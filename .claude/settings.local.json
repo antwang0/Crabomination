@@ -3,7 +3,12 @@
     "allow": [
       "mcp__acp__Bash",
       "WebFetch(domain:github.com)",
-      "WebFetch(domain:bevy-cheatbook.github.io)"
+      "WebFetch(domain:bevy-cheatbook.github.io)",
+      "mcp__acp__Edit",
+      "mcp__acp__Write",
+      "Bash(cargo check:*)",
+      "Bash(cargo build:*)",
+      "Bash(dir:*)"
     ]
   }
 }
