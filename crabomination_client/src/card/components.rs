@@ -1,11 +1,17 @@
 use bevy::prelude::*;
+use crabomination::card::CardId;
 
 pub const CARD_WIDTH: f32 = 3.0;
 pub const CARD_HEIGHT: f32 = CARD_WIDTH * 88.0 / 63.0;
 pub const CARD_THICKNESS: f32 = 0.02;
 
-pub const DECK_SIZE: usize = 30;
-pub const DECK_POSITION: Vec3 = Vec3::new(-6.0, 0.0, 0.0);
+// Deck and graveyard sit far left/right (x=±11) so they don't overlap battlefield cards.
+// They are stacked vertically in Z with >CARD_HEIGHT (4.19) separation to avoid overlapping each other.
+// Deck at z=±9.5: edges at ±[7.4, 11.6]. Graveyard at z=±4.0: edges at ±[1.9, 6.1]. Gap: 1.3 units.
+pub const DECK_POSITION: Vec3 = Vec3::new(-11.0, 0.0, 9.5);
+pub const BOT_DECK_POSITION: Vec3 = Vec3::new(11.0, 0.0, -9.5);
+pub const HUMAN_GRAVEYARD_POSITION: Vec3 = Vec3::new(-11.0, 0.0, 4.0);
+pub const BOT_GRAVEYARD_POSITION: Vec3 = Vec3::new(11.0, 0.0, -4.0);
 pub const DECK_CARD_Y_STEP: f32 = CARD_THICKNESS * 1.5;
 
 pub const HOVER_LIFT_AMOUNT: f32 = 0.6;
@@ -79,7 +85,14 @@ pub struct DeckCard {
     pub index: usize,
 }
 
+/// Marker for bot hand card visuals (face-down, count-synced).
+#[derive(Component)]
+pub struct BotHandCard {
+    pub slot: usize,
+}
+
 #[derive(Clone, Copy, PartialEq, Eq)]
+#[allow(dead_code)]
 pub enum ShufflePhase {
     Spread,   // Cards cascade out into a vertical column
     Shuffle,  // Cards slide to their new positions within the spread
@@ -111,9 +124,107 @@ pub struct DeckShuffleAnimation {
     pub phase_start_rotation: Quat,
 }
 
+/// Links a visual card entity to a game-engine CardId.
+#[derive(Component, Clone, Copy)]
+pub struct GameCardId(pub CardId);
+
+/// Tracks which player owns this visual card entity.
+#[derive(Component, Clone, Copy)]
+pub struct CardOwner(pub usize);
+
+/// Marks a card as on the battlefield, with row information.
+#[derive(Component)]
+pub struct BattlefieldCard {
+    pub is_land: bool,
+}
+
+/// Tracks a card's visual tapped state for animation.
+#[derive(Component)]
+pub struct TapState {
+    pub tapped: bool,
+}
+
+/// Animates a card tapping/untapping (90° rotation).
+#[derive(Component)]
+pub struct TapAnimation {
+    pub progress: f32,
+    pub speed: f32,
+    pub start_rotation: Quat,
+    pub target_rotation: Quat,
+}
+
+/// Marker for a graveyard pile visual entity.
+#[derive(Component)]
+pub struct GraveyardPile {
+    pub owner: usize,
+}
+
+/// Marker added to pile entities (deck/graveyard) while the pointer is over them.
+#[derive(Component)]
+pub struct PileHovered;
+
+/// Visual entity for one card in the bot's face-down deck pile.
+#[derive(Component)]
+pub struct BotDeckPile {
+    pub index: usize,
+}
+
+/// Marker for valid target entities during targeting mode.
+#[derive(Component)]
+pub struct ValidTarget;
+
+/// Clickable zone representing a player as a target.
+#[derive(Component)]
+pub struct PlayerTargetZone(pub usize);
+
+/// Animates a card flying to the graveyard pile; despawns the entity on completion.
+#[derive(Component)]
+pub struct SendToGraveyardAnimation {
+    pub progress: f32,
+    pub speed: f32,
+    pub start_translation: Vec3,
+    pub start_rotation: Quat,
+    pub target_translation: Vec3,
+    pub target_rotation: Quat,
+    /// Which player's graveyard this card is headed to (HUMAN=0, BOT=1).
+    pub owner: usize,
+}
+
+/// Animates a card from hand to the battlefield.
+#[derive(Component)]
+pub struct PlayCardAnimation {
+    pub progress: f32,
+    pub speed: f32,
+    pub start_translation: Vec3,
+    pub start_rotation: Quat,
+    pub target_translation: Vec3,
+    pub target_rotation: Quat,
+}
+
+/// Three-phase peek animation for deck cards: flip face-up, hold briefly, flip back.
+#[derive(Component)]
+pub struct RevealPeekAnimation {
+    pub progress: f32,
+    pub speed: f32,
+    pub start_rotation: Quat,
+    pub face_up_rotation: Quat,
+    pub start_y: f32,
+}
+
 /// Resource holding shared mesh/material handles for card highlighting.
 #[derive(Resource)]
 pub struct CardHighlightAssets {
     pub border_mesh: Handle<Mesh>,
     pub border_material: Handle<StandardMaterial>,
 }
+
+/// Resource holding shared mesh/material handles for dynamically spawning cards.
+#[derive(Resource)]
+pub struct CardMeshAssets {
+    pub card_mesh: Handle<Mesh>,
+    pub back_material: Handle<StandardMaterial>,
+}
+
+/// Marker for a card entity that is currently on the stack (cast but not yet resolved).
+#[derive(Component)]
+pub struct StackCard;

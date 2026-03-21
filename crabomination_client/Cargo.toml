@@ -4,19 +4,11 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-bevy = { version = "0.18.0", features = ["dynamic_linking"] }
-bevy_mesh = "0.18.0"
-rand = "0.8"
-
-# for Linux
-[target.x86_64-unknown-linux-gnu]
-linker = "clang"
-rustflags = ["-C", "link-arg=-fuse-ld=lld"]
-
-# for Windows
-[target.x86_64-pc-windows-msvc]
-linker = "rust-lld.exe" # Use LLD Linker
-rustflags = [
-  "-Zshare-generics=off", # (Nightly)
-  "-Zthreads=0",        # (Nightly) Use improved multithreading with the recommended amount of threads.
-]
+bevy = { version = "0.18.1", features = ["dynamic_linking"] }
+bevy_mesh = "0.18.1"
+rand = "0.10"
+ureq = "3.2"
+serde = { version = "1.0.228", features = ["derive"] }
+toml = "1.0.6"
+dirs = "6"
+crabomination = { path = "../crabomination" }

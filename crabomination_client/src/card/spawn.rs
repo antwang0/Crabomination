@@ -3,95 +3,38 @@ use std::f32::consts::{FRAC_PI_2, PI};
 use bevy::prelude::*;
 
 use super::components::{
-    Card, CardFrontTexture, CardHighlightAssets, CardHoverLift, DeckCard, CARD_THICKNESS,
-    DECK_CARD_Y_STEP, DECK_POSITION, DECK_SIZE,
+    BotDeckPile, Card, CardFrontTexture, CardHighlightAssets, CardHoverLift, CardMeshAssets,
+    CardOwner, DeckCard, GameCardId, GraveyardPile, HandCard, PileHovered, PlayerTargetZone,
+    CARD_THICKNESS, BOT_DECK_POSITION, BOT_GRAVEYARD_POSITION, DECK_CARD_Y_STEP, DECK_POSITION,
+    HUMAN_GRAVEYARD_POSITION,
 };
+use super::hand::hand_card_transform;
 use super::mesh::{card_border_mesh, card_mesh};
-use super::observers::{on_card_out, on_card_over};
+use super::observers::{on_card_out, on_card_over, on_zone_out, on_zone_over};
 
-const DECK_CARD_FRONTS: &[&str] = &[
-    "cards/black_lotus.png",
-    "cards/sheoldred_the_apocalypse.png",
-];
+use crate::game::{GraveyardBrowserState, GameResource, BOT, HUMAN};
+use crate::scryfall;
 
-pub fn spawn_deck(
+/// Spawn 3D card entities for both players' libraries (deck) and opening hands.
+pub fn spawn_game_cards(
     commands: &mut Commands,
     meshes: &mut ResMut<Assets<Mesh>>,
     materials: &mut ResMut<Assets<StandardMaterial>>,
     asset_server: &Res<AssetServer>,
+    game: &GameResource,
 ) {
     let card_mesh_handle = card_mesh(meshes);
+    let border_mesh_handle = card_border_mesh(meshes);
 
     let back_texture: Handle<Image> = asset_server.load("cards/cardback.png");
-    let back_material_shared = materials.add(StandardMaterial {
+    let back_material = materials.add(StandardMaterial {
         base_color_texture: Some(back_texture),
         perceptual_roughness: 0.9,
         metallic: 0.0,
         ..default()
     });
 
-    for i in 0..DECK_SIZE {
-        let y = i as f32 * DECK_CARD_Y_STEP + 0.01;
-        let front_path = DECK_CARD_FRONTS[i % DECK_CARD_FRONTS.len()];
-        let front_texture: Handle<Image> = asset_server.load(front_path);
-        let front_material = materials.add(StandardMaterial {
-            base_color_texture: Some(front_texture),
-            perceptual_roughness: 0.9,
-            metallic: 0.0,
-            ..default()
-        });
-
-        commands
-            .spawn((
-                Transform::from_xyz(DECK_POSITION.x, y, DECK_POSITION.z)
-                    .with_rotation(Quat::from_rotation_x(FRAC_PI_2) * Quat::from_rotation_z(PI)),
-                Visibility::default(),
-                Card,
-                DeckCard { index: i },
-                CardFrontTexture(front_path.to_string()),
-                CardHoverLift {
-                    current_lift: 0.0,
-                    target_lift: 0.0,
-                    base_translation: Vec3::new(DECK_POSITION.x, y, DECK_POSITION.z),
-                },
-            ))
-            .with_children(|parent| {
-                // Front face (+Z)
-                parent
-                    .spawn((
-                        Mesh3d(card_mesh_handle.clone()),
-                        MeshMaterial3d(front_material),
-                        Transform::from_xyz(0.0, 0.0, CARD_THICKNESS / 2.0),
-                    ))
-                    .observe(on_card_over)
-                    .observe(on_card_out);
-                // Back face (-Z)
-                parent
-                    .spawn((
-                        Mesh3d(card_mesh_handle.clone()),
-                        MeshMaterial3d(back_material_shared.clone()),
-                        Transform::from_xyz(0.0, 0.0, -CARD_THICKNESS / 2.0)
-                            .with_rotation(Quat::from_rotation_y(PI)),
-                    ))
-                    .observe(on_card_over)
-                    .observe(on_card_out);
-            });
-    }
-}
-
-pub fn spawn_cards(
-    commands: &mut Commands,
-    meshes: &mut ResMut<Assets<Mesh>>,
-    materials: &mut ResMut<Assets<StandardMaterial>>,
-    asset_server: &Res<AssetServer>,
-) {
-    use std::f32::consts::FRAC_PI_2;
-
-    use super::components::{CARD_HEIGHT, CARD_WIDTH};
-
-    let card_mesh_handle = card_mesh(meshes);
-    let border_mesh_handle = card_border_mesh(meshes);
-
+    // Highlight assets (shared by hover system)
     let border_material = materials.add(StandardMaterial {
         base_color: Color::srgb(1.0, 0.85, 0.0),
         unlit: true,
@@ -100,71 +43,206 @@ pub fn spawn_cards(
     });
     commands.insert_resource(CardHighlightAssets {
         border_mesh: border_mesh_handle,
-        border_material: border_material.clone(),
+        border_material,
+    });
+    commands.insert_resource(CardMeshAssets {
+        card_mesh: card_mesh_handle.clone(),
+        back_material: back_material.clone(),
     });
 
-    let card_definitions = vec![
-        ("cards/black_lotus.png", "cards/cardback.png"),
-        ("cards/sheoldred_the_apocalypse.png", "cards/cardback.png"),
-    ];
+    let state = &game.state;
 
-    let spacing_x = CARD_WIDTH * 1.1;
-    let spacing_z = CARD_HEIGHT * 1.1;
+    // ── Human player cards ───────────────────────────────────────────────────
 
-    for (i, (front_path, back_path)) in card_definitions.iter().enumerate() {
-        let front_texture: Handle<Image> = asset_server.load(*front_path);
-        let back_texture: Handle<Image> = asset_server.load(*back_path);
+    // Library → DeckCard entities
+    for (i, card) in state.players[HUMAN].library.iter().enumerate() {
+        let y = i as f32 * DECK_CARD_Y_STEP + 0.01;
+        let front_mat = card_front_material(card.definition.name, materials, asset_server);
+        let pos = Vec3::new(DECK_POSITION.x, y, DECK_POSITION.z);
 
-        let front_material = materials.add(StandardMaterial {
-            base_color_texture: Some(front_texture),
-            perceptual_roughness: 0.9,
-            metallic: 0.0,
-            ..default()
-        });
-
-        let back_material = materials.add(StandardMaterial {
-            base_color_texture: Some(back_texture),
-            perceptual_roughness: 0.9,
-            metallic: 0.0,
-            ..default()
-        });
-
-        let x = (i % 4) as f32 * spacing_x - 1.5;
-        let z = (i / 4) as f32 * spacing_z - 1.0;
-
+        let entity = spawn_single_card(
+            commands,
+            &card_mesh_handle,
+            front_mat,
+            back_material.clone(),
+            Transform::from_translation(pos)
+                .with_rotation(Quat::from_rotation_x(FRAC_PI_2) * Quat::from_rotation_z(PI)),
+            GameCardId(card.id),
+            card.definition.name,
+            pos,
+        );
         commands
-            .spawn((
-                Transform::from_xyz(x, 0.01, z)
-                    .with_rotation(Quat::from_rotation_x(-FRAC_PI_2)),
-                Visibility::default(),
-                Card,
-                CardFrontTexture(front_path.to_string()),
-                CardHoverLift {
-                    current_lift: 0.0,
-                    target_lift: 0.0,
-                    base_translation: Vec3::new(x, 0.01, z),
-                },
-            ))
-            .with_children(|parent| {
-                // Front face (facing +Z in local space)
-                parent
-                    .spawn((
-                        Mesh3d(card_mesh_handle.clone()),
-                        MeshMaterial3d(front_material),
-                        Transform::from_xyz(0.0, 0.0, CARD_THICKNESS / 2.0),
-                    ))
-                    .observe(on_card_over)
-                    .observe(on_card_out);
-                // Back face (facing -Z, rotated 180° around Y)
-                parent
-                    .spawn((
-                        Mesh3d(card_mesh_handle.clone()),
-                        MeshMaterial3d(back_material),
-                        Transform::from_xyz(0.0, 0.0, -CARD_THICKNESS / 2.0)
-                            .with_rotation(Quat::from_rotation_y(PI)),
-                    ))
-                    .observe(on_card_over)
-                    .observe(on_card_out);
-            });
+            .entity(entity)
+            .insert((DeckCard { index: i }, CardOwner(HUMAN)));
     }
+
+    // Hand → HandCard entities
+    let hand = &state.players[HUMAN].hand;
+    let total = hand.len();
+    for (i, card) in hand.iter().enumerate() {
+        let target = hand_card_transform(i, total);
+        let front_mat = card_front_material(card.definition.name, materials, asset_server);
+
+        let entity = spawn_single_card(
+            commands,
+            &card_mesh_handle,
+            front_mat,
+            back_material.clone(),
+            target,
+            GameCardId(card.id),
+            card.definition.name,
+            target.translation,
+        );
+        commands
+            .entity(entity)
+            .insert((HandCard { slot: i }, CardOwner(HUMAN)));
+    }
+
+    // ── Bot deck pile — one face-down entity per library card ─────────────────
+    {
+        let bot_lib = state.players[BOT].library.len();
+        let rot = Quat::from_rotation_x(-FRAC_PI_2) * Quat::from_rotation_z(PI);
+        for i in 0..bot_lib {
+            let y = i as f32 * DECK_CARD_Y_STEP + 0.01;
+            let pos = Vec3::new(BOT_DECK_POSITION.x, y, BOT_DECK_POSITION.z);
+            commands.spawn((
+                Mesh3d(card_mesh_handle.clone()),
+                MeshMaterial3d(back_material.clone()),
+                Transform::from_translation(pos).with_rotation(rot),
+                Visibility::default(),
+                BotDeckPile { index: i },
+                CardHoverLift { current_lift: 0.0, target_lift: 0.0, base_translation: pos },
+            ))
+            .observe(on_pile_over)
+            .observe(on_pile_out);
+        }
+    }
+
+    // ── Graveyard piles (initially empty, visual entities for both players) ──
+    // Human GY: same orientation as human BF cards (rotation_x(-PI/2)).
+    // Bot GY: same orientation as bot BF cards (rotation_x(-PI/2) * rotation_z(PI)).
+    commands.spawn((
+        Mesh3d(card_mesh_handle.clone()),
+        MeshMaterial3d(back_material.clone()),
+        Transform::from_translation(HUMAN_GRAVEYARD_POSITION)
+            .with_rotation(Quat::from_rotation_x(-FRAC_PI_2)),
+        Visibility::Hidden,
+        GraveyardPile { owner: HUMAN },
+        CardHoverLift { current_lift: 0.0, target_lift: 0.0, base_translation: HUMAN_GRAVEYARD_POSITION },
+    ))
+    .observe(on_pile_over)
+    .observe(on_pile_out)
+    .observe(on_graveyard_click::<HUMAN>);
+
+    commands.spawn((
+        Mesh3d(card_mesh_handle.clone()),
+        MeshMaterial3d(back_material.clone()),
+        Transform::from_translation(BOT_GRAVEYARD_POSITION)
+            .with_rotation(Quat::from_rotation_x(-FRAC_PI_2) * Quat::from_rotation_z(PI)),
+        Visibility::Hidden,
+        GraveyardPile { owner: BOT },
+        CardHoverLift { current_lift: 0.0, target_lift: 0.0, base_translation: BOT_GRAVEYARD_POSITION },
+    ))
+    .observe(on_pile_over)
+    .observe(on_pile_out)
+    .observe(on_graveyard_click::<BOT>);
+
+    // ── Player target zones (invisible clickable areas representing players) ─
+    // Bot target zone: placed near bot's battlefield side
+    commands.spawn((
+        Mesh3d(meshes.add(Plane3d::default().mesh().size(8.0, 3.0))),
+        MeshMaterial3d(materials.add(StandardMaterial {
+            base_color: Color::srgba(1.0, 0.0, 0.0, 0.0),
+            alpha_mode: AlphaMode::Blend,
+            unlit: true,
+            ..default()
+        })),
+        Transform::from_xyz(0.0, 0.01, -6.0),
+        Visibility::default(),
+        PlayerTargetZone(BOT),
+    ))
+    .observe(on_zone_over)
+    .observe(on_zone_out);
+}
+
+pub fn spawn_single_card(
+    commands: &mut Commands,
+    card_mesh: &Handle<Mesh>,
+    front_material: Handle<StandardMaterial>,
+    back_material: Handle<StandardMaterial>,
+    transform: Transform,
+    game_card_id: GameCardId,
+    card_name: &str,
+    base_pos: Vec3,
+) -> Entity {
+    commands
+        .spawn((
+            transform,
+            Visibility::default(),
+            Card,
+            game_card_id,
+            CardFrontTexture(scryfall::card_asset_path(card_name)),
+            CardHoverLift {
+                current_lift: 0.0,
+                target_lift: 0.0,
+                base_translation: base_pos,
+            },
+        ))
+        .with_children(|parent| {
+            // Front face (+Z)
+            parent
+                .spawn((
+                    Mesh3d(card_mesh.clone()),
+                    MeshMaterial3d(front_material),
+                    Transform::from_xyz(0.0, 0.0, CARD_THICKNESS / 2.0),
+                ))
+                .observe(on_card_over)
+                .observe(on_card_out);
+            // Back face (-Z)
+            parent
+                .spawn((
+                    Mesh3d(card_mesh.clone()),
+                    MeshMaterial3d(back_material),
+                    Transform::from_xyz(0.0, 0.0, -CARD_THICKNESS / 2.0)
+                        .with_rotation(Quat::from_rotation_y(PI)),
+                ))
+                .observe(on_card_over)
+                .observe(on_card_out);
+        })
+        .id()
+}
+
+fn on_pile_over(ev: On<Pointer<Over>>, mut commands: Commands) {
+    commands.entity(ev.entity).insert(PileHovered);
+}
+
+fn on_pile_out(ev: On<Pointer<Out>>, mut commands: Commands) {
+    commands.entity(ev.entity).remove::<PileHovered>();
+}
+
+fn on_graveyard_click<const OWNER: usize>(
+    _ev: On<Pointer<Click>>,
+    mut browser: ResMut<GraveyardBrowserState>,
+) {
+    if browser.open && browser.owner == OWNER {
+        browser.open = false;
+    } else {
+        browser.open = true;
+        browser.owner = OWNER;
+    }
+}
+
+pub fn card_front_material(
+    name: &str,
+    materials: &mut Assets<StandardMaterial>,
+    asset_server: &AssetServer,
+) -> Handle<StandardMaterial> {
+    let asset_path = scryfall::card_asset_path(name);
+    let texture: Handle<Image> = asset_server.load(&asset_path);
+    materials.add(StandardMaterial {
+        base_color_texture: Some(texture),
+        perceptual_roughness: 0.85,
+        metallic: 0.0,
+        ..default()
+    })
 }

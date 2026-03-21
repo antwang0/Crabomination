@@ -14,28 +14,7 @@ pub const BORDER_WIDTH: f32 = 0.15;
 pub fn create_rounded_rect_mesh(width: f32, height: f32, radius: f32, segments: usize) -> Mesh {
     let hw = width / 2.0;
     let hh = height / 2.0;
-    let r = radius.min(hw.min(hh));
-
-    // Corner arc centers
-    let corners = [
-        (Vec2::new(hw - r, hh - r), 0.0),             // top-right
-        (Vec2::new(-hw + r, hh - r), FRAC_PI_2),       // top-left
-        (Vec2::new(-hw + r, -hh + r), PI),              // bottom-left
-        (Vec2::new(hw - r, -hh + r), 3.0 * FRAC_PI_2), // bottom-right
-    ];
-
-    // Build perimeter vertices
-    let mut perimeter = Vec::new();
-    for (center, start_angle) in &corners {
-        for i in 0..=segments {
-            let t = i as f32 / segments as f32;
-            let angle = start_angle + t * FRAC_PI_2;
-            perimeter.push(Vec2::new(
-                center.x + r * angle.cos(),
-                center.y + r * angle.sin(),
-            ));
-        }
-    }
+    let perimeter = rounded_rect_perimeter(width, height, radius, segments);
 
     let vert_count = perimeter.len() + 1; // +1 for center
     let mut positions = Vec::with_capacity(vert_count);

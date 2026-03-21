@@ -1,0 +1,78 @@
+use crate::card::{CardDefinition, CardId, CardInstance};
+use crate::mana::ManaPool;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct PlayerId(pub usize);
+
+#[derive(Debug, Clone)]
+pub struct Player {
+    pub id: PlayerId,
+    pub name: String,
+    pub life: i32,
+    pub mana_pool: ManaPool,
+    /// Top of library is `library[0]`.
+    pub library: Vec<CardInstance>,
+    pub hand: Vec<CardInstance>,
+    pub graveyard: Vec<CardInstance>,
+    /// How many lands this player has played on their current turn.
+    pub lands_played_this_turn: u32,
+}
+
+impl Player {
+    pub fn new(idx: usize, name: impl Into<String>) -> Self {
+        Self {
+            id: PlayerId(idx),
+            name: name.into(),
+            life: 20,
+            mana_pool: ManaPool::new(),
+            library: Vec::new(),
+            hand: Vec::new(),
+            graveyard: Vec::new(),
+            lands_played_this_turn: 0,
+        }
+    }
+
+    pub fn is_alive(&self) -> bool {
+        self.life > 0
+    }
+
+    pub fn can_play_land(&self) -> bool {
+        self.lands_played_this_turn == 0
+    }
+
+    /// Draw the top card into hand.  Returns `None` if the library is empty.
+    pub fn draw_top(&mut self) -> Option<CardId> {
+        if self.library.is_empty() {
+            return None;
+        }
+        let card = self.library.remove(0);
+        let id = card.id;
+        self.hand.push(card);
+        Some(id)
+    }
+
+    pub fn has_in_hand(&self, id: CardId) -> bool {
+        self.hand.iter().any(|c| c.id == id)
+    }
+
+    pub fn remove_from_hand(&mut self, id: CardId) -> Option<CardInstance> {
+        self.hand
+            .iter()
+            .position(|c| c.id == id)
+            .map(|i| self.hand.remove(i))
+    }
+
+    pub fn send_to_graveyard(&mut self, card: CardInstance) {
+        self.graveyard.push(card);
+    }
+
+    /// Push a card definition directly into the library (top of deck = index 0).
+    pub fn add_to_library_top(&mut self, id: CardId, definition: CardDefinition) {
+        self.library.insert(0, CardInstance::new(id, definition, self.id.0));
+    }
+
+    /// Push a card definition to the bottom of the library.
+    pub fn add_to_library_bottom(&mut self, id: CardId, definition: CardDefinition) {
+        self.library.push(CardInstance::new(id, definition, self.id.0));
+    }
+}

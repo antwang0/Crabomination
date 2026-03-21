@@ -4,8 +4,17 @@ use bevy::prelude::*;
 
 use crate::card::{
     hand_card_transform, CardFlipAnimation, CardHoverLift, DeckCard, DeckShuffleAnimation,
-    DrawCardAnimation, HandCard, HandSlideAnimation, ShufflePhase, CARD_WIDTH, HOVER_LIFT_SPEED,
+    DrawCardAnimation, HandCard, HandSlideAnimation, PlayCardAnimation, RevealPeekAnimation,
+    SendToGraveyardAnimation, ShufflePhase, TapAnimation, CARD_WIDTH, HOVER_LIFT_SPEED,
 };
+
+/// Global animation playback speed multiplier (1.0 = normal, 2.0 = double speed, etc.).
+#[derive(Resource)]
+pub struct AnimationSpeed(pub f32);
+
+impl Default for AnimationSpeed {
+    fn default() -> Self { AnimationSpeed(1.0) }
+}
 
 const SPREAD_DURATION: f32 = 0.1;
 const COLLAPSE_DURATION: f32 = 0.1;
@@ -19,6 +28,7 @@ pub fn ease_in_out(t: f32) -> f32 {
 /// Skipped for any card that has another animation currently driving its transform.
 pub fn animate_hover_lift(
     time: Res<Time>,
+    speed: Res<AnimationSpeed>,
     mut cards: Query<
         (&mut Transform, &mut CardHoverLift),
         (
@@ -26,13 +36,17 @@ pub fn animate_hover_lift(
             Without<DeckShuffleAnimation>,
             Without<CardFlipAnimation>,
             Without<HandSlideAnimation>,
+            Without<PlayCardAnimation>,
+            Without<TapAnimation>,
+            Without<SendToGraveyardAnimation>,
+            Without<RevealPeekAnimation>,
         ),
     >,
 ) {
-    let dt = time.delta_secs();
+    let dt = time.delta_secs() * speed.0;
     for (mut transform, mut lift) in &mut cards {
-        let speed = HOVER_LIFT_SPEED * dt;
-        lift.current_lift += (lift.target_lift - lift.current_lift) * speed.min(1.0);
+        let spd = HOVER_LIFT_SPEED * dt;
+        lift.current_lift += (lift.target_lift - lift.current_lift) * spd.min(1.0);
         transform.translation = lift.base_translation + Vec3::Y * lift.current_lift;
     }
 }
@@ -40,10 +54,11 @@ pub fn animate_hover_lift(
 pub fn animate_flip(
     mut commands: Commands,
     time: Res<Time>,
+    speed: Res<AnimationSpeed>,
     mut cards: Query<(Entity, &mut Transform, &mut CardFlipAnimation)>,
 ) {
     for (entity, mut transform, mut anim) in &mut cards {
-        anim.progress += time.delta_secs() * anim.speed;
+        anim.progress += time.delta_secs() * speed.0 * anim.speed;
 
         if anim.progress >= 1.0 {
             transform.rotation = anim.end_rotation;
@@ -63,6 +78,7 @@ pub fn animate_flip(
 pub fn animate_deck_shuffle(
     mut commands: Commands,
     time: Res<Time>,
+    speed: Res<AnimationSpeed>,
     mut cards: Query<(
         Entity,
         &mut Transform,
@@ -71,7 +87,7 @@ pub fn animate_deck_shuffle(
         &mut CardHoverLift,
     )>,
 ) {
-    let dt = time.delta_secs();
+    let dt = time.delta_secs() * speed.0;
     let flat_rotation =
         Quat::from_rotation_x(std::f32::consts::FRAC_PI_2) * Quat::from_rotation_z(PI);
 
@@ -133,6 +149,7 @@ pub fn animate_deck_shuffle(
 pub fn animate_draw_card(
     mut commands: Commands,
     time: Res<Time>,
+    speed: Res<AnimationSpeed>,
     mut cards: Query<(
         Entity,
         &mut Transform,
@@ -145,7 +162,7 @@ pub fn animate_draw_card(
     let total = all_hand_cards.iter().count();
 
     for (entity, mut transform, mut anim, mut lift, hand_card) in &mut cards {
-        anim.progress += time.delta_secs() * anim.speed;
+        anim.progress += time.delta_secs() * speed.0 * anim.speed;
 
         let t = ease_in_out(anim.progress.clamp(0.0, 1.0));
         let arc_y = (anim.progress.clamp(0.0, 1.0) * PI).sin() * 3.0;
@@ -170,10 +187,11 @@ pub fn animate_draw_card(
 pub fn animate_hand_slide(
     mut commands: Commands,
     time: Res<Time>,
+    speed: Res<AnimationSpeed>,
     mut cards: Query<(Entity, &mut Transform, &mut HandSlideAnimation, &mut CardHoverLift)>,
 ) {
     for (entity, mut transform, mut anim, mut lift) in &mut cards {
-        anim.progress += time.delta_secs() * anim.speed;
+        anim.progress += time.delta_secs() * speed.0 * anim.speed;
         let t = ease_in_out(anim.progress.clamp(0.0, 1.0));
         let pos = anim.start_translation.lerp(anim.target_translation, t);
         transform.translation = pos;
@@ -184,5 +202,135 @@ pub fn animate_hand_slide(
             lift.base_translation = anim.target_translation;
             commands.entity(entity).remove::<HandSlideAnimation>();
         }
+    }
+}
+
+/// Animate a card moving from hand to battlefield.
+pub fn animate_play_card(
+    mut commands: Commands,
+    time: Res<Time>,
+    speed: Res<AnimationSpeed>,
+    mut cards: Query<(
+        Entity,
+        &mut Transform,
+        &mut PlayCardAnimation,
+        &mut CardHoverLift,
+    )>,
+) {
+    for (entity, mut transform, mut anim, mut lift) in &mut cards {
+        anim.progress += time.delta_secs() * speed.0 * anim.speed;
+
+        let t = ease_in_out(anim.progress.clamp(0.0, 1.0));
+        let arc_y = (anim.progress.clamp(0.0, 1.0) * PI).sin() * 2.0;
+
+        let mut pos = anim.start_translation.lerp(anim.target_translation, t);
+        pos.y += arc_y;
+        transform.translation = pos;
+        transform.rotation = anim.start_rotation.slerp(anim.target_rotation, t);
+
+        if anim.progress >= 1.0 {
+            transform.translation = anim.target_translation;
+            transform.rotation = anim.target_rotation;
+            lift.base_translation = anim.target_translation;
+            lift.current_lift = 0.0;
+            lift.target_lift = 0.0;
+            commands.entity(entity).remove::<PlayCardAnimation>();
+        }
+    }
+}
+
+/// Animate a card flying to the graveyard with a tumbling spin, then despawn it.
+pub fn animate_send_to_graveyard(
+    mut commands: Commands,
+    time: Res<Time>,
+    speed: Res<AnimationSpeed>,
+    mut cards: Query<(Entity, &mut Transform, &mut SendToGraveyardAnimation)>,
+) {
+    for (entity, mut transform, mut anim) in &mut cards {
+        anim.progress += time.delta_secs() * speed.0 * anim.speed;
+
+        let t = ease_in_out(anim.progress.clamp(0.0, 1.0));
+        // Arc: rise then fall as the card travels to the graveyard
+        let arc_y = (anim.progress.clamp(0.0, 1.0) * PI).sin() * 2.0;
+        let mut pos = anim.start_translation.lerp(anim.target_translation, t);
+        pos.y += arc_y;
+        transform.translation = pos;
+        transform.rotation = anim.start_rotation.slerp(anim.target_rotation, t);
+
+        if anim.progress >= 1.0 {
+            commands.entity(entity).despawn();
+        }
+    }
+}
+
+/// Animate a card tapping (90°) or untapping.
+pub fn animate_tap(
+    mut commands: Commands,
+    time: Res<Time>,
+    speed: Res<AnimationSpeed>,
+    mut cards: Query<(Entity, &mut Transform, &mut TapAnimation)>,
+) {
+    for (entity, mut transform, mut anim) in &mut cards {
+        anim.progress += time.delta_secs() * speed.0 * anim.speed;
+        let t = ease_in_out(anim.progress.clamp(0.0, 1.0));
+        transform.rotation = anim.start_rotation.slerp(anim.target_rotation, t);
+
+        if anim.progress >= 1.0 {
+            transform.rotation = anim.target_rotation;
+            commands.entity(entity).remove::<TapAnimation>();
+        }
+    }
+}
+
+/// Three-phase animation: flip to face-up (0-0.35), hold (0.35-0.65), flip back (0.65-1.0).
+pub fn animate_reveal_peek(
+    mut commands: Commands,
+    time: Res<Time>,
+    speed: Res<AnimationSpeed>,
+    mut cards: Query<(Entity, &mut Transform, &mut RevealPeekAnimation)>,
+) {
+    for (entity, mut transform, mut anim) in &mut cards {
+        anim.progress += time.delta_secs() * speed.0 * anim.speed;
+        let p = anim.progress.clamp(0.0, 1.0);
+
+        let (rot_t, y_t) = if p < 0.35 {
+            // Phase 1: flip to face-up
+            let t = ease_in_out(p / 0.35);
+            (t, t)
+        } else if p < 0.65 {
+            // Phase 2: hold face-up
+            (1.0_f32, 1.0_f32)
+        } else {
+            // Phase 3: flip back
+            let t = ease_in_out((p - 0.65) / 0.35);
+            (1.0 - t, 1.0 - t)
+        };
+
+        transform.rotation = anim.start_rotation.slerp(anim.face_up_rotation, rot_t);
+        let lift = (y_t * PI).sin().abs() * (CARD_WIDTH / 2.0);
+        transform.translation.y = anim.start_y + lift;
+
+        if anim.progress >= 1.0 {
+            transform.rotation = anim.start_rotation;
+            transform.translation.y = anim.start_y;
+            commands.entity(entity).remove::<RevealPeekAnimation>();
+        }
+    }
+}
+
+/// Keyboard shortcuts to adjust animation playback speed.
+/// [ = half speed, ] = double speed, Backslash = reset to 1×.
+pub fn adjust_animation_speed(
+    keyboard: Res<ButtonInput<KeyCode>>,
+    mut speed: ResMut<AnimationSpeed>,
+) {
+    if keyboard.just_pressed(KeyCode::BracketLeft) {
+        speed.0 = (speed.0 * 0.5).max(0.25);
+    }
+    if keyboard.just_pressed(KeyCode::BracketRight) {
+        speed.0 = (speed.0 * 2.0).min(8.0);
+    }
+    if keyboard.just_pressed(KeyCode::Backslash) {
+        speed.0 = 1.0;
     }
 }

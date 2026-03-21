@@ -1,3 +1,3 @@
 pub mod animate;
-pub mod input;
+pub mod game_ui;
 pub mod ui;

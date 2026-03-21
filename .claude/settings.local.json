@@ -8,7 +8,14 @@
       "mcp__acp__Write",
       "Bash(cargo check:*)",
       "Bash(cargo build:*)",
-      "Bash(dir:*)"
+      "Bash(dir:*)",
+      "Bash(cargo test -p crabomination)",
+      "Bash(xargs grep -l \"GlobalAmbientLight\")",
+      "Bash(grep -n \"GlobalAmbientLight\\\\|pub color\\\\|pub brightness\" ~/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/bevy_pbr-0.18.0/src/light/*.rs)",
+      "Bash(xargs grep -l \"struct GlobalAmbientLight\")",
+      "Bash(cargo doc -p bevy --no-deps)",
+      "Read(//c/Users/JB/.cargo/registry/src/**)",
+      "Bash(cargo test:*)"
     ]
   }
 }
