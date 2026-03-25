@@ -3,16 +3,16 @@ use std::f32::consts::{FRAC_PI_2, PI};
 use bevy::prelude::*;
 
 use super::components::{
-    BotDeckPile, Card, CardFrontTexture, CardHighlightAssets, CardHoverLift, CardMeshAssets,
+    P1DeckPile, Card, CardFrontTexture, CardHighlightAssets, CardHoverLift, CardMeshAssets,
     CardOwner, DeckCard, GameCardId, GraveyardPile, HandCard, PileHovered, PlayerTargetZone,
-    CARD_THICKNESS, BOT_DECK_POSITION, BOT_GRAVEYARD_POSITION, DECK_CARD_Y_STEP, DECK_POSITION,
-    HUMAN_GRAVEYARD_POSITION,
+    CARD_THICKNESS, P1_DECK_POSITION, P1_GRAVEYARD_POSITION, DECK_CARD_Y_STEP, DECK_POSITION,
+    P0_GRAVEYARD_POSITION,
 };
 use super::hand::hand_card_transform;
 use super::mesh::{card_border_mesh, card_mesh};
 use super::observers::{on_card_out, on_card_over, on_zone_out, on_zone_over};
 
-use crate::game::{GraveyardBrowserState, GameResource, BOT, HUMAN};
+use crate::game::{GraveyardBrowserState, GameResource, PLAYER_1, PLAYER_0};
 use crate::scryfall;
 
 /// Spawn 3D card entities for both players' libraries (deck) and opening hands.
@@ -22,9 +22,10 @@ pub fn spawn_game_cards(
     materials: &mut ResMut<Assets<StandardMaterial>>,
     asset_server: &Res<AssetServer>,
     game: &GameResource,
+    segments: usize,
 ) {
-    let card_mesh_handle = card_mesh(meshes);
-    let border_mesh_handle = card_border_mesh(meshes);
+    let card_mesh_handle = card_mesh(meshes, segments);
+    let border_mesh_handle = card_border_mesh(meshes, segments);
 
     let back_texture: Handle<Image> = asset_server.load("cards/cardback.png");
     let back_material = materials.add(StandardMaterial {
@@ -52,10 +53,10 @@ pub fn spawn_game_cards(
 
     let state = &game.state;
 
-    // ── Human player cards ───────────────────────────────────────────────────
+    // ── Player 0 cards ───────────────────────────────────────────────────────
 
     // Library → DeckCard entities
-    for (i, card) in state.players[HUMAN].library.iter().enumerate() {
+    for (i, card) in state.players[PLAYER_0].library.iter().enumerate() {
         let y = i as f32 * DECK_CARD_Y_STEP + 0.01;
         let front_mat = card_front_material(card.definition.name, materials, asset_server);
         let pos = Vec3::new(DECK_POSITION.x, y, DECK_POSITION.z);
@@ -73,11 +74,11 @@ pub fn spawn_game_cards(
         );
         commands
             .entity(entity)
-            .insert((DeckCard { index: i }, CardOwner(HUMAN)));
+            .insert((DeckCard { index: i }, CardOwner(PLAYER_0)));
     }
 
     // Hand → HandCard entities
-    let hand = &state.players[HUMAN].hand;
+    let hand = &state.players[PLAYER_0].hand;
     let total = hand.len();
     for (i, card) in hand.iter().enumerate() {
         let target = hand_card_transform(i, total);
@@ -95,22 +96,22 @@ pub fn spawn_game_cards(
         );
         commands
             .entity(entity)
-            .insert((HandCard { slot: i }, CardOwner(HUMAN)));
+            .insert((HandCard { slot: i }, CardOwner(PLAYER_0)));
     }
 
-    // ── Bot deck pile — one face-down entity per library card ─────────────────
+    // ── Player 1 deck pile — one face-down entity per library card ────────────
     {
-        let bot_lib = state.players[BOT].library.len();
+        let p1_lib = state.players[PLAYER_1].library.len();
         let rot = Quat::from_rotation_x(-FRAC_PI_2) * Quat::from_rotation_z(PI);
-        for i in 0..bot_lib {
+        for i in 0..p1_lib {
             let y = i as f32 * DECK_CARD_Y_STEP + 0.01;
-            let pos = Vec3::new(BOT_DECK_POSITION.x, y, BOT_DECK_POSITION.z);
+            let pos = Vec3::new(P1_DECK_POSITION.x, y, P1_DECK_POSITION.z);
             commands.spawn((
                 Mesh3d(card_mesh_handle.clone()),
                 MeshMaterial3d(back_material.clone()),
                 Transform::from_translation(pos).with_rotation(rot),
                 Visibility::default(),
-                BotDeckPile { index: i },
+                P1DeckPile { index: i },
                 CardHoverLift { current_lift: 0.0, target_lift: 0.0, base_translation: pos },
             ))
             .observe(on_pile_over)
@@ -119,36 +120,36 @@ pub fn spawn_game_cards(
     }
 
     // ── Graveyard piles (initially empty, visual entities for both players) ──
-    // Human GY: same orientation as human BF cards (rotation_x(-PI/2)).
-    // Bot GY: same orientation as bot BF cards (rotation_x(-PI/2) * rotation_z(PI)).
+    // Player 0 GY: same orientation as player 0 BF cards (rotation_x(-PI/2)).
+    // Player 1 GY: same orientation as player 1 BF cards (rotation_x(-PI/2) * rotation_z(PI)).
     commands.spawn((
         Mesh3d(card_mesh_handle.clone()),
         MeshMaterial3d(back_material.clone()),
-        Transform::from_translation(HUMAN_GRAVEYARD_POSITION)
+        Transform::from_translation(P0_GRAVEYARD_POSITION)
             .with_rotation(Quat::from_rotation_x(-FRAC_PI_2)),
         Visibility::Hidden,
-        GraveyardPile { owner: HUMAN },
-        CardHoverLift { current_lift: 0.0, target_lift: 0.0, base_translation: HUMAN_GRAVEYARD_POSITION },
+        GraveyardPile { owner: PLAYER_0 },
+        CardHoverLift { current_lift: 0.0, target_lift: 0.0, base_translation: P0_GRAVEYARD_POSITION },
     ))
     .observe(on_pile_over)
     .observe(on_pile_out)
-    .observe(on_graveyard_click::<HUMAN>);
+    .observe(on_graveyard_click::<PLAYER_0>);
 
     commands.spawn((
         Mesh3d(card_mesh_handle.clone()),
         MeshMaterial3d(back_material.clone()),
-        Transform::from_translation(BOT_GRAVEYARD_POSITION)
+        Transform::from_translation(P1_GRAVEYARD_POSITION)
             .with_rotation(Quat::from_rotation_x(-FRAC_PI_2) * Quat::from_rotation_z(PI)),
         Visibility::Hidden,
-        GraveyardPile { owner: BOT },
-        CardHoverLift { current_lift: 0.0, target_lift: 0.0, base_translation: BOT_GRAVEYARD_POSITION },
+        GraveyardPile { owner: PLAYER_1 },
+        CardHoverLift { current_lift: 0.0, target_lift: 0.0, base_translation: P1_GRAVEYARD_POSITION },
     ))
     .observe(on_pile_over)
     .observe(on_pile_out)
-    .observe(on_graveyard_click::<BOT>);
+    .observe(on_graveyard_click::<PLAYER_1>);
 
     // ── Player target zones (invisible clickable areas representing players) ─
-    // Bot target zone: placed near bot's battlefield side
+    // Player 1 target zone: placed near player 1's battlefield side
     commands.spawn((
         Mesh3d(meshes.add(Plane3d::default().mesh().size(8.0, 3.0))),
         MeshMaterial3d(materials.add(StandardMaterial {
@@ -159,7 +160,7 @@ pub fn spawn_game_cards(
         })),
         Transform::from_xyz(0.0, 0.01, -6.0),
         Visibility::default(),
-        PlayerTargetZone(BOT),
+        PlayerTargetZone(PLAYER_1),
     ))
     .observe(on_zone_over)
     .observe(on_zone_out);

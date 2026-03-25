@@ -1,10 +1,10 @@
 use bevy::prelude::*;
 
 use crate::card::{
-    BotDeckPile, Card, CardBorderHighlight, CardFrontTexture, CardHighlightAssets, CardHovered,
+    P1DeckPile, Card, CardBorderHighlight, CardFrontTexture, CardHighlightAssets, CardHovered,
     DeckCard, GraveyardPile, PileHovered, CARD_THICKNESS,
 };
-use crate::game::{GraveyardBrowserState, GameResource, BOT, HUMAN};
+use crate::game::{GraveyardBrowserState, GameResource, PLAYER_1, PLAYER_0};
 
 /// Tracks a pending top-card reveal popup.
 #[derive(Resource, Default)]
@@ -72,9 +72,10 @@ pub fn highlight_hovered_cards(
     }
 }
 
-// Card aspect ratio: 88/63 ≈ 1.397
+/// Standard Magic card aspect ratio (height / width).
+const CARD_ASPECT_RATIO: f32 = 88.0 / 63.0;
 const POPUP_WIDTH: f32 = 340.0;
-const POPUP_HEIGHT: f32 = POPUP_WIDTH * 88.0 / 63.0;
+const POPUP_HEIGHT: f32 = POPUP_WIDTH * CARD_ASPECT_RATIO;
 
 pub fn peek_popup(
     mut commands: Commands,
@@ -128,9 +129,8 @@ pub fn peek_popup(
     }
 }
 
-// Card aspect ratio reused from above
 const BROWSER_CARD_WIDTH: f32 = 220.0;
-const BROWSER_CARD_HEIGHT: f32 = BROWSER_CARD_WIDTH * 88.0 / 63.0;
+const BROWSER_CARD_HEIGHT: f32 = BROWSER_CARD_WIDTH * CARD_ASPECT_RATIO;
 const BROWSER_COLS: u32 = 4;
 
 pub fn graveyard_browser(
@@ -158,7 +158,7 @@ pub fn graveyard_browser(
     if should_show && existing.is_empty() {
         let owner = state.owner;
         let graveyard = &game.state.players[owner].graveyard;
-        let owner_label = if owner == HUMAN { "Your" } else { "Bot" };
+        let owner_label = if owner == PLAYER_0 { "Player 0's" } else { "Player 1's" };
         let count = graveyard.len();
 
         let panel_width = BROWSER_CARD_WIDTH * BROWSER_COLS as f32 + 80.0;
@@ -277,18 +277,18 @@ pub fn pile_tooltip(
     mut commands: Commands,
     game: Res<GameResource>,
     deck_hovered: Query<(), (With<DeckCard>, With<CardHovered>)>,
-    bot_deck_hovered: Query<(), (With<BotDeckPile>, With<PileHovered>)>,
+    bot_deck_hovered: Query<(), (With<P1DeckPile>, With<PileHovered>)>,
     gy_hovered: Query<&GraveyardPile, With<PileHovered>>,
     existing: Query<Entity, With<PileTooltip>>,
 ) {
     let text = if !deck_hovered.is_empty() {
-        let count = game.state.players[HUMAN].library.len();
-        Some(format!("Your library: {count} card{}", if count == 1 { "" } else { "s" }))
+        let count = game.state.players[PLAYER_0].library.len();
+        Some(format!("Player 0 library: {count} card{}", if count == 1 { "" } else { "s" }))
     } else if !bot_deck_hovered.is_empty() {
-        let count = game.state.players[BOT].library.len();
-        Some(format!("Bot library: {count} card{}", if count == 1 { "" } else { "s" }))
+        let count = game.state.players[PLAYER_1].library.len();
+        Some(format!("Player 1 library: {count} card{}", if count == 1 { "" } else { "s" }))
     } else if let Some(gy) = gy_hovered.iter().next() {
-        let owner_label = if gy.owner == HUMAN { "Your" } else { "Bot" };
+        let owner_label = if gy.owner == PLAYER_0 { "Player 0's" } else { "Player 1's" };
         let count = game.state.players[gy.owner].graveyard.len();
         Some(format!("{owner_label} graveyard: {count} card{} — click to browse", if count == 1 { "" } else { "s" }))
     } else {

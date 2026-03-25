@@ -9,24 +9,38 @@ mod bot;
 mod card;
 mod config;
 mod game;
+mod render_quality;
 mod scryfall;
 mod systems;
 
-use card::spawn_game_cards;
+use card::{
+    spawn_game_cards, CardHighlightAssets, CardMeshAssets,
+    CARD_HEIGHT, CARD_WIDTH, create_border_mesh, create_rounded_rect_mesh, BORDER_WIDTH, CORNER_RADIUS,
+};
+use render_quality::{ChangeQuality, RenderQuality};
 use config::GraphicsConfig;
-use game::{build_game, BlockingState, BotTimer, GameLog, GameResource, GraveyardBrowserState, TargetingState};
+use game::{build_game, BlockingState, MulliganState, P1Timer, GameLog, GameResource, GraveyardBrowserState, TargetingState};
 use systems::animate::{
     adjust_animation_speed, animate_deck_shuffle, animate_draw_card, animate_flip,
-    animate_hand_slide, animate_hover_lift, animate_play_card, animate_reveal_peek,
-    animate_send_to_graveyard, animate_tap, AnimationSpeed,
+    animate_hand_slide, animate_hover_lift, animate_play_card, animate_return_to_deck,
+    animate_reveal_peek, animate_send_to_graveyard, animate_tap, AnimationSpeed,
 };
 use systems::game_ui::{
-    auto_advance_human, bot_system, draw_attacker_overlays, draw_blocking_gizmos,
-    handle_game_input, setup_game_hud, sync_game_visuals, trigger_reveal_animation,
-    update_bot_text, update_game_log, update_hint, update_phase_chart, update_player_text,
-    update_turn_text, AttackerGizmos, BlockingGizmos,
+    auto_advance_p0, p1_system, draw_attacker_overlays, draw_blocking_gizmos,
+    handle_game_input, mulligan_system, setup_game_hud, setup_mulligan_ui, setup_quality_panel,
+    handle_quality_buttons, sync_game_visuals, trigger_reveal_animation,
+    update_mulligan_ui, update_p1_text, update_game_log, update_hint, update_phase_chart,
+    update_player_text, update_turn_text, AttackerGizmos, BlockingGizmos,
 };
 use systems::ui::{graveyard_browser, highlight_hovered_cards, peek_popup, pile_tooltip, reveal_popup, RevealPopupState};
+
+/// Marks the decorative ground plane so quality changes can update its mesh.
+#[derive(Component)]
+struct GroundPlane;
+
+/// Marks the primary 3D camera so quality changes can update its SMAA setting.
+#[derive(Component)]
+struct MainCamera;
 
 /// All unique card names used in the game (for Scryfall image download).
 const CARD_NAMES: &[&str] = &[
@@ -34,7 +48,7 @@ const CARD_NAMES: &[&str] = &[
     "Mountain",
     "Plains",
     "Swamp",
-    // Human (RW) cards
+    // Player 0 (RW) cards
     "Savannah Lions",
     "White Knight",
     "Hopeful Eidolon",
@@ -45,7 +59,7 @@ const CARD_NAMES: &[&str] = &[
     "Shivan Dragon",
     "Wrath of God",
     "Shock",
-    // Bot (BR) cards
+    // Player 1 (BR) cards
     "Hypnotic Specter",
     "Dark Ritual",
     "Terror",
@@ -76,19 +90,22 @@ fn main() {
         .add_systems(Startup, configure_gizmos)
         .insert_resource(DirectionalLightShadowMap { size: gfx.shadow_map_size })
         .insert_resource(gfx)
+        .insert_resource(RenderQuality::default())
+        .add_message::<ChangeQuality>()
         .insert_resource(build_game())
         .insert_resource(GameLog::default())
-        .insert_resource(BotTimer(Timer::from_seconds(0.4, TimerMode::Repeating)))
+        .insert_resource(P1Timer(Timer::from_seconds(0.4, TimerMode::Repeating)))
         .insert_resource(TargetingState::default())
         .insert_resource(BlockingState::default())
         .insert_resource(GraveyardBrowserState::default())
+        .insert_resource(MulliganState::default())
         .insert_resource(RevealPopupState::default())
         .insert_resource(AnimationSpeed::default())
-        .add_systems(Startup, (setup, setup_game_hud))
-        // Game logic: bot → auto-advance → player input (ordered)
+        .add_systems(Startup, (setup, setup_game_hud, setup_mulligan_ui, setup_quality_panel))
+        // Game logic: mulligan → player 1 AI → auto-advance → player input (ordered)
         .add_systems(
             Update,
-            (bot_system, auto_advance_human, handle_game_input).chain(),
+            (mulligan_system, p1_system, auto_advance_p0, handle_game_input).chain(),
         )
         // Visual sync (after game logic)
         .add_systems(Update, sync_game_visuals.after(handle_game_input))
@@ -98,10 +115,11 @@ fn main() {
             (
                 update_turn_text,
                 update_player_text,
-                update_bot_text,
+                update_p1_text,
                 update_hint,
                 update_game_log,
                 update_phase_chart,
+                update_mulligan_ui,
             )
                 .after(handle_game_input),
         )
@@ -120,6 +138,7 @@ fn main() {
                 animate_draw_card,
                 animate_hand_slide,
                 animate_play_card,
+                animate_return_to_deck,
                 animate_send_to_graveyard,
                 animate_tap,
                 animate_reveal_peek,
@@ -129,6 +148,8 @@ fn main() {
                 adjust_animation_speed,
             ),
         )
+        // Quality menu: buttons send event, system applies all quality changes
+        .add_systems(Update, (handle_quality_buttons, apply_render_quality_change).chain())
         .run();
 }
 
@@ -146,8 +167,9 @@ fn setup(
     asset_server: Res<AssetServer>,
     game: Res<GameResource>,
     gfx: Res<GraphicsConfig>,
+    quality: Res<RenderQuality>,
 ) {
-    spawn_game_cards(&mut commands, &mut meshes, &mut materials, &asset_server, &game);
+    spawn_game_cards(&mut commands, &mut meshes, &mut materials, &asset_server, &game, quality.corner_segments());
 
     // Ambient fill light — softens harsh shadows.
     commands.insert_resource(GlobalAmbientLight {
@@ -185,13 +207,65 @@ fn setup(
 
     // Ground plane
     commands.spawn((
-        Mesh3d(meshes.add(Plane3d::default().mesh().size(50.0, 50.0).subdivisions(10))),
+        Mesh3d(meshes.add(Plane3d::default().mesh().size(50.0, 50.0).subdivisions(quality.ground_subdivisions()))),
         MeshMaterial3d(materials.add(Color::from(SILVER))),
+        GroundPlane,
     ));
 
     commands.spawn((
         Camera3d::default(),
         Transform::from_xyz(0.0, 28.0, 18.0).looking_at(Vec3::ZERO, Vec3::Y),
         Smaa { preset: gfx.smaa_preset.to_bevy() },
+        MainCamera,
     ));
+}
+
+fn apply_render_quality_change(
+    mut messages: MessageReader<ChangeQuality>,
+    mut quality: ResMut<RenderQuality>,
+    card_assets: Option<Res<CardMeshAssets>>,
+    highlight_assets: Option<Res<CardHighlightAssets>>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut shadow_map: ResMut<DirectionalLightShadowMap>,
+    ground_query: Query<&Mesh3d, With<GroundPlane>>,
+    camera_query: Query<Entity, With<MainCamera>>,
+    mut commands: Commands,
+) {
+    let Some(msg) = messages.read().last() else { return };
+    let new_quality = msg.0;
+    if new_quality == *quality {
+        return;
+    }
+    *quality = new_quality;
+
+    let segments = new_quality.corner_segments();
+
+    if let Some(assets) = &card_assets {
+        if let Some(mesh) = meshes.get_mut(&assets.card_mesh) {
+            *mesh = create_rounded_rect_mesh(CARD_WIDTH, CARD_HEIGHT, CORNER_RADIUS, segments);
+        }
+    }
+
+    if let Some(assets) = &highlight_assets {
+        if let Some(mesh) = meshes.get_mut(&assets.border_mesh) {
+            *mesh = create_border_mesh(CARD_WIDTH, CARD_HEIGHT, CORNER_RADIUS, BORDER_WIDTH, segments);
+        }
+    }
+
+    if let Ok(ground_mesh) = ground_query.single() {
+        if let Some(mesh) = meshes.get_mut(&ground_mesh.0) {
+            *mesh = Plane3d::default().mesh().size(50.0, 50.0)
+                .subdivisions(new_quality.ground_subdivisions())
+                .into();
+        }
+    }
+
+    shadow_map.size = new_quality.shadow_map_size();
+
+    if let Ok(cam) = camera_query.single() {
+        match new_quality.smaa_preset() {
+            Some(preset) => { commands.entity(cam).insert(Smaa { preset }); }
+            None => { commands.entity(cam).remove::<Smaa>(); }
+        }
+    }
 }

@@ -23,21 +23,21 @@ pub fn hand_card_transform(slot: usize, total: usize) -> Transform {
     let x = offset * HAND_CARD_SPACING;
     let y = HAND_Y - offset.abs() * HAND_FAN_Y_DROP;
     // Lower slot index = closer to camera, so left cards overlap right cards.
-    let z_offset = if total > 0 { (total - 1 - slot) as f32 } else { 0.0 };
+    let z_offset = if total > 0 { (total - 1).saturating_sub(slot) as f32 } else { 0.0 };
     let z = HAND_CENTER_Z + z_offset * CARD_THICKNESS * 4.0;
     let rot_z = -offset * HAND_FAN_ANGLE;
     Transform::from_xyz(x, y, z)
         .with_rotation(Quat::from_rotation_x(HAND_TILT_X) * Quat::from_rotation_z(rot_z))
 }
 
-/// Bot hand: face-down cards fanned at the far side (mirrored from human hand).
-pub fn bot_hand_card_transform(slot: usize, total: usize) -> Transform {
+/// Player 1 hand: face-down cards fanned at the far side (mirrored from player 0 hand).
+pub fn p1_hand_card_transform(slot: usize, total: usize) -> Transform {
     let center = (total as f32 - 1.0) / 2.0;
     let offset = slot as f32 - center;
     let x = offset * HAND_CARD_SPACING;
     let y = HAND_Y + 3.0 - offset.abs() * HAND_FAN_Y_DROP; // extra lift so cards clear the table at the far camera angle
     // Mirror z_offset so rightmost card (slot 0) is closest to bot (matches human mirroring)
-    let z_offset = if total > 0 { (total - 1 - slot) as f32 } else { 0.0 };
+    let z_offset = if total > 0 { (total - 1).saturating_sub(slot) as f32 } else { 0.0 };
     let z = -(HAND_CENTER_Z + 2.0 + z_offset * CARD_THICKNESS * 4.0); // extra 2 units back
     let rot_z = offset * HAND_FAN_ANGLE; // mirror fan direction
     // Tilt toward camera from bot's side, flipped Z (PI) so back faces up
@@ -53,14 +53,14 @@ const BF_CARD_SPACING: f32 = CARD_HEIGHT * 1.1;
 
 // Rows must be > CARD_HEIGHT (~4.19) apart so flat cards don't overlap.
 // Creature rows must each be > CARD_HEIGHT/2 (~2.1) from z=0 so opposing rows don't overlap.
-// HUMAN_CREATURE_Z=3.5: human [1.4,5.6], bot [-5.6,-1.4] → 2.8-unit gap at center.
-// HUMAN_LAND_Z=8.5: land top at 6.4, creature bottom at 5.6 → 0.8-unit gap.
-const HUMAN_CREATURE_Z: f32 = 3.5;
-const HUMAN_LAND_Z: f32 = 8.5;
+// P0_CREATURE_Z=3.5: player 0 [1.4,5.6], player 1 [-5.6,-1.4] → 2.8-unit gap at center.
+// P0_LAND_Z=8.5: land top at 6.4, creature bottom at 5.6 → 0.8-unit gap.
+const P0_CREATURE_Z: f32 = 3.5;
+const P0_LAND_Z: f32 = 8.5;
 
-// Bot rows (mirrored).
-const BOT_CREATURE_Z: f32 = -3.5;
-const BOT_LAND_Z: f32 = -8.5;
+// Player 1 rows (mirrored).
+const P1_CREATURE_Z: f32 = -3.5;
+const P1_LAND_Z: f32 = -8.5;
 
 /// How much each card in an identical-land stack is offset from the previous.
 pub const LAND_STACK_OFFSET_X: f32 = 0.18;
@@ -103,10 +103,10 @@ pub fn bf_card_transform(slot: usize, total: usize, is_land: bool, is_bot: bool,
     let x = offset * BF_CARD_SPACING;
 
     let z = match (is_bot, is_land) {
-        (false, false) => HUMAN_CREATURE_Z,
-        (false, true) => HUMAN_LAND_Z,
-        (true, false) => BOT_CREATURE_Z,
-        (true, true) => BOT_LAND_Z,
+        (false, false) => P0_CREATURE_Z,
+        (false, true) => P0_LAND_Z,
+        (true, false) => P1_CREATURE_Z,
+        (true, true) => P1_LAND_Z,
     };
 
     let base_rot = if is_bot {

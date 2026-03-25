@@ -5,24 +5,28 @@ use std::collections::{HashMap, HashSet};
 use std::f32::consts::{FRAC_PI_2, PI};
 
 use bevy::prelude::*;
+use rand::seq::SliceRandom;
 use crabomination::card::{CardId, SpellEffect};
 use crabomination::game::{GameAction, StackItem, Target, TurnStep};
 use crabomination::mana::{Color as ManaColor, ManaCost, ManaSymbol};
 
-use crate::bot::{bot_declare_blocks, bot_take_action, human_auto_target};
+use crate::bot::{p1_declare_blocks, p1_take_action, p0_auto_target};
+use crate::bot::p1_mulligan_decision;
 use crate::card::{
-    bf_card_transform, bot_hand_card_transform, card_front_material, hand_card_transform,
-    land_group_info, spawn_single_card, BattlefieldCard, BotDeckPile, BotHandCard, CardHoverLift,
+    bf_card_transform, p1_hand_card_transform, card_front_material, hand_card_transform,
+    land_group_info, spawn_single_card, Animating, BattlefieldCard, P1DeckPile, P1HandCard, CardHoverLift,
     CardHovered, CardMeshAssets, CardOwner, DeckCard, DrawCardAnimation, GameCardId, GraveyardPile,
-    HandCard, HandSlideAnimation, PlayCardAnimation, PlayerTargetZone, RevealPeekAnimation,
-    SendToGraveyardAnimation, StackCard, TapAnimation, TapState, ValidTarget, BOT_DECK_POSITION,
-    BOT_GRAVEYARD_POSITION, CARD_THICKNESS, CARD_WIDTH, DECK_CARD_Y_STEP, HUMAN_GRAVEYARD_POSITION,
-    LAND_STACK_OFFSET_X, LAND_STACK_OFFSET_Z,
+    HandCard, HandSlideAnimation, PlayCardAnimation, PlayerTargetZone, ReturnToDeckAnimation,
+    RevealPeekAnimation, SendToGraveyardAnimation, StackCard, TapAnimation, TapState, ValidTarget,
+    DECK_POSITION, P1_DECK_POSITION, P1_GRAVEYARD_POSITION, CARD_THICKNESS, CARD_WIDTH,
+    DECK_CARD_Y_STEP, P0_GRAVEYARD_POSITION, LAND_STACK_OFFSET_X, LAND_STACK_OFFSET_Z,
 };
 use crate::game::{
-    format_mana_pool, BlockingState, BotTimer, GameLog, GameResource, TargetingState, BOT, HUMAN,
+    format_mana_pool, BlockingState, MulliganState, P1Timer, GameLog, GameResource, TargetingState,
+    PLAYER_1, PLAYER_0,
 };
 use super::ui::RevealPopupState;
+use crate::render_quality::{ChangeQuality, RenderQuality};
 
 /// Max number of PassPriority calls issued by the "End Turn" button/key.
 /// Enough to cover all remaining steps in a turn without risking an infinite loop.
@@ -37,7 +41,7 @@ pub struct TurnInfoText;
 pub struct PlayerStatusText;
 
 #[derive(Component)]
-pub struct BotStatusText;
+pub struct P1StatusText;
 
 #[derive(Component)]
 pub struct GameLogText;
@@ -56,6 +60,26 @@ pub struct EndTurnButton;
 
 #[derive(Component)]
 pub struct PhaseStepLabel(pub TurnStep);
+
+/// Marker for quality preset buttons in the quality selector panel.
+#[derive(Component)]
+pub struct QualityButton(pub RenderQuality);
+
+/// Marker for the mulligan phase overlay node.
+#[derive(Component)]
+pub struct MulliganOverlay;
+
+/// Status text within the mulligan overlay.
+#[derive(Component)]
+pub struct MulliganStatusText;
+
+/// "Keep" button in the mulligan overlay.
+#[derive(Component)]
+pub struct MulliganKeepButton;
+
+/// "Mulligan" button in the mulligan overlay.
+#[derive(Component)]
+pub struct MulliganMulliganButton;
 
 /// Custom gizmo config group for blocking indicators (thicker lines).
 #[derive(Default, Reflect, GizmoConfigGroup)]
@@ -147,7 +171,7 @@ pub fn setup_game_hud(mut commands: Commands, asset_server: Res<AssetServer>) {
                 Text::new(""),
                 tf(16.0),
                 TextColor(Color::srgb(1.0, 0.65, 0.65)),
-                BotStatusText,
+                P1StatusText,
             ));
         });
 
@@ -256,7 +280,7 @@ pub fn update_turn_text(
     let s = &game.state;
     t.0 = if let Some(winner) = s.game_over {
         match winner {
-            Some(p) => format!("GAME OVER — {} wins!", if p == HUMAN { "You" } else { "Bot" }),
+            Some(p) => format!("GAME OVER — {} wins!", if p == PLAYER_0 { "Player 0" } else { "Player 1" }),
             None => "GAME OVER — Draw!".into(),
         }
     } else {
@@ -264,7 +288,7 @@ pub fn update_turn_text(
             "Turn {} | {:?} | {}'s turn",
             s.turn_number,
             s.step,
-            if s.active_player_idx == HUMAN { "Your" } else { "Bot's" }
+            if s.active_player_idx == PLAYER_0 { "Player 0" } else { "Player 1" }
         )
     };
 }
@@ -275,26 +299,26 @@ pub fn update_player_text(
 ) {
     let Ok(mut t) = q.single_mut() else { return };
     let s = &game.state;
-    let p = &s.players[HUMAN];
+    let p = &s.players[PLAYER_0];
     t.0 = format!(
-        "You | Life: {} | Hand: {} | Deck: {} | GY: {} | Mana: {}",
+        "Player 0 | Life: {} | Hand: {} | Deck: {} | GY: {} | Mana: {}",
         p.life,
         p.hand.len(),
         p.library.len(),
         p.graveyard.len(),
-        format_mana_pool(s, HUMAN)
+        format_mana_pool(s, PLAYER_0)
     );
 }
 
-pub fn update_bot_text(
+pub fn update_p1_text(
     game: Res<GameResource>,
-    mut q: Query<&mut Text, With<BotStatusText>>,
+    mut q: Query<&mut Text, With<P1StatusText>>,
 ) {
     let Ok(mut t) = q.single_mut() else { return };
     let s = &game.state;
-    let p = &s.players[BOT];
+    let p = &s.players[PLAYER_1];
     t.0 = format!(
-        "Bot | Life: {} | Hand: {} | Deck: {} | GY: {}",
+        "Player 1 | Life: {} | Hand: {} | Deck: {} | GY: {}",
         p.life, p.hand.len(), p.library.len(), p.graveyard.len()
     );
 }
@@ -324,7 +348,7 @@ pub fn draw_blocking_gizmos(
     bf_cards: Query<(&Transform, &GameCardId, &CardOwner), With<BattlefieldCard>>,
     mut gizmos: Gizmos<BlockingGizmos>,
 ) {
-    if game.state.step != TurnStep::DeclareBlockers || game.state.active_player_idx != BOT {
+    if game.state.step != TurnStep::DeclareBlockers || game.state.active_player_idx != PLAYER_1 {
         return;
     }
 
@@ -438,9 +462,26 @@ pub fn update_hint(
     game: Res<GameResource>,
     targeting: Res<TargetingState>,
     blocking: Res<BlockingState>,
+    mulligan: Res<MulliganState>,
     mut q: Query<&mut Text, With<HintText>>,
 ) {
     let Ok(mut t) = q.single_mut() else { return };
+    if mulligan.active {
+        t.0 = if !mulligan.initial_deal_done {
+            "Dealing opening hands...".into()
+        } else if mulligan.p0_cards_to_bottom > 0 {
+            format!(
+                "Click {} card{} in your hand to put to the bottom of your library.",
+                mulligan.p0_cards_to_bottom,
+                if mulligan.p0_cards_to_bottom == 1 { "" } else { "s" }
+            )
+        } else if !mulligan.p0_kept {
+            "Keep your hand (K) or take a mulligan (M).".into()
+        } else {
+            "Waiting for opponent...".into()
+        };
+        return;
+    }
     if game.state.is_game_over() {
         t.0 = String::new();
         return;
@@ -454,8 +495,8 @@ pub fn update_hint(
         t.0 = format!("{stack_size} item(s) on stack. P = Resolve.");
         return;
     }
-    // Human defending against bot's attack
-    if game.state.step == TurnStep::DeclareBlockers && game.state.active_player_idx == BOT {
+    // Player 0 defending against player 1's attack
+    if game.state.step == TurnStep::DeclareBlockers && game.state.active_player_idx == PLAYER_1 {
         t.0 = if blocking.selected_blocker.is_some() {
             "Click an attacking creature to assign the block. Right-click to cancel.".into()
         } else {
@@ -464,17 +505,17 @@ pub fn update_hint(
         return;
     }
     t.0 = match (game.state.active_player_idx, game.state.step) {
-        (HUMAN, TurnStep::PreCombatMain) | (HUMAN, TurnStep::PostCombatMain) => {
+        (PLAYER_0, TurnStep::PreCombatMain) | (PLAYER_0, TurnStep::PostCombatMain) => {
             "Click a hand card to play it. P = Pass Priority.".into()
         }
-        (HUMAN, TurnStep::DeclareAttackers) => {
+        (PLAYER_0, TurnStep::DeclareAttackers) => {
             "A = Attack with all eligible creatures. P = Pass (no attack).".into()
         }
-        (HUMAN, TurnStep::DeclareBlockers) => {
-            "Bot is assigning blocks. P = Proceed to combat.".into()
+        (PLAYER_0, TurnStep::DeclareBlockers) => {
+            "Player 1 is assigning blocks. P = Proceed to combat.".into()
         }
-        (HUMAN, _) => String::new(),
-        (BOT, _) => "Bot is thinking...".into(),
+        (PLAYER_0, _) => String::new(),
+        (PLAYER_1, _) => "Player 1 is thinking...".into(),
         _ => String::new(),
     };
 }
@@ -533,26 +574,28 @@ pub fn sync_game_visuals(
     asset_server: Res<AssetServer>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     card_assets: Option<Res<CardMeshAssets>>,
-    hand_cards: Query<(Entity, &GameCardId, &Transform, Option<&StackCard>), (With<HandCard>, Without<SendToGraveyardAnimation>, Without<DrawCardAnimation>)>,
-    deck_cards: Query<(Entity, &GameCardId, &DeckCard, &Transform), Without<HandCard>>,
-    bf_cards: Query<(Entity, &GameCardId, &CardOwner, &BattlefieldCard, &Transform, Option<&TapState>), (Without<HandCard>, Without<SendToGraveyardAnimation>)>,
-    mut bot_deck_q: Query<(Entity, &BotDeckPile, &mut Transform, &mut CardHoverLift), Without<GameCardId>>,
-    mut graveyard_q: Query<(&GraveyardPile, &mut Transform, &mut Visibility, &mut CardHoverLift, &mut MeshMaterial3d<StandardMaterial>), (Without<BotDeckPile>, Without<GameCardId>)>,
-    bot_hand_q: Query<(Entity, &BotHandCard, &Transform), (Without<BotDeckPile>, Without<GraveyardPile>, Without<SendToGraveyardAnimation>)>,
+    removed_animating: RemovedComponents<Animating>,
+    hand_cards: Query<(Entity, &GameCardId, &Transform, Option<&StackCard>, &CardHoverLift), (With<HandCard>, Without<Animating>)>,
+    deck_cards: Query<(Entity, &GameCardId, &DeckCard, &Transform), (Without<HandCard>, Without<Animating>)>,
+    bf_cards: Query<(Entity, &GameCardId, &CardOwner, &BattlefieldCard, &Transform, Option<&TapState>), (Without<HandCard>, Without<Animating>)>,
+    mut bot_deck_q: Query<(Entity, &P1DeckPile, &mut Transform, &mut CardHoverLift), Without<GameCardId>>,
+    mut graveyard_q: Query<(&GraveyardPile, &mut Transform, &mut Visibility, &mut CardHoverLift, &mut MeshMaterial3d<StandardMaterial>), (Without<P1DeckPile>, Without<GameCardId>)>,
+    bot_hand_q: Query<(Entity, &P1HandCard, &Transform, Has<Animating>), (Without<P1DeckPile>, Without<GraveyardPile>)>,
     gy_anims: Query<&SendToGraveyardAnimation>,
+    all_bf_entities: Query<&GameCardId, With<BattlefieldCard>>,
 ) {
     let state = &game.state;
 
     // ── Always update: deck/graveyard heights and bot hand count ─────────────
     // These must run every frame so they stay correct after spawning.
 
-    let bot_deck_size = state.players[BOT].library.len();
+    let p1_deck_size = state.players[PLAYER_1].library.len();
     for (entity, pile, mut transform, mut lift) in &mut bot_deck_q {
-        if pile.index >= bot_deck_size {
+        if pile.index >= p1_deck_size {
             commands.entity(entity).despawn();
         } else {
             let y = pile.index as f32 * DECK_CARD_Y_STEP + 0.01;
-            let pos = Vec3::new(BOT_DECK_POSITION.x, y, BOT_DECK_POSITION.z);
+            let pos = Vec3::new(P1_DECK_POSITION.x, y, P1_DECK_POSITION.z);
             transform.translation = pos;
             lift.base_translation = pos;
         }
@@ -572,7 +615,7 @@ pub fn sync_game_visuals(
             *vis = Visibility::Hidden;
         } else {
             *vis = Visibility::Visible;
-            let base_pos = if gy.owner == HUMAN { HUMAN_GRAVEYARD_POSITION } else { BOT_GRAVEYARD_POSITION };
+            let base_pos = if gy.owner == PLAYER_0 { P0_GRAVEYARD_POSITION } else { P1_GRAVEYARD_POSITION };
             let y = arrived as f32 * DECK_CARD_Y_STEP + 0.01;
             let pos = Vec3::new(base_pos.x, y, base_pos.z);
             transform.translation = pos;
@@ -580,49 +623,269 @@ pub fn sync_game_visuals(
         }
     }
 
-    if !game.is_changed() {
+    if !game.is_changed() && removed_animating.is_empty() {
         return;
     }
     let Some(card_assets) = card_assets else { return };
 
-    // ── Bot hand sync (spawn/despawn/slide on game state change) ─────────────
-    {
-        let bot_hand_size = state.players[BOT].hand.len();
-        let all_bot_hand: Vec<(Entity, usize, Vec3, Quat)> = bot_hand_q.iter()
-            .map(|(e, bh, t)| (e, bh.slot, t.translation, t.rotation))
+    // ── Player 1 hand + battlefield sync ──────────────────────────────────────
+    // Collect all P1HandCards first (used for both hand reconciliation and BF
+    // spawn start positions). Include animating cards in the count so we never
+    // double-spawn.
+    let p1_hand_size = state.players[PLAYER_1].hand.len();
+    let all_p1_hand: Vec<(Entity, usize, Vec3, Quat, bool)> = bot_hand_q.iter()
+        .map(|(e, bh, t, is_animating)| (e, bh.slot, t.translation, t.rotation, is_animating))
+        .collect();
+
+    // Pool of non-animating hand cards available to use as animation origins for
+    // newly played P1 BF cards (highest-slot first so we pull from the "end" of the fan).
+    // Sorted ascending by slot so pop() always yields the highest-slotted card,
+    // keeping remaining slots contiguous and < p1_hand_size after promotion.
+    let mut hand_pool: Vec<(Entity, Vec3, Quat)> = {
+        let mut pool: Vec<_> = all_p1_hand.iter()
+            .filter(|(_, _, _, _, is_anim)| !is_anim)
+            .map(|(e, slot, pos, rot, _)| (*e, *slot, *pos, *rot))
             .collect();
-        let visual_bot_hand_size = all_bot_hand.len();
+        pool.sort_by_key(|(_, slot, _, _)| *slot);
+        pool.into_iter().map(|(e, _, pos, rot)| (e, pos, rot)).collect()
+    };
+    // Entities consumed from the hand pool for BF animations (excluded from hand count).
+    let mut promoted: HashSet<Entity> = HashSet::new();
 
-        let mut removed: HashSet<Entity> = HashSet::new();
+    // ── Update graveyard pile face-up material ────────────────────────────────
+    for (gy, _transform, _vis, _lift, mut mat) in &mut graveyard_q {
+        let graveyard = &state.players[gy.owner].graveyard;
+        let in_flight = gy_in_flight.get(&gy.owner).copied().unwrap_or(0);
+        let arrived = graveyard.len().saturating_sub(in_flight);
+        if arrived > 0 {
+            if let Some(top) = graveyard.get(arrived - 1) {
+                *mat = MeshMaterial3d(card_front_material(top.definition.name, &mut materials, &asset_server));
+            }
+        }
+    }
 
-        if visual_bot_hand_size > bot_hand_size {
-            // Cards left hand — despawn immediately. The BF entity's PlayCardAnimation
-            // already shows played cards flying to the battlefield; we don't want a
-            // second graveyard animation that conflicts with it.
-            let mut sorted = all_bot_hand.clone();
-            sorted.sort_by_key(|(_, slot, _, _)| std::cmp::Reverse(*slot));
-            for (entity, _, _, _) in sorted.iter().take(visual_bot_hand_size - bot_hand_size) {
+    // Build sets of CardIds in each game-engine zone
+    let stack_ids: HashSet<CardId> = state.stack.iter().filter_map(|item| {
+        if let StackItem::Spell { card, .. } = item { Some(card.id) } else { None }
+    }).collect();
+    let hand_ids: HashSet<CardId> = state.players[PLAYER_0].hand.iter().map(|c| c.id).collect();
+    let p0_bf_ids: HashSet<CardId> = state.battlefield.iter().filter(|c| c.owner == PLAYER_0).map(|c| c.id).collect();
+    let p1_bf_ids: HashSet<CardId> = state.battlefield.iter().filter(|c| c.owner == PLAYER_1).map(|c| c.id).collect();
+    let all_bf_ids: HashSet<CardId> = p0_bf_ids.iter().chain(p1_bf_ids.iter()).copied().collect();
+
+    let hand_total = hand_ids.len();
+    let (_p0_lands, p0_creatures) = bf_row_counts(state, PLAYER_0);
+    let (_p1_lands, p1_creatures) = bf_row_counts(state, PLAYER_1);
+
+    // Include animating BF entities so in-flight cards aren't re-spawned.
+    let visual_bf_ids: HashSet<CardId> = all_bf_entities.iter().map(|gid| gid.0).collect();
+
+    // ── Deck → Hand transitions ──────────────────────────────────────────────
+    for (entity, game_id, _deck_card, transform) in &deck_cards {
+        if hand_ids.contains(&game_id.0) {
+            let slot = state.players[PLAYER_0].hand.iter().position(|c| c.id == game_id.0)
+                .unwrap_or(hand_total.saturating_sub(1));
+            let target = hand_card_transform(slot, hand_total);
+            commands.entity(entity)
+                .remove::<DeckCard>()
+                .insert(HandCard { slot })
+                .insert(Animating)
+                .insert(DrawCardAnimation {
+                    progress: 0.0, speed: 1.5,
+                    start_translation: transform.translation, start_rotation: transform.rotation,
+                    target_translation: target.translation, target_rotation: target.rotation,
+                });
+        }
+    }
+
+    // ── Hand → Battlefield / Stack transitions ───────────────────────────────
+    for (entity, game_id, transform, stack_card, _lift) in &hand_cards {
+        if p0_bf_ids.contains(&game_id.0) {
+            let card_inst = state.battlefield.iter().find(|c| c.id == game_id.0);
+            let is_land = card_inst.map_or(false, |c| c.definition.is_land());
+            let target = if is_land {
+                land_card_transform(state, PLAYER_0, game_id.0, false).unwrap_or_else(|| {
+                    bf_card_transform(0, 1, true, false, false)
+                })
+            } else {
+                let row_total = p0_creatures;
+                let slot = bf_row_slot(state, PLAYER_0, game_id.0, false).unwrap_or(0);
+                bf_card_transform(slot, row_total, false, false, false)
+            };
+            commands.entity(entity)
+                .remove::<HandCard>()
+                .remove::<StackCard>()
+                .remove::<CardHovered>()
+                .insert(BattlefieldCard { is_land })
+                .insert(CardOwner(PLAYER_0))
+                .insert(TapState { tapped: false })
+                .insert(Animating)
+                .insert(PlayCardAnimation {
+                    progress: 0.0, speed: 2.0,
+                    start_translation: transform.translation, start_rotation: transform.rotation,
+                    target_translation: target.translation, target_rotation: target.rotation,
+                });
+        } else if stack_ids.contains(&game_id.0) {
+            if stack_card.is_none() {
+                // First time we see this card on the stack — fly it to the center
+                let idx = state.stack.iter().position(|item| {
+                    matches!(item, StackItem::Spell { card, .. } if card.id == game_id.0)
+                }).unwrap_or(0);
+                let total = stack_ids.len();
+                let target = stack_card_transform(idx, total);
+                commands.entity(entity)
+                    .remove::<CardHovered>()
+                    .insert(StackCard)
+                    .insert(Animating)
+                    .insert(PlayCardAnimation {
+                        progress: 0.0, speed: 2.0,
+                        start_translation: transform.translation, start_rotation: transform.rotation,
+                        target_translation: target.translation, target_rotation: target.rotation,
+                    });
+            }
+        } else if !hand_ids.contains(&game_id.0) {
+            // Determine destination: library (mulligan return) or graveyard.
+            let returned_to_library = state.players[PLAYER_0].library.iter().any(|c| c.id == game_id.0);
+            if returned_to_library {
+                let deck_rot = Quat::from_rotation_x(FRAC_PI_2) * Quat::from_rotation_z(PI);
+                commands.entity(entity)
+                    .remove::<CardHovered>()
+                    .insert(Animating)
+                    .insert(ReturnToDeckAnimation {
+                        progress: 0.0,
+                        speed: 2.5,
+                        start_translation: transform.translation,
+                        start_rotation: transform.rotation,
+                        target_translation: DECK_POSITION,
+                        target_rotation: deck_rot,
+                    });
+            } else {
+                commands.entity(entity)
+                    .remove::<HandCard>()
+                    .remove::<CardHovered>()
+                    .insert(Animating)
+                    .insert(SendToGraveyardAnimation {
+                        progress: 0.0,
+                        speed: 1.5,
+                        start_translation: transform.translation,
+                        start_rotation: transform.rotation,
+                        target_translation: P0_GRAVEYARD_POSITION,
+                        target_rotation: Quat::from_rotation_x(-FRAC_PI_2),
+                        owner: PLAYER_0,
+                    });
+            }
+        }
+    }
+
+    // ── Battlefield → Graveyard transitions ──────────────────────────────────
+    for (entity, game_id, owner, _bf, transform, _) in &bf_cards {
+        if !all_bf_ids.contains(&game_id.0) {
+            let (gy_pos, gy_rot) = if owner.0 == PLAYER_0 {
+                (P0_GRAVEYARD_POSITION, Quat::from_rotation_x(-FRAC_PI_2))
+            } else {
+                (P1_GRAVEYARD_POSITION, Quat::from_rotation_x(-FRAC_PI_2) * Quat::from_rotation_z(PI))
+            };
+            commands.entity(entity)
+                .remove::<BattlefieldCard>()
+                .remove::<TapState>()
+                .remove::<CardHovered>()
+                .insert(Animating)
+                .insert(SendToGraveyardAnimation {
+                    progress: 0.0,
+                    speed: 1.5,
+                    start_translation: transform.translation,
+                    start_rotation: transform.rotation,
+                    target_translation: gy_pos,
+                    target_rotation: gy_rot,
+                    owner: owner.0,
+                });
+        }
+    }
+
+    // ── Spawn new player 1 battlefield cards ─────────────────────────────────
+    // Where possible, pull a real P1HandCard entity's position as the animation
+    // start so the card visually flies from the bot's hand to the board.
+    for card in state.battlefield.iter().filter(|c| c.owner == PLAYER_1) {
+        if visual_bf_ids.contains(&card.id) {
+            continue;
+        }
+        let is_land = card.definition.is_land();
+        let target = if is_land {
+            land_card_transform(state, PLAYER_1, card.id, true).unwrap_or_else(|| {
+                bf_card_transform(0, 1, true, true, false)
+            })
+        } else {
+            let row_total = p1_creatures;
+            let slot = bf_row_slot(state, PLAYER_1, card.id, false).unwrap_or(0);
+            bf_card_transform(slot, row_total, false, true, card.tapped)
+        };
+
+        // Reuse an actual hand card position; fall back to computed center if none available.
+        let (start_pos, start_rot) = if let Some((hand_entity, pos, rot)) = hand_pool.pop() {
+            commands.entity(hand_entity).despawn();
+            promoted.insert(hand_entity);
+            (pos, rot)
+        } else {
+            let c = p1_hand_card_transform(0, 1);
+            (c.translation, c.rotation)
+        };
+
+        let front_mat = card_front_material(card.definition.name, &mut materials, &asset_server);
+        let entity = spawn_single_card(
+            &mut commands, &card_assets.card_mesh, front_mat,
+            card_assets.back_material.clone(),
+            Transform::from_translation(start_pos).with_rotation(start_rot),
+            GameCardId(card.id), card.definition.name, target.translation,
+        );
+        commands.entity(entity).insert((
+            BattlefieldCard { is_land },
+            CardOwner(PLAYER_1),
+            TapState { tapped: card.tapped },
+            Animating,
+            PlayCardAnimation {
+                progress: 0.0,
+                speed: 2.0,
+                start_translation: start_pos,
+                start_rotation: start_rot,
+                target_translation: target.translation,
+                target_rotation: target.rotation,
+            },
+        ));
+    }
+
+    // ── Player 1 hand reconciliation ──────────────────────────────────────────
+    {
+        // Cards promoted to BF are already despawned above; exclude them from count.
+        let visual_p1_hand_size = all_p1_hand.len() - promoted.len();
+        let mut removed: HashSet<Entity> = promoted.clone();
+
+        if visual_p1_hand_size > p1_hand_size {
+            let mut sorted: Vec<_> = all_p1_hand.iter()
+                .filter(|(e, _, _, _, _)| !promoted.contains(e))
+                .collect();
+            sorted.sort_by_key(|(_, slot, _, _, _)| std::cmp::Reverse(*slot));
+            for (entity, _, _, _, _) in sorted.iter().take(visual_p1_hand_size - p1_hand_size) {
                 commands.entity(*entity).despawn();
                 removed.insert(*entity);
             }
-        } else if visual_bot_hand_size < bot_hand_size {
-            // Cards added to hand — spawn new draw animations.
-            let deck_y = bot_hand_size as f32 * DECK_CARD_Y_STEP + 0.5;
-            let deck_pos = Vec3::new(BOT_DECK_POSITION.x, deck_y, BOT_DECK_POSITION.z);
-            for slot in visual_bot_hand_size..bot_hand_size {
-                let target = bot_hand_card_transform(slot, bot_hand_size);
+        } else if visual_p1_hand_size < p1_hand_size {
+            let deck_y = p1_hand_size as f32 * DECK_CARD_Y_STEP + 0.5;
+            let deck_pos = Vec3::new(P1_DECK_POSITION.x, deck_y, P1_DECK_POSITION.z);
+            for slot in visual_p1_hand_size..p1_hand_size {
+                let target = p1_hand_card_transform(slot, p1_hand_size);
                 let back_mat = card_assets.back_material.clone();
                 let card_mesh = card_assets.card_mesh.clone();
                 let start_transform = Transform::from_translation(deck_pos);
                 commands.spawn((
                     start_transform,
                     Visibility::default(),
-                    BotHandCard { slot },
+                    P1HandCard { slot },
                     CardHoverLift {
                         current_lift: 0.0,
                         target_lift: 0.0,
                         base_translation: target.translation,
                     },
+                    Animating,
                     PlayCardAnimation {
                         progress: 0.0,
                         speed: 2.0,
@@ -648,12 +911,22 @@ pub fn sync_game_visuals(
             }
         }
 
-        // Slide remaining cards to their new positions.
-        for (entity, slot, pos, _rot) in &all_bot_hand {
-            if removed.contains(entity) { continue; }
-            let target = bot_hand_card_transform(*slot, bot_hand_size);
+        // Despawn any cards whose slot is now out of range (can happen when an
+        // animating card had a high slot that wasn't cleaned up by the count pass).
+        for (entity, slot, _, _, _) in &all_p1_hand {
+            if !removed.contains(entity) && *slot >= p1_hand_size {
+                commands.entity(*entity).despawn();
+                removed.insert(*entity);
+            }
+        }
+
+        // Slide remaining non-animating cards to their new positions.
+        for (entity, slot, pos, _rot, is_animating) in &all_p1_hand {
+            if removed.contains(entity) || *is_animating { continue; }
+            let target = p1_hand_card_transform(*slot, p1_hand_size);
             if pos.distance(target.translation) > 0.001 {
                 commands.entity(*entity)
+                    .insert(Animating)
                     .insert(HandSlideAnimation {
                         progress: 0.0,
                         speed: 4.0,
@@ -670,187 +943,20 @@ pub fn sync_game_visuals(
         }
     }
 
-    // ── Update graveyard pile face-up material ────────────────────────────────
-    for (gy, _transform, _vis, _lift, mut mat) in &mut graveyard_q {
-        let graveyard = &state.players[gy.owner].graveyard;
-        let in_flight = gy_in_flight.get(&gy.owner).copied().unwrap_or(0);
-        let arrived = graveyard.len().saturating_sub(in_flight);
-        if arrived > 0 {
-            if let Some(top) = graveyard.get(arrived - 1) {
-                *mat = MeshMaterial3d(card_front_material(top.definition.name, &mut materials, &asset_server));
-            }
-        }
-    }
-
-    // Build sets of CardIds in each game-engine zone
-    let stack_ids: HashSet<CardId> = state.stack.iter().filter_map(|item| {
-        if let StackItem::Spell { card, .. } = item { Some(card.id) } else { None }
-    }).collect();
-    let hand_ids: HashSet<CardId> = state.players[HUMAN].hand.iter().map(|c| c.id).collect();
-    let human_bf_ids: HashSet<CardId> = state.battlefield.iter().filter(|c| c.owner == HUMAN).map(|c| c.id).collect();
-    let bot_bf_ids: HashSet<CardId> = state.battlefield.iter().filter(|c| c.owner == BOT).map(|c| c.id).collect();
-    let all_bf_ids: HashSet<CardId> = human_bf_ids.iter().chain(bot_bf_ids.iter()).copied().collect();
-
-    let hand_total = hand_ids.len();
-    let (human_lands, human_creatures) = bf_row_counts(state, HUMAN);
-    let (bot_lands, bot_creatures) = bf_row_counts(state, BOT);
-
-    let visual_bf_ids: HashSet<CardId> = bf_cards.iter().map(|(_, gid, _, _, _, _)| gid.0).collect();
-
-    // ── Deck → Hand transitions ──────────────────────────────────────────────
-    for (entity, game_id, _deck_card, transform) in &deck_cards {
-        if hand_ids.contains(&game_id.0) {
-            let slot = state.players[HUMAN].hand.iter().position(|c| c.id == game_id.0)
-                .unwrap_or(hand_total.saturating_sub(1));
-            let target = hand_card_transform(slot, hand_total);
-            commands.entity(entity)
-                .remove::<DeckCard>()
-                .insert(HandCard { slot })
-                .insert(DrawCardAnimation {
-                    progress: 0.0, speed: 1.5,
-                    start_translation: transform.translation, start_rotation: transform.rotation,
-                    target_translation: target.translation, target_rotation: target.rotation,
-                });
-        }
-    }
-
-    // ── Hand → Battlefield / Stack transitions ───────────────────────────────
-    for (entity, game_id, transform, stack_card) in &hand_cards {
-        if human_bf_ids.contains(&game_id.0) {
-            let card_inst = state.battlefield.iter().find(|c| c.id == game_id.0);
-            let is_land = card_inst.map_or(false, |c| c.definition.is_land());
-            let target = if is_land {
-                land_card_transform(state, HUMAN, game_id.0, false).unwrap_or_else(|| {
-                    bf_card_transform(0, 1, true, false, false)
-                })
-            } else {
-                let row_total = human_creatures;
-                let slot = bf_row_slot(state, HUMAN, game_id.0, false).unwrap_or(0);
-                bf_card_transform(slot, row_total, false, false, false)
-            };
-            commands.entity(entity)
-                .remove::<HandCard>()
-                .remove::<StackCard>()
-                .remove::<CardHovered>()
-                .insert(BattlefieldCard { is_land })
-                .insert(CardOwner(HUMAN))
-                .insert(TapState { tapped: false })
-                .insert(PlayCardAnimation {
-                    progress: 0.0, speed: 2.0,
-                    start_translation: transform.translation, start_rotation: transform.rotation,
-                    target_translation: target.translation, target_rotation: target.rotation,
-                });
-        } else if stack_ids.contains(&game_id.0) {
-            if stack_card.is_none() {
-                // First time we see this card on the stack — fly it to the center
-                let idx = state.stack.iter().position(|item| {
-                    matches!(item, StackItem::Spell { card, .. } if card.id == game_id.0)
-                }).unwrap_or(0);
-                let total = stack_ids.len();
-                let target = stack_card_transform(idx, total);
-                commands.entity(entity)
-                    .remove::<CardHovered>()
-                    .insert(StackCard)
-                    .insert(PlayCardAnimation {
-                        progress: 0.0, speed: 2.0,
-                        start_translation: transform.translation, start_rotation: transform.rotation,
-                        target_translation: target.translation, target_rotation: target.rotation,
-                    });
-            }
-        } else if !hand_ids.contains(&game_id.0) {
-            commands.entity(entity)
-                .remove::<HandCard>()
-                .remove::<CardHovered>()
-                .insert(SendToGraveyardAnimation {
-                    progress: 0.0,
-                    speed: 1.5,
-                    start_translation: transform.translation,
-                    start_rotation: transform.rotation,
-                    target_translation: HUMAN_GRAVEYARD_POSITION,
-                    target_rotation: Quat::from_rotation_x(-FRAC_PI_2),
-                    owner: HUMAN,
-                });
-        }
-    }
-
-    // ── Battlefield → Graveyard transitions ──────────────────────────────────
-    for (entity, game_id, owner, _bf, transform, _) in &bf_cards {
-        if !all_bf_ids.contains(&game_id.0) {
-            let (gy_pos, gy_rot) = if owner.0 == HUMAN {
-                (HUMAN_GRAVEYARD_POSITION, Quat::from_rotation_x(-FRAC_PI_2))
-            } else {
-                (BOT_GRAVEYARD_POSITION, Quat::from_rotation_x(-FRAC_PI_2) * Quat::from_rotation_z(PI))
-            };
-            commands.entity(entity)
-                .remove::<BattlefieldCard>()
-                .remove::<TapState>()
-                .remove::<CardHovered>()
-                .insert(SendToGraveyardAnimation {
-                    progress: 0.0,
-                    speed: 1.5,
-                    start_translation: transform.translation,
-                    start_rotation: transform.rotation,
-                    target_translation: gy_pos,
-                    target_rotation: gy_rot,
-                    owner: owner.0,
-                });
-        }
-    }
-
-    // ── Spawn new bot battlefield cards ──────────────────────────────────────
-    // Use the bot hand center position as the animation start point.
-    let bot_hand_center = bot_hand_card_transform(0, 1);
-    for card in state.battlefield.iter().filter(|c| c.owner == BOT) {
-        if visual_bf_ids.contains(&card.id) {
-            continue;
-        }
-        let is_land = card.definition.is_land();
-        let target = if is_land {
-            land_card_transform(state, BOT, card.id, true).unwrap_or_else(|| {
-                bf_card_transform(0, 1, true, true, false)
-            })
-        } else {
-            let row_total = bot_creatures;
-            let slot = bf_row_slot(state, BOT, card.id, false).unwrap_or(0);
-            bf_card_transform(slot, row_total, false, true, card.tapped)
-        };
-        let front_mat = card_front_material(card.definition.name, &mut materials, &asset_server);
-
-        let entity = spawn_single_card(
-            &mut commands, &card_assets.card_mesh, front_mat,
-            card_assets.back_material.clone(),
-            Transform::from_translation(bot_hand_center.translation).with_rotation(bot_hand_center.rotation),
-            GameCardId(card.id), card.definition.name, target.translation,
-        );
-        commands.entity(entity).insert((
-            BattlefieldCard { is_land },
-            CardOwner(BOT),
-            TapState { tapped: card.tapped },
-            PlayCardAnimation {
-                progress: 0.0,
-                speed: 2.0,
-                start_translation: bot_hand_center.translation,
-                start_rotation: bot_hand_center.rotation,
-                target_translation: target.translation,
-                target_rotation: target.rotation,
-            },
-        ));
-    }
-
-    // ── Also spawn new human battlefield cards that don't have entities yet ──
+    // ── Also spawn new player 0 battlefield cards that don't have entities yet ─
     // (e.g. cards that entered via game actions without going through hand→bf)
-    for card in state.battlefield.iter().filter(|c| c.owner == HUMAN) {
-        if visual_bf_ids.contains(&card.id) || hand_cards.iter().any(|(_, gid, _, _)| gid.0 == card.id) {
+    for card in state.battlefield.iter().filter(|c| c.owner == PLAYER_0) {
+        if visual_bf_ids.contains(&card.id) || hand_cards.iter().any(|(_, gid, _, _, _)| gid.0 == card.id) {
             continue;
         }
         let is_land = card.definition.is_land();
         let target = if is_land {
-            land_card_transform(state, HUMAN, card.id, false).unwrap_or_else(|| {
+            land_card_transform(state, PLAYER_0, card.id, false).unwrap_or_else(|| {
                 bf_card_transform(0, 1, true, false, false)
             })
         } else {
-            let row_total = human_creatures;
-            let slot = bf_row_slot(state, HUMAN, card.id, false).unwrap_or(0);
+            let row_total = p0_creatures;
+            let slot = bf_row_slot(state, PLAYER_0, card.id, false).unwrap_or(0);
             bf_card_transform(slot, row_total, false, false, card.tapped)
         };
         let front_mat = card_front_material(card.definition.name, &mut materials, &asset_server);
@@ -862,25 +968,28 @@ pub fn sync_game_visuals(
         );
         commands.entity(entity).insert((
             BattlefieldCard { is_land },
-            CardOwner(HUMAN),
+            CardOwner(PLAYER_0),
             TapState { tapped: card.tapped },
         ));
     }
 
     // ── Rebalance hand slots ─────────────────────────────────────────────────
-    for (entity, game_id, transform, stack_card) in &hand_cards {
+    for (entity, game_id, _transform, stack_card, lift) in &hand_cards {
         if stack_card.is_some() { continue; } // don't slide stack cards back to hand
         if !hand_ids.contains(&game_id.0) { continue; }
-        let Some(new_slot) = state.players[HUMAN].hand.iter().position(|c| c.id == game_id.0) else { continue; };
+        let Some(new_slot) = state.players[PLAYER_0].hand.iter().position(|c| c.id == game_id.0) else { continue; };
         let target = hand_card_transform(new_slot, hand_total);
-        let dist = (transform.translation - target.translation).length();
+        // Compare base position (no hover-lift offset) to avoid spurious slides on hovered cards.
+        let dist = (lift.base_translation - target.translation).length();
         if dist > 0.1 {
-            commands.entity(entity).insert(HandSlideAnimation {
-                progress: 0.0, speed: 3.0,
-                start_translation: transform.translation,
-                target_translation: target.translation,
-                target_rotation: target.rotation,
-            });
+            commands.entity(entity)
+                .insert(Animating)
+                .insert(HandSlideAnimation {
+                    progress: 0.0, speed: 3.0,
+                    start_translation: lift.base_translation,
+                    target_translation: target.translation,
+                    target_rotation: target.rotation,
+                });
         }
         commands.entity(entity).insert(HandCard { slot: new_slot });
     }
@@ -888,7 +997,7 @@ pub fn sync_game_visuals(
     // ── Rebalance battlefield positions + sync tapped state ──────────────────
     for (entity, game_id, owner, bf, _transform, tap_state) in &bf_cards {
         if !all_bf_ids.contains(&game_id.0) { continue; }
-        let is_bot = owner.0 == BOT;
+        let is_bot = owner.0 == PLAYER_1;
         let is_land = bf.is_land;
 
         // Check tapped state from game engine
@@ -910,14 +1019,14 @@ pub fn sync_game_visuals(
                 None => continue,
             }
         } else {
-            let row_total = if is_bot { bot_creatures } else { human_creatures };
+            let row_total = if is_bot { p1_creatures } else { p0_creatures };
             let Some(slot) = bf_row_slot(state, owner.0, game_id.0, false) else { continue; };
             bf_card_transform(slot, row_total, false, is_bot, game_tapped)
         };
 
         if game_tapped != visual_tapped {
             let (untapped_rot, tapped_rot) = if is_land {
-                let base = target.rotation;
+                let _base = target.rotation;
                 // For lands, tapped rot was already computed; get both variants
                 let land_base = land_card_transform(state, owner.0, game_id.0, is_bot)
                     .map(|t| t.rotation)
@@ -925,7 +1034,7 @@ pub fn sync_game_visuals(
                 let land_tapped = Quat::from_rotation_y(-std::f32::consts::FRAC_PI_2) * land_base;
                 (land_base, land_tapped)
             } else {
-                let row_total = if is_bot { bot_creatures } else { human_creatures };
+                let row_total = if is_bot { p1_creatures } else { p0_creatures };
                 let slot = bf_row_slot(state, owner.0, game_id.0, false).unwrap_or(0);
                 (
                     bf_card_transform(slot, row_total, false, is_bot, false).rotation,
@@ -934,6 +1043,7 @@ pub fn sync_game_visuals(
             };
             let (start, end) = if game_tapped { (untapped_rot, tapped_rot) } else { (tapped_rot, untapped_rot) };
             commands.entity(entity)
+                .insert(Animating)
                 .insert(TapAnimation { progress: 0.0, speed: 4.0, start_rotation: start, target_rotation: end })
                 .insert(TapState { tapped: game_tapped });
         }
@@ -945,16 +1055,16 @@ pub fn sync_game_visuals(
         });
     }
 
-    // ── Update human deck card visibility (remove drawn cards) ────────────
-    let human_lib_ids: HashSet<CardId> = state.players[HUMAN].library.iter().map(|c| c.id).collect();
+    // ── Update player 0 deck card visibility (remove drawn cards) ─────────
+    let p0_lib_ids: HashSet<CardId> = state.players[PLAYER_0].library.iter().map(|c| c.id).collect();
     for (entity, game_id, _deck_card, _transform) in &deck_cards {
-        if !human_lib_ids.contains(&game_id.0) && !hand_ids.contains(&game_id.0) {
+        if !p0_lib_ids.contains(&game_id.0) && !hand_ids.contains(&game_id.0) {
             commands.entity(entity).despawn();
         }
     }
 }
 
-// ── Bot system ────────────────────────────────────────────────────────────────
+// ── Player 1 system ───────────────────────────────────────────────────────────
 
 /// Scan `events` for `TopCardRevealed` and arm the reveal popup if found.
 fn check_reveal(events: &[crabomination::game::GameEvent], reveal: &mut RevealPopupState) {
@@ -966,48 +1076,52 @@ fn check_reveal(events: &[crabomination::game::GameEvent], reveal: &mut RevealPo
     }
 }
 
-pub fn bot_system(
+pub fn p1_system(
     time: Res<Time>,
-    mut timer: ResMut<BotTimer>,
+    mut timer: ResMut<P1Timer>,
     mut game: ResMut<GameResource>,
     mut log: ResMut<GameLog>,
     mut reveal: ResMut<RevealPopupState>,
     mut last_key: Local<Option<(usize, TurnStep)>>,
+    mulligan: Res<MulliganState>,
 ) {
+    if mulligan.active { return; }
     if game.state.is_game_over() { return; }
 
     let current_key = (game.state.active_player_idx, game.state.step);
     let step_just_changed = *last_key != Some(current_key);
     *last_key = Some(current_key);
 
-    let is_bot_blocking = game.state.step == TurnStep::DeclareBlockers && game.state.active_player_idx == HUMAN;
-    if is_bot_blocking && step_just_changed {
-        let evs = bot_declare_blocks(&mut game.state, &mut rand::rng());
+    let is_p1_blocking = game.state.step == TurnStep::DeclareBlockers && game.state.active_player_idx == PLAYER_0;
+    if is_p1_blocking && step_just_changed {
+        let evs = p1_declare_blocks(&mut game.state, &mut rand::rng());
         log.apply_events(&evs);
         return;
     }
 
-    if game.state.active_player_idx != BOT { return; }
+    if game.state.active_player_idx != PLAYER_1 { return; }
 
-    // Wait for human to finish declaring blocks before advancing
+    // Wait for player 0 to finish declaring blocks before advancing
     if game.state.step == TurnStep::DeclareBlockers { return; }
 
     timer.0.tick(time.delta());
     if !timer.0.just_finished() { return; }
 
-    let evs = bot_take_action(&mut game.state, &mut rand::rng());
+    let evs = p1_take_action(&mut game.state, &mut rand::rng());
     log.apply_events(&evs);
     check_reveal(&evs, &mut reveal);
 }
 
-// ── Auto-advance non-interactive steps for the human player ──────────────────
+// ── Auto-advance non-interactive steps for player 0 ──────────────────────────
 
-pub fn auto_advance_human(
+pub fn auto_advance_p0(
     mut game: ResMut<GameResource>,
     mut log: ResMut<GameLog>,
     mut reveal: ResMut<RevealPopupState>,
+    mulligan: Res<MulliganState>,
 ) {
-    if game.state.is_game_over() || game.state.active_player_idx != HUMAN { return; }
+    if mulligan.active { return; }
+    if game.state.is_game_over() || game.state.active_player_idx != PLAYER_0 { return; }
     let should_advance = matches!(
         game.state.step,
         TurnStep::Untap | TurnStep::Upkeep | TurnStep::Draw | TurnStep::BeginCombat
@@ -1021,7 +1135,7 @@ pub fn auto_advance_human(
     }
 }
 
-// ── Human player input ────────────────────────────────────────────────────────
+// ── Player 0 input ────────────────────────────────────────────────────────────
 
 pub fn handle_game_input(
     mut commands: Commands,
@@ -1030,6 +1144,7 @@ pub fn handle_game_input(
     mut targeting: ResMut<TargetingState>,
     mut blocking: ResMut<BlockingState>,
     mut reveal: ResMut<RevealPopupState>,
+    mut mulligan: ResMut<MulliganState>,
     keyboard: Res<ButtonInput<KeyCode>>,
     mouse: Res<ButtonInput<MouseButton>>,
     hovered_hand: Query<&GameCardId, (With<CardHovered>, With<HandCard>)>,
@@ -1040,8 +1155,32 @@ pub fn handle_game_input(
     attack_btn: Query<&Interaction, (Changed<Interaction>, With<AttackAllButton>)>,
     end_turn_btn: Query<&Interaction, (Changed<Interaction>, With<EndTurnButton>)>,
 ) {
-    // ── Blocking (human defends on bot's turn) ───────────────────────────────
-    if game.state.step == TurnStep::DeclareBlockers && game.state.active_player_idx == BOT {
+    // ── London Mulligan bottoming phase ──────────────────────────────────────
+    if mulligan.active && mulligan.p0_cards_to_bottom > 0 {
+        if mouse.just_pressed(MouseButton::Left) {
+            if let Some(game_id) = hovered_hand.iter().next() {
+                let player = &mut game.state.players[PLAYER_0];
+                if let Some(pos) = player.hand.iter().position(|c| c.id == game_id.0) {
+                    let card = player.hand.remove(pos);
+                    player.library.push(card);
+                    mulligan.p0_cards_to_bottom -= 1;
+                    if mulligan.p0_cards_to_bottom == 0 {
+                        mulligan.p0_kept = true;
+                        log.push(format!(
+                            "Player 0 keeps ({} cards)",
+                            game.state.players[PLAYER_0].hand.len()
+                        ));
+                    }
+                }
+            }
+        }
+        return;
+    }
+
+    if mulligan.active { return; }
+
+    // ── Blocking (player 0 defends on player 1's turn) ───────────────────────
+    if game.state.step == TurnStep::DeclareBlockers && game.state.active_player_idx == PLAYER_1 {
         let mut pass = keyboard.just_pressed(KeyCode::KeyP) || keyboard.just_pressed(KeyCode::Space);
         for i in &pass_btn {
             if *i == Interaction::Pressed { pass = true; }
@@ -1052,14 +1191,14 @@ pub fn handle_game_input(
         }
         if mouse.just_pressed(MouseButton::Left) {
             if let Some((game_id, owner)) = hovered_bf.iter().next() {
-                if owner.0 == HUMAN {
+                if owner.0 == PLAYER_0 {
                     // Only allow selecting creatures that can legally block something
                     // and haven't already been assigned to an attacker.
                     let already_assigned = blocking.assignments.iter().any(|(b, _)| *b == game_id.0);
                     if game.state.can_block_any_attacker(game_id.0) && !already_assigned {
                         blocking.selected_blocker = Some(game_id.0);
                     }
-                } else if owner.0 == BOT {
+                } else if owner.0 == PLAYER_1 {
                     if let Some(blocker_id) = blocking.selected_blocker {
                         // Only allow assigning to an attacker the blocker can legally block.
                         if game.state.attacking().contains(&game_id.0)
@@ -1087,7 +1226,7 @@ pub fn handle_game_input(
         return;
     }
 
-    if game.state.is_game_over() || game.state.active_player_idx != HUMAN {
+    if game.state.is_game_over() || game.state.active_player_idx != PLAYER_0 {
         return;
     }
 
@@ -1155,7 +1294,7 @@ pub fn handle_game_input(
     }
     if attack && game.state.step == TurnStep::DeclareAttackers {
         let ids: Vec<_> = game.state.battlefield.iter()
-            .filter(|c| c.owner == HUMAN && c.can_attack())
+            .filter(|c| c.owner == PLAYER_0 && c.can_attack())
             .map(|c| c.id).collect();
         if let Ok(evs) = game.state.perform_action(GameAction::DeclareAttackers(ids)) {
             log.apply_events(&evs);
@@ -1174,7 +1313,7 @@ pub fn handle_game_input(
         }
     }
 
-    // End Turn (E) — pass priority repeatedly until it's the bot's turn
+    // End Turn (E) — pass priority repeatedly until it's player 1's turn
     let mut end_turn = keyboard.just_pressed(KeyCode::KeyE);
     for i in &end_turn_btn {
         if *i == Interaction::Pressed { end_turn = true; }
@@ -1182,7 +1321,7 @@ pub fn handle_game_input(
     if end_turn {
         for _ in 0..MAX_END_TURN_PASSES {
             if game.state.is_game_over() { break; }
-            if game.state.active_player_idx != HUMAN { break; }
+            if game.state.active_player_idx != PLAYER_0 { break; }
             if let Ok(evs) = game.state.perform_action(GameAction::PassPriority) {
                 log.apply_events(&evs);
             } else {
@@ -1222,7 +1361,7 @@ fn play_hand_card_by_id(
     targeting: &mut TargetingState,
     card_id: CardId,
 ) {
-    let hand = &game.state.players[HUMAN].hand;
+    let hand = &game.state.players[PLAYER_0].hand;
     let Some(card) = hand.iter().find(|c| c.id == card_id) else { return; };
     let card = card.clone();
 
@@ -1244,7 +1383,7 @@ fn play_hand_card_by_id(
 
     // No target needed — cast immediately
     auto_tap_lands(game, log, &card.definition.cost);
-    let target = human_auto_target(&game.state, &card.definition);
+    let target = p0_auto_target(&game.state, &card.definition);
     if let Ok(evs) = game.state.perform_action(GameAction::CastSpell { card_id: card.id, target }) {
         log.apply_events(&evs);
     }
@@ -1276,7 +1415,7 @@ fn auto_tap_lands(game: &mut GameResource, log: &mut GameLog, cost: &ManaCost) {
     // Tap a color-matched land for each colored pip
     for color in needed_colors {
         let land_id = game.state.battlefield.iter()
-            .find(|c| c.owner == HUMAN && c.definition.is_land() && !c.tapped && land_produces_color(c, color))
+            .find(|c| c.owner == PLAYER_0 && c.definition.is_land() && !c.tapped && land_produces_color(c, color))
             .map(|c| c.id);
         if let Some(id) = land_id {
             if let Ok(evs) = game.state.perform_action(GameAction::ActivateAbility {
@@ -1290,7 +1429,7 @@ fn auto_tap_lands(game: &mut GameResource, log: &mut GameLog, cost: &ManaCost) {
     // Tap any remaining untapped land for generic pips
     for _ in 0..generic {
         let land_id = game.state.battlefield.iter()
-            .find(|c| c.owner == HUMAN && c.definition.is_land() && !c.tapped)
+            .find(|c| c.owner == PLAYER_0 && c.definition.is_land() && !c.tapped)
             .map(|c| c.id);
         let Some(id) = land_id else { break };
         if let Ok(evs) = game.state.perform_action(GameAction::ActivateAbility {
@@ -1315,22 +1454,22 @@ fn stack_card_transform(idx: usize, total: usize) -> Transform {
 /// When RevealPopupState activates, start a RevealPeekAnimation on the top deck card.
 pub fn trigger_reveal_animation(
     mut reveal: ResMut<RevealPopupState>,
-    deck_cards: Query<(Entity, &DeckCard, &Transform), (Without<RevealPeekAnimation>, Without<BotDeckPile>)>,
-    bot_deck_cards: Query<(Entity, &BotDeckPile, &Transform), (Without<RevealPeekAnimation>, Without<DeckCard>)>,
+    deck_cards: Query<(Entity, &DeckCard, &Transform), (Without<RevealPeekAnimation>, Without<Animating>, Without<P1DeckPile>)>,
+    bot_deck_cards: Query<(Entity, &P1DeckPile, &Transform), (Without<RevealPeekAnimation>, Without<Animating>, Without<DeckCard>)>,
     mut commands: Commands,
 ) {
     let Some(player) = reveal.revealed_player.take() else { return };
 
-    // face_up = 180° around the card's own local X axis (width edge), so the flip
-    // looks like opening a book rather than spinning around an arbitrary world axis.
-    if player == HUMAN {
-        // Bot's Goblin Guide revealed the human player's top card.
+    // face_up = 180° around the card's own local Y axis (long/height edge), so the flip
+    // rotates along the long axis like turning a page.
+    if player == PLAYER_0 {
+        // Player 1's Goblin Guide revealed player 0's top card.
         if let Some((entity, _, transform)) = deck_cards
             .iter()
             .max_by_key(|(_, dc, _)| dc.index)
         {
-            let face_up = transform.rotation * Quat::from_rotation_x(std::f32::consts::PI);
-            commands.entity(entity).insert(RevealPeekAnimation {
+            let face_up = transform.rotation * Quat::from_rotation_y(std::f32::consts::PI);
+            commands.entity(entity).insert(Animating).insert(RevealPeekAnimation {
                 progress: 0.0,
                 speed: 0.6,
                 start_rotation: transform.rotation,
@@ -1339,19 +1478,336 @@ pub fn trigger_reveal_animation(
             });
         }
     } else {
-        // Human's Goblin Guide revealed the bot's top card.
+        // Player 0's Goblin Guide revealed player 1's top card.
         if let Some((entity, _, transform)) = bot_deck_cards
             .iter()
             .max_by_key(|(_, bp, _)| bp.index)
         {
-            let face_up = transform.rotation * Quat::from_rotation_x(std::f32::consts::PI);
-            commands.entity(entity).insert(RevealPeekAnimation {
+            let face_up = transform.rotation * Quat::from_rotation_y(std::f32::consts::PI);
+            commands.entity(entity).insert(Animating).insert(RevealPeekAnimation {
                 progress: 0.0,
                 speed: 0.6,
                 start_rotation: transform.rotation,
                 face_up_rotation: face_up,
                 start_y: transform.translation.y,
             });
+        }
+    }
+}
+
+// ── Quality selector panel ─────────────────────────────────────────────────────
+
+const QUALITY_BTN_ACTIVE: Color = Color::srgb(0.15, 0.45, 0.15);
+// ── Mulligan UI setup ─────────────────────────────────────────────────────────
+
+pub fn setup_mulligan_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
+    let font = asset_server.load("fonts/MiranoExtendedFreebie-Light.ttf");
+    let tf = |size: f32| TextFont { font: font.clone(), font_size: size, ..default() };
+
+    // Full-screen transparent wrapper centers the panel.
+    commands
+        .spawn((
+            Node {
+                position_type: PositionType::Absolute,
+                top: Val::Px(0.0),
+                left: Val::Px(0.0),
+                width: Val::Percent(100.0),
+                height: Val::Percent(100.0),
+                justify_content: JustifyContent::Center,
+                align_items: AlignItems::Center,
+                ..default()
+            },
+            Visibility::Hidden,
+            Pickable::IGNORE,
+            MulliganOverlay,
+        ))
+        .with_children(|p| {
+            p.spawn((
+                Node {
+                    flex_direction: FlexDirection::Column,
+                    align_items: AlignItems::Center,
+                    padding: UiRect::axes(Val::Px(24.0), Val::Px(14.0)),
+                    row_gap: Val::Px(10.0),
+                    ..default()
+                },
+                BackgroundColor(Color::srgba(0.0, 0.0, 0.15, 0.88)),
+            ))
+            .with_children(|p| {
+                p.spawn((
+                    Text::new("Opening Hand"),
+                    tf(18.0),
+                    TextColor(Color::srgb(1.0, 0.88, 0.0)),
+                ));
+                p.spawn((
+                    Text::new(""),
+                    tf(14.0),
+                    TextColor(Color::WHITE),
+                    MulliganStatusText,
+                ));
+                p.spawn(Node {
+                    flex_direction: FlexDirection::Row,
+                    column_gap: Val::Px(12.0),
+                    ..default()
+                })
+                .with_children(|p| {
+                    p.spawn((
+                        Node { padding: UiRect::all(Val::Px(10.0)), ..default() },
+                        BackgroundColor(Color::srgb(0.08, 0.45, 0.08)),
+                        Button,
+                        MulliganKeepButton,
+                    ))
+                    .with_children(|p| {
+                        p.spawn((Text::new("Keep (K)"), tf(14.0), TextColor(Color::WHITE)));
+                    });
+
+                    p.spawn((
+                        Node { padding: UiRect::all(Val::Px(10.0)), ..default() },
+                        BackgroundColor(Color::srgb(0.45, 0.12, 0.08)),
+                        Button,
+                        MulliganMulliganButton,
+                    ))
+                    .with_children(|p| {
+                        p.spawn((Text::new("Mulligan (M)"), tf(14.0), TextColor(Color::WHITE)));
+                    });
+                });
+            });
+        });
+}
+
+// ── Mulligan system ───────────────────────────────────────────────────────────
+
+pub fn mulligan_system(
+    mut game: ResMut<GameResource>,
+    mut mulligan: ResMut<MulliganState>,
+    mut log: ResMut<GameLog>,
+    keyboard: Res<ButtonInput<KeyCode>>,
+    keep_buttons: Query<&Interaction, (With<MulliganKeepButton>, Changed<Interaction>)>,
+    mull_buttons: Query<&Interaction, (With<MulliganMulliganButton>, Changed<Interaction>)>,
+    time: Res<Time>,
+) {
+    if !mulligan.active {
+        return;
+    }
+
+    // Deal initial hands once.
+    if !mulligan.initial_deal_done {
+        for _ in 0..7 {
+            game.state.players[PLAYER_0].draw_top();
+        }
+        for _ in 0..7 {
+            game.state.players[PLAYER_1].draw_top();
+        }
+        mulligan.initial_deal_done = true;
+        mulligan.p1_timer.reset();
+        return;
+    }
+
+    // ── Player 0 input ────────────────────────────────────────────────────────
+    // Skip button input while in bottoming phase (card clicks are handled in handle_game_input).
+    if !mulligan.p0_kept && mulligan.p0_cards_to_bottom == 0 {
+        let keep_clicked = keep_buttons.iter().any(|i| *i == Interaction::Pressed);
+        let mull_clicked = mull_buttons.iter().any(|i| *i == Interaction::Pressed);
+
+        if keyboard.just_pressed(KeyCode::KeyK) || keep_clicked {
+            // London Mulligan: put (mulligan_count) cards to the bottom before keeping.
+            if mulligan.p0_mulligans > 0 {
+                mulligan.p0_cards_to_bottom = mulligan.p0_mulligans;
+                log.push(format!(
+                    "Player 0 keeps — click {} card{} to put to bottom",
+                    mulligan.p0_mulligans,
+                    if mulligan.p0_mulligans == 1 { "" } else { "s" }
+                ));
+            } else {
+                mulligan.p0_kept = true;
+                log.push(format!("Player 0 keeps ({} cards)", game.state.players[PLAYER_0].hand.len()));
+            }
+        } else if keyboard.just_pressed(KeyCode::KeyM) || mull_clicked {
+            // London Mulligan: always draw 7.
+            game.state.players[PLAYER_0].return_hand_to_library();
+            game.state.players[PLAYER_0].library.shuffle(&mut rand::rng());
+            for _ in 0..7 {
+                game.state.players[PLAYER_0].draw_top();
+            }
+            mulligan.p0_mulligans += 1;
+            log.push(format!("Player 0 mulligans (drawing 7, {} so far)", mulligan.p0_mulligans));
+        }
+    }
+
+    // ── Player 1 bot decision ─────────────────────────────────────────────────
+    if !mulligan.p1_kept {
+        mulligan.p1_timer.tick(time.delta());
+        if mulligan.p1_timer.just_finished() {
+            let keep = p1_mulligan_decision(&game.state, mulligan.p1_mulligans);
+            if keep || mulligan.p1_mulligans >= 3 {
+                // London Mulligan: randomly put (p1_mulligans) cards to the bottom.
+                let n = mulligan.p1_mulligans;
+                let mut ids: Vec<crabomination::card::CardId> = game.state.players[PLAYER_1]
+                    .hand.iter().map(|c| c.id).collect();
+                ids.shuffle(&mut rand::rng());
+                let to_bottom: Vec<crabomination::card::CardId> =
+                    ids.into_iter().take(n).collect();
+                for id in to_bottom {
+                    if let Some(pos) = game.state.players[PLAYER_1].hand.iter().position(|c| c.id == id) {
+                        let card = game.state.players[PLAYER_1].hand.remove(pos);
+                        game.state.players[PLAYER_1].library.push(card);
+                    }
+                }
+                mulligan.p1_kept = true;
+                log.push(format!(
+                    "Player 1 keeps ({} cards)",
+                    game.state.players[PLAYER_1].hand.len()
+                ));
+            } else {
+                // London Mulligan: always draw 7.
+                game.state.players[PLAYER_1].return_hand_to_library();
+                game.state.players[PLAYER_1].library.shuffle(&mut rand::rng());
+                for _ in 0..7 {
+                    game.state.players[PLAYER_1].draw_top();
+                }
+                mulligan.p1_mulligans += 1;
+                log.push(format!("Player 1 mulligans (drawing 7, {} so far)", mulligan.p1_mulligans));
+                mulligan.p1_timer = bevy::time::Timer::from_seconds(1.5, bevy::time::TimerMode::Once);
+            }
+        }
+    }
+
+    // ── End mulligan phase ────────────────────────────────────────────────────
+    if mulligan.p0_kept && mulligan.p1_kept {
+        mulligan.active = false;
+        log.push("Mulligan complete. Game begins!");
+    }
+}
+
+// ── Mulligan UI update ────────────────────────────────────────────────────────
+
+pub fn update_mulligan_ui(
+    mulligan: Res<MulliganState>,
+    game: Res<GameResource>,
+    mut overlay_q: Query<&mut Visibility, With<MulliganOverlay>>,
+    mut status_q: Query<&mut Text, With<MulliganStatusText>>,
+    mut keep_btn_q: Query<&mut Visibility, (With<MulliganKeepButton>, Without<MulliganOverlay>, Without<MulliganMulliganButton>)>,
+    mut mull_btn_q: Query<&mut Visibility, (With<MulliganMulliganButton>, Without<MulliganOverlay>, Without<MulliganKeepButton>)>,
+) {
+    let Ok(mut vis) = overlay_q.single_mut() else { return };
+    if !mulligan.active || !mulligan.initial_deal_done {
+        *vis = Visibility::Hidden;
+        return;
+    }
+    *vis = Visibility::Visible;
+
+    // Update status text
+    if let Ok(mut text) = status_q.single_mut() {
+        let p0_status = if mulligan.p0_cards_to_bottom > 0 {
+            format!(
+                "You: put {} card{} to bottom",
+                mulligan.p0_cards_to_bottom,
+                if mulligan.p0_cards_to_bottom == 1 { "" } else { "s" }
+            )
+        } else if mulligan.p0_kept {
+            format!("You: kept {} cards", game.state.players[PLAYER_0].hand.len())
+        } else if mulligan.p0_mulligans == 0 {
+            "You: 7 cards".into()
+        } else {
+            format!(
+                "You: 7 cards — keep & put {} back, or mull again",
+                mulligan.p0_mulligans
+            )
+        };
+        let p1_status = if mulligan.p1_kept {
+            format!("Opp: kept {} cards", game.state.players[PLAYER_1].hand.len())
+        } else {
+            "Opp: deciding...".into()
+        };
+        text.0 = format!("{p0_status}  |  {p1_status}");
+    }
+
+    // Hide Keep/Mulligan buttons once player 0 has decided or is in bottoming phase.
+    // Use Inherited (not Visible) so parent Visibility::Hidden propagates correctly.
+    let show_btns = !mulligan.p0_kept && mulligan.p0_cards_to_bottom == 0;
+    for mut v in &mut keep_btn_q {
+        *v = if show_btns { Visibility::Inherited } else { Visibility::Hidden };
+    }
+    for mut v in &mut mull_btn_q {
+        *v = if show_btns { Visibility::Inherited } else { Visibility::Hidden };
+    }
+}
+
+const QUALITY_BTN_INACTIVE: Color = Color::srgb(0.12, 0.12, 0.18);
+
+pub fn setup_quality_panel(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    quality: Res<RenderQuality>,
+) {
+    let font = asset_server.load("fonts/MiranoExtendedFreebie-Light.ttf");
+    let tf = |size: f32| TextFont { font: font.clone(), font_size: size, ..default() };
+
+    commands
+        .spawn((
+            Node {
+                position_type: PositionType::Absolute,
+                bottom: Val::Px(10.0),
+                right: Val::Px(10.0),
+                flex_direction: FlexDirection::Column,
+                padding: UiRect::all(Val::Px(6.0)),
+                row_gap: Val::Px(4.0),
+                ..default()
+            },
+            BackgroundColor(Color::srgba(0.0, 0.0, 0.0, 0.72)),
+        ))
+        .with_children(|p| {
+            p.spawn((
+                Text::new("Quality"),
+                tf(11.0),
+                TextColor(Color::srgba(0.7, 0.7, 0.7, 1.0)),
+            ));
+            p.spawn(Node {
+                flex_direction: FlexDirection::Row,
+                column_gap: Val::Px(4.0),
+                ..default()
+            })
+            .with_children(|p| {
+                for q in RenderQuality::ALL {
+                    let bg = if q == *quality { QUALITY_BTN_ACTIVE } else { QUALITY_BTN_INACTIVE };
+                    p.spawn((
+                        Node { padding: UiRect::axes(Val::Px(8.0), Val::Px(5.0)), ..default() },
+                        BackgroundColor(bg),
+                        Button,
+                        QualityButton(q),
+                    ))
+                    .with_children(|p| {
+                        p.spawn((Text::new(q.label()), tf(12.0), TextColor(Color::WHITE)));
+                    });
+                }
+            });
+        });
+}
+
+pub fn handle_quality_buttons(
+    mut buttons: Query<(&Interaction, &QualityButton, &mut BackgroundColor)>,
+    quality: Res<RenderQuality>,
+    mut messages: MessageWriter<ChangeQuality>,
+) {
+    // First pass: find if any button was just pressed (immutable borrow)
+    let pressed = buttons
+        .iter()
+        .find(|(i, _, _)| **i == Interaction::Pressed)
+        .map(|(_, btn, _)| btn.0);
+
+    if let Some(q) = pressed {
+        messages.write(ChangeQuality(q));
+    }
+
+    // Second pass: sync button colors (mutable borrow)
+    // Update immediately on press; otherwise track the quality resource.
+    if pressed.is_some() || quality.is_changed() {
+        let active = pressed.unwrap_or(*quality);
+        for (_, btn, mut bg) in buttons.iter_mut() {
+            *bg = if btn.0 == active {
+                BackgroundColor(QUALITY_BTN_ACTIVE)
+            } else {
+                BackgroundColor(QUALITY_BTN_INACTIVE)
+            };
         }
     }
 }

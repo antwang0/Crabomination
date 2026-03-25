@@ -7,7 +7,6 @@ use bevy_mesh::{Indices, PrimitiveTopology};
 use super::components::{CARD_HEIGHT, CARD_WIDTH};
 
 pub const CORNER_RADIUS: f32 = 0.15;
-pub const CORNER_SEGMENTS: usize = 8;
 pub const BORDER_WIDTH: f32 = 0.15;
 
 /// Creates a rounded rectangle mesh lying in the XY plane, facing +Z.
@@ -136,22 +135,11 @@ fn rounded_rect_perimeter(width: f32, height: f32, radius: f32, segments: usize)
 }
 
 /// Convenience: card-sized rounded rect mesh.
-pub fn card_mesh(meshes: &mut Assets<Mesh>) -> Handle<Mesh> {
-    meshes.add(create_rounded_rect_mesh(
-        CARD_WIDTH,
-        CARD_HEIGHT,
-        CORNER_RADIUS,
-        CORNER_SEGMENTS,
-    ))
+pub fn card_mesh(meshes: &mut Assets<Mesh>, segments: usize) -> Handle<Mesh> {
+    meshes.add(create_rounded_rect_mesh(CARD_WIDTH, CARD_HEIGHT, CORNER_RADIUS, segments))
 }
 
 /// Convenience: card border ring mesh.
-pub fn card_border_mesh(meshes: &mut Assets<Mesh>) -> Handle<Mesh> {
-    meshes.add(create_border_mesh(
-        CARD_WIDTH,
-        CARD_HEIGHT,
-        CORNER_RADIUS,
-        BORDER_WIDTH,
-        CORNER_SEGMENTS,
-    ))
+pub fn card_border_mesh(meshes: &mut Assets<Mesh>, segments: usize) -> Handle<Mesh> {
+    meshes.add(create_border_mesh(CARD_WIDTH, CARD_HEIGHT, CORNER_RADIUS, BORDER_WIDTH, segments))
 }

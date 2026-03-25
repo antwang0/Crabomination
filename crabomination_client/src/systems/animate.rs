@@ -3,9 +3,10 @@ use std::f32::consts::PI;
 use bevy::prelude::*;
 
 use crate::card::{
-    hand_card_transform, CardFlipAnimation, CardHoverLift, DeckCard, DeckShuffleAnimation,
-    DrawCardAnimation, HandCard, HandSlideAnimation, PlayCardAnimation, RevealPeekAnimation,
-    SendToGraveyardAnimation, ShufflePhase, TapAnimation, CARD_WIDTH, HOVER_LIFT_SPEED,
+    hand_card_transform, Animating, CardFlipAnimation, CardHoverLift, DeckCard, DeckShuffleAnimation,
+    DrawCardAnimation, HandCard, HandSlideAnimation, PlayCardAnimation, ReturnToDeckAnimation,
+    RevealPeekAnimation, SendToGraveyardAnimation, ShufflePhase, TapAnimation,
+    CARD_WIDTH, HOVER_LIFT_SPEED,
 };
 
 /// Global animation playback speed multiplier (1.0 = normal, 2.0 = double speed, etc.).
@@ -39,6 +40,7 @@ pub fn animate_hover_lift(
             Without<PlayCardAnimation>,
             Without<TapAnimation>,
             Without<SendToGraveyardAnimation>,
+            Without<ReturnToDeckAnimation>,
             Without<RevealPeekAnimation>,
         ),
     >,
@@ -63,7 +65,7 @@ pub fn animate_flip(
         if anim.progress >= 1.0 {
             transform.rotation = anim.end_rotation;
             transform.translation.y = anim.start_y;
-            commands.entity(entity).remove::<CardFlipAnimation>();
+            commands.entity(entity).remove::<CardFlipAnimation>().remove::<Animating>();
         } else {
             let t = ease_in_out(anim.progress);
             transform.rotation = anim.start_rotation.slerp(anim.end_rotation, t);
@@ -138,7 +140,7 @@ pub fn animate_deck_shuffle(
                     deck_card.index = anim.new_index;
                     lift.base_translation = anim.restack_target;
                     lift.current_lift = 0.0;
-                    commands.entity(entity).remove::<DeckShuffleAnimation>();
+                    commands.entity(entity).remove::<DeckShuffleAnimation>().remove::<Animating>();
                 }
             }
         }
@@ -179,7 +181,7 @@ pub fn animate_draw_card(
             lift.base_translation = final_t.translation;
             lift.current_lift = 0.0;
             lift.target_lift = 0.0;
-            commands.entity(entity).remove::<DrawCardAnimation>();
+            commands.entity(entity).remove::<DrawCardAnimation>().remove::<Animating>();
         }
     }
 }
@@ -200,7 +202,7 @@ pub fn animate_hand_slide(
         if anim.progress >= 1.0 {
             transform.translation = anim.target_translation;
             lift.base_translation = anim.target_translation;
-            commands.entity(entity).remove::<HandSlideAnimation>();
+            commands.entity(entity).remove::<HandSlideAnimation>().remove::<Animating>();
         }
     }
 }
@@ -234,7 +236,7 @@ pub fn animate_play_card(
             lift.base_translation = anim.target_translation;
             lift.current_lift = 0.0;
             lift.target_lift = 0.0;
-            commands.entity(entity).remove::<PlayCardAnimation>();
+            commands.entity(entity).remove::<PlayCardAnimation>().remove::<Animating>();
         }
     }
 }
@@ -263,6 +265,38 @@ pub fn animate_send_to_graveyard(
     }
 }
 
+/// Animate a hand card flying back to the deck during a mulligan, then re-insert it as a DeckCard.
+pub fn animate_return_to_deck(
+    mut commands: Commands,
+    time: Res<Time>,
+    speed: Res<AnimationSpeed>,
+    mut cards: Query<(Entity, &mut Transform, &mut ReturnToDeckAnimation, &mut CardHoverLift)>,
+) {
+    for (entity, mut transform, mut anim, mut lift) in &mut cards {
+        anim.progress += time.delta_secs() * speed.0 * anim.speed;
+
+        let t = ease_in_out(anim.progress.clamp(0.0, 1.0));
+        let arc_y = (anim.progress.clamp(0.0, 1.0) * PI).sin() * 2.0;
+        let mut pos = anim.start_translation.lerp(anim.target_translation, t);
+        pos.y += arc_y;
+        transform.translation = pos;
+        transform.rotation = anim.start_rotation.slerp(anim.target_rotation, t);
+
+        if anim.progress >= 1.0 {
+            transform.translation = anim.target_translation;
+            transform.rotation = anim.target_rotation;
+            lift.base_translation = anim.target_translation;
+            lift.current_lift = 0.0;
+            lift.target_lift = 0.0;
+            commands.entity(entity)
+                .remove::<ReturnToDeckAnimation>()
+                .remove::<HandCard>()
+                .remove::<Animating>()
+                .insert(DeckCard { index: 0 });
+        }
+    }
+}
+
 /// Animate a card tapping (90°) or untapping.
 pub fn animate_tap(
     mut commands: Commands,
@@ -277,7 +311,7 @@ pub fn animate_tap(
 
         if anim.progress >= 1.0 {
             transform.rotation = anim.target_rotation;
-            commands.entity(entity).remove::<TapAnimation>();
+            commands.entity(entity).remove::<TapAnimation>().remove::<Animating>();
         }
     }
 }
@@ -293,16 +327,16 @@ pub fn animate_reveal_peek(
         anim.progress += time.delta_secs() * speed.0 * anim.speed;
         let p = anim.progress.clamp(0.0, 1.0);
 
-        let (rot_t, y_t) = if p < 0.35 {
+        let (rot_t, y_t) = if p < 0.25 {
             // Phase 1: flip to face-up
-            let t = ease_in_out(p / 0.35);
+            let t = ease_in_out(p / 0.25);
             (t, t)
-        } else if p < 0.65 {
+        } else if p < 0.75 {
             // Phase 2: hold face-up
             (1.0_f32, 1.0_f32)
         } else {
             // Phase 3: flip back
-            let t = ease_in_out((p - 0.65) / 0.35);
+            let t = ease_in_out((p - 0.75) / 0.25);
             (1.0 - t, 1.0 - t)
         };
 
@@ -313,7 +347,7 @@ pub fn animate_reveal_peek(
         if anim.progress >= 1.0 {
             transform.rotation = anim.start_rotation;
             transform.translation.y = anim.start_y;
-            commands.entity(entity).remove::<RevealPeekAnimation>();
+            commands.entity(entity).remove::<RevealPeekAnimation>().remove::<Animating>();
         }
     }
 }

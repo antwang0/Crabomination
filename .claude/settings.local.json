@@ -15,7 +15,13 @@
       "Bash(xargs grep -l \"struct GlobalAmbientLight\")",
       "Bash(cargo doc -p bevy --no-deps)",
       "Read(//c/Users/JB/.cargo/registry/src/**)",
-      "Bash(cargo test:*)"
+      "Bash(cargo test:*)",
+      "Bash(find /home/jb/repos/Crabomination -name config.rs -o -name config.toml -o -name *.toml)",
+      "Bash(find ~/.cargo/registry/src -name *.rs -path *bevy_ecs*0.18*)",
+      "Bash(grep -r EventWriter ~/.cargo/registry/src/*/bevy_ecs-0.18*/src/event/*.rs)",
+      "Bash(wc -l /home/jb/repos/Crabomination/crabomination/src/catalog/sets/*.rs)",
+      "Bash(grep -n \"fn goblin_guide\\\\|fn hopeful_eidolon\" /home/jb/repos/Crabomination/crabomination/src/catalog/sets/*.rs)",
+      "Bash(grep -n \"fn terminate\\\\|fn shock\\\\|fn lightning_helix\" /home/jb/repos/Crabomination/crabomination/src/catalog/sets/*.rs)"
     ]
   }
 }

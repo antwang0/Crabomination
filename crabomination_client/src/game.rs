@@ -1,3 +1,4 @@
+use bevy::time::Timer;
 use bevy::prelude::*;
 use crabomination::{
     card::{CardDefinition, CardId},
@@ -8,8 +9,8 @@ use crabomination::{
 };
 use rand::seq::SliceRandom;
 
-pub const HUMAN: usize = 0;
-pub const BOT: usize = 1;
+pub const PLAYER_0: usize = 0;
+pub const PLAYER_1: usize = 1;
 
 #[derive(Resource)]
 pub struct GameResource {
@@ -47,7 +48,7 @@ impl GameLog {
 }
 
 fn player_label(idx: usize) -> &'static str {
-    if idx == HUMAN { "You" } else { "Bot" }
+    if idx == PLAYER_0 { "Player 0" } else { "Player 1" }
 }
 
 fn describe_event(event: &GameEvent) -> String {
@@ -117,7 +118,7 @@ pub fn format_mana_pool(state: &GameState, player_idx: usize) -> String {
 }
 
 #[derive(Resource)]
-pub struct BotTimer(pub Timer);
+pub struct P1Timer(pub Timer);
 
 /// Tracks the "targeting mode" UI state when a spell needs a player-chosen target.
 #[derive(Resource, Default)]
@@ -130,6 +131,43 @@ pub struct TargetingState {
     pub pending_cost: ManaCost,
 }
 
+/// Tracks the opening-hand mulligan phase (before the game starts).
+#[derive(Resource)]
+pub struct MulliganState {
+    /// Whether the mulligan phase is currently active.
+    pub active: bool,
+    /// Whether initial 7-card hands have been dealt yet.
+    pub initial_deal_done: bool,
+    /// Whether player 0 has decided to keep their current hand.
+    pub p0_kept: bool,
+    /// Whether player 1 has decided to keep their current hand.
+    pub p1_kept: bool,
+    /// Number of times player 0 has mulliganed.
+    pub p0_mulligans: usize,
+    /// Number of times player 1 has mulliganed.
+    pub p1_mulligans: usize,
+    /// Timer controlling when the bot (P1) makes its mulligan decision.
+    pub p1_timer: Timer,
+    /// London mulligan: how many cards P0 still needs to click to send to the bottom.
+    /// Non-zero means the bottoming phase is active.
+    pub p0_cards_to_bottom: usize,
+}
+
+impl Default for MulliganState {
+    fn default() -> Self {
+        Self {
+            active: true,
+            initial_deal_done: false,
+            p0_kept: false,
+            p1_kept: false,
+            p0_mulligans: 0,
+            p1_mulligans: 0,
+            p1_timer: Timer::from_seconds(2.0, bevy::time::TimerMode::Once),
+            p0_cards_to_bottom: 0,
+        }
+    }
+}
+
 /// State for the graveyard card browser popup.
 #[derive(Resource, Default)]
 pub struct GraveyardBrowserState {
@@ -137,10 +175,10 @@ pub struct GraveyardBrowserState {
     pub owner: usize,
 }
 
-/// Tracks the human player's blocker assignments during the DeclareBlockers step.
+/// Tracks player 0's blocker assignments during the DeclareBlockers step.
 #[derive(Resource, Default)]
 pub struct BlockingState {
-    /// The human creature the player clicked to block with.
+    /// The player 0 creature the player clicked to block with.
     pub selected_blocker: Option<CardId>,
     /// Confirmed (blocker_id, attacker_id) assignments to submit on Pass.
     pub assignments: Vec<(CardId, CardId)>,
@@ -150,57 +188,63 @@ type CardFactory = fn() -> CardDefinition;
 
 /// Build a fresh game with two players, each with a shuffled deck and 7-card opening hand.
 ///
-/// Human — Red/White aggro: burn, weenies, Lightning Helix, Wrath of God.
-/// Bot   — Black/Red: Dark Ritual, discard threats, removal, big vampires.
+/// Player 0 — Red/White aggro (60 cards): burn, weenies, Lightning Helix, Wrath of God.
+/// Player 1 — Black/Red midrange (60 cards): Dark Ritual, discard threats, removal, vampires.
 pub fn build_game() -> GameResource {
-    let mut state = GameState::new(vec![Player::new(HUMAN, "You"), Player::new(BOT, "Bot")]);
+    let mut state = GameState::new(vec![Player::new(PLAYER_0, "Player 0"), Player::new(PLAYER_1, "Player 1")]);
 
-    // ── Human: Red/White (33 cards) ───────────────────────────────────────────
-    let human_deck: &[CardFactory] = &[
-        // Lands (12)
+    // ── Player 0: Red/White Aggro (60 cards) ──────────────────────────────────
+    let p0_deck: &[CardFactory] = &[
+        // Lands (24)
         plains, plains, plains, plains, plains, plains,
+        plains, plains, plains, plains,
         mountain, mountain, mountain, mountain, mountain, mountain,
-        // Creatures (11)
-        savannah_lions, savannah_lions,
-        white_knight, white_knight,
-        hopeful_eidolon, hopeful_eidolon,
-        goblin_guide, goblin_guide,
+        mountain, mountain, mountain, mountain, mountain, mountain,
+        mountain, mountain,
+        // Creatures (20)
+        savannah_lions, savannah_lions, savannah_lions, savannah_lions,
+        white_knight, white_knight, white_knight, white_knight,
+        hopeful_eidolon, hopeful_eidolon, hopeful_eidolon, hopeful_eidolon,
+        goblin_guide, goblin_guide, goblin_guide, goblin_guide,
         serra_angel, serra_angel,
-        shivan_dragon,
-        // Spells (10)
+        shivan_dragon, shivan_dragon,
+        // Spells (16)
         lightning_bolt, lightning_bolt, lightning_bolt, lightning_bolt,
-        lightning_helix, lightning_helix,
-        shock, shock, shock,
-        wrath_of_god,
+        lightning_helix, lightning_helix, lightning_helix, lightning_helix,
+        shock, shock, shock, shock,
+        wrath_of_god, wrath_of_god, wrath_of_god, wrath_of_god,
     ];
 
-    // ── Bot: Black/Red (32 cards) ─────────────────────────────────────────────
-    let bot_deck: &[CardFactory] = &[
-        // Lands (12)
+    // ── Player 1: Black/Red Midrange (60 cards) ───────────────────────────────
+    let p1_deck: &[CardFactory] = &[
+        // Lands (24)
         swamp, swamp, swamp, swamp, swamp, swamp,
+        swamp, swamp, swamp, swamp, swamp, swamp,
+        swamp, swamp,
         mountain, mountain, mountain, mountain, mountain, mountain,
-        // Creatures (8)
-        black_knight, black_knight,
-        goblin_guide, goblin_guide,
-        hypnotic_specter, hypnotic_specter,
-        sengir_vampire, sengir_vampire,
-        // Spells (12)
-        dark_ritual, dark_ritual, dark_ritual,
+        mountain, mountain, mountain, mountain,
+        // Creatures (16)
+        black_knight, black_knight, black_knight, black_knight,
+        goblin_guide, goblin_guide, goblin_guide, goblin_guide,
+        hypnotic_specter, hypnotic_specter, hypnotic_specter, hypnotic_specter,
+        sengir_vampire, sengir_vampire, sengir_vampire, sengir_vampire,
+        // Spells (20)
+        dark_ritual, dark_ritual, dark_ritual, dark_ritual,
         lightning_bolt, lightning_bolt, lightning_bolt, lightning_bolt,
-        terror, terror,
-        shock, shock,
-        terminate,
+        terror, terror, terror, terror,
+        shock, shock, shock, shock,
+        terminate, terminate, terminate, terminate,
     ];
 
     let mut rng = rand::rng();
 
-    for &f in human_deck { state.add_card_to_library(HUMAN, f()); }
-    state.players[HUMAN].library.shuffle(&mut rng);
-    for _ in 0..7 { state.players[HUMAN].draw_top(); }
+    for &f in p0_deck { state.add_card_to_library(PLAYER_0, f()); }
+    state.players[PLAYER_0].library.shuffle(&mut rng);
 
-    for &f in bot_deck { state.add_card_to_library(BOT, f()); }
-    state.players[BOT].library.shuffle(&mut rng);
-    for _ in 0..7 { state.players[BOT].draw_top(); }
+    for &f in p1_deck { state.add_card_to_library(PLAYER_1, f()); }
+    state.players[PLAYER_1].library.shuffle(&mut rng);
+
+    // Initial hands are dealt during the mulligan phase by mulligan_system.
 
     GameResource { state }
 }

@@ -6,39 +6,39 @@ use crabomination::{
     mana::ManaPool,
 };
 
-use crate::game::{BOT, HUMAN};
+use crate::game::{PLAYER_1, PLAYER_0};
 
-/// Take one bot action and return the resulting events.
-/// Should be called when `state.active_player_idx == BOT`.
-pub fn bot_take_action<R: RngExt>(state: &mut GameState, rng: &mut R) -> Vec<GameEvent> {
+/// Take one player 1 action and return the resulting events.
+/// Should be called when `state.active_player_idx == PLAYER_1`.
+pub fn p1_take_action<R: RngExt>(state: &mut GameState, rng: &mut R) -> Vec<GameEvent> {
     if state.is_game_over() {
         return vec![];
     }
     match (state.active_player_idx, state.step) {
-        (BOT, TurnStep::PreCombatMain) | (BOT, TurnStep::PostCombatMain) => {
-            bot_main_phase(state, rng)
+        (PLAYER_1, TurnStep::PreCombatMain) | (PLAYER_1, TurnStep::PostCombatMain) => {
+            p1_main_phase(state, rng)
         }
-        (BOT, TurnStep::DeclareAttackers) => bot_attack(state),
-        // Bot is the attacker here; human must declare blockers before we can advance.
-        (BOT, TurnStep::DeclareBlockers) if !state.attacking().is_empty() => vec![],
-        (BOT, _) => state.perform_action(GameAction::PassPriority).unwrap_or_default(),
+        (PLAYER_1, TurnStep::DeclareAttackers) => p1_attack(state),
+        // Player 1 is the attacker here; player 0 must declare blockers before we can advance.
+        (PLAYER_1, TurnStep::DeclareBlockers) if !state.attacking().is_empty() => vec![],
+        (PLAYER_1, _) => state.perform_action(GameAction::PassPriority).unwrap_or_default(),
         _ => vec![],
     }
 }
 
-/// Called once when entering DeclareBlockers while the bot is the defending player.
-/// (active_player == HUMAN, bot defends.)
-pub fn bot_declare_blocks<R: RngExt>(state: &mut GameState, rng: &mut R) -> Vec<GameEvent> {
-    if state.active_player_idx != HUMAN || state.step != TurnStep::DeclareBlockers {
+/// Called once when entering DeclareBlockers while player 1 is the defending player.
+/// (active_player == PLAYER_0, player 1 defends.)
+pub fn p1_declare_blocks<R: RngExt>(state: &mut GameState, rng: &mut R) -> Vec<GameEvent> {
+    if state.active_player_idx != PLAYER_0 || state.step != TurnStep::DeclareBlockers {
         return vec![];
     }
     let attacking = state.attacking().to_vec();
 
     // Snapshot blocker and attacker data to avoid borrow conflicts.
-    let bot_blockers: Vec<(CardId, bool, bool)> = state
+    let p1_blockers: Vec<(CardId, bool, bool)> = state
         .battlefield
         .iter()
-        .filter(|c| c.owner == BOT && c.can_block())
+        .filter(|c| c.owner == PLAYER_1 && c.can_block())
         .map(|c| (c.id, c.has_keyword(&Keyword::Flying), c.has_keyword(&Keyword::Reach)))
         .collect();
 
@@ -51,7 +51,7 @@ pub fn bot_declare_blocks<R: RngExt>(state: &mut GameState, rng: &mut R) -> Vec<
         })
         .collect();
 
-    let assignments: Vec<(CardId, CardId)> = bot_blockers
+    let assignments: Vec<(CardId, CardId)> = p1_blockers
         .into_iter()
         .filter_map(|(blocker_id, blocker_flying, blocker_reach)| {
             // Only consider attackers this blocker can legally block.
@@ -75,12 +75,12 @@ pub fn bot_declare_blocks<R: RngExt>(state: &mut GameState, rng: &mut R) -> Vec<
 
 // ── Private helpers ────────────────────────────────────────────────────────────
 
-fn bot_main_phase<R: RngExt>(state: &mut GameState, rng: &mut R) -> Vec<GameEvent> {
+fn p1_main_phase<R: RngExt>(state: &mut GameState, rng: &mut R) -> Vec<GameEvent> {
     // 1. Tap any untapped land first (one per call so the caller can animate)
     let land_id = state
         .battlefield
         .iter()
-        .find(|c| c.owner == BOT && c.definition.is_land() && !c.tapped)
+        .find(|c| c.owner == PLAYER_1 && c.definition.is_land() && !c.tapped)
         .map(|c| c.id);
 
     if let Some(id) = land_id {
@@ -94,22 +94,22 @@ fn bot_main_phase<R: RngExt>(state: &mut GameState, rng: &mut R) -> Vec<GameEven
     }
 
     // 2. Cast a random affordable card from hand
-    let hand: Vec<_> = state.players[BOT].hand.iter().cloned().collect();
+    let hand: Vec<_> = state.players[PLAYER_1].hand.iter().cloned().collect();
     let castable: Vec<_> = hand
         .iter()
-        .filter(|c| can_afford(&c.definition, &state.players[BOT].mana_pool))
+        .filter(|c| can_afford(&c.definition, &state.players[PLAYER_1].mana_pool))
         .collect();
 
     if !castable.is_empty() {
         let card = castable[rng.random_range(0..castable.len())].clone();
         let action = if card.definition.is_land() {
-            if state.players[BOT].can_play_land() {
+            if state.players[PLAYER_1].can_play_land() {
                 GameAction::PlayLand(card.id)
             } else {
                 return state.perform_action(GameAction::PassPriority).unwrap_or_default();
             }
         } else {
-            let target = choose_target(state, &card.definition, BOT, rng);
+            let target = choose_target(state, &card.definition, PLAYER_1, rng);
             GameAction::CastSpell { card_id: card.id, target }
         };
 
@@ -122,11 +122,11 @@ fn bot_main_phase<R: RngExt>(state: &mut GameState, rng: &mut R) -> Vec<GameEven
     state.perform_action(GameAction::PassPriority).unwrap_or_default()
 }
 
-fn bot_attack(state: &mut GameState) -> Vec<GameEvent> {
+fn p1_attack(state: &mut GameState) -> Vec<GameEvent> {
     let attackers: Vec<CardId> = state
         .battlefield
         .iter()
-        .filter(|c| c.owner == BOT && c.can_attack())
+        .filter(|c| c.owner == PLAYER_1 && c.can_attack())
         .map(|c| c.id)
         .collect();
 
@@ -165,7 +165,7 @@ pub fn can_afford(def: &CardDefinition, pool: &ManaPool) -> bool {
 fn target_for_requirement<R: RngExt>(
     state: &GameState,
     req: &crabomination::card::SelectionRequirement,
-    caster: usize,
+    _caster: usize,
     opp: usize,
     rng: &mut R,
 ) -> Option<Target> {
@@ -181,7 +181,7 @@ fn target_for_requirement<R: RngExt>(
                 .collect();
             if ids.is_empty() { None } else { Some(Target::Permanent(ids[rng.random_range(0..ids.len())])) }
         }
-        // For Any, prefer player (direct damage is most impactful for bot)
+        // For Any, prefer player (direct damage is most impactful for player 1)
         SR::Any | SR::Not(_) | SR::Or(_, _) => Some(Target::Player(opp)),
         // For And requirements, check if creatures are valid
         SR::And(_, _) => {
@@ -224,7 +224,20 @@ pub fn choose_target<R: RngExt>(
     None
 }
 
-/// Auto-target for spells the human player casts (always picks opponent or their creatures).
-pub fn human_auto_target(state: &GameState, def: &CardDefinition) -> Option<Target> {
-    choose_target(state, def, HUMAN, &mut rand::rng())
+/// Auto-target for spells player 0 casts (always picks opponent or their creatures).
+pub fn p0_auto_target(state: &GameState, def: &CardDefinition) -> Option<Target> {
+    choose_target(state, def, PLAYER_0, &mut rand::rng())
+}
+
+/// Decide whether player 1 should keep their current hand.
+/// Returns `true` to keep, `false` to mulligan.
+/// Always keeps after 3 mulligans (forced keep at 4 cards).
+pub fn p1_mulligan_decision(state: &GameState, mulligans_taken: usize) -> bool {
+    if mulligans_taken >= 3 {
+        return true;
+    }
+    let hand = &state.players[PLAYER_1].hand;
+    let lands = hand.iter().filter(|c| c.definition.is_land()).count();
+    // Keep if hand has 2–5 lands (playable range).
+    lands >= 2 && lands <= 5
 }

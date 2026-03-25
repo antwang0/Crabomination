@@ -9,9 +9,9 @@ pub const CARD_THICKNESS: f32 = 0.02;
 // They are stacked vertically in Z with >CARD_HEIGHT (4.19) separation to avoid overlapping each other.
 // Deck at z=±9.5: edges at ±[7.4, 11.6]. Graveyard at z=±4.0: edges at ±[1.9, 6.1]. Gap: 1.3 units.
 pub const DECK_POSITION: Vec3 = Vec3::new(-11.0, 0.0, 9.5);
-pub const BOT_DECK_POSITION: Vec3 = Vec3::new(11.0, 0.0, -9.5);
-pub const HUMAN_GRAVEYARD_POSITION: Vec3 = Vec3::new(-11.0, 0.0, 4.0);
-pub const BOT_GRAVEYARD_POSITION: Vec3 = Vec3::new(11.0, 0.0, -4.0);
+pub const P1_DECK_POSITION: Vec3 = Vec3::new(11.0, 0.0, -9.5);
+pub const P0_GRAVEYARD_POSITION: Vec3 = Vec3::new(-11.0, 0.0, 4.0);
+pub const P1_GRAVEYARD_POSITION: Vec3 = Vec3::new(11.0, 0.0, -4.0);
 pub const DECK_CARD_Y_STEP: f32 = CARD_THICKNESS * 1.5;
 
 pub const HOVER_LIFT_AMOUNT: f32 = 0.6;
@@ -20,6 +20,11 @@ pub const HOVER_LIFT_SPEED: f32 = 8.0;
 /// Marker for any card entity.
 #[derive(Component)]
 pub struct Card;
+
+/// Marker present on any entity that is currently running an animation.
+/// Prevents a second animation from being inserted before the first completes.
+#[derive(Component)]
+pub struct Animating;
 
 /// Marker: the pointer is currently hovering over this card (or one of its children).
 #[derive(Component)]
@@ -85,9 +90,9 @@ pub struct DeckCard {
     pub index: usize,
 }
 
-/// Marker for bot hand card visuals (face-down, count-synced).
+/// Marker for player 1 hand card visuals (face-down, count-synced).
 #[derive(Component)]
-pub struct BotHandCard {
+pub struct P1HandCard {
     pub slot: usize,
 }
 
@@ -163,9 +168,9 @@ pub struct GraveyardPile {
 #[derive(Component)]
 pub struct PileHovered;
 
-/// Visual entity for one card in the bot's face-down deck pile.
+/// Visual entity for one card in player 1's face-down deck pile.
 #[derive(Component)]
-pub struct BotDeckPile {
+pub struct P1DeckPile {
     pub index: usize,
 }
 
@@ -186,8 +191,20 @@ pub struct SendToGraveyardAnimation {
     pub start_rotation: Quat,
     pub target_translation: Vec3,
     pub target_rotation: Quat,
-    /// Which player's graveyard this card is headed to (HUMAN=0, BOT=1).
+    /// Which player's graveyard this card is headed to (PLAYER_0=0, PLAYER_1=1).
     pub owner: usize,
+}
+
+/// Animates a hand card back to the deck position during a mulligan.
+/// On completion the entity is converted from HandCard to DeckCard.
+#[derive(Component)]
+pub struct ReturnToDeckAnimation {
+    pub progress: f32,
+    pub speed: f32,
+    pub start_translation: Vec3,
+    pub start_rotation: Quat,
+    pub target_translation: Vec3,
+    pub target_rotation: Quat,
 }
 
 /// Animates a card from hand to the battlefield.
