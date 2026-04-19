@@ -59,6 +59,9 @@ pub struct AttackAllButton;
 pub struct EndTurnButton;
 
 #[derive(Component)]
+pub struct NextTurnButton;
+
+#[derive(Component)]
 pub struct PhaseStepLabel(pub TurnStep);
 
 /// Marker for quality preset buttons in the quality selector panel.
@@ -80,6 +83,32 @@ pub struct MulliganKeepButton;
 /// "Mulligan" button in the mulligan overlay.
 #[derive(Component)]
 pub struct MulliganMulliganButton;
+
+/// Latched button presses collected by `poll_action_buttons` each frame,
+/// consumed by `handle_game_input`.  Using a resource instead of inline
+/// button queries keeps `handle_game_input` under Bevy's system-param limit.
+#[derive(Resource, Default)]
+pub struct ButtonState {
+    pub pass: bool,
+    pub attack: bool,
+    pub end_turn: bool,
+    pub next_turn: bool,
+}
+
+/// Reads all action-button `Interaction` components and writes results into
+/// `ButtonState`.  Must run before `handle_game_input` in the same frame.
+pub fn poll_action_buttons(
+    mut state: ResMut<ButtonState>,
+    pass_btn: Query<&Interaction, (Changed<Interaction>, With<PassPriorityButton>)>,
+    attack_btn: Query<&Interaction, (Changed<Interaction>, With<AttackAllButton>)>,
+    end_turn_btn: Query<&Interaction, (Changed<Interaction>, With<EndTurnButton>)>,
+    next_turn_btn: Query<&Interaction, (Changed<Interaction>, With<NextTurnButton>)>,
+) {
+    state.pass = pass_btn.iter().any(|i| *i == Interaction::Pressed);
+    state.attack = attack_btn.iter().any(|i| *i == Interaction::Pressed);
+    state.end_turn = end_turn_btn.iter().any(|i| *i == Interaction::Pressed);
+    state.next_turn = next_turn_btn.iter().any(|i| *i == Interaction::Pressed);
+}
 
 /// Custom gizmo config group for blocking indicators (thicker lines).
 #[derive(Default, Reflect, GizmoConfigGroup)]
@@ -254,7 +283,7 @@ pub fn setup_game_hud(mut commands: Commands, asset_server: Res<AssetServer>) {
                     PassPriorityButton,
                 ))
                 .with_children(|p| {
-                    p.spawn((Text::new("Pass (P)"), tf(13.0), TextColor(Color::WHITE)));
+                    p.spawn((Text::new("Pass (Space)"), tf(13.0), TextColor(Color::WHITE)));
                 });
 
                 p.spawn((
@@ -265,6 +294,16 @@ pub fn setup_game_hud(mut commands: Commands, asset_server: Res<AssetServer>) {
                 ))
                 .with_children(|p| {
                     p.spawn((Text::new("End Turn (E)"), tf(13.0), TextColor(Color::WHITE)));
+                });
+
+                p.spawn((
+                    Node { padding: UiRect::all(Val::Px(8.0)), ..default() },
+                    BackgroundColor(Color::srgb(0.28, 0.18, 0.48)),
+                    Button,
+                    NextTurnButton,
+                ))
+                .with_children(|p| {
+                    p.spawn((Text::new("Next Turn (N)"), tf(13.0), TextColor(Color::WHITE)));
                 });
             });
         });
@@ -370,30 +409,27 @@ pub fn draw_blocking_gizmos(
     }
 
     // Highlight selected blocker in yellow + guide arrows to each unassigned attacker
-    if let Some(blocker_id) = blocking.selected_blocker {
-        if let Some(&pos) = positions.get(&blocker_id) {
+    if let Some(blocker_id) = blocking.selected_blocker
+        && let Some(&pos) = positions.get(&blocker_id) {
             draw_diamond(&mut gizmos, pos, 1.1, Color::srgb(1.0, 0.88, 0.0));
             for &attacker_id in attacking {
                 let already_assigned = blocking.assignments.iter().any(|(_, a)| *a == attacker_id);
-                if !already_assigned {
-                    if let Some(&att_pos) = positions.get(&attacker_id) {
+                if !already_assigned
+                    && let Some(&att_pos) = positions.get(&attacker_id) {
                         gizmos.arrow(pos, att_pos, Color::srgba(1.0, 0.88, 0.0, 0.7))
                             .with_tip_length(0.6);
                     }
-                }
             }
         }
-    }
 
     // Draw confirmed assignment arrows in green
     for &(blocker_id, attacker_id) in &blocking.assignments {
-        if let Some(&b_pos) = positions.get(&blocker_id) {
-            if let Some(&a_pos) = positions.get(&attacker_id) {
+        if let Some(&b_pos) = positions.get(&blocker_id)
+            && let Some(&a_pos) = positions.get(&attacker_id) {
                 gizmos.arrow(b_pos, a_pos, Color::srgb(0.0, 0.9, 0.3))
                     .with_tip_length(0.6);
                 draw_diamond(&mut gizmos, b_pos, 1.1, Color::srgb(0.0, 0.9, 0.3));
             }
-        }
     }
 }
 
@@ -568,6 +604,7 @@ fn land_card_transform(
     })
 }
 
+#[allow(clippy::too_many_arguments, clippy::type_complexity)]
 pub fn sync_game_visuals(
     mut commands: Commands,
     game: Res<GameResource>,
@@ -657,11 +694,10 @@ pub fn sync_game_visuals(
         let graveyard = &state.players[gy.owner].graveyard;
         let in_flight = gy_in_flight.get(&gy.owner).copied().unwrap_or(0);
         let arrived = graveyard.len().saturating_sub(in_flight);
-        if arrived > 0 {
-            if let Some(top) = graveyard.get(arrived - 1) {
+        if arrived > 0
+            && let Some(top) = graveyard.get(arrived - 1) {
                 *mat = MeshMaterial3d(card_front_material(top.definition.name, &mut materials, &asset_server));
             }
-        }
     }
 
     // Build sets of CardIds in each game-engine zone
@@ -702,7 +738,7 @@ pub fn sync_game_visuals(
     for (entity, game_id, transform, stack_card, _lift) in &hand_cards {
         if p0_bf_ids.contains(&game_id.0) {
             let card_inst = state.battlefield.iter().find(|c| c.id == game_id.0);
-            let is_land = card_inst.map_or(false, |c| c.definition.is_land());
+            let is_land = card_inst.is_some_and(|c| c.definition.is_land());
             let target = if is_land {
                 land_card_transform(state, PLAYER_0, game_id.0, false).unwrap_or_else(|| {
                     bf_card_transform(0, 1, true, false, false)
@@ -1003,8 +1039,8 @@ pub fn sync_game_visuals(
         // Check tapped state from game engine
         let game_tapped = state.battlefield.iter()
             .find(|c| c.id == game_id.0)
-            .map_or(false, |c| c.tapped);
-        let visual_tapped = tap_state.map_or(false, |ts| ts.tapped);
+            .is_some_and(|c| c.tapped);
+        let visual_tapped = tap_state.is_some_and(|ts| ts.tapped);
 
         // Use stacked layout for lands, standard slot layout for creatures
         let target = if is_land {
@@ -1121,22 +1157,22 @@ pub fn auto_advance_p0(
     mulligan: Res<MulliganState>,
 ) {
     if mulligan.active { return; }
-    if game.state.is_game_over() || game.state.active_player_idx != PLAYER_0 { return; }
+    if game.state.is_game_over() || game.state.player_with_priority() != PLAYER_0 { return; }
     let should_advance = matches!(
         game.state.step,
         TurnStep::Untap | TurnStep::Upkeep | TurnStep::Draw | TurnStep::BeginCombat
             | TurnStep::CombatDamage | TurnStep::EndCombat | TurnStep::End | TurnStep::Cleanup
-    );
-    if should_advance {
-        if let Ok(evs) = game.state.perform_action(GameAction::PassPriority) {
+    ) || game.state.active_player_idx == PLAYER_1;
+    if should_advance
+        && let Ok(evs) = game.state.perform_action(GameAction::PassPriority) {
             log.apply_events(&evs);
             check_reveal(&evs, &mut reveal);
         }
-    }
 }
 
 // ── Player 0 input ────────────────────────────────────────────────────────────
 
+#[allow(clippy::too_many_arguments, clippy::type_complexity)]
 pub fn handle_game_input(
     mut commands: Commands,
     mut game: ResMut<GameResource>,
@@ -1151,14 +1187,12 @@ pub fn handle_game_input(
     hovered_bf: Query<(&GameCardId, &CardOwner), (With<CardHovered>, With<BattlefieldCard>)>,
     hovered_target_zone: Query<&PlayerTargetZone, With<CardHovered>>,
     valid_targets: Query<Entity, With<ValidTarget>>,
-    pass_btn: Query<&Interaction, (Changed<Interaction>, With<PassPriorityButton>)>,
-    attack_btn: Query<&Interaction, (Changed<Interaction>, With<AttackAllButton>)>,
-    end_turn_btn: Query<&Interaction, (Changed<Interaction>, With<EndTurnButton>)>,
+    btns: Res<ButtonState>,
 ) {
     // ── London Mulligan bottoming phase ──────────────────────────────────────
     if mulligan.active && mulligan.p0_cards_to_bottom > 0 {
-        if mouse.just_pressed(MouseButton::Left) {
-            if let Some(game_id) = hovered_hand.iter().next() {
+        if mouse.just_pressed(MouseButton::Left)
+            && let Some(game_id) = hovered_hand.iter().next() {
                 let player = &mut game.state.players[PLAYER_0];
                 if let Some(pos) = player.hand.iter().position(|c| c.id == game_id.0) {
                     let card = player.hand.remove(pos);
@@ -1173,7 +1207,6 @@ pub fn handle_game_input(
                     }
                 }
             }
-        }
         return;
     }
 
@@ -1181,16 +1214,13 @@ pub fn handle_game_input(
 
     // ── Blocking (player 0 defends on player 1's turn) ───────────────────────
     if game.state.step == TurnStep::DeclareBlockers && game.state.active_player_idx == PLAYER_1 {
-        let mut pass = keyboard.just_pressed(KeyCode::KeyP) || keyboard.just_pressed(KeyCode::Space);
-        for i in &pass_btn {
-            if *i == Interaction::Pressed { pass = true; }
-        }
+        let pass = keyboard.just_pressed(KeyCode::Space) || btns.pass;
         if mouse.just_pressed(MouseButton::Right) || keyboard.just_pressed(KeyCode::Escape) {
             blocking.selected_blocker = None;
             return;
         }
-        if mouse.just_pressed(MouseButton::Left) {
-            if let Some((game_id, owner)) = hovered_bf.iter().next() {
+        if mouse.just_pressed(MouseButton::Left)
+            && let Some((game_id, owner)) = hovered_bf.iter().next() {
                 if owner.0 == PLAYER_0 {
                     // Only allow selecting creatures that can legally block something
                     // and haven't already been assigned to an attacker.
@@ -1198,8 +1228,8 @@ pub fn handle_game_input(
                     if game.state.can_block_any_attacker(game_id.0) && !already_assigned {
                         blocking.selected_blocker = Some(game_id.0);
                     }
-                } else if owner.0 == PLAYER_1 {
-                    if let Some(blocker_id) = blocking.selected_blocker {
+                } else if owner.0 == PLAYER_1
+                    && let Some(blocker_id) = blocking.selected_blocker {
                         // Only allow assigning to an attacker the blocker can legally block.
                         if game.state.attacking().contains(&game_id.0)
                             && game.state.blocker_can_block_attacker(blocker_id, game_id.0)
@@ -1208,17 +1238,14 @@ pub fn handle_game_input(
                             blocking.selected_blocker = None;
                         }
                     }
-                }
             }
-        }
         if pass {
             let assignments = std::mem::take(&mut blocking.assignments);
             blocking.selected_blocker = None;
-            if !assignments.is_empty() {
-                if let Ok(evs) = game.state.perform_action(GameAction::DeclareBlockers(assignments)) {
+            if !assignments.is_empty()
+                && let Ok(evs) = game.state.perform_action(GameAction::DeclareBlockers(assignments)) {
                     log.apply_events(&evs);
                 }
-            }
             if let Ok(evs) = game.state.perform_action(GameAction::PassPriority) {
                 log.apply_events(&evs);
             }
@@ -1249,6 +1276,7 @@ pub fn handle_game_input(
                         if let Ok(evs) = game.state.perform_action(GameAction::CastSpell {
                             card_id: pending_id,
                             target: Some(target),
+                            mode: None, x_value: None,
                         }) {
                             log.apply_events(&evs);
                         }
@@ -1265,6 +1293,7 @@ pub fn handle_game_input(
                     if let Ok(evs) = game.state.perform_action(GameAction::CastSpell {
                         card_id: pending_id,
                         target: Some(Target::Player(zone.0)),
+                        mode: None, x_value: None,
                     }) {
                         log.apply_events(&evs);
                     }
@@ -1281,17 +1310,13 @@ pub fn handle_game_input(
         game.state.step,
         TurnStep::PreCombatMain | TurnStep::PostCombatMain
     );
-    if in_main && mouse.just_pressed(MouseButton::Left) {
-        if let Some(game_id) = hovered_hand.iter().next() {
+    if in_main && mouse.just_pressed(MouseButton::Left)
+        && let Some(game_id) = hovered_hand.iter().next() {
             play_hand_card_by_id(&mut game, &mut log, &mut targeting, game_id.0);
         }
-    }
 
     // Attack All (A)
-    let mut attack = keyboard.just_pressed(KeyCode::KeyA);
-    for i in &attack_btn {
-        if *i == Interaction::Pressed { attack = true; }
-    }
+    let attack = keyboard.just_pressed(KeyCode::KeyA) || btns.attack;
     if attack && game.state.step == TurnStep::DeclareAttackers {
         let ids: Vec<_> = game.state.battlefield.iter()
             .filter(|c| c.owner == PLAYER_0 && c.can_attack())
@@ -1301,23 +1326,16 @@ pub fn handle_game_input(
         }
     }
 
-    // Pass Priority (P / Space)
-    let mut pass = keyboard.just_pressed(KeyCode::KeyP) || keyboard.just_pressed(KeyCode::Space);
-    for i in &pass_btn {
-        if *i == Interaction::Pressed { pass = true; }
-    }
-    if pass {
-        if let Ok(evs) = game.state.perform_action(GameAction::PassPriority) {
+    // Pass Priority (Space)
+    let pass = keyboard.just_pressed(KeyCode::Space) || btns.pass;
+    if pass
+        && let Ok(evs) = game.state.perform_action(GameAction::PassPriority) {
             log.apply_events(&evs);
             check_reveal(&evs, &mut reveal);
         }
-    }
 
     // End Turn (E) — pass priority repeatedly until it's player 1's turn
-    let mut end_turn = keyboard.just_pressed(KeyCode::KeyE);
-    for i in &end_turn_btn {
-        if *i == Interaction::Pressed { end_turn = true; }
-    }
+    let end_turn = keyboard.just_pressed(KeyCode::KeyE) || btns.end_turn;
     if end_turn {
         for _ in 0..MAX_END_TURN_PASSES {
             if game.state.is_game_over() { break; }
@@ -1326,6 +1344,61 @@ pub fn handle_game_input(
                 log.apply_events(&evs);
             } else {
                 break;
+            }
+        }
+    }
+
+    // Next Turn (N) — run through P1's entire turn and stop at P0's next main phase
+    let next_turn = keyboard.just_pressed(KeyCode::KeyN) || btns.next_turn;
+    if next_turn {
+        advance_to_p0_main(&mut game, &mut log, &mut reveal);
+    }
+}
+
+/// Fast-forward through P1's automated turn, stopping at P0's next PreCombatMain
+/// or when P0 must manually declare blockers.
+fn advance_to_p0_main(game: &mut GameResource, log: &mut GameLog, reveal: &mut RevealPopupState) {
+    const MAX: usize = 400;
+    let mut rng = rand::rng();
+    for _ in 0..MAX {
+        if game.state.is_game_over() { break; }
+        // Stop when P0 is back in their main phase with priority.
+        if game.state.active_player_idx == PLAYER_0
+            && game.state.step == TurnStep::PreCombatMain
+            && game.state.player_with_priority() == PLAYER_0
+        {
+            break;
+        }
+        // Stop so P0 can manually declare blockers.
+        if game.state.active_player_idx == PLAYER_1
+            && game.state.step == TurnStep::DeclareBlockers
+        {
+            break;
+        }
+
+        let priority = game.state.player_with_priority();
+        if game.state.active_player_idx == PLAYER_1 && priority == PLAYER_1 {
+            // Run P1's action inline (bypasses the 0.4s timer).
+            let evs = p1_take_action(&mut game.state, &mut rng);
+            log.apply_events(&evs);
+            check_reveal(&evs, reveal);
+            if evs.is_empty() {
+                // P1 returned nothing (e.g. waiting on blockers) — break to avoid spin.
+                break;
+            }
+        } else if game.state.active_player_idx == PLAYER_0
+            && game.state.step == TurnStep::DeclareBlockers
+        {
+            // On P0's turn DeclareBlockers: auto-run P1's block declarations then pass.
+            let evs = p1_declare_blocks(&mut game.state, &mut rng);
+            log.apply_events(&evs);
+            if let Ok(evs) = game.state.perform_action(GameAction::PassPriority) {
+                log.apply_events(&evs);
+            }
+        } else {
+            match game.state.perform_action(GameAction::PassPriority) {
+                Ok(evs) => { log.apply_events(&evs); check_reveal(&evs, reveal); }
+                Err(_) => break,
             }
         }
     }
@@ -1384,20 +1457,32 @@ fn play_hand_card_by_id(
     // No target needed — cast immediately
     auto_tap_lands(game, log, &card.definition.cost);
     let target = p0_auto_target(&game.state, &card.definition);
-    if let Ok(evs) = game.state.perform_action(GameAction::CastSpell { card_id: card.id, target }) {
+    if let Ok(evs) = game.state.perform_action(GameAction::CastSpell { card_id: card.id, target, mode: None, x_value: None }) {
         log.apply_events(&evs);
     }
 }
 
-fn land_produces_color(card: &crabomination::card::CardInstance, color: ManaColor) -> bool {
+fn source_produces_color(card: &crabomination::card::CardInstance, color: ManaColor) -> bool {
     card.definition.activated_abilities.iter().any(|a| {
-        a.effects.iter().any(|e| {
-            if let SpellEffect::AddMana { colors } = e {
-                colors.contains(&color)
-            } else {
-                false
-            }
+        a.effects.iter().any(|e| match e {
+            SpellEffect::AddMana { colors } => colors.contains(&color),
+            SpellEffect::AddManaAnyColor { .. } => true,
+            _ => false,
         })
+    })
+}
+
+fn is_mana_source(card: &crabomination::card::CardInstance) -> bool {
+    card.definition.activated_abilities.iter().any(|a| {
+        !a.effects.is_empty()
+            && a.effects.iter().all(|e| {
+                matches!(
+                    e,
+                    SpellEffect::AddMana { .. }
+                        | SpellEffect::AddManaAnyColor { .. }
+                        | SpellEffect::AddColorlessMana { .. }
+                )
+            })
     })
 }
 
@@ -1409,29 +1494,32 @@ fn auto_tap_lands(game: &mut GameResource, log: &mut GameLog, cost: &ManaCost) {
         match sym {
             ManaSymbol::Colored(c) => needed_colors.push(*c),
             ManaSymbol::Generic(n) => generic += n,
+            ManaSymbol::Hybrid(a, b) => { needed_colors.push(*a); needed_colors.push(*b); }
+            ManaSymbol::Phyrexian(c) => needed_colors.push(*c),
+            ManaSymbol::Colorless(n) => generic += n,
+            ManaSymbol::Snow | ManaSymbol::X => {}
         }
     }
 
-    // Tap a color-matched land for each colored pip
+    // Tap a color-matched mana source for each colored pip
     for color in needed_colors {
-        let land_id = game.state.battlefield.iter()
-            .find(|c| c.owner == PLAYER_0 && c.definition.is_land() && !c.tapped && land_produces_color(c, color))
+        let source_id = game.state.battlefield.iter()
+            .find(|c| c.owner == PLAYER_0 && !c.tapped && source_produces_color(c, color))
             .map(|c| c.id);
-        if let Some(id) = land_id {
-            if let Ok(evs) = game.state.perform_action(GameAction::ActivateAbility {
+        if let Some(id) = source_id
+            && let Ok(evs) = game.state.perform_action(GameAction::ActivateAbility {
                 card_id: id, ability_index: 0, target: None,
             }) {
                 log.apply_events(&evs);
             }
-        }
     }
 
-    // Tap any remaining untapped land for generic pips
+    // Tap any remaining untapped mana source for generic pips
     for _ in 0..generic {
-        let land_id = game.state.battlefield.iter()
-            .find(|c| c.owner == PLAYER_0 && c.definition.is_land() && !c.tapped)
+        let source_id = game.state.battlefield.iter()
+            .find(|c| c.owner == PLAYER_0 && !c.tapped && is_mana_source(c))
             .map(|c| c.id);
-        let Some(id) = land_id else { break };
+        let Some(id) = source_id else { break };
         if let Ok(evs) = game.state.perform_action(GameAction::ActivateAbility {
             card_id: id, ability_index: 0, target: None,
         }) {
@@ -1452,6 +1540,7 @@ fn stack_card_transform(idx: usize, total: usize) -> Transform {
 }
 
 /// When RevealPopupState activates, start a RevealPeekAnimation on the top deck card.
+#[allow(clippy::type_complexity)]
 pub fn trigger_reveal_animation(
     mut reveal: ResMut<RevealPopupState>,
     deck_cards: Query<(Entity, &DeckCard, &Transform), (Without<RevealPeekAnimation>, Without<Animating>, Without<P1DeckPile>)>,
@@ -1680,6 +1769,7 @@ pub fn mulligan_system(
 
 // ── Mulligan UI update ────────────────────────────────────────────────────────
 
+#[allow(clippy::type_complexity)]
 pub fn update_mulligan_ui(
     mulligan: Res<MulliganState>,
     game: Res<GameResource>,

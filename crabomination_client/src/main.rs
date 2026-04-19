@@ -27,12 +27,13 @@ use systems::animate::{
 };
 use systems::game_ui::{
     auto_advance_p0, p1_system, draw_attacker_overlays, draw_blocking_gizmos,
-    handle_game_input, mulligan_system, setup_game_hud, setup_mulligan_ui, setup_quality_panel,
-    handle_quality_buttons, sync_game_visuals, trigger_reveal_animation,
+    handle_game_input, mulligan_system, poll_action_buttons, setup_game_hud, setup_mulligan_ui,
+    setup_quality_panel, handle_quality_buttons, sync_game_visuals, trigger_reveal_animation,
     update_mulligan_ui, update_p1_text, update_game_log, update_hint, update_phase_chart,
-    update_player_text, update_turn_text, AttackerGizmos, BlockingGizmos,
+    update_player_text, update_turn_text, AttackerGizmos, BlockingGizmos, ButtonState,
 };
 use systems::ui::{graveyard_browser, highlight_hovered_cards, peek_popup, pile_tooltip, reveal_popup, RevealPopupState};
+use systems::decision_ui::{spawn_decision_ui, handle_scry_toggles, handle_confirm, DecisionUiState};
 
 /// Marks the decorative ground plane so quality changes can update its mesh.
 #[derive(Component)]
@@ -45,27 +46,45 @@ struct MainCamera;
 /// All unique card names used in the game (for Scryfall image download).
 const CARD_NAMES: &[&str] = &[
     // Lands
+    "Island",
     "Mountain",
     "Plains",
     "Swamp",
-    // Player 0 (RW) cards
+    // Power / Moxen
+    "Black Lotus",
+    "Mox Emerald",
+    "Mox Jet",
+    "Mox Pearl",
+    "Mox Ruby",
+    "Mox Sapphire",
+    "Sol Ring",
+    // Player 0 (UW) creatures
+    "Birds of Paradise",
+    "Mahamoti Djinn",
     "Savannah Lions",
-    "White Knight",
-    "Hopeful Eidolon",
-    "Lightning Helix",
-    "Goblin Guide",
-    "Lightning Bolt",
     "Serra Angel",
-    "Shivan Dragon",
+    "White Knight",
+    // Player 0 (UW) spells
+    "Ancestral Recall",
+    "Brainstorm",
+    "Counterspell",
+    "Force of Will",
+    "Opt",
+    "Preordain",
+    "Swords to Plowshares",
     "Wrath of God",
-    "Shock",
-    // Player 1 (BR) cards
-    "Hypnotic Specter",
-    "Dark Ritual",
-    "Terror",
+    // Player 1 (B) creatures
     "Black Knight",
-    "Sengir Vampire",
+    "Hypnotic Specter",
+    "Juzám Djinn",
+    // Player 1 (B) spells
+    "Dark Ritual",
+    "Demonic Tutor",
+    "Hymn to Tourach",
+    "Reanimate",
     "Terminate",
+    "Terror",
+    "Wheel of Fortune",
 ];
 
 fn main() {
@@ -101,11 +120,17 @@ fn main() {
         .insert_resource(MulliganState::default())
         .insert_resource(RevealPopupState::default())
         .insert_resource(AnimationSpeed::default())
+        .insert_resource(ButtonState::default())
+        .insert_resource(DecisionUiState::default())
         .add_systems(Startup, (setup, setup_game_hud, setup_mulligan_ui, setup_quality_panel))
+        // Button polling runs first so handle_game_input can read latched state.
+        .add_systems(Update, poll_action_buttons)
         // Game logic: mulligan → player 1 AI → auto-advance → player input (ordered)
         .add_systems(
             Update,
-            (mulligan_system, p1_system, auto_advance_p0, handle_game_input).chain(),
+            (mulligan_system, p1_system, auto_advance_p0, handle_game_input)
+                .chain()
+                .after(poll_action_buttons),
         )
         // Visual sync (after game logic)
         .add_systems(Update, sync_game_visuals.after(handle_game_input))
@@ -148,6 +173,8 @@ fn main() {
                 adjust_animation_speed,
             ),
         )
+        // Decision UI: spawn modal when pending, handle interactions, submit answer.
+        .add_systems(Update, (spawn_decision_ui, handle_scry_toggles, handle_confirm).chain().after(handle_game_input))
         // Quality menu: buttons send event, system applies all quality changes
         .add_systems(Update, (handle_quality_buttons, apply_render_quality_change).chain())
         .run();
@@ -220,6 +247,7 @@ fn setup(
     ));
 }
 
+#[allow(clippy::too_many_arguments)]
 fn apply_render_quality_change(
     mut messages: MessageReader<ChangeQuality>,
     mut quality: ResMut<RenderQuality>,
@@ -240,25 +268,22 @@ fn apply_render_quality_change(
 
     let segments = new_quality.corner_segments();
 
-    if let Some(assets) = &card_assets {
-        if let Some(mesh) = meshes.get_mut(&assets.card_mesh) {
+    if let Some(assets) = &card_assets
+        && let Some(mesh) = meshes.get_mut(&assets.card_mesh) {
             *mesh = create_rounded_rect_mesh(CARD_WIDTH, CARD_HEIGHT, CORNER_RADIUS, segments);
         }
-    }
 
-    if let Some(assets) = &highlight_assets {
-        if let Some(mesh) = meshes.get_mut(&assets.border_mesh) {
+    if let Some(assets) = &highlight_assets
+        && let Some(mesh) = meshes.get_mut(&assets.border_mesh) {
             *mesh = create_border_mesh(CARD_WIDTH, CARD_HEIGHT, CORNER_RADIUS, BORDER_WIDTH, segments);
         }
-    }
 
-    if let Ok(ground_mesh) = ground_query.single() {
-        if let Some(mesh) = meshes.get_mut(&ground_mesh.0) {
+    if let Ok(ground_mesh) = ground_query.single()
+        && let Some(mesh) = meshes.get_mut(&ground_mesh.0) {
             *mesh = Plane3d::default().mesh().size(50.0, 50.0)
                 .subdivisions(new_quality.ground_subdivisions())
                 .into();
         }
-    }
 
     shadow_map.size = new_quality.shadow_map_size();
 

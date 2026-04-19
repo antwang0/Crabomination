@@ -38,19 +38,12 @@ pub fn load() -> Config {
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(default)]
+#[derive(Default)]
 pub struct Config {
     pub paths: PathsConfig,
     pub graphics: GraphicsConfig,
 }
 
-impl Default for Config {
-    fn default() -> Self {
-        Self {
-            paths: PathsConfig::default(),
-            graphics: GraphicsConfig::default(),
-        }
-    }
-}
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(default)]

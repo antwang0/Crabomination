@@ -2,6 +2,7 @@ use rand::RngExt;
 
 use crabomination::{
     card::{CardDefinition, CardId, Keyword, SpellEffect},
+    decision::{AutoDecider, Decider},
     game::{GameAction, GameEvent, GameState, Target, TurnStep},
     mana::ManaPool,
 };
@@ -9,9 +10,20 @@ use crabomination::{
 use crate::game::{PLAYER_1, PLAYER_0};
 
 /// Take one player 1 action and return the resulting events.
-/// Should be called when `state.active_player_idx == PLAYER_1`.
+/// Called whenever it might be P1's turn to act (checks priority internally).
 pub fn p1_take_action<R: RngExt>(state: &mut GameState, rng: &mut R) -> Vec<GameEvent> {
     if state.is_game_over() {
+        return vec![];
+    }
+    // If a decision is pending on P1's spell/ability, auto-answer it. Without
+    // this the game would stall — no UI is surfaced for bot-side decisions.
+    if let Some(pending) = &state.pending_decision
+        && pending.acting_player() == PLAYER_1 {
+            let answer = AutoDecider.decide(&pending.decision);
+            return state.perform_action(GameAction::SubmitDecision(answer)).unwrap_or_default();
+        }
+    // Only act when P1 actually has priority.
+    if state.player_with_priority() != PLAYER_1 {
         return vec![];
     }
     match (state.active_player_idx, state.step) {
@@ -19,10 +31,10 @@ pub fn p1_take_action<R: RngExt>(state: &mut GameState, rng: &mut R) -> Vec<Game
             p1_main_phase(state, rng)
         }
         (PLAYER_1, TurnStep::DeclareAttackers) => p1_attack(state),
-        // Player 1 is the attacker here; player 0 must declare blockers before we can advance.
+        // Waiting for P0 to declare blockers — P1 should not act.
         (PLAYER_1, TurnStep::DeclareBlockers) if !state.attacking().is_empty() => vec![],
-        (PLAYER_1, _) => state.perform_action(GameAction::PassPriority).unwrap_or_default(),
-        _ => vec![],
+        // P1 has priority but is not the active player (opponent's turn) — pass.
+        _ => state.perform_action(GameAction::PassPriority).unwrap_or_default(),
     }
 }
 
@@ -76,7 +88,8 @@ pub fn p1_declare_blocks<R: RngExt>(state: &mut GameState, rng: &mut R) -> Vec<G
 // ── Private helpers ────────────────────────────────────────────────────────────
 
 fn p1_main_phase<R: RngExt>(state: &mut GameState, rng: &mut R) -> Vec<GameEvent> {
-    // 1. Tap any untapped land first (one per call so the caller can animate)
+    // 1. Tap any untapped land first (one per call so the caller can animate).
+    //    Mana abilities can be activated any time we have priority.
     let land_id = state
         .battlefield
         .iter()
@@ -94,7 +107,7 @@ fn p1_main_phase<R: RngExt>(state: &mut GameState, rng: &mut R) -> Vec<GameEvent
     }
 
     // 2. Cast a random affordable card from hand
-    let hand: Vec<_> = state.players[PLAYER_1].hand.iter().cloned().collect();
+    let hand: Vec<_> = state.players[PLAYER_1].hand.to_vec();
     let castable: Vec<_> = hand
         .iter()
         .filter(|c| can_afford(&c.definition, &state.players[PLAYER_1].mana_pool))
@@ -110,7 +123,7 @@ fn p1_main_phase<R: RngExt>(state: &mut GameState, rng: &mut R) -> Vec<GameEvent
             }
         } else {
             let target = choose_target(state, &card.definition, PLAYER_1, rng);
-            GameAction::CastSpell { card_id: card.id, target }
+            GameAction::CastSpell { card_id: card.id, target, mode: None, x_value: None }
         };
 
         if let Ok(evs) = state.perform_action(action) {
@@ -157,7 +170,13 @@ fn p1_attack(state: &mut GameState) -> Vec<GameEvent> {
 
 /// True if the player can pay the card's mana cost from their current pool.
 pub fn can_afford(def: &CardDefinition, pool: &ManaPool) -> bool {
-    pool.clone().pay(&def.cost).is_ok()
+    let cost = if def.cost.has_x() {
+        // Bot spends all remaining mana on X
+        def.cost.with_x_value(0)
+    } else {
+        def.cost.clone()
+    };
+    pool.clone().pay(&cost).is_ok()
 }
 
 /// Choose a target that satisfies `req`, preferring opponent creatures for damage
@@ -188,7 +207,7 @@ fn target_for_requirement<R: RngExt>(
             let ids: Vec<_> = state
                 .battlefield
                 .iter()
-                .filter(|c| c.owner == opp && c.definition.is_creature() && state.evaluate_requirement(req, &Target::Permanent(c.id)))
+                .filter(|c| c.owner == opp && c.definition.is_creature() && state.evaluate_requirement(req, &Target::Permanent(c.id), PLAYER_0))
                 .map(|c| c.id)
                 .collect();
             if ids.is_empty() { None } else { Some(Target::Permanent(ids[rng.random_range(0..ids.len())])) }
@@ -239,5 +258,5 @@ pub fn p1_mulligan_decision(state: &GameState, mulligans_taken: usize) -> bool {
     let hand = &state.players[PLAYER_1].hand;
     let lands = hand.iter().filter(|c| c.definition.is_land()).count();
     // Keep if hand has 2–5 lands (playable range).
-    lands >= 2 && lands <= 5
+    (2..=5).contains(&lands)
 }

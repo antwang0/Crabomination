@@ -23,12 +23,11 @@ pub fn on_card_over(
         if let Ok(mut ec) = commands.get_entity(parent) {
             ec.insert(CardHovered);
         }
-        if let Ok((transform, mut lift, hand_card)) = lifts.get_mut(parent) {
-            if hand_card.is_some() {
+        if let Ok((transform, mut lift, hand_card)) = lifts.get_mut(parent)
+            && hand_card.is_some() {
                 lift.base_translation = transform.translation - Vec3::Y * lift.current_lift;
                 lift.target_lift = HOVER_LIFT_AMOUNT;
             }
-        }
     }
 }
 

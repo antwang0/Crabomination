@@ -65,6 +65,9 @@ fn describe_event(event: &GameEvent) -> String {
         GameEvent::ManaAdded { player, color } => {
             format!("{} adds {:?}", player_label(*player), color)
         }
+        GameEvent::ColorlessManaAdded { player } => {
+            format!("{} adds {{C}}", player_label(*player))
+        }
         GameEvent::PermanentEntered { .. } => "Permanent enters".into(),
         GameEvent::DamageDealt { amount, to_player, .. } => {
             if let Some(p) = to_player {
@@ -86,6 +89,24 @@ fn describe_event(event: &GameEvent) -> String {
         GameEvent::AttackerDeclared(_) => "Attacker declared".into(),
         GameEvent::BlockerDeclared { .. } => "Blocker declared".into(),
         GameEvent::CombatResolved => "Combat resolved".into(),
+        GameEvent::PermanentExiled { .. } => "Permanent exiled".into(),
+        GameEvent::CounterAdded { count, counter_type, .. } => {
+            format!("{count} {:?} counter(s) added", counter_type)
+        }
+        GameEvent::CounterRemoved { count, counter_type, .. } => {
+            format!("{count} {:?} counter(s) removed", counter_type)
+        }
+        GameEvent::PermanentTapped { .. } => "Permanent tapped".into(),
+        GameEvent::PermanentUntapped { .. } => "Permanent untapped".into(),
+        GameEvent::TokenCreated { .. } => "Token created".into(),
+        GameEvent::CardMilled { player, .. } => format!("{} milled a card", player_label(*player)),
+        GameEvent::ScryPerformed { player, looked_at, bottomed } => {
+            format!(
+                "{} scry {looked_at}: kept {} on top, sent {bottomed} to bottom",
+                player_label(*player),
+                looked_at - bottomed,
+            )
+        }
         GameEvent::TopCardRevealed { player, card_name, is_land } => {
             let suffix = if *is_land { " (land — drawn!)" } else { " (not a land)" };
             format!("Revealed: {} for {}{}", card_name, player_label(*player), suffix)
@@ -94,6 +115,24 @@ fn describe_event(event: &GameEvent) -> String {
             Some(p) => format!("GAME OVER: {} wins!", player_label(*p)),
             None => "GAME OVER: Draw!".into(),
         },
+        GameEvent::FirstStrikeDamageResolved => "First-strike damage resolved".into(),
+        GameEvent::AttachmentMoved { .. } => "Attachment moved".into(),
+        GameEvent::PoisonAdded { player, amount } => {
+            format!("{} gets {amount} poison counter(s)", player_label(*player))
+        }
+        GameEvent::LoyaltyAbilityActivated { .. } => "Loyalty ability activated".into(),
+        GameEvent::LoyaltyChanged { new_loyalty, .. } => {
+            format!("Loyalty changed to {new_loyalty}")
+        }
+        GameEvent::PlaneswalkerDied { .. } => "Planeswalker died".into(),
+        GameEvent::SpellsCopied { .. } => "Spells copied".into(),
+        GameEvent::SurveilPerformed { player, looked_at, graveyarded } => {
+            format!(
+                "{} surveils {looked_at}: kept {}, sent {graveyarded} to graveyard",
+                player_label(*player),
+                looked_at - graveyarded,
+            )
+        }
     }
 }
 
@@ -107,13 +146,15 @@ pub fn format_mana_pool(state: &GameState, player_idx: usize) -> String {
         (ManaColor::Red, 'R'),
         (ManaColor::Green, 'G'),
     ];
-    let parts: Vec<String> = colors
+    let mut parts: Vec<String> = colors
         .iter()
         .filter_map(|(c, sym)| {
             let n = pool.amount(*c);
             if n > 0 { Some(format!("{sym}:{n}")) } else { None }
         })
         .collect();
+    let cl = pool.colorless_amount();
+    if cl > 0 { parts.push(format!("C:{cl}")); }
     if parts.is_empty() { "0".into() } else { parts.join(" ") }
 }
 
@@ -188,51 +229,66 @@ type CardFactory = fn() -> CardDefinition;
 
 /// Build a fresh game with two players, each with a shuffled deck and 7-card opening hand.
 ///
-/// Player 0 — Red/White aggro (60 cards): burn, weenies, Lightning Helix, Wrath of God.
-/// Player 1 — Black/Red midrange (60 cards): Dark Ritual, discard threats, removal, vampires.
+/// Player 0 — Blue/White control (60 cards): Power Nine, Counterspell, Force of Will, Swords to Plowshares.
+/// Player 1 — Black combo (60 cards): Dark Ritual, Demonic Tutor, Juzám Djinn, Reanimate, discard.
 pub fn build_game() -> GameResource {
     let mut state = GameState::new(vec![Player::new(PLAYER_0, "Player 0"), Player::new(PLAYER_1, "Player 1")]);
 
-    // ── Player 0: Red/White Aggro (60 cards) ──────────────────────────────────
+    // ── Player 0: Blue/White Vintage Control (60 cards) ──────────────────────
+    // Power Nine, hard permission, the best removal, and Serra Angel finishers.
     let p0_deck: &[CardFactory] = &[
-        // Lands (24)
+        // Lands (20)
         plains, plains, plains, plains, plains, plains,
         plains, plains, plains, plains,
-        mountain, mountain, mountain, mountain, mountain, mountain,
-        mountain, mountain, mountain, mountain, mountain, mountain,
-        mountain, mountain,
-        // Creatures (20)
-        savannah_lions, savannah_lions, savannah_lions, savannah_lions,
-        white_knight, white_knight, white_knight, white_knight,
-        hopeful_eidolon, hopeful_eidolon, hopeful_eidolon, hopeful_eidolon,
-        goblin_guide, goblin_guide, goblin_guide, goblin_guide,
-        serra_angel, serra_angel,
-        shivan_dragon, shivan_dragon,
-        // Spells (16)
-        lightning_bolt, lightning_bolt, lightning_bolt, lightning_bolt,
-        lightning_helix, lightning_helix, lightning_helix, lightning_helix,
-        shock, shock, shock, shock,
-        wrath_of_god, wrath_of_god, wrath_of_god, wrath_of_god,
+        island, island, island, island, island, island,
+        island, island, island, island,
+        // Power (6)
+        black_lotus, sol_ring, mox_pearl, mox_sapphire, mox_ruby, mox_emerald,
+        // Draw (6)
+        ancestral_recall, ancestral_recall, ancestral_recall, ancestral_recall,
+        brainstorm, brainstorm,
+        // Cantrips — exercise the Scry decider (4)
+        opt, opt, preordain, preordain,
+        // Permission (8)
+        counterspell, counterspell, counterspell, counterspell,
+        force_of_will, force_of_will, force_of_will, force_of_will,
+        // Removal (6)
+        swords_to_plowshares, swords_to_plowshares, swords_to_plowshares, swords_to_plowshares,
+        wrath_of_god, wrath_of_god,
+        // Mana fixing — exercises the AddManaAnyColor decider (2)
+        birds_of_paradise, birds_of_paradise,
+        // Creatures (4)
+        white_knight, white_knight,
+        mahamoti_djinn, mahamoti_djinn,
+        // Finishers (4)
+        serra_angel, serra_angel, serra_angel, serra_angel,
     ];
 
-    // ── Player 1: Black/Red Midrange (60 cards) ───────────────────────────────
+    // ── Player 1: Black Vintage Combo (60 cards) ──────────────────────────────
+    // Dark Ritual into threats, Demonic Tutor for silver bullets, reanimation package.
     let p1_deck: &[CardFactory] = &[
-        // Lands (24)
+        // Lands (20)
         swamp, swamp, swamp, swamp, swamp, swamp,
         swamp, swamp, swamp, swamp, swamp, swamp,
-        swamp, swamp,
-        mountain, mountain, mountain, mountain, mountain, mountain,
         mountain, mountain, mountain, mountain,
-        // Creatures (16)
-        black_knight, black_knight, black_knight, black_knight,
-        goblin_guide, goblin_guide, goblin_guide, goblin_guide,
-        hypnotic_specter, hypnotic_specter, hypnotic_specter, hypnotic_specter,
-        sengir_vampire, sengir_vampire, sengir_vampire, sengir_vampire,
-        // Spells (20)
+        mountain, mountain, mountain, mountain,
+        // Power (5)
+        black_lotus, sol_ring, mox_jet, mox_ruby, mox_emerald,
+        // Acceleration (4)
         dark_ritual, dark_ritual, dark_ritual, dark_ritual,
-        lightning_bolt, lightning_bolt, lightning_bolt, lightning_bolt,
+        // Tutors + draw (6)
+        demonic_tutor, demonic_tutor, demonic_tutor, demonic_tutor,
+        wheel_of_fortune, wheel_of_fortune,
+        // Discard (4)
+        hymn_to_tourach, hymn_to_tourach, hymn_to_tourach, hymn_to_tourach,
+        // Reanimation (3)
+        reanimate, reanimate, reanimate,
+        // Creatures (10)
+        black_knight, black_knight, black_knight, black_knight,
+        hypnotic_specter, hypnotic_specter,
+        juzam_djinn, juzam_djinn, juzam_djinn, juzam_djinn,
+        // Removal (8)
         terror, terror, terror, terror,
-        shock, shock, shock, shock,
         terminate, terminate, terminate, terminate,
     ];
 

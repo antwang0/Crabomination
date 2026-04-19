@@ -4,27 +4,35 @@
 use crate::card::{ActivatedAbility, SpellEffect};
 use crate::mana::{Color, ManaCost};
 
-pub(super) fn tap_add(color: Color) -> ActivatedAbility {
+pub fn tap_add(color: Color) -> ActivatedAbility {
     ActivatedAbility {
         tap_cost: true,
         mana_cost: ManaCost::default(),
         effects: vec![SpellEffect::AddMana { colors: vec![color] }],
+        once_per_turn: false,
+        sorcery_speed: false,
     }
 }
 
-pub(super) fn no_abilities() -> Vec<ActivatedAbility> {
+pub fn no_abilities() -> Vec<ActivatedAbility> {
     vec![]
 }
 
+pub mod all;
 pub mod ap;
+pub mod arn;
 pub mod dis;
+pub mod fem;
 pub mod gpt;
+pub mod ice;
 pub mod inv;
 pub mod lea;
+pub mod m11;
 pub mod ogw;
 pub mod pc2;
 pub mod por;
 pub mod rav;
 pub mod rtr;
+pub mod tmp;
 pub mod zen;
 pub mod ths;

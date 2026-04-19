@@ -27,6 +27,7 @@ pub fn ease_in_out(t: f32) -> f32 {
 
 /// Smoothly lerp each card's Y toward its target (base + hover lift).
 /// Skipped for any card that has another animation currently driving its transform.
+#[allow(clippy::type_complexity)]
 pub fn animate_hover_lift(
     time: Res<Time>,
     speed: Res<AnimationSpeed>,

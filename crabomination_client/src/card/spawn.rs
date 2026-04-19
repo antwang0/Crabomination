@@ -166,6 +166,7 @@ pub fn spawn_game_cards(
     .observe(on_zone_out);
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn spawn_single_card(
     commands: &mut Commands,
     card_mesh: &Handle<Mesh>,

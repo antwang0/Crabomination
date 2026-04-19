@@ -16,6 +16,8 @@ pub struct Player {
     pub graveyard: Vec<CardInstance>,
     /// How many lands this player has played on their current turn.
     pub lands_played_this_turn: u32,
+    /// Poison counters (player loses at 10).
+    pub poison_counters: u32,
 }
 
 impl Player {
@@ -29,6 +31,7 @@ impl Player {
             hand: Vec::new(),
             graveyard: Vec::new(),
             lands_played_this_turn: 0,
+            poison_counters: 0,
         }
     }
 

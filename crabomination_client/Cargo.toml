@@ -6,9 +6,9 @@ edition = "2024"
 [dependencies]
 bevy = { version = "0.18.1", features = ["dynamic_linking"] }
 bevy_mesh = "0.18.1"
-rand = "0.10"
-ureq = "3.2"
+rand = "0.10.1"
+ureq = "3.3"
 serde = { version = "1.0.228", features = ["derive"] }
-toml = "1.0.6"
+toml = "1.1.2"
 dirs = "6"
 crabomination = { path = "../crabomination" }
