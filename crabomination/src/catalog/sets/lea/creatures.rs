@@ -1,9 +1,11 @@
 use super::{no_abilities, tap_add};
 use crate::card::{
-    ActivatedAbility, CardDefinition, CardType, CreatureType, Keyword,
-    SelectionRequirement, SpellEffect, Subtypes, TriggerCondition, TriggeredAbility,
+    ActivatedAbility, CardDefinition, CardType, CreatureType, Effect, EventKind, EventScope,
+    EventSpec, Keyword, Subtypes, TriggeredAbility,
 };
-use crate::mana::{b, cost, g, generic, r, u, w, Color, ManaCost};
+use crate::effect::shortcut::{deal, target};
+use crate::effect::{ManaPayload, PlayerRef, Selector, Value};
+use crate::mana::{Color, ManaCost, b, cost, g, generic, r, u, w};
 
 /// Savannah Lions — {W} 2/1
 pub fn savannah_lions() -> CardDefinition {
@@ -12,10 +14,14 @@ pub fn savannah_lions() -> CardDefinition {
         cost: cost(&[w()]),
         supertypes: vec![],
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Cat, CreatureType::Lion], ..Default::default() },
-        power: 2, toughness: 1,
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Cat, CreatureType::Lion],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
         keywords: vec![],
-        spell_effects: vec![],
+        effect: Effect::Noop,
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -31,10 +37,14 @@ pub fn white_knight() -> CardDefinition {
         cost: cost(&[w(), w()]),
         supertypes: vec![],
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Human, CreatureType::Knight], ..Default::default() },
-        power: 2, toughness: 2,
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
         keywords: vec![Keyword::FirstStrike],
-        spell_effects: vec![],
+        effect: Effect::Noop,
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -50,10 +60,14 @@ pub fn serra_angel() -> CardDefinition {
         cost: cost(&[generic(3), w(), w()]),
         supertypes: vec![],
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Angel], ..Default::default() },
-        power: 4, toughness: 4,
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Angel],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
         keywords: vec![Keyword::Flying, Keyword::Vigilance],
-        spell_effects: vec![],
+        effect: Effect::Noop,
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -69,10 +83,14 @@ pub fn mahamoti_djinn() -> CardDefinition {
         cost: cost(&[generic(3), u(), u()]),
         supertypes: vec![],
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Djinn], ..Default::default() },
-        power: 5, toughness: 6,
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Djinn],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 6,
         keywords: vec![Keyword::Flying],
-        spell_effects: vec![],
+        effect: Effect::Noop,
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -88,14 +106,18 @@ pub fn prodigal_sorcerer() -> CardDefinition {
         cost: cost(&[generic(2), u()]),
         supertypes: vec![],
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Human, CreatureType::Wizard], ..Default::default() },
-        power: 1, toughness: 1,
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
         keywords: vec![],
-        spell_effects: vec![],
+        effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             mana_cost: ManaCost::default(),
-            effects: vec![SpellEffect::DealDamage { amount: 1, target: SelectionRequirement::Any }],
+            effect: deal(1, target()),
             once_per_turn: false,
             sorcery_speed: false,
         }],
@@ -113,10 +135,14 @@ pub fn black_knight() -> CardDefinition {
         cost: cost(&[b(), b()]),
         supertypes: vec![],
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Human, CreatureType::Knight], ..Default::default() },
-        power: 2, toughness: 2,
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
         keywords: vec![Keyword::FirstStrike],
-        spell_effects: vec![],
+        effect: Effect::Noop,
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -133,17 +159,23 @@ pub fn hypnotic_specter() -> CardDefinition {
         cost: cost(&[generic(1), b(), b()]),
         supertypes: vec![],
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Specter], ..Default::default() },
-        power: 2, toughness: 2,
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Specter],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
         keywords: vec![Keyword::Flying],
-        spell_effects: vec![],
+        effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![
-            TriggeredAbility {
-                condition: TriggerCondition::Attacks,
-                effects: vec![SpellEffect::OpponentDiscardRandom],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::Discard {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(1),
+                random: true,
             },
-        ],
+        }],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -157,10 +189,14 @@ pub fn sengir_vampire() -> CardDefinition {
         cost: cost(&[generic(3), b(), b()]),
         supertypes: vec![],
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Vampire], ..Default::default() },
-        power: 4, toughness: 4,
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
         keywords: vec![Keyword::Flying],
-        spell_effects: vec![],
+        effect: Effect::Noop,
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -176,10 +212,14 @@ pub fn shivan_dragon() -> CardDefinition {
         cost: cost(&[generic(4), r(), r()]),
         supertypes: vec![],
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Dragon], ..Default::default() },
-        power: 5, toughness: 5,
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dragon],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 5,
         keywords: vec![Keyword::Flying],
-        spell_effects: vec![],
+        effect: Effect::Noop,
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -195,10 +235,14 @@ pub fn grizzly_bears() -> CardDefinition {
         cost: cost(&[generic(1), g()]),
         supertypes: vec![],
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Bear], ..Default::default() },
-        power: 2, toughness: 2,
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bear],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
         keywords: vec![],
-        spell_effects: vec![],
+        effect: Effect::Noop,
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -214,14 +258,21 @@ pub fn birds_of_paradise() -> CardDefinition {
         cost: cost(&[g()]),
         supertypes: vec![],
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Bird], ..Default::default() },
-        power: 0, toughness: 1,
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bird],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 1,
         keywords: vec![Keyword::Flying],
-        spell_effects: vec![],
+        effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             mana_cost: ManaCost::default(),
-            effects: vec![SpellEffect::AddManaAnyColor { amount: 1 }],
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::AnyOneColor(Value::Const(1)),
+            },
             once_per_turn: false,
             sorcery_speed: false,
         }],
@@ -239,10 +290,14 @@ pub fn llanowar_elves() -> CardDefinition {
         cost: cost(&[g()]),
         supertypes: vec![],
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Elf, CreatureType::Druid], ..Default::default() },
-        power: 1, toughness: 1,
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
         keywords: vec![],
-        spell_effects: vec![],
+        effect: Effect::Noop,
         activated_abilities: vec![tap_add(Color::Green)],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -258,10 +313,14 @@ pub fn elvish_archer() -> CardDefinition {
         cost: cost(&[generic(1), g()]),
         supertypes: vec![],
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Elf, CreatureType::Archer], ..Default::default() },
-        power: 1, toughness: 2,
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Archer],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
         keywords: vec![Keyword::FirstStrike],
-        spell_effects: vec![],
+        effect: Effect::Noop,
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -277,10 +336,14 @@ pub fn craw_wurm() -> CardDefinition {
         cost: cost(&[generic(4), g(), g()]),
         supertypes: vec![],
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Wurm], ..Default::default() },
-        power: 6, toughness: 4,
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Wurm],
+            ..Default::default()
+        },
+        power: 6,
+        toughness: 4,
         keywords: vec![],
-        spell_effects: vec![],
+        effect: Effect::Noop,
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],

@@ -1,5 +1,7 @@
 use super::no_abilities;
-use crate::card::{CardDefinition, CardType, SelectionRequirement, SpellEffect, Subtypes};
+use crate::card::{CardDefinition, CardType, Subtypes};
+use crate::effect::shortcut::{destroy_target, draw};
+use crate::effect::{Effect, PlayerRef, Value};
 use crate::mana::{b, cost, r, u};
 
 /// Terminate — {B}{R}: destroy target creature
@@ -10,11 +12,10 @@ pub fn terminate() -> CardDefinition {
         supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
-        power: 0, toughness: 0,
+        power: 0,
+        toughness: 0,
         keywords: vec![],
-        spell_effects: vec![SpellEffect::DestroyCreature {
-            target: SelectionRequirement::Creature,
-        }],
+        effect: destroy_target(),
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -31,12 +32,13 @@ pub fn opt() -> CardDefinition {
         supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
-        power: 0, toughness: 0,
+        power: 0,
+        toughness: 0,
         keywords: vec![],
-        spell_effects: vec![
-            SpellEffect::Scry { amount: 1 },
-            SpellEffect::DrawCards { amount: 1 },
-        ],
+        effect: Effect::Seq(vec![
+            Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
+            draw(1),
+        ]),
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],

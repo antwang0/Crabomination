@@ -1,13 +1,13 @@
 use rand::RngExt;
 
 use crabomination::{
-    card::{CardDefinition, CardId, Keyword, SpellEffect},
+    card::{CardDefinition, CardId, Keyword},
     decision::{AutoDecider, Decider},
     game::{GameAction, GameEvent, GameState, Target, TurnStep},
     mana::ManaPool,
 };
 
-use crate::game::{PLAYER_1, PLAYER_0};
+use crate::game::{PLAYER_0, PLAYER_1};
 
 /// Take one player 1 action and return the resulting events.
 /// Called whenever it might be P1's turn to act (checks priority internally).
@@ -18,10 +18,13 @@ pub fn p1_take_action<R: RngExt>(state: &mut GameState, rng: &mut R) -> Vec<Game
     // If a decision is pending on P1's spell/ability, auto-answer it. Without
     // this the game would stall — no UI is surfaced for bot-side decisions.
     if let Some(pending) = &state.pending_decision
-        && pending.acting_player() == PLAYER_1 {
-            let answer = AutoDecider.decide(&pending.decision);
-            return state.perform_action(GameAction::SubmitDecision(answer)).unwrap_or_default();
-        }
+        && pending.acting_player() == PLAYER_1
+    {
+        let answer = AutoDecider.decide(&pending.decision);
+        return state
+            .perform_action(GameAction::SubmitDecision(answer))
+            .unwrap_or_default();
+    }
     // Only act when P1 actually has priority.
     if state.player_with_priority() != PLAYER_1 {
         return vec![];
@@ -34,7 +37,9 @@ pub fn p1_take_action<R: RngExt>(state: &mut GameState, rng: &mut R) -> Vec<Game
         // Waiting for P0 to declare blockers — P1 should not act.
         (PLAYER_1, TurnStep::DeclareBlockers) if !state.attacking().is_empty() => vec![],
         // P1 has priority but is not the active player (opponent's turn) — pass.
-        _ => state.perform_action(GameAction::PassPriority).unwrap_or_default(),
+        _ => state
+            .perform_action(GameAction::PassPriority)
+            .unwrap_or_default(),
     }
 }
 
@@ -51,14 +56,23 @@ pub fn p1_declare_blocks<R: RngExt>(state: &mut GameState, rng: &mut R) -> Vec<G
         .battlefield
         .iter()
         .filter(|c| c.owner == PLAYER_1 && c.can_block())
-        .map(|c| (c.id, c.has_keyword(&Keyword::Flying), c.has_keyword(&Keyword::Reach)))
+        .map(|c| {
+            (
+                c.id,
+                c.has_keyword(&Keyword::Flying),
+                c.has_keyword(&Keyword::Reach),
+            )
+        })
         .collect();
 
     // (attacker_id, has_flying)
     let attacker_data: Vec<(CardId, bool)> = attacking
         .iter()
         .filter_map(|&id| {
-            state.battlefield.iter().find(|c| c.id == id)
+            state
+                .battlefield
+                .iter()
+                .find(|c| c.id == id)
                 .map(|a| (id, a.has_keyword(&Keyword::Flying)))
         })
         .collect();
@@ -119,11 +133,18 @@ fn p1_main_phase<R: RngExt>(state: &mut GameState, rng: &mut R) -> Vec<GameEvent
             if state.players[PLAYER_1].can_play_land() {
                 GameAction::PlayLand(card.id)
             } else {
-                return state.perform_action(GameAction::PassPriority).unwrap_or_default();
+                return state
+                    .perform_action(GameAction::PassPriority)
+                    .unwrap_or_default();
             }
         } else {
             let target = choose_target(state, &card.definition, PLAYER_1, rng);
-            GameAction::CastSpell { card_id: card.id, target, mode: None, x_value: None }
+            GameAction::CastSpell {
+                card_id: card.id,
+                target,
+                mode: None,
+                x_value: None,
+            }
         };
 
         if let Ok(evs) = state.perform_action(action) {
@@ -132,7 +153,9 @@ fn p1_main_phase<R: RngExt>(state: &mut GameState, rng: &mut R) -> Vec<GameEvent
     }
 
     // 3. Nothing to do — pass priority
-    state.perform_action(GameAction::PassPriority).unwrap_or_default()
+    state
+        .perform_action(GameAction::PassPriority)
+        .unwrap_or_default()
 }
 
 fn p1_attack(state: &mut GameState) -> Vec<GameEvent> {
@@ -198,7 +221,11 @@ fn target_for_requirement<R: RngExt>(
                 .filter(|c| c.owner == opp && c.definition.is_creature())
                 .map(|c| c.id)
                 .collect();
-            if ids.is_empty() { None } else { Some(Target::Permanent(ids[rng.random_range(0..ids.len())])) }
+            if ids.is_empty() {
+                None
+            } else {
+                Some(Target::Permanent(ids[rng.random_range(0..ids.len())]))
+            }
         }
         // For Any, prefer player (direct damage is most impactful for player 1)
         SR::Any | SR::Not(_) | SR::Or(_, _) => Some(Target::Player(opp)),
@@ -207,10 +234,18 @@ fn target_for_requirement<R: RngExt>(
             let ids: Vec<_> = state
                 .battlefield
                 .iter()
-                .filter(|c| c.owner == opp && c.definition.is_creature() && state.evaluate_requirement(req, &Target::Permanent(c.id), PLAYER_0))
+                .filter(|c| {
+                    c.owner == opp
+                        && c.definition.is_creature()
+                        && state.evaluate_requirement(req, &Target::Permanent(c.id), PLAYER_0)
+                })
                 .map(|c| c.id)
                 .collect();
-            if ids.is_empty() { None } else { Some(Target::Permanent(ids[rng.random_range(0..ids.len())])) }
+            if ids.is_empty() {
+                None
+            } else {
+                Some(Target::Permanent(ids[rng.random_range(0..ids.len())]))
+            }
         }
         _ => Some(Target::Player(opp)),
     }
@@ -221,26 +256,9 @@ pub fn choose_target<R: RngExt>(
     state: &GameState,
     def: &CardDefinition,
     caster: usize,
-    rng: &mut R,
+    _rng: &mut R,
 ) -> Option<Target> {
-    let opp = 1 - caster;
-    for effect in &def.spell_effects {
-        match effect {
-            SpellEffect::DealDamage { target: req, .. }
-            | SpellEffect::DestroyCreature { target: req } => {
-                return target_for_requirement(state, req, caster, opp, rng);
-            }
-            SpellEffect::PumpCreature { .. } => {
-                return state
-                    .battlefield
-                    .iter()
-                    .find(|c| c.owner == caster && c.definition.is_creature())
-                    .map(|c| Target::Permanent(c.id));
-            }
-            _ => {}
-        }
-    }
-    None
+    state.auto_target_for_effect(&def.effect, caster)
 }
 
 /// Auto-target for spells player 0 casts (always picks opponent or their creatures).

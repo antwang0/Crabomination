@@ -1,5 +1,6 @@
 use super::no_abilities;
-use crate::card::{CardDefinition, CardType, SelectionRequirement, SpellEffect, Subtypes, Zone};
+use crate::card::{CardDefinition, CardType, Effect, SelectionRequirement, Subtypes};
+use crate::effect::{PlayerRef, Selector, Value, ZoneDest};
 use crate::mana::{b, cost, generic, r, w};
 
 /// Wrath of God — {2}{W}{W} Sorcery: destroy all creatures
@@ -10,9 +11,12 @@ pub fn wrath_of_god() -> CardDefinition {
         supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
-        power: 0, toughness: 0,
+        power: 0,
+        toughness: 0,
         keywords: vec![],
-        spell_effects: vec![SpellEffect::DestroyAllCreatures],
+        effect: Effect::Destroy {
+            what: Selector::EachPermanent(SelectionRequirement::Creature),
+        },
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -29,11 +33,12 @@ pub fn armageddon() -> CardDefinition {
         supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
-        power: 0, toughness: 0,
+        power: 0,
+        toughness: 0,
         keywords: vec![],
-        spell_effects: vec![SpellEffect::DestroyAll {
-            target: SelectionRequirement::Land,
-        }],
+        effect: Effect::Destroy {
+            what: Selector::EachPermanent(SelectionRequirement::Land),
+        },
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -50,12 +55,14 @@ pub fn demonic_tutor() -> CardDefinition {
         supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
-        power: 0, toughness: 0,
+        power: 0,
+        toughness: 0,
         keywords: vec![],
-        spell_effects: vec![SpellEffect::SearchLibrary {
+        effect: Effect::Search {
+            who: PlayerRef::You,
             filter: SelectionRequirement::Any,
-            put_into: Zone::Hand,
-        }],
+            to: ZoneDest::Hand(PlayerRef::You),
+        },
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -72,9 +79,13 @@ pub fn wheel_of_fortune() -> CardDefinition {
         supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
-        power: 0, toughness: 0,
+        power: 0,
+        toughness: 0,
         keywords: vec![],
-        spell_effects: vec![SpellEffect::EachPlayerDraws { amount: 7 }],
+        effect: Effect::Draw {
+            who: Selector::Player(PlayerRef::EachPlayer),
+            amount: Value::Const(7),
+        },
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],

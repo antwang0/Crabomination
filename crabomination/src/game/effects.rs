@@ -1,1673 +1,1096 @@
+//! Resolver for the unified `Effect` tree.
+//!
+//! A single entry point — [`GameState::resolve_effect`] — walks the effect
+//! tree against an [`EffectContext`] describing the casting/activating player,
+//! chosen target(s), etc. Combinators (`Seq`, `If`, `ForEach`, `Repeat`,
+//! `ChooseMode`) recurse; leaf mutations perform game-state changes and emit
+//! [`GameEvent`]s.
+
 use super::*;
 use crate::card::{
-    ActivatedAbility, CardDefinition, CardId, CardInstance, EffectCondition, Keyword,
-    SelectionRequirement, SpellEffect, TokenDefinition, Zone,
+    ArtifactSubtype, CardDefinition, CardId, CardInstance, CardType, CounterType,
+    Keyword, SelectionRequirement, Subtypes, Supertype, TokenDefinition, Zone,
 };
-use crate::decision::{Decision, DecisionAnswer};
-use crate::mana::{Color, ManaSymbol, ManaCost};
+use crate::effect::{
+    Effect, EventKind, EventScope, EventSpec, LibraryPosition, ManaPayload, PlayerRef, Predicate,
+    Selector, Value, ZoneDest, ZoneRef,
+};
+use crate::mana::{Color, ManaCost, ManaSymbol};
+
+/// Runtime context threaded through effect resolution.
+#[derive(Debug, Clone)]
+pub struct EffectContext {
+    pub controller: usize,
+    pub source: Option<CardId>,
+    /// Targets chosen at cast/activation time (typically 0 or 1 entries).
+    pub targets: Vec<Target>,
+    /// The entity that caused the current trigger to fire (`Selector::TriggerSource`).
+    pub trigger_source: Option<EntityRef>,
+    /// Modal choice index (for `Effect::ChooseMode`).
+    pub mode: usize,
+    pub x_value: u32,
+}
+
+impl EffectContext {
+    pub fn for_spell(caster: usize, target: Option<Target>, mode: usize, x_value: u32) -> Self {
+        Self {
+            controller: caster,
+            source: None,
+            targets: target.into_iter().collect(),
+            trigger_source: None,
+            mode,
+            x_value,
+        }
+    }
+    pub fn for_trigger(
+        source: CardId,
+        controller: usize,
+        target: Option<Target>,
+        mode: usize,
+    ) -> Self {
+        Self {
+            controller,
+            source: Some(source),
+            targets: target.into_iter().collect(),
+            trigger_source: Some(EntityRef::Permanent(source)),
+            mode,
+            x_value: 0,
+        }
+    }
+    pub fn for_ability(
+        source: CardId,
+        controller: usize,
+        target: Option<Target>,
+    ) -> Self {
+        Self {
+            controller,
+            source: Some(source),
+            targets: target.into_iter().collect(),
+            trigger_source: Some(EntityRef::Permanent(source)),
+            mode: 0,
+            x_value: 0,
+        }
+    }
+}
+
+/// A resolved reference to something in the game (used internally for selector
+/// resolution and `ForEach` iteration).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum EntityRef {
+    Player(usize),
+    Permanent(CardId),
+    /// A card in a non-battlefield zone (library/graveyard/exile/hand).
+    Card(CardId),
+}
+
+impl EntityRef {
+    pub fn as_target(&self) -> Target {
+        match *self {
+            EntityRef::Player(p) => Target::Player(p),
+            EntityRef::Permanent(c) | EntityRef::Card(c) => Target::Permanent(c),
+        }
+    }
+}
 
 impl GameState {
-    // ── Effect resolution ─────────────────────────────────────────────────────
+    // ── Entry points ─────────────────────────────────────────────────────────
 
-    /// Resolve a single spell or ability effect.
-    ///
-    /// `mode` is the chosen option index for `ChooseOne` effects (0 if not applicable).
     pub(crate) fn resolve_effect(
         &mut self,
-        effect: &SpellEffect,
-        controller: usize,
-        target: Option<&Target>,
-        mode: usize,
+        effect: &Effect,
+        ctx: &EffectContext,
     ) -> Result<Vec<GameEvent>, GameError> {
         let mut events = vec![];
+        self.run_effect(effect, ctx, &mut events)?;
+        Ok(events)
+    }
+
+    fn run_effect(
+        &mut self,
+        effect: &Effect,
+        ctx: &EffectContext,
+        events: &mut Vec<GameEvent>,
+    ) -> Result<(), GameError> {
         match effect {
-            SpellEffect::DealDamage { amount, target: req } => {
-                let tgt = target.ok_or(GameError::TargetRequired)?;
-                if !self.evaluate_requirement(req, tgt, controller) {
-                    return Err(GameError::SelectionRequirementViolated);
-                }
-                match tgt {
-                    Target::Player(pidx) => {
-                        let amount = *amount;
-                        self.players[*pidx].life -= amount as i32;
-                        events.push(GameEvent::DamageDealt {
-                            amount,
-                            to_player: Some(*pidx),
-                            to_card: None,
-                        });
-                        events.push(GameEvent::LifeLost {
-                            player: *pidx,
-                            amount,
-                        });
-                        let mut sba = self.check_state_based_actions();
-                        events.append(&mut sba);
-                    }
-                    Target::Permanent(cid) => {
-                        let amount = *amount;
-                        if let Some(c) = self.battlefield_find_mut(*cid) {
-                            c.damage += amount;
-                        } else {
-                            return Err(GameError::CardNotOnBattlefield(*cid));
+            Effect::Noop => Ok(()),
+
+            Effect::Seq(steps) => {
+                for (idx, step) in steps.iter().enumerate() {
+                    self.run_effect(step, ctx, events)?;
+                    // A child effect signalled suspension — prepend the rest of
+                    // this Seq onto whatever remaining effects it already saved.
+                    if let Some((_, _, remaining)) = self.suspend_signal.as_mut() {
+                        let tail: Vec<Effect> = steps[idx + 1..].to_vec();
+                        if !tail.is_empty() {
+                            let carried = std::mem::replace(remaining, Effect::Noop);
+                            let mut combined = Vec::with_capacity(tail.len() + 1);
+                            combined.extend(tail);
+                            if !matches!(carried, Effect::Noop) {
+                                combined.push(carried);
+                            }
+                            *remaining = Effect::seq(combined);
                         }
-                        events.push(GameEvent::DamageDealt {
-                            amount,
-                            to_player: None,
-                            to_card: Some(*cid),
-                        });
-                        let mut sba = self.check_state_based_actions();
-                        events.append(&mut sba);
+                        return Ok(());
                     }
                 }
+                Ok(())
             }
 
-            // ── Destroy ──────────────────────────────────────────────────────
-
-            SpellEffect::DestroyCreature { target: req } => {
-                let tgt = target.ok_or(GameError::TargetRequired)?;
-                let Target::Permanent(cid) = tgt else {
-                    return Err(GameError::InvalidTarget);
-                };
-                if !self.evaluate_requirement(req, tgt, controller) {
-                    return Err(GameError::SelectionRequirementViolated);
-                }
-                let card_id = *cid;
-                // Indestructible permanents are unaffected by destroy effects.
-                if self.battlefield_find(card_id).map(|c| c.has_keyword(&Keyword::Indestructible)).unwrap_or(false) {
-                    // No event; spell fizzles on indestructible target.
+            Effect::If { cond, then, else_ } => {
+                if self.evaluate_predicate(cond, ctx) {
+                    self.run_effect(then, ctx, events)
                 } else {
-                    events.push(GameEvent::CreatureDied { card_id });
-                    let mut die_evs = self.remove_to_graveyard_with_triggers(card_id);
-                    events.append(&mut die_evs);
+                    self.run_effect(else_, ctx, events)
                 }
             }
 
-            SpellEffect::DestroyPermanent { target: req } => {
-                let tgt = target.ok_or(GameError::TargetRequired)?;
-                let Target::Permanent(cid) = tgt else {
-                    return Err(GameError::InvalidTarget);
-                };
-                if !self.evaluate_requirement(req, tgt, controller) {
-                    return Err(GameError::SelectionRequirementViolated);
+            Effect::ForEach { selector, body } => {
+                let entities = self.resolve_selector(selector, ctx);
+                for ent in entities {
+                    let mut sub_ctx = ctx.clone();
+                    sub_ctx.trigger_source = Some(ent);
+                    self.run_effect(body, &sub_ctx, events)?;
                 }
-                let card_id = *cid;
-                if !self.battlefield_find(card_id).map(|c| c.has_keyword(&Keyword::Indestructible)).unwrap_or(false) {
-                    let is_creature = self.battlefield_find(card_id).map(|c| c.definition.is_creature()).unwrap_or(false);
-                    if is_creature { events.push(GameEvent::CreatureDied { card_id }); }
-                    let mut die_evs = self.remove_to_graveyard_with_triggers(card_id);
-                    events.append(&mut die_evs);
-                }
+                Ok(())
             }
 
-            SpellEffect::DestroyAll { target: req } => {
-                let ids: Vec<CardId> = self.battlefield.iter()
-                    .filter(|c| {
-                        let tgt = Target::Permanent(c.id);
-                        self.evaluate_requirement_static(req, &tgt, controller)
-                            && !c.has_keyword(&Keyword::Indestructible)
-                    })
-                    .map(|c| c.id)
-                    .collect();
-                for id in ids {
-                    let is_creature = self.battlefield_find(id).map(|c| c.definition.is_creature()).unwrap_or(false);
-                    if is_creature { events.push(GameEvent::CreatureDied { card_id: id }); }
-                    let mut die_evs = self.remove_to_graveyard_with_triggers(id);
-                    events.append(&mut die_evs);
+            Effect::Repeat { count, body } => {
+                let n = self.evaluate_value(count, ctx).max(0);
+                for _ in 0..n {
+                    self.run_effect(body, ctx, events)?;
+                }
+                Ok(())
+            }
+
+            Effect::ChooseMode(modes) => {
+                let idx = ctx.mode;
+                if let Some(m) = modes.get(idx) {
+                    self.run_effect(m, ctx, events)
+                } else {
+                    Err(GameError::ModeOutOfBounds(idx))
                 }
             }
 
-            SpellEffect::DestroyAllCreatures => {
-                let ids: Vec<CardId> = self.battlefield.iter()
-                    .filter(|c| c.definition.is_creature() && !c.has_keyword(&Keyword::Indestructible))
-                    .map(|c| c.id)
-                    .collect();
-                for id in ids {
-                    events.push(GameEvent::CreatureDied { card_id: id });
-                    let mut die_evs = self.remove_to_graveyard_with_triggers(id);
-                    events.append(&mut die_evs);
-                }
-            }
-
-            // ── Exile ─────────────────────────────────────────────────────────
-
-            SpellEffect::ExilePermanent { target: req } => {
-                let tgt = target.ok_or(GameError::TargetRequired)?;
-                let Target::Permanent(cid) = tgt else {
-                    return Err(GameError::InvalidTarget);
-                };
-                if !self.evaluate_requirement(req, tgt, controller) {
-                    return Err(GameError::SelectionRequirementViolated);
-                }
-                let card_id = *cid;
-                events.push(GameEvent::PermanentExiled { card_id });
-                self.remove_from_battlefield_to_exile(card_id);
-            }
-
-            SpellEffect::ExileAll { target: req } => {
-                let ids: Vec<CardId> = self.battlefield.iter()
-                    .filter(|c| {
-                        let tgt = Target::Permanent(c.id);
-                        self.evaluate_requirement_static(req, &tgt, controller)
-                    })
-                    .map(|c| c.id)
-                    .collect();
-                for id in ids {
-                    events.push(GameEvent::PermanentExiled { card_id: id });
-                    self.remove_from_battlefield_to_exile(id);
-                }
-            }
-
-            // ── Draw / discard / mill ──────────────────────────────────────────
-
-            SpellEffect::DrawCards { amount } => {
-                for _ in 0..*amount {
-                    let drawn = self.players[controller].draw_top();
-                    match drawn {
-                        Some(id) => {
-                            events.push(GameEvent::CardDrawn { player: controller, card_id: id });
-                        }
-                        None => {
-                            let opp = (controller + 1) % self.players.len();
-                            self.game_over = Some(Some(opp));
-                            events.push(GameEvent::GameOver { winner: Some(opp) });
-                            return Ok(events);
-                        }
-                    }
-                }
-            }
-
-            SpellEffect::EachPlayerDraws { amount } => {
-                for p in 0..self.players.len() {
-                    for _ in 0..*amount {
-                        if let Some(id) = self.players[p].draw_top() {
-                            events.push(GameEvent::CardDrawn { player: p, card_id: id });
-                        }
-                    }
-                }
-            }
-
-            SpellEffect::Discard { amount } => {
-                let opp = (controller + 1) % self.players.len();
-                for _ in 0..*amount {
-                    if !self.players[opp].hand.is_empty() {
-                        let card = self.players[opp].hand.remove(0);
-                        let card_id = card.id;
-                        self.players[opp].send_to_graveyard(card);
-                        events.push(GameEvent::CardDiscarded { player: opp, card_id });
-                    }
-                }
-            }
-
-            SpellEffect::Mill { amount } => {
-                // Default: mill controller's opponent.
-                let opp = (controller + 1) % self.players.len();
-                for _ in 0..*amount {
-                    if self.players[opp].library.is_empty() {
-                        let opp_opp = (opp + 1) % self.players.len();
-                        self.game_over = Some(Some(opp_opp));
-                        events.push(GameEvent::GameOver { winner: Some(opp_opp) });
-                        return Ok(events);
-                    }
-                    let card = self.players[opp].library.remove(0);
-                    let card_id = card.id;
-                    self.players[opp].send_to_graveyard(card);
-                    events.push(GameEvent::CardMilled { player: opp, card_id });
-                }
-            }
-
-            SpellEffect::Scry { amount } => {
-                let n = (*amount as usize).min(self.players[controller].library.len());
-                if n > 0 {
-                    let peeked: Vec<(CardId, &'static str)> = self.players[controller]
-                        .library
-                        .iter()
-                        .take(n)
-                        .map(|c| (c.id, c.definition.name))
-                        .collect();
-                    // Suspend: the enclosing resolver will install a
-                    // `pending_decision` with the resume context. The library
-                    // is left untouched; the top N cards stay in place until
-                    // `submit_decision` is called with the chosen order.
-                    self.suspend_signal = Some((
-                        Decision::Scry { player: controller, cards: peeked },
-                        PendingEffectState::ScryPeeked { count: n, player: controller },
-                    ));
-                }
-            }
-
-            // ── Mana ──────────────────────────────────────────────────────────
-
-            SpellEffect::AddMana { colors } => {
-                for &c in colors {
-                    self.players[controller].mana_pool.add(c, 1);
-                    events.push(GameEvent::ManaAdded { player: controller, color: c });
-                }
-            }
-
-            SpellEffect::AddManaAnyColor { amount } => {
-                for _ in 0..*amount {
-                    let ans = self.decider.decide(&Decision::ChooseColor {
-                        source: CardId(0),
-                        legal: vec![
-                            Color::White, Color::Blue, Color::Black, Color::Red, Color::Green,
-                        ],
-                    });
-                    let DecisionAnswer::Color(c) = ans else {
-                        return Err(GameError::InvalidTarget);
-                    };
-                    self.players[controller].mana_pool.add(c, 1);
-                    events.push(GameEvent::ManaAdded { player: controller, color: c });
-                }
-            }
-
-            SpellEffect::AddColorlessMana { amount } => {
-                self.players[controller].mana_pool.add_colorless(*amount);
-                // No ManaAdded event color to report; emit one per pip with a placeholder.
-                for _ in 0..*amount {
-                    events.push(GameEvent::ColorlessManaAdded { player: controller });
-                }
-            }
-
-            // ── Life ──────────────────────────────────────────────────────────
-
-            SpellEffect::GainLife { amount } => {
-                let amount = *amount;
-                self.players[controller].life += amount as i32;
-                events.push(GameEvent::LifeGained { player: controller, amount });
-            }
-
-            SpellEffect::LoseLife { amount } => {
-                let amount = *amount;
-                // Default: controller loses life (e.g. "you lose 3 life").
-                self.players[controller].life -= amount as i32;
-                events.push(GameEvent::LifeLost { player: controller, amount });
-                let mut sba = self.check_state_based_actions();
-                events.append(&mut sba);
-            }
-
-            // ── Pump ──────────────────────────────────────────────────────────
-
-            SpellEffect::PumpCreature { power_bonus, toughness_bonus } => {
-                let tgt = target.ok_or(GameError::TargetRequired)?;
-                let Target::Permanent(cid) = tgt else {
-                    return Err(GameError::InvalidTarget);
-                };
-                let c = self
-                    .battlefield_find_mut(*cid)
-                    .ok_or(GameError::CardNotOnBattlefield(*cid))?;
-                c.power_bonus += power_bonus;
-                c.toughness_bonus += toughness_bonus;
-                events.push(GameEvent::PumpApplied {
-                    card_id: *cid,
-                    power: *power_bonus,
-                    toughness: *toughness_bonus,
-                });
-            }
-
-            SpellEffect::PumpAllCreatures { power_bonus, toughness_bonus, filter } => {
-                let ids: Vec<CardId> = self.battlefield.iter()
-                    .filter(|c| {
-                        c.definition.is_creature() && {
-                            let tgt = Target::Permanent(c.id);
-                            self.evaluate_requirement_static(filter, &tgt, controller)
-                        }
-                    })
-                    .map(|c| c.id)
-                    .collect();
-                for id in ids {
-                    if let Some(c) = self.battlefield_find_mut(id) {
-                        c.power_bonus += power_bonus;
-                        c.toughness_bonus += toughness_bonus;
-                        events.push(GameEvent::PumpApplied {
-                            card_id: id,
-                            power: *power_bonus,
-                            toughness: *toughness_bonus,
-                        });
-                    }
-                }
-            }
-
-            // ── Bounce ────────────────────────────────────────────────────────
-
-            SpellEffect::ReturnToHand { target: req } => {
-                let tgt = target.ok_or(GameError::TargetRequired)?;
-                let Target::Permanent(cid) = tgt else {
-                    return Err(GameError::InvalidTarget);
-                };
-                if !self.evaluate_requirement(req, tgt, controller) {
-                    return Err(GameError::SelectionRequirementViolated);
-                }
-                let card_id = *cid;
-                if let Some(pos) = self.battlefield.iter().position(|c| c.id == card_id) {
-                    let card = self.battlefield.remove(pos);
-                    let owner = card.owner;
-                    self.players[owner].hand.push(card);
-                }
-            }
-
-            SpellEffect::ReturnAllToHand { target: req } => {
-                let ids: Vec<CardId> = self.battlefield.iter()
-                    .filter(|c| {
-                        let tgt = Target::Permanent(c.id);
-                        self.evaluate_requirement_static(req, &tgt, controller)
-                    })
-                    .map(|c| c.id)
-                    .collect();
-                for id in ids {
-                    if let Some(pos) = self.battlefield.iter().position(|c| c.id == id) {
-                        let card = self.battlefield.remove(pos);
-                        let owner = card.owner;
-                        self.players[owner].hand.push(card);
-                    }
-                }
-            }
-
-            // ── Counters ──────────────────────────────────────────────────────
-
-            SpellEffect::AddCounters { count, counter_type, target: req } => {
-                let tgt = target.ok_or(GameError::TargetRequired)?;
-                let Target::Permanent(cid) = tgt else {
-                    return Err(GameError::InvalidTarget);
-                };
-                if !self.evaluate_requirement(req, tgt, controller) {
-                    return Err(GameError::SelectionRequirementViolated);
-                }
-                let card_id = *cid;
-                let ct = *counter_type;
-                let n = *count;
-                if let Some(c) = self.battlefield_find_mut(card_id) {
-                    c.add_counters(ct, n);
-                    events.push(GameEvent::CounterAdded { card_id, counter_type: ct, count: n });
+            Effect::DealDamage { to, amount } => {
+                let amt = self.evaluate_value(amount, ctx).max(0) as u32;
+                if amt == 0 { return Ok(()); }
+                for ent in self.resolve_selector(to, ctx) {
+                    self.deal_damage_to(ent, amt, events);
                 }
                 let mut sba = self.check_state_based_actions();
                 events.append(&mut sba);
+                Ok(())
             }
 
-            SpellEffect::RemoveCounters { count, counter_type, target: req } => {
-                let tgt = target.ok_or(GameError::TargetRequired)?;
-                let Target::Permanent(cid) = tgt else {
-                    return Err(GameError::InvalidTarget);
-                };
-                if !self.evaluate_requirement(req, tgt, controller) {
-                    return Err(GameError::SelectionRequirementViolated);
+            Effect::GainLife { who, amount } => {
+                let amt = self.evaluate_value(amount, ctx).max(0) as u32;
+                if amt == 0 { return Ok(()); }
+                for ent in self.resolve_selector(who, ctx) {
+                    if let EntityRef::Player(p) = ent {
+                        self.players[p].life += amt as i32;
+                        events.push(GameEvent::LifeGained { player: p, amount: amt });
+                    }
                 }
-                let card_id = *cid;
-                let ct = *counter_type;
-                let n = *count;
-                if let Some(c) = self.battlefield_find_mut(card_id) {
-                    let removed = c.remove_counters(ct, n);
-                    if removed > 0 {
-                        events.push(GameEvent::CounterRemoved { card_id, counter_type: ct, count: removed });
+                Ok(())
+            }
+
+            Effect::LoseLife { who, amount } => {
+                let amt = self.evaluate_value(amount, ctx).max(0) as u32;
+                if amt == 0 { return Ok(()); }
+                for ent in self.resolve_selector(who, ctx) {
+                    if let EntityRef::Player(p) = ent {
+                        self.players[p].life -= amt as i32;
+                        events.push(GameEvent::LifeLost { player: p, amount: amt });
                     }
                 }
                 let mut sba = self.check_state_based_actions();
                 events.append(&mut sba);
+                Ok(())
             }
 
-            // ── Tap / untap ────────────────────────────────────────────────────
-
-            SpellEffect::TapPermanent { target: req } => {
-                let tgt = target.ok_or(GameError::TargetRequired)?;
-                let Target::Permanent(cid) = tgt else {
-                    return Err(GameError::InvalidTarget);
-                };
-                if !self.evaluate_requirement(req, tgt, controller) {
-                    return Err(GameError::SelectionRequirementViolated);
-                }
-                let card_id = *cid;
-                if let Some(c) = self.battlefield_find_mut(card_id) {
-                    c.tapped = true;
-                    events.push(GameEvent::PermanentTapped { card_id });
-                }
-            }
-
-            SpellEffect::TapAll { target: req } => {
-                let ids: Vec<CardId> = self.battlefield.iter()
-                    .filter(|c| {
-                        let tgt = Target::Permanent(c.id);
-                        self.evaluate_requirement_static(req, &tgt, controller)
-                    })
-                    .map(|c| c.id)
-                    .collect();
-                for id in ids {
-                    if let Some(c) = self.battlefield_find_mut(id) {
-                        c.tapped = true;
-                        events.push(GameEvent::PermanentTapped { card_id: id });
+            Effect::Drain { from, to, amount } => {
+                let amt = self.evaluate_value(amount, ctx).max(0) as u32;
+                if amt == 0 { return Ok(()); }
+                for ent in self.resolve_selector(from, ctx) {
+                    if let EntityRef::Player(p) = ent {
+                        self.players[p].life -= amt as i32;
+                        events.push(GameEvent::LifeLost { player: p, amount: amt });
                     }
                 }
-            }
-
-            SpellEffect::UntapPermanent { target: req } => {
-                let tgt = target.ok_or(GameError::TargetRequired)?;
-                let Target::Permanent(cid) = tgt else {
-                    return Err(GameError::InvalidTarget);
-                };
-                if !self.evaluate_requirement(req, tgt, controller) {
-                    return Err(GameError::SelectionRequirementViolated);
-                }
-                let card_id = *cid;
-                if let Some(c) = self.battlefield_find_mut(card_id) {
-                    c.tapped = false;
-                    events.push(GameEvent::PermanentUntapped { card_id });
-                }
-            }
-
-            SpellEffect::UntapAll { target: req } => {
-                let ids: Vec<CardId> = self.battlefield.iter()
-                    .filter(|c| {
-                        let tgt = Target::Permanent(c.id);
-                        self.evaluate_requirement_static(req, &tgt, controller)
-                    })
-                    .map(|c| c.id)
-                    .collect();
-                for id in ids {
-                    if let Some(c) = self.battlefield_find_mut(id) {
-                        c.tapped = false;
-                        events.push(GameEvent::PermanentUntapped { card_id: id });
+                for ent in self.resolve_selector(to, ctx) {
+                    if let EntityRef::Player(p) = ent {
+                        self.players[p].life += amt as i32;
+                        events.push(GameEvent::LifeGained { player: p, amount: amt });
                     }
                 }
+                let mut sba = self.check_state_based_actions();
+                events.append(&mut sba);
+                Ok(())
             }
 
-            // ── Stack interaction ──────────────────────────────────────────────
-
-            SpellEffect::CounterSpell { target: req } => {
-                let _tgt = target.ok_or(GameError::TargetRequired)?;
-                // CounterSpell targets a StackItem — simplified: remove top matching spell.
-                // The `req` is checked against the top-of-stack card.
-                let stack_pos = self.stack.iter().rposition(|item| {
-                    if let StackItem::Spell { card, .. } = item {
-                        let fake_target = Target::Permanent(card.id);
-                        self.evaluate_requirement_static(req, &fake_target, controller)
-                    } else {
-                        false
+            Effect::Draw { who, amount } => {
+                let n = self.evaluate_value(amount, ctx).max(0) as usize;
+                for ent in self.resolve_selector(who, ctx) {
+                    if let EntityRef::Player(p) = ent {
+                        for _ in 0..n {
+                            match self.players[p].draw_top() {
+                                Some(id) => events.push(GameEvent::CardDrawn { player: p, card_id: id }),
+                                None => {
+                                    let opp = (p + 1) % self.players.len();
+                                    self.game_over = Some(Some(opp));
+                                    events.push(GameEvent::GameOver { winner: Some(opp) });
+                                    return Ok(());
+                                }
+                            }
+                        }
                     }
-                });
-                if let Some(pos) = stack_pos {
-                    if let StackItem::Spell { card, caster, .. } = self.stack.remove(pos) {
-                        self.players[caster].send_to_graveyard(*card);
+                }
+                Ok(())
+            }
+
+            Effect::Discard { who, amount, random } => {
+                let n = self.evaluate_value(amount, ctx).max(0) as usize;
+                for ent in self.resolve_selector(who, ctx) {
+                    if let EntityRef::Player(p) = ent {
+                        for _ in 0..n {
+                            let idx = if *random {
+                                if self.players[p].hand.is_empty() { break; }
+                                // AutoDecider picks index 0 deterministically.
+                                0usize
+                            } else {
+                                0usize
+                            };
+                            if idx >= self.players[p].hand.len() { break; }
+                            let card = self.players[p].hand.remove(idx);
+                            let cid = card.id;
+                            self.players[p].graveyard.push(card);
+                            events.push(GameEvent::CardDiscarded { player: p, card_id: cid });
+                        }
                     }
-                } else if !self.stack.is_empty() {
-                    return Err(GameError::StackEmpty);
                 }
+                Ok(())
             }
 
-            // ── Token creation ─────────────────────────────────────────────────
-
-            SpellEffect::CreateTokens { count, definition } => {
-                for _ in 0..*count {
-                    let id = self.next_id();
-                    let def = token_to_card_definition(definition);
-                    let token = CardInstance::new(id, def, controller);
-                    self.battlefield.push(token);
-                    events.push(GameEvent::TokenCreated { card_id: id });
-                    events.push(GameEvent::PermanentEntered { card_id: id });
+            Effect::Mill { who, amount } => {
+                let n = self.evaluate_value(amount, ctx).max(0) as usize;
+                for ent in self.resolve_selector(who, ctx) {
+                    if let EntityRef::Player(p) = ent {
+                        for _ in 0..n {
+                            if self.players[p].library.is_empty() { break; }
+                            let card = self.players[p].library.remove(0);
+                            let cid = card.id;
+                            self.players[p].graveyard.push(card);
+                            events.push(GameEvent::CardMilled { player: p, card_id: cid });
+                        }
+                    }
                 }
+                Ok(())
             }
 
-            // ── Library manipulation ────────────────────────────────────────────
-
-            SpellEffect::SearchLibrary { filter, put_into } => {
-                let target_zone = *put_into;
-                let candidates: Vec<(CardId, &'static str)> = self.players[controller]
+            Effect::Scry { who, amount } | Effect::Surveil { who, amount } | Effect::LookAtTop { who, amount } => {
+                use crate::decision::Decision;
+                let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
+                let n = self.evaluate_value(amount, ctx).max(0) as usize;
+                let peek: Vec<(CardId, &'static str)> = self.players[p]
                     .library
                     .iter()
-                    .filter(|c| {
-                        let tgt = Target::Permanent(c.id);
-                        self.evaluate_requirement_static(filter, &tgt, controller)
-                    })
+                    .take(n)
                     .map(|c| (c.id, c.definition.name))
                     .collect();
-                let ans = self.decider.decide(&Decision::SearchLibrary {
-                    player: controller,
-                    candidates,
-                });
-                let DecisionAnswer::Search(picked) = ans else {
-                    return Err(GameError::InvalidTarget);
-                };
-                if let Some(card_id) = picked
-                    && let Some(pos) = self.players[controller]
-                        .library
-                        .iter()
-                        .position(|c| c.id == card_id)
-                {
-                    let card = self.players[controller].library.remove(pos);
-                    match target_zone {
-                        Zone::Hand => self.players[controller].hand.push(card),
-                        Zone::Battlefield => {
-                            let cid = card.id;
-                            self.battlefield.push(card);
-                            events.push(GameEvent::PermanentEntered { card_id: cid });
-                        }
-                        Zone::Graveyard => self.players[controller].graveyard.push(card),
-                        _ => self.players[controller].library.insert(pos, card),
-                    }
+                let actual = peek.len();
+                if actual == 0 {
+                    return Ok(());
                 }
-                // Tutors shuffle after; we don't shuffle here to keep resolution
-                // deterministic for tests. The caller can shuffle explicitly.
+
+                let decision = Decision::Scry { player: p, cards: peek.clone() };
+                let is_surveil = matches!(effect, Effect::Surveil { .. });
+                let pending_state = if is_surveil {
+                    PendingEffectState::SurveilPeeked { count: actual, player: p }
+                } else {
+                    PendingEffectState::ScryPeeked { count: actual, player: p }
+                };
+
+                // If the acting player wants UI input, suspend — the outer
+                // resolver will convert `suspend_signal` into `pending_decision`
+                // and `submit_decision` will apply the answer + run any
+                // remaining Seq effects.
+                if self.players[p].wants_ui {
+                    self.suspend_signal = Some((decision, pending_state, Effect::Noop));
+                    return Ok(());
+                }
+
+                // Otherwise resolve synchronously via the decider (bot / tests).
+                let answer = self.decider.decide(&decision);
+                let mut applied = self.apply_pending_effect_answer(pending_state, &answer)?;
+                events.append(&mut applied);
+                Ok(())
             }
 
-            SpellEffect::ReturnFromGraveyard { filter: req, put_into } => {
-                let target_zone = *put_into;
-                let pos = self.players[controller].graveyard.iter().position(|c| {
-                    let tgt = Target::Permanent(c.id);
-                    self.evaluate_requirement_static(req, &tgt, controller)
-                });
-                if let Some(p) = pos {
-                    let card = self.players[controller].graveyard.remove(p);
-                    match target_zone {
-                        Zone::Hand => self.players[controller].hand.push(card),
-                        Zone::Battlefield => {
-                            let card_id = card.id;
-                            self.battlefield.push(card);
-                            events.push(GameEvent::PermanentEntered { card_id });
+            Effect::AddMana { who, pool } => {
+                let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
+                match pool {
+                    ManaPayload::Colors(colors) => {
+                        for c in colors {
+                            self.players[p].mana_pool.add(*c, 1);
+                            events.push(GameEvent::ManaAdded { player: p, color: *c });
                         }
-                        Zone::Library => self.players[controller].library.push(card),
+                    }
+                    ManaPayload::Colorless(v) => {
+                        let n = self.evaluate_value(v, ctx).max(0) as u32;
+                        for _ in 0..n {
+                            self.players[p].mana_pool.add_colorless(1);
+                            events.push(GameEvent::ColorlessManaAdded { player: p });
+                        }
+                    }
+                    ManaPayload::AnyOneColor(v) | ManaPayload::AnyColors(v) => {
+                        let n = self.evaluate_value(v, ctx).max(0) as u32;
+                        let source = ctx.source.unwrap_or(CardId(0));
+                        let legal = vec![
+                            Color::White, Color::Blue, Color::Black, Color::Red, Color::Green,
+                        ];
+                        for _ in 0..n {
+                            let answer = self.decider.decide(&crate::decision::Decision::ChooseColor {
+                                source,
+                                legal: legal.clone(),
+                            });
+                            let color = match answer {
+                                crate::decision::DecisionAnswer::Color(c) => c,
+                                _ => Color::White,
+                            };
+                            self.players[p].mana_pool.add(color, 1);
+                            events.push(GameEvent::ManaAdded { player: p, color });
+                        }
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::Destroy { what } => {
+                let entities = self.resolve_selector(what, ctx);
+                for ent in entities {
+                    if let EntityRef::Permanent(cid) = ent {
+                        let indestructible = self.battlefield_find(cid)
+                            .map(|c| c.has_keyword(&Keyword::Indestructible))
+                            .unwrap_or(true);
+                        if !indestructible {
+                            let is_creature = self.battlefield_find(cid)
+                                .map(|c| c.definition.is_creature())
+                                .unwrap_or(false);
+                            if is_creature {
+                                events.push(GameEvent::CreatureDied { card_id: cid });
+                            }
+                            let mut dies = self.remove_to_graveyard_with_triggers(cid);
+                            events.append(&mut dies);
+                        }
+                    }
+                }
+                let mut sba = self.check_state_based_actions();
+                events.append(&mut sba);
+                Ok(())
+            }
+
+            Effect::Exile { what } => {
+                for ent in self.resolve_selector(what, ctx) {
+                    if let EntityRef::Permanent(cid) = ent {
+                        self.remove_from_battlefield_to_exile(cid);
+                        events.push(GameEvent::PermanentExiled { card_id: cid });
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::Tap { what } => {
+                for ent in self.resolve_selector(what, ctx) {
+                    if let EntityRef::Permanent(cid) = ent
+                        && let Some(c) = self.battlefield_find_mut(cid)
+                        && !c.tapped {
+                            c.tapped = true;
+                            events.push(GameEvent::PermanentTapped { card_id: cid });
+                        }
+                }
+                Ok(())
+            }
+
+            Effect::Untap { what } => {
+                for ent in self.resolve_selector(what, ctx) {
+                    if let EntityRef::Permanent(cid) = ent
+                        && let Some(c) = self.battlefield_find_mut(cid)
+                        && c.tapped {
+                            c.tapped = false;
+                            events.push(GameEvent::PermanentUntapped { card_id: cid });
+                        }
+                }
+                Ok(())
+            }
+
+            Effect::PumpPT { what, power, toughness, duration: _ } => {
+                let p = self.evaluate_value(power, ctx);
+                let t = self.evaluate_value(toughness, ctx);
+                for ent in self.resolve_selector(what, ctx) {
+                    if let EntityRef::Permanent(cid) = ent
+                        && let Some(c) = self.battlefield_find_mut(cid) {
+                            c.power_bonus += p;
+                            c.toughness_bonus += t;
+                            events.push(GameEvent::PumpApplied { card_id: cid, power: p, toughness: t });
+                        }
+                }
+                Ok(())
+            }
+
+            Effect::GrantKeyword { what, keyword, duration: _ } => {
+                for ent in self.resolve_selector(what, ctx) {
+                    if let EntityRef::Permanent(cid) = ent
+                        && let Some(c) = self.battlefield_find_mut(cid)
+                        && !c.definition.keywords.contains(keyword) {
+                            c.definition.keywords.push(keyword.clone());
+                        }
+                }
+                Ok(())
+            }
+
+            Effect::AddCounter { what, kind, amount } => {
+                let n = self.evaluate_value(amount, ctx).max(0) as u32;
+                if n == 0 { return Ok(()); }
+                for ent in self.resolve_selector(what, ctx) {
+                    match ent {
+                        EntityRef::Permanent(cid) => {
+                            if let Some(c) = self.battlefield_find_mut(cid) {
+                                c.add_counters(*kind, n);
+                                events.push(GameEvent::CounterAdded { card_id: cid, counter_type: *kind, count: n });
+                            }
+                        }
+                        EntityRef::Player(p) if *kind == CounterType::Poison => {
+                            self.players[p].poison_counters += n;
+                            events.push(GameEvent::PoisonAdded { player: p, amount: n });
+                        }
                         _ => {}
                     }
                 }
-            }
-
-            // ── Iterated effects ────────────────────────────────────────────────
-
-            SpellEffect::ForEachCreature { effects } => {
-                let creature_ids: Vec<CardId> = self.battlefield.iter()
-                    .filter(|c| c.definition.is_creature())
-                    .map(|c| c.id)
-                    .collect();
-                for cid in creature_ids {
-                    let tgt = Some(Target::Permanent(cid));
-                    for effect in effects {
-                        let mut eff_evs = self.resolve_effect(effect, controller, tgt.as_ref(), mode)?;
-                        events.append(&mut eff_evs);
-                    }
-                }
-            }
-
-            SpellEffect::ForEachOpponent { effects } => {
-                let opponents: Vec<usize> = (0..self.players.len()).filter(|&i| i != controller).collect();
-                for opp in opponents {
-                    let tgt = Some(Target::Player(opp));
-                    for effect in effects {
-                        let mut eff_evs = self.resolve_effect(effect, controller, tgt.as_ref(), mode)?;
-                        events.append(&mut eff_evs);
-                    }
-                }
-            }
-
-            // ── Modal ───────────────────────────────────────────────────────────
-
-            SpellEffect::ChooseOne { options } => {
-                let chosen = mode;
-                let option_effects = options.get(chosen)
-                    .ok_or(GameError::ModeOutOfBounds(chosen))?
-                    .clone();
-                for effect in &option_effects {
-                    let mut eff_evs = self.resolve_effect(effect, controller, target, mode)?;
-                    events.append(&mut eff_evs);
-                }
-            }
-
-            // ── Conditional ─────────────────────────────────────────────────────
-
-            SpellEffect::Conditional { condition, then_effects, else_effects } => {
-                let applies = self.evaluate_condition(condition, controller, target);
-                let branch = if applies { then_effects } else { else_effects };
-                let branch = branch.clone();
-                for effect in &branch {
-                    let mut eff_evs = self.resolve_effect(effect, controller, target, mode)?;
-                    events.append(&mut eff_evs);
-                }
-            }
-
-            // ── Deal damage to all ──────────────────────────────────────────────
-
-            SpellEffect::DealDamageToAll { amount, target_filter } => {
-                let amount = *amount;
-                // Damage creatures
-                let creature_ids: Vec<CardId> = self.battlefield.iter()
-                    .filter(|c| {
-                        let tgt = Target::Permanent(c.id);
-                        self.evaluate_requirement_static(target_filter, &tgt, controller)
-                    })
-                    .map(|c| c.id)
-                    .collect();
-                for id in creature_ids {
-                    if let Some(c) = self.battlefield_find_mut(id) {
-                        c.damage += amount;
-                        events.push(GameEvent::DamageDealt { amount, to_player: None, to_card: Some(id) });
-                    }
-                }
-                // Damage players if filter includes players
-                let player_filter = Target::Player(0); // proxy check
-                if self.evaluate_requirement_static(target_filter, &player_filter, controller) {
-                    for pidx in 0..self.players.len() {
-                        self.players[pidx].life -= amount as i32;
-                        events.push(GameEvent::DamageDealt { amount, to_player: Some(pidx), to_card: None });
-                        events.push(GameEvent::LifeLost { player: pidx, amount });
-                    }
-                }
                 let mut sba = self.check_state_based_actions();
                 events.append(&mut sba);
+                Ok(())
             }
 
-            // ── Life gain/loss (targeted) ─────────────────────────────────────
-
-            SpellEffect::TargetGainsLife { amount, target: req } => {
-                let tgt = target.ok_or(GameError::TargetRequired)?;
-                if !self.evaluate_requirement(req, tgt, controller) {
-                    return Err(GameError::SelectionRequirementViolated);
-                }
-                let amount = *amount;
-                match tgt {
-                    Target::Player(pidx) => {
-                        self.players[*pidx].life += amount as i32;
-                        events.push(GameEvent::LifeGained { player: *pidx, amount });
-                    }
-                    _ => return Err(GameError::InvalidTarget),
-                }
-            }
-
-            SpellEffect::TargetLosesLife { amount, target: req } => {
-                let tgt = target.ok_or(GameError::TargetRequired)?;
-                if !self.evaluate_requirement(req, tgt, controller) {
-                    return Err(GameError::SelectionRequirementViolated);
-                }
-                let amount = *amount;
-                match tgt {
-                    Target::Player(pidx) => {
-                        self.players[*pidx].life -= amount as i32;
-                        events.push(GameEvent::LifeLost { player: *pidx, amount });
-                        let mut sba = self.check_state_based_actions();
-                        events.append(&mut sba);
-                    }
-                    _ => return Err(GameError::InvalidTarget),
-                }
-            }
-
-            SpellEffect::EachPlayerLosesLife { amount } => {
-                let amount = *amount;
-                for pidx in 0..self.players.len() {
-                    self.players[pidx].life -= amount as i32;
-                    events.push(GameEvent::LifeLost { player: pidx, amount });
-                }
-                let mut sba = self.check_state_based_actions();
-                events.append(&mut sba);
-            }
-
-            SpellEffect::Drain { amount, target: req } => {
-                let tgt = target.ok_or(GameError::TargetRequired)?;
-                if !self.evaluate_requirement(req, tgt, controller) {
-                    return Err(GameError::SelectionRequirementViolated);
-                }
-                let amount = *amount;
-                match tgt {
-                    Target::Player(pidx) => {
-                        self.players[*pidx].life -= amount as i32;
-                        events.push(GameEvent::LifeLost { player: *pidx, amount });
-                    }
-                    _ => return Err(GameError::InvalidTarget),
-                }
-                self.players[controller].life += amount as i32;
-                events.push(GameEvent::LifeGained { player: controller, amount });
-                let mut sba = self.check_state_based_actions();
-                events.append(&mut sba);
-            }
-
-            // ── Card selection ─────────────────────────────────────────────────
-
-            SpellEffect::Surveil { amount } => {
-                let n = (*amount as usize).min(self.players[controller].library.len());
-                if n > 0 {
-                    let peeked: Vec<(CardId, &'static str)> = self.players[controller]
-                        .library
-                        .iter()
-                        .take(n)
-                        .map(|c| (c.id, c.definition.name))
-                        .collect();
-                    self.suspend_signal = Some((
-                        crate::decision::Decision::Scry { player: controller, cards: peeked },
-                        PendingEffectState::SurveilPeeked { count: n, player: controller },
-                    ));
-                }
-            }
-
-            SpellEffect::LookAtTopCards { amount } => {
-                // Simplified: just look, no choice made. Actual UI would show cards.
-                let n = (*amount as usize).min(self.players[controller].library.len());
-                for i in 0..n {
-                    if let Some(card) = self.players[controller].library.get(i) {
-                        let _name = card.definition.name; // revealed to player
-                        let _ = _name;
-                    }
-                }
-            }
-
-            // ── Poison counters ────────────────────────────────────────────────
-
-            SpellEffect::AddPoisonCounters { count, target: req } => {
-                let tgt = target.ok_or(GameError::TargetRequired)?;
-                if !self.evaluate_requirement(req, tgt, controller) {
-                    return Err(GameError::SelectionRequirementViolated);
-                }
-                let amount = *count;
-                match tgt {
-                    Target::Player(pidx) => {
-                        self.players[*pidx].poison_counters += amount;
-                        events.push(GameEvent::PoisonAdded { player: *pidx, amount });
-                        let mut sba = self.check_state_based_actions();
-                        events.append(&mut sba);
-                    }
-                    _ => return Err(GameError::InvalidTarget),
-                }
-            }
-
-            // ── Proliferate ────────────────────────────────────────────────────
-
-            SpellEffect::Proliferate => {
-                // Add one of each counter type already on permanents and players.
-                let ids: Vec<CardId> = self.battlefield.iter()
-                    .filter(|c| !c.counters.is_empty())
-                    .map(|c| c.id)
-                    .collect();
-                for id in ids {
-                    if let Some(c) = self.battlefield_find_mut(id) {
-                        let counter_types: Vec<_> = c.counters.keys().copied()
-                            .filter(|&ct| c.counters[&ct] > 0)
-                            .collect();
-                        for ct in counter_types {
-                            c.add_counters(ct, 1);
-                            events.push(GameEvent::CounterAdded { card_id: id, counter_type: ct, count: 1 });
-                        }
-                    }
-                }
-                // Proliferate poison counters on players.
-                for pidx in 0..self.players.len() {
-                    if self.players[pidx].poison_counters > 0 {
-                        self.players[pidx].poison_counters += 1;
-                        events.push(GameEvent::PoisonAdded { player: pidx, amount: 1 });
-                    }
-                }
-                let mut sba = self.check_state_based_actions();
-                events.append(&mut sba);
-            }
-
-            // ── Control changing ───────────────────────────────────────────────
-
-            SpellEffect::GainControlUntilEndOfTurn { target: req } => {
-                let tgt = target.ok_or(GameError::TargetRequired)?;
-                if !self.evaluate_requirement(req, tgt, controller) {
-                    return Err(GameError::SelectionRequirementViolated);
-                }
-                if let Target::Permanent(cid) = tgt {
-                    let card_id = *cid;
-                    let ts = self.next_timestamp();
-                    self.add_continuous_effect(crate::game::layers::ContinuousEffect {
-                        timestamp: ts,
-                        source: card_id,
-                        affected: crate::game::layers::AffectedPermanents::Specific(vec![card_id]),
-                        layer: crate::game::layers::Layer::L2Control,
-                        sublayer: None,
-                        duration: crate::game::layers::EffectDuration::UntilEndOfTurn,
-                        modification: crate::game::layers::Modification::ChangeController(controller),
-                    });
-                    // Give haste (standard for "gain control until end of turn" effects).
-                    self.add_continuous_effect(crate::game::layers::ContinuousEffect {
-                        timestamp: ts + 1,
-                        source: card_id,
-                        affected: crate::game::layers::AffectedPermanents::Specific(vec![card_id]),
-                        layer: crate::game::layers::Layer::L6Ability,
-                        sublayer: None,
-                        duration: crate::game::layers::EffectDuration::UntilEndOfTurn,
-                        modification: crate::game::layers::Modification::AddKeyword(crate::card::Keyword::Haste),
-                    });
-                }
-            }
-
-            SpellEffect::GainControl { target: req } => {
-                let tgt = target.ok_or(GameError::TargetRequired)?;
-                if !self.evaluate_requirement(req, tgt, controller) {
-                    return Err(GameError::SelectionRequirementViolated);
-                }
-                if let Target::Permanent(cid) = tgt {
-                    let card_id = *cid;
-                    let ts = self.next_timestamp();
-                    self.add_continuous_effect(crate::game::layers::ContinuousEffect {
-                        timestamp: ts,
-                        source: card_id,
-                        affected: crate::game::layers::AffectedPermanents::Specific(vec![card_id]),
-                        layer: crate::game::layers::Layer::L2Control,
-                        sublayer: None,
-                        duration: crate::game::layers::EffectDuration::Indefinite,
-                        modification: crate::game::layers::Modification::ChangeController(controller),
-                    });
-                }
-            }
-
-            // ── Keyword granting ──────────────────────────────────────────────
-
-            SpellEffect::GrantKeywordUntilEndOfTurn { keyword, target: req } => {
-                let tgt = target.ok_or(GameError::TargetRequired)?;
-                if !self.evaluate_requirement(req, tgt, controller) {
-                    return Err(GameError::SelectionRequirementViolated);
-                }
-                if let Target::Permanent(cid) = tgt {
-                    let card_id = *cid;
-                    let ts = self.next_timestamp();
-                    self.add_continuous_effect(crate::game::layers::ContinuousEffect {
-                        timestamp: ts,
-                        source: card_id,
-                        affected: crate::game::layers::AffectedPermanents::Specific(vec![card_id]),
-                        layer: crate::game::layers::Layer::L6Ability,
-                        sublayer: None,
-                        duration: crate::game::layers::EffectDuration::UntilEndOfTurn,
-                        modification: crate::game::layers::Modification::AddKeyword(keyword.clone()),
-                    });
-                }
-            }
-
-            SpellEffect::GrantKeywordsUntilEndOfTurn { keywords, target: req } => {
-                let tgt = target.ok_or(GameError::TargetRequired)?;
-                if !self.evaluate_requirement(req, tgt, controller) {
-                    return Err(GameError::SelectionRequirementViolated);
-                }
-                if let Target::Permanent(cid) = tgt {
-                    let card_id = *cid;
-                    for keyword in keywords {
-                        let ts = self.next_timestamp();
-                        self.add_continuous_effect(crate::game::layers::ContinuousEffect {
-                            timestamp: ts,
-                            source: card_id,
-                            affected: crate::game::layers::AffectedPermanents::Specific(vec![card_id]),
-                            layer: crate::game::layers::Layer::L6Ability,
-                            sublayer: None,
-                            duration: crate::game::layers::EffectDuration::UntilEndOfTurn,
-                            modification: crate::game::layers::Modification::AddKeyword(keyword.clone()),
-                        });
-                    }
-                }
-            }
-
-            SpellEffect::GrantKeywordToYourCreaturesUntilEndOfTurn { keyword } => {
-                let ts = self.next_timestamp();
-                self.add_continuous_effect(crate::game::layers::ContinuousEffect {
-                    timestamp: ts,
-                    source: CardId(controller as u32),
-                    affected: crate::game::layers::AffectedPermanents::All {
-                        controller: Some(controller),
-                        card_types: vec![crate::card::CardType::Creature],
-                    },
-                    layer: crate::game::layers::Layer::L6Ability,
-                    sublayer: None,
-                    duration: crate::game::layers::EffectDuration::UntilEndOfTurn,
-                    modification: crate::game::layers::Modification::AddKeyword(keyword.clone()),
-                });
-            }
-
-            // ── Token creation (specific) ─────────────────────────────────────
-
-            SpellEffect::CreateFood { count } => {
-                for _ in 0..*count {
-                    let id = self.next_id();
-                    let def = food_token_definition();
-                    let mut token = CardInstance::new_token(id, def, controller);
-                    token.is_token = true;
-                    self.battlefield.push(token);
-                    events.push(GameEvent::TokenCreated { card_id: id });
-                    events.push(GameEvent::PermanentEntered { card_id: id });
-                }
-            }
-
-            SpellEffect::CreateTreasure { count } => {
-                for _ in 0..*count {
-                    let id = self.next_id();
-                    let def = treasure_token_definition();
-                    let mut token = CardInstance::new_token(id, def, controller);
-                    token.is_token = true;
-                    self.battlefield.push(token);
-                    events.push(GameEvent::TokenCreated { card_id: id });
-                    events.push(GameEvent::PermanentEntered { card_id: id });
-                }
-            }
-
-            SpellEffect::CreateBlood { count } => {
-                for _ in 0..*count {
-                    let id = self.next_id();
-                    let def = blood_token_definition();
-                    let mut token = CardInstance::new_token(id, def, controller);
-                    token.is_token = true;
-                    self.battlefield.push(token);
-                    events.push(GameEvent::TokenCreated { card_id: id });
-                    events.push(GameEvent::PermanentEntered { card_id: id });
-                }
-            }
-
-            SpellEffect::Investigate { count } => {
-                for _ in 0..*count {
-                    let id = self.next_id();
-                    let def = clue_token_definition();
-                    let mut token = CardInstance::new_token(id, def, controller);
-                    token.is_token = true;
-                    self.battlefield.push(token);
-                    events.push(GameEvent::TokenCreated { card_id: id });
-                    events.push(GameEvent::PermanentEntered { card_id: id });
-                }
-            }
-
-            // ── Sacrifice ─────────────────────────────────────────────────────
-
-            SpellEffect::Sacrifice { count, filter } => {
-                let n = *count as usize;
-                let candidates: Vec<CardId> = self.battlefield.iter()
-                    .filter(|c| {
-                        c.controller == controller && {
-                            let tgt = Target::Permanent(c.id);
-                            self.evaluate_requirement_static(filter, &tgt, controller)
-                        }
-                    })
-                    .map(|c| c.id)
-                    .take(n)
-                    .collect();
-                for id in candidates {
-                    let is_creature = self.battlefield_find(id).map(|c| c.definition.is_creature()).unwrap_or(false);
-                    if is_creature { events.push(GameEvent::CreatureDied { card_id: id }); }
-                    let mut die_evs = self.remove_to_graveyard_with_triggers(id);
-                    events.append(&mut die_evs);
-                }
-            }
-
-            SpellEffect::OpponentSacrifices { count, filter } => {
-                let opp = (controller + 1) % self.players.len();
-                let n = *count as usize;
-                let candidates: Vec<CardId> = self.battlefield.iter()
-                    .filter(|c| {
-                        c.controller == opp && {
-                            let tgt = Target::Permanent(c.id);
-                            self.evaluate_requirement_static(filter, &tgt, opp)
-                        }
-                    })
-                    .map(|c| c.id)
-                    .take(n)
-                    .collect();
-                for id in candidates {
-                    let is_creature = self.battlefield_find(id).map(|c| c.definition.is_creature()).unwrap_or(false);
-                    if is_creature { events.push(GameEvent::CreatureDied { card_id: id }); }
-                    let mut die_evs = self.remove_to_graveyard_with_triggers(id);
-                    events.append(&mut die_evs);
-                }
-            }
-
-            SpellEffect::EachPlayerSacrifices { count, filter } => {
-                let n = *count as usize;
-                for pidx in 0..self.players.len() {
-                    let candidates: Vec<CardId> = self.battlefield.iter()
-                        .filter(|c| {
-                            c.controller == pidx && {
-                                let tgt = Target::Permanent(c.id);
-                                self.evaluate_requirement_static(filter, &tgt, pidx)
+            Effect::RemoveCounter { what, kind, amount } => {
+                let n = self.evaluate_value(amount, ctx).max(0) as u32;
+                if n == 0 { return Ok(()); }
+                for ent in self.resolve_selector(what, ctx) {
+                    if let EntityRef::Permanent(cid) = ent
+                        && let Some(c) = self.battlefield_find_mut(cid) {
+                            let removed = c.remove_counters(*kind, n);
+                            if removed > 0 {
+                                events.push(GameEvent::CounterRemoved { card_id: cid, counter_type: *kind, count: removed });
                             }
+                        }
+                }
+                Ok(())
+            }
+
+            Effect::Proliferate => {
+                // Add one counter of each existing type on any permanent/player.
+                // Simplified: only handles permanents, each counter type present.
+                let updates: Vec<(CardId, Vec<CounterType>)> = self
+                    .battlefield
+                    .iter()
+                    .map(|c| {
+                        let kinds: Vec<CounterType> = c.counters.iter()
+                            .filter(|(_, n)| **n > 0)
+                            .map(|(k, _)| *k)
+                            .collect();
+                        (c.id, kinds)
+                    })
+                    .filter(|(_, kinds)| !kinds.is_empty())
+                    .collect();
+                for (cid, kinds) in updates {
+                    if let Some(c) = self.battlefield_find_mut(cid) {
+                        for k in kinds {
+                            c.add_counters(k, 1);
+                            events.push(GameEvent::CounterAdded { card_id: cid, counter_type: k, count: 1 });
+                        }
+                    }
+                }
+                for i in 0..self.players.len() {
+                    if self.players[i].poison_counters > 0 {
+                        self.players[i].poison_counters += 1;
+                        events.push(GameEvent::PoisonAdded { player: i, amount: 1 });
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::GainControl { what, duration: _ } => {
+                let new_ctrl = ctx.controller;
+                for ent in self.resolve_selector(what, ctx) {
+                    if let EntityRef::Permanent(cid) = ent
+                        && let Some(c) = self.battlefield_find_mut(cid) {
+                            c.controller = new_ctrl;
+                        }
+                }
+                Ok(())
+            }
+
+            Effect::CreateToken { who, count, definition } => {
+                let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
+                let n = self.evaluate_value(count, ctx).max(0) as u32;
+                for _ in 0..n {
+                    let id = self.next_id();
+                    let def = token_to_card_definition(definition);
+                    let mut inst = CardInstance::new_token(id, def, p);
+                    inst.controller = p;
+                    self.battlefield.push(inst);
+                    events.push(GameEvent::TokenCreated { card_id: id });
+                    events.push(GameEvent::PermanentEntered { card_id: id });
+                }
+                Ok(())
+            }
+
+            Effect::CounterSpell { what } => {
+                // With only a single stack target, we pop the top of the stack if
+                // it's a spell (matching by target id when available).
+                let targets = self.resolve_selector(what, ctx);
+                let mut to_remove: Vec<usize> = Vec::new();
+                for t in &targets {
+                    if let EntityRef::Permanent(cid) = t {
+                        if let Some(pos) = self.stack.iter().position(|si| matches!(si, StackItem::Spell { card, .. } if card.id == *cid)) {
+                            to_remove.push(pos);
+                        }
+                    }
+                }
+                to_remove.sort_unstable_by(|a, b| b.cmp(a));
+                for pos in to_remove {
+                    if let StackItem::Spell { card, caster, .. } = self.stack.remove(pos) {
+                        self.players[caster].send_to_graveyard(*card);
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::Sacrifice { who, count, filter } => {
+                let n = self.evaluate_value(count, ctx).max(0) as usize;
+                for ent in self.resolve_selector(who, ctx) {
+                    let EntityRef::Player(p) = ent else { continue; };
+                    let ids: Vec<CardId> = self.battlefield.iter()
+                        .filter(|c| c.controller == p)
+                        .filter(|c| {
+                            let t = Target::Permanent(c.id);
+                            self.evaluate_requirement_static(filter, &t, p)
                         })
-                        .map(|c| c.id)
                         .take(n)
+                        .map(|c| c.id)
                         .collect();
-                    for id in candidates {
+                    for id in ids {
                         let is_creature = self.battlefield_find(id).map(|c| c.definition.is_creature()).unwrap_or(false);
                         if is_creature { events.push(GameEvent::CreatureDied { card_id: id }); }
                         let mut die_evs = self.remove_to_graveyard_with_triggers(id);
                         events.append(&mut die_evs);
                     }
                 }
+                Ok(())
             }
 
-            // ── Discard (controller choice) ────────────────────────────────────
-
-            SpellEffect::DiscardCards { amount } => {
-                let n = (*amount as usize).min(self.players[controller].hand.len());
-                for _ in 0..n {
-                    if !self.players[controller].hand.is_empty() {
-                        let card = self.players[controller].hand.remove(0);
-                        let card_id = card.id;
-                        self.players[controller].send_to_graveyard(card);
-                        events.push(GameEvent::CardDiscarded { player: controller, card_id });
+            Effect::AddPoison { who, amount } => {
+                let n = self.evaluate_value(amount, ctx).max(0) as u32;
+                for ent in self.resolve_selector(who, ctx) {
+                    if let EntityRef::Player(p) = ent {
+                        self.players[p].poison_counters += n;
+                        events.push(GameEvent::PoisonAdded { player: p, amount: n });
                     }
                 }
+                let mut sba = self.check_state_based_actions();
+                events.append(&mut sba);
+                Ok(())
             }
 
-            SpellEffect::DiscardToHandSize { hand_size } => {
-                let opp = (controller + 1) % self.players.len();
-                let max = *hand_size as usize;
-                while self.players[opp].hand.len() > max {
-                    let card = self.players[opp].hand.remove(0);
-                    let card_id = card.id;
-                    self.players[opp].send_to_graveyard(card);
-                    events.push(GameEvent::CardDiscarded { player: opp, card_id });
+            Effect::Move { what, to } => {
+                for ent in self.resolve_selector(what, ctx) {
+                    let cid = match ent {
+                        EntityRef::Permanent(c) | EntityRef::Card(c) => c,
+                        _ => continue,
+                    };
+                    self.move_card_to(cid, to, ctx, events);
                 }
+                Ok(())
             }
 
-            // ── Copy effects ──────────────────────────────────────────────────
-
-            SpellEffect::CopyTopSpell | SpellEffect::CreateCopies { .. } => {
-                // Copying is complex (needs full stack copy). Placeholder: no-op.
-            }
-
-            // ── Graveyard/exile manipulation ──────────────────────────────────
-
-            SpellEffect::ShuffleGraveyardIntoLibrary => {
-                let graveyard = std::mem::take(&mut self.players[controller].graveyard);
-                for card in graveyard {
-                    self.players[controller].library.push(card);
-                }
-                // Shuffle not implemented deterministically; order remains.
-            }
-
-            SpellEffect::ReturnFromExile { filter: req } => {
-                let pos = self.exile.iter().position(|c| {
-                    c.owner == controller && {
-                        let tgt = Target::Permanent(c.id);
-                        self.evaluate_requirement_static(req, &tgt, controller)
-                    }
+            Effect::Search { who, filter, to } => {
+                let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
+                let pos = self.players[p].library.iter().position(|c| {
+                    let t = Target::Permanent(c.id);
+                    self.evaluate_requirement_static(filter, &t, p)
                 });
-                if let Some(p) = pos {
-                    let card = self.exile.remove(p);
-                    self.players[controller].hand.push(card);
-                }
-            }
-
-            SpellEffect::ReanimateFromGraveyard { filter: req, controller: reanimate_ctrl } => {
-                use crate::card::ReanimateController;
-                let target_player = match reanimate_ctrl {
-                    ReanimateController::Caster => controller,
-                    ReanimateController::OriginalOwner => controller, // simplified
-                };
-                // Find any card in any player's graveyard matching the filter.
-                let found = (0..self.players.len()).find_map(|pidx| {
-                    self.players[pidx].graveyard.iter().position(|c| {
-                        let tgt = Target::Permanent(c.id);
-                        self.evaluate_requirement_static(req, &tgt, controller)
-                    }).map(|pos| (pidx, pos))
-                });
-                if let Some((from_player, pos)) = found {
-                    let mut card = self.players[from_player].graveyard.remove(pos);
-                    card.controller = target_player;
-                    card.damage = 0;
-                    card.summoning_sick = true;
+                if let Some(idx) = pos {
+                    let card = self.players[p].library.remove(idx);
                     let cid = card.id;
-                    self.battlefield.push(card);
-                    events.push(GameEvent::PermanentEntered { card_id: cid });
+                    self.place_card_in_dest(card, p, to, events);
+                    let _ = cid;
                 }
+                Ok(())
             }
 
-            SpellEffect::ResetCreature { target: req } => {
-                let tgt = target.ok_or(GameError::TargetRequired)?;
-                if !self.evaluate_requirement(req, tgt, controller) {
-                    return Err(GameError::SelectionRequirementViolated);
+            Effect::ShuffleGraveyardIntoLibrary { who } => {
+                if let Some(p) = self.resolve_player(who, ctx) {
+                    let cards = std::mem::take(&mut self.players[p].graveyard);
+                    self.players[p].library.extend(cards);
                 }
-                if let Target::Permanent(cid) = tgt {
-                    let card_id = *cid;
-                    let ts = self.next_timestamp();
-                    // Remove all abilities and set P/T to 1/1.
-                    self.add_continuous_effect(crate::game::layers::ContinuousEffect {
-                        timestamp: ts,
-                        source: card_id,
-                        affected: crate::game::layers::AffectedPermanents::Specific(vec![card_id]),
-                        layer: crate::game::layers::Layer::L6Ability,
-                        sublayer: None,
-                        duration: crate::game::layers::EffectDuration::UntilEndOfTurn,
-                        modification: crate::game::layers::Modification::RemoveAllAbilities,
-                    });
-                    self.add_continuous_effect(crate::game::layers::ContinuousEffect {
-                        timestamp: ts + 1,
-                        source: card_id,
-                        affected: crate::game::layers::AffectedPermanents::Specific(vec![card_id]),
-                        layer: crate::game::layers::Layer::L7PowerTough,
-                        sublayer: Some(crate::game::layers::PtSublayer::SetValue),
-                        duration: crate::game::layers::EffectDuration::UntilEndOfTurn,
-                        modification: crate::game::layers::Modification::SetPowerToughness(1, 1),
-                    });
-                }
+                Ok(())
             }
 
-            SpellEffect::BecomeBasicLand { land_type, target: req } => {
-                let tgt = target.ok_or(GameError::TargetRequired)?;
-                if !self.evaluate_requirement(req, tgt, controller) {
-                    return Err(GameError::SelectionRequirementViolated);
-                }
-                if let Target::Permanent(cid) = tgt {
-                    let card_id = *cid;
-                    let ts = self.next_timestamp();
-                    self.add_continuous_effect(crate::game::layers::ContinuousEffect {
-                        timestamp: ts,
-                        source: card_id,
-                        affected: crate::game::layers::AffectedPermanents::Specific(vec![card_id]),
-                        layer: crate::game::layers::Layer::L4Type,
-                        sublayer: None,
-                        duration: crate::game::layers::EffectDuration::Indefinite,
-                        modification: crate::game::layers::Modification::AddLandType(*land_type),
-                    });
-                }
-            }
-
-            SpellEffect::DrawFromTop { amount, target: req } => {
-                let tgt = target.ok_or(GameError::TargetRequired)?;
-                if !self.evaluate_requirement(req, tgt, controller) {
-                    return Err(GameError::SelectionRequirementViolated);
-                }
-                if let Target::Player(pidx) = tgt {
-                    for _ in 0..*amount {
-                        if let Some(id) = self.players[*pidx].draw_top() {
-                            events.push(GameEvent::CardDrawn { player: *pidx, card_id: id });
-                        }
-                    }
-                }
-            }
-
-            // ── Legacy effects ─────────────────────────────────────────────────
-
-            SpellEffect::RevealOpponentTopCard => {
-                let opp = (controller + 1) % self.players.len();
-                if let Some(top) = self.players[opp].library.first() {
-                    let name = top.definition.name;
-                    let is_land = top.definition.is_land();
-                    events.push(GameEvent::TopCardRevealed { player: opp, card_name: name, is_land });
-                    if is_land
-                        && let Some(id) = self.players[opp].draw_top() {
-                            events.push(GameEvent::CardDrawn { player: opp, card_id: id });
+            Effect::Attach { what, to } => {
+                let anchor = self.resolve_selector(to, ctx).into_iter().find_map(|e| {
+                    if let EntityRef::Permanent(cid) = e { Some(cid) } else { None }
+                });
+                for ent in self.resolve_selector(what, ctx) {
+                    if let EntityRef::Permanent(cid) = ent
+                        && let Some(c) = self.battlefield_find_mut(cid) {
+                            c.attached_to = anchor;
+                            events.push(GameEvent::AttachmentMoved { attachment: cid, attached_to: anchor });
                         }
                 }
+                Ok(())
             }
 
-            SpellEffect::OpponentDiscardRandom => {
-                let opp = (controller + 1) % self.players.len();
-                if !self.players[opp].hand.is_empty() {
-                    let card = self.players[opp].hand.remove(0);
-                    let card_id = card.id;
-                    self.players[opp].send_to_graveyard(card);
-                    events.push(GameEvent::CardDiscarded { player: opp, card_id });
-                }
+            Effect::BecomeBasicLand { .. }
+            | Effect::ResetCreature { .. }
+            | Effect::CopySpell { .. }
+            | Effect::RevealTopAndDrawIf { .. } => {
+                // TODO: implement via layer/stack mechanics.
+                Ok(())
             }
-
         }
-        Ok(events)
     }
 
-    /// Evaluate a boolean `EffectCondition` at resolution time.
-    fn evaluate_condition(
-        &self,
-        condition: &EffectCondition,
-        controller: usize,
-        _target: Option<&Target>,
-    ) -> bool {
-        match condition {
-            EffectCondition::ControllerControls(req) => {
-                self.battlefield.iter().any(|c| {
-                    c.controller == controller && {
-                        let tgt = Target::Permanent(c.id);
-                        self.evaluate_requirement_static(req, &tgt, controller)
-                    }
+    // ── Selector / Value / Predicate resolution ─────────────────────────────
+
+    pub(crate) fn resolve_selector(&self, sel: &Selector, ctx: &EffectContext) -> Vec<EntityRef> {
+        match sel {
+            Selector::None => vec![],
+            Selector::This => ctx.source.map(EntityRef::Permanent).into_iter().collect(),
+            Selector::You => vec![EntityRef::Player(ctx.controller)],
+            Selector::Target(idx) | Selector::TargetFiltered { slot: idx, .. } => ctx
+                .targets
+                .get(*idx as usize)
+                .map(|t| target_to_entity(t))
+                .into_iter()
+                .collect(),
+            Selector::TriggerSource => ctx.trigger_source.into_iter().collect(),
+            Selector::ChoiceResult(_) => vec![], // TODO when decision loop lands
+
+            Selector::EachMatching { zone, filter } => self.entities_in_zone(zone, filter, ctx),
+            Selector::EachPermanent(filter) => self
+                .battlefield
+                .iter()
+                .filter(|c| self.evaluate_requirement_static(filter, &Target::Permanent(c.id), ctx.controller))
+                .map(|c| EntityRef::Permanent(c.id))
+                .collect(),
+
+            Selector::AttachedTo(inner) => self
+                .resolve_selector(inner, ctx)
+                .into_iter()
+                .filter_map(|e| {
+                    let EntityRef::Permanent(cid) = e else { return None; };
+                    self.battlefield_find(cid)
+                        .and_then(|c| c.attached_to)
+                        .map(EntityRef::Permanent)
                 })
+                .collect(),
+
+            Selector::AttachedToMe(inner) => {
+                let anchors: Vec<CardId> = self
+                    .resolve_selector(inner, ctx)
+                    .into_iter()
+                    .filter_map(|e| if let EntityRef::Permanent(c) = e { Some(c) } else { None })
+                    .collect();
+                self.battlefield
+                    .iter()
+                    .filter(|c| c.attached_to.is_some_and(|a| anchors.contains(&a)))
+                    .map(|c| EntityRef::Permanent(c.id))
+                    .collect()
             }
-            EffectCondition::TargetHasCounter(ct, n) => {
-                if let Some(Target::Permanent(cid)) = _target {
-                    self.battlefield_find(*cid)
-                        .map(|c| c.counter_count(*ct) >= *n)
-                        .unwrap_or(false)
+
+            Selector::TopOfLibrary { who, count } => {
+                let Some(p) = self.resolve_player(who, ctx) else { return vec![]; };
+                let n = self.evaluate_value(count, ctx).max(0) as usize;
+                self.players[p]
+                    .library
+                    .iter()
+                    .take(n)
+                    .map(|c| EntityRef::Card(c.id))
+                    .collect()
+            }
+            Selector::BottomOfLibrary { who, count } => {
+                let Some(p) = self.resolve_player(who, ctx) else { return vec![]; };
+                let n = self.evaluate_value(count, ctx).max(0) as usize;
+                let lib = &self.players[p].library;
+                let total = lib.len();
+                if n >= total {
+                    lib.iter().map(|c| EntityRef::Card(c.id)).collect()
                 } else {
-                    false
+                    lib.iter().skip(total - n).map(|c| EntityRef::Card(c.id)).collect()
                 }
             }
-            EffectCondition::ControllerLifeAtMost(threshold) => {
-                self.players[controller].life <= *threshold
+            Selector::CardsInZone { who, zone, filter } => {
+                let Some(p) = self.resolve_player(who, ctx) else { return vec![]; };
+                let cards: Vec<&CardInstance> = match zone {
+                    Zone::Hand => self.players[p].hand.iter().collect(),
+                    Zone::Graveyard => self.players[p].graveyard.iter().collect(),
+                    Zone::Library => self.players[p].library.iter().collect(),
+                    Zone::Exile => self.exile.iter().filter(|c| c.owner == p).collect(),
+                    Zone::Battlefield => self.battlefield.iter().filter(|c| c.controller == p).collect(),
+                    Zone::Stack | Zone::Command => vec![],
+                };
+                cards
+                    .into_iter()
+                    .filter(|c| self.evaluate_requirement_static(filter, &Target::Permanent(c.id), ctx.controller))
+                    .map(|c| if matches!(zone, Zone::Battlefield) { EntityRef::Permanent(c.id) } else { EntityRef::Card(c.id) })
+                    .collect()
             }
-            EffectCondition::ControllerGraveyardAtLeast(n) => {
-                self.players[controller].graveyard.len() >= *n
-            }
-            EffectCondition::OpponentGraveyardAtLeast(n) => {
-                let opp = (controller + 1) % self.players.len();
-                self.players[opp].graveyard.len() >= *n
-            }
-            EffectCondition::ControllerHandAtLeast(n) => {
-                self.players[controller].hand.len() >= *n
-            }
-            EffectCondition::ControllerHandEmpty => {
-                self.players[controller].hand.is_empty()
-            }
-            EffectCondition::ControllerControlsCreatureType(ct) => {
-                self.battlefield.iter().any(|c| {
-                    c.controller == controller
-                        && c.definition.is_creature()
-                        && (c.definition.subtypes.creature_types.contains(ct)
-                            || c.definition.keywords.contains(&crate::card::Keyword::Changeling))
-                })
-            }
-            EffectCondition::ControllerGraveyardCreaturesAtLeast(n) => {
-                let count = self.players[controller].graveyard.iter()
-                    .filter(|c| c.definition.is_creature())
-                    .count();
-                count >= *n
-            }
-            EffectCondition::ControllerGraveyardHasLand => {
-                self.players[controller].graveyard.iter().any(|c| c.definition.is_land())
-            }
-            EffectCondition::ControllerLandCountAtLeast(n) => {
-                let count = self.battlefield.iter()
-                    .filter(|c| c.controller == controller && c.definition.is_land())
-                    .count();
-                count >= *n
-            }
-            EffectCondition::IsControllersTurn => {
-                self.active_player_idx == controller
-            }
-            EffectCondition::SpellsCastThisTurnAtLeast(n) => {
-                self.spells_cast_this_turn as usize >= *n
-            }
-            EffectCondition::IsAttacking => {
-                if let Some(Target::Permanent(cid)) = _target {
-                    self.attacking.contains(cid)
-                } else { false }
-            }
-            EffectCondition::IsBlocking => {
-                if let Some(Target::Permanent(cid)) = _target {
-                    self.block_map.contains_key(cid)
-                } else { false }
-            }
-            EffectCondition::TargetIsToken => {
-                if let Some(Target::Permanent(cid)) = _target {
-                    self.battlefield_find(*cid).map(|c| c.is_token).unwrap_or(false)
-                } else { false }
-            }
+
+            Selector::Player(p) => self
+                .resolve_player(p, ctx)
+                .map(EntityRef::Player)
+                .into_iter()
+                .collect(),
         }
     }
 
-    /// Same as `evaluate_requirement` but callable from methods that hold `&self`
-    /// (avoids borrow checker issues when iterating `battlefield`).
+    pub(crate) fn resolve_player(&self, pref: &PlayerRef, ctx: &EffectContext) -> Option<usize> {
+        match pref {
+            PlayerRef::You => Some(ctx.controller),
+            PlayerRef::ActivePlayer => Some(self.active_player_idx),
+            PlayerRef::Triggerer => ctx.trigger_source.and_then(|e| match e {
+                EntityRef::Player(p) => Some(p),
+                _ => None,
+            }),
+            PlayerRef::Target(idx) => ctx.targets.get(*idx as usize).and_then(|t| match t {
+                Target::Player(p) => Some(*p),
+                _ => None,
+            }),
+            PlayerRef::EachOpponent => {
+                // Return first opponent; `ForEach` with `Player(EachOpponent)`
+                // iterates all of them — use `resolve_player_many` there.
+                (0..self.players.len()).find(|i| *i != ctx.controller)
+            }
+            PlayerRef::EachPlayer => Some(0),
+            PlayerRef::OwnerOf(sel) => self
+                .resolve_selector(sel, ctx)
+                .into_iter()
+                .find_map(|e| match e {
+                    EntityRef::Permanent(cid) | EntityRef::Card(cid) => {
+                        self.battlefield_find(cid).map(|c| c.owner)
+                    }
+                    _ => None,
+                }),
+            PlayerRef::ControllerOf(sel) => self
+                .resolve_selector(sel, ctx)
+                .into_iter()
+                .find_map(|e| match e {
+                    EntityRef::Permanent(cid) => self.battlefield_find(cid).map(|c| c.controller),
+                    _ => None,
+                }),
+        }
+    }
+
+    fn entities_in_zone(
+        &self,
+        zone: &ZoneRef,
+        filter: &SelectionRequirement,
+        ctx: &EffectContext,
+    ) -> Vec<EntityRef> {
+        match zone {
+            ZoneRef::Battlefield => self
+                .battlefield
+                .iter()
+                .filter(|c| self.evaluate_requirement_static(filter, &Target::Permanent(c.id), ctx.controller))
+                .map(|c| EntityRef::Permanent(c.id))
+                .collect(),
+            ZoneRef::Stack => self
+                .stack
+                .iter()
+                .filter_map(|si| match si {
+                    StackItem::Spell { card, .. } => Some(EntityRef::Permanent(card.id)),
+                    _ => None,
+                })
+                .collect(),
+            ZoneRef::Library(who) | ZoneRef::Hand(who) | ZoneRef::Graveyard(who) => {
+                let Some(p) = self.resolve_player(who, ctx) else { return vec![]; };
+                let cards: Vec<&CardInstance> = match zone {
+                    ZoneRef::Library(_) => self.players[p].library.iter().collect(),
+                    ZoneRef::Hand(_) => self.players[p].hand.iter().collect(),
+                    ZoneRef::Graveyard(_) => self.players[p].graveyard.iter().collect(),
+                    _ => vec![],
+                };
+                cards
+                    .into_iter()
+                    .filter(|c| self.evaluate_requirement_static(filter, &Target::Permanent(c.id), ctx.controller))
+                    .map(|c| EntityRef::Card(c.id))
+                    .collect()
+            }
+            ZoneRef::Exile => self
+                .exile
+                .iter()
+                .filter(|c| self.evaluate_requirement_static(filter, &Target::Permanent(c.id), ctx.controller))
+                .map(|c| EntityRef::Card(c.id))
+                .collect(),
+            ZoneRef::Command => vec![],
+        }
+    }
+
+    pub(crate) fn evaluate_value(&self, v: &Value, ctx: &EffectContext) -> i32 {
+        match v {
+            Value::Const(n) => *n,
+            Value::CountOf(s) => self.resolve_selector(s, ctx).len() as i32,
+            Value::PowerOf(s) => self.resolve_selector(s, ctx).iter().find_map(|e| {
+                if let EntityRef::Permanent(cid) = e { self.battlefield_find(*cid).map(|c| c.power()) } else { None }
+            }).unwrap_or(0),
+            Value::ToughnessOf(s) => self.resolve_selector(s, ctx).iter().find_map(|e| {
+                if let EntityRef::Permanent(cid) = e { self.battlefield_find(*cid).map(|c| c.toughness()) } else { None }
+            }).unwrap_or(0),
+            Value::LifeOf(p) => self.resolve_player(p, ctx).map(|p| self.players[p].life).unwrap_or(0),
+            Value::HandSizeOf(p) => self.resolve_player(p, ctx).map(|p| self.players[p].hand.len() as i32).unwrap_or(0),
+            Value::GraveyardSizeOf(p) => self.resolve_player(p, ctx).map(|p| self.players[p].graveyard.len() as i32).unwrap_or(0),
+            Value::XFromCost => ctx.x_value as i32,
+            Value::StormCount => self.spells_cast_this_turn.saturating_sub(1) as i32,
+            Value::CountersOn { what, kind } => self
+                .resolve_selector(what, ctx)
+                .into_iter()
+                .find_map(|e| if let EntityRef::Permanent(cid) = e { self.battlefield_find(cid).map(|c| c.counter_count(*kind) as i32) } else { None })
+                .unwrap_or(0),
+            Value::Sum(vs) => vs.iter().map(|v| self.evaluate_value(v, ctx)).sum(),
+            Value::Diff(a, b) => self.evaluate_value(a, ctx) - self.evaluate_value(b, ctx),
+            Value::Times(a, b) => self.evaluate_value(a, ctx) * self.evaluate_value(b, ctx),
+            Value::Min(a, b) => self.evaluate_value(a, ctx).min(self.evaluate_value(b, ctx)),
+            Value::Max(a, b) => self.evaluate_value(a, ctx).max(self.evaluate_value(b, ctx)),
+            Value::NonNeg(v) => self.evaluate_value(v, ctx).max(0),
+        }
+    }
+
+    pub(crate) fn evaluate_predicate(&self, p: &Predicate, ctx: &EffectContext) -> bool {
+        match p {
+            Predicate::True => true,
+            Predicate::False => false,
+            Predicate::Not(q) => !self.evaluate_predicate(q, ctx),
+            Predicate::All(qs) => qs.iter().all(|q| self.evaluate_predicate(q, ctx)),
+            Predicate::Any(qs) => qs.iter().any(|q| self.evaluate_predicate(q, ctx)),
+            Predicate::SelectorExists(s) => !self.resolve_selector(s, ctx).is_empty(),
+            Predicate::SelectorCountAtLeast { sel, n } => {
+                self.resolve_selector(sel, ctx).len() as i32 >= self.evaluate_value(n, ctx)
+            }
+            Predicate::ValueAtLeast(a, b) => self.evaluate_value(a, ctx) >= self.evaluate_value(b, ctx),
+            Predicate::ValueAtMost(a, b) => self.evaluate_value(a, ctx) <= self.evaluate_value(b, ctx),
+            Predicate::IsTurnOf(pref) => self.resolve_player(pref, ctx) == Some(self.active_player_idx),
+            Predicate::EntityMatches { what, filter } => self
+                .resolve_selector(what, ctx)
+                .into_iter()
+                .all(|e| match e {
+                    EntityRef::Permanent(cid) | EntityRef::Card(cid) => {
+                        self.evaluate_requirement_static(filter, &Target::Permanent(cid), ctx.controller)
+                    }
+                    EntityRef::Player(_) => matches!(filter, SelectionRequirement::Player),
+                }),
+        }
+    }
+
+    // ── Requirement evaluation (unchanged API) ──────────────────────────────
+
     pub(crate) fn evaluate_requirement_static(
         &self,
         req: &SelectionRequirement,
         target: &Target,
         controller: usize,
     ) -> bool {
+        use SelectionRequirement as R;
         match req {
-            SelectionRequirement::Any => true,
-            SelectionRequirement::Player => matches!(target, Target::Player(_)),
-
-            SelectionRequirement::Permanent => matches!(target, Target::Permanent(_)),
-
-            SelectionRequirement::Creature => match target {
-                Target::Permanent(cid) => self
-                    .battlefield_find(*cid)
-                    .map(|c| c.definition.is_creature())
-                    .unwrap_or(false),
-                _ => false,
+            R::Any => true,
+            R::Player => matches!(target, Target::Player(_)),
+            R::And(a, b) => self.evaluate_requirement_static(a, target, controller)
+                && self.evaluate_requirement_static(b, target, controller),
+            R::Or(a, b) => self.evaluate_requirement_static(a, target, controller)
+                || self.evaluate_requirement_static(b, target, controller),
+            R::Not(inner) => !self.evaluate_requirement_static(inner, target, controller),
+            R::ControlledByYou => match target {
+                Target::Permanent(cid) => self.battlefield_find(*cid).map(|c| c.controller == controller).unwrap_or(false),
+                Target::Player(p) => *p == controller,
             },
-            SelectionRequirement::Artifact => match target {
-                Target::Permanent(cid) => self
-                    .battlefield_find(*cid)
-                    .map(|c| c.definition.is_artifact())
-                    .unwrap_or(false),
-                _ => false,
+            R::ControlledByOpponent => match target {
+                Target::Permanent(cid) => self.battlefield_find(*cid).map(|c| c.controller != controller).unwrap_or(false),
+                Target::Player(p) => *p != controller,
             },
-            SelectionRequirement::Enchantment => match target {
-                Target::Permanent(cid) => self
-                    .battlefield_find(*cid)
-                    .map(|c| c.definition.is_enchantment())
-                    .unwrap_or(false),
-                _ => false,
-            },
-            SelectionRequirement::Planeswalker => match target {
-                Target::Permanent(cid) => self
-                    .battlefield_find(*cid)
-                    .map(|c| c.definition.is_planeswalker())
-                    .unwrap_or(false),
-                _ => false,
-            },
-            SelectionRequirement::Land => match target {
-                Target::Permanent(cid) => self
-                    .battlefield_find(*cid)
-                    .map(|c| c.definition.is_land())
-                    .unwrap_or(false),
-                _ => false,
-            },
-            SelectionRequirement::Nonland => match target {
-                Target::Permanent(cid) => self
-                    .battlefield_find(*cid)
-                    .map(|c| !c.definition.is_land())
-                    .unwrap_or(false),
-                _ => true, // players are not lands
-            },
-            SelectionRequirement::Noncreature => match target {
-                Target::Permanent(cid) => self
-                    .battlefield_find(*cid)
-                    .map(|c| !c.definition.is_creature())
-                    .unwrap_or(false),
-                _ => true,
-            },
-            SelectionRequirement::Tapped => match target {
-                Target::Permanent(cid) => self
-                    .battlefield_find(*cid)
-                    .map(|c| c.tapped)
-                    .unwrap_or(false),
-                _ => false,
-            },
-            SelectionRequirement::Untapped => match target {
-                Target::Permanent(cid) => self
-                    .battlefield_find(*cid)
-                    .map(|c| !c.tapped)
-                    .unwrap_or(false),
-                _ => false,
-            },
-            SelectionRequirement::HasColor(color) => match target {
-                Target::Permanent(cid) => self
-                    .battlefield_find(*cid)
-                    .map(|c| card_has_color(c, *color))
-                    .unwrap_or(false),
-                _ => false,
-            },
-            SelectionRequirement::HasKeyword(kw) => match target {
-                Target::Permanent(cid) => self
-                    .battlefield_find(*cid)
-                    .map(|c| c.has_keyword(kw))
-                    .unwrap_or(false),
-                _ => false,
-            },
-            SelectionRequirement::PowerAtMost(n) => match target {
-                Target::Permanent(cid) => self
-                    .battlefield_find(*cid)
-                    .map(|c| c.definition.is_creature() && c.power() <= *n)
-                    .unwrap_or(false),
-                _ => false,
-            },
-            SelectionRequirement::ToughnessAtMost(n) => match target {
-                Target::Permanent(cid) => self
-                    .battlefield_find(*cid)
-                    .map(|c| c.definition.is_creature() && c.toughness() <= *n)
-                    .unwrap_or(false),
-                _ => false,
-            },
-            SelectionRequirement::WithCounter(ct) => match target {
-                Target::Permanent(cid) => self
-                    .battlefield_find(*cid)
-                    .map(|c| c.counter_count(*ct) > 0)
-                    .unwrap_or(false),
-                _ => false,
-            },
-            SelectionRequirement::ControlledByYou => match target {
-                Target::Permanent(cid) => self
-                    .battlefield_find(*cid)
-                    .map(|c| c.controller == controller)
-                    .unwrap_or(false),
-                Target::Player(pidx) => *pidx == controller,
-            },
-            SelectionRequirement::ControlledByOpponent => match target {
-                Target::Permanent(cid) => self
-                    .battlefield_find(*cid)
-                    .map(|c| c.controller != controller)
-                    .unwrap_or(false),
-                Target::Player(pidx) => *pidx != controller,
-            },
-            SelectionRequirement::HasSupertype(st) => match target {
-                Target::Permanent(cid) => self
-                    .battlefield_find(*cid)
-                    .map(|c| c.definition.supertypes.contains(st))
-                    .unwrap_or(false),
-                _ => false,
-            },
-            SelectionRequirement::HasCreatureType(ct) => match target {
-                Target::Permanent(cid) => self
-                    .battlefield_find(*cid)
-                    .map(|c| c.definition.subtypes.creature_types.contains(ct))
-                    .unwrap_or(false),
-                _ => false,
-            },
-            SelectionRequirement::HasLandType(lt) => match target {
-                Target::Permanent(cid) => self
-                    .battlefield_find(*cid)
-                    .map(|c| c.definition.subtypes.land_types.contains(lt))
-                    .unwrap_or(false),
-                _ => false,
-            },
-            SelectionRequirement::HasArtifactSubtype(at) => match target {
-                Target::Permanent(cid) => self
-                    .battlefield_find(*cid)
-                    .map(|c| c.definition.subtypes.artifact_subtypes.contains(at))
-                    .unwrap_or(false),
-                _ => false,
-            },
-            SelectionRequirement::HasEnchantmentSubtype(et) => match target {
-                Target::Permanent(cid) => self
-                    .battlefield_find(*cid)
-                    .map(|c| c.definition.subtypes.enchantment_subtypes.contains(et))
-                    .unwrap_or(false),
-                _ => false,
-            },
-            SelectionRequirement::PowerAtLeast(n) => match target {
-                Target::Permanent(cid) => self
-                    .battlefield_find(*cid)
-                    .map(|c| c.definition.is_creature() && c.power() >= *n)
-                    .unwrap_or(false),
-                _ => false,
-            },
-            SelectionRequirement::ToughnessAtLeast(n) => match target {
-                Target::Permanent(cid) => self
-                    .battlefield_find(*cid)
-                    .map(|c| c.definition.is_creature() && c.toughness() >= *n)
-                    .unwrap_or(false),
-                _ => false,
-            },
-            SelectionRequirement::IsToken => match target {
-                Target::Permanent(cid) => self
-                    .battlefield_find(*cid)
-                    .map(|c| c.is_token)
-                    .unwrap_or(false),
-                _ => false,
-            },
-            SelectionRequirement::NotToken => match target {
-                Target::Permanent(cid) => self
-                    .battlefield_find(*cid)
-                    .map(|c| !c.is_token)
-                    .unwrap_or(true),
-                _ => true,
-            },
-            SelectionRequirement::IsBasicLand => match target {
-                Target::Permanent(cid) => self
-                    .battlefield_find(*cid)
-                    .map(|c| c.definition.is_land() && c.definition.is_basic())
-                    .unwrap_or(false),
-                _ => false,
-            },
-            SelectionRequirement::IsAttacking => match target {
-                Target::Permanent(cid) => self.attacking.contains(cid),
-                _ => false,
-            },
-            SelectionRequirement::IsBlocking => match target {
-                Target::Permanent(cid) => self.block_map.contains_key(cid),
-                _ => false,
-            },
-            SelectionRequirement::IsSpellOnStack => {
-                false // stack targeting requires separate logic
+            _ => {
+                let Target::Permanent(cid) = target else { return false; };
+                let Some(card) = self.battlefield_find(*cid) else { return false; };
+                match req {
+                    R::Creature => card.definition.is_creature(),
+                    R::Artifact => card.definition.is_artifact(),
+                    R::Enchantment => card.definition.is_enchantment(),
+                    R::Planeswalker => card.definition.is_planeswalker(),
+                    R::Permanent => card.definition.is_permanent(),
+                    R::Land => card.definition.is_land(),
+                    R::Nonland => !card.definition.is_land(),
+                    R::Noncreature => !card.definition.is_creature(),
+                    R::Tapped => card.tapped,
+                    R::Untapped => !card.tapped,
+                    R::HasColor(c) => card
+                        .definition
+                        .cost
+                        .symbols
+                        .iter()
+                        .any(|s| matches!(s, ManaSymbol::Colored(cc) if cc == c)),
+                    R::HasKeyword(kw) => card.has_keyword(kw),
+                    R::PowerAtMost(n) => card.definition.is_creature() && card.power() <= *n,
+                    R::ToughnessAtMost(n) => card.definition.is_creature() && card.toughness() <= *n,
+                    R::PowerAtLeast(n) => card.definition.is_creature() && card.power() >= *n,
+                    R::ToughnessAtLeast(n) => card.definition.is_creature() && card.toughness() >= *n,
+                    R::WithCounter(k) => card.counter_count(*k) > 0,
+                    R::HasSupertype(st) => card.definition.supertypes.contains(st),
+                    R::HasCreatureType(ct) => card.definition.subtypes.creature_types.contains(ct),
+                    R::HasLandType(lt) => card.definition.subtypes.land_types.contains(lt),
+                    R::HasArtifactSubtype(a) => card.definition.subtypes.artifact_subtypes.contains(a),
+                    R::HasEnchantmentSubtype(e) => card.definition.subtypes.enchantment_subtypes.contains(e),
+                    R::IsToken => card.is_token,
+                    R::NotToken => !card.is_token,
+                    R::IsBasicLand => card.definition.is_land() && card.definition.supertypes.contains(&Supertype::Basic),
+                    R::IsAttacking => self.attacking.contains(&card.id),
+                    R::IsBlocking => self.block_map.contains_key(&card.id),
+                    R::IsSpellOnStack => self.stack.iter().any(|si| matches!(si, StackItem::Spell { card: c, .. } if c.id == card.id)),
+                    R::ManaValueAtMost(n) => card.definition.cost.cmc() <= *n,
+                    R::ManaValueAtLeast(n) => card.definition.cost.cmc() >= *n,
+                    R::HasCardType(ct) => card.definition.card_types.contains(ct),
+                    _ => unreachable!("handled above"),
+                }
             }
-            SelectionRequirement::ManaValueAtMost(n) => match target {
-                Target::Permanent(cid) => self
-                    .battlefield_find(*cid)
-                    .map(|c| c.definition.cost.cmc() <= *n)
-                    .unwrap_or(false),
-                _ => false,
-            },
-            SelectionRequirement::ManaValueAtLeast(n) => match target {
-                Target::Permanent(cid) => self
-                    .battlefield_find(*cid)
-                    .map(|c| c.definition.cost.cmc() >= *n)
-                    .unwrap_or(false),
-                _ => false,
-            },
-            SelectionRequirement::HasCardType(card_type) => match target {
-                Target::Permanent(cid) => self
-                    .battlefield_find(*cid)
-                    .map(|c| c.definition.card_types.contains(card_type))
-                    .unwrap_or(false),
-                _ => false,
-            },
-            SelectionRequirement::And(a, b) => {
-                self.evaluate_requirement_static(a, target, controller)
-                    && self.evaluate_requirement_static(b, target, controller)
-            }
-            SelectionRequirement::Or(a, b) => {
-                self.evaluate_requirement_static(a, target, controller)
-                    || self.evaluate_requirement_static(b, target, controller)
-            }
-            SelectionRequirement::Not(a) => !self.evaluate_requirement_static(a, target, controller),
         }
     }
 
-    /// Pick a sensible auto-target for a single effect triggered by `controller`.
-    pub(crate) fn auto_target_for_effect(&self, effect: &SpellEffect, controller: usize) -> Option<Target> {
+    // ── Auto-target heuristic for simple triggers ────────────────────────────
+
+    /// Pick a legal target for an effect that requires one, used when the
+    /// engine fires a trigger without explicit user input (ETB, attack trigger,
+    /// etc.). Returns `None` if the effect requires no target or no legal
+    /// target exists.
+    pub fn auto_target_for_effect(&self, eff: &Effect, controller: usize) -> Option<Target> {
+        let req = eff.primary_target_filter()?;
+        // Opponent first; fall back to controller for "any".
         let opp = (controller + 1) % self.players.len();
-        match effect {
-            SpellEffect::DealDamage { .. } => {
-                Some(Target::Player(opp))
+        if self.evaluate_requirement_static(req, &Target::Player(opp), controller) {
+            return Some(Target::Player(opp));
+        }
+        if self.evaluate_requirement_static(req, &Target::Player(controller), controller) {
+            return Some(Target::Player(controller));
+        }
+        // Try a battlefield permanent.
+        self.battlefield
+            .iter()
+            .find(|c| self.evaluate_requirement_static(req, &Target::Permanent(c.id), controller))
+            .map(|c| Target::Permanent(c.id))
+    }
+
+    // ── Zone move helpers ────────────────────────────────────────────────────
+
+    fn deal_damage_to(&mut self, ent: EntityRef, amount: u32, events: &mut Vec<GameEvent>) {
+        match ent {
+            EntityRef::Player(p) => {
+                self.players[p].life -= amount as i32;
+                events.push(GameEvent::DamageDealt { amount, to_player: Some(p), to_card: None });
+                events.push(GameEvent::LifeLost { player: p, amount });
             }
-            SpellEffect::DestroyCreature { .. } => {
-                self.battlefield.iter()
-                    .find(|c| c.owner == opp && c.definition.is_creature())
-                    .map(|c| Target::Permanent(c.id))
+            EntityRef::Permanent(cid) => {
+                if let Some(c) = self.battlefield_find_mut(cid) {
+                    c.damage += amount;
+                    events.push(GameEvent::DamageDealt { amount, to_player: None, to_card: Some(cid) });
+                }
             }
-            SpellEffect::PumpCreature { .. } => {
-                self.battlefield.iter()
-                    .find(|c| c.owner == controller && c.definition.is_creature())
-                    .map(|c| Target::Permanent(c.id))
-            }
-            // These effects are controller-relative; no Target needed
-            SpellEffect::RevealOpponentTopCard | SpellEffect::OpponentDiscardRandom => None,
-            _ => None,
+            EntityRef::Card(_) => {}
         }
     }
 
-    /// Pick a sensible auto-target for a slice of effects triggered by `controller`.
-    /// Returns the first non-None target found across all effects.
-    pub(crate) fn auto_target_for_effects(&self, effects: &[SpellEffect], controller: usize) -> Option<Target> {
-        effects.iter().find_map(|e| self.auto_target_for_effect(e, controller))
+    fn move_card_to(
+        &mut self,
+        cid: CardId,
+        dest: &ZoneDest,
+        ctx: &EffectContext,
+        events: &mut Vec<GameEvent>,
+    ) {
+        // Try battlefield first.
+        if let Some(pos) = self.battlefield.iter().position(|c| c.id == cid) {
+            let mut card = self.battlefield.remove(pos);
+            self.remove_effects_from_source(cid);
+            card.damage = 0;
+            card.tapped = false;
+            card.attached_to = None;
+            self.place_card_in_dest(card, ctx.controller, dest, events);
+            return;
+        }
+        // Then graveyards.
+        for p in 0..self.players.len() {
+            if let Some(pos) = self.players[p].graveyard.iter().position(|c| c.id == cid) {
+                let card = self.players[p].graveyard.remove(pos);
+                self.place_card_in_dest(card, p, dest, events);
+                return;
+            }
+        }
+        // Then exile.
+        if let Some(pos) = self.exile.iter().position(|c| c.id == cid) {
+            let card = self.exile.remove(pos);
+            let owner = card.owner;
+            self.place_card_in_dest(card, owner, dest, events);
+        }
+    }
+
+    fn place_card_in_dest(
+        &mut self,
+        mut card: CardInstance,
+        default_player: usize,
+        dest: &ZoneDest,
+        events: &mut Vec<GameEvent>,
+    ) {
+        match dest {
+            ZoneDest::Hand(who) => {
+                let ctx = EffectContext::for_spell(default_player, None, 0, 0);
+                let p = self.resolve_player(who, &ctx).unwrap_or(default_player);
+                card.controller = p;
+                self.players[p].hand.push(card);
+            }
+            ZoneDest::Library { who, pos } => {
+                let ctx = EffectContext::for_spell(default_player, None, 0, 0);
+                let p = self.resolve_player(who, &ctx).unwrap_or(default_player);
+                match pos {
+                    LibraryPosition::Top => self.players[p].library.insert(0, card),
+                    LibraryPosition::Bottom | LibraryPosition::Shuffled => self.players[p].library.push(card),
+                }
+            }
+            ZoneDest::Graveyard => {
+                let owner = card.owner;
+                self.players[owner].send_to_graveyard(card);
+            }
+            ZoneDest::Exile => {
+                let cid = card.id;
+                self.exile.push(card);
+                events.push(GameEvent::PermanentExiled { card_id: cid });
+            }
+            ZoneDest::Battlefield { controller, tapped } => {
+                let ctx = EffectContext::for_spell(default_player, None, 0, 0);
+                let p = self.resolve_player(controller, &ctx).unwrap_or(default_player);
+                card.controller = p;
+                card.tapped = *tapped;
+                card.summoning_sick = card.definition.is_creature();
+                let cid = card.id;
+                self.battlefield.push(card);
+                events.push(GameEvent::PermanentEntered { card_id: cid });
+            }
+        }
     }
 }
 
-// ── Specific token definitions ─────────────────────────────────────────────────
-
-fn food_token_definition() -> CardDefinition {
-    use crate::card::{ArtifactSubtype, Subtypes};
-    CardDefinition {
-        name: "Food",
-        cost: ManaCost::default(),
-        supertypes: vec![],
-        card_types: vec![crate::card::CardType::Artifact],
-        subtypes: Subtypes {
-            artifact_subtypes: vec![ArtifactSubtype::Food],
-            ..Default::default()
-        },
-        power: 0, toughness: 0, base_loyalty: 0,
-        keywords: vec![],
-        static_abilities: vec![],
-        spell_effects: vec![],
-        activated_abilities: vec![ActivatedAbility {
-            tap_cost: false,
-            mana_cost: ManaCost::new(vec![crate::mana::ManaSymbol::Generic(2)]),
-            effects: vec![SpellEffect::GainLife { amount: 3 }],
-            once_per_turn: false,
-            sorcery_speed: false,
-        }],
-        triggered_abilities: vec![],
-        loyalty_abilities: vec![],
+fn target_to_entity(t: &Target) -> EntityRef {
+    match t {
+        Target::Player(p) => EntityRef::Player(*p),
+        Target::Permanent(c) => EntityRef::Permanent(*c),
     }
 }
 
-fn treasure_token_definition() -> CardDefinition {
-    use crate::card::{ArtifactSubtype, Subtypes};
-    CardDefinition {
-        name: "Treasure",
-        cost: ManaCost::default(),
-        supertypes: vec![],
-        card_types: vec![crate::card::CardType::Artifact],
-        subtypes: Subtypes {
-            artifact_subtypes: vec![ArtifactSubtype::Treasure],
-            ..Default::default()
-        },
-        power: 0, toughness: 0, base_loyalty: 0,
-        keywords: vec![],
-        static_abilities: vec![],
-        spell_effects: vec![],
-        activated_abilities: vec![ActivatedAbility {
-            tap_cost: true,
-            mana_cost: ManaCost::default(),
-            effects: vec![SpellEffect::AddManaAnyColor { amount: 1 }],
-            once_per_turn: false,
-            sorcery_speed: false,
-        }],
-        triggered_abilities: vec![],
-        loyalty_abilities: vec![],
-    }
-}
+// ── Token → CardDefinition ──────────────────────────────────────────────────
 
-fn blood_token_definition() -> CardDefinition {
-    use crate::card::{ArtifactSubtype, Subtypes};
-    CardDefinition {
-        name: "Blood",
-        cost: ManaCost::default(),
-        supertypes: vec![],
-        card_types: vec![crate::card::CardType::Artifact],
-        subtypes: Subtypes {
-            artifact_subtypes: vec![ArtifactSubtype::Blood],
-            ..Default::default()
-        },
-        power: 0, toughness: 0, base_loyalty: 0,
-        keywords: vec![],
-        static_abilities: vec![],
-        spell_effects: vec![],
-        activated_abilities: vec![ActivatedAbility {
-            tap_cost: false,
-            mana_cost: ManaCost::new(vec![crate::mana::ManaSymbol::Generic(1)]),
-            effects: vec![SpellEffect::DiscardCards { amount: 1 }, SpellEffect::DrawCards { amount: 1 }],
-            once_per_turn: false,
-            sorcery_speed: false,
-        }],
-        triggered_abilities: vec![],
-        loyalty_abilities: vec![],
-    }
-}
-
-fn clue_token_definition() -> CardDefinition {
-    use crate::card::{ArtifactSubtype, Subtypes};
-    CardDefinition {
-        name: "Clue",
-        cost: ManaCost::default(),
-        supertypes: vec![],
-        card_types: vec![crate::card::CardType::Artifact],
-        subtypes: Subtypes {
-            artifact_subtypes: vec![ArtifactSubtype::Clue],
-            ..Default::default()
-        },
-        power: 0, toughness: 0, base_loyalty: 0,
-        keywords: vec![],
-        static_abilities: vec![],
-        spell_effects: vec![],
-        activated_abilities: vec![ActivatedAbility {
-            tap_cost: false,
-            mana_cost: ManaCost::new(vec![crate::mana::ManaSymbol::Generic(2)]),
-            effects: vec![SpellEffect::DrawCards { amount: 1 }],
-            once_per_turn: false,
-            sorcery_speed: false,
-        }],
-        triggered_abilities: vec![],
-        loyalty_abilities: vec![],
-    }
-}
-
-fn card_has_color(card: &CardInstance, color: Color) -> bool {
-    card.definition.cost.symbols.iter().any(|s| match s {
-        ManaSymbol::Colored(c) => *c == color,
-        ManaSymbol::Hybrid(a, b) => *a == color || *b == color,
-        ManaSymbol::Phyrexian(c) => *c == color,
-        _ => false,
-    })
-}
-
-/// Convert a `TokenDefinition` into a minimal `CardDefinition` that can be
-/// placed on the battlefield as a `CardInstance`.
-fn token_to_card_definition(token: &TokenDefinition) -> CardDefinition {
+pub fn token_to_card_definition(token: &TokenDefinition) -> CardDefinition {
     CardDefinition {
         name: token.name,
         cost: ManaCost::default(),
@@ -1679,9 +1102,171 @@ fn token_to_card_definition(token: &TokenDefinition) -> CardDefinition {
         base_loyalty: 0,
         keywords: token.keywords.clone(),
         static_abilities: vec![],
-        spell_effects: vec![],
+        effect: Effect::Noop,
         activated_abilities: vec![],
         triggered_abilities: vec![],
         loyalty_abilities: vec![],
+    }
+}
+
+// ── Event matching for triggers ─────────────────────────────────────────────
+
+/// Returns true if `event` matches the `EventSpec` on `source` (a permanent
+/// on the battlefield). Used by `fire_triggers_for_event` to decide whether a
+/// triggered ability should be pushed onto the stack.
+pub(crate) fn event_matches_spec(
+    event: &GameEvent,
+    spec: &EventSpec,
+    source: &CardInstance,
+) -> bool {
+    let kind_ok = match (&spec.kind, event) {
+        (EventKind::EntersBattlefield, GameEvent::PermanentEntered { .. }) => true,
+        (EventKind::CreatureDied, GameEvent::CreatureDied { .. }) => true,
+        (EventKind::PermanentLeavesBattlefield, GameEvent::CreatureDied { .. }) => true,
+        (EventKind::CardDrawn, GameEvent::CardDrawn { .. }) => true,
+        (EventKind::CardDiscarded, GameEvent::CardDiscarded { .. }) => true,
+        (EventKind::LandPlayed, GameEvent::LandPlayed { .. }) => true,
+        (EventKind::SpellCast, GameEvent::SpellCast { .. }) => true,
+        (EventKind::Attacks, GameEvent::AttackerDeclared(_)) => true,
+        (EventKind::BecomesBlocked, GameEvent::BlockerDeclared { .. }) => true,
+        (EventKind::LifeGained, GameEvent::LifeGained { .. }) => true,
+        (EventKind::LifeLost, GameEvent::LifeLost { .. }) => true,
+        (EventKind::StepBegins(s), GameEvent::StepChanged(got)) => s == got,
+        (EventKind::TurnBegins, GameEvent::TurnStarted { .. }) => true,
+        (EventKind::CounterAdded(k), GameEvent::CounterAdded { counter_type, .. }) => counter_type == k,
+        (EventKind::AbilityActivated, GameEvent::AbilityActivated { .. }) => true,
+        _ => false,
+    };
+    if !kind_ok {
+        return false;
+    }
+
+    let scope_ok = match spec.scope {
+        EventScope::SelfSource => matches!(
+            event,
+            GameEvent::PermanentEntered { card_id } if *card_id == source.id
+        ) || matches!(
+            event,
+            GameEvent::AttackerDeclared(id) if *id == source.id
+        ) || matches!(
+            event,
+            GameEvent::CreatureDied { card_id } if *card_id == source.id
+        ) || matches!(
+            event,
+            GameEvent::BlockerDeclared { attacker, .. } if *attacker == source.id
+        ),
+        EventScope::YourControl => event_player(event).is_some_and(|p| p == source.controller),
+        EventScope::OpponentControl => event_player(event).is_some_and(|p| p != source.controller),
+        EventScope::AnyPlayer | EventScope::ActivePlayer => true,
+        EventScope::AnotherOfYours => {
+            // ETB/die triggers for "another creature"
+            let target = event_card(event);
+            target != Some(source.id)
+        }
+    };
+
+    if !scope_ok {
+        return false;
+    }
+
+    // Filter predicate evaluation is deferred to when the trigger actually
+    // resolves; at this stage we just ensure the shape matches.
+    true
+}
+
+fn event_player(event: &GameEvent) -> Option<usize> {
+    match event {
+        GameEvent::CardDrawn { player, .. }
+        | GameEvent::CardDiscarded { player, .. }
+        | GameEvent::LandPlayed { player, .. }
+        | GameEvent::SpellCast { player, .. }
+        | GameEvent::LifeGained { player, .. }
+        | GameEvent::LifeLost { player, .. }
+        | GameEvent::PoisonAdded { player, .. }
+        | GameEvent::CardMilled { player, .. }
+        | GameEvent::ManaAdded { player, .. }
+        | GameEvent::ColorlessManaAdded { player }
+        | GameEvent::TurnStarted { player, .. } => Some(*player),
+        _ => None,
+    }
+}
+
+fn event_card(event: &GameEvent) -> Option<CardId> {
+    match event {
+        GameEvent::PermanentEntered { card_id }
+        | GameEvent::PermanentExiled { card_id }
+        | GameEvent::CreatureDied { card_id }
+        | GameEvent::PermanentTapped { card_id }
+        | GameEvent::PermanentUntapped { card_id }
+        | GameEvent::TokenCreated { card_id }
+        | GameEvent::AttackerDeclared(card_id) => Some(*card_id),
+        GameEvent::BlockerDeclared { blocker, .. } => Some(*blocker),
+        _ => None,
+    }
+}
+
+// ── Built-in token definitions ───────────────────────────────────────────────
+
+pub fn food_token() -> TokenDefinition {
+    TokenDefinition {
+        name: "Food",
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        card_types: vec![CardType::Artifact],
+        colors: vec![],
+        supertypes: vec![],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Food],
+            ..Default::default()
+        },
+    }
+}
+
+pub fn treasure_token() -> TokenDefinition {
+    TokenDefinition {
+        name: "Treasure",
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        card_types: vec![CardType::Artifact],
+        colors: vec![],
+        supertypes: vec![],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Treasure],
+            ..Default::default()
+        },
+    }
+}
+
+pub fn blood_token() -> TokenDefinition {
+    TokenDefinition {
+        name: "Blood",
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        card_types: vec![CardType::Artifact],
+        colors: vec![],
+        supertypes: vec![],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Blood],
+            ..Default::default()
+        },
+    }
+}
+
+pub fn clue_token() -> TokenDefinition {
+    TokenDefinition {
+        name: "Clue",
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        card_types: vec![CardType::Artifact],
+        colors: vec![],
+        supertypes: vec![],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Clue],
+            ..Default::default()
+        },
     }
 }

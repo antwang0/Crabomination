@@ -1,5 +1,9 @@
 use super::no_abilities;
-use crate::card::{CardDefinition, CardType, SelectionRequirement, SpellEffect, StaticAbility, StaticAbilityTemplate, Subtypes, TriggerCondition, TriggeredAbility, Zone};
+use crate::card::{
+    CardDefinition, CardType, Effect, EventKind, EventScope, EventSpec, SelectionRequirement,
+    StaticAbility, StaticEffect, Subtypes, TriggeredAbility,
+};
+use crate::effect::{PlayerRef, Selector, ZoneDest};
 use crate::mana::{b, cost, generic, w};
 
 /// Glorious Anthem — {1}{W}{W} Enchantment
@@ -11,14 +15,21 @@ pub fn glorious_anthem() -> CardDefinition {
         supertypes: vec![],
         card_types: vec![CardType::Enchantment],
         subtypes: Subtypes::default(),
-        power: 0, toughness: 0,
+        power: 0,
+        toughness: 0,
         keywords: vec![],
-        spell_effects: vec![],
+        effect: Effect::Noop,
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![StaticAbility {
             description: "Creatures you control get +1/+1",
-            template: StaticAbilityTemplate::PumpYourCreatures { power: 1, toughness: 1 },
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                power: 1,
+                toughness: 1,
+            },
         }],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -34,16 +45,17 @@ pub fn animate_dead() -> CardDefinition {
         supertypes: vec![],
         card_types: vec![CardType::Enchantment],
         subtypes: Subtypes::default(),
-        power: 0, toughness: 0,
+        power: 0,
+        toughness: 0,
         keywords: vec![],
-        spell_effects: vec![],
+        effect: Effect::Noop,
         activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
-            condition: TriggerCondition::EntersBattlefield,
-            effects: vec![SpellEffect::ReturnFromGraveyard {
-                filter: SelectionRequirement::Creature,
-                put_into: Zone::Battlefield,
-            }],
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Move {
+                what: Selector::Target(0),
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            },
         }],
         static_abilities: vec![],
         base_loyalty: 0,

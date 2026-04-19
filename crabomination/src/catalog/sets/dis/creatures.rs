@@ -1,5 +1,5 @@
 use super::no_abilities;
-use crate::card::{CardDefinition, CardType, Keyword, Subtypes};
+use crate::card::{CardDefinition, CardType, Effect, Keyword, Subtypes};
 use crate::mana::{cost, generic, u, w};
 
 /// Azorius First-Wing — {1}{W}{U} 2/2 Flying
@@ -10,9 +10,10 @@ pub fn azorius_first_wing() -> CardDefinition {
         supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes::default(),
-        power: 2, toughness: 2,
+        power: 2,
+        toughness: 2,
         keywords: vec![Keyword::Flying],
-        spell_effects: vec![],
+        effect: Effect::Noop,
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],

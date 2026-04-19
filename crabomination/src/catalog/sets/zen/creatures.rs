@@ -1,5 +1,9 @@
 use super::no_abilities;
-use crate::card::{CardDefinition, CardType, CreatureType, Keyword, SpellEffect, Subtypes, TriggerCondition, TriggeredAbility};
+use crate::card::{
+    CardDefinition, CardType, CreatureType, Effect, EventKind, EventScope, EventSpec, Keyword,
+    SelectionRequirement, Subtypes, TriggeredAbility,
+};
+use crate::effect::PlayerRef;
 use crate::mana::{cost, r};
 
 /// Goblin Guide — {R} 2/2 Haste
@@ -11,17 +15,22 @@ pub fn goblin_guide() -> CardDefinition {
         cost: cost(&[r()]),
         supertypes: vec![],
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Goblin], ..Default::default() },
-        power: 2, toughness: 2,
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
         keywords: vec![Keyword::Haste],
-        spell_effects: vec![],
+        effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![
-            TriggeredAbility {
-                condition: TriggerCondition::Attacks,
-                effects: vec![SpellEffect::RevealOpponentTopCard],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::RevealTopAndDrawIf {
+                who: PlayerRef::EachOpponent,
+                reveal_filter: SelectionRequirement::Land,
             },
-        ],
+        }],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],

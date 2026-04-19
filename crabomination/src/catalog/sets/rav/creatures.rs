@@ -1,5 +1,5 @@
 use super::no_abilities;
-use crate::card::{CardDefinition, CardType, CreatureType, Subtypes};
+use crate::card::{CardDefinition, CardType, CreatureType, Effect, Subtypes};
 use crate::mana::{cost, g, w};
 
 /// Watchwolf — {G}{W} 3/3
@@ -9,10 +9,14 @@ pub fn watchwolf() -> CardDefinition {
         cost: cost(&[g(), w()]),
         supertypes: vec![],
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Wolf], ..Default::default() },
-        power: 3, toughness: 3,
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Wolf],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
         keywords: vec![],
-        spell_effects: vec![],
+        effect: Effect::Noop,
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],

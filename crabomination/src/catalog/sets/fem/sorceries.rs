@@ -1,5 +1,7 @@
 use super::no_abilities;
-use crate::card::{CardDefinition, CardType, SpellEffect, Subtypes};
+use crate::card::{CardDefinition, CardType, Subtypes};
+use crate::effect::shortcut::discard;
+use crate::effect::Selector;
 use crate::mana::{b, cost};
 
 /// Hymn to Tourach — {B}{B} Sorcery: target player discards two cards at random
@@ -10,9 +12,10 @@ pub fn hymn_to_tourach() -> CardDefinition {
         supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
-        power: 0, toughness: 0,
+        power: 0,
+        toughness: 0,
         keywords: vec![],
-        spell_effects: vec![SpellEffect::Discard { amount: 2 }],
+        effect: discard(Selector::Target(0), 2, true),
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],

@@ -1,10 +1,10 @@
-use crate::card::{CardId, CardInstance, CounterType, SpellEffect};
+use crate::card::{CardId, CardInstance, CounterType};
 use crate::decision::{Decision, DecisionAnswer};
+use crate::effect::Effect;
 use crate::mana::{Color, ManaError};
 
 // ── Turn step sequence ────────────────────────────────────────────────────────
 
-/// Flat enumeration of every step and phase in an MTG turn.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TurnStep {
     Untap,
@@ -14,11 +14,7 @@ pub enum TurnStep {
     BeginCombat,
     DeclareAttackers,
     DeclareBlockers,
-    /// First-strike and double-strike creatures deal damage here (CR 510.1).
-    /// Only present when at least one attacker or blocker has first/double strike;
-    /// skipped automatically if none are present.
     FirstStrikeDamage,
-    /// Normal (non-first-strike) and double-strike creatures deal damage here.
     CombatDamage,
     EndCombat,
     PostCombatMain,
@@ -71,33 +67,20 @@ pub enum Target {
 #[derive(Debug, Clone)]
 pub enum GameAction {
     PlayLand(CardId),
-    /// Cast a spell.
-    ///
-    /// - `target`: the chosen target for targeted spells (required when the
-    ///   spell has a targeted effect).
-    /// - `mode`: for `ChooseOne` modal spells, the 0-based index of the chosen
-    ///   option. Defaults to `0` if `None`.
     CastSpell { card_id: CardId, target: Option<Target>, mode: Option<usize>, x_value: Option<u32> },
-    /// Activate ability at `ability_index` on a permanent.
     ActivateAbility { card_id: CardId, ability_index: usize, target: Option<Target> },
-    /// Declare one or more attackers at once (must be in DeclareAttackers step).
     DeclareAttackers(Vec<CardId>),
-    /// Defending player assigns blockers: `(blocker_id, attacker_id)` pairs.
     DeclareBlockers(Vec<(CardId, CardId)>),
-    /// Activate a loyalty ability on a planeswalker (sorcery speed, once per turn).
     ActivateLoyaltyAbility { card_id: CardId, ability_index: usize, target: Option<Target> },
-    /// Cast a spell from the graveyard using its Flashback cost.
     CastFlashback { card_id: CardId, target: Option<Target>, mode: Option<usize>, x_value: Option<u32> },
     PassPriority,
-    /// Submit an answer for a pending player-choice decision.
     SubmitDecision(DecisionAnswer),
 }
 
 // ── Pending decisions (suspendable resolution) ───────────────────────────────
 
 /// A decision the engine is waiting on before it can continue resolving the
-/// current spell or ability. The UI renders the `decision`, the player picks
-/// an answer, and the engine resumes via `GameState::submit_decision`.
+/// current spell or ability.
 #[derive(Debug)]
 pub struct PendingDecision {
     pub decision: Decision,
@@ -105,7 +88,6 @@ pub struct PendingDecision {
 }
 
 impl PendingDecision {
-    /// The player who must answer this decision (the spell/ability controller).
     pub fn acting_player(&self) -> usize {
         match &self.resume {
             ResumeContext::Spell { caster, .. } => *caster,
@@ -115,9 +97,10 @@ impl PendingDecision {
     }
 }
 
-/// Internal state recording where resolution suspended so it can be picked up
-/// after the decision answer arrives. Each variant mirrors the resolution
-/// context (spell on the stack, triggered ability, activated ability).
+/// Recorded where resolution suspended so it can resume after the decision.
+/// `remaining` is whatever effects in the original tree still need to run
+/// after the answered decision is applied (e.g. the `Draw` half of `Opt`
+/// suspended on its `Scry`).
 #[derive(Debug)]
 pub(crate) enum ResumeContext {
     Spell {
@@ -125,36 +108,29 @@ pub(crate) enum ResumeContext {
         caster: usize,
         target: Option<Target>,
         mode: usize,
-        effects_done: usize,
         in_progress: PendingEffectState,
+        remaining: Effect,
     },
     Trigger {
         source: CardId,
         controller: usize,
-        effects: Vec<SpellEffect>,
         target: Option<Target>,
         mode: usize,
-        effects_done: usize,
         in_progress: PendingEffectState,
+        remaining: Effect,
     },
     Ability {
         source: CardId,
         controller: usize,
-        effects: Vec<SpellEffect>,
         target: Option<Target>,
-        effects_done: usize,
         in_progress: PendingEffectState,
+        remaining: Effect,
     },
 }
 
-/// State snapshot for the partially-resolved effect when the engine suspends.
-/// Carries the minimum info needed to finish that effect once the answer is in.
 #[derive(Debug, Clone)]
 pub enum PendingEffectState {
-    /// Scry: top `count` cards of `player`'s library were peeked; they are still
-    /// on top of the library in their original order, waiting for a reorder.
     ScryPeeked { count: usize, player: usize },
-    /// Surveil: top `count` cards were peeked; player chooses which go to graveyard.
     SurveilPeeked { count: usize, player: usize },
 }
 
@@ -184,42 +160,27 @@ pub enum GameEvent {
     PermanentUntapped { card_id: CardId },
     TokenCreated { card_id: CardId },
     CardMilled { player: usize, card_id: CardId },
-    /// A scry resolved: `looked_at` top cards were examined; `bottomed` were sent
-    /// to the bottom, the rest were kept on top in the decider's chosen order.
     ScryPerformed { player: usize, looked_at: usize, bottomed: usize },
     AttackerDeclared(CardId),
     BlockerDeclared { blocker: CardId, attacker: CardId },
     CombatResolved,
     FirstStrikeDamageResolved,
-    /// Top card of `player`'s library was revealed; if `is_land` the card was drawn.
     TopCardRevealed { player: usize, card_name: &'static str, is_land: bool },
-    /// A permanent was attached to another (Equipment equip, Aura ETB, etc.).
     AttachmentMoved { attachment: CardId, attached_to: Option<CardId> },
-    /// A player gained poison counters.
     PoisonAdded { player: usize, amount: u32 },
-    /// A loyalty ability was activated on a planeswalker.
     LoyaltyAbilityActivated { planeswalker: CardId, loyalty_change: i32 },
-    /// A permanent's loyalty changed (from loyalty ability or damage).
     LoyaltyChanged { card_id: CardId, new_loyalty: i32 },
-    /// A planeswalker died from 0 loyalty.
     PlaneswalkerDied { card_id: CardId },
-    /// Spells were copied (Storm or copy effects).
     SpellsCopied { original: CardId, count: u32 },
-    /// A surveil was performed.
     SurveilPerformed { player: usize, looked_at: usize, graveyarded: usize },
     GameOver { winner: Option<usize> },
 }
 
 // ── Priority ──────────────────────────────────────────────────────────────────
 
-/// Tracks who currently has priority and how many consecutive passes have occurred.
 #[derive(Debug, Clone)]
 pub struct PriorityState {
-    /// Index of the player who currently holds priority.
     pub player_with_priority: usize,
-    /// Number of consecutive passes since the last stack action.
-    /// When this equals the number of players, the top of the stack resolves
-    /// (or the step advances if the stack is empty).
     pub consecutive_passes: usize,
 }
 
@@ -239,14 +200,14 @@ pub enum StackItem {
         card: Box<CardInstance>,
         caster: usize,
         target: Option<Target>,
-        /// Chosen mode index for `ChooseOne` effects (0 if `None`).
+        /// Chosen mode index for `ChooseMode` effects (0 if `None`).
         mode: Option<usize>,
     },
-    /// A triggered ability waiting to resolve (ETB, attack trigger, etc.).
+    /// A triggered/loyalty ability waiting to resolve.
     Trigger {
         source: CardId,
         controller: usize,
-        effects: Vec<SpellEffect>,
+        effect: Effect,
         target: Option<Target>,
         mode: Option<usize>,
     },

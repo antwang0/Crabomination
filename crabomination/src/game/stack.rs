@@ -1,5 +1,6 @@
 use super::*;
-use crate::card::{Keyword, SpellEffect, Supertype, TriggerCondition};
+use crate::card::{Keyword, Supertype};
+use crate::effect::{Effect, EventKind, EventScope};
 
 impl GameState {
     // ── Pass priority ─────────────────────────────────────────────────────────
@@ -28,7 +29,10 @@ impl GameState {
         // Stack is empty — advance to next step.
 
         // Auto-declare empty blockers if no one blocked.
-        if self.step == TurnStep::DeclareBlockers && !self.attacking.is_empty() && !self.blockers_declared {
+        if self.step == TurnStep::DeclareBlockers
+            && !self.attacking.is_empty()
+            && !self.blockers_declared
+        {
             self.blockers_declared = true;
         }
 
@@ -67,7 +71,10 @@ impl GameState {
                 } else {
                     let p = self.active_player_idx;
                     match self.players[p].draw_top() {
-                        Some(id) => events.push(GameEvent::CardDrawn { player: p, card_id: id }),
+                        Some(id) => events.push(GameEvent::CardDrawn {
+                            player: p,
+                            card_id: id,
+                        }),
                         None => {
                             let opp = (p + 1) % self.players.len();
                             self.game_over = Some(Some(opp));
@@ -79,12 +86,11 @@ impl GameState {
                 self.give_priority_to_active();
             }
             TurnStep::Upkeep => {
-                self.fire_step_triggers(TriggerCondition::BeginningOfUpkeep);
-                self.fire_step_triggers(TriggerCondition::EachUpkeep);
+                self.fire_step_triggers(TurnStep::Upkeep);
                 self.give_priority_to_active();
             }
             TurnStep::BeginCombat => {
-                self.fire_step_triggers(TriggerCondition::BeginningOfCombat);
+                self.fire_step_triggers(TurnStep::BeginCombat);
                 self.give_priority_to_active();
             }
             TurnStep::FirstStrikeDamage => {
@@ -98,8 +104,7 @@ impl GameState {
                 self.give_priority_to_active();
             }
             TurnStep::End => {
-                self.fire_step_triggers(TriggerCondition::BeginningOfEndStep);
-                self.fire_step_triggers(TriggerCondition::EachEndStep);
+                self.fire_step_triggers(TurnStep::End);
                 self.give_priority_to_active();
             }
             TurnStep::Cleanup => {
@@ -115,32 +120,39 @@ impl GameState {
         Ok(events)
     }
 
-    /// Push step-based triggers onto the stack for all permanents matching the condition.
-    /// For active-player-only triggers (Upkeep, End), only fires for the active player's permanents.
-    /// For `EachUpkeep` / `EachEndStep`, fires for ALL players' permanents.
-    pub(crate) fn fire_step_triggers(&mut self, condition: TriggerCondition) {
+    /// Push step-based triggers onto the stack for the given step.
+    /// Fires `EventKind::StepBegins(step)` triggers. Scope controls which
+    /// players' permanents' triggers fire: `ActivePlayer` is default for
+    /// "at the beginning of your upkeep"; `AnyPlayer` fires for everyone.
+    pub(crate) fn fire_step_triggers(&mut self, step: TurnStep) {
         let active = self.active_player_idx;
-        let all_players = matches!(
-            condition,
-            TriggerCondition::EachUpkeep | TriggerCondition::EachEndStep
-        );
-        let triggers: Vec<(CardId, Vec<SpellEffect>, usize)> = self
+        let kind = EventKind::StepBegins(step);
+        let triggers: Vec<(CardId, Effect, usize)> = self
             .battlefield
             .iter()
-            .filter(|c| all_players || c.controller == active)
             .flat_map(|c| {
-                c.definition.triggered_abilities.iter()
-                    .filter(|t| t.condition == condition)
-                    .map(|t| (c.id, t.effects.clone(), c.controller))
+                c.definition
+                    .triggered_abilities
+                    .iter()
+                    .filter(|t| t.event.kind == kind)
+                    .filter(|t| match t.event.scope {
+                        EventScope::AnyPlayer => true,
+                        EventScope::ActivePlayer | EventScope::YourControl | EventScope::SelfSource => {
+                            c.controller == active
+                        }
+                        EventScope::OpponentControl => c.controller != active,
+                        EventScope::AnotherOfYours => false,
+                    })
+                    .map(|t| (c.id, t.effect.clone(), c.controller))
             })
             .collect();
 
-        for (source, effects, controller) in triggers {
-            let auto_target = self.auto_target_for_effects(&effects, controller);
+        for (source, effect, controller) in triggers {
+            let auto_target = self.auto_target_for_effect(&effect, controller);
             self.stack.push(StackItem::Trigger {
                 source,
                 controller,
-                effects,
+                effect,
                 target: auto_target,
                 mode: None,
             });
@@ -156,63 +168,76 @@ impl GameState {
         let mut events = vec![];
 
         match item {
-            StackItem::Spell { card, caster, target, mode } => {
+            StackItem::Spell {
+                card,
+                caster,
+                target,
+                mode,
+            } => {
                 let card = *card;
                 let card_id = card.id;
                 let is_noncreature = !card.definition.is_creature();
 
                 if card.definition.is_permanent() {
                     // Collect ETB triggers before moving card into battlefield.
-                    let etb_triggers: Vec<Vec<SpellEffect>> = card.definition.triggered_abilities.iter()
-                        .filter(|t| t.condition == TriggerCondition::EntersBattlefield)
-                        .map(|t| t.effects.clone())
+                    let etb_triggers: Vec<Effect> = card
+                        .definition
+                        .triggered_abilities
+                        .iter()
+                        .filter(|t| t.event.kind == EventKind::EntersBattlefield
+                            && matches!(t.event.scope, EventScope::SelfSource))
+                        .map(|t| t.effect.clone())
                         .collect();
                     self.battlefield.push(card);
                     events.push(GameEvent::PermanentEntered { card_id });
 
                     // Push ETB triggers onto the stack.
-                    for effects in etb_triggers {
-                        let auto_target = self.auto_target_for_effects(&effects, caster);
+                    for effect in etb_triggers {
+                        let auto_target = self.auto_target_for_effect(&effect, caster);
                         self.stack.push(StackItem::Trigger {
                             source: card_id,
                             controller: caster,
-                            effects,
+                            effect,
                             target: auto_target,
                             mode: None,
                         });
                     }
 
-                    // OtherCreatureEntersBattlefield triggers.
-                    if self.battlefield.last().map(|c| c.id == card_id && c.definition.is_creature()).unwrap_or(false) {
-                        let other_triggers: Vec<(CardId, Vec<SpellEffect>)> = self
+                    // AnotherOfYours creature ETB triggers.
+                    if self
+                        .battlefield
+                        .last()
+                        .map(|c| c.id == card_id && c.definition.is_creature())
+                        .unwrap_or(false)
+                    {
+                        let other_triggers: Vec<(CardId, Effect)> = self
                             .battlefield
                             .iter()
                             .filter(|c| c.id != card_id && c.controller == caster)
                             .flat_map(|c| {
-                                c.definition.triggered_abilities.iter()
-                                    .filter(|t| t.condition == TriggerCondition::OtherCreatureEntersBattlefield)
-                                    .map(|t| (c.id, t.effects.clone()))
+                                c.definition
+                                    .triggered_abilities
+                                    .iter()
+                                    .filter(|t| t.event.kind == EventKind::EntersBattlefield
+                                        && matches!(t.event.scope, EventScope::AnotherOfYours))
+                                    .map(|t| (c.id, t.effect.clone()))
                             })
                             .collect();
-                        for (src, effects) in other_triggers {
-                            let auto_target = self.auto_target_for_effects(&effects, caster);
+                        for (src, effect) in other_triggers {
+                            let auto_target = self.auto_target_for_effect(&effect, caster);
                             self.stack.push(StackItem::Trigger {
                                 source: src,
                                 controller: caster,
-                                effects,
+                                effect,
                                 target: auto_target,
                                 mode: None,
                             });
                         }
                     }
                 } else {
-                    // Instant/sorcery: resolve effects, then graveyard. May
-                    // suspend mid-resolution; if so, `continue_spell_resolution`
-                    // installs a `pending_decision` and leaves the card held in
-                    // that resume context (not on the stack, not in graveyard).
                     let chosen_mode = mode.unwrap_or(0);
                     let mut spell_events =
-                        self.continue_spell_resolution(card, caster, target, chosen_mode, 0)?;
+                        self.continue_spell_resolution(card, caster, target, chosen_mode, None)?;
                     events.append(&mut spell_events);
                     if self.pending_decision.is_some() {
                         return Ok(events);
@@ -222,10 +247,20 @@ impl GameState {
                 // SpellCast triggers fire after the spell resolves (e.g. Prowess).
                 self.fire_spell_cast_triggers(caster, is_noncreature);
             }
-            StackItem::Trigger { source, controller, effects, target, mode } => {
+            StackItem::Trigger {
+                source,
+                controller,
+                effect,
+                target,
+                mode,
+            } => {
                 let chosen_mode = mode.unwrap_or(0);
                 let mut trig_events = self.continue_trigger_resolution(
-                    source, controller, effects, target, chosen_mode, 0,
+                    source,
+                    controller,
+                    effect,
+                    target,
+                    chosen_mode,
                 )?;
                 events.append(&mut trig_events);
                 if self.pending_decision.is_some() {
@@ -281,22 +316,39 @@ impl GameState {
 
         // +1/+1 and -1/-1 counters cancel each other out (CR 704.5q / 704.5r).
         for card in &mut self.battlefield {
-            let plus = card.counters.get(&crate::card::CounterType::PlusOnePlusOne).copied().unwrap_or(0);
-            let minus = card.counters.get(&crate::card::CounterType::MinusOneMinusOne).copied().unwrap_or(0);
+            let plus = card
+                .counters
+                .get(&crate::card::CounterType::PlusOnePlusOne)
+                .copied()
+                .unwrap_or(0);
+            let minus = card
+                .counters
+                .get(&crate::card::CounterType::MinusOneMinusOne)
+                .copied()
+                .unwrap_or(0);
             if plus > 0 && minus > 0 {
                 let cancel = plus.min(minus);
-                *card.counters.entry(crate::card::CounterType::PlusOnePlusOne).or_insert(0) -= cancel;
-                *card.counters.entry(crate::card::CounterType::MinusOneMinusOne).or_insert(0) -= cancel;
+                *card
+                    .counters
+                    .entry(crate::card::CounterType::PlusOnePlusOne)
+                    .or_insert(0) -= cancel;
+                *card
+                    .counters
+                    .entry(crate::card::CounterType::MinusOneMinusOne)
+                    .or_insert(0) -= cancel;
             }
         }
 
         // Legend rule: if two+ legendaries with the same name share a controller,
         // keep the newest (highest CardId) and sacrifice the rest.
         let legend_victims: Vec<CardId> = {
-            let mut seen: std::collections::HashMap<(usize, &str), CardId> = std::collections::HashMap::new();
+            let mut seen: std::collections::HashMap<(usize, &str), CardId> =
+                std::collections::HashMap::new();
             let mut victims = Vec::new();
             // Sort by id descending so we keep the newest.
-            let mut legendaries: Vec<_> = self.battlefield.iter()
+            let mut legendaries: Vec<_> = self
+                .battlefield
+                .iter()
                 .filter(|c| c.definition.supertypes.contains(&Supertype::Legendary))
                 .collect();
             legendaries.sort_by(|a, b| b.id.cmp(&a.id));
@@ -321,9 +373,13 @@ impl GameState {
             .battlefield
             .iter()
             .filter(|c| {
-                if !c.definition.is_creature() { return false; }
+                if !c.definition.is_creature() {
+                    return false;
+                }
                 // Indestructible stops destruction by damage but NOT by toughness ≤ 0.
-                let computed_toughness = computed.iter().find(|cp| cp.id == c.id)
+                let computed_toughness = computed
+                    .iter()
+                    .find(|cp| cp.id == c.id)
                     .map(|cp| cp.toughness)
                     .unwrap_or(c.toughness());
                 // Toughness ≤ 0 kills even indestructible creatures.
@@ -339,30 +395,49 @@ impl GameState {
         for id in dead {
             events.push(GameEvent::CreatureDied { card_id: id });
             // Collect Dies triggers and Persist/Undying info before removing from battlefield.
-            let (die_triggers, has_persist, has_undying, minus_count, plus_count, owner, controller_idx) = self
+            let (
+                die_triggers,
+                has_persist,
+                has_undying,
+                minus_count,
+                plus_count,
+                owner,
+                controller_idx,
+            ) = self
                 .battlefield
                 .iter()
                 .find(|c| c.id == id)
                 .map(|c| {
-                    let triggers: Vec<(CardId, Vec<SpellEffect>, usize)> = c.definition.triggered_abilities.iter()
-                        .filter(|t| t.condition == TriggerCondition::Dies)
-                        .map(|t| (c.id, t.effects.clone(), c.controller))
+                    let triggers: Vec<(CardId, Effect, usize)> = c
+                        .definition
+                        .triggered_abilities
+                        .iter()
+                        .filter(|t| t.event.kind == EventKind::CreatureDied)
+                        .map(|t| (c.id, t.effect.clone(), c.controller))
                         .collect();
                     let has_persist = c.definition.keywords.contains(&Keyword::Persist);
                     let has_undying = c.definition.keywords.contains(&Keyword::Undying);
                     let minus = c.counter_count(crate::card::CounterType::MinusOneMinusOne);
                     let plus = c.counter_count(crate::card::CounterType::PlusOnePlusOne);
-                    (triggers, has_persist, has_undying, minus, plus, c.owner, c.controller)
+                    (
+                        triggers,
+                        has_persist,
+                        has_undying,
+                        minus,
+                        plus,
+                        c.owner,
+                        c.controller,
+                    )
                 })
                 .unwrap_or_default();
             self.remove_from_battlefield_to_graveyard(id);
             // Push Dies triggers to the stack for resolution.
-            for (source, effects, controller) in die_triggers {
-                let auto_target = self.auto_target_for_effects(&effects, controller);
+            for (source, effect, controller) in die_triggers {
+                let auto_target = self.auto_target_for_effect(&effect, controller);
                 self.stack.push(StackItem::Trigger {
                     source,
                     controller,
-                    effects,
+                    effect,
                     target: auto_target,
                     mode: None,
                 });
@@ -370,7 +445,11 @@ impl GameState {
             // Persist: return to battlefield with -1/-1 counter if it had no -1/-1 counter.
             if has_persist && minus_count == 0 {
                 // Find the card in owner's graveyard and return it.
-                if let Some(pos) = self.players[owner].graveyard.iter().position(|c| c.id == id) {
+                if let Some(pos) = self.players[owner]
+                    .graveyard
+                    .iter()
+                    .position(|c| c.id == id)
+                {
                     let mut returned = self.players[owner].graveyard.remove(pos);
                     returned.damage = 0;
                     returned.summoning_sick = true;
@@ -382,7 +461,11 @@ impl GameState {
             }
             // Undying: return to battlefield with +1/+1 counter if it had no +1/+1 counter.
             else if has_undying && plus_count == 0 {
-                if let Some(pos) = self.players[owner].graveyard.iter().position(|c| c.id == id) {
+                if let Some(pos) = self.players[owner]
+                    .graveyard
+                    .iter()
+                    .position(|c| c.id == id)
+                {
                     let mut returned = self.players[owner].graveyard.remove(pos);
                     returned.damage = 0;
                     returned.summoning_sick = true;
@@ -396,9 +479,13 @@ impl GameState {
         }
 
         // Planeswalkers with 0 loyalty die (CR 704.5i).
-        let pw_dead: Vec<CardId> = self.battlefield.iter()
-            .filter(|c| c.definition.is_planeswalker()
-                && c.counter_count(crate::card::CounterType::Loyalty) == 0)
+        let pw_dead: Vec<CardId> = self
+            .battlefield
+            .iter()
+            .filter(|c| {
+                c.definition.is_planeswalker()
+                    && c.counter_count(crate::card::CounterType::Loyalty) == 0
+            })
             .map(|c| c.id)
             .collect();
         for id in pw_dead {
@@ -407,7 +494,9 @@ impl GameState {
         }
 
         // Auras with no valid attachment target go to their owner's graveyard (CR 704.5n/5q).
-        let orphaned_auras: Vec<CardId> = self.battlefield.iter()
+        let orphaned_auras: Vec<CardId> = self
+            .battlefield
+            .iter()
             .filter(|c| c.definition.is_aura())
             .filter(|c| {
                 match c.attached_to {
@@ -426,7 +515,9 @@ impl GameState {
             if !self.players[i].is_alive() && self.game_over.is_none() {
                 let winner = (i + 1) % self.players.len();
                 self.game_over = Some(Some(winner));
-                events.push(GameEvent::GameOver { winner: Some(winner) });
+                events.push(GameEvent::GameOver {
+                    winner: Some(winner),
+                });
             }
         }
 
@@ -435,7 +526,9 @@ impl GameState {
             if self.players[i].poison_counters >= 10 && self.game_over.is_none() {
                 let winner = (i + 1) % self.players.len();
                 self.game_over = Some(Some(winner));
-                events.push(GameEvent::GameOver { winner: Some(winner) });
+                events.push(GameEvent::GameOver {
+                    winner: Some(winner),
+                });
             }
         }
 
@@ -463,24 +556,26 @@ impl GameState {
     /// `Dies` triggered abilities, returning them as events after the fact.
     /// (This is the version used by destroy/damage effects that want to fire triggers.)
     pub(crate) fn remove_to_graveyard_with_triggers(&mut self, id: CardId) -> Vec<GameEvent> {
-        let die_triggers: Vec<(CardId, Vec<SpellEffect>, usize)> = self
+        let die_triggers: Vec<(CardId, Effect, usize)> = self
             .battlefield
             .iter()
             .find(|c| c.id == id)
             .map(|c| {
-                c.definition.triggered_abilities.iter()
-                    .filter(|t| t.condition == TriggerCondition::Dies)
-                    .map(|t| (c.id, t.effects.clone(), c.controller))
+                c.definition
+                    .triggered_abilities
+                    .iter()
+                    .filter(|t| t.event.kind == EventKind::CreatureDied)
+                    .map(|t| (c.id, t.effect.clone(), c.controller))
                     .collect()
             })
             .unwrap_or_default();
         self.remove_from_battlefield_to_graveyard(id);
-        for (source, effects, controller) in die_triggers {
-            let auto_target = self.auto_target_for_effects(&effects, controller);
+        for (source, effect, controller) in die_triggers {
+            let auto_target = self.auto_target_for_effect(&effect, controller);
             self.stack.push(StackItem::Trigger {
                 source,
                 controller,
-                effects,
+                effect,
                 target: auto_target,
                 mode: None,
             });

@@ -1,6 +1,10 @@
 use super::no_abilities;
-use crate::card::{CardDefinition, CardType, SelectionRequirement, SpellEffect, Subtypes};
-use crate::mana::{b, cost, g, generic, r, u, w, Color};
+use crate::card::{CardDefinition, CardType, SelectionRequirement, Subtypes};
+use crate::effect::shortcut::{
+    add_mana, counter_target_spell, deal, draw, exile_target, pump_target, target, target_filtered,
+};
+use crate::effect::Effect;
+use crate::mana::{Color, b, cost, g, generic, r, u, w};
 
 /// Swords to Plowshares — {W}: exile target creature
 pub fn swords_to_plowshares() -> CardDefinition {
@@ -10,11 +14,10 @@ pub fn swords_to_plowshares() -> CardDefinition {
         supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
-        power: 0, toughness: 0,
+        power: 0,
+        toughness: 0,
         keywords: vec![],
-        spell_effects: vec![SpellEffect::ExilePermanent {
-            target: SelectionRequirement::Creature,
-        }],
+        effect: exile_target(),
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -31,11 +34,10 @@ pub fn counterspell() -> CardDefinition {
         supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
-        power: 0, toughness: 0,
+        power: 0,
+        toughness: 0,
         keywords: vec![],
-        spell_effects: vec![SpellEffect::CounterSpell {
-            target: SelectionRequirement::Any,
-        }],
+        effect: counter_target_spell(),
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -52,9 +54,10 @@ pub fn ancestral_recall() -> CardDefinition {
         supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
-        power: 0, toughness: 0,
+        power: 0,
+        toughness: 0,
         keywords: vec![],
-        spell_effects: vec![SpellEffect::DrawCards { amount: 3 }],
+        effect: draw(3),
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -71,11 +74,10 @@ pub fn dark_ritual() -> CardDefinition {
         supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
-        power: 0, toughness: 0,
+        power: 0,
+        toughness: 0,
         keywords: vec![],
-        spell_effects: vec![SpellEffect::AddMana {
-            colors: vec![Color::Black, Color::Black, Color::Black],
-        }],
+        effect: add_mana(vec![Color::Black, Color::Black, Color::Black]),
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -86,19 +88,19 @@ pub fn dark_ritual() -> CardDefinition {
 
 /// Terror — {1}{B}: destroy target non-black, non-artifact creature
 pub fn terror() -> CardDefinition {
+    let filter = SelectionRequirement::Creature
+        .and(SelectionRequirement::HasColor(Color::Black).negate())
+        .and(SelectionRequirement::HasCardType(CardType::Artifact).negate());
     CardDefinition {
         name: "Terror",
         cost: cost(&[generic(1), b()]),
         supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
-        power: 0, toughness: 0,
+        power: 0,
+        toughness: 0,
         keywords: vec![],
-        spell_effects: vec![SpellEffect::DestroyCreature {
-            target: SelectionRequirement::Creature
-                .and(SelectionRequirement::HasColor(Color::Black).negate())
-                .and(SelectionRequirement::Artifact.negate()),
-        }],
+        effect: Effect::Destroy { what: target_filtered(filter) },
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -115,12 +117,10 @@ pub fn lightning_bolt() -> CardDefinition {
         supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
-        power: 0, toughness: 0,
+        power: 0,
+        toughness: 0,
         keywords: vec![],
-        spell_effects: vec![SpellEffect::DealDamage {
-            amount: 3,
-            target: SelectionRequirement::Any,
-        }],
+        effect: deal(3, target()),
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -137,12 +137,10 @@ pub fn giant_growth() -> CardDefinition {
         supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
-        power: 0, toughness: 0,
+        power: 0,
+        toughness: 0,
         keywords: vec![],
-        spell_effects: vec![SpellEffect::PumpCreature {
-            power_bonus: 3,
-            toughness_bonus: 3,
-        }],
+        effect: pump_target(3, 3),
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -150,3 +148,4 @@ pub fn giant_growth() -> CardDefinition {
         loyalty_abilities: vec![],
     }
 }
+

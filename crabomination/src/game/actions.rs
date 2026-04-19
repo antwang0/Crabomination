@@ -1,19 +1,15 @@
 use super::*;
-use crate::card::{Keyword, SpellEffect, TriggerCondition};
+use crate::card::Keyword;
+use crate::effect::Effect;
 
-/// Returns true if the given effects constitute a mana ability:
-/// they only add mana and have no targeting requirements.
-/// Mana abilities resolve immediately without using the stack.
-fn is_mana_ability(effects: &[SpellEffect]) -> bool {
-    !effects.is_empty()
-        && effects.iter().all(|e| {
-            matches!(
-                e,
-                SpellEffect::AddMana { .. }
-                    | SpellEffect::AddManaAnyColor { .. }
-                    | SpellEffect::AddColorlessMana { .. }
-            )
-        })
+/// Returns true if the given effect is purely a mana ability — only adds
+/// mana and uses no targets. Mana abilities resolve immediately without the stack.
+fn is_mana_ability(effect: &Effect) -> bool {
+    match effect {
+        Effect::AddMana { .. } => true,
+        Effect::Seq(steps) => !steps.is_empty() && steps.iter().all(is_mana_ability),
+        _ => false,
+    }
 }
 
 impl GameState {
@@ -30,9 +26,7 @@ impl GameState {
         if !self.players[p].has_in_hand(card_id) {
             return Err(GameError::CardNotInHand(card_id));
         }
-        let card = self.players[p]
-            .remove_from_hand(card_id)
-            .unwrap(); // we just checked has_in_hand
+        let card = self.players[p].remove_from_hand(card_id).unwrap(); // we just checked has_in_hand
         if !card.definition.is_land() {
             // Put it back then error
             self.players[p].hand.push(card);
@@ -64,26 +58,28 @@ impl GameState {
 
         // Timing: sorcery-speed requires empty stack + main phase + active player priority.
         // Instant-speed (Instant type or Flash) may be cast whenever you have priority.
-        if !card.definition.is_instant_speed()
-            && !self.can_cast_sorcery_speed(p) {
-                self.players[p].hand.push(card);
-                return Err(GameError::SorcerySpeedOnly);
-            }
+        if !card.definition.is_instant_speed() && !self.can_cast_sorcery_speed(p) {
+            self.players[p].hand.push(card);
+            return Err(GameError::SorcerySpeedOnly);
+        }
 
         // Validate that the chosen target is legally targetable.
-        if let Some(ref tgt) = target {
-            if let Err(e) = self.check_target_legality(tgt, p) {
-                self.players[p].hand.push(card);
-                return Err(e);
-            }
-            // Validate target meets all SelectionRequirements from the spell's effects.
-            for effect in &card.definition.spell_effects {
-                if let Some(req) = effect.targeted_requirement()
-                    && !self.evaluate_requirement_static(req, tgt, p) {
-                        self.players[p].hand.push(card);
-                        return Err(GameError::SelectionRequirementViolated);
-                    }
-            }
+        if let Some(ref tgt) = target
+            && let Err(e) = self.check_target_legality(tgt, p)
+        {
+            self.players[p].hand.push(card);
+            return Err(e);
+        }
+
+        // Enforce the spell's target selection requirement (e.g. Terror's
+        // "non-black, non-artifact creature"): if the effect binds a filter to
+        // slot 0 and the chosen target doesn't match, reject the cast.
+        if let Some(ref tgt) = target
+            && let Some(filter) = card.definition.effect.target_filter_for_slot(0)
+            && !self.evaluate_requirement_static(filter, tgt, p)
+        {
+            self.players[p].hand.push(card);
+            return Err(GameError::SelectionRequirementViolated);
         }
 
         // Pay the cost (substitute X if present)
@@ -111,7 +107,12 @@ impl GameState {
         self.spells_cast_this_turn += 1;
 
         // Push onto the stack — spell waits there until all players pass priority.
-        self.stack.push(StackItem::Spell { card: Box::new(card), caster: p, target, mode });
+        self.stack.push(StackItem::Spell {
+            card: Box::new(card),
+            caster: p,
+            target,
+            mode,
+        });
 
         // Reset priority to active player so all players get a chance to respond.
         self.give_priority_to_active();
@@ -130,13 +131,18 @@ impl GameState {
         let p = self.priority.player_with_priority;
 
         // Find the card in the controller's graveyard.
-        let graveyard_pos = self.players[p].graveyard.iter().position(|c| c.id == card_id)
+        let graveyard_pos = self.players[p]
+            .graveyard
+            .iter()
+            .position(|c| c.id == card_id)
             .ok_or(GameError::CardNotInHand(card_id))?;
 
         let card = self.players[p].graveyard[graveyard_pos].clone();
 
         // The card must have Flashback.
-        let flashback_cost = card.definition.has_flashback()
+        let flashback_cost = card
+            .definition
+            .has_flashback()
             .ok_or(GameError::SorcerySpeedOnly)?
             .clone();
 
@@ -173,7 +179,12 @@ impl GameState {
         let events = vec![GameEvent::SpellCast { player: p, card_id }];
         self.spells_cast_this_turn += 1;
 
-        self.stack.push(StackItem::Spell { card: Box::new(card), caster: p, target, mode });
+        self.stack.push(StackItem::Spell {
+            card: Box::new(card),
+            caster: p,
+            target,
+            mode,
+        });
         self.give_priority_to_active();
 
         Ok(events)
@@ -202,37 +213,33 @@ impl GameState {
 
     /// Push `SpellCast` triggered abilities (e.g. Prowess) onto the stack.
     /// They will resolve when priority is passed through.
-    pub(crate) fn fire_spell_cast_triggers(
-        &mut self,
-        controller: usize,
-        is_noncreature: bool,
-    ) {
-        let triggers: Vec<(CardId, Vec<SpellEffect>)> = self
+    pub(crate) fn fire_spell_cast_triggers(&mut self, controller: usize, _is_noncreature: bool) {
+        use crate::effect::{EventKind, EventScope};
+        let triggers: Vec<(CardId, Effect)> = self
             .battlefield
             .iter()
             .filter(|c| c.controller == controller)
             .flat_map(|c| {
-                c.definition.triggered_abilities.iter().filter_map(|t| {
-                    match &t.condition {
-                        TriggerCondition::SpellCast { noncreature_only } => {
-                            if *noncreature_only && !is_noncreature {
-                                None
-                            } else {
-                                Some((c.id, t.effects.clone()))
-                            }
-                        }
-                        _ => None,
-                    }
-                })
+                c.definition
+                    .triggered_abilities
+                    .iter()
+                    .filter(|t| {
+                        t.event.kind == EventKind::SpellCast
+                            && matches!(
+                                t.event.scope,
+                                EventScope::YourControl | EventScope::AnyPlayer
+                            )
+                    })
+                    .map(|t| (c.id, t.effect.clone()))
             })
             .collect();
 
-        for (source, effects) in triggers {
-            let auto_target = self.auto_target_for_effects(&effects, controller);
+        for (source, effect) in triggers {
+            let auto_target = self.auto_target_for_effect(&effect, controller);
             self.stack.push(StackItem::Trigger {
                 source,
                 controller,
-                effects,
+                effect,
                 target: auto_target,
                 mode: None,
             });
@@ -289,21 +296,19 @@ impl GameState {
         let mut events = vec![GameEvent::AbilityActivated { source: card_id }];
 
         // Mana abilities resolve immediately (no stack, no priority reset).
-        // A mana ability is: produces mana, has no target requirement, not a loyalty ability.
-        let is_mana_ability = is_mana_ability(&ability.effects);
+        let is_mana_ab = is_mana_ability(&ability.effect);
 
-        if is_mana_ability {
-            let effects = ability.effects.clone();
-            let mut ability_events = self.continue_ability_resolution(
-                card_id, p, effects, target.clone(), 0,
-            )?;
+        if is_mana_ab {
+            let effect = ability.effect.clone();
+            let mut ability_events =
+                self.continue_ability_resolution(card_id, p, effect, target.clone())?;
             events.append(&mut ability_events);
         } else {
             // Non-mana activated ability goes on the stack.
             self.stack.push(StackItem::Trigger {
                 source: card_id,
                 controller: p,
-                effects: ability.effects,
+                effect: ability.effect,
                 target,
                 mode: None,
             });

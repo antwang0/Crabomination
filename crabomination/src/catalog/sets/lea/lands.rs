@@ -1,5 +1,5 @@
 use super::tap_add;
-use crate::card::{CardDefinition, CardType, LandType, Subtypes, Supertype};
+use crate::card::{CardDefinition, CardType, Effect, LandType, Subtypes, Supertype};
 use crate::mana::{Color, ManaCost};
 
 pub fn plains() -> CardDefinition {
@@ -8,10 +8,14 @@ pub fn plains() -> CardDefinition {
         cost: ManaCost::default(),
         supertypes: vec![Supertype::Basic],
         card_types: vec![CardType::Land],
-        subtypes: Subtypes { land_types: vec![LandType::Plains], ..Default::default() },
-        power: 0, toughness: 0,
+        subtypes: Subtypes {
+            land_types: vec![LandType::Plains],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 0,
         keywords: vec![],
-        spell_effects: vec![],
+        effect: Effect::Noop,
         activated_abilities: vec![tap_add(Color::White)],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -26,10 +30,14 @@ pub fn island() -> CardDefinition {
         cost: ManaCost::default(),
         supertypes: vec![Supertype::Basic],
         card_types: vec![CardType::Land],
-        subtypes: Subtypes { land_types: vec![LandType::Island], ..Default::default() },
-        power: 0, toughness: 0,
+        subtypes: Subtypes {
+            land_types: vec![LandType::Island],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 0,
         keywords: vec![],
-        spell_effects: vec![],
+        effect: Effect::Noop,
         activated_abilities: vec![tap_add(Color::Blue)],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -44,10 +52,14 @@ pub fn swamp() -> CardDefinition {
         cost: ManaCost::default(),
         supertypes: vec![Supertype::Basic],
         card_types: vec![CardType::Land],
-        subtypes: Subtypes { land_types: vec![LandType::Swamp], ..Default::default() },
-        power: 0, toughness: 0,
+        subtypes: Subtypes {
+            land_types: vec![LandType::Swamp],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 0,
         keywords: vec![],
-        spell_effects: vec![],
+        effect: Effect::Noop,
         activated_abilities: vec![tap_add(Color::Black)],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -62,10 +74,14 @@ pub fn mountain() -> CardDefinition {
         cost: ManaCost::default(),
         supertypes: vec![Supertype::Basic],
         card_types: vec![CardType::Land],
-        subtypes: Subtypes { land_types: vec![LandType::Mountain], ..Default::default() },
-        power: 0, toughness: 0,
+        subtypes: Subtypes {
+            land_types: vec![LandType::Mountain],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 0,
         keywords: vec![],
-        spell_effects: vec![],
+        effect: Effect::Noop,
         activated_abilities: vec![tap_add(Color::Red)],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -80,10 +96,14 @@ pub fn forest() -> CardDefinition {
         cost: ManaCost::default(),
         supertypes: vec![Supertype::Basic],
         card_types: vec![CardType::Land],
-        subtypes: Subtypes { land_types: vec![LandType::Forest], ..Default::default() },
-        power: 0, toughness: 0,
+        subtypes: Subtypes {
+            land_types: vec![LandType::Forest],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 0,
         keywords: vec![],
-        spell_effects: vec![],
+        effect: Effect::Noop,
         activated_abilities: vec![tap_add(Color::Green)],
         triggered_abilities: vec![],
         static_abilities: vec![],

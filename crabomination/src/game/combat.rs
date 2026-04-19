@@ -1,11 +1,15 @@
 use super::*;
-use crate::card::{Keyword, SelectionRequirement, SpellEffect, TriggerCondition};
+use crate::card::Keyword;
+use crate::effect::{Effect, EventKind};
 use crate::game::layers::ComputedPermanent;
 
 impl GameState {
     // ── Declare attackers ─────────────────────────────────────────────────────
 
-    pub(crate) fn declare_attackers(&mut self, ids: Vec<CardId>) -> Result<Vec<GameEvent>, GameError> {
+    pub(crate) fn declare_attackers(
+        &mut self,
+        ids: Vec<CardId>,
+    ) -> Result<Vec<GameEvent>, GameError> {
         if self.step != TurnStep::DeclareAttackers {
             return Err(GameError::WrongStep { actual: self.step });
         }
@@ -14,10 +18,12 @@ impl GameState {
             return Err(GameError::NotYourPriority);
         }
         let mut events = vec![];
-        let mut triggers: Vec<(CardId, Vec<SpellEffect>, usize)> = vec![];
+        let mut triggers: Vec<(CardId, Effect, usize)> = vec![];
         let computed = self.compute_battlefield();
         let computed_kw = |id: CardId| -> &[Keyword] {
-            computed.iter().find(|c| c.id == id)
+            computed
+                .iter()
+                .find(|c| c.id == id)
                 .map(|c| c.keywords.as_slice())
                 .unwrap_or(&[])
         };
@@ -43,26 +49,25 @@ impl GameState {
             events.push(GameEvent::AttackerDeclared(id));
             // Collect attack triggers (pushed after the loop to avoid borrow conflict)
             for t in &card.definition.triggered_abilities {
-                if t.condition == TriggerCondition::Attacks {
-                    triggers.push((id, t.effects.clone(), p));
+                if t.event.kind == EventKind::Attacks {
+                    triggers.push((id, t.effect.clone(), p));
                 }
             }
-            // Annihilator: push triggered sacrifice effects for each attacker with it.
-            let annihilator_n = computed_kw(id).iter().find_map(|kw| {
+            // Annihilator: TODO — translate to Effect tree (no-op for now).
+            let _annihilator_n = computed_kw(id).iter().find_map(|kw| {
                 if let Keyword::Annihilator(n) = kw { Some(*n) } else { None }
             });
-            if let Some(n) = annihilator_n {
-                // Use OpponentSacrifices effect for the annihilator trigger.
-                triggers.push((id, vec![SpellEffect::OpponentSacrifices {
-                    count: n,
-                    filter: SelectionRequirement::Permanent,
-                }], p));
-            }
         }
         // Push collected attack triggers onto the stack.
-        for (source, effects, controller) in triggers {
-            let auto_target = self.auto_target_for_effects(&effects, controller);
-            self.stack.push(StackItem::Trigger { source, controller, effects, target: auto_target, mode: None });
+        for (source, effect, controller) in triggers {
+            let auto_target = self.auto_target_for_effect(&effect, controller);
+            self.stack.push(StackItem::Trigger {
+                source,
+                controller,
+                effect,
+                target: auto_target,
+                mode: None,
+            });
         }
         // Active player gets priority after attackers are declared.
         self.give_priority_to_active();
@@ -84,7 +89,9 @@ impl GameState {
         let computed = self.compute_battlefield();
         let cp_of = |id: CardId| computed.iter().find(|c| c.id == id);
         let kws_of = |id: CardId| -> &[Keyword] {
-            computed.iter().find(|c| c.id == id)
+            computed
+                .iter()
+                .find(|c| c.id == id)
                 .map(|c| c.keywords.as_slice())
                 .unwrap_or(&[])
         };
@@ -106,7 +113,12 @@ impl GameState {
                 .ok_or(GameError::CardNotOnBattlefield(attacker_id))?;
 
             let blocker_cp = cp_of(blocker_id).ok_or(GameError::CannotBlock(blocker_id))?;
-            if !super::can_block_attacker_computed(blocker, attacker, blocker_cp, kws_of(attacker_id)) {
+            if !super::can_block_attacker_computed(
+                blocker,
+                attacker,
+                blocker_cp,
+                kws_of(attacker_id),
+            ) {
                 return Err(GameError::CannotBlock(blocker_id));
             }
         }
@@ -143,7 +155,9 @@ impl GameState {
     pub(crate) fn has_first_strikers(&self) -> bool {
         let computed = self.compute_battlefield();
         let kws_of = |id: CardId| -> &[Keyword] {
-            computed.iter().find(|c| c.id == id)
+            computed
+                .iter()
+                .find(|c| c.id == id)
                 .map(|c| c.keywords.as_slice())
                 .unwrap_or(&[])
         };
@@ -162,7 +176,9 @@ impl GameState {
         let computed = self.compute_battlefield();
         let mut events = self.resolve_combat_damage_with_filter(
             &computed,
-            |kws: &[Keyword]| kws.contains(&Keyword::FirstStrike) || kws.contains(&Keyword::DoubleStrike),
+            |kws: &[Keyword]| {
+                kws.contains(&Keyword::FirstStrike) || kws.contains(&Keyword::DoubleStrike)
+            },
             |_kws: &[Keyword]| false, // blockers with first strike
         )?;
         // State-based actions between damage steps.
@@ -178,7 +194,9 @@ impl GameState {
         let computed = self.compute_battlefield();
         let mut events = self.resolve_combat_damage_with_filter(
             &computed,
-            |kws: &[Keyword]| !kws.contains(&Keyword::FirstStrike) || kws.contains(&Keyword::DoubleStrike),
+            |kws: &[Keyword]| {
+                !kws.contains(&Keyword::FirstStrike) || kws.contains(&Keyword::DoubleStrike)
+            },
             |_kws: &[Keyword]| true, // all remaining blockers deal damage
         )?;
 
@@ -207,9 +225,8 @@ impl GameState {
         let mut events = vec![];
         let defender_idx = (self.active_player_idx + 1) % self.players.len();
 
-        let computed_of = |id: CardId| -> Option<&ComputedPermanent> {
-            computed.iter().find(|c| c.id == id)
-        };
+        let computed_of =
+            |id: CardId| -> Option<&ComputedPermanent> { computed.iter().find(|c| c.id == id) };
 
         // Snapshot attacker data (using layer-computed P/T and keywords).
         struct AttackerInfo {
@@ -248,7 +265,9 @@ impl GameState {
             .collect();
 
         for atk in &attacker_infos {
-            if !atk.should_deal { continue; }
+            if !atk.should_deal {
+                continue;
+            }
 
             let blocker_ids: Vec<CardId> = self
                 .block_map
@@ -264,7 +283,10 @@ impl GameState {
                     if atk.has_infect {
                         // Infect: deal damage as poison counters to players.
                         self.players[defender_idx].poison_counters += amount;
-                        events.push(GameEvent::PoisonAdded { player: defender_idx, amount });
+                        events.push(GameEvent::PoisonAdded {
+                            player: defender_idx,
+                            amount,
+                        });
                     } else {
                         self.players[defender_idx].life -= atk.power;
                         events.push(GameEvent::DamageDealt {
@@ -272,7 +294,10 @@ impl GameState {
                             to_player: Some(defender_idx),
                             to_card: None,
                         });
-                        events.push(GameEvent::LifeLost { player: defender_idx, amount });
+                        events.push(GameEvent::LifeLost {
+                            player: defender_idx,
+                            amount,
+                        });
                     }
                     if atk.has_lifelink {
                         let a = self.active_player_idx;
@@ -286,9 +311,16 @@ impl GameState {
                 let mut lifelink_dealt = 0i32;
 
                 for &blocker_id in &blocker_ids {
-                    if remaining_atk_damage <= 0 { break; }
-                    let blocker_toughness = computed_of(blocker_id).map(|c| c.toughness).unwrap_or(0);
-                    let lethal = if atk.has_deathtouch { 1 } else { blocker_toughness };
+                    if remaining_atk_damage <= 0 {
+                        break;
+                    }
+                    let blocker_toughness =
+                        computed_of(blocker_id).map(|c| c.toughness).unwrap_or(0);
+                    let lethal = if atk.has_deathtouch {
+                        1
+                    } else {
+                        blocker_toughness
+                    };
                     let assign = remaining_atk_damage.min(lethal);
                     remaining_atk_damage -= assign;
                     lifelink_dealt += assign;
@@ -297,7 +329,10 @@ impl GameState {
                         // Infect/Wither: deal as -1/-1 counters to creatures.
                         if assign > 0 {
                             if let Some(blocker) = self.battlefield_find_mut(blocker_id) {
-                                blocker.add_counters(crate::card::CounterType::MinusOneMinusOne, assign as u32);
+                                blocker.add_counters(
+                                    crate::card::CounterType::MinusOneMinusOne,
+                                    assign as u32,
+                                );
                                 events.push(GameEvent::CounterAdded {
                                     card_id: blocker_id,
                                     counter_type: crate::card::CounterType::MinusOneMinusOne,
@@ -321,7 +356,10 @@ impl GameState {
                     lifelink_dealt += remaining_atk_damage;
                     if atk.has_infect {
                         self.players[defender_idx].poison_counters += amount;
-                        events.push(GameEvent::PoisonAdded { player: defender_idx, amount });
+                        events.push(GameEvent::PoisonAdded {
+                            player: defender_idx,
+                            amount,
+                        });
                     } else {
                         self.players[defender_idx].life -= remaining_atk_damage;
                         events.push(GameEvent::DamageDealt {
@@ -329,14 +367,20 @@ impl GameState {
                             to_player: Some(defender_idx),
                             to_card: None,
                         });
-                        events.push(GameEvent::LifeLost { player: defender_idx, amount });
+                        events.push(GameEvent::LifeLost {
+                            player: defender_idx,
+                            amount,
+                        });
                     }
                 }
 
                 if atk.has_lifelink && lifelink_dealt > 0 {
                     let a = self.active_player_idx;
                     self.players[a].life += lifelink_dealt;
-                    events.push(GameEvent::LifeGained { player: a, amount: lifelink_dealt as u32 });
+                    events.push(GameEvent::LifeGained {
+                        player: a,
+                        amount: lifelink_dealt as u32,
+                    });
                 }
 
                 // Blockers deal damage back to the attacker.
@@ -347,19 +391,26 @@ impl GameState {
                     .filter_map(|&bid| computed_of(bid))
                     .filter(|bc| {
                         // In this simplified version, all blockers deal damage in the normal step.
-                        !bc.keywords.contains(&Keyword::FirstStrike) || bc.keywords.contains(&Keyword::DoubleStrike)
-                            || atk.has_first_strike || atk.has_double_strike
+                        !bc.keywords.contains(&Keyword::FirstStrike)
+                            || bc.keywords.contains(&Keyword::DoubleStrike)
+                            || atk.has_first_strike
+                            || atk.has_double_strike
                     })
                     .map(|c| c.power)
                     .sum();
 
                 if blocker_damage_to_attacker > 0 {
-                    let any_deathtouch_blocker = blocker_ids.iter()
+                    let any_deathtouch_blocker = blocker_ids
+                        .iter()
                         .filter_map(|&bid| computed_of(bid))
                         .any(|c| c.keywords.contains(&Keyword::Deathtouch));
-                    let any_infect_blocker = blocker_ids.iter()
+                    let any_infect_blocker = blocker_ids
+                        .iter()
                         .filter_map(|&bid| computed_of(bid))
-                        .any(|c| c.keywords.contains(&Keyword::Infect) || c.keywords.contains(&Keyword::Wither));
+                        .any(|c| {
+                            c.keywords.contains(&Keyword::Infect)
+                                || c.keywords.contains(&Keyword::Wither)
+                        });
                     let attacker_toughness = computed_of(atk.id).map(|c| c.toughness).unwrap_or(0);
                     if let Some(attacker) = self.battlefield_find_mut(atk.id) {
                         if any_infect_blocker {
@@ -386,7 +437,8 @@ impl GameState {
                             });
                         }
                         // Blocker lifelink
-                        let blocker_lifelink_total: i32 = blocker_ids.iter()
+                        let blocker_lifelink_total: i32 = blocker_ids
+                            .iter()
                             .filter_map(|&bid| computed_of(bid))
                             .filter(|bc| bc.keywords.contains(&Keyword::Lifelink))
                             .map(|bc| bc.power)

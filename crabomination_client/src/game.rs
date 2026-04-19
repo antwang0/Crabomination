@@ -233,6 +233,8 @@ type CardFactory = fn() -> CardDefinition;
 /// Player 1 — Black combo (60 cards): Dark Ritual, Demonic Tutor, Juzám Djinn, Reanimate, discard.
 pub fn build_game() -> GameResource {
     let mut state = GameState::new(vec![Player::new(PLAYER_0, "Player 0"), Player::new(PLAYER_1, "Player 1")]);
+    // P0 is the human — decisions surface through `pending_decision` for the UI.
+    state.players[PLAYER_0].wants_ui = true;
 
     // ── Player 0: Blue/White Vintage Control (60 cards) ──────────────────────
     // Power Nine, hard permission, the best removal, and Serra Angel finishers.

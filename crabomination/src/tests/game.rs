@@ -1,7 +1,9 @@
 use super::*;
 use crate::catalog;
-use crate::card::{SpellEffect, StaticAbility, StaticAbilityTemplate};
+use crate::card::StaticAbility;
 use crate::decision::{DecisionAnswer, ScriptedDecider};
+use crate::effect::{Effect, ManaPayload, PlayerRef, Selector, StaticEffect, Value};
+use crate::game::effects::EffectContext;
 use crate::mana::Color;
 
 fn two_player_game() -> GameState {
@@ -598,7 +600,10 @@ fn layer_keyword_grants_flying() {
     let mut bear_def = catalog::grizzly_bears();
     bear_def.static_abilities = vec![StaticAbility {
         description: "This creature has flying",
-        template: StaticAbilityTemplate::GrantKeywordToSource(crate::card::Keyword::Flying),
+        effect: StaticEffect::GrantKeyword {
+            applies_to: Selector::This,
+            keyword: crate::card::Keyword::Flying,
+        },
     }];
     let bear_id = g.add_card_to_battlefield(0, bear_def);
     let cp = g.computed_permanent(bear_id).unwrap();
@@ -612,7 +617,10 @@ fn flying_via_layer_cannot_be_blocked_by_ground() {
     let mut bear_def = catalog::grizzly_bears();
     bear_def.static_abilities = vec![StaticAbility {
         description: "Flying",
-        template: StaticAbilityTemplate::GrantKeywordToSource(crate::card::Keyword::Flying),
+        effect: StaticEffect::GrantKeyword {
+            applies_to: Selector::This,
+            keyword: crate::card::Keyword::Flying,
+        },
     }];
     let attacker_id = setup_attacker(&mut g, 0, || bear_def.clone());
     let ground_blocker = setup_attacker(&mut g, 1, catalog::grizzly_bears);
@@ -628,24 +636,44 @@ fn flying_via_layer_cannot_be_blocked_by_ground() {
 // ── Decision system ───────────────────────────────────────────────────────────
 
 #[test]
-fn scry_suspends_and_resumes_with_submitted_order() {
+fn wants_ui_opt_suspends_on_scry_and_draws_after_submit() {
+    // P0 is marked as needing UI — the Scry half of Opt should suspend instead
+    // of auto-resolving; after SubmitDecision, the Draw half of the Seq runs.
     let mut g = two_player_game();
-    let top = g.add_card_to_library(0, catalog::forest());
-    let next = g.add_card_to_library(0, catalog::plains());
-    // Cast Opt so the engine drives the full stack resolution: Scry → suspend → submit → Draw.
+    g.players[0].wants_ui = true;
+    let undesired = g.add_card_to_library(0, catalog::forest());
+    let keeper = g.add_card_to_library(0, catalog::plains());
+    g.add_card_to_library(0, catalog::island());
     let opt_id = g.add_card_to_hand(0, catalog::opt());
     g.players[0].mana_pool.add(Color::Blue, 1);
     g.perform_action(GameAction::CastSpell { card_id: opt_id, target: None, mode: None, x_value: None }).unwrap();
-    // Pass priorities so the spell begins resolving and suspends on Scry.
-    g.perform_action(GameAction::PassPriority).unwrap();
-    g.perform_action(GameAction::PassPriority).unwrap();
-    assert!(g.pending_decision.is_some(), "scry should suspend resolution");
-    // Library: [top=forest, next=plains]. Keep `next` on top; send `top` to bottom.
+    drain_stack(&mut g);
+    assert!(g.pending_decision.is_some(), "Opt should suspend on its Scry half for UI");
+    // Scry the undesired card to the bottom. Draw should fire after submission.
     g.perform_action(GameAction::SubmitDecision(DecisionAnswer::ScryOrder {
+        kept_top: vec![],
+        bottom: vec![undesired],
+    })).unwrap();
+    assert!(g.pending_decision.is_none(), "decision should be resolved");
+    assert!(g.players[0].hand.iter().any(|c| c.id == keeper),
+        "Draw half of Opt should run after the scry decision resolves");
+}
+
+#[test]
+fn scry_resolves_with_scripted_order() {
+    let mut g = two_player_game();
+    let top = g.add_card_to_library(0, catalog::forest());
+    let next = g.add_card_to_library(0, catalog::plains());
+    // Library: [top=forest, next=plains]. Keep `next` on top; send `top` to bottom.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::ScryOrder {
         kept_top: vec![next],
         bottom: vec![top],
-    })).unwrap();
-    assert!(g.pending_decision.is_none(), "scry should have been completed");
+    }]));
+    let opt_id = g.add_card_to_hand(0, catalog::opt());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::CastSpell { card_id: opt_id, target: None, mode: None, x_value: None }).unwrap();
+    drain_stack(&mut g);
+    assert!(g.pending_decision.is_none(), "scry should have been completed synchronously");
     // `next` was kept on top then drawn by Opt's draw effect → it's now in hand.
     // `top` went to the bottom of the library.
     assert!(g.players[0].hand.iter().any(|c| c.id == next));
@@ -657,8 +685,12 @@ fn add_mana_any_color_asks_decider() {
     let mut g = two_player_game();
     let scripted = ScriptedDecider::new([DecisionAnswer::Color(Color::Blue)]);
     g.decider = Box::new(scripted);
-    g.resolve_effect(&SpellEffect::AddManaAnyColor { amount: 1 }, 0, None, 0)
-        .unwrap();
+    let eff = Effect::AddMana {
+        who: PlayerRef::You,
+        pool: ManaPayload::AnyOneColor(Value::Const(1)),
+    };
+    let ctx = EffectContext::for_spell(0, None, 0, 0);
+    g.resolve_effect(&eff, &ctx).unwrap();
     assert_eq!(g.players[0].mana_pool.amount(Color::Blue), 1);
     assert_eq!(g.players[0].mana_pool.amount(Color::Green), 0);
 }
@@ -670,21 +702,16 @@ fn opt_scries_then_draws() {
     let undesired = g.add_card_to_library(0, catalog::forest());
     let keeper = g.add_card_to_library(0, catalog::plains());
     g.add_card_to_library(0, catalog::island());
+    // Scry 1: the undesired top card is sent to the bottom; then Draw 1 draws `keeper`.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::ScryOrder {
+        kept_top: vec![],
+        bottom: vec![undesired],
+    }]));
     let opt = catalog::opt();
     let opt_id = g.add_card_to_hand(0, opt);
     g.players[0].mana_pool.add(Color::Blue, 1);
     g.perform_action(GameAction::CastSpell { card_id: opt_id, target: None, mode: None, x_value: None }).unwrap();
-    // Drain stack
-    while !g.stack.is_empty() {
-        g.perform_action(GameAction::PassPriority).unwrap();
-        g.perform_action(GameAction::PassPriority).unwrap();
-    }
-    // Scry 1: the undesired top card is sent to the bottom; then Draw 1 draws `keeper`.
-    assert!(g.pending_decision.is_some(), "Opt should suspend on its Scry effect");
-    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::ScryOrder {
-        kept_top: vec![],
-        bottom: vec![undesired],
-    })).unwrap();
+    drain_stack(&mut g);
     assert!(g.players[0].hand.iter().any(|c| c.id == keeper),
         "Opt should have drawn the keeper after scrying undesired to bottom");
 }
@@ -735,18 +762,14 @@ fn preordain_scry_2_then_draws() {
     g.add_card_to_library(0, catalog::island());
     // After scrying top 2 to bottom, the 3rd (island) becomes top and is drawn.
     let island_top = g.players[0].library[2].id;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::ScryOrder {
+        kept_top: vec![],
+        bottom: vec![bottom_card, top_card],
+    }]));
     let pre_id = g.add_card_to_hand(0, catalog::preordain());
     g.players[0].mana_pool.add(Color::Blue, 1);
     g.perform_action(GameAction::CastSpell { card_id: pre_id, target: None, mode: None, x_value: None }).unwrap();
-    while !g.stack.is_empty() {
-        g.perform_action(GameAction::PassPriority).unwrap();
-        g.perform_action(GameAction::PassPriority).unwrap();
-    }
-    assert!(g.pending_decision.is_some(), "Preordain should suspend on its Scry effect");
-    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::ScryOrder {
-        kept_top: vec![],
-        bottom: vec![bottom_card, top_card],
-    })).unwrap();
+    drain_stack(&mut g);
     assert!(g.players[0].hand.iter().any(|c| c.id == island_top),
         "Preordain should draw what was the 3rd card after scrying top 2 to bottom");
 }

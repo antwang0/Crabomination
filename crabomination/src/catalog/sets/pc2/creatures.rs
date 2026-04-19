@@ -1,5 +1,5 @@
 use super::no_abilities;
-use crate::card::{CardDefinition, CardType, CreatureType, Keyword, Subtypes};
+use crate::card::{CardDefinition, CardType, CreatureType, Effect, Keyword, Subtypes};
 use crate::mana::{b, cost, u};
 
 /// Baleful Strix — {U}{B} 1/1 Flying Deathtouch
@@ -9,10 +9,14 @@ pub fn baleful_strix() -> CardDefinition {
         cost: cost(&[u(), b()]),
         supertypes: vec![],
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Bird], ..Default::default() },
-        power: 1, toughness: 1,
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bird],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
         keywords: vec![Keyword::Flying, Keyword::Deathtouch],
-        spell_effects: vec![],
+        effect: Effect::Noop,
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],

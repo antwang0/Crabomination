@@ -1,14 +1,18 @@
 //! One submodule per Magic set, named by the set's three-letter code.
 //! Helpers shared across all set modules live here.
 
-use crate::card::{ActivatedAbility, SpellEffect};
+use crate::card::ActivatedAbility;
+use crate::effect::{Effect, ManaPayload, PlayerRef};
 use crate::mana::{Color, ManaCost};
 
 pub fn tap_add(color: Color) -> ActivatedAbility {
     ActivatedAbility {
         tap_cost: true,
         mana_cost: ManaCost::default(),
-        effects: vec![SpellEffect::AddMana { colors: vec![color] }],
+        effect: Effect::AddMana {
+            who: PlayerRef::You,
+            pool: ManaPayload::Colors(vec![color]),
+        },
         once_per_turn: false,
         sorcery_speed: false,
     }
@@ -33,6 +37,6 @@ pub mod pc2;
 pub mod por;
 pub mod rav;
 pub mod rtr;
+pub mod ths;
 pub mod tmp;
 pub mod zen;
-pub mod ths;

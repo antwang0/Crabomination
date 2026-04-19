@@ -18,6 +18,10 @@ pub struct Player {
     pub lands_played_this_turn: u32,
     /// Poison counters (player loses at 10).
     pub poison_counters: u32,
+    /// When true, decisions this player would make suspend via
+    /// `pending_decision` so a UI can respond; when false, the engine calls
+    /// the installed `Decider` synchronously (bot / tests).
+    pub wants_ui: bool,
 }
 
 impl Player {
@@ -32,6 +36,7 @@ impl Player {
             graveyard: Vec::new(),
             lands_played_this_turn: 0,
             poison_counters: 0,
+            wants_ui: false,
         }
     }
 

@@ -1,6 +1,6 @@
 use super::no_abilities;
-use crate::card::{CardDefinition, CardType, Keyword, Subtypes};
-use crate::mana::{cost, generic, g, r};
+use crate::card::{CardDefinition, CardType, Effect, Keyword, Subtypes};
+use crate::mana::{cost, g, generic, r};
 
 /// Ghor-Clan Rampager — {2}{R}{G} 4/4 Trample
 pub fn ghor_clan_rampager() -> CardDefinition {
@@ -10,9 +10,10 @@ pub fn ghor_clan_rampager() -> CardDefinition {
         supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes::default(),
-        power: 4, toughness: 4,
+        power: 4,
+        toughness: 4,
         keywords: vec![Keyword::Trample],
-        spell_effects: vec![],
+        effect: Effect::Noop,
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],

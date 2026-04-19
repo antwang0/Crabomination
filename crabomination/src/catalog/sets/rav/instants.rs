@@ -1,5 +1,7 @@
 use super::no_abilities;
-use crate::card::{CardDefinition, CardType, SelectionRequirement, SpellEffect, Subtypes};
+use crate::card::{CardDefinition, CardType, Subtypes};
+use crate::effect::shortcut::{deal, destroy_target, gain_life, target};
+use crate::effect::Effect;
 use crate::mana::{b, cost, g, generic, r, w};
 
 /// Lightning Helix — {R}{W}: deal 3 damage to any target, you gain 3 life
@@ -10,12 +12,10 @@ pub fn lightning_helix() -> CardDefinition {
         supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
-        power: 0, toughness: 0,
+        power: 0,
+        toughness: 0,
         keywords: vec![],
-        spell_effects: vec![
-            SpellEffect::DealDamage { amount: 3, target: SelectionRequirement::Any },
-            SpellEffect::GainLife { amount: 3 },
-        ],
+        effect: Effect::Seq(vec![deal(3, target()), gain_life(3)]),
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -32,11 +32,10 @@ pub fn putrefy() -> CardDefinition {
         supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
-        power: 0, toughness: 0,
+        power: 0,
+        toughness: 0,
         keywords: vec![],
-        spell_effects: vec![SpellEffect::DestroyCreature {
-            target: SelectionRequirement::Creature,
-        }],
+        effect: destroy_target(),
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],

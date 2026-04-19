@@ -1,5 +1,9 @@
 use super::no_abilities;
-use crate::card::{CardDefinition, CardType, CreatureType, SpellEffect, Subtypes, TriggerCondition, TriggeredAbility};
+use crate::card::{
+    CardDefinition, CardType, CreatureType, Effect, EventKind, EventScope, EventSpec, Selector,
+    Subtypes, TriggeredAbility, Value,
+};
+use crate::game::types::TurnStep;
 use crate::mana::{b, cost, generic};
 
 /// Juzám Djinn — {2}{B}{B} 5/5
@@ -10,14 +14,18 @@ pub fn juzam_djinn() -> CardDefinition {
         cost: cost(&[generic(2), b(), b()]),
         supertypes: vec![],
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Djinn], ..Default::default() },
-        power: 5, toughness: 5,
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Djinn],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 5,
         keywords: vec![],
-        spell_effects: vec![],
+        effect: Effect::Noop,
         activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
-            condition: TriggerCondition::BeginningOfUpkeep,
-            effects: vec![SpellEffect::LoseLife { amount: 1 }],
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+            effect: Effect::LoseLife { who: Selector::You, amount: Value::Const(1) },
         }],
         static_abilities: vec![],
         base_loyalty: 0,

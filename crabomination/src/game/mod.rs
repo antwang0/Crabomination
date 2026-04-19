@@ -15,25 +15,27 @@
 //!   which is called by whoever controls the defending creatures.
 
 pub(crate) mod actions;
-pub(crate) mod effects;
 pub(crate) mod combat;
-pub(crate) mod stack;
+pub(crate) mod effects;
 pub mod layers;
-mod types;
+pub(crate) mod stack;
 #[cfg(test)]
 #[path = "../tests/game.rs"]
 mod tests;
+pub mod types;
 
 pub use types::*;
 
-use std::collections::HashMap;
-use crate::card::{CardDefinition, CardId, CardInstance, CardType, Keyword, SelectionRequirement, SpellEffect};
+use crate::card::{CardDefinition, CardId, CardInstance, CardType, Keyword, SelectionRequirement};
 use crate::decision::{AutoDecider, Decider, Decision, DecisionAnswer};
-use crate::player::Player;
+use crate::effect::Effect;
+use crate::game::effects::EffectContext;
 use crate::game::layers::{
-    AffectedPermanents, ContinuousEffect, EffectDuration, Layer, Modification,
-    PtSublayer, apply_layers, ComputedPermanent,
+    AffectedPermanents, ComputedPermanent, ContinuousEffect, EffectDuration, Layer, Modification,
+    PtSublayer, apply_layers,
 };
+use crate::player::Player;
+use std::collections::HashMap;
 
 // ── Game state ────────────────────────────────────────────────────────────────
 
@@ -81,7 +83,9 @@ pub struct GameState {
     /// One-shot signal from `resolve_effect` to the enclosing resolver when an
     /// effect needs to suspend. Callers check this after each effect call, wrap
     /// it up in `pending_decision` with the full resume context, and return.
-    pub(crate) suspend_signal: Option<(Decision, PendingEffectState)>,
+    /// `remaining` carries any sibling effects still queued behind the one that
+    /// suspended (e.g. `Draw` after `Scry` in a Seq).
+    pub(crate) suspend_signal: Option<(Decision, PendingEffectState, Effect)>,
 }
 
 impl GameState {
@@ -162,7 +166,8 @@ impl GameState {
 
     /// Expire all `UntilEndOfTurn` continuous effects (called during Cleanup).
     pub(crate) fn expire_end_of_turn_effects(&mut self) {
-        self.continuous_effects.retain(|e| e.duration != EffectDuration::UntilEndOfTurn);
+        self.continuous_effects
+            .retain(|e| e.duration != EffectDuration::UntilEndOfTurn);
     }
 
     /// True if the stack is empty and it is `player`'s main phase — sorcery timing.
@@ -193,7 +198,8 @@ impl GameState {
     /// Put a card directly onto the battlefield (enters with summoning sickness unless cleared).
     pub fn add_card_to_battlefield(&mut self, player_idx: usize, def: CardDefinition) -> CardId {
         let id = self.next_id();
-        self.battlefield.push(CardInstance::new(id, def, player_idx));
+        self.battlefield
+            .push(CardInstance::new(id, def, player_idx));
         id
     }
 
@@ -230,13 +236,18 @@ impl GameState {
         }
         let computed = self.compute_battlefield();
         let blocker_computed = computed.iter().find(|c| c.id == blocker_id);
-        let Some(blocker_cp) = blocker_computed else { return false; };
+        let Some(blocker_cp) = blocker_computed else {
+            return false;
+        };
         self.attacking.iter().any(|&atk_id| {
             let attacker = self.battlefield.iter().find(|c| c.id == atk_id);
-            let atk_kws = computed.iter().find(|c| c.id == atk_id)
+            let atk_kws = computed
+                .iter()
+                .find(|c| c.id == atk_id)
                 .map(|c| c.keywords.as_slice())
                 .unwrap_or(&[]);
-            attacker.map(|atk| can_block_attacker_computed(blocker, atk, blocker_cp, atk_kws))
+            attacker
+                .map(|atk| can_block_attacker_computed(blocker, atk, blocker_cp, atk_kws))
                 .unwrap_or(false)
         })
     }
@@ -251,8 +262,12 @@ impl GameState {
         };
         let computed = self.compute_battlefield();
         let blocker_cp = computed.iter().find(|c| c.id == blocker_id);
-        let Some(blocker_cp) = blocker_cp else { return false; };
-        let atk_kws = computed.iter().find(|c| c.id == attacker_id)
+        let Some(blocker_cp) = blocker_cp else {
+            return false;
+        };
+        let atk_kws = computed
+            .iter()
+            .find(|c| c.id == attacker_id)
             .map(|c| c.keywords.as_slice())
             .unwrap_or(&[]);
         can_block_attacker_computed(blocker, attacker, blocker_cp, atk_kws)
@@ -274,14 +289,28 @@ impl GameState {
         }
         match action {
             GameAction::PlayLand(id) => self.play_land(id),
-            GameAction::CastSpell { card_id, target, mode, x_value } => self.cast_spell(card_id, target, mode, x_value),
-            GameAction::CastFlashback { card_id, target, mode, x_value } => self.cast_flashback(card_id, target, mode, x_value),
-            GameAction::ActivateAbility { card_id, ability_index, target } => {
-                self.activate_ability(card_id, ability_index, target)
-            }
-            GameAction::ActivateLoyaltyAbility { card_id, ability_index, target } => {
-                self.activate_loyalty_ability(card_id, ability_index, target)
-            }
+            GameAction::CastSpell {
+                card_id,
+                target,
+                mode,
+                x_value,
+            } => self.cast_spell(card_id, target, mode, x_value),
+            GameAction::CastFlashback {
+                card_id,
+                target,
+                mode,
+                x_value,
+            } => self.cast_flashback(card_id, target, mode, x_value),
+            GameAction::ActivateAbility {
+                card_id,
+                ability_index,
+                target,
+            } => self.activate_ability(card_id, ability_index, target),
+            GameAction::ActivateLoyaltyAbility {
+                card_id,
+                ability_index,
+                target,
+            } => self.activate_loyalty_ability(card_id, ability_index, target),
             GameAction::DeclareAttackers(ids) => self.declare_attackers(ids),
             GameAction::DeclareBlockers(assignments) => self.declare_blockers(assignments),
             GameAction::PassPriority => self.pass_priority(),
@@ -300,7 +329,10 @@ impl GameState {
         if !self.can_cast_sorcery_speed(p) {
             return Err(GameError::SorcerySpeedOnly);
         }
-        let pos = self.battlefield.iter().position(|c| c.id == card_id)
+        let pos = self
+            .battlefield
+            .iter()
+            .position(|c| c.id == card_id)
             .ok_or(GameError::CardNotOnBattlefield(card_id))?;
         if self.battlefield[pos].controller != p {
             return Err(GameError::NotYourPriority);
@@ -312,29 +344,42 @@ impl GameState {
             return Err(GameError::InvalidTarget);
         }
 
-        let ability = self.battlefield[pos].definition.loyalty_abilities.get(ability_index).cloned()
+        let ability = self.battlefield[pos]
+            .definition
+            .loyalty_abilities
+            .get(ability_index)
+            .cloned()
             .ok_or(GameError::AbilityIndexOutOfBounds)?;
 
         // Apply loyalty cost.
-        let current_loyalty = self.battlefield[pos].counter_count(crate::card::CounterType::Loyalty) as i32;
+        let current_loyalty =
+            self.battlefield[pos].counter_count(crate::card::CounterType::Loyalty) as i32;
         let new_loyalty = current_loyalty + ability.loyalty_cost;
         if new_loyalty < 0 {
             return Err(GameError::InvalidTarget); // not enough loyalty
         }
-        self.battlefield[pos].counters.insert(crate::card::CounterType::Loyalty, new_loyalty as u32);
+        self.battlefield[pos]
+            .counters
+            .insert(crate::card::CounterType::Loyalty, new_loyalty as u32);
         self.battlefield[pos].used_loyalty_ability_this_turn = true;
 
         let loyalty_change = ability.loyalty_cost;
         let mut events = vec![
-            GameEvent::LoyaltyAbilityActivated { planeswalker: card_id, loyalty_change },
-            GameEvent::LoyaltyChanged { card_id, new_loyalty },
+            GameEvent::LoyaltyAbilityActivated {
+                planeswalker: card_id,
+                loyalty_change,
+            },
+            GameEvent::LoyaltyChanged {
+                card_id,
+                new_loyalty,
+            },
         ];
 
         // Push ability effects onto the stack.
         self.stack.push(StackItem::Trigger {
             source: card_id,
             controller: p,
-            effects: ability.effects,
+            effect: ability.effect,
             target,
             mode: None,
         });
@@ -349,23 +394,51 @@ impl GameState {
     /// Fails if no decision is pending, or the answer shape doesn't match the
     /// decision kind.
     pub fn submit_decision(&mut self, answer: DecisionAnswer) -> Result<Vec<GameEvent>, GameError> {
-        let pd = self.pending_decision.take().ok_or(GameError::NoDecisionPending)?;
+        let pd = self
+            .pending_decision
+            .take()
+            .ok_or(GameError::NoDecisionPending)?;
         let mut events = match pd.resume {
-            ResumeContext::Spell { card, caster, target, mode, effects_done, in_progress } => {
+            ResumeContext::Spell {
+                card,
+                caster,
+                target,
+                mode,
+                in_progress,
+                remaining,
+            } => {
                 let mut evs = self.apply_pending_effect_answer(in_progress, &answer)?;
-                let mut more = self.continue_spell_resolution(*card, caster, target, mode, effects_done + 1)?;
+                let mut more =
+                    self.continue_spell_resolution(*card, caster, target, mode, Some(remaining))?;
                 evs.append(&mut more);
                 evs
             }
-            ResumeContext::Trigger { source, controller, effects, target, mode, effects_done, in_progress } => {
+            ResumeContext::Trigger {
+                source,
+                controller,
+                target,
+                mode,
+                in_progress,
+                remaining,
+            } => {
                 let mut evs = self.apply_pending_effect_answer(in_progress, &answer)?;
-                let mut more = self.continue_trigger_resolution(source, controller, effects, target, mode, effects_done + 1)?;
+                let mut more = self.continue_trigger_resolution(
+                    source, controller, remaining, target, mode,
+                )?;
                 evs.append(&mut more);
                 evs
             }
-            ResumeContext::Ability { source, controller, effects, target, effects_done, in_progress } => {
+            ResumeContext::Ability {
+                source,
+                controller,
+                target,
+                in_progress,
+                remaining,
+            } => {
                 let mut evs = self.apply_pending_effect_answer(in_progress, &answer)?;
-                let mut more = self.continue_ability_resolution(source, controller, effects, target, effects_done + 1)?;
+                let mut more = self.continue_ability_resolution(
+                    source, controller, remaining, target,
+                )?;
                 evs.append(&mut more);
                 evs
             }
@@ -377,7 +450,7 @@ impl GameState {
 
     /// Complete the suspended effect using the player's answer. Returns the
     /// events generated by the now-finished effect (e.g. `ScryPerformed`).
-    fn apply_pending_effect_answer(
+    pub(crate) fn apply_pending_effect_answer(
         &mut self,
         state: PendingEffectState,
         answer: &DecisionAnswer,
@@ -387,7 +460,8 @@ impl GameState {
                 let DecisionAnswer::ScryOrder { kept_top, bottom } = answer else {
                     return Err(GameError::DecisionAnswerMismatch);
                 };
-                let mut remaining: Vec<CardInstance> = self.players[player].library.drain(..count).collect();
+                let mut remaining: Vec<CardInstance> =
+                    self.players[player].library.drain(..count).collect();
                 let mut top_cards = Vec::with_capacity(kept_top.len());
                 for id in kept_top {
                     if let Some(pos) = remaining.iter().position(|c| c.id == *id) {
@@ -410,14 +484,23 @@ impl GameState {
                 for c in top_cards.into_iter().rev() {
                     lib.insert(0, c);
                 }
-                Ok(vec![GameEvent::ScryPerformed { player, looked_at: count, bottomed }])
+                Ok(vec![GameEvent::ScryPerformed {
+                    player,
+                    looked_at: count,
+                    bottomed,
+                }])
             }
             PendingEffectState::SurveilPeeked { count, player } => {
                 // Surveil: player chooses which cards go to the graveyard; rest go to top.
-                let DecisionAnswer::ScryOrder { kept_top, bottom: to_graveyard } = answer else {
+                let DecisionAnswer::ScryOrder {
+                    kept_top,
+                    bottom: to_graveyard,
+                } = answer
+                else {
                     return Err(GameError::DecisionAnswerMismatch);
                 };
-                let mut remaining: Vec<CardInstance> = self.players[player].library.drain(..count).collect();
+                let mut remaining: Vec<CardInstance> =
+                    self.players[player].library.drain(..count).collect();
                 let mut top_cards = Vec::with_capacity(kept_top.len());
                 for id in kept_top {
                     if let Some(pos) = remaining.iter().position(|c| c.id == *id) {
@@ -439,104 +522,97 @@ impl GameState {
                 for c in top_cards.into_iter().rev() {
                     lib.insert(0, c);
                 }
-                Ok(vec![GameEvent::SurveilPerformed { player, looked_at: count, graveyarded }])
+                Ok(vec![GameEvent::SurveilPerformed {
+                    player,
+                    looked_at: count,
+                    graveyarded,
+                }])
             }
         }
     }
 
-    /// Continue resolving a spell from `start_idx` onward. If another effect
-    /// suspends, installs a new `pending_decision` and returns the events so far.
+    /// Resolve a spell's effect tree. On suspension, installs a
+    /// `pending_decision` and returns events accumulated so far. `override_effect`
+    /// is used on resume to continue with whatever Seq tail was left after the
+    /// suspending effect — pass `None` for the initial resolution and `Some(...)`
+    /// when continuing from `submit_decision`.
     pub(crate) fn continue_spell_resolution(
         &mut self,
         card: CardInstance,
         caster: usize,
         target: Option<Target>,
         mode: usize,
-        start_idx: usize,
+        override_effect: Option<Effect>,
     ) -> Result<Vec<GameEvent>, GameError> {
-        let mut events = vec![];
-        let def = card.definition.clone();
-        for (idx, effect) in def.spell_effects.iter().enumerate() {
-            if idx < start_idx { continue; }
-            let mut ev = self.resolve_effect(effect, caster, target.as_ref(), mode)?;
-            events.append(&mut ev);
-            if let Some((decision, state)) = self.suspend_signal.take() {
-                self.pending_decision = Some(PendingDecision {
-                    decision,
-                    resume: ResumeContext::Spell {
-                        card: Box::new(card),
-                        caster, target, mode,
-                        effects_done: idx,
-                        in_progress: state,
-                    },
-                });
-                return Ok(events);
-            }
+        let effect = override_effect.unwrap_or_else(|| card.definition.effect.clone());
+        let ctx = EffectContext::for_spell(caster, target.clone(), mode, 0);
+        let events = self.resolve_effect(&effect, &ctx)?;
+        if let Some((decision, in_progress, remaining)) = self.suspend_signal.take() {
+            self.pending_decision = Some(PendingDecision {
+                decision,
+                resume: ResumeContext::Spell {
+                    card: Box::new(card),
+                    caster,
+                    target,
+                    mode,
+                    in_progress,
+                    remaining,
+                },
+            });
+            return Ok(events);
         }
-        // Not a permanent — it's only spell-resolution-continued for instants/sorceries.
         self.players[caster].send_to_graveyard(card);
         Ok(events)
     }
 
-    /// Resume a triggered ability that was suspended mid-resolution.
+    /// Resolve a triggered ability's effect tree.
     pub(crate) fn continue_trigger_resolution(
         &mut self,
         source: CardId,
         controller: usize,
-        effects: Vec<SpellEffect>,
+        effect: crate::effect::Effect,
         target: Option<Target>,
         mode: usize,
-        start_idx: usize,
     ) -> Result<Vec<GameEvent>, GameError> {
-        let mut events = vec![];
-        for (idx, effect) in effects.iter().enumerate() {
-            if idx < start_idx { continue; }
-            let mut ev = self.resolve_effect(effect, controller, target.as_ref(), mode)?;
-            events.append(&mut ev);
-            if let Some((decision, state)) = self.suspend_signal.take() {
-                self.pending_decision = Some(PendingDecision {
-                    decision,
-                    resume: ResumeContext::Trigger {
-                        source, controller,
-                        effects: effects.clone(),
-                        target, mode,
-                        effects_done: idx,
-                        in_progress: state,
-                    },
-                });
-                return Ok(events);
-            }
+        let ctx = EffectContext::for_trigger(source, controller, target.clone(), mode);
+        let events = self.resolve_effect(&effect, &ctx)?;
+        if let Some((decision, in_progress, remaining)) = self.suspend_signal.take() {
+            self.pending_decision = Some(PendingDecision {
+                decision,
+                resume: ResumeContext::Trigger {
+                    source,
+                    controller,
+                    target,
+                    mode,
+                    in_progress,
+                    remaining,
+                },
+            });
         }
         Ok(events)
     }
 
-    /// Resume an activated ability that was suspended mid-resolution.
+    /// Resolve an activated ability's effect tree.
     pub(crate) fn continue_ability_resolution(
         &mut self,
         source: CardId,
         controller: usize,
-        effects: Vec<SpellEffect>,
+        effect: crate::effect::Effect,
         target: Option<Target>,
-        start_idx: usize,
     ) -> Result<Vec<GameEvent>, GameError> {
-        let mut events = vec![];
-        for (idx, effect) in effects.iter().enumerate() {
-            if idx < start_idx { continue; }
-            let mut ev = self.resolve_effect(effect, controller, target.as_ref(), 0)?;
-            events.append(&mut ev);
-            if let Some((decision, state)) = self.suspend_signal.take() {
-                self.pending_decision = Some(PendingDecision {
-                    decision,
-                    resume: ResumeContext::Ability {
-                        source, controller,
-                        effects: effects.clone(),
-                        target,
-                        effects_done: idx,
-                        in_progress: state,
-                    },
-                });
-                return Ok(events);
-            }
+        let ctx = EffectContext::for_ability(source, controller, target.clone());
+        let events = self.resolve_effect(&effect, &ctx)?;
+        if let Some((decision, in_progress, remaining)) = self.suspend_signal.take() {
+            self.pending_decision = Some(PendingDecision {
+                decision,
+                resume: ResumeContext::Ability {
+                    source,
+                    controller,
+                    target,
+                    in_progress,
+                    remaining,
+                },
+            });
         }
         Ok(events)
     }
@@ -580,7 +656,9 @@ impl GameState {
     /// Returns the computed toughness of permanent `id`, or 0 if not on battlefield.
     #[allow(dead_code)]
     pub(crate) fn computed_toughness(&self, id: CardId) -> i32 {
-        self.computed_permanent(id).map(|c| c.toughness).unwrap_or(0)
+        self.computed_permanent(id)
+            .map(|c| c.toughness)
+            .unwrap_or(0)
     }
 }
 
@@ -588,144 +666,117 @@ impl GameState {
 
 /// Convert a `StaticAbility` from a source permanent into `ContinuousEffect`s.
 /// Takes the full `CardInstance` so Equipment/Aura abilities can use `attached_to`.
-fn static_ability_to_effects(
-    card: &CardInstance,
-    timestamp: u64,
-) -> Vec<ContinuousEffect> {
+fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<ContinuousEffect> {
+    use crate::effect::StaticEffect;
     let source = card.id;
-    let controller = card.controller;
-    use crate::card::StaticAbilityTemplate::*;
-    card.definition.static_abilities.iter().flat_map(|sa| {
-        match &sa.template {
-        PumpYourCreatures { power, toughness } => vec![ContinuousEffect {
-            timestamp,
-            source,
-            affected: AffectedPermanents::All {
-                controller: Some(controller),
-                card_types: vec![CardType::Creature],
-            },
-            layer: Layer::L7PowerTough,
-            sublayer: Some(PtSublayer::Modify),
-            duration: EffectDuration::WhileSourceOnBattlefield,
-            modification: Modification::ModifyPowerToughness(*power, *toughness),
-        }],
-        PumpAllCreatures { power, toughness } => vec![ContinuousEffect {
-            timestamp,
-            source,
-            affected: AffectedPermanents::All {
-                controller: None,
-                card_types: vec![CardType::Creature],
-            },
-            layer: Layer::L7PowerTough,
-            sublayer: Some(PtSublayer::Modify),
-            duration: EffectDuration::WhileSourceOnBattlefield,
-            modification: Modification::ModifyPowerToughness(*power, *toughness),
-        }],
-        WeakenOpponentCreatures { power, toughness } | WeakenAllOpponentCreatures { power, toughness } => vec![ContinuousEffect {
-            timestamp,
-            source,
-            affected: AffectedPermanents::AllOpponents {
-                source_controller: controller,
-                card_types: vec![CardType::Creature],
-            },
-            layer: Layer::L7PowerTough,
-            sublayer: Some(PtSublayer::Modify),
-            duration: EffectDuration::WhileSourceOnBattlefield,
-            modification: Modification::ModifyPowerToughness(*power, *toughness),
-        }],
-        CreatureTypeGetsBonus { creature_type, power, toughness } => vec![ContinuousEffect {
-            timestamp,
-            source,
-            affected: AffectedPermanents::AllWithCreatureType {
-                controller: Some(controller),
-                creature_type: *creature_type,
-            },
-            layer: Layer::L7PowerTough,
-            sublayer: Some(PtSublayer::Modify),
-            duration: EffectDuration::WhileSourceOnBattlefield,
-            modification: Modification::ModifyPowerToughness(*power, *toughness),
-        }],
-        CreatureTypeGetsKeyword { creature_type, keyword } => vec![ContinuousEffect {
-            timestamp,
-            source,
-            affected: AffectedPermanents::AllWithCreatureType {
-                controller: Some(controller),
-                creature_type: *creature_type,
-            },
-            layer: Layer::L6Ability,
-            sublayer: None,
-            duration: EffectDuration::WhileSourceOnBattlefield,
-            modification: Modification::AddKeyword(keyword.clone()),
-        }],
-        GrantKeywordToYourCreatures(kw) => vec![ContinuousEffect {
-            timestamp,
-            source,
-            affected: AffectedPermanents::All {
-                controller: Some(controller),
-                card_types: vec![CardType::Creature],
-            },
-            layer: Layer::L6Ability,
-            sublayer: None,
-            duration: EffectDuration::WhileSourceOnBattlefield,
-            modification: Modification::AddKeyword(kw.clone()),
-        }],
-        GrantKeywordToAllCreatures(kw) => vec![ContinuousEffect {
-            timestamp,
-            source,
-            affected: AffectedPermanents::All {
-                controller: None,
-                card_types: vec![CardType::Creature],
-            },
-            layer: Layer::L6Ability,
-            sublayer: None,
-            duration: EffectDuration::WhileSourceOnBattlefield,
-            modification: Modification::AddKeyword(kw.clone()),
-        }],
-        GrantKeywordToSource(kw) => vec![ContinuousEffect {
-            timestamp,
-            source,
-            affected: AffectedPermanents::Source,
-            layer: Layer::L6Ability,
-            sublayer: None,
-            duration: EffectDuration::WhileSourceOnBattlefield,
-            modification: Modification::AddKeyword(kw.clone()),
-        }],
-        AttachedCreatureGetsPT { power, toughness } => {
-            // Only applies when this Aura/Equipment is attached to something.
-            if let Some(attached_id) = card.attached_to {
-                vec![ContinuousEffect {
-                    timestamp,
-                    source,
-                    affected: AffectedPermanents::Specific(vec![attached_id]),
-                    layer: Layer::L7PowerTough,
-                    sublayer: Some(PtSublayer::Modify),
-                    duration: EffectDuration::WhileSourceOnBattlefield,
-                    modification: Modification::ModifyPowerToughness(*power, *toughness),
-                }]
-            } else {
-                vec![]
+
+    card.definition
+        .static_abilities
+        .iter()
+        .flat_map(|sa| match &sa.effect {
+            StaticEffect::PumpPT { applies_to, power, toughness } => {
+                match selector_to_affected(applies_to, card) {
+                    Some(affected) => vec![ContinuousEffect {
+                        timestamp,
+                        source,
+                        affected,
+                        layer: Layer::L7PowerTough,
+                        sublayer: Some(PtSublayer::Modify),
+                        duration: EffectDuration::WhileSourceOnBattlefield,
+                        modification: Modification::ModifyPowerToughness(*power, *toughness),
+                    }],
+                    None => vec![],
+                }
             }
-        }
-        AttachedCreatureGetsKeyword(kw) => {
-            if let Some(attached_id) = card.attached_to {
-                vec![ContinuousEffect {
-                    timestamp,
-                    source,
-                    affected: AffectedPermanents::Specific(vec![attached_id]),
-                    layer: Layer::L6Ability,
-                    sublayer: None,
-                    duration: EffectDuration::WhileSourceOnBattlefield,
-                    modification: Modification::AddKeyword(kw.clone()),
-                }]
-            } else {
-                vec![]
+            StaticEffect::GrantKeyword { applies_to, keyword } => {
+                match selector_to_affected(applies_to, card) {
+                    Some(affected) => vec![ContinuousEffect {
+                        timestamp,
+                        source,
+                        affected,
+                        layer: Layer::L6Ability,
+                        sublayer: None,
+                        duration: EffectDuration::WhileSourceOnBattlefield,
+                        modification: Modification::AddKeyword(keyword.clone()),
+                    }],
+                    None => vec![],
+                }
             }
-        }
-        // These don't produce continuous effects in the layer system (handled elsewhere).
-        OpponentsCreaturesEnterTapped | PlayAdditionalLand | CostReduction { .. } => vec![],
-    }
-    }).collect()
+            StaticEffect::EntersTapped { .. }
+            | StaticEffect::ExtraLandPerTurn
+            | StaticEffect::CostReduction { .. } => vec![],
+        })
+        .collect()
 }
+
+/// Translate a selector into a `layers::AffectedPermanents` description for
+/// those `StaticEffect` variants that express broad "lord-like" scope. Returns
+/// `None` if the selector shape isn't representable in the layer system yet.
+fn selector_to_affected(
+    sel: &crate::effect::Selector,
+    card: &CardInstance,
+) -> Option<AffectedPermanents> {
+    use crate::effect::Selector;
+    let controller = card.controller;
+    match sel {
+        Selector::This => Some(AffectedPermanents::Source),
+        Selector::AttachedTo(inner) => {
+            if matches!(inner.as_ref(), Selector::This)
+                && let Some(attached_id) = card.attached_to
+            {
+                Some(AffectedPermanents::Specific(vec![attached_id]))
+            } else {
+                None
+            }
+        }
+        Selector::EachPermanent(req) => affected_from_requirement(req, controller),
+        _ => None,
+    }
+}
+
+fn affected_from_requirement(
+    req: &SelectionRequirement,
+    source_controller: usize,
+) -> Option<AffectedPermanents> {
+    use SelectionRequirement as R;
+    // Decompose And-trees to extract controller filter + card-type filter.
+    let mut ctrl: Option<Option<usize>> = None; // Outer Some(None) = all players; Some(Some(n)) = specific player
+    let mut types: Vec<CardType> = vec![];
+    let mut creature_type: Option<crate::card::CreatureType> = None;
+    let mut walk = vec![req];
+    while let Some(r) = walk.pop() {
+        match r {
+            R::And(a, b) => {
+                walk.push(a);
+                walk.push(b);
+            }
+            R::ControlledByYou => ctrl = Some(Some(source_controller)),
+            R::ControlledByOpponent => {
+                return Some(AffectedPermanents::AllOpponents {
+                    source_controller,
+                    card_types: if types.is_empty() { vec![] } else { types.clone() },
+                });
+            }
+            R::Creature => types.push(CardType::Creature),
+            R::Artifact => types.push(CardType::Artifact),
+            R::Enchantment => types.push(CardType::Enchantment),
+            R::Planeswalker => types.push(CardType::Planeswalker),
+            R::Land => types.push(CardType::Land),
+            R::HasCardType(t) => types.push(t.clone()),
+            R::HasCreatureType(ct) => creature_type = Some(*ct),
+            R::Any | R::Permanent => {}
+            _ => return None,
+        }
+    }
+    if let Some(ct) = creature_type {
+        return Some(AffectedPermanents::AllWithCreatureType { controller: ctrl.flatten(), creature_type: ct });
+    }
+    Some(AffectedPermanents::All {
+        controller: ctrl.unwrap_or(None),
+        card_types: types,
+    })
+}
+
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -746,14 +797,16 @@ pub(crate) fn can_block_attacker_computed(
     // Flying: can only be blocked by fliers or reach.
     if attacker_kws.contains(&Keyword::Flying)
         && !blocker_kws.contains(&Keyword::Flying)
-        && !blocker_kws.contains(&Keyword::Reach) {
-            return false;
-        }
+        && !blocker_kws.contains(&Keyword::Reach)
+    {
+        return false;
+    }
     // Horsemanship: can only be blocked by other Horsemanship creatures.
     if attacker_kws.contains(&Keyword::Horsemanship)
-        && !blocker_kws.contains(&Keyword::Horsemanship) {
-            return false;
-        }
+        && !blocker_kws.contains(&Keyword::Horsemanship)
+    {
+        return false;
+    }
     // Shadow: can only block/be blocked by other shadow creatures.
     if attacker_kws.contains(&Keyword::Shadow) && !blocker_kws.contains(&Keyword::Shadow) {
         return false;
@@ -768,11 +821,12 @@ pub(crate) fn can_block_attacker_computed(
     // Intimidate: can only be blocked by artifact creatures or creatures sharing a color.
     if attacker_kws.contains(&Keyword::Intimidate) {
         let blocker_is_artifact = blocker.definition.is_artifact();
-        let shares_color = blocker_computed.colors.iter()
-            .any(|c| attacker.definition.cost.symbols.iter().any(|s| {
+        let shares_color = blocker_computed.colors.iter().any(|c| {
+            attacker.definition.cost.symbols.iter().any(|s| {
                 use crate::mana::ManaSymbol;
                 matches!(s, ManaSymbol::Colored(ac) if ac == c)
-            }));
+            })
+        });
         if !blocker_is_artifact && !shares_color {
             return false;
         }
@@ -781,9 +835,15 @@ pub(crate) fn can_block_attacker_computed(
     use crate::mana::ManaSymbol;
     for kw in attacker_kws {
         if let Keyword::Protection(color) = kw
-            && blocker.definition.cost.symbols.iter().any(|s| matches!(s, ManaSymbol::Colored(c) if c == color)) {
-                return false;
-            }
+            && blocker
+                .definition
+                .cost
+                .symbols
+                .iter()
+                .any(|s| matches!(s, ManaSymbol::Colored(c) if c == color))
+        {
+            return false;
+        }
     }
     true
 }
