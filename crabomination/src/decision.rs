@@ -49,6 +49,15 @@ pub enum Decision {
         source: CardId,
         description: &'static str,
     },
+
+    /// Choose `count` cards from hand to put on top of the library.
+    /// The order of the returned IDs determines library order: index 0 ends up
+    /// on top.
+    PutOnLibrary {
+        player: usize,
+        count: usize,
+        hand: Vec<(CardId, &'static str)>,
+    },
 }
 
 /// The decider's answer to a `Decision`. Variants must match the decision kind.
@@ -66,6 +75,8 @@ pub enum DecisionAnswer {
     Discard(Vec<CardId>),
     Search(Option<CardId>),
     Bool(bool),
+    /// Ordered card IDs to put on top of library; index 0 = topmost.
+    PutOnLibrary(Vec<CardId>),
 }
 
 pub trait Decider {
@@ -96,6 +107,9 @@ impl Decider for AutoDecider {
             ),
             Decision::SearchLibrary { .. } => DecisionAnswer::Search(None),
             Decision::OptionalTrigger { .. } => DecisionAnswer::Bool(false),
+            Decision::PutOnLibrary { hand, count, .. } => DecisionAnswer::PutOnLibrary(
+                hand.iter().take(*count).map(|(id, _)| *id).collect(),
+            ),
         }
     }
 }

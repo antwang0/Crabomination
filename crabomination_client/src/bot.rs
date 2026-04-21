@@ -204,6 +204,7 @@ pub fn can_afford(def: &CardDefinition, pool: &ManaPool) -> bool {
 
 /// Choose a target that satisfies `req`, preferring opponent creatures for damage
 /// and defaulting to targeting the opponent player for `Any`.
+#[allow(dead_code)]
 fn target_for_requirement<R: RngExt>(
     state: &GameState,
     req: &crabomination::card::SelectionRequirement,

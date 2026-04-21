@@ -1,10 +1,10 @@
 use super::no_abilities;
-use crate::card::{CardDefinition, CardType, Effect, Subtypes};
+use crate::card::{CardDefinition, CardType, Subtypes};
 use crate::effect::shortcut::draw;
+use crate::effect::{Effect, PlayerRef, Value};
 use crate::mana::{cost, u};
 
-/// Brainstorm — {U}: draw three cards, then put two cards from your hand on top of your library
-/// (Simplified: draw three cards.)
+/// Brainstorm — {U}: draw three cards, then put two cards from your hand on top of your library.
 pub fn brainstorm() -> CardDefinition {
     CardDefinition {
         name: "Brainstorm",
@@ -15,7 +15,10 @@ pub fn brainstorm() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![],
-        effect: draw(3),
+        effect: Effect::Seq(vec![
+            draw(3),
+            Effect::PutOnLibraryFromHand { who: PlayerRef::You, count: Value::Const(2) },
+        ]),
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],

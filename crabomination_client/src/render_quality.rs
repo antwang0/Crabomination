@@ -74,4 +74,15 @@ impl RenderQuality {
             Self::Ultra => 10,
         }
     }
+
+    /// MSAA sample count. Higher = smoother geometry edges at increased GPU cost.
+    /// Low disables MSAA (SMAA post-process still applies on Medium+).
+    pub fn msaa(self) -> Msaa {
+        match self {
+            Self::Low => Msaa::Off,
+            Self::Medium => Msaa::Sample2,
+            Self::High => Msaa::Sample4,
+            Self::Ultra => Msaa::Sample4,
+        }
+    }
 }

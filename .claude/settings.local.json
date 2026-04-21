@@ -36,7 +36,8 @@
       "Bash(cargo clean *)",
       "Bash(xargs -I {} bash -c \"dirname {} | xargs basename; head -20 {}\")",
       "Bash(xargs cat *)",
-      "Bash(python3)"
+      "Bash(python3)",
+      "Bash(xargs grep *)"
     ]
   }
 }

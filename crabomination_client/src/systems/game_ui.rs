@@ -25,8 +25,8 @@ use crate::card::{
     p1_hand_card_transform, spawn_single_card,
 };
 use crate::game::{
-    BlockingState, GameLog, GameResource, MulliganState, P1Timer, PLAYER_0, PLAYER_1,
-    TargetingState, format_mana_pool,
+    AbilityMenuState, BlockingState, GameLog, GameResource, MulliganState, P1Timer,
+    PLAYER_0, PLAYER_1, TargetingState, format_mana_pool,
 };
 use crate::render_quality::{ChangeQuality, RenderQuality};
 
@@ -86,6 +86,17 @@ pub struct MulliganKeepButton;
 #[derive(Component)]
 pub struct MulliganMulliganButton;
 
+/// Root entity of the floating ability context menu.
+#[derive(Component)]
+pub struct AbilityMenu;
+
+/// One item in the ability menu.
+#[derive(Component)]
+pub struct AbilityMenuItem {
+    pub card_id: CardId,
+    pub ability_index: usize,
+}
+
 /// Latched button presses collected by `poll_action_buttons` each frame,
 /// consumed by `handle_game_input`.  Using a resource instead of inline
 /// button queries keeps `handle_game_input` under Bevy's system-param limit.
@@ -119,6 +130,10 @@ pub struct BlockingGizmos;
 /// Custom gizmo config group for attack indicators (sword overlay).
 #[derive(Default, Reflect, GizmoConfigGroup)]
 pub struct AttackerGizmos;
+
+/// Custom gizmo config group for stack targeting arrows.
+#[derive(Default, Reflect, GizmoConfigGroup)]
+pub struct StackGizmos;
 
 // ── HUD setup ─────────────────────────────────────────────────────────────────
 
@@ -493,6 +508,54 @@ pub fn draw_attacker_overlays(
     for &attacker_id in attacking {
         if let Some(&pos) = positions.get(&attacker_id) {
             draw_crossed_swords(&mut gizmos, pos, Color::srgb(1.0, 0.35, 0.05));
+        }
+    }
+}
+
+/// Draw arrows from each stack item's source to its target.
+pub fn draw_stack_arrows(
+    game: Res<GameResource>,
+    stack_cards: Query<(&Transform, &GameCardId), With<StackCard>>,
+    bf_cards: Query<(&Transform, &GameCardId), With<BattlefieldCard>>,
+    mut gizmos: Gizmos<StackGizmos>,
+) {
+    if game.state.stack.is_empty() { return; }
+
+    // Build id → world position maps.
+    let mut stack_pos: HashMap<crabomination::card::CardId, Vec3> = HashMap::new();
+    for (t, gid) in &stack_cards {
+        stack_pos.insert(gid.0, t.translation + Vec3::Y * 0.2);
+    }
+    let mut bf_pos: HashMap<crabomination::card::CardId, Vec3> = HashMap::new();
+    for (t, gid) in &bf_cards {
+        bf_pos.insert(gid.0, t.translation + Vec3::Y * 0.2);
+    }
+
+    // Fixed player "body" positions for player-targeted spells.
+    let player_pos = [
+        Vec3::new(0.0, 0.2, 13.5),   // P0 (front)
+        Vec3::new(0.0, 0.2, -13.5),  // P1 (back)
+    ];
+
+    let color = Color::srgba(1.0, 0.6, 0.05, 0.9);
+
+    for item in &game.state.stack {
+        let (source_id, target) = match item {
+            crabomination::game::StackItem::Spell { card, target, .. } => (Some(card.id), target),
+            crabomination::game::StackItem::Trigger { source, target, .. } => (Some(*source), target),
+        };
+        let Some(target) = target else { continue };
+
+        let from = source_id
+            .and_then(|id| stack_pos.get(&id).or_else(|| bf_pos.get(&id)))
+            .copied();
+        let to = match target {
+            crabomination::game::Target::Permanent(id) => bf_pos.get(id).copied(),
+            crabomination::game::Target::Player(idx) => player_pos.get(*idx).copied(),
+        };
+
+        if let (Some(from), Some(to)) = (from, to) {
+            gizmos.arrow(from, to, color).with_tip_length(0.7);
         }
     }
 }
@@ -1344,6 +1407,16 @@ pub fn p1_system(
         return;
     }
 
+    // P1 has priority but P0 is the active player — pass immediately.
+    // This unblocks the auto-advance of non-interactive steps and resolves
+    // the stack after P0 casts a spell and passes.
+    if game.state.player_with_priority() == PLAYER_1 && game.state.active_player_idx == PLAYER_0 {
+        let evs = p1_take_action(&mut game.state, &mut rand::rng());
+        log.apply_events(&evs);
+        check_reveal(&evs, &mut reveal);
+        return;
+    }
+
     if game.state.active_player_idx != PLAYER_1 {
         return;
     }
@@ -1405,6 +1478,7 @@ pub fn handle_game_input(
     mut blocking: ResMut<BlockingState>,
     mut reveal: ResMut<RevealPopupState>,
     mut mulligan: ResMut<MulliganState>,
+    mut menu_state: ResMut<AbilityMenuState>,
     keyboard: Res<ButtonInput<KeyCode>>,
     mouse: Res<ButtonInput<MouseButton>>,
     hovered_hand: Query<&GameCardId, (With<CardHovered>, With<HandCard>)>,
@@ -1412,6 +1486,7 @@ pub fn handle_game_input(
     hovered_target_zone: Query<&PlayerTargetZone, With<CardHovered>>,
     valid_targets: Query<Entity, With<ValidTarget>>,
     btns: Res<ButtonState>,
+    windows: Query<&Window, With<bevy::window::PrimaryWindow>>,
 ) {
     // ── London Mulligan bottoming phase ──────────────────────────────────────
     if mulligan.active && mulligan.p0_cards_to_bottom > 0 {
@@ -1498,34 +1573,63 @@ pub fn handle_game_input(
         }
 
         if mouse.just_pressed(MouseButton::Left) {
+            let is_ability_target = targeting.pending_ability_source.is_some();
+
             // Check if hovering a valid battlefield target
             for (game_id, _owner) in &hovered_bf {
-                {
-                    if let Some(pending_id) = targeting.pending_card_id {
-                        let target = Target::Permanent(game_id.0);
-                        let cost = targeting.pending_cost.clone();
-                        auto_tap_lands(&mut game, &mut log, &cost);
-                        if let Ok(evs) = game.state.perform_action(GameAction::CastSpell {
-                            card_id: pending_id,
+                let target = Target::Permanent(game_id.0);
+                if is_ability_target {
+                    if let (Some(src), Some(idx)) =
+                        (targeting.pending_ability_source, targeting.pending_ability_index)
+                    {
+                        if let Ok(evs) = game.state.perform_action(GameAction::ActivateAbility {
+                            card_id: src,
+                            ability_index: idx,
                             target: Some(target),
-                            mode: None,
-                            x_value: None,
                         }) {
                             log.apply_events(&evs);
                         }
                         cancel_targeting(&mut commands, &mut targeting, &valid_targets);
                         return;
                     }
-                }
-            }
-            // Check if hovering a player target zone
-            for zone in &hovered_target_zone {
-                if let Some(pending_id) = targeting.pending_card_id {
+                } else if let Some(pending_id) = targeting.pending_card_id {
                     let cost = targeting.pending_cost.clone();
                     auto_tap_lands(&mut game, &mut log, &cost);
                     if let Ok(evs) = game.state.perform_action(GameAction::CastSpell {
                         card_id: pending_id,
-                        target: Some(Target::Player(zone.0)),
+                        target: Some(target),
+                        mode: None,
+                        x_value: None,
+                    }) {
+                        log.apply_events(&evs);
+                    }
+                    cancel_targeting(&mut commands, &mut targeting, &valid_targets);
+                    return;
+                }
+            }
+            // Check if hovering a player target zone
+            for zone in &hovered_target_zone {
+                let target = Target::Player(zone.0);
+                if is_ability_target {
+                    if let (Some(src), Some(idx)) =
+                        (targeting.pending_ability_source, targeting.pending_ability_index)
+                    {
+                        if let Ok(evs) = game.state.perform_action(GameAction::ActivateAbility {
+                            card_id: src,
+                            ability_index: idx,
+                            target: Some(target),
+                        }) {
+                            log.apply_events(&evs);
+                        }
+                        cancel_targeting(&mut commands, &mut targeting, &valid_targets);
+                        return;
+                    }
+                } else if let Some(pending_id) = targeting.pending_card_id {
+                    let cost = targeting.pending_cost.clone();
+                    auto_tap_lands(&mut game, &mut log, &cost);
+                    if let Ok(evs) = game.state.perform_action(GameAction::CastSpell {
+                        card_id: pending_id,
+                        target: Some(target),
                         mode: None,
                         x_value: None,
                     }) {
@@ -1540,6 +1644,38 @@ pub fn handle_game_input(
     }
 
     // ── Normal input ─────────────────────────────────────────────────────────
+
+    // Right-click a P0 battlefield card → open or close the ability context menu.
+    if mouse.just_pressed(MouseButton::Right) {
+        if let Some((game_id, owner)) = hovered_bf.iter().next() {
+            if owner.0 == PLAYER_0 {
+                let card_id = game_id.0;
+                let has_non_mana = game.state.battlefield
+                    .iter()
+                    .find(|c| c.id == card_id)
+                    .map(|c| c.definition.activated_abilities.iter().any(|a| !effect_is_pure_mana(&a.effect)))
+                    .unwrap_or(false);
+                if has_non_mana {
+                    menu_state.card_id = Some(card_id);
+                    menu_state.spawn_pos = windows.single().ok()
+                        .and_then(|w| w.cursor_position())
+                        .unwrap_or(Vec2::new(400.0, 300.0));
+                } else {
+                    menu_state.card_id = None;
+                }
+            } else {
+                menu_state.card_id = None;
+            }
+        } else {
+            menu_state.card_id = None;
+        }
+    }
+
+    // Left-click outside the menu closes it.
+    if mouse.just_pressed(MouseButton::Left) && menu_state.card_id.is_some() {
+        menu_state.card_id = None;
+    }
+
     let in_main = matches!(
         game.state.step,
         TurnStep::PreCombatMain | TurnStep::PostCombatMain
@@ -1658,6 +1794,8 @@ fn cancel_targeting(
 ) {
     targeting.active = false;
     targeting.pending_card_id = None;
+    targeting.pending_ability_source = None;
+    targeting.pending_ability_index = None;
     for entity in valid_targets.iter() {
         commands.entity(entity).remove::<ValidTarget>();
     }
@@ -1713,13 +1851,176 @@ fn play_hand_card_by_id(
     // No target needed — cast immediately
     auto_tap_lands(game, log, &card.definition.cost);
     let target = p0_auto_target(&game.state, &card.definition);
-    if let Ok(evs) = game.state.perform_action(GameAction::CastSpell {
+    match game.state.perform_action(GameAction::CastSpell {
         card_id: card.id,
         target,
         mode: None,
         x_value: None,
     }) {
-        log.apply_events(&evs);
+        Ok(evs) => log.apply_events(&evs),
+        Err(e) => log.push(format!("Cast failed: {e:?}")),
+    }
+}
+
+/// Format the cost portion of an activated ability (e.g. "{T}, {2}{R}").
+fn ability_cost_label(ability: &crabomination::effect::ActivatedAbility) -> String {
+    let mut parts: Vec<String> = Vec::new();
+    if ability.tap_cost {
+        parts.push("{T}".into());
+    }
+    if !ability.mana_cost.symbols.is_empty() {
+        let mut s = String::new();
+        for sym in &ability.mana_cost.symbols {
+            use crabomination::mana::ManaSymbol;
+            let tok = match sym {
+                ManaSymbol::Colored(c) => format!("{{{c:?}}}"),
+                ManaSymbol::Generic(n) => format!("{{{n}}}"),
+                ManaSymbol::Colorless(n) => format!("{{{n}}}"),
+                ManaSymbol::Hybrid(a, b) => format!("{{{a:?}/{b:?}}}"),
+                ManaSymbol::Phyrexian(c) => format!("{{{c:?}/P}}"),
+                ManaSymbol::Snow => "{S}".into(),
+                ManaSymbol::X => "{X}".into(),
+            };
+            s.push_str(&tok);
+        }
+        parts.push(s);
+    }
+    if parts.is_empty() { "0".into() } else { parts.join(", ") }
+}
+
+/// Generate a one-line English description of an effect for the ability menu.
+fn ability_effect_label(effect: &Effect) -> &'static str {
+    match effect {
+        Effect::AddMana { .. } => "Add mana",
+        Effect::Seq(steps) => steps.first().map(ability_effect_label).unwrap_or("Activate"),
+        Effect::LoseLife { .. } => "Pay life / fetch land",
+        Effect::Search { .. } => "Search library",
+        Effect::Move { .. } => "Move permanent",
+        Effect::DealDamage { .. } => "Deal damage",
+        Effect::Draw { .. } => "Draw cards",
+        Effect::Destroy { .. } => "Destroy permanent",
+        Effect::Exile { .. } => "Exile permanent",
+        Effect::GainLife { .. } => "Gain life",
+        Effect::AddCounter { .. } => "Add counter",
+        Effect::CreateToken { .. } => "Create token",
+        _ => "Activate",
+    }
+}
+
+/// Spawn or despawn the floating ability context menu based on `AbilityMenuState`.
+pub fn spawn_ability_menu(
+    mut commands: Commands,
+    game: Res<GameResource>,
+    menu_state: Res<AbilityMenuState>,
+    existing: Query<Entity, With<AbilityMenu>>,
+) {
+    // Only act when the state actually changes to avoid despawn/respawn every frame.
+    if !menu_state.is_changed() { return; }
+
+    for e in &existing {
+        commands.entity(e).despawn();
+    }
+
+    let Some(card_id) = menu_state.card_id else { return };
+    let Some(card) = game.state.battlefield.iter().find(|c| c.id == card_id) else { return };
+
+    // Only list non-mana activated abilities.
+    let abilities: Vec<(usize, String)> = card
+        .definition
+        .activated_abilities
+        .iter()
+        .enumerate()
+        .filter(|(_, a)| !effect_is_pure_mana(&a.effect))
+        .map(|(i, a)| {
+            let label = format!("{}: {}", ability_cost_label(a), ability_effect_label(&a.effect));
+            (i, label)
+        })
+        .collect();
+
+    if abilities.is_empty() { return; }
+
+    let pos = menu_state.spawn_pos;
+
+    commands
+        .spawn((
+            Node {
+                position_type: PositionType::Absolute,
+                left: Val::Px(pos.x),
+                top: Val::Px(pos.y),
+                flex_direction: FlexDirection::Column,
+                row_gap: Val::Px(4.0),
+                padding: UiRect::all(Val::Px(8.0)),
+                ..default()
+            },
+            BackgroundColor(Color::srgba(0.08, 0.08, 0.14, 0.97)),
+            AbilityMenu,
+        ))
+        .with_children(|menu| {
+            menu.spawn((
+                Text::new(card.definition.name),
+                TextFont { font_size: 13.0, ..default() },
+                TextColor(Color::srgba(0.8, 0.8, 1.0, 1.0)),
+            ));
+            for (ability_index, label) in abilities {
+                menu.spawn((
+                    Button,
+                    Node {
+                        padding: UiRect::axes(Val::Px(10.0), Val::Px(6.0)),
+                        ..default()
+                    },
+                    BackgroundColor(Color::srgba(0.20, 0.22, 0.32, 0.95)),
+                    AbilityMenuItem { card_id, ability_index },
+                ))
+                .with_children(|b| {
+                    b.spawn((
+                        Text::new(label),
+                        TextFont { font_size: 13.0, ..default() },
+                        TextColor(Color::WHITE),
+                        Pickable::IGNORE,
+                    ));
+                });
+            }
+        });
+}
+
+/// Handle clicks on ability menu items.
+pub fn handle_ability_menu(
+    mut game: ResMut<GameResource>,
+    mut log: ResMut<GameLog>,
+    mut targeting: ResMut<TargetingState>,
+    mut menu_state: ResMut<AbilityMenuState>,
+    query: Query<(&Interaction, &AbilityMenuItem), Changed<Interaction>>,
+) {
+    for (interaction, item) in &query {
+        if *interaction != Interaction::Pressed { continue; }
+
+        let Some(card) = game.state.battlefield.iter().find(|c| c.id == item.card_id) else { continue };
+        let Some(ability) = card.definition.activated_abilities.get(item.ability_index) else { continue };
+
+        let needs_target = spell_needs_target(&ability.effect);
+        let mana_cost = ability.mana_cost.clone();
+
+        if needs_target {
+            // Enter targeting mode for this ability.
+            auto_tap_lands(&mut game, &mut log, &mana_cost);
+            targeting.active = true;
+            targeting.pending_card_id = None;
+            targeting.pending_cost = mana_cost;
+            targeting.pending_ability_source = Some(item.card_id);
+            targeting.pending_ability_index = Some(item.ability_index);
+        } else {
+            // Activate immediately.
+            auto_tap_lands(&mut game, &mut log, &mana_cost);
+            if let Ok(evs) = game.state.perform_action(GameAction::ActivateAbility {
+                card_id: item.card_id,
+                ability_index: item.ability_index,
+                target: None,
+            }) {
+                log.apply_events(&evs);
+            }
+        }
+
+        menu_state.card_id = None;
     }
 }
 
@@ -1750,6 +2051,14 @@ fn source_produces_color(card: &crabomination::card::CardInstance, color: ManaCo
         .any(|a| effect_produces_color(&a.effect, color))
 }
 
+fn ability_index_for_color(card: &crabomination::card::CardInstance, color: ManaColor) -> usize {
+    card.definition
+        .activated_abilities
+        .iter()
+        .position(|a| effect_produces_color(&a.effect, color))
+        .unwrap_or(0)
+}
+
 fn is_mana_source(card: &crabomination::card::CardInstance) -> bool {
     card.definition
         .activated_abilities
@@ -1775,18 +2084,19 @@ fn auto_tap_lands(game: &mut GameResource, log: &mut GameLog, cost: &ManaCost) {
         }
     }
 
-    // Tap a color-matched mana source for each colored pip
+    // Tap a color-matched mana source for each colored pip, using the ability
+    // that actually produces the needed color (important for dual lands).
     for color in needed_colors {
-        let source_id = game
+        let source = game
             .state
             .battlefield
             .iter()
             .find(|c| c.owner == PLAYER_0 && !c.tapped && source_produces_color(c, color))
-            .map(|c| c.id);
-        if let Some(id) = source_id
+            .map(|c| (c.id, ability_index_for_color(c, color)));
+        if let Some((id, ability_index)) = source
             && let Ok(evs) = game.state.perform_action(GameAction::ActivateAbility {
                 card_id: id,
-                ability_index: 0,
+                ability_index,
                 target: None,
             })
         {

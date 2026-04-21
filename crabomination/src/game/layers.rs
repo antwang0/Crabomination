@@ -285,16 +285,14 @@ fn colors_from_card(card: &crate::card::CardInstance) -> Vec<Color> {
     let mut colors = Vec::new();
     for sym in &card.definition.cost.symbols {
         match sym {
-            ManaSymbol::Colored(c) => {
-                if !colors.contains(c) { colors.push(*c); }
-            }
+            ManaSymbol::Colored(c) if !colors.contains(c) => { colors.push(*c); }
+            ManaSymbol::Colored(_) => {}
             ManaSymbol::Hybrid(a, b) => {
                 if !colors.contains(a) { colors.push(*a); }
                 if !colors.contains(b) { colors.push(*b); }
             }
-            ManaSymbol::Phyrexian(c) => {
-                if !colors.contains(c) { colors.push(*c); }
-            }
+            ManaSymbol::Phyrexian(c) if !colors.contains(c) => { colors.push(*c); }
+            ManaSymbol::Phyrexian(_) => {}
             _ => {}
         }
     }

@@ -132,6 +132,8 @@ pub(crate) enum ResumeContext {
 pub enum PendingEffectState {
     ScryPeeked { count: usize, player: usize },
     SurveilPeeked { count: usize, player: usize },
+    SearchPending { player: usize, to: crate::effect::ZoneDest },
+    PutOnLibraryPending { player: usize, count: usize },
 }
 
 // ── Events ────────────────────────────────────────────────────────────────────
@@ -207,7 +209,7 @@ pub enum StackItem {
     Trigger {
         source: CardId,
         controller: usize,
-        effect: Effect,
+        effect: Box<Effect>,
         target: Option<Target>,
         mode: Option<usize>,
     },

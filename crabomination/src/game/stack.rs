@@ -152,7 +152,7 @@ impl GameState {
             self.stack.push(StackItem::Trigger {
                 source,
                 controller,
-                effect,
+                effect: Box::new(effect),
                 target: auto_target,
                 mode: None,
             });
@@ -197,7 +197,7 @@ impl GameState {
                         self.stack.push(StackItem::Trigger {
                             source: card_id,
                             controller: caster,
-                            effect,
+                            effect: Box::new(effect),
                             target: auto_target,
                             mode: None,
                         });
@@ -228,7 +228,7 @@ impl GameState {
                             self.stack.push(StackItem::Trigger {
                                 source: src,
                                 controller: caster,
-                                effect,
+                                effect: Box::new(effect),
                                 target: auto_target,
                                 mode: None,
                             });
@@ -258,7 +258,7 @@ impl GameState {
                 let mut trig_events = self.continue_trigger_resolution(
                     source,
                     controller,
-                    effect,
+                    *effect,
                     target,
                     chosen_mode,
                 )?;
@@ -351,7 +351,7 @@ impl GameState {
                 .iter()
                 .filter(|c| c.definition.supertypes.contains(&Supertype::Legendary))
                 .collect();
-            legendaries.sort_by(|a, b| b.id.cmp(&a.id));
+            legendaries.sort_by_key(|b| std::cmp::Reverse(b.id));
             for c in legendaries {
                 let key = (c.controller, c.definition.name);
                 if let std::collections::hash_map::Entry::Vacant(e) = seen.entry(key) {
@@ -437,7 +437,7 @@ impl GameState {
                 self.stack.push(StackItem::Trigger {
                     source,
                     controller,
-                    effect,
+                    effect: Box::new(effect),
                     target: auto_target,
                     mode: None,
                 });
@@ -460,20 +460,19 @@ impl GameState {
                 }
             }
             // Undying: return to battlefield with +1/+1 counter if it had no +1/+1 counter.
-            else if has_undying && plus_count == 0 {
-                if let Some(pos) = self.players[owner]
+            else if has_undying && plus_count == 0
+                && let Some(pos) = self.players[owner]
                     .graveyard
                     .iter()
                     .position(|c| c.id == id)
-                {
-                    let mut returned = self.players[owner].graveyard.remove(pos);
-                    returned.damage = 0;
-                    returned.summoning_sick = true;
-                    returned.add_counters(crate::card::CounterType::PlusOnePlusOne, 1);
-                    let rid = returned.id;
-                    self.battlefield.push(returned);
-                    events.push(GameEvent::PermanentEntered { card_id: rid });
-                }
+            {
+                let mut returned = self.players[owner].graveyard.remove(pos);
+                returned.damage = 0;
+                returned.summoning_sick = true;
+                returned.add_counters(crate::card::CounterType::PlusOnePlusOne, 1);
+                let rid = returned.id;
+                self.battlefield.push(returned);
+                events.push(GameEvent::PermanentEntered { card_id: rid });
             }
             let _ = controller_idx; // used via closure above
         }
@@ -575,7 +574,7 @@ impl GameState {
             self.stack.push(StackItem::Trigger {
                 source,
                 controller,
-                effect,
+                effect: Box::new(effect),
                 target: auto_target,
                 mode: None,
             });

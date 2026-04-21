@@ -161,15 +161,27 @@ pub fn format_mana_pool(state: &GameState, player_idx: usize) -> String {
 #[derive(Resource)]
 pub struct P1Timer(pub Timer);
 
-/// Tracks the "targeting mode" UI state when a spell needs a player-chosen target.
+/// Tracks the "targeting mode" UI state when a spell or ability needs a target.
 #[derive(Resource, Default)]
 pub struct TargetingState {
     /// Whether we're currently waiting for the player to pick a target.
     pub active: bool,
-    /// The spell card the player is trying to cast.
+    /// The spell card the player is trying to cast (None when targeting for an ability).
     pub pending_card_id: Option<CardId>,
     /// Full mana cost of the pending spell (for color-aware auto-tapping).
     pub pending_cost: ManaCost,
+    /// When targeting for an activated ability rather than a spell: the source card
+    /// and ability index. Both must be Some together.
+    pub pending_ability_source: Option<CardId>,
+    pub pending_ability_index: Option<usize>,
+}
+
+/// State for the activated-ability context menu (right-click on P0 battlefield card).
+#[derive(Resource, Default)]
+pub struct AbilityMenuState {
+    pub card_id: Option<CardId>,
+    /// Cursor position captured at right-click time; menu spawns here and stays put.
+    pub spawn_pos: Vec2,
 }
 
 /// Tracks the opening-hand mulligan phase (before the game starts).
@@ -240,10 +252,12 @@ pub fn build_game() -> GameResource {
     // Power Nine, hard permission, the best removal, and Serra Angel finishers.
     let p0_deck: &[CardFactory] = &[
         // Lands (20)
-        plains, plains, plains, plains, plains, plains,
         plains, plains, plains, plains,
-        island, island, island, island, island, island,
         island, island, island, island,
+        tundra, tundra, tundra, tundra,
+        flooded_strand, flooded_strand, flooded_strand, flooded_strand,
+        marsh_flats, marsh_flats,
+        scalding_tarn, scalding_tarn,
         // Power (6)
         black_lotus, sol_ring, mox_pearl, mox_sapphire, mox_ruby, mox_emerald,
         // Draw (6)
@@ -271,9 +285,10 @@ pub fn build_game() -> GameResource {
     let p1_deck: &[CardFactory] = &[
         // Lands (20)
         swamp, swamp, swamp, swamp, swamp, swamp,
-        swamp, swamp, swamp, swamp, swamp, swamp,
+        swamp, swamp, swamp, swamp,
         mountain, mountain, mountain, mountain,
-        mountain, mountain, mountain, mountain,
+        mountain, mountain,
+        badlands, badlands, badlands, badlands,
         // Power (5)
         black_lotus, sol_ring, mox_jet, mox_ruby, mox_emerald,
         // Acceleration (4)

@@ -287,7 +287,7 @@ impl GameState {
         if self.pending_decision.is_some() {
             return Err(GameError::DecisionPending);
         }
-        match action {
+        let events = match action {
             GameAction::PlayLand(id) => self.play_land(id),
             GameAction::CastSpell {
                 card_id,
@@ -315,6 +315,45 @@ impl GameState {
             GameAction::DeclareBlockers(assignments) => self.declare_blockers(assignments),
             GameAction::PassPriority => self.pass_priority(),
             GameAction::SubmitDecision(_) => unreachable!(),
+        }?;
+        self.dispatch_triggers_for_events(&events);
+        Ok(events)
+    }
+
+    /// Walk the battlefield looking for triggered abilities whose `EventSpec`
+    /// matches any of `events`, and push matching triggers onto the stack.
+    ///
+    /// Events already handled by hardcoded trigger sites (ETB, attackers,
+    /// spell-cast, dies, step changes) are skipped here to avoid double-firing.
+    /// Everything else (TurnBegins, CardDrawn, LandPlayed, LifeGained, etc.)
+    /// gains trigger capability through this path.
+    pub(crate) fn dispatch_triggers_for_events(&mut self, events: &[GameEvent]) {
+        if events.is_empty() {
+            return;
+        }
+        let mut matched: Vec<(CardId, Effect, usize)> = Vec::new();
+        for card in &self.battlefield {
+            for ta in &card.definition.triggered_abilities {
+                for ev in events {
+                    if is_event_hardcoded(ev) {
+                        continue;
+                    }
+                    if crate::game::effects::event_matches_spec(ev, &ta.event, card) {
+                        matched.push((card.id, ta.effect.clone(), card.controller));
+                        break;
+                    }
+                }
+            }
+        }
+        for (source, effect, controller) in matched {
+            let auto_target = self.auto_target_for_effect(&effect, controller);
+            self.stack.push(StackItem::Trigger {
+                source,
+                controller,
+                effect: Box::new(effect),
+                target: auto_target,
+                mode: None,
+            });
         }
     }
 
@@ -379,7 +418,7 @@ impl GameState {
         self.stack.push(StackItem::Trigger {
             source: card_id,
             controller: p,
-            effect: ability.effect,
+            effect: Box::new(ability.effect),
             target,
             mode: None,
         });
@@ -445,6 +484,7 @@ impl GameState {
         };
         let mut sba = self.check_state_based_actions();
         events.append(&mut sba);
+        self.dispatch_triggers_for_events(&events);
         Ok(events)
     }
 
@@ -527,6 +567,26 @@ impl GameState {
                     looked_at: count,
                     graveyarded,
                 }])
+            }
+            PendingEffectState::SearchPending { player, to } => {
+                let DecisionAnswer::Search(chosen_id) = answer else {
+                    return Err(GameError::DecisionAnswerMismatch);
+                };
+                let mut events = vec![];
+                if let Some(card_id) = chosen_id
+                    && let Some(pos) = self.players[player].library.iter().position(|c| c.id == *card_id) {
+                    let card = self.players[player].library.remove(pos);
+                    self.place_card_in_dest(card, player, &to, &mut events);
+                }
+                Ok(events)
+            }
+            PendingEffectState::PutOnLibraryPending { player, .. } => {
+                let DecisionAnswer::PutOnLibrary(chosen) = answer else {
+                    return Err(GameError::DecisionAnswerMismatch);
+                };
+                let mut events = vec![];
+                self.execute_put_on_library(player, chosen, &mut events);
+                Ok(events)
             }
         }
     }
@@ -660,6 +720,21 @@ impl GameState {
             .map(|c| c.toughness)
             .unwrap_or(0)
     }
+}
+
+/// Events already fired by hardcoded sites. Skip them in the unified dispatcher
+/// to prevent double-firing. Dies triggers are captured by SBA before the
+/// creature leaves the battlefield, so `SelfSource` Dies triggers wouldn't
+/// match after-the-fact anyway — keep them hardcoded.
+fn is_event_hardcoded(ev: &GameEvent) -> bool {
+    matches!(
+        ev,
+        GameEvent::PermanentEntered { .. }
+            | GameEvent::AttackerDeclared(_)
+            | GameEvent::SpellCast { .. }
+            | GameEvent::CreatureDied { .. }
+            | GameEvent::StepChanged(_)
+    )
 }
 
 // ── Static ability conversion ─────────────────────────────────────────────────

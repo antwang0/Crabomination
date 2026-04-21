@@ -1,8 +1,10 @@
 use std::f32::consts::PI;
 use std::path::Path;
 
+use bevy::image::{ImageFilterMode, ImageSamplerDescriptor};
 use bevy::light::{CascadeShadowConfigBuilder, DirectionalLightShadowMap, GlobalAmbientLight};
 use bevy::picking::mesh_picking::MeshPickingPlugin;
+use bevy::render::view::Msaa;
 use bevy::{anti_alias::smaa::Smaa, color::palettes::basic::SILVER, prelude::*};
 
 mod bot;
@@ -26,14 +28,15 @@ use systems::animate::{
     animate_reveal_peek, animate_send_to_graveyard, animate_tap, AnimationSpeed,
 };
 use systems::game_ui::{
-    auto_advance_p0, p1_system, draw_attacker_overlays, draw_blocking_gizmos,
-    handle_game_input, mulligan_system, poll_action_buttons, setup_game_hud, setup_mulligan_ui,
-    setup_quality_panel, handle_quality_buttons, sync_game_visuals, trigger_reveal_animation,
-    update_mulligan_ui, update_p1_text, update_game_log, update_hint, update_phase_chart,
-    update_player_text, update_turn_text, AttackerGizmos, BlockingGizmos, ButtonState,
+    auto_advance_p0, p1_system, draw_attacker_overlays, draw_blocking_gizmos, draw_stack_arrows,
+    handle_ability_menu, handle_game_input, mulligan_system, poll_action_buttons, setup_game_hud,
+    setup_mulligan_ui, setup_quality_panel, handle_quality_buttons, spawn_ability_menu,
+    sync_game_visuals, trigger_reveal_animation, update_mulligan_ui, update_p1_text,
+    update_game_log, update_hint, update_phase_chart, update_player_text, update_turn_text,
+    AttackerGizmos, BlockingGizmos, ButtonState, StackGizmos,
 };
 use systems::ui::{graveyard_browser, highlight_hovered_cards, peek_popup, pile_tooltip, reveal_popup, RevealPopupState};
-use systems::decision_ui::{spawn_decision_ui, handle_scry_toggles, handle_confirm, DecisionUiState};
+use systems::decision_ui::{spawn_decision_ui, handle_scry_toggles, handle_scry_reorder, handle_search_select, handle_put_on_library_select, handle_confirm, DecisionUiState};
 
 /// Marks the decorative ground plane so quality changes can update its mesh.
 #[derive(Component)]
@@ -43,61 +46,36 @@ struct GroundPlane;
 #[derive(Component)]
 struct MainCamera;
 
-/// All unique card names used in the game (for Scryfall image download).
-const CARD_NAMES: &[&str] = &[
-    // Lands
-    "Island",
-    "Mountain",
-    "Plains",
-    "Swamp",
-    // Power / Moxen
-    "Black Lotus",
-    "Mox Emerald",
-    "Mox Jet",
-    "Mox Pearl",
-    "Mox Ruby",
-    "Mox Sapphire",
-    "Sol Ring",
-    // Player 0 (UW) creatures
-    "Birds of Paradise",
-    "Mahamoti Djinn",
-    "Savannah Lions",
-    "Serra Angel",
-    "White Knight",
-    // Player 0 (UW) spells
-    "Ancestral Recall",
-    "Brainstorm",
-    "Counterspell",
-    "Force of Will",
-    "Opt",
-    "Preordain",
-    "Swords to Plowshares",
-    "Wrath of God",
-    // Player 1 (B) creatures
-    "Black Knight",
-    "Hypnotic Specter",
-    "Juzám Djinn",
-    // Player 1 (B) spells
-    "Dark Ritual",
-    "Demonic Tutor",
-    "Hymn to Tourach",
-    "Reanimate",
-    "Terminate",
-    "Terror",
-    "Wheel of Fortune",
-];
-
 fn main() {
     let cfg = config::load();
 
-    // Download any missing card images before Bevy starts.
-    scryfall::ensure_card_images(CARD_NAMES, Path::new(&cfg.paths.asset_dir));
+    let game = build_game();
+
+    // Collect unique card names from every player zone so the image list
+    // stays in sync with the decks automatically.
+    let mut seen = std::collections::HashSet::new();
+    for player in &game.state.players {
+        for card in player.library.iter().chain(&player.hand).chain(&player.graveyard) {
+            seen.insert(card.definition.name);
+        }
+    }
+    let card_names: Vec<&str> = seen.into_iter().collect();
+    scryfall::ensure_card_images(&card_names, Path::new(&cfg.paths.asset_dir));
 
     let gfx = cfg.graphics;
     App::new()
         .add_plugins((
             DefaultPlugins
-                .set(ImagePlugin::default_nearest())
+                .set(ImagePlugin {
+                    default_sampler: ImageSamplerDescriptor {
+                        // 16x anisotropic filtering — keeps card text sharp at oblique angles.
+                        anisotropy_clamp: 16,
+                        mag_filter: ImageFilterMode::Linear,
+                        min_filter: ImageFilterMode::Linear,
+                        mipmap_filter: ImageFilterMode::Linear,
+                        ..ImageSamplerDescriptor::default()
+                    },
+                })
                 .set(AssetPlugin {
                     file_path: cfg.paths.asset_dir,
                     ..default()
@@ -106,12 +84,13 @@ fn main() {
         ))
         .init_gizmo_group::<BlockingGizmos>()
         .init_gizmo_group::<AttackerGizmos>()
+        .init_gizmo_group::<StackGizmos>()
         .add_systems(Startup, configure_gizmos)
         .insert_resource(DirectionalLightShadowMap { size: gfx.shadow_map_size })
         .insert_resource(gfx)
         .insert_resource(RenderQuality::default())
         .add_message::<ChangeQuality>()
-        .insert_resource(build_game())
+        .insert_resource(game)
         .insert_resource(GameLog::default())
         .insert_resource(P1Timer(Timer::from_seconds(0.4, TimerMode::Repeating)))
         .insert_resource(TargetingState::default())
@@ -122,6 +101,7 @@ fn main() {
         .insert_resource(AnimationSpeed::default())
         .insert_resource(ButtonState::default())
         .insert_resource(DecisionUiState::default())
+        .init_resource::<game::AbilityMenuState>()
         .add_systems(Startup, (setup, setup_game_hud, setup_mulligan_ui, setup_quality_panel))
         // Button polling runs first so handle_game_input can read latched state.
         .add_systems(Update, poll_action_buttons)
@@ -170,11 +150,14 @@ fn main() {
                 trigger_reveal_animation,
                 draw_blocking_gizmos,
                 draw_attacker_overlays,
+                draw_stack_arrows,
                 adjust_animation_speed,
             ),
         )
         // Decision UI: spawn modal when pending, handle interactions, submit answer.
-        .add_systems(Update, (spawn_decision_ui, handle_scry_toggles, handle_confirm).chain().after(handle_game_input))
+        .add_systems(Update, (spawn_decision_ui, handle_scry_toggles, handle_scry_reorder, handle_search_select, handle_put_on_library_select, handle_confirm).chain().after(handle_game_input))
+        // Ability menu: handle clicks first, then (re)spawn menu to reflect new state.
+        .add_systems(Update, (handle_ability_menu, spawn_ability_menu).chain().after(handle_game_input))
         // Quality menu: buttons send event, system applies all quality changes
         .add_systems(Update, (handle_quality_buttons, apply_render_quality_change).chain())
         .run();
@@ -184,6 +167,8 @@ fn configure_gizmos(mut store: ResMut<GizmoConfigStore>) {
     let (config, _) = store.config_mut::<BlockingGizmos>();
     config.line.width = 4.0;
     let (config, _) = store.config_mut::<AttackerGizmos>();
+    config.line.width = 3.0;
+    let (config, _) = store.config_mut::<StackGizmos>();
     config.line.width = 3.0;
 }
 
@@ -241,8 +226,9 @@ fn setup(
 
     commands.spawn((
         Camera3d::default(),
-        Transform::from_xyz(0.0, 28.0, 18.0).looking_at(Vec3::ZERO, Vec3::Y),
+        Transform::from_xyz(0.0, 22.0, 26.0).looking_at(Vec3::ZERO, Vec3::Y),
         Smaa { preset: gfx.smaa_preset.to_bevy() },
+        quality.msaa(),
         MainCamera,
     ));
 }
@@ -288,6 +274,7 @@ fn apply_render_quality_change(
     shadow_map.size = new_quality.shadow_map_size();
 
     if let Ok(cam) = camera_query.single() {
+        commands.entity(cam).insert(new_quality.msaa());
         match new_quality.smaa_preset() {
             Some(preset) => { commands.entity(cam).insert(Smaa { preset }); }
             None => { commands.entity(cam).remove::<Smaa>(); }

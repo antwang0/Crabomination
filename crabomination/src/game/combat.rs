@@ -55,7 +55,11 @@ impl GameState {
             }
             // Annihilator: TODO — translate to Effect tree (no-op for now).
             let _annihilator_n = computed_kw(id).iter().find_map(|kw| {
-                if let Keyword::Annihilator(n) = kw { Some(*n) } else { None }
+                if let Keyword::Annihilator(n) = kw {
+                    Some(*n)
+                } else {
+                    None
+                }
             });
         }
         // Push collected attack triggers onto the stack.
@@ -64,7 +68,7 @@ impl GameState {
             self.stack.push(StackItem::Trigger {
                 source,
                 controller,
-                effect,
+                effect: Box::new(effect),
                 target: auto_target,
                 mode: None,
             });
@@ -327,18 +331,18 @@ impl GameState {
 
                     if atk.has_infect || atk.has_wither {
                         // Infect/Wither: deal as -1/-1 counters to creatures.
-                        if assign > 0 {
-                            if let Some(blocker) = self.battlefield_find_mut(blocker_id) {
-                                blocker.add_counters(
-                                    crate::card::CounterType::MinusOneMinusOne,
-                                    assign as u32,
-                                );
-                                events.push(GameEvent::CounterAdded {
-                                    card_id: blocker_id,
-                                    counter_type: crate::card::CounterType::MinusOneMinusOne,
-                                    count: assign as u32,
-                                });
-                            }
+                        if assign > 0
+                            && let Some(blocker) = self.battlefield_find_mut(blocker_id)
+                        {
+                            blocker.add_counters(
+                                crate::card::CounterType::MinusOneMinusOne,
+                                assign as u32,
+                            );
+                            events.push(GameEvent::CounterAdded {
+                                card_id: blocker_id,
+                                counter_type: crate::card::CounterType::MinusOneMinusOne,
+                                count: assign as u32,
+                            });
                         }
                     } else if let Some(blocker) = self.battlefield_find_mut(blocker_id) {
                         blocker.damage += assign as u32;

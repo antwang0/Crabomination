@@ -239,7 +239,7 @@ impl GameState {
             self.stack.push(StackItem::Trigger {
                 source,
                 controller,
-                effect,
+                effect: Box::new(effect),
                 target: auto_target,
                 mode: None,
             });
@@ -308,7 +308,7 @@ impl GameState {
             self.stack.push(StackItem::Trigger {
                 source: card_id,
                 controller: p,
-                effect: ability.effect,
+                effect: Box::new(ability.effect),
                 target,
                 mode: None,
             });

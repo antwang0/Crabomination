@@ -84,6 +84,7 @@ pub enum EntityRef {
 }
 
 impl EntityRef {
+    #[allow(dead_code)]
     pub fn as_target(&self) -> Target {
         match *self {
             EntityRef::Player(p) => Target::Player(p),
@@ -550,10 +551,9 @@ impl GameState {
                 let targets = self.resolve_selector(what, ctx);
                 let mut to_remove: Vec<usize> = Vec::new();
                 for t in &targets {
-                    if let EntityRef::Permanent(cid) = t {
-                        if let Some(pos) = self.stack.iter().position(|si| matches!(si, StackItem::Spell { card, .. } if card.id == *cid)) {
-                            to_remove.push(pos);
-                        }
+                    if let EntityRef::Permanent(cid) = t
+                        && let Some(pos) = self.stack.iter().position(|si| matches!(si, StackItem::Spell { card, .. } if card.id == *cid)) {
+                        to_remove.push(pos);
                     }
                 }
                 to_remove.sort_unstable_by(|a, b| b.cmp(a));
@@ -613,17 +613,29 @@ impl GameState {
             }
 
             Effect::Search { who, filter, to } => {
+                use crate::decision::Decision;
                 let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
-                let pos = self.players[p].library.iter().position(|c| {
-                    let t = Target::Permanent(c.id);
-                    self.evaluate_requirement_static(filter, &t, p)
-                });
-                if let Some(idx) = pos {
-                    let card = self.players[p].library.remove(idx);
-                    let cid = card.id;
-                    self.place_card_in_dest(card, p, to, events);
-                    let _ = cid;
+
+                // Collect candidates from the library using definition-level evaluation
+                // (cards are not on the battlefield so battlefield_find would fail).
+                let candidates: Vec<(crate::card::CardId, &'static str)> = self.players[p]
+                    .library
+                    .iter()
+                    .filter(|c| self.evaluate_requirement_on_card(filter, c, p))
+                    .map(|c| (c.id, c.definition.name))
+                    .collect();
+
+                let decision = Decision::SearchLibrary { player: p, candidates };
+                let pending = PendingEffectState::SearchPending { player: p, to: to.clone() };
+
+                if self.players[p].wants_ui {
+                    self.suspend_signal = Some((decision, pending, Effect::Noop));
+                    return Ok(());
                 }
+
+                let answer = self.decider.decide(&decision);
+                let mut applied = self.apply_pending_effect_answer(pending, &answer)?;
+                events.append(&mut applied);
                 Ok(())
             }
 
@@ -649,6 +661,29 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::PutOnLibraryFromHand { who, count } => {
+                use crate::decision::Decision;
+                let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
+                let n = self.evaluate_value(count, ctx).max(0) as usize;
+                let hand_snapshot: Vec<(crate::card::CardId, &'static str)> =
+                    self.players[p].hand.iter().map(|c| (c.id, c.definition.name)).collect();
+                let actual = n.min(hand_snapshot.len());
+                if actual == 0 { return Ok(()); }
+
+                let decision = Decision::PutOnLibrary { player: p, count: actual, hand: hand_snapshot.clone() };
+                let pending = PendingEffectState::PutOnLibraryPending { player: p, count: actual };
+
+                if self.players[p].wants_ui {
+                    self.suspend_signal = Some((decision, pending, Effect::Noop));
+                    return Ok(());
+                }
+                // Bot: auto-pick first N cards.
+                let chosen: Vec<crate::card::CardId> =
+                    hand_snapshot.iter().take(actual).map(|(id, _)| *id).collect();
+                self.execute_put_on_library(p, &chosen, events);
+                Ok(())
+            }
+
             Effect::BecomeBasicLand { .. }
             | Effect::ResetCreature { .. }
             | Effect::CopySpell { .. }
@@ -656,6 +691,25 @@ impl GameState {
                 // TODO: implement via layer/stack mechanics.
                 Ok(())
             }
+        }
+    }
+
+    pub(crate) fn execute_put_on_library(
+        &mut self,
+        player: usize,
+        chosen: &[crate::card::CardId],
+        _events: &mut Vec<crate::game::GameEvent>,
+    ) {
+        // Remove chosen cards from hand (in reverse order to preserve indices).
+        let mut cards_to_insert: Vec<crate::card::CardInstance> = Vec::new();
+        for &id in chosen {
+            if let Some(pos) = self.players[player].hand.iter().position(|c| c.id == id) {
+                cards_to_insert.push(self.players[player].hand.remove(pos));
+            }
+        }
+        // Insert in reverse so that chosen[0] ends up on top.
+        for card in cards_to_insert.into_iter().rev() {
+            self.players[player].library.insert(0, card);
         }
     }
 
@@ -669,7 +723,7 @@ impl GameState {
             Selector::Target(idx) | Selector::TargetFiltered { slot: idx, .. } => ctx
                 .targets
                 .get(*idx as usize)
-                .map(|t| target_to_entity(t))
+                .map(target_to_entity)
                 .into_iter()
                 .collect(),
             Selector::TriggerSource => ctx.trigger_source.into_iter().collect(),
@@ -961,6 +1015,63 @@ impl GameState {
         }
     }
 
+    /// Evaluate a `SelectionRequirement` directly against a `CardInstance`
+    /// without requiring it to be on the battlefield. Used for library searches.
+    /// Battlefield-only predicates (Tapped, IsAttacking, etc.) return false.
+    pub(crate) fn evaluate_requirement_on_card(
+        &self,
+        req: &SelectionRequirement,
+        card: &CardInstance,
+        controller: usize,
+    ) -> bool {
+        use SelectionRequirement as R;
+        match req {
+            R::Any => true,
+            R::Player => false,
+            R::And(a, b) => {
+                self.evaluate_requirement_on_card(a, card, controller)
+                    && self.evaluate_requirement_on_card(b, card, controller)
+            }
+            R::Or(a, b) => {
+                self.evaluate_requirement_on_card(a, card, controller)
+                    || self.evaluate_requirement_on_card(b, card, controller)
+            }
+            R::Not(inner) => !self.evaluate_requirement_on_card(inner, card, controller),
+            R::ControlledByYou => card.controller == controller,
+            R::ControlledByOpponent => card.controller != controller,
+            R::Creature => card.definition.is_creature(),
+            R::Artifact => card.definition.is_artifact(),
+            R::Enchantment => card.definition.is_enchantment(),
+            R::Planeswalker => card.definition.is_planeswalker(),
+            R::Permanent => card.definition.is_permanent(),
+            R::Land => card.definition.is_land(),
+            R::Nonland => !card.definition.is_land(),
+            R::Noncreature => !card.definition.is_creature(),
+            R::HasColor(c) => card.definition.cost.symbols.iter().any(|s| {
+                matches!(s, crate::mana::ManaSymbol::Colored(cc) if cc == c)
+            }),
+            R::HasKeyword(kw) => card.has_keyword(kw),
+            R::PowerAtMost(n) => card.definition.is_creature() && card.power() <= *n,
+            R::PowerAtLeast(n) => card.definition.is_creature() && card.power() >= *n,
+            R::ToughnessAtMost(n) => card.definition.is_creature() && card.toughness() <= *n,
+            R::ToughnessAtLeast(n) => card.definition.is_creature() && card.toughness() >= *n,
+            R::HasSupertype(st) => card.definition.supertypes.contains(st),
+            R::HasCreatureType(ct) => card.definition.subtypes.creature_types.contains(ct),
+            R::HasLandType(lt) => card.definition.subtypes.land_types.contains(lt),
+            R::HasArtifactSubtype(a) => card.definition.subtypes.artifact_subtypes.contains(a),
+            R::HasEnchantmentSubtype(e) => card.definition.subtypes.enchantment_subtypes.contains(e),
+            R::IsToken => card.is_token,
+            R::NotToken => !card.is_token,
+            R::IsBasicLand => card.definition.is_land() && card.definition.supertypes.contains(&Supertype::Basic),
+            R::ManaValueAtMost(n) => card.definition.cost.cmc() <= *n,
+            R::ManaValueAtLeast(n) => card.definition.cost.cmc() >= *n,
+            R::HasCardType(ct) => card.definition.card_types.contains(ct),
+            // Battlefield-state predicates can't be evaluated for library cards.
+            R::Tapped | R::Untapped | R::WithCounter(_)
+            | R::IsAttacking | R::IsBlocking | R::IsSpellOnStack => false,
+        }
+    }
+
     // ── Auto-target heuristic for simple triggers ────────────────────────────
 
     /// Pick a legal target for an effect that requires one, used when the
@@ -1036,7 +1147,7 @@ impl GameState {
         }
     }
 
-    fn place_card_in_dest(
+    pub(crate) fn place_card_in_dest(
         &mut self,
         mut card: CardInstance,
         default_player: usize,
@@ -1207,6 +1318,7 @@ fn event_card(event: &GameEvent) -> Option<CardId> {
 
 // ── Built-in token definitions ───────────────────────────────────────────────
 
+#[allow(dead_code)]
 pub fn food_token() -> TokenDefinition {
     TokenDefinition {
         name: "Food",
@@ -1223,6 +1335,7 @@ pub fn food_token() -> TokenDefinition {
     }
 }
 
+#[allow(dead_code)]
 pub fn treasure_token() -> TokenDefinition {
     TokenDefinition {
         name: "Treasure",
@@ -1239,6 +1352,7 @@ pub fn treasure_token() -> TokenDefinition {
     }
 }
 
+#[allow(dead_code)]
 pub fn blood_token() -> TokenDefinition {
     TokenDefinition {
         name: "Blood",
@@ -1255,6 +1369,7 @@ pub fn blood_token() -> TokenDefinition {
     }
 }
 
+#[allow(dead_code)]
 pub fn clue_token() -> TokenDefinition {
     TokenDefinition {
         name: "Clue",

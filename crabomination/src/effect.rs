@@ -384,6 +384,10 @@ pub enum Effect {
     // ── Misc atomic operations needed by existing cards ──────────────────────
     /// Reveal the top card of `who`'s library; if `reveal_filter` matches, draw it.
     RevealTopAndDrawIf { who: PlayerRef, reveal_filter: SelectionRequirement },
+
+    /// Controller chooses `count` cards from their hand and puts them on top of
+    /// their library in a chosen order (first chosen = topmost).
+    PutOnLibraryFromHand { who: PlayerRef, count: Value },
 }
 
 impl Effect {
@@ -508,6 +512,9 @@ impl Effect {
             Effect::Sacrifice { who, count, .. } => sel_has_target(who) || value_has_target(count),
             Effect::AddPoison { who, amount } => sel_has_target(who) || value_has_target(amount),
             Effect::RevealTopAndDrawIf { who, .. } => player_has_target(who),
+            Effect::PutOnLibraryFromHand { who, count } => {
+                player_has_target(who) || value_has_target(count)
+            }
         }
     }
 
