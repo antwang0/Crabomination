@@ -391,12 +391,20 @@ impl GameState {
         }
         let events = match action {
             GameAction::PlayLand(id) => self.play_land(id),
+            GameAction::PlayLandBack(id) => self.play_land_with_face(id, true),
             GameAction::CastSpell {
                 card_id,
                 target,
                 mode,
                 x_value,
             } => self.cast_spell(card_id, target, mode, x_value),
+            GameAction::CastSpellConvoke {
+                card_id,
+                target,
+                mode,
+                x_value,
+                convoke_creatures,
+            } => self.cast_spell_with_convoke(card_id, target, mode, x_value, &convoke_creatures),
             GameAction::CastSpellAlternative {
                 card_id,
                 pitch_card,
@@ -592,12 +600,21 @@ impl GameState {
                 caster,
                 target,
                 mode,
+                x_value,
+                converged_value,
                 in_progress,
                 remaining,
             } => {
                 let mut evs = self.apply_pending_effect_answer(in_progress, &answer)?;
-                let mut more =
-                    self.continue_spell_resolution(*card, caster, target, mode, Some(remaining))?;
+                let mut more = self.continue_spell_resolution(
+                    *card,
+                    caster,
+                    target,
+                    mode,
+                    x_value,
+                    converged_value,
+                    Some(remaining),
+                )?;
                 evs.append(&mut more);
                 evs
             }
@@ -819,10 +836,14 @@ impl GameState {
         caster: usize,
         target: Option<Target>,
         mode: usize,
+        x_value: u32,
+        converged_value: u32,
         override_effect: Option<Effect>,
     ) -> Result<Vec<GameEvent>, GameError> {
         let effect = override_effect.unwrap_or_else(|| card.definition.effect.clone());
-        let ctx = EffectContext::for_spell(caster, target.clone(), mode, 0);
+        let ctx = EffectContext::for_spell_full(
+            caster, target.clone(), mode, x_value, converged_value,
+        );
         let events = self.resolve_effect(&effect, &ctx)?;
         if let Some((decision, in_progress, remaining)) = self.suspend_signal.take() {
             self.pending_decision = Some(PendingDecision {
@@ -832,10 +853,33 @@ impl GameState {
                     caster,
                     target,
                     mode,
+                    x_value,
+                    converged_value,
                     in_progress,
                     remaining,
                 },
             });
+            return Ok(events);
+        }
+        // Rebound: if this card has Keyword::Rebound and was cast from
+        // hand, exile it instead of sending it to the graveyard, and
+        // schedule a delayed trigger at the caster's next upkeep that
+        // re-runs the spell's effect with a fresh auto-target.
+        if card.cast_from_hand
+            && card.definition.keywords.contains(&crate::card::Keyword::Rebound)
+        {
+            use crate::game::types::{DelayedKind, DelayedTrigger};
+            let source = card.id;
+            let body = card.definition.effect.clone();
+            self.delayed_triggers.push(DelayedTrigger {
+                controller: caster,
+                source,
+                kind: DelayedKind::YourNextUpkeep,
+                effect: body,
+                target: None, // re-pick at fire time
+                fires_once: true,
+            });
+            self.exile.push(card);
             return Ok(events);
         }
         self.players[caster].send_to_graveyard(card);
@@ -851,7 +895,19 @@ impl GameState {
         target: Option<Target>,
         mode: usize,
     ) -> Result<Vec<GameEvent>, GameError> {
-        let ctx = EffectContext::for_trigger(source, controller, target.clone(), mode);
+        // If the trigger has a stored target that's no longer legal (e.g.
+        // an Elesh-Norn-doubled Solitude ETB whose first target was just
+        // exiled by the prior copy), re-pick a fresh target on resolution.
+        let resolved_target = match target.as_ref() {
+            Some(t) => match effect.target_filter_for_slot(0) {
+                Some(filter) if !self.evaluate_requirement_static(filter, t, controller) => {
+                    self.auto_target_for_effect(&effect, controller)
+                }
+                _ => Some(t.clone()),
+            },
+            None => None,
+        };
+        let ctx = EffectContext::for_trigger(source, controller, resolved_target.clone(), mode);
         let events = self.resolve_effect(&effect, &ctx)?;
         if let Some((decision, in_progress, remaining)) = self.suspend_signal.take() {
             self.pending_decision = Some(PendingDecision {
@@ -996,7 +1052,8 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             }
             StaticEffect::EntersTapped { .. }
             | StaticEffect::ExtraLandPerTurn
-            | StaticEffect::CostReduction { .. } => vec![],
+            | StaticEffect::CostReduction { .. }
+            | StaticEffect::AdditionalCostAfterFirstSpell { .. } => vec![],
         })
         .collect()
 }

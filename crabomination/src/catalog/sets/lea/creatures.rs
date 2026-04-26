@@ -28,6 +28,7 @@ pub fn savannah_lions() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        back_face: None,
     }
 }
 
@@ -52,6 +53,7 @@ pub fn white_knight() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        back_face: None,
     }
 }
 
@@ -76,6 +78,7 @@ pub fn serra_angel() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        back_face: None,
     }
 }
 
@@ -100,6 +103,7 @@ pub fn mahamoti_djinn() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        back_face: None,
     }
 }
 
@@ -130,6 +134,7 @@ pub fn prodigal_sorcerer() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        back_face: None,
     }
 }
 
@@ -154,6 +159,7 @@ pub fn black_knight() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        back_face: None,
     }
 }
 
@@ -194,6 +200,7 @@ pub fn hypnotic_specter() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        back_face: None,
     }
 }
 
@@ -218,6 +225,7 @@ pub fn sengir_vampire() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        back_face: None,
     }
 }
 
@@ -242,6 +250,7 @@ pub fn shivan_dragon() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        back_face: None,
     }
 }
 
@@ -266,6 +275,7 @@ pub fn grizzly_bears() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        back_face: None,
     }
 }
 
@@ -299,6 +309,7 @@ pub fn birds_of_paradise() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        back_face: None,
     }
 }
 
@@ -323,6 +334,7 @@ pub fn llanowar_elves() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        back_face: None,
     }
 }
 
@@ -347,6 +359,7 @@ pub fn elvish_archer() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        back_face: None,
     }
 }
 
@@ -371,5 +384,6 @@ pub fn craw_wurm() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        back_face: None,
     }
 }

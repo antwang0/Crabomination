@@ -85,7 +85,25 @@ pub struct Attack {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum GameAction {
     PlayLand(CardId),
+    /// Play a modal-double-faced-card land using its **back face**. The
+    /// resulting `CardInstance.definition` is swapped to the back face's
+    /// definition before entering the battlefield, so all subsequent abilities
+    /// (mana abilities, ETB triggers, land types) come from the back face.
+    PlayLandBack(CardId),
     CastSpell { card_id: CardId, target: Option<Target>, mode: Option<usize>, x_value: Option<u32> },
+    /// Cast a spell with `Keyword::Convoke`, tapping each creature in
+    /// `convoke_creatures` to contribute {1} generic mana toward the cost
+    /// (real Magic also allows tapping for one colored mana matching the
+    /// creature's identity — we collapse to generic for now; converge
+    /// tracking still counts the creature's colors). Each must be an
+    /// untapped creature controlled by the caster.
+    CastSpellConvoke {
+        card_id: CardId,
+        target: Option<Target>,
+        mode: Option<usize>,
+        x_value: Option<u32>,
+        convoke_creatures: Vec<CardId>,
+    },
     /// Cast a spell paying its `alternative_cost` instead of its regular
     /// mana cost. `pitch_card` is the hand card (e.g., a blue card for Force
     /// of Will/Negation) being exiled to satisfy the alt cost — `None` when
@@ -174,6 +192,8 @@ pub(crate) enum ResumeContext {
         caster: usize,
         target: Option<Target>,
         mode: usize,
+        x_value: u32,
+        converged_value: u32,
         in_progress: PendingEffectState,
         remaining: Effect,
     },
@@ -281,6 +301,14 @@ pub enum StackItem {
         target: Option<Target>,
         /// Chosen mode index for `ChooseMode` effects (0 if `None`).
         mode: Option<usize>,
+        /// X paid into the spell's cost. Threaded into `EffectContext.x_value`
+        /// at resolution time so `Value::XFromCost` reads the actual paid X.
+        x_value: u32,
+        /// Number of distinct colors of mana spent paying this spell's
+        /// cost. Read by `Value::ConvergedValue` (Prismatic Ending, Pest
+        /// Control). Convoke pips contribute generic only, so they don't
+        /// raise this value.
+        converged_value: u32,
         /// True if this spell can't be countered by spells or abilities
         /// (Cavern of Souls–style protection). `Effect::CounterSpell` skips
         /// these stack items.

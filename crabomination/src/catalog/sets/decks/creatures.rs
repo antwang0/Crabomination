@@ -7,11 +7,12 @@
 
 use super::super::no_abilities;
 use crate::card::{
-    AlternativeCost, CardDefinition, CardType, CreatureType, Effect, EventKind, EventScope,
-    EventSpec, Keyword, PlaneswalkerSubtype, SelectionRequirement, Subtypes, Supertype,
-    TriggeredAbility,
+    ActivatedAbility, AlternativeCost, CardDefinition, CardType, CreatureType, Effect, EventKind,
+    EventScope, EventSpec, Keyword, PlaneswalkerSubtype, Selector, SelectionRequirement, Subtypes,
+    Supertype, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::target_filtered;
+use crate::effect::{Duration, PlayerRef, ZoneDest};
 use crate::mana::{Color, ManaCost, b, cost, g, generic, r, u, w};
 
 // ── BRG creatures ────────────────────────────────────────────────────────────
@@ -39,6 +40,7 @@ pub fn callous_sell_sword() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        back_face: None,
     }
 }
 
@@ -66,6 +68,7 @@ pub fn chancellor_of_the_tangle() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        back_face: None,
     }
 }
 
@@ -93,11 +96,14 @@ pub fn cosmogoyf() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        back_face: None,
     }
 }
 
-/// Devourer of Destiny — {5}, 7/5 colorless Eldrazi with on-cast scry. Stub:
-/// 7/5 with no scry trigger. TODO: scry-on-cast.
+/// Devourer of Destiny — {5}, 7/5 colorless Eldrazi. "When you cast this
+/// spell, scry 2." The on-cast trigger fires off the just-cast card via
+/// the engine's `SpellCast` + `SelfSource` path (the scry resolves before
+/// Devourer enters the battlefield).
 pub fn devourer_of_destiny() -> CardDefinition {
     CardDefinition {
         name: "Devourer of Destiny",
@@ -113,21 +119,30 @@ pub fn devourer_of_destiny() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::SelfSource),
+            effect: Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
+        }],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        back_face: None,
     }
 }
 
 // ── Goryo's creatures ────────────────────────────────────────────────────────
 
 /// Atraxa, Grand Unifier — {3}{W}{U}{B}{R}{G}, 7/7 Legendary Phyrexian
-/// Praetor. Flying, vigilance, deathtouch, lifelink. ETB reveal-top-10 and
-/// take one of each card type. Stub: vanilla 7/7 with all four keywords; ETB
-/// reveal-and-sort omitted.
-/// TODO: implement the reveal-and-sort ETB.
+/// Praetor. Flying, vigilance, deathtouch, lifelink. ETB reveals the top
+/// ten cards of your library, you may put up to one of each card type
+/// into your hand, the rest on the bottom.
+///
+/// Approximation: ETB Draw 4 — the average reveal-and-sort yield in a
+/// modern reanimator deck (lands + creatures + spell types). Skips the
+/// reveal-and-pick machinery, which would require a typed multi-pick
+/// decision the engine doesn't expose yet.
+/// TODO: implement the real reveal-and-sort ETB.
 pub fn atraxa_grand_unifier() -> CardDefinition {
     CardDefinition {
         name: "Atraxa, Grand Unifier",
@@ -148,11 +163,18 @@ pub fn atraxa_grand_unifier() -> CardDefinition {
         ],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(4),
+            },
+        }],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        back_face: None,
     }
 }
 
@@ -192,13 +214,16 @@ pub fn griselbrand() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        back_face: None,
     }
 }
 
-/// Psychic Frog — {U}{B}, 1/3 Frog. Flying. Discard a card: this gets +1/+1
-/// until end of turn. Sacrifice this: each opponent mills 4. Stub: 1/3 with
-/// flying; activated abilities omitted.
-/// TODO: wire discard-pump and sacrifice-mill abilities.
+/// Psychic Frog — {U}{B}, 1/3 Frog. Flying. "Discard a card: Psychic Frog
+/// gets +1/+1 until end of turn." "Sacrifice Psychic Frog: Each opponent
+/// mills 4 cards." Both costs are modeled as the first step of the resolved
+/// effect (rather than at activation time), which is gameplay-equivalent
+/// here — the bot/UI never tries to interrupt between cost payment and
+/// resolution.
 pub fn psychic_frog() -> CardDefinition {
     CardDefinition {
         name: "Psychic Frog",
@@ -213,19 +238,58 @@ pub fn psychic_frog() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
+        activated_abilities: vec![
+            // "Discard a card: Psychic Frog gets +1/+1 until end of turn."
+            ActivatedAbility {
+                tap_cost: false,
+                mana_cost: ManaCost::default(),
+                effect: Effect::Seq(vec![
+                    Effect::Discard {
+                        who: Selector::You,
+                        amount: Value::Const(1),
+                        random: false,
+                    },
+                    Effect::PumpPT {
+                        what: Selector::This,
+                        power: Value::Const(1),
+                        toughness: Value::Const(1),
+                        duration: Duration::EndOfTurn,
+                    },
+                ]),
+                once_per_turn: false,
+                sorcery_speed: false,
+            },
+            // "Sacrifice Psychic Frog: Each opponent mills 4 cards."
+            ActivatedAbility {
+                tap_cost: false,
+                mana_cost: ManaCost::default(),
+                effect: Effect::Seq(vec![
+                    Effect::Move {
+                        what: Selector::This,
+                        to: ZoneDest::Graveyard,
+                    },
+                    Effect::Mill {
+                        who: Selector::Player(PlayerRef::EachOpponent),
+                        amount: Value::Const(4),
+                    },
+                ]),
+                once_per_turn: false,
+                sorcery_speed: false,
+            },
+        ],
         triggered_abilities: vec![],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        back_face: None,
     }
 }
 
-/// Quantum Riddler — {1}{U}{B}, 4/4 Sphinx (approximation). When this enters,
-/// draw a card. Stub: vanilla 4/4 — exact card text varies; treat as a
-/// reasonable mid-curve value creature.
-/// TODO: wire actual oracle text once confirmed.
+/// Quantum Riddler — {1}{U}{B}, 4/4 Sphinx with flying. "When you cast
+/// Quantum Riddler, draw a card." Wired as a real on-cast trigger via
+/// `SpellCast` + `SelfSource`, so the cantrip fires (and the card resolves)
+/// even if Quantum Riddler itself is countered.
 pub fn quantum_riddler() -> CardDefinition {
     CardDefinition {
         name: "Quantum Riddler",
@@ -241,11 +305,18 @@ pub fn quantum_riddler() -> CardDefinition {
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::SelfSource),
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        }],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        back_face: None,
     }
 }
 
@@ -290,7 +361,10 @@ pub fn solitude() -> CardDefinition {
             life_cost: 0,
             exile_filter: Some(SelectionRequirement::HasColor(Color::White)),
             evoke_sacrifice: true,
+            not_your_turn_only: false,
+            target_filter: None,
         }),
+        back_face: None,
     }
 }
 
@@ -320,6 +394,7 @@ pub fn chancellor_of_the_annex() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        back_face: None,
     }
 }
 
@@ -328,8 +403,14 @@ pub fn chancellor_of_the_annex() -> CardDefinition {
 /// triggered ability of a permanent you control to trigger, that ability
 /// triggers an additional time. Permanents entering the battlefield don't
 /// cause abilities of permanents your opponents control to trigger."
-/// Stub: vanilla 4/7 vigilance; static ETB-trigger replacements omitted.
-/// TODO: implement ETB-trigger doubling/suppression static.
+///
+/// Wired via `actions::etb_trigger_multiplier`: every ETB-trigger push
+/// site (the cast resolution path, `fire_self_etb_triggers`, etc.) consults
+/// the helper, which returns 0 if any opponent of the trigger's controller
+/// has an Elesh Norn (suppressing the trigger) or `1 + your_norns`
+/// otherwise (one extra fire per Norn under your control). Currently
+/// covers self-source ETB triggers; the AnotherOfYours scope is still
+/// unmodified (TODO).
 pub fn elesh_norn_mother_of_machines() -> CardDefinition {
     CardDefinition {
         name: "Elesh Norn, Mother of Machines",
@@ -350,6 +431,7 @@ pub fn elesh_norn_mother_of_machines() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        back_face: None,
     }
 }
 
@@ -358,9 +440,12 @@ pub fn elesh_norn_mother_of_machines() -> CardDefinition {
 /// cast a sorcery. +1: until your next turn, you may cast sorcery spells as
 /// though they had flash. -3: return target nonland permanent an opponent
 /// controls to its owner's hand. Draw a card.
-/// Stub: 4-loyalty walker; loyalty abilities omitted.
-/// TODO: wire +1 flash and -3 bounce; static spell-timing restriction.
+///
+/// Wired loyalty ability: **-3 bounce + draw**. The +1 flash-on-sorceries
+/// and the static spell-timing restriction still need engine support
+/// (sorcery-timing override + per-spell timing veto).
 pub fn teferi_time_raveler() -> CardDefinition {
+    use crate::card::LoyaltyAbility;
     CardDefinition {
         name: "Teferi, Time Raveler",
         cost: cost(&[generic(1), w(), u()]),
@@ -378,7 +463,24 @@ pub fn teferi_time_raveler() -> CardDefinition {
         triggered_abilities: vec![],
         static_abilities: vec![],
         base_loyalty: 4,
-        loyalty_abilities: vec![],
+        loyalty_abilities: vec![LoyaltyAbility {
+            loyalty_cost: -3,
+            effect: Effect::Seq(vec![
+                Effect::Move {
+                    what: target_filtered(
+                        SelectionRequirement::Permanent
+                            .and(SelectionRequirement::Nonland)
+                            .and(SelectionRequirement::ControlledByOpponent),
+                    ),
+                    to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+                },
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
+            ]),
+        }],
         alternative_cost: None,
+        back_face: None,
     }
 }

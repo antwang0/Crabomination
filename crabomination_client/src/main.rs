@@ -24,7 +24,9 @@ use card::{
 };
 use render_quality::{ChangeQuality, RenderQuality};
 use config::GraphicsConfig;
-use game::{AltCastState, BlockingState, GameLog, GraveyardBrowserState, TargetingState};
+use game::{
+    AltCastState, BlockingState, FlippedHandCards, GameLog, GraveyardBrowserState, TargetingState,
+};
 use systems::game_ui::FastForward;
 use systems::animate::{
     adjust_animation_speed, animate_deck_shuffle, animate_draw_card, animate_flip,
@@ -34,8 +36,9 @@ use systems::animate::{
 use systems::game_ui::{
     auto_advance_p0, handle_ability_menu, handle_alt_cast_buttons, handle_game_input,
     poll_action_buttons, setup_game_hud, spawn_ability_menu, spawn_alt_cast_modal,
-    sync_game_visuals, trigger_reveal_animation, update_log_text, update_p1_text, update_hint,
-    update_phase_chart, update_player_text, update_turn_text, ButtonState, GameLogicSet,
+    sync_flipped_hand_cards, sync_game_visuals, trigger_reveal_animation, update_log_text,
+    update_p1_text, update_hint, update_phase_chart, update_player_text, update_turn_text,
+    ButtonState, GameLogicSet,
 };
 use systems::gizmos::{
     draw_attacker_overlays, draw_blocking_gizmos, draw_stack_arrows,
@@ -103,6 +106,7 @@ fn main() {
         .insert_resource(TargetingState::default())
         .insert_resource(BlockingState::default())
         .insert_resource(AltCastState::default())
+        .insert_resource(FlippedHandCards::default())
         .insert_resource(GraveyardBrowserState::default())
         .insert_resource(RevealPopupState::default())
         .insert_resource(AnimationSpeed::default())
@@ -132,6 +136,14 @@ fn main() {
         .add_systems(
             Update,
             sync_game_visuals.after(GameLogicSet).run_if(in_state(AppState::InGame)),
+        )
+        // MDFC flip sync — runs after visual sync so freshly-spawned hand
+        // cards see their flipped state immediately on the next frame.
+        .add_systems(
+            Update,
+            sync_flipped_hand_cards
+                .after(sync_game_visuals)
+                .run_if(in_state(AppState::InGame)),
         )
         // HUD refresh (after game logic)
         .add_systems(

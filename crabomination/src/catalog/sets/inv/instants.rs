@@ -22,6 +22,7 @@ pub fn terminate() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        back_face: None,
     }
 }
 
@@ -46,5 +47,6 @@ pub fn opt() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        back_face: None,
     }
 }

@@ -185,6 +185,14 @@ pub enum Keyword {
     Changeling,
     Storm,
     Inspired,
+    /// "When you cast this spell from your hand, exile it as it resolves.
+    /// At the beginning of your next upkeep, you may cast this card from
+    /// exile without paying its mana cost." Wired in
+    /// `continue_spell_resolution`: cast-from-hand spells with Rebound go
+    /// to exile (instead of graveyard) and schedule a `YourNextUpkeep`
+    /// delayed trigger that re-runs the spell's effect with a fresh
+    /// auto-target.
+    Rebound,
 }
 
 /// Composable filter for valid targets of a spell or ability.
@@ -296,6 +304,12 @@ pub struct CardDefinition {
     /// some life and exiling a card from hand matching `exile_filter`.
     /// Used for Force of Will, Force of Negation, and similar.
     pub alternative_cost: Option<AlternativeCost>,
+    /// Modal-double-faced-card back face. When `Some`, the player can play
+    /// the card via its back face (e.g. `GameAction::PlayLandBack`); the
+    /// resulting `CardInstance` adopts this definition wholesale, so all
+    /// downstream abilities, types, and costs are the back face's. Only the
+    /// front face stores `back_face` — the back's `back_face` is `None`.
+    pub back_face: Option<Box<CardDefinition>>,
 }
 
 /// An alternative (pitch) cost. Replaces the normal mana cost when the
@@ -315,6 +329,17 @@ pub struct AlternativeCost {
     /// True for evoke costs — the resulting permanent is sacrificed on ETB
     /// (after its ETB triggers fire).
     pub evoke_sacrifice: bool,
+    /// True if this alt cost is only legal on a turn that isn't the caster's
+    /// (Force of Negation, Foundation Breaker, Force of Vigor, etc.). The
+    /// engine rejects the alt cast when the caster *is* the active player.
+    pub not_your_turn_only: bool,
+    /// Optional extra target filter applied **only** on the alt-cast path.
+    /// Lets a spell expose a cheaper alt cost that's restricted to a
+    /// narrower set of targets (e.g. Mystical Dispute's "{U} less if blue":
+    /// regular target is any spell, alt-cost target must be a blue spell).
+    /// When `Some`, `cast_spell_alternative` validates the chosen target
+    /// against this filter on top of the spell's normal target filter.
+    pub target_filter: Option<SelectionRequirement>,
 }
 
 impl CardDefinition {
@@ -402,6 +427,11 @@ pub struct CardInstance {
     /// True if this card was cast via an evoke alternative cost — it will
     /// be sacrificed on ETB after its ETB triggers fire.
     pub evoked: bool,
+    /// True if this card was cast from its owner's hand on its current
+    /// trip through the stack. Used by the rebound resolution path to
+    /// distinguish hand-casts (rebound triggers) from re-casts from exile
+    /// (rebound does **not** chain).
+    pub cast_from_hand: bool,
 }
 
 impl CardInstance {
@@ -430,6 +460,7 @@ impl CardInstance {
             is_token: false,
             used_loyalty_ability_this_turn: false,
             evoked: false,
+            cast_from_hand: false,
         }
     }
 

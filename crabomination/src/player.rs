@@ -16,6 +16,10 @@ pub struct Player {
     pub graveyard: Vec<CardInstance>,
     /// How many lands this player has played on their current turn.
     pub lands_played_this_turn: u32,
+    /// How many spells this player has cast this turn. Reset on
+    /// `TurnStarted`. Powers Damping Sphere's "second-and-onward spells
+    /// cost {1} more" static.
+    pub spells_cast_this_turn: u32,
     /// Poison counters (player loses at 10).
     pub poison_counters: u32,
     /// True once this player has lost the game (life ≤ 0, poison ≥ 10, or
@@ -39,6 +43,7 @@ impl Player {
             hand: Vec::new(),
             graveyard: Vec::new(),
             lands_played_this_turn: 0,
+            spells_cast_this_turn: 0,
             poison_counters: 0,
             eliminated: false,
             wants_ui: false,

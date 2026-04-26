@@ -22,6 +22,7 @@ pub fn lightning_helix() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        back_face: None,
     }
 }
 
@@ -51,5 +52,6 @@ pub fn putrefy() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        back_face: None,
     }
 }

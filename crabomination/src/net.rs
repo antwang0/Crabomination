@@ -112,6 +112,13 @@ pub struct KnownCard {
     /// "Cast for alt cost" menu entry.
     #[serde(default)]
     pub has_alternative_cost: bool,
+    /// MDFC back-face name, if any (e.g. Blightstep Pathway → "Searstep
+    /// Pathway"). Drives the client's right-click flip on hand cards: when
+    /// `Some`, right-click toggles the card's hand visual to the back face
+    /// and a subsequent left-click submits `PlayLandBack` instead of
+    /// `PlayLand`.
+    #[serde(default)]
+    pub back_face_name: Option<String>,
 }
 
 /// One activated ability as projected for the client.

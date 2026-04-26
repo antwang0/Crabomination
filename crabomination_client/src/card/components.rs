@@ -31,6 +31,13 @@ pub struct CardBorderHighlight(pub Entity, pub Entity);
 #[derive(Component)]
 pub struct CardFrontTexture(pub String);
 
+/// Marker for the front-face child mesh of a card entity. Used by systems
+/// that need to swap the front material at runtime — e.g. the MDFC flip
+/// (`sync_flipped_hand_cards`) replaces this child's material with the
+/// back-face texture when the player flips a hand card.
+#[derive(Component)]
+pub struct FrontFaceMesh;
+
 /// Tracks an in-progress flip animation. `progress` goes from 0.0 to 1.0.
 #[derive(Component)]
 pub struct CardFlipAnimation {

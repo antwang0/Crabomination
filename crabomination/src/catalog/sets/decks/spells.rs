@@ -8,11 +8,11 @@
 
 use super::super::no_abilities;
 use crate::card::{
-    AlternativeCost, CardDefinition, CardType, Effect, SelectionRequirement, Subtypes,
+    AlternativeCost, CardDefinition, CardType, Effect, Predicate, SelectionRequirement, Subtypes,
 };
 use crate::effect::shortcut::{counter_target_spell, target_filtered};
 use crate::effect::{DelayedTriggerKind, PlayerRef, Selector, Value, ZoneDest};
-use crate::mana::{Color, ManaCost, b, cost, generic, r, u, w};
+use crate::mana::{Color, ManaCost, b, cost, generic, r, u, w, x};
 
 // ── BRG main-deck spells ─────────────────────────────────────────────────────
 
@@ -45,6 +45,7 @@ pub fn pact_of_negation() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        back_face: None,
     }
 }
 
@@ -91,6 +92,7 @@ pub fn plunge_into_darkness() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        back_face: None,
     }
 }
 
@@ -127,13 +129,19 @@ pub fn serum_powder() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        back_face: None,
     }
 }
 
 /// Spoils of the Vault — {B} Instant. Name a card. Reveal cards from the top
 /// of your library until you reveal the named card or 10 different cards.
-/// Stub: Effect::Noop — reveal-until-find isn't supported by the engine.
-/// TODO: wire name-and-reveal-until-find.
+/// Put the named card into your hand. You lose 1 life for each card revealed.
+///
+/// Approximation: `Search(Any → Hand) + LoseLife(3)`. Skips the name-then-
+/// reveal-until-find machinery (the engine has no naming primitive) — the
+/// caster picks any library card directly. The 3-life cost is the rough
+/// average reveal count for a non-singleton tutor target in a 60-card deck.
+/// TODO: real reveal-until-find with a chosen name + variable life cost.
 pub fn spoils_of_the_vault() -> CardDefinition {
     CardDefinition {
         name: "Spoils of the Vault",
@@ -144,13 +152,21 @@ pub fn spoils_of_the_vault() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![],
-        effect: Effect::Noop,
+        effect: Effect::Seq(vec![
+            Effect::Search {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::Any,
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+            Effect::LoseLife { who: Selector::You, amount: Value::Const(3) },
+        ]),
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        back_face: None,
     }
 }
 
@@ -189,6 +205,7 @@ pub fn summoners_pact() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        back_face: None,
     }
 }
 
@@ -228,6 +245,7 @@ pub fn thud() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        back_face: None,
     }
 }
 
@@ -260,6 +278,7 @@ pub fn inquisition_of_kozilek() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        back_face: None,
     }
 }
 
@@ -284,15 +303,27 @@ pub fn leyline_of_sanctity() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        back_face: None,
     }
 }
 
 // ── Goryo's main-deck spells ────────────────────────────────────────────────
 
 /// Ephemerate — {W} Instant. Exile target creature you control, then return
-/// it to the battlefield under its owner's control. Rebound. Stub:
-/// Effect::Noop — flicker + rebound omitted.
-/// TODO: wire flicker (exile-and-return) + rebound.
+/// it to the battlefield under its owner's control. **Rebound**: cast from
+/// hand → exile on resolution, schedule a "may cast from exile next upkeep"
+/// trigger that re-runs the flicker effect with a fresh auto-target.
+///
+/// Modeled as `Seq([Exile target creature you control, Move target back to
+/// the battlefield])`. The same target slot is re-resolved on the second
+/// step — `Selector::Target(0)` finds the card in exile (the engine
+/// `evaluate_requirement_static` falls through to graveyard / exile so the
+/// target stays bound), and `move_card_to` walks all zones until it finds
+/// the card. ETB triggers fire because `place_card_in_dest` now invokes
+/// `fire_self_etb_triggers` on Battlefield zone changes. Rebound is wired
+/// via `Keyword::Rebound`: the cast-from-hand resolution path detects it
+/// and pushes a `YourNextUpkeep` `DelayedTrigger` whose body is the
+/// spell's effect — the body re-targets fresh on fire.
 pub fn ephemerate() -> CardDefinition {
     CardDefinition {
         name: "Ephemerate",
@@ -302,24 +333,41 @@ pub fn ephemerate() -> CardDefinition {
         subtypes: Subtypes::default(),
         power: 0,
         toughness: 0,
-        keywords: vec![],
-        effect: Effect::Noop,
+        keywords: vec![crate::card::Keyword::Rebound],
+        effect: Effect::Seq(vec![
+            Effect::Exile {
+                what: target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+            },
+            Effect::Move {
+                what: Selector::Target(0),
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: false,
+                },
+            },
+        ]),
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        back_face: None,
     }
 }
 
 /// Faithful Mending — {1}{W} Sorcery. Discard up to two cards. Draw two
 /// cards. Gain 2 life. Flashback {1}{B}.
 ///
-/// The "up to two" discard is implemented as `Discard { count: 2 }`; the
-/// loop breaks when the hand runs out, which is gameplay-equivalent for
-/// the common line. Flashback {1}{B} is wired via `Keyword::Flashback`
-/// and the existing flashback cast path.
+/// "Up to two" is exposed as a `ChooseMode` with three options (discard 2,
+/// discard 1, discard 0). Mode 0 is the full discard so `AutoDecider` (and
+/// the bot) keep the gameplay-optimal choice for this deck — Faithful
+/// Mending is most often cast to dump a fatty for reanimation. Flashback
+/// {1}{B} is wired via `Keyword::Flashback` + the existing flashback cast
+/// path.
 pub fn faithful_mending() -> CardDefinition {
     use crate::card::Keyword;
     use crate::mana::ManaCost as Mc;
@@ -339,11 +387,19 @@ pub fn faithful_mending() -> CardDefinition {
         toughness: 0,
         keywords: vec![Keyword::Flashback(flashback_cost)],
         effect: Effect::Seq(vec![
-            Effect::Discard {
-                who: Selector::You,
-                amount: Value::Const(2),
-                random: false,
-            },
+            Effect::ChooseMode(vec![
+                Effect::Discard {
+                    who: Selector::You,
+                    amount: Value::Const(2),
+                    random: false,
+                },
+                Effect::Discard {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                    random: false,
+                },
+                Effect::Noop,
+            ]),
             Effect::Draw { who: Selector::You, amount: Value::Const(2) },
             Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
         ]),
@@ -353,17 +409,14 @@ pub fn faithful_mending() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        back_face: None,
     }
 }
 
 /// Force of Negation — {1}{U}{U} Instant. Counter target noncreature spell.
-/// Alternative cost: if it's not your turn, you may exile a blue card from
-/// your hand rather than pay this spell's mana cost.
-///
-/// The "if it's not your turn" timing restriction on the alt cost is not
-/// enforced by the engine — the player can pitch-cast Force of Negation on
-/// their own turn. Practical impact is small (you wouldn't normally want to)
-/// and will be revisited if it matters.
+/// Alternative cost: "If it's not your turn, you may exile a blue card from
+/// your hand rather than pay this spell's mana cost." `not_your_turn_only`
+/// gates the alt cast in `cast_spell_alternative`.
 pub fn force_of_negation() -> CardDefinition {
     CardDefinition {
         name: "Force of Negation",
@@ -387,7 +440,10 @@ pub fn force_of_negation() -> CardDefinition {
             life_cost: 0,
             exile_filter: Some(SelectionRequirement::HasColor(Color::Blue)),
             evoke_sacrifice: false,
+            not_your_turn_only: true,
+            target_filter: None,
         }),
+        back_face: None,
     }
 }
 
@@ -441,14 +497,20 @@ pub fn goryos_vengeance() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        back_face: None,
     }
 }
 
 /// Prismatic Ending — {W} Sorcery — Convoke. Exile target nonland permanent
 /// with mana value less than or equal to the spell's converged value.
-/// Stub: Effect::Noop. Convoke / converge isn't supported yet.
-/// TODO: convoke + exile-target-with-CMC-≤-converged.
+///
+/// Targeted; the cast-time filter is just `Permanent ∧ Nonland` (no CMC
+/// constraint, since converged value is only known after paying). At
+/// resolution, `If(ManaValueOf(Target) ≤ ConvergedValue, Exile, Noop)`
+/// gates the exile. Caster pays {W} for converge=1; convoke + non-white
+/// generic payments raise converge.
 pub fn prismatic_ending() -> CardDefinition {
+    use crate::card::Keyword;
     CardDefinition {
         name: "Prismatic Ending",
         cost: cost(&[w()]),
@@ -457,14 +519,26 @@ pub fn prismatic_ending() -> CardDefinition {
         subtypes: Subtypes::default(),
         power: 0,
         toughness: 0,
-        keywords: vec![],
-        effect: Effect::Noop,
+        keywords: vec![Keyword::Convoke],
+        effect: Effect::If {
+            cond: Predicate::ValueAtMost(
+                Value::ManaValueOf(Box::new(Selector::Target(0))),
+                Value::ConvergedValue,
+            ),
+            then: Box::new(Effect::Exile {
+                what: target_filtered(
+                    SelectionRequirement::Permanent.and(SelectionRequirement::Nonland),
+                ),
+            }),
+            else_: Box::new(Effect::Noop),
+        },
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        back_face: None,
     }
 }
 
@@ -497,15 +571,20 @@ pub fn thoughtseize() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        back_face: None,
     }
 }
 
 // ── Goryo's sideboard spells ────────────────────────────────────────────────
 
 /// Consign to Memory — {U} Instant. Counter target activated or triggered
-/// ability OR counter target spell that's a card with the chosen name.
-/// Stub: Effect::Noop — countering abilities (vs spells) isn't supported.
-/// TODO: counter-an-ability primitive.
+/// ability. (Real Oracle also has a "OR counter target legendary spell"
+/// branch — we ship just the ability-counter half for now since that's
+/// what comes up against Goryo's ETB-driven matchups.)
+///
+/// Targets a permanent (the source of the ability); the engine's
+/// `Effect::CounterAbility` handler walks the stack top-down for the most
+/// recent `StackItem::Trigger` with that source and removes it.
 pub fn consign_to_memory() -> CardDefinition {
     CardDefinition {
         name: "Consign to Memory",
@@ -516,22 +595,31 @@ pub fn consign_to_memory() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![],
-        effect: Effect::Noop,
+        effect: Effect::CounterAbility {
+            what: target_filtered(SelectionRequirement::Permanent),
+        },
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        back_face: None,
     }
 }
 
 /// Damping Sphere — {2} Artifact. "If a player has cast another spell this
 /// turn, each spell that player casts costs {1} more to cast. Lands that tap
 /// to add more than one mana enter producing only {C}."
-/// Stub: vanilla 2-cost rock with no static effect.
-/// TODO: cost-tax static + storm/sol-ring nerf.
+///
+/// Cost-tax half is wired via `StaticEffect::AdditionalCostAfterFirstSpell`:
+/// the cast paths consult the caster's per-player `spells_cast_this_turn`,
+/// and if it's ≥ 1 the spell pays an extra {1}. The "lands that tap for
+/// >1 mana enter producing only {C}" half is still ⏳ (no land-tap-output
+/// replacement primitive yet).
 pub fn damping_sphere() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
     CardDefinition {
         name: "Damping Sphere",
         cost: cost(&[generic(2)]),
@@ -544,17 +632,29 @@ pub fn damping_sphere() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
+        static_abilities: vec![StaticAbility {
+            description: "Each spell a player casts after their first this turn costs {1} more.",
+            effect: StaticEffect::AdditionalCostAfterFirstSpell {
+                filter: SelectionRequirement::Any,
+                amount: 1,
+            },
+        }],
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        back_face: None,
     }
 }
 
 /// Mystical Dispute — {2}{U} Instant. Counter target spell unless its
 /// controller pays {3}. If the spell is blue, this costs {U} less.
-/// Stub: simple counter at hard cost; conditional cost reduction omitted.
-/// TODO: cost reduction "if target is blue".
+///
+/// The "{U} less if blue" is modeled as an alternative cost: pay {U}
+/// instead of {2}{U}, and the alt cost's `target_filter` requires the
+/// targeted stack spell to be blue. The "unless they pay {3}" rider is
+/// wired via `Effect::CounterUnlessPaid` — at resolution the engine
+/// auto-pays on behalf of the spell's controller; if affordable the
+/// spell stays, otherwise it's countered.
 pub fn mystical_dispute() -> CardDefinition {
     CardDefinition {
         name: "Mystical Dispute",
@@ -565,21 +665,38 @@ pub fn mystical_dispute() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![],
-        effect: counter_target_spell(),
+        effect: Effect::CounterUnlessPaid {
+            what: target_filtered(SelectionRequirement::IsSpellOnStack),
+            mana_cost: cost(&[generic(3)]),
+        },
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
-        alternative_cost: None,
+        alternative_cost: Some(AlternativeCost {
+            mana_cost: cost(&[u()]),
+            life_cost: 0,
+            exile_filter: None,
+            evoke_sacrifice: false,
+            not_your_turn_only: false,
+            target_filter: Some(SelectionRequirement::HasColor(Color::Blue)),
+        }),
+        back_face: None,
     }
 }
 
 /// Pest Control — {W}{B} Sorcery — Convoke. Destroy each nonland permanent
 /// with mana value less than or equal to the spell's converged value.
-/// Stub: Effect::Noop.
-/// TODO: convoke + destroy-CMC-≤-converged.
+///
+/// Convoke lets the caster tap creatures to contribute generic mana toward
+/// the cost. Converge counts distinct colors of mana spent — at minimum 2
+/// (one white + one black pip) when cast for {W}{B}, but if the caster
+/// also pays the generic part with red/blue/green mana, the converged
+/// value scales up. Effect uses `ForEach + If` over `Nonland` permanents,
+/// destroying any whose `ManaValueOf` is ≤ `Value::ConvergedValue`.
 pub fn pest_control() -> CardDefinition {
+    use crate::card::Keyword;
     CardDefinition {
         name: "Pest Control",
         cost: cost(&[w(), b()]),
@@ -588,37 +705,70 @@ pub fn pest_control() -> CardDefinition {
         subtypes: Subtypes::default(),
         power: 0,
         toughness: 0,
-        keywords: vec![],
-        effect: Effect::Noop,
+        keywords: vec![Keyword::Convoke],
+        effect: Effect::ForEach {
+            selector: Selector::EachPermanent(SelectionRequirement::Nonland),
+            body: Box::new(Effect::If {
+                cond: Predicate::ValueAtMost(
+                    Value::ManaValueOf(Box::new(Selector::TriggerSource)),
+                    Value::ConvergedValue,
+                ),
+                then: Box::new(Effect::Destroy { what: Selector::TriggerSource }),
+                else_: Box::new(Effect::Noop),
+            }),
+        },
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        back_face: None,
     }
 }
 
-/// Wrath of the Skies — {X}{W}{W} Sorcery. Destroy each nonland permanent
-/// with mana value X. Convoke.
-/// Stub: Effect::Noop.
-/// TODO: convoke + destroy-CMC-=-X.
+/// Wrath of the Skies — {X}{W}{W} Sorcery — Convoke. Destroy each nonland
+/// permanent with mana value X.
+///
+/// Implemented as `ForEach(EachPermanent(Nonland))` body that destroys the
+/// current entity if its mana value equals X (the X paid into the spell's
+/// cost). `Value::ManaValueOf(Selector::TriggerSource)` reads the iterated
+/// permanent's CMC. Convoke now lets the caster tap creatures to pay
+/// generic mana toward the X cost.
 pub fn wrath_of_the_skies() -> CardDefinition {
+    use crate::card::Keyword;
     CardDefinition {
         name: "Wrath of the Skies",
-        cost: cost(&[w(), w()]),
+        cost: cost(&[x(), w(), w()]),
         supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
         toughness: 0,
-        keywords: vec![],
-        effect: Effect::Noop,
+        keywords: vec![Keyword::Convoke],
+        effect: Effect::ForEach {
+            selector: Selector::EachPermanent(SelectionRequirement::Nonland),
+            body: Box::new(Effect::If {
+                cond: Predicate::All(vec![
+                    Predicate::ValueAtLeast(
+                        Value::ManaValueOf(Box::new(Selector::TriggerSource)),
+                        Value::XFromCost,
+                    ),
+                    Predicate::ValueAtMost(
+                        Value::ManaValueOf(Box::new(Selector::TriggerSource)),
+                        Value::XFromCost,
+                    ),
+                ]),
+                then: Box::new(Effect::Destroy { what: Selector::TriggerSource }),
+                else_: Box::new(Effect::Noop),
+            }),
+        },
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        back_face: None,
     }
 }
