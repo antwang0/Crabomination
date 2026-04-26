@@ -30,6 +30,7 @@ use game::{
 use systems::game_ui::FastForward;
 use systems::animate::{
     adjust_animation_speed, animate_deck_shuffle, animate_draw_card, animate_flip,
+    animate_mdfc_flip,
     animate_hand_slide, animate_hover_lift, animate_play_card, animate_return_to_deck,
     animate_reveal_peek, animate_send_to_graveyard, animate_tap, AnimationSpeed,
 };
@@ -60,11 +61,16 @@ fn main() {
     let cfg = config::load();
 
     // Preload card images by inspecting the same demo state the server uses.
+    // Also pull MDFC back-face names so the right-click flip animation has
+    // a real Scryfall image instead of a missing-asset blank.
     let demo = crabomination::demo::build_demo_state();
-    let mut seen = std::collections::HashSet::new();
+    let mut seen: std::collections::HashSet<&str> = std::collections::HashSet::new();
     for player in &demo.players {
         for card in player.library.iter().chain(&player.hand).chain(&player.graveyard) {
             seen.insert(card.definition.name);
+            if let Some(back) = card.definition.back_face.as_ref() {
+                seen.insert(back.name);
+            }
         }
     }
     let card_names: Vec<&str> = seen.into_iter().collect();
@@ -186,6 +192,8 @@ fn main() {
             )
                 .run_if(in_state(AppState::InGame)),
         )
+        // Separate add_systems call to stay under Bevy's 20-tuple limit.
+        .add_systems(Update, animate_mdfc_flip.run_if(in_state(AppState::InGame)))
         // Decision UI: spawn modal when pending, handle interactions, submit answer.
         .add_systems(
             Update,

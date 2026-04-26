@@ -8,10 +8,10 @@ pub use components::{
     Animating, BattlefieldCard, Card, CardBorderHighlight, CardFlipAnimation, CardFrontTexture,
     CardHighlightAssets, CardHoverLift, CardHovered, CardMeshAssets, CardOwner, DeckCard,
     DeckPile, DeckShuffleAnimation, DrawCardAnimation, FrontFaceMesh, GameCardId, GraveyardPile,
-    HandCard, HandSlideAnimation, OpponentHandCard, PileHovered, PlayCardAnimation,
-    PlayerTargetZone, RevealPeekAnimation, ReturnToDeckAnimation, SendToGraveyardAnimation,
-    ShufflePhase, StackCard, TapAnimation, TapState, ValidTarget, CARD_HEIGHT, CARD_THICKNESS,
-    CARD_WIDTH, DECK_CARD_Y_STEP, HOVER_LIFT_SPEED,
+    HandCard, HandSlideAnimation, MdfcFlipAnimation, OpponentHandCard, PileHovered,
+    PlayCardAnimation, PlayerTargetZone, RevealPeekAnimation, ReturnToDeckAnimation,
+    SendToGraveyardAnimation, ShufflePhase, StackCard, TapAnimation, TapState, ValidTarget,
+    CARD_HEIGHT, CARD_THICKNESS, CARD_WIDTH, DECK_CARD_Y_STEP, HOVER_LIFT_SPEED,
 };
 pub use layout::{
     back_face_rotation, bf_card_transform, deck_position, graveyard_position,

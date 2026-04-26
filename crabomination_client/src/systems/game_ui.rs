@@ -1854,24 +1854,20 @@ pub fn trigger_reveal_animation(
 // ── MDFC flip sync ────────────────────────────────────────────────────────────
 
 /// Reconcile each viewer hand card's front-face material with its flipped
-/// state. When a card is in `FlippedHandCards.flipped`, its front-face mesh
-/// is repainted with the back-face's texture (and its `CardFrontTexture`
-/// path updated so the peek popup mirrors the flip). Also drops stale
-/// entries when cards leave the hand.
+/// state. When `FlippedHandCards.flipped` toggles for a card, attach an
+/// `MdfcFlipAnimation` to its visual entity — the animation does the
+/// material swap at its mid-point so the user sees a 360° spin instead
+/// of an instant texture pop. Also drops stale flip entries when cards
+/// leave the hand.
 #[allow(clippy::type_complexity)]
 pub fn sync_flipped_hand_cards(
+    mut commands: Commands,
     cv: Res<CurrentView>,
     mut flipped: ResMut<crate::game::FlippedHandCards>,
-    mut hand_cards: Query<
-        (&GameCardId, &Children, &mut crate::card::CardFrontTexture),
-        With<HandCard>,
+    hand_cards: Query<
+        (Entity, &GameCardId, &Transform, &crate::card::CardFrontTexture),
+        (With<HandCard>, Without<crate::card::MdfcFlipAnimation>),
     >,
-    mut front_meshes: Query<
-        &mut MeshMaterial3d<StandardMaterial>,
-        With<crate::card::FrontFaceMesh>,
-    >,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-    asset_server: Res<AssetServer>,
 ) {
     let Some(view) = cv.0.as_ref() else { return };
     let viewer = view.your_seat;
@@ -1885,8 +1881,9 @@ pub fn sync_flipped_hand_cards(
         .collect();
     flipped.flipped.retain(|id| in_hand.contains(id));
 
-    // Reconcile front-face material against the desired (front vs back) name.
-    for (game_id, children, mut tex) in &mut hand_cards {
+    // Detect mismatches between the card's painted texture and its desired
+    // flipped state; attach a flip animation to bring them into sync.
+    for (entity, game_id, transform, tex) in &hand_cards {
         let card_id = game_id.0;
         let known = view.players[viewer].hand.iter().find_map(|h| match h {
             crabomination::net::HandCardView::Known(k) if k.id == card_id => Some(k),
@@ -1903,17 +1900,12 @@ pub fn sync_flipped_hand_cards(
         if tex.0 == desired_path {
             continue;
         }
-        // Repaint the front-face child's material.
-        for child in children.iter() {
-            if let Ok(mut mat) = front_meshes.get_mut(child) {
-                *mat = MeshMaterial3d(card_front_material(
-                    desired_name,
-                    &mut materials,
-                    &asset_server,
-                ));
-                break;
-            }
-        }
-        tex.0 = desired_path;
+        commands.entity(entity).insert(crate::card::MdfcFlipAnimation {
+            progress: 0.0,
+            speed: 2.5,
+            start_rotation: transform.rotation,
+            target_flipped: is_flipped,
+            did_swap: false,
+        });
     }
 }

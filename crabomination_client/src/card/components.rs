@@ -38,6 +38,22 @@ pub struct CardFrontTexture(pub String);
 #[derive(Component)]
 pub struct FrontFaceMesh;
 
+/// Spinning animation for MDFC right-click flips. Rotates the parent
+/// 360° around its local Y axis over `progress: 0.0..1.0` so the user
+/// sees the card flip end-over-end. The front-face material is swapped
+/// to the new face (front ↔ back) at `progress >= 0.5` (when the card
+/// is showing its physical back), so the swap is hidden by the rotation.
+#[derive(Component)]
+pub struct MdfcFlipAnimation {
+    pub progress: f32,
+    pub speed: f32,
+    pub start_rotation: Quat,
+    /// `true` if this animation is flipping FROM front TO back (so the
+    /// midpoint material swap should paint the back-face image).
+    pub target_flipped: bool,
+    pub did_swap: bool,
+}
+
 /// Tracks an in-progress flip animation. `progress` goes from 0.0 to 1.0.
 #[derive(Component)]
 pub struct CardFlipAnimation {
