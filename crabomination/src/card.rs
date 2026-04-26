@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 
+use serde::{Deserialize, Serialize};
+
 pub use crate::effect::{
     ActivatedAbility, Effect, EventKind, EventScope, EventSpec, LoyaltyAbility, Predicate,
     Selector, StaticAbility, StaticEffect, TriggeredAbility, Value,
@@ -7,11 +9,11 @@ pub use crate::effect::{
 use crate::mana::{Color, ManaCost};
 
 /// Unique runtime ID for a card instance within a game.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct CardId(pub u32);
 
 /// A single card type. Cards may have multiple types (e.g. Enchantment + Creature).
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum CardType {
     Land,
     Creature,
@@ -50,6 +52,7 @@ pub enum CreatureType {
     Dinosaur, Lizard, Snake, Scorpion, Bat, Squirrel, Ox, Boar, Goat,
     Elephant, Rhino, Hippo, Mammoth, Whale, Leviathan, Kraken,
     Lion, Kavu, Lhurgoyf, Atog, Noggle, Vedalken, Kor, Ally,
+    Avatar, Phyrexian, Praetor, Incarnation, Mercenary,
 }
 
 /// Land subtypes (basic land types + others).
@@ -96,7 +99,7 @@ pub struct Subtypes {
 }
 
 /// Counter types that can be placed on permanents or players.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum CounterType {
     PlusOnePlusOne,
     MinusOneMinusOne,
@@ -129,7 +132,7 @@ pub enum Zone {
 }
 
 /// Keyword abilities supported by the engine.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Keyword {
     Flying,
     Reach,
@@ -288,6 +291,30 @@ pub struct CardDefinition {
     pub activated_abilities: Vec<ActivatedAbility>,
     pub triggered_abilities: Vec<TriggeredAbility>,
     pub loyalty_abilities: Vec<LoyaltyAbility>,
+    /// Optional alternative ("pitch") cost. When `Some`, the player can cast
+    /// this spell by paying the alternative cost instead of `cost` — typically
+    /// some life and exiling a card from hand matching `exile_filter`.
+    /// Used for Force of Will, Force of Negation, and similar.
+    pub alternative_cost: Option<AlternativeCost>,
+}
+
+/// An alternative (pitch) cost. Replaces the normal mana cost when the
+/// player chooses to cast via this path. Models pitch (Force of Will,
+/// Force of Negation) and evoke (Solitude) — the latter additionally
+/// sacrifices the resulting permanent on ETB via `evoke_sacrifice`.
+#[derive(Debug, Clone)]
+pub struct AlternativeCost {
+    /// Mana paid for the alternative cast (often empty / `{0}` for pitch
+    /// spells, but non-empty for evoke or kicker-style alternatives).
+    pub mana_cost: ManaCost,
+    /// Life paid as additional cost.
+    pub life_cost: u32,
+    /// If `Some`, the player must exile a card from their hand matching this
+    /// filter as part of casting via the alternative.
+    pub exile_filter: Option<SelectionRequirement>,
+    /// True for evoke costs — the resulting permanent is sacrificed on ETB
+    /// (after its ETB triggers fire).
+    pub evoke_sacrifice: bool,
 }
 
 impl CardDefinition {
@@ -372,6 +399,9 @@ pub struct CardInstance {
     pub face_down: bool,
     pub is_token: bool,
     pub used_loyalty_ability_this_turn: bool,
+    /// True if this card was cast via an evoke alternative cost — it will
+    /// be sacrificed on ETB after its ETB triggers fire.
+    pub evoked: bool,
 }
 
 impl CardInstance {
@@ -399,6 +429,7 @@ impl CardInstance {
             face_down: false,
             is_token: false,
             used_loyalty_ability_this_turn: false,
+            evoked: false,
         }
     }
 

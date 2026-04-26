@@ -37,7 +37,9 @@
       "Bash(xargs -I {} bash -c \"dirname {} | xargs basename; head -20 {}\")",
       "Bash(xargs cat *)",
       "Bash(python3)",
-      "Bash(xargs grep *)"
+      "Bash(xargs grep *)",
+      "Bash(CRAB_BIND=127.0.0.1:7778 CRAB_BOT=1 timeout 2 ./target/debug/crabomination_server.exe)",
+      "Bash(xargs wc *)"
     ]
   }
 }

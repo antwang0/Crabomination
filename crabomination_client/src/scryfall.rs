@@ -1,5 +1,6 @@
 //! Download card images from Scryfall and cache them in assets/cards/.
 
+use std::fmt::Write;
 use std::fs;
 use std::path::Path;
 use std::thread;
@@ -55,7 +56,19 @@ fn download_card_image(name: &str) -> Result<Vec<u8>, Box<dyn std::error::Error>
     Ok(bytes)
 }
 
-/// Minimal percent-encoding for card names in URLs.
+/// Percent-encode a card name for use in a Scryfall URL query parameter.
+/// Spaces become `+`; all non-ASCII and reserved ASCII characters are encoded.
 fn urlenccode(s: &str) -> String {
-    s.replace(' ', "+")
+    let mut out = String::with_capacity(s.len());
+    for byte in s.bytes() {
+        match byte {
+            b' ' => out.push('+'),
+            // Unreserved characters (RFC 3986) pass through unchanged.
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9'
+            | b'-' | b'_' | b'.' | b'~' => out.push(byte as char),
+            // Everything else (including non-ASCII UTF-8 bytes) is encoded.
+            b => { let _ = write!(out, "%{b:02X}"); }
+        }
+    }
+    out
 }

@@ -21,6 +21,7 @@ pub fn plains() -> CardDefinition {
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
+        alternative_cost: None,
     }
 }
 
@@ -43,6 +44,7 @@ pub fn island() -> CardDefinition {
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
+        alternative_cost: None,
     }
 }
 
@@ -65,6 +67,7 @@ pub fn swamp() -> CardDefinition {
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
+        alternative_cost: None,
     }
 }
 
@@ -87,6 +90,7 @@ pub fn mountain() -> CardDefinition {
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
+        alternative_cost: None,
     }
 }
 
@@ -109,6 +113,7 @@ pub fn forest() -> CardDefinition {
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
+        alternative_cost: None,
     }
 }
 
@@ -131,6 +136,7 @@ fn dual(name: &'static str, a: LandType, b: LandType, ca: Color, cb: Color) -> C
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
+        alternative_cost: None,
     }
 }
 

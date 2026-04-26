@@ -4,8 +4,10 @@ use crate::effect::{
 };
 use crate::mana::ManaCost;
 
-/// Build a fetch land activated ability: {T}, sacrifice this: search your library
-/// for a `type_a` or `type_b` land and put it onto the battlefield tapped.
+/// Build a fetch land activated ability: {T}, pay 1 life, sacrifice this:
+/// search your library for a `type_a` or `type_b` land and put it onto the
+/// battlefield (untapped — Oracle text for Onslaught/Zendikar fetches says
+/// "put it onto the battlefield", which means untapped).
 fn fetch_ability(type_a: LandType, type_b: LandType) -> ActivatedAbility {
     let filter = SelectionRequirement::HasLandType(type_a)
         .or(SelectionRequirement::HasLandType(type_b));
@@ -20,11 +22,12 @@ fn fetch_ability(type_a: LandType, type_b: LandType) -> ActivatedAbility {
                 what: Selector::This,
                 to: ZoneDest::Graveyard,
             },
-            // Search library for a land of either type, put it onto battlefield tapped
+            // Search library for a land of either type, put it onto
+            // battlefield untapped.
             Effect::Search {
                 who: PlayerRef::You,
                 filter,
-                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
             },
         ]),
         once_per_turn: false,
@@ -52,6 +55,7 @@ fn fetch_land(
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
+        alternative_cost: None,
     }
 }
 

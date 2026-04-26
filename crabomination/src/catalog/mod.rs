@@ -22,3 +22,4 @@ pub use sets::rtr::*;
 pub use sets::tmp::*;
 pub use sets::zen::*;
 pub use sets::ths::*;
+pub use sets::decks::*;

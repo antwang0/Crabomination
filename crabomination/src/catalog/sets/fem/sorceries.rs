@@ -21,5 +21,6 @@ pub fn hymn_to_tourach() -> CardDefinition {
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
+        alternative_cost: None,
     }
 }

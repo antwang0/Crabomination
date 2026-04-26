@@ -1,10 +1,11 @@
 use bevy::prelude::*;
 
 use crate::card::{
-    P1DeckPile, Card, CardBorderHighlight, CardFrontTexture, CardHighlightAssets, CardHovered,
-    DeckCard, GraveyardPile, PileHovered, CARD_THICKNESS,
+    Card, CardBorderHighlight, CardFrontTexture, CardHighlightAssets, CardHovered,
+    DeckCard, DeckPile, GraveyardPile, PileHovered, CARD_THICKNESS,
 };
-use crate::game::{GraveyardBrowserState, GameResource, PLAYER_1, PLAYER_0};
+use crate::game::GraveyardBrowserState;
+use crate::net_plugin::CurrentView;
 
 /// Tracks a pending top-card reveal popup.
 #[derive(Resource, Default)]
@@ -136,7 +137,7 @@ const BROWSER_COLS: u32 = 4;
 pub fn graveyard_browser(
     mut commands: Commands,
     mut state: ResMut<GraveyardBrowserState>,
-    game: Res<GameResource>,
+    view: Res<CurrentView>,
     asset_server: Res<AssetServer>,
     existing: Query<Entity, With<GraveyardBrowser>>,
     keyboard: Res<ButtonInput<KeyCode>>,
@@ -157,9 +158,18 @@ pub fn graveyard_browser(
 
     if should_show && existing.is_empty() {
         let owner = state.owner;
-        let graveyard = &game.state.players[owner].graveyard;
-        let owner_label = if owner == PLAYER_0 { "Player 0's" } else { "Player 1's" };
-        let count = graveyard.len();
+        let owner_name: String = view
+            .0
+            .as_ref()
+            .and_then(|cv| cv.players.iter().find(|p| p.seat == owner))
+            .map(|p| p.name.clone())
+            .unwrap_or_else(|| format!("Player {owner}"));
+        let owner_label = format!("{owner_name}'s");
+
+        let card_names: Vec<String> = view.0.as_ref()
+            .map(|cv| cv.players[owner].graveyard.iter().map(|c| c.name.clone()).collect())
+            .unwrap_or_default();
+        let count = card_names.len();
 
         let panel_width = BROWSER_CARD_WIDTH * BROWSER_COLS as f32 + 80.0;
 
@@ -222,7 +232,7 @@ pub fn graveyard_browser(
                     });
 
                 // Card grid
-                if graveyard.is_empty() {
+                if card_names.is_empty() {
                     panel.spawn((
                         Text::new("Empty"),
                         TextFont { font_size: 14.0, ..default() },
@@ -242,8 +252,8 @@ pub fn graveyard_browser(
                             Pickable::IGNORE,
                         ))
                         .with_children(|grid| {
-                            for card in graveyard {
-                                let path = scryfall::card_asset_path(card.definition.name);
+                            for name in &card_names {
+                                let path = scryfall::card_asset_path(name);
                                 let texture: Handle<Image> = asset_server.load(&path);
                                 grid.spawn((
                                     ImageNode { image: texture, ..default() },
@@ -275,22 +285,40 @@ pub fn graveyard_browser(
 
 pub fn pile_tooltip(
     mut commands: Commands,
-    game: Res<GameResource>,
+    view: Res<CurrentView>,
     deck_hovered: Query<(), (With<DeckCard>, With<CardHovered>)>,
-    bot_deck_hovered: Query<(), (With<P1DeckPile>, With<PileHovered>)>,
+    pile_hovered: Query<&DeckPile, With<PileHovered>>,
     gy_hovered: Query<&GraveyardPile, With<PileHovered>>,
     existing: Query<Entity, With<PileTooltip>>,
 ) {
+    let cv = view.0.as_ref();
+    let lib_size = |owner: usize| -> usize {
+        cv.and_then(|cv| cv.players.iter().find(|p| p.seat == owner))
+            .map(|p| p.library.size)
+            .unwrap_or(0)
+    };
+    let gy_count = |owner: usize| -> usize {
+        cv.and_then(|cv| cv.players.iter().find(|p| p.seat == owner))
+            .map(|p| p.graveyard.len())
+            .unwrap_or(0)
+    };
+    let player_name = |owner: usize| -> String {
+        cv.and_then(|cv| cv.players.iter().find(|p| p.seat == owner))
+            .map(|p| p.name.clone())
+            .unwrap_or_else(|| format!("Player {owner}"))
+    };
+    let viewer = cv.map(|cv| cv.your_seat).unwrap_or(0);
+
     let text = if !deck_hovered.is_empty() {
-        let count = game.state.players[PLAYER_0].library.len();
-        Some(format!("Player 0 library: {count} card{}", if count == 1 { "" } else { "s" }))
-    } else if !bot_deck_hovered.is_empty() {
-        let count = game.state.players[PLAYER_1].library.len();
-        Some(format!("Player 1 library: {count} card{}", if count == 1 { "" } else { "s" }))
+        // Hovering a face-up viewer-deck card visual.
+        let count = lib_size(viewer);
+        Some(format!("{} library: {count} card{}", player_name(viewer), if count == 1 { "" } else { "s" }))
+    } else if let Some(pile) = pile_hovered.iter().next() {
+        let count = lib_size(pile.owner);
+        Some(format!("{} library: {count} card{}", player_name(pile.owner), if count == 1 { "" } else { "s" }))
     } else if let Some(gy) = gy_hovered.iter().next() {
-        let owner_label = if gy.owner == PLAYER_0 { "Player 0's" } else { "Player 1's" };
-        let count = game.state.players[gy.owner].graveyard.len();
-        Some(format!("{owner_label} graveyard: {count} card{} — click to browse", if count == 1 { "" } else { "s" }))
+        let count = gy_count(gy.owner);
+        Some(format!("{}'s graveyard: {count} card{} — click to browse", player_name(gy.owner), if count == 1 { "" } else { "s" }))
     } else {
         None
     };

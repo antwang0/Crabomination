@@ -27,12 +27,15 @@ pub fn goblin_guide() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
             effect: Effect::RevealTopAndDrawIf {
-                who: PlayerRef::EachOpponent,
+                // Oracle: "defending player" — the specific opponent (or
+                // planeswalker controller) Goblin Guide is attacking.
+                who: PlayerRef::DefendingPlayer,
                 reveal_filter: SelectionRequirement::Land,
             },
         }],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
+        alternative_cost: None,
     }
 }

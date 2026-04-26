@@ -19,5 +19,6 @@ pub fn ghor_clan_rampager() -> CardDefinition {
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
+        alternative_cost: None,
     }
 }

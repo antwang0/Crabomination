@@ -1,3 +1,5 @@
+use serde::{Deserialize, Serialize};
+
 use crate::card::{CardId, CardInstance, CounterType};
 use crate::decision::{Decision, DecisionAnswer};
 use crate::effect::Effect;
@@ -5,7 +7,7 @@ use crate::mana::{Color, ManaError};
 
 // ── Turn step sequence ────────────────────────────────────────────────────────
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum TurnStep {
     Untap,
     Upkeep,
@@ -58,23 +60,86 @@ impl TurnStep {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Target {
     Player(usize),
     Permanent(CardId),
 }
 
-#[derive(Debug, Clone)]
+/// What an attacking creature is attacking. In multiplayer each attacker
+/// chooses one of the defending players or a planeswalker controlled by one
+/// of them; in 2-player games this is always `Player(opponent)`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum AttackTarget {
+    Player(usize),
+    Planeswalker(CardId),
+}
+
+/// One attacker's declared assignment.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Attack {
+    pub attacker: CardId,
+    pub target: AttackTarget,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum GameAction {
     PlayLand(CardId),
     CastSpell { card_id: CardId, target: Option<Target>, mode: Option<usize>, x_value: Option<u32> },
+    /// Cast a spell paying its `alternative_cost` instead of its regular
+    /// mana cost. `pitch_card` is the hand card (e.g., a blue card for Force
+    /// of Will/Negation) being exiled to satisfy the alt cost — `None` when
+    /// the alt cost has no exile requirement.
+    CastSpellAlternative {
+        card_id: CardId,
+        pitch_card: Option<CardId>,
+        target: Option<Target>,
+        mode: Option<usize>,
+        x_value: Option<u32>,
+    },
     ActivateAbility { card_id: CardId, ability_index: usize, target: Option<Target> },
-    DeclareAttackers(Vec<CardId>),
+    /// Declare attackers: each attacker picks a defending player or a
+    /// planeswalker controlled by a non-active player.
+    DeclareAttackers(Vec<Attack>),
     DeclareBlockers(Vec<(CardId, CardId)>),
     ActivateLoyaltyAbility { card_id: CardId, ability_index: usize, target: Option<Target> },
     CastFlashback { card_id: CardId, target: Option<Target>, mode: Option<usize>, x_value: Option<u32> },
     PassPriority,
     SubmitDecision(DecisionAnswer),
+}
+
+// ── Delayed triggers ─────────────────────────────────────────────────────────
+
+/// A trigger registered by a resolved spell or ability that fires at a
+/// specified future moment ("at the beginning of your next upkeep, ...",
+/// "at the beginning of the next end step, exile this", ...). Stored on
+/// `GameState::delayed_triggers` and consumed by the step-event dispatcher.
+#[derive(Debug, Clone)]
+pub struct DelayedTrigger {
+    /// Whose ability this is — used both for `YourNextUpkeep`-style scope
+    /// matching and for the resolution ctx when the trigger fires.
+    pub controller: usize,
+    /// CardId of the spell/permanent that registered this trigger. Used for
+    /// the resulting `StackItem::Trigger`'s `source` slot — even if the
+    /// source has since left play.
+    pub source: CardId,
+    /// What event activates this trigger.
+    pub kind: DelayedKind,
+    /// Effect tree to run when the trigger fires.
+    pub effect: Effect,
+    /// Optional target (e.g. Goryo's exiles the reanimated creature).
+    pub target: Option<Target>,
+    /// True for one-shot triggers; removed after firing.
+    pub fires_once: bool,
+}
+
+/// What kind of future event a delayed trigger waits for.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DelayedKind {
+    /// At the beginning of `controller`'s next upkeep.
+    YourNextUpkeep,
+    /// At the beginning of the next end step (any player's).
+    NextEndStep,
 }
 
 // ── Pending decisions (suspendable resolution) ───────────────────────────────
@@ -93,6 +158,7 @@ impl PendingDecision {
             ResumeContext::Spell { caster, .. } => *caster,
             ResumeContext::Trigger { controller, .. } => *controller,
             ResumeContext::Ability { controller, .. } => *controller,
+            ResumeContext::Mulligan { player, .. } => *player,
         }
     }
 }
@@ -126,6 +192,13 @@ pub(crate) enum ResumeContext {
         in_progress: PendingEffectState,
         remaining: Effect,
     },
+    /// Pre-game mulligan phase for `player`. After this player keeps,
+    /// mulligan advances to `next_player` (None = all players done, start game).
+    Mulligan {
+        player: usize,
+        mulligans_taken: usize,
+        next_player: Option<usize>,
+    },
 }
 
 #[derive(Debug, Clone)]
@@ -134,6 +207,10 @@ pub enum PendingEffectState {
     SurveilPeeked { count: usize, player: usize },
     SearchPending { player: usize, to: crate::effect::ZoneDest },
     PutOnLibraryPending { player: usize, count: usize },
+    /// Suspended on a `ChooseColor` for an `AnyOneColor(count)` mana
+    /// payload — Black Lotus, Birds of Paradise, Mox Diamond. The UI picks
+    /// a color and the engine adds `count` mana of that color.
+    AnyOneColorPending { player: usize, count: u32 },
 }
 
 // ── Events ────────────────────────────────────────────────────────────────────
@@ -180,7 +257,7 @@ pub enum GameEvent {
 
 // ── Priority ──────────────────────────────────────────────────────────────────
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PriorityState {
     pub player_with_priority: usize,
     pub consecutive_passes: usize,
@@ -204,6 +281,10 @@ pub enum StackItem {
         target: Option<Target>,
         /// Chosen mode index for `ChooseMode` effects (0 if `None`).
         mode: Option<usize>,
+        /// True if this spell can't be countered by spells or abilities
+        /// (Cavern of Souls–style protection). `Effect::CounterSpell` skips
+        /// these stack items.
+        uncounterable: bool,
     },
     /// A triggered/loyalty ability waiting to resolve.
     Trigger {
@@ -273,4 +354,14 @@ pub enum GameError {
     DecisionPending,
     #[error("Submitted decision answer does not match the pending decision kind")]
     DecisionAnswerMismatch,
+    #[error("Card has no alternative (pitch) cost")]
+    NoAlternativeCost,
+    #[error("Pitch card {0:?} is missing from hand or doesn't match the alternative cost's filter")]
+    InvalidPitchCard(CardId),
+    #[error("Cannot attack player {0} (active player, eliminated, or out of range)")]
+    InvalidAttackTarget(usize),
+    #[error("Planeswalker {0:?} is not a valid attack target")]
+    InvalidPlaneswalkerAttackTarget(CardId),
+    #[error("Blocker {blocker:?} cannot block an attacker targeting a different player")]
+    BlockerWrongDefender { blocker: CardId },
 }

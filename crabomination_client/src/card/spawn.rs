@@ -1,28 +1,33 @@
-use std::f32::consts::{FRAC_PI_2, PI};
+use std::f32::consts::PI;
 
 use bevy::prelude::*;
 
 use super::components::{
-    P1DeckPile, Card, CardFrontTexture, CardHighlightAssets, CardHoverLift, CardMeshAssets,
-    CardOwner, DeckCard, GameCardId, GraveyardPile, HandCard, PileHovered, PlayerTargetZone,
-    CARD_THICKNESS, P1_DECK_POSITION, P1_GRAVEYARD_POSITION, DECK_CARD_Y_STEP, DECK_POSITION,
-    P0_GRAVEYARD_POSITION,
+    Card, CardFrontTexture, CardHighlightAssets, CardHoverLift, CardMeshAssets,
+    GraveyardPile, PileHovered, PlayerTargetZone, CARD_THICKNESS,
 };
-use super::hand::hand_card_transform;
+use super::layout::{back_face_rotation, graveyard_position, player_target_zone_position};
 use super::mesh::{card_border_mesh, card_mesh};
 use super::observers::{on_card_out, on_card_over, on_zone_out, on_zone_over};
 
-use crate::game::{GraveyardBrowserState, GameResource, PLAYER_1, PLAYER_0};
+use crate::game::GraveyardBrowserState;
 use crate::scryfall;
 
-/// Spawn 3D card entities for both players' libraries (deck) and opening hands.
-pub fn spawn_game_cards(
+/// Initialize shared mesh/material assets and spawn always-present scaffolding
+/// (per-seat graveyard piles and per-opponent target zones). Per-card entities
+/// are spawned on-demand by `sync_game_visuals` once a `ClientView` arrives.
+///
+/// `n_seats` and `viewer_seat` determine the per-seat layout: the viewer sits
+/// at the front of the table; each opponent gets a graveyard pile and a
+/// click-to-target zone at the back of the table.
+pub fn init_shared_assets(
     commands: &mut Commands,
     meshes: &mut ResMut<Assets<Mesh>>,
     materials: &mut ResMut<Assets<StandardMaterial>>,
     asset_server: &Res<AssetServer>,
-    game: &GameResource,
     segments: usize,
+    n_seats: usize,
+    viewer_seat: usize,
 ) {
     let card_mesh_handle = card_mesh(meshes, segments);
     let border_mesh_handle = card_border_mesh(meshes, segments);
@@ -35,7 +40,6 @@ pub fn spawn_game_cards(
         ..default()
     });
 
-    // Highlight assets (shared by hover system)
     let border_material = materials.add(StandardMaterial {
         base_color: Color::srgb(1.0, 0.85, 0.0),
         unlit: true,
@@ -51,119 +55,52 @@ pub fn spawn_game_cards(
         back_material: back_material.clone(),
     });
 
-    let state = &game.state;
-
-    // ── Player 0 cards ───────────────────────────────────────────────────────
-
-    // Library → DeckCard entities
-    for (i, card) in state.players[PLAYER_0].library.iter().enumerate() {
-        let y = i as f32 * DECK_CARD_Y_STEP + 0.01;
-        let front_mat = card_front_material(card.definition.name, materials, asset_server);
-        let pos = Vec3::new(DECK_POSITION.x, y, DECK_POSITION.z);
-
-        let entity = spawn_single_card(
-            commands,
-            &card_mesh_handle,
-            front_mat,
-            back_material.clone(),
-            Transform::from_translation(pos)
-                .with_rotation(Quat::from_rotation_x(FRAC_PI_2) * Quat::from_rotation_z(PI)),
-            GameCardId(card.id),
-            card.definition.name,
-            pos,
-        );
+    // One graveyard pile per seat. Hidden until non-empty.
+    for seat in 0..n_seats {
+        let pos = graveyard_position(seat, viewer_seat, n_seats);
+        let rot = back_face_rotation(seat, viewer_seat);
         commands
-            .entity(entity)
-            .insert((DeckCard { index: i }, CardOwner(PLAYER_0)));
-    }
-
-    // Hand → HandCard entities
-    let hand = &state.players[PLAYER_0].hand;
-    let total = hand.len();
-    for (i, card) in hand.iter().enumerate() {
-        let target = hand_card_transform(i, total);
-        let front_mat = card_front_material(card.definition.name, materials, asset_server);
-
-        let entity = spawn_single_card(
-            commands,
-            &card_mesh_handle,
-            front_mat,
-            back_material.clone(),
-            target,
-            GameCardId(card.id),
-            card.definition.name,
-            target.translation,
-        );
-        commands
-            .entity(entity)
-            .insert((HandCard { slot: i }, CardOwner(PLAYER_0)));
-    }
-
-    // ── Player 1 deck pile — one face-down entity per library card ────────────
-    {
-        let p1_lib = state.players[PLAYER_1].library.len();
-        let rot = Quat::from_rotation_x(-FRAC_PI_2) * Quat::from_rotation_z(PI);
-        for i in 0..p1_lib {
-            let y = i as f32 * DECK_CARD_Y_STEP + 0.01;
-            let pos = Vec3::new(P1_DECK_POSITION.x, y, P1_DECK_POSITION.z);
-            commands.spawn((
+            .spawn((
                 Mesh3d(card_mesh_handle.clone()),
                 MeshMaterial3d(back_material.clone()),
                 Transform::from_translation(pos).with_rotation(rot),
-                Visibility::default(),
-                P1DeckPile { index: i },
-                CardHoverLift { current_lift: 0.0, target_lift: 0.0, base_translation: pos },
+                Visibility::Hidden,
+                GraveyardPile { owner: seat },
+                CardHoverLift {
+                    current_lift: 0.0,
+                    target_lift: 0.0,
+                    base_translation: pos,
+                },
             ))
             .observe(on_pile_over)
-            .observe(on_pile_out);
-        }
+            .observe(on_pile_out)
+            .observe(on_graveyard_click);
     }
 
-    // ── Graveyard piles (initially empty, visual entities for both players) ──
-    // Player 0 GY: same orientation as player 0 BF cards (rotation_x(-PI/2)).
-    // Player 1 GY: same orientation as player 1 BF cards (rotation_x(-PI/2) * rotation_z(PI)).
-    commands.spawn((
-        Mesh3d(card_mesh_handle.clone()),
-        MeshMaterial3d(back_material.clone()),
-        Transform::from_translation(P0_GRAVEYARD_POSITION)
-            .with_rotation(Quat::from_rotation_x(-FRAC_PI_2)),
-        Visibility::Hidden,
-        GraveyardPile { owner: PLAYER_0 },
-        CardHoverLift { current_lift: 0.0, target_lift: 0.0, base_translation: P0_GRAVEYARD_POSITION },
-    ))
-    .observe(on_pile_over)
-    .observe(on_pile_out)
-    .observe(on_graveyard_click::<PLAYER_0>);
-
-    commands.spawn((
-        Mesh3d(card_mesh_handle.clone()),
-        MeshMaterial3d(back_material.clone()),
-        Transform::from_translation(P1_GRAVEYARD_POSITION)
-            .with_rotation(Quat::from_rotation_x(-FRAC_PI_2) * Quat::from_rotation_z(PI)),
-        Visibility::Hidden,
-        GraveyardPile { owner: PLAYER_1 },
-        CardHoverLift { current_lift: 0.0, target_lift: 0.0, base_translation: P1_GRAVEYARD_POSITION },
-    ))
-    .observe(on_pile_over)
-    .observe(on_pile_out)
-    .observe(on_graveyard_click::<PLAYER_1>);
-
-    // ── Player target zones (invisible clickable areas representing players) ─
-    // Player 1 target zone: placed near player 1's battlefield side
-    commands.spawn((
-        Mesh3d(meshes.add(Plane3d::default().mesh().size(8.0, 3.0))),
-        MeshMaterial3d(materials.add(StandardMaterial {
-            base_color: Color::srgba(1.0, 0.0, 0.0, 0.0),
-            alpha_mode: AlphaMode::Blend,
-            unlit: true,
-            ..default()
-        })),
-        Transform::from_xyz(0.0, 0.01, -6.0),
-        Visibility::default(),
-        PlayerTargetZone(PLAYER_1),
-    ))
-    .observe(on_zone_over)
-    .observe(on_zone_out);
+    // One clickable target zone per opponent. The viewer doesn't need a
+    // self-target zone (spells targeting yourself land on your portrait via
+    // a different code path).
+    for seat in 0..n_seats {
+        if seat == viewer_seat {
+            continue;
+        }
+        let pos = player_target_zone_position(seat, viewer_seat, n_seats);
+        commands
+            .spawn((
+                Mesh3d(meshes.add(Plane3d::default().mesh().size(8.0, 3.0))),
+                MeshMaterial3d(materials.add(StandardMaterial {
+                    base_color: Color::srgba(1.0, 0.0, 0.0, 0.0),
+                    alpha_mode: AlphaMode::Blend,
+                    unlit: true,
+                    ..default()
+                })),
+                Transform::from_translation(pos),
+                Visibility::default(),
+                PlayerTargetZone(seat),
+            ))
+            .observe(on_zone_over)
+            .observe(on_zone_out);
+    }
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -173,7 +110,7 @@ pub fn spawn_single_card(
     front_material: Handle<StandardMaterial>,
     back_material: Handle<StandardMaterial>,
     transform: Transform,
-    game_card_id: GameCardId,
+    game_card_id: super::components::GameCardId,
     card_name: &str,
     base_pos: Vec3,
 ) -> Entity {
@@ -222,15 +159,18 @@ fn on_pile_out(ev: On<Pointer<Out>>, mut commands: Commands) {
     commands.entity(ev.entity).remove::<PileHovered>();
 }
 
-fn on_graveyard_click<const OWNER: usize>(
-    _ev: On<Pointer<Click>>,
+/// Click on any graveyard pile toggles the browser to that pile's owner.
+fn on_graveyard_click(
+    ev: On<Pointer<Click>>,
+    piles: Query<&GraveyardPile>,
     mut browser: ResMut<GraveyardBrowserState>,
 ) {
-    if browser.open && browser.owner == OWNER {
+    let Ok(pile) = piles.get(ev.entity) else { return };
+    if browser.open && browser.owner == pile.owner {
         browser.open = false;
     } else {
         browser.open = true;
-        browser.owner = OWNER;
+        browser.owner = pile.owner;
     }
 }
 

@@ -8,6 +8,7 @@ use crate::card::{
     RevealPeekAnimation, SendToGraveyardAnimation, ShufflePhase, TapAnimation,
     CARD_WIDTH, HOVER_LIFT_SPEED,
 };
+use crate::net_plugin::CurrentView;
 
 /// Global animation playback speed multiplier (1.0 = normal, 2.0 = double speed, etc.).
 #[derive(Resource)]
@@ -148,11 +149,14 @@ pub fn animate_deck_shuffle(
     }
 }
 
-/// Animate cards flying from the deck to the hand.
+/// Animate cards flying from the deck to the hand. `HandCard` only ever
+/// marks the viewer's own hand, so on completion we snap the card into the
+/// viewer's hand fan (seat=viewer).
 pub fn animate_draw_card(
     mut commands: Commands,
     time: Res<Time>,
     speed: Res<AnimationSpeed>,
+    view: Res<CurrentView>,
     mut cards: Query<(
         Entity,
         &mut Transform,
@@ -163,6 +167,11 @@ pub fn animate_draw_card(
     all_hand_cards: Query<&HandCard>,
 ) {
     let total = all_hand_cards.iter().count();
+    let (viewer, n_seats) = view
+        .0
+        .as_ref()
+        .map(|cv| (cv.your_seat, cv.players.len()))
+        .unwrap_or((0, 2));
 
     for (entity, mut transform, mut anim, mut lift, hand_card) in &mut cards {
         anim.progress += time.delta_secs() * speed.0 * anim.speed;
@@ -176,7 +185,7 @@ pub fn animate_draw_card(
         transform.rotation = anim.start_rotation.slerp(anim.target_rotation, t);
 
         if anim.progress >= 1.0 {
-            let final_t = hand_card_transform(hand_card.slot, total);
+            let final_t = hand_card_transform(viewer, viewer, n_seats, hand_card.slot, total);
             transform.translation = final_t.translation;
             transform.rotation = final_t.rotation;
             lift.base_translation = final_t.translation;
@@ -266,14 +275,18 @@ pub fn animate_send_to_graveyard(
     }
 }
 
-/// Animate a hand card flying back to the deck during a mulligan, then re-insert it as a DeckCard.
+/// Animate a hand card flying back to the deck during a mulligan, then
+/// despawn it. The face-down deck pile (`DeckPile`) is sized off
+/// `library.size` and is updated by `sync_game_visuals`, so the visual deck
+/// height already reflects the returned card; keeping a separate per-card
+/// entity around would just clutter the deck pile with duplicates.
 pub fn animate_return_to_deck(
     mut commands: Commands,
     time: Res<Time>,
     speed: Res<AnimationSpeed>,
-    mut cards: Query<(Entity, &mut Transform, &mut ReturnToDeckAnimation, &mut CardHoverLift)>,
+    mut cards: Query<(Entity, &mut Transform, &mut ReturnToDeckAnimation)>,
 ) {
-    for (entity, mut transform, mut anim, mut lift) in &mut cards {
+    for (entity, mut transform, mut anim) in &mut cards {
         anim.progress += time.delta_secs() * speed.0 * anim.speed;
 
         let t = ease_in_out(anim.progress.clamp(0.0, 1.0));
@@ -284,16 +297,7 @@ pub fn animate_return_to_deck(
         transform.rotation = anim.start_rotation.slerp(anim.target_rotation, t);
 
         if anim.progress >= 1.0 {
-            transform.translation = anim.target_translation;
-            transform.rotation = anim.target_rotation;
-            lift.base_translation = anim.target_translation;
-            lift.current_lift = 0.0;
-            lift.target_lift = 0.0;
-            commands.entity(entity)
-                .remove::<ReturnToDeckAnimation>()
-                .remove::<HandCard>()
-                .remove::<Animating>()
-                .insert(DeckCard { index: 0 });
+            commands.entity(entity).despawn();
         }
     }
 }

@@ -1,6 +1,8 @@
 use std::fmt;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Color {
     White,
     Blue,
@@ -10,7 +12,7 @@ pub enum Color {
 }
 
 /// A single symbol in a mana cost.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum ManaSymbol {
     /// One mana of a specific color.
     Colored(Color),
@@ -29,7 +31,7 @@ pub enum ManaSymbol {
 }
 
 /// The full mana cost of a card or ability (e.g. {3}{W}{W} for Serra Angel).
-#[derive(Debug, Clone, Default, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct ManaCost {
     pub symbols: Vec<ManaSymbol>,
 }
@@ -76,7 +78,7 @@ impl ManaCost {
 }
 
 /// Available mana in a player's pool during their turn.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct ManaPool {
     white: u32,
     blue: u32,
@@ -95,7 +97,7 @@ pub struct PaymentSideEffects {
     pub life_lost: u32,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ManaError {
     InsufficientColored { color: Color, needed: u32, have: u32 },
     InsufficientGeneric { needed: u32, have: u32 },

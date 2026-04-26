@@ -61,8 +61,9 @@ pub struct GameState {
     #[allow(dead_code)]
     pub(crate) next_effect_timestamp: u64,
     pub(crate) next_id: u32,
-    /// Cards declared as attackers this combat.
-    pub(crate) attacking: Vec<CardId>,
+    /// Attackers declared this combat, each with the player or planeswalker
+    /// it is attacking.
+    pub(crate) attacking: Vec<Attack>,
     /// Blocker → attacker mapping for the current combat.
     pub(crate) block_map: HashMap<CardId, CardId>,
     /// Set to true once `declare_blockers` has been called during the current DeclareBlockers step.
@@ -71,6 +72,15 @@ pub struct GameState {
     pub(crate) skip_first_draw: bool,
     /// Count of spells cast this turn (for Storm and related effects).
     pub spells_cast_this_turn: u32,
+    /// Delayed triggered abilities registered by resolved spells/abilities
+    /// (Pact upkeep cost, Goryo's exile-at-EOT, etc.). Fired by the step
+    /// dispatcher when the matching event occurs.
+    pub delayed_triggers: Vec<DelayedTrigger>,
+    /// Transient: power of the most recently sacrificed creature within the
+    /// current effect resolution. Set by `Effect::SacrificeAndRemember` and
+    /// read by `Value::SacrificedPower` (e.g. Thud). Reset between
+    /// independent spell/ability resolutions.
+    pub(crate) sacrificed_power: Option<i32>,
     /// Resolves player choices encountered during effect resolution. Used for
     /// *non-suspending* decisions (e.g. `AddManaAnyColor` auto-picks a color).
     /// Suspending decisions (currently Scry) surface through `pending_decision`
@@ -89,8 +99,12 @@ pub struct GameState {
 }
 
 impl GameState {
-    /// Create a fresh game.  `player_names` must have at least 2 entries.
+    /// Create a fresh game.  `players` must have at least 2 entries. Defaults
+    /// to 20-life, 2-player rules; call [`apply_format`] (or set
+    /// `skip_first_draw` / per-player `life` directly) to configure the game
+    /// for a specific format or player count.
     pub fn new(players: Vec<Player>) -> Self {
+        let n = players.len();
         Self {
             players,
             battlefield: Vec::new(),
@@ -107,12 +121,48 @@ impl GameState {
             attacking: Vec::new(),
             block_map: HashMap::new(),
             blockers_declared: false,
-            skip_first_draw: true,
+            // Multiplayer (3+) doesn't skip the first draw — only the 2-player
+            // starting player does.
+            skip_first_draw: n <= 2,
             spells_cast_this_turn: 0,
+            delayed_triggers: Vec::new(),
+            sacrificed_power: None,
             decider: Box::new(AutoDecider),
             pending_decision: None,
             suspend_signal: None,
         }
+    }
+
+    /// Apply format-specific setup: starting life total and turn-1 draw rule.
+    pub fn apply_format(&mut self, format: crate::format::Format) {
+        let rules = format.rules();
+        let life = if self.players.len() > 2 {
+            rules.multiplayer_starting_life.unwrap_or(rules.starting_life)
+        } else {
+            rules.starting_life
+        };
+        for p in &mut self.players {
+            p.life = life;
+        }
+        self.skip_first_draw = self.players.len() <= 2;
+    }
+
+    /// Number of players that have not been eliminated.
+    pub fn alive_count(&self) -> usize {
+        self.players.iter().filter(|p| p.is_alive()).count()
+    }
+
+    /// Next non-eliminated seat strictly after `from` (wrapping). Returns
+    /// `from` if no other alive players remain.
+    pub fn next_alive_seat(&self, from: usize) -> usize {
+        let n = self.players.len();
+        for step in 1..=n {
+            let i = (from + step) % n;
+            if self.players[i].is_alive() {
+                return i;
+            }
+        }
+        from
     }
 
     /// The player who currently holds priority.
@@ -138,7 +188,39 @@ impl GameState {
             let effects = static_ability_to_effects(card, ts);
             all_effects.extend(effects);
         }
+        // Tarmogoyf-style dynamic P/T: a few cards' power/toughness depend on
+        // graveyard contents and so can't be expressed via static `PumpPT`
+        // ahead of time. Inject the per-card SetPT effect at compute-time.
+        let goyf_n = self.distinct_card_types_in_all_graveyards() as i32;
+        for card in &self.battlefield {
+            if card.definition.name == "Cosmogoyf" {
+                all_effects.push(ContinuousEffect {
+                    timestamp: card.id.0 as u64,
+                    source: card.id,
+                    affected: AffectedPermanents::Source,
+                    layer: Layer::L7PowerTough,
+                    sublayer: Some(PtSublayer::CharDefining),
+                    duration: EffectDuration::WhileSourceOnBattlefield,
+                    modification: Modification::SetPowerToughness(goyf_n, goyf_n + 1),
+                });
+            }
+        }
         apply_layers(&self.battlefield, &all_effects)
+    }
+
+    /// Count of distinct card types (Artifact, Creature, Enchantment,
+    /// Instant, Land, Planeswalker, Sorcery, Battle, Tribal) across every
+    /// player's graveyard. Used by Tarmogoyf-style dynamic P/T.
+    pub fn distinct_card_types_in_all_graveyards(&self) -> usize {
+        let mut seen: std::collections::HashSet<CardType> = std::collections::HashSet::new();
+        for player in &self.players {
+            for card in &player.graveyard {
+                for ct in &card.definition.card_types {
+                    seen.insert(ct.clone());
+                }
+            }
+        }
+        seen.len()
     }
 
     /// Get the computed state of a single permanent (or None if not on battlefield).
@@ -221,9 +303,29 @@ impl GameState {
         self.game_over.is_some()
     }
 
-    /// Cards currently declared as attackers in this combat step.
-    pub fn attacking(&self) -> &[CardId] {
+    /// Attackers declared in this combat step (with their chosen target).
+    pub fn attacking(&self) -> &[Attack] {
         &self.attacking
+    }
+
+    /// Convenience: just the IDs of all declared attackers.
+    pub fn attacking_ids(&self) -> Vec<CardId> {
+        self.attacking.iter().map(|a| a.attacker).collect()
+    }
+
+    /// Look up the attack record for a given attacker id, if any.
+    pub fn attack_for(&self, attacker: CardId) -> Option<&Attack> {
+        self.attacking.iter().find(|a| a.attacker == attacker)
+    }
+
+    /// Resolve the defending player for a given attack target.
+    pub fn defender_for(&self, target: AttackTarget) -> Option<usize> {
+        match target {
+            AttackTarget::Player(p) => Some(p),
+            AttackTarget::Planeswalker(pw) => {
+                self.battlefield_find(pw).map(|c| c.controller)
+            }
+        }
     }
 
     /// True if `blocker_id` can legally block at least one current attacker.
@@ -239,15 +341,15 @@ impl GameState {
         let Some(blocker_cp) = blocker_computed else {
             return false;
         };
-        self.attacking.iter().any(|&atk_id| {
-            let attacker = self.battlefield.iter().find(|c| c.id == atk_id);
+        self.attacking.iter().any(|atk| {
+            let attacker = self.battlefield.iter().find(|c| c.id == atk.attacker);
             let atk_kws = computed
                 .iter()
-                .find(|c| c.id == atk_id)
+                .find(|c| c.id == atk.attacker)
                 .map(|c| c.keywords.as_slice())
                 .unwrap_or(&[]);
             attacker
-                .map(|atk| can_block_attacker_computed(blocker, atk, blocker_cp, atk_kws))
+                .map(|a| can_block_attacker_computed(blocker, a, blocker_cp, atk_kws))
                 .unwrap_or(false)
         })
     }
@@ -295,6 +397,13 @@ impl GameState {
                 mode,
                 x_value,
             } => self.cast_spell(card_id, target, mode, x_value),
+            GameAction::CastSpellAlternative {
+                card_id,
+                pitch_card,
+                target,
+                mode,
+                x_value,
+            } => self.cast_spell_alternative(card_id, pitch_card, target, mode, x_value),
             GameAction::CastFlashback {
                 card_id,
                 target,
@@ -429,6 +538,46 @@ impl GameState {
         Ok(events)
     }
 
+    /// Begin the pre-game London-mulligan phase. Deals 7 cards to each player
+    /// and sets `pending_decision` for seat 0's opening-hand choice.
+    /// Call this after constructing the `GameState` and before the first turn.
+    pub fn start_mulligan_phase(&mut self) {
+        let n = self.players.len();
+        for i in 0..n {
+            self.deal_to_hand(i, 7);
+        }
+        self.set_mulligan_decision(0, 0, if n > 1 { Some(1) } else { None });
+    }
+
+    fn deal_to_hand(&mut self, seat: usize, count: usize) {
+        for _ in 0..count {
+            if let Some(card) = self.players[seat].library.pop() {
+                self.players[seat].hand.push(card);
+            }
+        }
+    }
+
+    fn shuffle_hand_to_library(&mut self, seat: usize) {
+        use rand::seq::SliceRandom;
+        let hand = std::mem::take(&mut self.players[seat].hand);
+        for card in hand {
+            self.players[seat].library.push(card);
+        }
+        let mut rng = rand::rng();
+        self.players[seat].library.shuffle(&mut rng);
+    }
+
+    fn set_mulligan_decision(&mut self, player: usize, mulligans_taken: usize, next_player: Option<usize>) {
+        let hand = self.players[player].hand
+            .iter()
+            .map(|c| (c.id, c.definition.name))
+            .collect();
+        self.pending_decision = Some(PendingDecision {
+            decision: Decision::Mulligan { player, hand, mulligans_taken },
+            resume: ResumeContext::Mulligan { player, mulligans_taken, next_player },
+        });
+    }
+
     /// Submit an answer to the currently-pending decision and resume resolution.
     /// Fails if no decision is pending, or the answer shape doesn't match the
     /// decision kind.
@@ -481,11 +630,68 @@ impl GameState {
                 evs.append(&mut more);
                 evs
             }
+            ResumeContext::Mulligan { player, mulligans_taken, next_player } => {
+                match answer {
+                    DecisionAnswer::TakeMulligan => {
+                        self.shuffle_hand_to_library(player);
+                        self.deal_to_hand(player, 7);
+                        self.set_mulligan_decision(player, mulligans_taken + 1, next_player);
+                        return Ok(vec![]);
+                    }
+                    DecisionAnswer::Keep => {
+                        if mulligans_taken > 0 {
+                            let hand = self.players[player].hand
+                                .iter()
+                                .map(|c| (c.id, c.definition.name))
+                                .collect();
+                            self.pending_decision = Some(PendingDecision {
+                                decision: Decision::PutOnLibrary {
+                                    player,
+                                    count: mulligans_taken,
+                                    hand,
+                                },
+                                // Carry the mulligan count forward so the
+                                // PutOnLibrary handler below knows how many
+                                // cards to bottom.
+                                resume: ResumeContext::Mulligan { player, mulligans_taken, next_player },
+                            });
+                            return Ok(vec![]);
+                        }
+                        self.advance_mulligan(next_player);
+                        return Ok(vec![]);
+                    }
+                    DecisionAnswer::PutOnLibrary(ids) => {
+                        // London mulligan: chosen cards go to the BOTTOM of
+                        // the library (not the top — `insert(0, …)` would put
+                        // them on top, which is the bug we're fixing).
+                        for card_id in ids.iter().take(mulligans_taken) {
+                            if let Some(pos) = self.players[player].hand.iter().position(|c| c.id == *card_id) {
+                                let card = self.players[player].hand.remove(pos);
+                                self.players[player].library.push(card);
+                            }
+                        }
+                        self.advance_mulligan(next_player);
+                        return Ok(vec![]);
+                    }
+                    _ => return Err(GameError::DecisionAnswerMismatch),
+                }
+            }
         };
         let mut sba = self.check_state_based_actions();
         events.append(&mut sba);
         self.dispatch_triggers_for_events(&events);
         Ok(events)
+    }
+
+    fn advance_mulligan(&mut self, next_player: Option<usize>) {
+        match next_player {
+            Some(p) => self.set_mulligan_decision(p, 0, None),
+            None => {
+                // All players kept — game begins. Give priority to seat 0.
+                self.pending_decision = None;
+                self.give_priority_to_active();
+            }
+        }
     }
 
     /// Complete the suspended effect using the player's answer. Returns the
@@ -586,6 +792,17 @@ impl GameState {
                 };
                 let mut events = vec![];
                 self.execute_put_on_library(player, chosen, &mut events);
+                Ok(events)
+            }
+            PendingEffectState::AnyOneColorPending { player, count } => {
+                let DecisionAnswer::Color(c) = answer else {
+                    return Err(GameError::DecisionAnswerMismatch);
+                };
+                let mut events = Vec::with_capacity(count as usize);
+                for _ in 0..count {
+                    self.players[player].mana_pool.add(*c, 1);
+                    events.push(GameEvent::ManaAdded { player, color: *c });
+                }
                 Ok(events)
             }
         }

@@ -39,6 +39,11 @@ pub enum PlayerRef {
     ControllerOf(Box<Selector>),
     /// The player who triggered the event (for triggered abilities).
     Triggerer,
+    /// The player or planeswalker controller being attacked by the source
+    /// creature. Resolves to `None` when the source isn't currently
+    /// attacking. Used for "defending player" triggers (Goblin Guide,
+    /// Hypnotic Specter).
+    DefendingPlayer,
 }
 
 /// A zone plus optional owner (for zones like Hand/Library/Graveyard that
@@ -131,6 +136,10 @@ pub enum Value {
     Max(Box<Value>, Box<Value>),
     /// Clamp the inner value to ≥0.
     NonNeg(Box<Value>),
+    /// Power of the most recently sacrificed creature this resolution
+    /// (set by `Effect::SacrificeAndRemember`). Used by Thud / Greater
+    /// Gargadon-style sacrifice + damage spells.
+    SacrificedPower,
 }
 
 impl Value {
@@ -388,6 +397,52 @@ pub enum Effect {
     /// Controller chooses `count` cards from their hand and puts them on top of
     /// their library in a chosen order (first chosen = topmost).
     PutOnLibraryFromHand { who: PlayerRef, count: Value },
+
+    /// Sacrifice one creature `who` controls matching `filter` and store its
+    /// power in the resolution context for later `Value::SacrificedPower`
+    /// references. Used by Thud (sacrifice creature, deal damage equal to
+    /// its power) and similar spells.
+    SacrificeAndRemember { who: PlayerRef, filter: SelectionRequirement },
+
+    /// "Target opponent reveals their hand. You choose a card from it
+    /// matching `filter`. They discard it." Inquisition of Kozilek,
+    /// Thoughtseize, etc. Currently the **caster** auto-picks the first
+    /// matching card via `AutoDecider`; an interactive picker UI is a
+    /// future improvement.
+    DiscardChosen {
+        from: Selector,
+        count: Value,
+        filter: SelectionRequirement,
+    },
+
+    // ── Delayed triggers and pact costs ──────────────────────────────────────
+    /// Register a delayed triggered ability that fires later. `kind` selects
+    /// the future event (your next upkeep, next end step, …); `body` is the
+    /// effect that resolves when the trigger fires. Captures the current
+    /// `ctx.targets[0]` so the body can reference it via `Selector::Target(0)`.
+    DelayUntil {
+        kind: DelayedTriggerKind,
+        body: Box<Effect>,
+    },
+
+    /// "Pay {cost} or you lose the game." Used for pact upkeep payments
+    /// (Pact of Negation, Summoner's Pact). Auto-pays when the controller
+    /// can afford; eliminates the controller otherwise. (No interactive
+    /// "do I want to pay?" prompt yet — pact costs are virtually always
+    /// paid, and skipping the prompt avoids another suspend path.)
+    PayOrLoseGame {
+        mana_cost: crate::mana::ManaCost,
+        life_cost: u32,
+    },
+}
+
+/// Lightweight mirror of `crate::game::types::DelayedKind` for use inside
+/// `Effect`. Kept separate so `effect.rs` doesn't need to import from
+/// `game::`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DelayedTriggerKind {
+    YourNextUpkeep,
+    NextEndStep,
 }
 
 impl Effect {
@@ -515,6 +570,12 @@ impl Effect {
             Effect::PutOnLibraryFromHand { who, count } => {
                 player_has_target(who) || value_has_target(count)
             }
+            Effect::DelayUntil { body, .. } => body.requires_target(),
+            Effect::PayOrLoseGame { .. } => false,
+            Effect::SacrificeAndRemember { .. } => false,
+            Effect::DiscardChosen { from, count, .. } => {
+                sel_has_target(from) || value_has_target(count)
+            }
         }
     }
 
@@ -543,6 +604,15 @@ impl Effect {
             Effect::PumpPT { what, .. } => sel_filter(what),
             Effect::GrantKeyword { what, .. } => sel_filter(what),
             Effect::Move { what, .. } => sel_filter(what),
+            // Compound effects: walk into the children. Spells like Goryo's
+            // Vengeance wrap a `Move` (target legendary creature) in a
+            // `Seq` alongside a delayed exile trigger; the primary target
+            // is still the Move's target.
+            Effect::Seq(v) => v.iter().find_map(|e| e.primary_target_filter()),
+            Effect::If { then, else_, .. } => then
+                .primary_target_filter()
+                .or_else(|| else_.primary_target_filter()),
+            Effect::DelayUntil { body, .. } => body.primary_target_filter(),
             _ => None,
         }
     }

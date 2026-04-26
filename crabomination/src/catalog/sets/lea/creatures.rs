@@ -27,6 +27,7 @@ pub fn savannah_lions() -> CardDefinition {
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
+        alternative_cost: None,
     }
 }
 
@@ -50,6 +51,7 @@ pub fn white_knight() -> CardDefinition {
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
+        alternative_cost: None,
     }
 }
 
@@ -73,6 +75,7 @@ pub fn serra_angel() -> CardDefinition {
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
+        alternative_cost: None,
     }
 }
 
@@ -96,6 +99,7 @@ pub fn mahamoti_djinn() -> CardDefinition {
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
+        alternative_cost: None,
     }
 }
 
@@ -125,6 +129,7 @@ pub fn prodigal_sorcerer() -> CardDefinition {
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
+        alternative_cost: None,
     }
 }
 
@@ -148,11 +153,14 @@ pub fn black_knight() -> CardDefinition {
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
+        alternative_cost: None,
     }
 }
 
 /// Hypnotic Specter — {1}{B}{B} 2/2 Flying
-/// Whenever Hypnotic Specter attacks, defending player discards a card at random.
+/// Hypnotic Specter — {1}{B}{B} 2/2 Flying.
+/// Whenever Hypnotic Specter deals damage to an opponent, that player
+/// discards a card at random.
 pub fn hypnotic_specter() -> CardDefinition {
     CardDefinition {
         name: "Hypnotic Specter",
@@ -169,9 +177,15 @@ pub fn hypnotic_specter() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            event: EventSpec::new(
+                EventKind::DealsCombatDamageToPlayer,
+                EventScope::SelfSource,
+            ),
+            // Combat fires this trigger with `target = Player(damaged)` so
+            // `PlayerRef::Target(0)` resolves to exactly the player who took
+            // damage — not every opponent.
             effect: Effect::Discard {
-                who: Selector::Player(PlayerRef::EachOpponent),
+                who: Selector::Player(PlayerRef::Target(0)),
                 amount: Value::Const(1),
                 random: true,
             },
@@ -179,6 +193,7 @@ pub fn hypnotic_specter() -> CardDefinition {
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
+        alternative_cost: None,
     }
 }
 
@@ -202,6 +217,7 @@ pub fn sengir_vampire() -> CardDefinition {
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
+        alternative_cost: None,
     }
 }
 
@@ -225,6 +241,7 @@ pub fn shivan_dragon() -> CardDefinition {
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
+        alternative_cost: None,
     }
 }
 
@@ -248,6 +265,7 @@ pub fn grizzly_bears() -> CardDefinition {
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
+        alternative_cost: None,
     }
 }
 
@@ -280,6 +298,7 @@ pub fn birds_of_paradise() -> CardDefinition {
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
+        alternative_cost: None,
     }
 }
 
@@ -303,6 +322,7 @@ pub fn llanowar_elves() -> CardDefinition {
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
+        alternative_cost: None,
     }
 }
 
@@ -326,6 +346,7 @@ pub fn elvish_archer() -> CardDefinition {
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
+        alternative_cost: None,
     }
 }
 
@@ -349,5 +370,6 @@ pub fn craw_wurm() -> CardDefinition {
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
+        alternative_cost: None,
     }
 }

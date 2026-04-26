@@ -7,6 +7,8 @@
 //! The engine pauses resolution by calling `Decider::decide`; the decider
 //! (human UI, bot, scripted test) returns a `DecisionAnswer`.
 
+use serde::{Deserialize, Serialize};
+
 use crate::card::CardId;
 use crate::game::Target;
 use crate::mana::Color;
@@ -58,10 +60,18 @@ pub enum Decision {
         count: usize,
         hand: Vec<(CardId, &'static str)>,
     },
+
+    /// Opening-hand keep-or-mulligan decision. The player sees their current
+    /// hand and decides whether to keep or shuffle back and draw again.
+    Mulligan {
+        player: usize,
+        hand: Vec<(CardId, &'static str)>,
+        mulligans_taken: usize,
+    },
 }
 
 /// The decider's answer to a `Decision`. Variants must match the decision kind.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum DecisionAnswer {
     Target(Target),
     Mode(usize),
@@ -77,6 +87,10 @@ pub enum DecisionAnswer {
     Bool(bool),
     /// Ordered card IDs to put on top of library; index 0 = topmost.
     PutOnLibrary(Vec<CardId>),
+    /// Keep the current opening hand.
+    Keep,
+    /// Shuffle the current hand back and draw a new one.
+    TakeMulligan,
 }
 
 pub trait Decider {
@@ -110,6 +124,7 @@ impl Decider for AutoDecider {
             Decision::PutOnLibrary { hand, count, .. } => DecisionAnswer::PutOnLibrary(
                 hand.iter().take(*count).map(|(id, _)| *id).collect(),
             ),
+            Decision::Mulligan { .. } => DecisionAnswer::Keep,
         }
     }
 }

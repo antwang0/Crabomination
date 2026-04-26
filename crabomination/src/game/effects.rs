@@ -101,6 +101,8 @@ impl GameState {
         effect: &Effect,
         ctx: &EffectContext,
     ) -> Result<Vec<GameEvent>, GameError> {
+        // Reset sacrificed-power scratch for this independent resolution.
+        self.sacrificed_power = None;
         let mut events = vec![];
         self.run_effect(effect, ctx, &mut events)?;
         Ok(events)
@@ -237,9 +239,10 @@ impl GameState {
                             match self.players[p].draw_top() {
                                 Some(id) => events.push(GameEvent::CardDrawn { player: p, card_id: id }),
                                 None => {
-                                    let opp = (p + 1) % self.players.len();
-                                    self.game_over = Some(Some(opp));
-                                    events.push(GameEvent::GameOver { winner: Some(opp) });
+                                    // Drawing from empty library eliminates p
+                                    // (SBA at the end of the call decides
+                                    // game-over).
+                                    self.players[p].eliminated = true;
                                     return Ok(());
                                 }
                             }
@@ -343,7 +346,49 @@ impl GameState {
                             events.push(GameEvent::ColorlessManaAdded { player: p });
                         }
                     }
-                    ManaPayload::AnyOneColor(v) | ManaPayload::AnyColors(v) => {
+                    ManaPayload::AnyOneColor(v) => {
+                        // ONE color choice; add `n` mana of that color (Black
+                        // Lotus, Birds of Paradise, Mox Diamond, etc.).
+                        let n = self.evaluate_value(v, ctx).max(0) as u32;
+                        if n == 0 { return Ok(()); }
+                        let source = ctx.source.unwrap_or(CardId(0));
+                        let legal = vec![
+                            Color::White, Color::Blue, Color::Black, Color::Red, Color::Green,
+                        ];
+                        if self.players[p].wants_ui {
+                            // Surface a `ChooseColor` decision to the UI.
+                            // After the player answers, `apply_pending_effect_answer`
+                            // adds `n` mana of the chosen color.
+                            self.suspend_signal = Some((
+                                crate::decision::Decision::ChooseColor {
+                                    source,
+                                    legal,
+                                },
+                                PendingEffectState::AnyOneColorPending { player: p, count: n },
+                                Effect::Noop,
+                            ));
+                            return Ok(());
+                        }
+                        let answer = self.decider.decide(
+                            &crate::decision::Decision::ChooseColor {
+                                source,
+                                legal,
+                            },
+                        );
+                        let color = match answer {
+                            crate::decision::DecisionAnswer::Color(c) => c,
+                            _ => Color::White,
+                        };
+                        for _ in 0..n {
+                            self.players[p].mana_pool.add(color, 1);
+                            events.push(GameEvent::ManaAdded { player: p, color });
+                        }
+                    }
+                    ManaPayload::AnyColors(v) => {
+                        // N independent color choices (one per pip). Currently
+                        // resolves synchronously via the installed decider — a
+                        // UI prompt per pip would require a multi-step pending
+                        // state and isn't needed by any catalog card today.
                         let n = self.evaluate_value(v, ctx).max(0) as u32;
                         let source = ctx.source.unwrap_or(CardId(0));
                         let legal = vec![
@@ -546,13 +591,20 @@ impl GameState {
             }
 
             Effect::CounterSpell { what } => {
-                // With only a single stack target, we pop the top of the stack if
-                // it's a spell (matching by target id when available).
+                // With only a single stack target, we pop the top of the
+                // stack if it's a spell (matching by target id when
+                // available). Spells flagged `uncounterable` (Cavern of
+                // Souls) are skipped — the counter has no effect on them.
                 let targets = self.resolve_selector(what, ctx);
                 let mut to_remove: Vec<usize> = Vec::new();
                 for t in &targets {
                     if let EntityRef::Permanent(cid) = t
-                        && let Some(pos) = self.stack.iter().position(|si| matches!(si, StackItem::Spell { card, .. } if card.id == *cid)) {
+                        && let Some(pos) = self.stack.iter().position(|si| matches!(
+                            si,
+                            StackItem::Spell { card, uncounterable: false, .. }
+                                if card.id == *cid
+                        ))
+                    {
                         to_remove.push(pos);
                     }
                 }
@@ -684,10 +736,151 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::RevealTopAndDrawIf { who, reveal_filter } => {
+                // Each resolved player reveals the top card of their library;
+                // if it matches `reveal_filter`, that player puts it into
+                // their hand (otherwise it stays on top).
+                for p in self.resolve_players(who, ctx) {
+                    let Some(top) = self.players[p].library.first() else {
+                        continue;
+                    };
+                    let card_name = top.definition.name;
+                    let is_land = top.definition.is_land();
+                    // `evaluate_requirement_on_card` works on any
+                    // `CardInstance` (the battlefield-only variant would fail
+                    // here since the card is in the library).
+                    let matches =
+                        self.evaluate_requirement_on_card(reveal_filter, top, ctx.controller);
+                    events.push(GameEvent::TopCardRevealed {
+                        player: p,
+                        card_name,
+                        is_land,
+                    });
+                    if matches {
+                        let card = self.players[p].library.remove(0);
+                        let cid = card.id;
+                        self.players[p].hand.push(card);
+                        events.push(GameEvent::CardDrawn { player: p, card_id: cid });
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::DiscardChosen { from, count, filter } => {
+                // Resolve target player(s) — usually one opponent. For each,
+                // discard `count` cards matching `filter` from their hand,
+                // picking each one via the simplest legal choice.
+                let n = self.evaluate_value(count, ctx).max(0) as usize;
+                if n == 0 { return Ok(()); }
+                for ent in self.resolve_selector(from, ctx) {
+                    let EntityRef::Player(p) = ent else { continue };
+                    for _ in 0..n {
+                        let pick = self.players[p].hand.iter().position(|c| {
+                            self.evaluate_requirement_on_card(filter, c, ctx.controller)
+                        });
+                        let Some(idx) = pick else { break };
+                        let card = self.players[p].hand.remove(idx);
+                        let cid = card.id;
+                        self.players[p].graveyard.push(card);
+                        events.push(GameEvent::CardDiscarded { player: p, card_id: cid });
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::SacrificeAndRemember { who, filter } => {
+                // Resolve `who` to a single player; pick one of their
+                // controlled permanents matching `filter`; sacrifice it and
+                // record its power on `state.sacrificed_power` so a
+                // subsequent `Value::SacrificedPower` can reference it.
+                let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
+                let candidate = self
+                    .battlefield
+                    .iter()
+                    .find(|c| {
+                        c.controller == p
+                            && self.evaluate_requirement_static(filter, &Target::Permanent(c.id), p)
+                    })
+                    .map(|c| (c.id, c.power()));
+                if let Some((cid, power)) = candidate {
+                    self.sacrificed_power = Some(power);
+                    let is_creature = self
+                        .battlefield_find(cid)
+                        .map(|c| c.definition.is_creature())
+                        .unwrap_or(false);
+                    if is_creature {
+                        events.push(GameEvent::CreatureDied { card_id: cid });
+                    }
+                    self.remove_from_battlefield_to_graveyard(cid);
+                }
+                Ok(())
+            }
+
+            Effect::DelayUntil { kind, body } => {
+                // Capture the current target slot so the delayed body can
+                // reference it via `Selector::Target(0)` later (e.g. Goryo's
+                // wants to exile the same creature it reanimated).
+                let target = ctx.targets.first().cloned();
+                let source = ctx.source.unwrap_or(crate::card::CardId(0));
+                let delayed_kind = match kind {
+                    crate::effect::DelayedTriggerKind::YourNextUpkeep => DelayedKind::YourNextUpkeep,
+                    crate::effect::DelayedTriggerKind::NextEndStep => DelayedKind::NextEndStep,
+                };
+                self.delayed_triggers.push(DelayedTrigger {
+                    controller: ctx.controller,
+                    source,
+                    kind: delayed_kind,
+                    effect: (**body).clone(),
+                    target,
+                    fires_once: true,
+                });
+                Ok(())
+            }
+
+            Effect::PayOrLoseGame { mana_cost, life_cost } => {
+                let p = ctx.controller;
+                // Try to pay mana via auto-tap, then deduct life. If any of
+                // those fail, the controller loses the game. Roll back any
+                // partial payment on failure.
+                let cost_subbed = if mana_cost.has_x() {
+                    mana_cost.with_x_value(0)
+                } else {
+                    mana_cost.clone()
+                };
+                let pool_before = self.players[p].mana_pool.clone();
+                let tapped_before: Vec<(CardId, bool)> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| c.owner == p)
+                    .map(|c| (c.id, c.tapped))
+                    .collect();
+                let mut paid_events = self.auto_tap_for_cost(p, &cost_subbed);
+                let mana_paid = self.players[p].mana_pool.pay(&cost_subbed).is_ok();
+                let life_ok = self.players[p].life > *life_cost as i32;
+                if mana_paid && life_ok {
+                    if *life_cost > 0 {
+                        self.players[p].life -= *life_cost as i32;
+                        paid_events.push(GameEvent::LifeLost { player: p, amount: *life_cost });
+                    }
+                    events.append(&mut paid_events);
+                } else {
+                    // Roll back the auto-tap and pool change.
+                    self.players[p].mana_pool = pool_before;
+                    for (id, was_tapped) in tapped_before {
+                        if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == id) {
+                            c.tapped = was_tapped;
+                        }
+                    }
+                    self.players[p].eliminated = true;
+                    let mut sba = self.check_state_based_actions();
+                    events.append(&mut sba);
+                }
+                Ok(())
+            }
+
             Effect::BecomeBasicLand { .. }
             | Effect::ResetCreature { .. }
-            | Effect::CopySpell { .. }
-            | Effect::RevealTopAndDrawIf { .. } => {
+            | Effect::CopySpell { .. } => {
                 // TODO: implement via layer/stack mechanics.
                 Ok(())
             }
@@ -800,10 +993,26 @@ impl GameState {
             }
 
             Selector::Player(p) => self
-                .resolve_player(p, ctx)
-                .map(EntityRef::Player)
+                .resolve_players(p, ctx)
                 .into_iter()
+                .map(EntityRef::Player)
                 .collect(),
+        }
+    }
+
+    /// Multi-player resolver. `EachPlayer` and `EachOpponent` return all
+    /// matching alive seats so effects like Wheel of Fortune actually hit
+    /// every player. Non-collective `PlayerRef` variants resolve to a single
+    /// seat (or empty if the reference can't be resolved).
+    pub(crate) fn resolve_players(&self, pref: &PlayerRef, ctx: &EffectContext) -> Vec<usize> {
+        match pref {
+            PlayerRef::EachOpponent => (0..self.players.len())
+                .filter(|i| *i != ctx.controller && self.players[*i].is_alive())
+                .collect(),
+            PlayerRef::EachPlayer => (0..self.players.len())
+                .filter(|i| self.players[*i].is_alive())
+                .collect(),
+            _ => self.resolve_player(pref, ctx).into_iter().collect(),
         }
     }
 
@@ -820,11 +1029,15 @@ impl GameState {
                 _ => None,
             }),
             PlayerRef::EachOpponent => {
-                // Return first opponent; `ForEach` with `Player(EachOpponent)`
-                // iterates all of them — use `resolve_player_many` there.
-                (0..self.players.len()).find(|i| *i != ctx.controller)
+                // Singular fallback — `resolve_players` returns the full set.
+                (0..self.players.len())
+                    .find(|i| *i != ctx.controller && self.players[*i].is_alive())
             }
-            PlayerRef::EachPlayer => Some(0),
+            PlayerRef::EachPlayer => (0..self.players.len()).find(|i| self.players[*i].is_alive()),
+            PlayerRef::DefendingPlayer => ctx
+                .source
+                .and_then(|src| self.attack_for(src).map(|a| a.target))
+                .and_then(|target| self.defender_for(target)),
             PlayerRef::OwnerOf(sel) => self
                 .resolve_selector(sel, ctx)
                 .into_iter()
@@ -915,6 +1128,7 @@ impl GameState {
             Value::Min(a, b) => self.evaluate_value(a, ctx).min(self.evaluate_value(b, ctx)),
             Value::Max(a, b) => self.evaluate_value(a, ctx).max(self.evaluate_value(b, ctx)),
             Value::NonNeg(v) => self.evaluate_value(v, ctx).max(0),
+            Value::SacrificedPower => self.sacrificed_power.unwrap_or(0),
         }
     }
 
@@ -971,7 +1185,14 @@ impl GameState {
             },
             _ => {
                 let Target::Permanent(cid) = target else { return false; };
-                let Some(card) = self.battlefield_find(*cid) else { return false; };
+                // Look on the battlefield first; fall through to graveyards
+                // and exile so reanimate-style spells (Goryo's Vengeance,
+                // Reanimate, Animate Dead) can validate their targets.
+                let card = self
+                    .battlefield_find(*cid)
+                    .or_else(|| self.players.iter().find_map(|p| p.graveyard.iter().find(|c| c.id == *cid)))
+                    .or_else(|| self.exile.iter().find(|c| c.id == *cid));
+                let Some(card) = card else { return false; };
                 match req {
                     R::Creature => card.definition.is_creature(),
                     R::Artifact => card.definition.is_artifact(),
@@ -1003,7 +1224,7 @@ impl GameState {
                     R::IsToken => card.is_token,
                     R::NotToken => !card.is_token,
                     R::IsBasicLand => card.definition.is_land() && card.definition.supertypes.contains(&Supertype::Basic),
-                    R::IsAttacking => self.attacking.contains(&card.id),
+                    R::IsAttacking => self.attacking.iter().any(|a| a.attacker == card.id),
                     R::IsBlocking => self.block_map.contains_key(&card.id),
                     R::IsSpellOnStack => self.stack.iter().any(|si| matches!(si, StackItem::Spell { card: c, .. } if c.id == card.id)),
                     R::ManaValueAtMost(n) => card.definition.cost.cmc() <= *n,
@@ -1217,6 +1438,7 @@ pub fn token_to_card_definition(token: &TokenDefinition) -> CardDefinition {
         activated_abilities: vec![],
         triggered_abilities: vec![],
         loyalty_abilities: vec![],
+        alternative_cost: None,
     }
 }
 

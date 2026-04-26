@@ -1,8 +1,11 @@
 pub mod card;
 pub mod catalog;
 pub mod decision;
+pub mod demo;
 pub mod effect;
 pub mod format;
 pub mod game;
 pub mod mana;
+pub mod net;
 pub mod player;
+pub mod server;

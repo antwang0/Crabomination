@@ -4,39 +4,46 @@ use std::path::Path;
 use bevy::image::{ImageFilterMode, ImageSamplerDescriptor};
 use bevy::light::{CascadeShadowConfigBuilder, DirectionalLightShadowMap, GlobalAmbientLight};
 use bevy::picking::mesh_picking::MeshPickingPlugin;
-use bevy::render::view::Msaa;
 use bevy::{anti_alias::smaa::Smaa, color::palettes::basic::SILVER, prelude::*};
 
-mod bot;
 mod card;
 mod config;
 mod game;
+mod menu;
+mod net_plugin;
 mod render_quality;
 mod scryfall;
 mod systems;
 
+use menu::{AppState, MenuPlugin, start_net_session_from_menu};
+use net_plugin::SinglePlayerPlugin;
+
 use card::{
-    spawn_game_cards, CardHighlightAssets, CardMeshAssets,
+    init_shared_assets, CardHighlightAssets, CardMeshAssets,
     CARD_HEIGHT, CARD_WIDTH, create_border_mesh, create_rounded_rect_mesh, BORDER_WIDTH, CORNER_RADIUS,
 };
 use render_quality::{ChangeQuality, RenderQuality};
 use config::GraphicsConfig;
-use game::{build_game, BlockingState, MulliganState, P1Timer, GameLog, GameResource, GraveyardBrowserState, TargetingState};
+use game::{AltCastState, BlockingState, GameLog, GraveyardBrowserState, TargetingState};
+use systems::game_ui::FastForward;
 use systems::animate::{
     adjust_animation_speed, animate_deck_shuffle, animate_draw_card, animate_flip,
     animate_hand_slide, animate_hover_lift, animate_play_card, animate_return_to_deck,
     animate_reveal_peek, animate_send_to_graveyard, animate_tap, AnimationSpeed,
 };
 use systems::game_ui::{
-    auto_advance_p0, p1_system, draw_attacker_overlays, draw_blocking_gizmos, draw_stack_arrows,
-    handle_ability_menu, handle_game_input, mulligan_system, poll_action_buttons, setup_game_hud,
-    setup_mulligan_ui, setup_quality_panel, handle_quality_buttons, spawn_ability_menu,
-    sync_game_visuals, trigger_reveal_animation, update_mulligan_ui, update_p1_text,
-    update_game_log, update_hint, update_phase_chart, update_player_text, update_turn_text,
-    AttackerGizmos, BlockingGizmos, ButtonState, StackGizmos,
+    auto_advance_p0, handle_ability_menu, handle_alt_cast_buttons, handle_game_input,
+    poll_action_buttons, setup_game_hud, spawn_ability_menu, spawn_alt_cast_modal,
+    sync_game_visuals, trigger_reveal_animation, update_log_text, update_p1_text, update_hint,
+    update_phase_chart, update_player_text, update_turn_text, ButtonState, GameLogicSet,
 };
+use systems::gizmos::{
+    draw_attacker_overlays, draw_blocking_gizmos, draw_stack_arrows,
+    AttackerGizmos, BlockingGizmos, StackGizmos,
+};
+use systems::quality::{setup_quality_panel, handle_quality_buttons};
 use systems::ui::{graveyard_browser, highlight_hovered_cards, peek_popup, pile_tooltip, reveal_popup, RevealPopupState};
-use systems::decision_ui::{spawn_decision_ui, handle_scry_toggles, handle_scry_reorder, handle_search_select, handle_put_on_library_select, handle_confirm, DecisionUiState};
+use systems::decision_ui::{spawn_decision_ui, handle_scry_toggles, handle_scry_reorder, handle_search_select, handle_put_on_library_select, handle_put_on_library_hand_click, update_put_on_library_count_text, update_put_on_library_visuals, handle_choose_color_buttons, handle_confirm, handle_mulligan_buttons, DecisionUiState};
 
 /// Marks the decorative ground plane so quality changes can update its mesh.
 #[derive(Component)]
@@ -49,12 +56,10 @@ struct MainCamera;
 fn main() {
     let cfg = config::load();
 
-    let game = build_game();
-
-    // Collect unique card names from every player zone so the image list
-    // stays in sync with the decks automatically.
+    // Preload card images by inspecting the same demo state the server uses.
+    let demo = crabomination::demo::build_demo_state();
     let mut seen = std::collections::HashSet::new();
-    for player in &game.state.players {
+    for player in &demo.players {
         for card in player.library.iter().chain(&player.hand).chain(&player.graveyard) {
             seen.insert(card.definition.name);
         }
@@ -64,6 +69,8 @@ fn main() {
 
     let gfx = cfg.graphics;
     App::new()
+        // DefaultPlugins must come first — its StatesPlugin is what makes
+        // `init_state::<AppState>()` work for MenuPlugin.
         .add_plugins((
             DefaultPlugins
                 .set(ImagePlugin {
@@ -82,6 +89,7 @@ fn main() {
                 }),
             MeshPickingPlugin,
         ))
+        .add_plugins((SinglePlayerPlugin, MenuPlugin))
         .init_gizmo_group::<BlockingGizmos>()
         .init_gizmo_group::<AttackerGizmos>()
         .init_gizmo_group::<StackGizmos>()
@@ -90,30 +98,41 @@ fn main() {
         .insert_resource(gfx)
         .insert_resource(RenderQuality::default())
         .add_message::<ChangeQuality>()
-        .insert_resource(game)
         .insert_resource(GameLog::default())
-        .insert_resource(P1Timer(Timer::from_seconds(0.4, TimerMode::Repeating)))
+        .insert_resource(FastForward::default())
         .insert_resource(TargetingState::default())
         .insert_resource(BlockingState::default())
+        .insert_resource(AltCastState::default())
         .insert_resource(GraveyardBrowserState::default())
-        .insert_resource(MulliganState::default())
         .insert_resource(RevealPopupState::default())
         .insert_resource(AnimationSpeed::default())
         .insert_resource(ButtonState::default())
         .insert_resource(DecisionUiState::default())
         .init_resource::<game::AbilityMenuState>()
-        .add_systems(Startup, (setup, setup_game_hud, setup_mulligan_ui, setup_quality_panel))
+        .add_systems(Startup, setup)
+        // HUD scaffolding + network connection only spawn once the menu picks
+        // a mode and we transition into the in-game state.
+        .add_systems(
+            OnEnter(AppState::InGame),
+            (start_net_session_from_menu, setup_game_hud, setup_quality_panel),
+        )
         // Button polling runs first so handle_game_input can read latched state.
-        .add_systems(Update, poll_action_buttons)
-        // Game logic: mulligan → player 1 AI → auto-advance → player input (ordered)
+        .add_systems(Update, poll_action_buttons.run_if(in_state(AppState::InGame)))
+        // Game logic: auto-advance → player input
         .add_systems(
             Update,
-            (mulligan_system, p1_system, auto_advance_p0, handle_game_input)
-                .chain()
-                .after(poll_action_buttons),
+            (
+                auto_advance_p0.in_set(GameLogicSet),
+                handle_game_input.in_set(GameLogicSet).after(auto_advance_p0),
+            )
+                .after(poll_action_buttons)
+                .run_if(in_state(AppState::InGame)),
         )
         // Visual sync (after game logic)
-        .add_systems(Update, sync_game_visuals.after(handle_game_input))
+        .add_systems(
+            Update,
+            sync_game_visuals.after(GameLogicSet).run_if(in_state(AppState::InGame)),
+        )
         // HUD refresh (after game logic)
         .add_systems(
             Update,
@@ -122,11 +141,11 @@ fn main() {
                 update_player_text,
                 update_p1_text,
                 update_hint,
-                update_game_log,
                 update_phase_chart,
-                update_mulligan_ui,
+                update_log_text,
             )
-                .after(handle_game_input),
+                .after(handle_game_input)
+                .run_if(in_state(AppState::InGame)),
         )
         // Visual / animation systems
         .add_systems(
@@ -152,14 +171,53 @@ fn main() {
                 draw_attacker_overlays,
                 draw_stack_arrows,
                 adjust_animation_speed,
-            ),
+            )
+                .run_if(in_state(AppState::InGame)),
         )
         // Decision UI: spawn modal when pending, handle interactions, submit answer.
-        .add_systems(Update, (spawn_decision_ui, handle_scry_toggles, handle_scry_reorder, handle_search_select, handle_put_on_library_select, handle_confirm).chain().after(handle_game_input))
+        .add_systems(
+            Update,
+            (
+                spawn_decision_ui,
+                handle_scry_toggles,
+                handle_scry_reorder,
+                handle_search_select,
+                handle_put_on_library_select,
+                handle_put_on_library_hand_click,
+                update_put_on_library_count_text,
+                update_put_on_library_visuals,
+                handle_confirm,
+                handle_mulligan_buttons,
+                handle_choose_color_buttons,
+            )
+                .chain()
+                .after(handle_game_input)
+                .run_if(in_state(AppState::InGame)),
+        )
         // Ability menu: handle clicks first, then (re)spawn menu to reflect new state.
-        .add_systems(Update, (handle_ability_menu, spawn_ability_menu).chain().after(handle_game_input))
+        .add_systems(
+            Update,
+            (handle_ability_menu, spawn_ability_menu)
+                .chain()
+                .after(handle_game_input)
+                .run_if(in_state(AppState::InGame)),
+        )
+        // Alt-cast (pitch) modal: pick a pitch card after right-clicking
+        // a hand card with `has_alternative_cost`.
+        .add_systems(
+            Update,
+            (handle_alt_cast_buttons, spawn_alt_cast_modal)
+                .chain()
+                .after(handle_game_input)
+                .run_if(in_state(AppState::InGame)),
+        )
         // Quality menu: buttons send event, system applies all quality changes
-        .add_systems(Update, (handle_quality_buttons, apply_render_quality_change).chain())
+        .add_systems(
+            Update,
+            (handle_quality_buttons, apply_render_quality_change)
+                .chain()
+                .run_if(in_state(AppState::InGame)),
+        )
         .run();
 }
 
@@ -177,11 +235,26 @@ fn setup(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     asset_server: Res<AssetServer>,
-    game: Res<GameResource>,
     gfx: Res<GraphicsConfig>,
     quality: Res<RenderQuality>,
 ) {
-    spawn_game_cards(&mut commands, &mut meshes, &mut materials, &asset_server, &game, quality.corner_segments());
+    // Card meshes are spawned by `sync_game_visuals` from the first ClientView
+    // that arrives. Here we just initialize shared mesh/material assets and
+    // the always-present scaffolding: per-seat graveyard piles and one
+    // click-to-target zone per opponent. The demo state defines the seat
+    // count; for true multiplayer this will eventually come from the lobby.
+    let demo = crabomination::demo::build_demo_state();
+    let n_seats = demo.players.len();
+    let viewer_seat = 0;
+    init_shared_assets(
+        &mut commands,
+        &mut meshes,
+        &mut materials,
+        &asset_server,
+        quality.corner_segments(),
+        n_seats,
+        viewer_seat,
+    );
 
     // Ambient fill light — softens harsh shadows.
     commands.insert_resource(GlobalAmbientLight {

@@ -1,18 +1,19 @@
 use super::*;
 use crate::card::{Keyword, Supertype};
 use crate::effect::{Effect, EventKind, EventScope};
+use crate::game::types::{DelayedKind, DelayedTrigger};
 
 impl GameState {
     // ── Pass priority ─────────────────────────────────────────────────────────
 
     pub(crate) fn pass_priority(&mut self) -> Result<Vec<GameEvent>, GameError> {
-        let num_players = self.players.len();
+        let alive = self.alive_count();
         self.priority.consecutive_passes += 1;
 
-        if self.priority.consecutive_passes < num_players {
-            // Move priority to the next player.
+        if self.priority.consecutive_passes < alive {
+            // Move priority to the next non-eliminated player.
             self.priority.player_with_priority =
-                (self.priority.player_with_priority + 1) % num_players;
+                self.next_alive_seat(self.priority.player_with_priority);
             return Ok(vec![]);
         }
 
@@ -27,6 +28,11 @@ impl GameState {
         }
 
         // Stack is empty — advance to next step.
+
+        // MTG rule 500.4: mana pools empty at the end of each step and phase.
+        for player in &mut self.players {
+            player.mana_pool.empty();
+        }
 
         // Auto-declare empty blockers if no one blocked.
         if self.step == TurnStep::DeclareBlockers
@@ -76,10 +82,15 @@ impl GameState {
                             card_id: id,
                         }),
                         None => {
-                            let opp = (p + 1) % self.players.len();
-                            self.game_over = Some(Some(opp));
-                            events.push(GameEvent::GameOver { winner: Some(opp) });
-                            return Ok(events);
+                            // Drawing from an empty library eliminates `p`.
+                            // Game-over check happens inside SBA and may end
+                            // the game if only one player remains.
+                            self.players[p].eliminated = true;
+                            let mut sba = self.check_state_based_actions();
+                            events.append(&mut sba);
+                            if self.is_game_over() {
+                                return Ok(events);
+                            }
                         }
                     }
                 }
@@ -124,6 +135,8 @@ impl GameState {
     /// Fires `EventKind::StepBegins(step)` triggers. Scope controls which
     /// players' permanents' triggers fire: `ActivePlayer` is default for
     /// "at the beginning of your upkeep"; `AnyPlayer` fires for everyone.
+    /// Also processes any `delayed_triggers` whose kind matches this step
+    /// (e.g. Pact upkeep cost, Goryo's exile-at-end-step).
     pub(crate) fn fire_step_triggers(&mut self, step: TurnStep) {
         let active = self.active_player_idx;
         let kind = EventKind::StepBegins(step);
@@ -146,6 +159,39 @@ impl GameState {
                     .map(|t| (c.id, t.effect.clone(), c.controller))
             })
             .collect();
+
+        // Drain matching delayed triggers off the queue and queue them up
+        // alongside the regular battlefield triggers. Fires-once triggers
+        // are removed; this keeps `pact_of_negation`-style "next upkeep"
+        // logic correct without leaking back into the next turn.
+        let mut delayed_to_fire: Vec<(CardId, Effect, usize, Option<Target>)> = Vec::new();
+        let mut keep: Vec<DelayedTrigger> = Vec::new();
+        for dt in std::mem::take(&mut self.delayed_triggers) {
+            let matches = match (dt.kind, step) {
+                (DelayedKind::YourNextUpkeep, TurnStep::Upkeep) => dt.controller == active,
+                (DelayedKind::NextEndStep, TurnStep::End) => true,
+                _ => false,
+            };
+            if matches {
+                delayed_to_fire.push((dt.source, dt.effect.clone(), dt.controller, dt.target.clone()));
+                if !dt.fires_once {
+                    keep.push(dt);
+                }
+            } else {
+                keep.push(dt);
+            }
+        }
+        self.delayed_triggers = keep;
+
+        for (source, effect, controller, target) in delayed_to_fire {
+            self.stack.push(StackItem::Trigger {
+                source,
+                controller,
+                effect: Box::new(effect),
+                target,
+                mode: None,
+            });
+        }
 
         for (source, effect, controller) in triggers {
             let auto_target = self.auto_target_for_effect(&effect, controller);
@@ -173,6 +219,7 @@ impl GameState {
                 caster,
                 target,
                 mode,
+                uncounterable: _,
             } => {
                 let card = *card;
                 let card_id = card.id;
@@ -188,8 +235,25 @@ impl GameState {
                             && matches!(t.event.scope, EventScope::SelfSource))
                         .map(|t| t.effect.clone())
                         .collect();
+                    let evoked = card.evoked;
                     self.battlefield.push(card);
                     events.push(GameEvent::PermanentEntered { card_id });
+
+                    // Evoke: schedule a self-sacrifice trigger that resolves
+                    // AFTER the ETB triggers (so the ETB exile happens first,
+                    // then the creature sacrifices itself).
+                    if evoked {
+                        self.stack.push(StackItem::Trigger {
+                            source: card_id,
+                            controller: caster,
+                            effect: Box::new(Effect::Move {
+                                what: crate::effect::Selector::This,
+                                to: crate::effect::ZoneDest::Graveyard,
+                            }),
+                            target: None,
+                            mode: None,
+                        });
+                    }
 
                     // Push ETB triggers onto the stack.
                     for effect in etb_triggers {
@@ -303,8 +367,9 @@ impl GameState {
         for player in &mut self.players {
             player.mana_pool.empty();
         }
-        // Advance to next player's turn (TurnStarted fires on Untap entry)
-        self.active_player_idx = (self.active_player_idx + 1) % self.players.len();
+        // Advance to the next non-eliminated player's turn (TurnStarted
+        // fires on Untap entry).
+        self.active_player_idx = self.next_alive_seat(self.active_player_idx);
         self.turn_number += 1;
         self.give_priority_to_active();
     }
@@ -509,25 +574,33 @@ impl GameState {
             self.remove_from_battlefield_to_graveyard(id);
         }
 
-        // Check for player death.
+        // Player loss conditions (CR 704.5a/b/c). Eliminated players are
+        // removed from turn/priority rotation; the game ends when ≤ 1 alive.
         for i in 0..self.players.len() {
-            if !self.players[i].is_alive() && self.game_over.is_none() {
-                let winner = (i + 1) % self.players.len();
-                self.game_over = Some(Some(winner));
-                events.push(GameEvent::GameOver {
-                    winner: Some(winner),
-                });
+            if self.players[i].eliminated {
+                continue;
+            }
+            let lost = self.players[i].life <= 0 || self.players[i].poison_counters >= 10;
+            if lost {
+                self.players[i].eliminated = true;
             }
         }
 
-        // Check for poison (10+ poison counters = loss).
-        for i in 0..self.players.len() {
-            if self.players[i].poison_counters >= 10 && self.game_over.is_none() {
-                let winner = (i + 1) % self.players.len();
-                self.game_over = Some(Some(winner));
-                events.push(GameEvent::GameOver {
-                    winner: Some(winner),
-                });
+        if self.game_over.is_none() {
+            let alive: Vec<usize> = (0..self.players.len())
+                .filter(|i| !self.players[*i].eliminated)
+                .collect();
+            match alive.len() {
+                0 => {
+                    self.game_over = Some(None);
+                    events.push(GameEvent::GameOver { winner: None });
+                }
+                1 => {
+                    let winner = alive[0];
+                    self.game_over = Some(Some(winner));
+                    events.push(GameEvent::GameOver { winner: Some(winner) });
+                }
+                _ => {}
             }
         }
 

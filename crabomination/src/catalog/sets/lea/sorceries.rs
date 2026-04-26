@@ -22,6 +22,7 @@ pub fn wrath_of_god() -> CardDefinition {
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
+        alternative_cost: None,
     }
 }
 
@@ -44,6 +45,7 @@ pub fn armageddon() -> CardDefinition {
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
+        alternative_cost: None,
     }
 }
 
@@ -68,10 +70,12 @@ pub fn demonic_tutor() -> CardDefinition {
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
+        alternative_cost: None,
     }
 }
 
-/// Wheel of Fortune — {2}{R} Sorcery: each player draws seven cards
+/// Wheel of Fortune — {2}{R} Sorcery: each player discards their hand, then
+/// draws seven cards.
 pub fn wheel_of_fortune() -> CardDefinition {
     CardDefinition {
         name: "Wheel of Fortune",
@@ -82,14 +86,24 @@ pub fn wheel_of_fortune() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![],
-        effect: Effect::Draw {
-            who: Selector::Player(PlayerRef::EachPlayer),
-            amount: Value::Const(7),
-        },
+        effect: Effect::Seq(vec![
+            // Discard each player's whole hand. Discard breaks early once a
+            // hand is empty, so a large constant is equivalent to "all".
+            Effect::Discard {
+                who: Selector::Player(PlayerRef::EachPlayer),
+                amount: Value::Const(100),
+                random: false,
+            },
+            Effect::Draw {
+                who: Selector::Player(PlayerRef::EachPlayer),
+                amount: Value::Const(7),
+            },
+        ]),
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
+        alternative_cost: None,
     }
 }

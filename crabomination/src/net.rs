@@ -1,0 +1,520 @@
+//! Wire protocol for client↔server communication.
+//!
+//! The server holds the authoritative [`crate::game::GameState`]; clients
+//! interact via [`ClientMsg`] and receive [`ServerMsg`]. Each client sees a
+//! per-seat [`ClientView`] projection that hides opponent hand contents,
+//! library order, and other hidden information.
+//!
+//! [`DecisionWire`] and [`GameEventWire`] mirror the engine's `Decision` and
+//! `GameEvent` types with owned strings in place of the engine's
+//! `&'static str` card names, so the wire format round-trips through serde.
+
+use serde::{Deserialize, Serialize};
+
+use crate::card::{CardId, CardType, CounterType, Keyword};
+use crate::decision::Decision;
+use crate::game::{GameAction, GameEvent, Target, TurnStep};
+use crate::mana::{Color, ManaCost, ManaPool};
+
+// ── Client → server ──────────────────────────────────────────────────────────
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum ClientMsg {
+    /// Sent once on connect. The server replies with `YourSeat`.
+    JoinMatch { name: String },
+    /// A game action (including decision answers wrapped in `GameAction::SubmitDecision`).
+    SubmitAction(GameAction),
+}
+
+// ── Server → client ──────────────────────────────────────────────────────────
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum ServerMsg {
+    /// First message after a successful join. Identifies which seat this
+    /// connection controls (needed so the client can filter for its own
+    /// hand, decisions, etc.).
+    YourSeat(usize),
+    /// All seats are filled and the match is starting. Followed by the
+    /// first `View`.
+    MatchStarted,
+    /// Authoritative snapshot of state, projected for this seat.
+    View(ClientView),
+    /// Events produced by the most recent action, in order. Clients animate
+    /// off these; the accompanying `View` is the post-event state.
+    Events(Vec<GameEventWire>),
+    /// A submitted action was rejected.
+    ActionError(String),
+    /// The match has ended. `winner` follows `GameState::game_over` semantics.
+    MatchOver { winner: Option<usize> },
+}
+
+// ── Projected view types ─────────────────────────────────────────────────────
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ClientView {
+    pub your_seat: usize,
+    pub active_player: usize,
+    pub priority: usize,
+    pub step: TurnStep,
+    pub turn: u32,
+    pub players: Vec<PlayerView>,
+    pub battlefield: Vec<PermanentView>,
+    pub stack: Vec<StackItemView>,
+    pub pending_decision: Option<PendingDecisionView>,
+    /// `None` while the game is ongoing; `Some(None)` = draw; `Some(Some(i))` = seat `i` won.
+    pub game_over: Option<Option<usize>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PlayerView {
+    pub seat: usize,
+    pub name: String,
+    pub life: i32,
+    pub poison_counters: u32,
+    pub mana_pool: ManaPool,
+    pub library: LibraryView,
+    pub graveyard: Vec<GraveyardCardView>,
+    /// One entry per card in hand. Each entry is either `Known` (the viewer is
+    /// entitled to see the card — always for your own hand, sometimes for an
+    /// opponent's via Peek/Thoughtseize/Telepathy-style reveals) or `Hidden`
+    /// (id only). The vec length equals the player's hand size.
+    pub hand: Vec<HandCardView>,
+    pub lands_played_this_turn: u32,
+}
+
+/// A single hand-slot entry. `Hidden` for cards the viewer isn't entitled to
+/// see (typical opponent cards); `Known` when a reveal, or ownership of the
+/// hand, grants visibility.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum HandCardView {
+    Known(KnownCard),
+    Hidden { id: CardId },
+}
+
+impl HandCardView {
+    pub fn id(&self) -> CardId {
+        match self {
+            HandCardView::Known(k) => k.id,
+            HandCardView::Hidden { id } => *id,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct KnownCard {
+    pub id: CardId,
+    pub name: String,
+    pub cost: ManaCost,
+    pub card_types: Vec<CardType>,
+    pub needs_target: bool,
+    /// True if this card has an `alternative_cost` (Force of Will / Force of
+    /// Negation pitch, Solitude evoke). Drives the client's right-click
+    /// "Cast for alt cost" menu entry.
+    #[serde(default)]
+    pub has_alternative_cost: bool,
+}
+
+/// One activated ability as projected for the client.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AbilityView {
+    pub index: usize,
+    pub cost_label: String,
+    pub effect_label: String,
+    pub needs_target: bool,
+    pub is_mana: bool,
+}
+
+/// A library as visible to a specific seat. `size` is always the full count;
+/// `known_top` holds any cards the viewer is entitled to see at the top,
+/// ordered top-first (populated e.g. after Scry peeks or "look at the top N"
+/// effects). Empty means "no visibility beyond the size".
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct LibraryView {
+    pub size: usize,
+    pub known_top: Vec<KnownCard>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GraveyardCardView {
+    pub id: CardId,
+    pub name: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PermanentView {
+    pub id: CardId,
+    pub name: String,
+    pub controller: usize,
+    pub owner: usize,
+    pub card_types: Vec<CardType>,
+    pub tapped: bool,
+    pub damage: u32,
+    pub summoning_sick: bool,
+    /// Computed power after layer effects (0 for non-creatures).
+    pub power: i32,
+    /// Computed toughness after layer effects (0 for non-creatures).
+    pub toughness: i32,
+    /// Effective keywords (after layer effects).
+    pub keywords: Vec<Keyword>,
+    pub counters: Vec<(CounterType, u32)>,
+    pub attached_to: Option<CardId>,
+    pub is_token: bool,
+    /// Whether this permanent is currently declared as an attacker.
+    pub attacking: bool,
+    /// Activated abilities visible to the client.
+    pub abilities: Vec<AbilityView>,
+}
+
+impl PermanentView {
+    pub fn is_land(&self) -> bool {
+        self.card_types.contains(&CardType::Land)
+    }
+}
+
+/// One item on the stack, as visible to a specific seat. `Hidden` covers
+/// face-down spells (e.g. Morph) that reveal only to their caster; `Known`
+/// otherwise.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum StackItemView {
+    Known(KnownStackItem),
+    Hidden { source: CardId, controller: usize },
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct KnownStackItem {
+    pub source: CardId,
+    pub controller: usize,
+    pub name: String,
+    pub target: Option<Target>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PendingDecisionView {
+    pub acting_player: usize,
+    /// `Some` when the viewer is entitled to see the decision specifics
+    /// (typically: the viewer is the acting player). `None` when the viewer
+    /// is a spectator who should only know that some other seat is deciding.
+    pub decision: Option<DecisionWire>,
+}
+
+// ── Wire-side mirrors of engine types with static-string fields ─────────────
+
+/// Mirror of [`Decision`] using owned strings. Engine `&'static str` card
+/// names are copied to `String` at projection time.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum DecisionWire {
+    ChooseTarget {
+        source: CardId,
+        legal: Vec<Target>,
+    },
+    ChooseMode {
+        source: CardId,
+        num_modes: usize,
+    },
+    ChooseColor {
+        source: CardId,
+        legal: Vec<Color>,
+    },
+    Scry {
+        player: usize,
+        cards: Vec<(CardId, String)>,
+    },
+    Discard {
+        player: usize,
+        count: u32,
+        hand: Vec<(CardId, String)>,
+    },
+    SearchLibrary {
+        player: usize,
+        candidates: Vec<(CardId, String)>,
+    },
+    OptionalTrigger {
+        source: CardId,
+        description: String,
+    },
+    PutOnLibrary {
+        player: usize,
+        count: usize,
+        hand: Vec<(CardId, String)>,
+    },
+    Mulligan {
+        player: usize,
+        hand: Vec<(CardId, String)>,
+        mulligans_taken: usize,
+    },
+}
+
+impl From<&Decision> for DecisionWire {
+    fn from(d: &Decision) -> Self {
+        match d {
+            Decision::ChooseTarget { source, legal } => DecisionWire::ChooseTarget {
+                source: *source,
+                legal: legal.clone(),
+            },
+            Decision::ChooseMode { source, num_modes } => DecisionWire::ChooseMode {
+                source: *source,
+                num_modes: *num_modes,
+            },
+            Decision::ChooseColor { source, legal } => DecisionWire::ChooseColor {
+                source: *source,
+                legal: legal.clone(),
+            },
+            Decision::Scry { player, cards } => DecisionWire::Scry {
+                player: *player,
+                cards: cards.iter().map(|(id, n)| (*id, (*n).to_string())).collect(),
+            },
+            Decision::Discard { player, count, hand } => DecisionWire::Discard {
+                player: *player,
+                count: *count,
+                hand: hand.iter().map(|(id, n)| (*id, (*n).to_string())).collect(),
+            },
+            Decision::SearchLibrary { player, candidates } => DecisionWire::SearchLibrary {
+                player: *player,
+                candidates: candidates
+                    .iter()
+                    .map(|(id, n)| (*id, (*n).to_string()))
+                    .collect(),
+            },
+            Decision::OptionalTrigger { source, description } => DecisionWire::OptionalTrigger {
+                source: *source,
+                description: (*description).to_string(),
+            },
+            Decision::PutOnLibrary { player, count, hand } => DecisionWire::PutOnLibrary {
+                player: *player,
+                count: *count,
+                hand: hand.iter().map(|(id, n)| (*id, (*n).to_string())).collect(),
+            },
+            Decision::Mulligan { player, hand, mulligans_taken } => DecisionWire::Mulligan {
+                player: *player,
+                hand: hand.iter().map(|(id, n)| (*id, (*n).to_string())).collect(),
+                mulligans_taken: *mulligans_taken,
+            },
+        }
+    }
+}
+
+/// Mirror of [`GameEvent`] using owned strings in the one variant that carries
+/// a card name (`TopCardRevealed`).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum GameEventWire {
+    StepChanged(TurnStep),
+    TurnStarted { player: usize, turn: u32 },
+    CardDrawn { player: usize, card_id: CardId },
+    CardDiscarded { player: usize, card_id: CardId },
+    LandPlayed { player: usize, card_id: CardId },
+    SpellCast { player: usize, card_id: CardId },
+    AbilityActivated { source: CardId },
+    ManaAdded { player: usize, color: Color },
+    ColorlessManaAdded { player: usize },
+    PermanentEntered { card_id: CardId },
+    PermanentExiled { card_id: CardId },
+    DamageDealt { amount: u32, to_player: Option<usize>, to_card: Option<CardId> },
+    LifeLost { player: usize, amount: u32 },
+    LifeGained { player: usize, amount: u32 },
+    CreatureDied { card_id: CardId },
+    PumpApplied { card_id: CardId, power: i32, toughness: i32 },
+    CounterAdded { card_id: CardId, counter_type: CounterType, count: u32 },
+    CounterRemoved { card_id: CardId, counter_type: CounterType, count: u32 },
+    PermanentTapped { card_id: CardId },
+    PermanentUntapped { card_id: CardId },
+    TokenCreated { card_id: CardId },
+    CardMilled { player: usize, card_id: CardId },
+    ScryPerformed { player: usize, looked_at: usize, bottomed: usize },
+    AttackerDeclared(CardId),
+    BlockerDeclared { blocker: CardId, attacker: CardId },
+    CombatResolved,
+    FirstStrikeDamageResolved,
+    TopCardRevealed { player: usize, card_name: String, is_land: bool },
+    AttachmentMoved { attachment: CardId, attached_to: Option<CardId> },
+    PoisonAdded { player: usize, amount: u32 },
+    LoyaltyAbilityActivated { planeswalker: CardId, loyalty_change: i32 },
+    LoyaltyChanged { card_id: CardId, new_loyalty: i32 },
+    PlaneswalkerDied { card_id: CardId },
+    SpellsCopied { original: CardId, count: u32 },
+    SurveilPerformed { player: usize, looked_at: usize, graveyarded: usize },
+    GameOver { winner: Option<usize> },
+}
+
+impl From<&GameEvent> for GameEventWire {
+    fn from(e: &GameEvent) -> Self {
+        match e {
+            GameEvent::StepChanged(s) => GameEventWire::StepChanged(*s),
+            GameEvent::TurnStarted { player, turn } => GameEventWire::TurnStarted {
+                player: *player,
+                turn: *turn,
+            },
+            GameEvent::CardDrawn { player, card_id } => GameEventWire::CardDrawn {
+                player: *player,
+                card_id: *card_id,
+            },
+            GameEvent::CardDiscarded { player, card_id } => GameEventWire::CardDiscarded {
+                player: *player,
+                card_id: *card_id,
+            },
+            GameEvent::LandPlayed { player, card_id } => GameEventWire::LandPlayed {
+                player: *player,
+                card_id: *card_id,
+            },
+            GameEvent::SpellCast { player, card_id } => GameEventWire::SpellCast {
+                player: *player,
+                card_id: *card_id,
+            },
+            GameEvent::AbilityActivated { source } => {
+                GameEventWire::AbilityActivated { source: *source }
+            }
+            GameEvent::ManaAdded { player, color } => GameEventWire::ManaAdded {
+                player: *player,
+                color: *color,
+            },
+            GameEvent::ColorlessManaAdded { player } => {
+                GameEventWire::ColorlessManaAdded { player: *player }
+            }
+            GameEvent::PermanentEntered { card_id } => {
+                GameEventWire::PermanentEntered { card_id: *card_id }
+            }
+            GameEvent::PermanentExiled { card_id } => {
+                GameEventWire::PermanentExiled { card_id: *card_id }
+            }
+            GameEvent::DamageDealt { amount, to_player, to_card } => GameEventWire::DamageDealt {
+                amount: *amount,
+                to_player: *to_player,
+                to_card: *to_card,
+            },
+            GameEvent::LifeLost { player, amount } => GameEventWire::LifeLost {
+                player: *player,
+                amount: *amount,
+            },
+            GameEvent::LifeGained { player, amount } => GameEventWire::LifeGained {
+                player: *player,
+                amount: *amount,
+            },
+            GameEvent::CreatureDied { card_id } => {
+                GameEventWire::CreatureDied { card_id: *card_id }
+            }
+            GameEvent::PumpApplied { card_id, power, toughness } => GameEventWire::PumpApplied {
+                card_id: *card_id,
+                power: *power,
+                toughness: *toughness,
+            },
+            GameEvent::CounterAdded { card_id, counter_type, count } => {
+                GameEventWire::CounterAdded {
+                    card_id: *card_id,
+                    counter_type: *counter_type,
+                    count: *count,
+                }
+            }
+            GameEvent::CounterRemoved { card_id, counter_type, count } => {
+                GameEventWire::CounterRemoved {
+                    card_id: *card_id,
+                    counter_type: *counter_type,
+                    count: *count,
+                }
+            }
+            GameEvent::PermanentTapped { card_id } => {
+                GameEventWire::PermanentTapped { card_id: *card_id }
+            }
+            GameEvent::PermanentUntapped { card_id } => {
+                GameEventWire::PermanentUntapped { card_id: *card_id }
+            }
+            GameEvent::TokenCreated { card_id } => {
+                GameEventWire::TokenCreated { card_id: *card_id }
+            }
+            GameEvent::CardMilled { player, card_id } => GameEventWire::CardMilled {
+                player: *player,
+                card_id: *card_id,
+            },
+            GameEvent::ScryPerformed { player, looked_at, bottomed } => {
+                GameEventWire::ScryPerformed {
+                    player: *player,
+                    looked_at: *looked_at,
+                    bottomed: *bottomed,
+                }
+            }
+            GameEvent::AttackerDeclared(id) => GameEventWire::AttackerDeclared(*id),
+            GameEvent::BlockerDeclared { blocker, attacker } => GameEventWire::BlockerDeclared {
+                blocker: *blocker,
+                attacker: *attacker,
+            },
+            GameEvent::CombatResolved => GameEventWire::CombatResolved,
+            GameEvent::FirstStrikeDamageResolved => GameEventWire::FirstStrikeDamageResolved,
+            GameEvent::TopCardRevealed { player, card_name, is_land } => {
+                GameEventWire::TopCardRevealed {
+                    player: *player,
+                    card_name: (*card_name).to_string(),
+                    is_land: *is_land,
+                }
+            }
+            GameEvent::AttachmentMoved { attachment, attached_to } => {
+                GameEventWire::AttachmentMoved {
+                    attachment: *attachment,
+                    attached_to: *attached_to,
+                }
+            }
+            GameEvent::PoisonAdded { player, amount } => GameEventWire::PoisonAdded {
+                player: *player,
+                amount: *amount,
+            },
+            GameEvent::LoyaltyAbilityActivated { planeswalker, loyalty_change } => {
+                GameEventWire::LoyaltyAbilityActivated {
+                    planeswalker: *planeswalker,
+                    loyalty_change: *loyalty_change,
+                }
+            }
+            GameEvent::LoyaltyChanged { card_id, new_loyalty } => {
+                GameEventWire::LoyaltyChanged {
+                    card_id: *card_id,
+                    new_loyalty: *new_loyalty,
+                }
+            }
+            GameEvent::PlaneswalkerDied { card_id } => {
+                GameEventWire::PlaneswalkerDied { card_id: *card_id }
+            }
+            GameEvent::SpellsCopied { original, count } => GameEventWire::SpellsCopied {
+                original: *original,
+                count: *count,
+            },
+            GameEvent::SurveilPerformed { player, looked_at, graveyarded } => {
+                GameEventWire::SurveilPerformed {
+                    player: *player,
+                    looked_at: *looked_at,
+                    graveyarded: *graveyarded,
+                }
+            }
+            GameEvent::GameOver { winner } => GameEventWire::GameOver { winner: *winner },
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn client_msg_roundtrips() {
+        let msg = ClientMsg::SubmitAction(GameAction::PlayLand(CardId(7)));
+        let json = serde_json::to_string(&msg).unwrap();
+        let back: ClientMsg = serde_json::from_str(&json).unwrap();
+        assert!(matches!(
+            back,
+            ClientMsg::SubmitAction(GameAction::PlayLand(CardId(7)))
+        ));
+    }
+
+    #[test]
+    fn decision_wire_converts() {
+        let d = Decision::Scry {
+            player: 0,
+            cards: vec![(CardId(1), "Island"), (CardId(2), "Forest")],
+        };
+        let w: DecisionWire = (&d).into();
+        let json = serde_json::to_string(&w).unwrap();
+        let back: DecisionWire = serde_json::from_str(&json).unwrap();
+        match back {
+            DecisionWire::Scry { player, cards } => {
+                assert_eq!(player, 0);
+                assert_eq!(cards[0].1, "Island");
+            }
+            _ => panic!("wrong variant"),
+        }
+    }
+}

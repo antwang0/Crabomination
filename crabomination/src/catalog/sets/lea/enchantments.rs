@@ -33,11 +33,18 @@ pub fn glorious_anthem() -> CardDefinition {
         }],
         base_loyalty: 0,
         loyalty_abilities: vec![],
+        alternative_cost: None,
     }
 }
 
-/// Animate Dead — {1}{B} Enchantment
-/// When Animate Dead enters the battlefield, return target creature card from a graveyard to play.
+/// Animate Dead — {1}{B} Enchantment — Aura.
+///
+/// When Animate Dead enters the battlefield, return target creature card from
+/// a graveyard to the battlefield. The real Oracle text reattaches Animate
+/// Dead to the creature, sacrifices it on leave, and applies -1/-0; this
+/// engine doesn't yet model the aura-attach plus leaves-the-battlefield
+/// trigger plus power-modifier chain, so we keep the simplified reanimate
+/// behavior but at least restrict the target to creature cards.
 pub fn animate_dead() -> CardDefinition {
     CardDefinition {
         name: "Animate Dead",
@@ -53,12 +60,16 @@ pub fn animate_dead() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Move {
-                what: Selector::Target(0),
+                what: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: SelectionRequirement::Creature,
+                },
                 to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
             },
         }],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
+        alternative_cost: None,
     }
 }

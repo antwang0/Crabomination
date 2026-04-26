@@ -40,3 +40,4 @@ pub mod rtr;
 pub mod ths;
 pub mod tmp;
 pub mod zen;
+pub mod decks;

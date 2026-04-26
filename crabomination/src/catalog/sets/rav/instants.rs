@@ -1,6 +1,6 @@
 use super::no_abilities;
-use crate::card::{CardDefinition, CardType, Subtypes};
-use crate::effect::shortcut::{deal, destroy_target, gain_life, target};
+use crate::card::{CardDefinition, CardType, SelectionRequirement, Subtypes};
+use crate::effect::shortcut::{deal, gain_life, target, target_filtered};
 use crate::effect::Effect;
 use crate::mana::{b, cost, g, generic, r, w};
 
@@ -21,10 +21,15 @@ pub fn lightning_helix() -> CardDefinition {
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
+        alternative_cost: None,
     }
 }
 
-/// Putrefy — {1}{B}{G}: destroy target creature
+/// Putrefy — {1}{B}{G}: destroy target artifact or creature; it can't be regenerated.
+///
+/// Regeneration isn't modeled in this engine, so the "can't be regenerated"
+/// clause is a no-op — `Effect::Destroy` already moves the target to its
+/// owner's graveyard outright.
 pub fn putrefy() -> CardDefinition {
     CardDefinition {
         name: "Putrefy",
@@ -35,11 +40,16 @@ pub fn putrefy() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![],
-        effect: destroy_target(),
+        effect: Effect::Destroy {
+            what: target_filtered(
+                SelectionRequirement::Creature.or(SelectionRequirement::Artifact),
+            ),
+        },
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
+        alternative_cost: None,
     }
 }

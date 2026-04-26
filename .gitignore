@@ -19,3 +19,9 @@ target
 #  and can be added to the global gitignore or merged into this file.  For a more nuclear
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
+
+# Card images are auto-downloaded from Scryfall on first run by
+# `crabomination_client::scryfall::ensure_card_images`; tracking them just
+# bloats the repo and goes stale when the catalog grows. Fonts stay tracked
+# (they're not auto-fetched and the UI needs them at startup).
+crabomination_client/assets/cards/

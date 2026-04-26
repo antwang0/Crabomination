@@ -2057,6 +2057,9 @@ dependencies = [
 name = "crabomination"
 version = "0.1.0"
 dependencies = [
+ "rand 0.10.1",
+ "serde",
+ "serde_json",
  "thiserror 2.0.18",
 ]
 
@@ -2077,6 +2080,9 @@ dependencies = [
 [[package]]
 name = "crabomination_server"
 version = "0.1.0"
+dependencies = [
+ "crabomination",
+]
 
 [[package]]
 name = "crc32fast"

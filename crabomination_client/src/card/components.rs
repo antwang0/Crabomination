@@ -5,13 +5,6 @@ pub const CARD_WIDTH: f32 = 3.0;
 pub const CARD_HEIGHT: f32 = CARD_WIDTH * 88.0 / 63.0;
 pub const CARD_THICKNESS: f32 = 0.02;
 
-// Deck and graveyard sit far left/right (x=±11) so they don't overlap battlefield cards.
-// They are stacked vertically in Z with >CARD_HEIGHT (4.19) separation to avoid overlapping each other.
-// Deck at z=±9.5: edges at ±[7.4, 11.6]. Graveyard at z=±4.0: edges at ±[1.9, 6.1]. Gap: 1.3 units.
-pub const DECK_POSITION: Vec3 = Vec3::new(-11.0, 0.0, 9.5);
-pub const P1_DECK_POSITION: Vec3 = Vec3::new(11.0, 0.0, -9.5);
-pub const P0_GRAVEYARD_POSITION: Vec3 = Vec3::new(-11.0, 0.0, 4.0);
-pub const P1_GRAVEYARD_POSITION: Vec3 = Vec3::new(11.0, 0.0, -4.0);
 pub const DECK_CARD_Y_STEP: f32 = CARD_THICKNESS * 1.5;
 
 pub const HOVER_LIFT_AMOUNT: f32 = 0.6;
@@ -90,9 +83,12 @@ pub struct DeckCard {
     pub index: usize,
 }
 
-/// Marker for player 1 hand card visuals (face-down, count-synced).
+/// Marker for an opponent's hand card visual (face-down, count-synced).
+/// `owner` is the seat that owns this card; `slot` is its position in the
+/// owner's hand fan.
 #[derive(Component)]
-pub struct P1HandCard {
+pub struct OpponentHandCard {
+    pub owner: usize,
     pub slot: usize,
 }
 
@@ -168,9 +164,11 @@ pub struct GraveyardPile {
 #[derive(Component)]
 pub struct PileHovered;
 
-/// Visual entity for one card in player 1's face-down deck pile.
+/// Visual entity for one card in a player's face-down deck pile.
+/// `owner` identifies the seat; `index` is the card's height in the stack.
 #[derive(Component)]
-pub struct P1DeckPile {
+pub struct DeckPile {
+    pub owner: usize,
     pub index: usize,
 }
 
@@ -191,7 +189,7 @@ pub struct SendToGraveyardAnimation {
     pub start_rotation: Quat,
     pub target_translation: Vec3,
     pub target_rotation: Quat,
-    /// Which player's graveyard this card is headed to (PLAYER_0=0, PLAYER_1=1).
+    /// Which player's graveyard this card is headed to.
     pub owner: usize,
 }
 
