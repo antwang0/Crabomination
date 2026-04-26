@@ -107,6 +107,7 @@ fn dual_land_with(
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        start_of_game_effect: None,
     }
 }
 
@@ -182,6 +183,7 @@ fn pathway_face(name: &'static str, land_type: LandType, color: Color) -> CardDe
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        start_of_game_effect: None,
     }
 }
 
@@ -377,14 +379,18 @@ pub fn gemstone_mine() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        start_of_game_effect: None,
     }
 }
 
 /// Gemstone Caverns — Legendary Land. Opening-hand: may put into play with a
 /// luck counter. Tap to add a mana of any color, removing a luck counter.
 ///
-/// Stub: simple "tap for any color" land; no opening-hand effect yet.
-/// TODO: opening-hand pre-game install + luck counter mechanic.
+/// Opening-hand begin-in-play wired via `start_of_game_effect`. We model
+/// the "luck counter" with the engine's `Charge` counter (we don't have
+/// a dedicated `Luck` variant). The remove-counter-when-tapped clause
+/// of the activated ability is omitted — the land taps for any-one
+/// color indefinitely. Acceptable for the demo.
 pub fn gemstone_caverns() -> CardDefinition {
     use crate::card::Supertype;
     CardDefinition {
@@ -413,6 +419,13 @@ pub fn gemstone_caverns() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        start_of_game_effect: Some(Effect::Move {
+            what: Selector::This,
+            to: crate::effect::ZoneDest::Battlefield {
+                controller: PlayerRef::You,
+                tapped: false,
+            },
+        }),
     }
 }
 
@@ -454,6 +467,7 @@ pub fn cavern_of_souls() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        start_of_game_effect: None,
     }
 }
 
@@ -509,5 +523,6 @@ pub fn cephalid_coliseum() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        start_of_game_effect: None,
     }
 }

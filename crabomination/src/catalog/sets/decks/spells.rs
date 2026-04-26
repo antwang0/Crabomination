@@ -46,6 +46,7 @@ pub fn pact_of_negation() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        start_of_game_effect: None,
     }
 }
 
@@ -54,11 +55,12 @@ pub fn pact_of_negation() -> CardDefinition {
 ///   • Pay any amount of life. Look at that many cards from the top of your
 ///     library, then put one into your hand and the rest on the bottom.
 ///
-/// Engine model: `ChooseMode` between two simplified branches:
+/// Engine model: `ChooseMode` between two branches:
 /// mode 0 — sacrifice one creature you control + gain 3 life;
-/// mode 1 — Effect::Noop (the look-at-X / library manipulation requires a
-/// custom decision UI we don't have yet).
-/// AutoDecider picks mode 0, which matches the typical play (sac for life).
+/// mode 1 — pay 3 life + search-any → hand (approximation of "pay X
+/// life, look at X, pick one"; X is collapsed to a flat 3 since we
+/// don't have a variable-X choose-life-amount decision).
+/// AutoDecider picks mode 0 (sacrifice for life).
 pub fn plunge_into_darkness() -> CardDefinition {
     CardDefinition {
         name: "Plunge into Darkness",
@@ -83,8 +85,16 @@ pub fn plunge_into_darkness() -> CardDefinition {
                     amount: Value::Const(3),
                 },
             ]),
-            // Mode 1: pay-X-life, look-at-X, pick one — unimplemented.
-            Effect::Noop,
+            // Mode 1: pay 3 life, search any card → hand. Approximation
+            // of "pay X life, look at X cards, pick one" with X=3.
+            Effect::Seq(vec![
+                Effect::LoseLife { who: Selector::You, amount: Value::Const(3) },
+                Effect::Search {
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::Any,
+                    to: ZoneDest::Hand(PlayerRef::You),
+                },
+            ]),
         ]),
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
@@ -93,6 +103,7 @@ pub fn plunge_into_darkness() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        start_of_game_effect: None,
     }
 }
 
@@ -130,6 +141,7 @@ pub fn serum_powder() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        start_of_game_effect: None,
     }
 }
 
@@ -167,6 +179,7 @@ pub fn spoils_of_the_vault() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        start_of_game_effect: None,
     }
 }
 
@@ -206,6 +219,7 @@ pub fn summoners_pact() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        start_of_game_effect: None,
     }
 }
 
@@ -246,6 +260,7 @@ pub fn thud() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        start_of_game_effect: None,
     }
 }
 
@@ -279,14 +294,21 @@ pub fn inquisition_of_kozilek() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        start_of_game_effect: None,
     }
 }
 
 /// Leyline of Sanctity — {2}{W}{W} Enchantment. "If Leyline of Sanctity is in
 /// your opening hand, you may begin the game with it on the battlefield. You
-/// have hexproof." Stub: vanilla 4-cost enchantment with no game effect.
-/// TODO: opening-hand-into-play + you-have-hexproof static.
+/// have hexproof."
+///
+/// Opening-hand begin-in-play is wired via `start_of_game_effect`. The
+/// "you have hexproof" static is `StaticEffect::ControllerHasHexproof`,
+/// which `check_target_legality` consults when validating
+/// `Target::Player` from an opponent.
 pub fn leyline_of_sanctity() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
     CardDefinition {
         name: "Leyline of Sanctity",
         cost: cost(&[generic(2), w(), w()]),
@@ -299,11 +321,21 @@ pub fn leyline_of_sanctity() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
+        static_abilities: vec![StaticAbility {
+            description: "You have hexproof (you can't be the target of opponents' spells or abilities).",
+            effect: StaticEffect::ControllerHasHexproof,
+        }],
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        start_of_game_effect: Some(Effect::Move {
+            what: Selector::This,
+            to: ZoneDest::Battlefield {
+                controller: PlayerRef::You,
+                tapped: false,
+            },
+        }),
     }
 }
 
@@ -356,6 +388,7 @@ pub fn ephemerate() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        start_of_game_effect: None,
     }
 }
 
@@ -410,6 +443,7 @@ pub fn faithful_mending() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        start_of_game_effect: None,
     }
 }
 
@@ -444,6 +478,7 @@ pub fn force_of_negation() -> CardDefinition {
             target_filter: None,
         }),
         back_face: None,
+        start_of_game_effect: None,
     }
 }
 
@@ -498,6 +533,7 @@ pub fn goryos_vengeance() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        start_of_game_effect: None,
     }
 }
 
@@ -539,6 +575,7 @@ pub fn prismatic_ending() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        start_of_game_effect: None,
     }
 }
 
@@ -572,6 +609,7 @@ pub fn thoughtseize() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        start_of_game_effect: None,
     }
 }
 
@@ -605,6 +643,7 @@ pub fn consign_to_memory() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        start_of_game_effect: None,
     }
 }
 
@@ -643,6 +682,7 @@ pub fn damping_sphere() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        start_of_game_effect: None,
     }
 }
 
@@ -683,6 +723,7 @@ pub fn mystical_dispute() -> CardDefinition {
             target_filter: Some(SelectionRequirement::HasColor(Color::Blue)),
         }),
         back_face: None,
+        start_of_game_effect: None,
     }
 }
 
@@ -724,6 +765,7 @@ pub fn pest_control() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        start_of_game_effect: None,
     }
 }
 
@@ -770,5 +812,6 @@ pub fn wrath_of_the_skies() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        start_of_game_effect: None,
     }
 }

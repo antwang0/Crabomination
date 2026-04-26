@@ -310,6 +310,13 @@ pub struct CardDefinition {
     /// downstream abilities, types, and costs are the back face's. Only the
     /// front face stores `back_face` — the back's `back_face` is `None`.
     pub back_face: Option<Box<CardDefinition>>,
+    /// Start-of-game effect (Chancellor / Leyline / Gemstone Caverns):
+    /// after the mulligan phase finishes, every card in every player's
+    /// opening hand with a `Some(_)` effect resolves it once with that
+    /// player as controller and the card itself as `Selector::This`
+    /// (`ctx.source = card.id`). The "may reveal" choice is collapsed to
+    /// always-yes — these effects are universally good for their owner.
+    pub start_of_game_effect: Option<Effect>,
 }
 
 /// An alternative (pitch) cost. Replaces the normal mana cost when the

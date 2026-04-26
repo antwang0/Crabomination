@@ -2294,6 +2294,157 @@ fn convoke_rejects_tapped_creature() {
 }
 
 #[test]
+fn leyline_of_sanctity_starts_in_play_and_grants_player_hexproof() {
+    // Stock Leyline in P0's opening hand, fire start-of-game effects:
+    // Leyline should hit the battlefield and P0 should be untargetable
+    // by P1.
+    let mut g = two_player_game();
+    let leyline = g.add_card_to_hand(0, catalog::leyline_of_sanctity());
+    g.fire_start_of_game_effects();
+
+    assert!(g.battlefield.iter().any(|c| c.id == leyline),
+        "Leyline of Sanctity should begin the game on the battlefield");
+    assert!(!g.players[0].hand.iter().any(|c| c.id == leyline));
+
+    // P1 tries to target P0 with Lightning Bolt — rejected by hexproof.
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    let err = g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(0)),
+        mode: None,
+        x_value: None,
+    })
+    .unwrap_err();
+    assert!(matches!(err, GameError::TargetHasHexproof(_)),
+        "P0 should be untargetable while controlling Leyline of Sanctity");
+}
+
+#[test]
+fn leyline_of_sanctity_hexproof_does_not_apply_to_self() {
+    // Casting your own spell on yourself is fine — hexproof from Leyline
+    // only blocks opponents.
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::leyline_of_sanctity());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(0)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Self-targeting bypasses Leyline's hexproof");
+}
+
+#[test]
+fn chancellor_of_the_tangle_grants_one_green_at_start_of_game() {
+    let mut g = two_player_game();
+    g.add_card_to_hand(0, catalog::chancellor_of_the_tangle());
+    g.fire_start_of_game_effects();
+    assert_eq!(g.players[0].mana_pool.amount(Color::Green), 1,
+        "Chancellor of the Tangle should add {{G}} to its owner's pool");
+}
+
+#[test]
+fn gemstone_caverns_starts_in_play() {
+    let mut g = two_player_game();
+    let cave = g.add_card_to_hand(0, catalog::gemstone_caverns());
+    g.fire_start_of_game_effects();
+    assert!(g.battlefield.iter().any(|c| c.id == cave),
+        "Gemstone Caverns should begin the game on the battlefield");
+}
+
+#[test]
+fn inquisition_suspends_for_caster_ui_and_applies_chosen_discard() {
+    // P0 wants UI → Inquisition should suspend with a Decision::Discard
+    // pointing at P0 (the picker), showing P1's filtered hand. Submitting
+    // the chosen card discards it to P1's graveyard.
+    let mut g = two_player_game();
+    g.players[0].wants_ui = true;
+    let pricey = g.add_card_to_hand(1, catalog::shivan_dragon());   // CMC 6 — filtered out
+    let target = g.add_card_to_hand(1, catalog::lightning_bolt()); // CMC 1
+    let other = g.add_card_to_hand(1, catalog::counterspell());    // CMC 2
+    g.add_card_to_hand(1, catalog::forest());                      // land — filtered out
+
+    let inq = g.add_card_to_hand(0, catalog::inquisition_of_kozilek());
+    g.players[0].mana_pool.add(Color::Black, 1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: inq, target: None, mode: None, x_value: None,
+    })
+    .expect("Inquisition castable for {B}");
+    // First PassPriority lets P1 respond; second resolves the spell.
+    g.perform_action(GameAction::PassPriority).unwrap();
+    g.perform_action(GameAction::PassPriority).unwrap();
+
+    // Now Inquisition is resolving — it should suspend on a Discard
+    // decision. P0 is the acting player; the candidate list is P1's
+    // filtered hand (Bolt + Counterspell, but not Forest or Shivan).
+    let pd = g.pending_decision.as_ref().expect("Inquisition should suspend");
+    let crate::decision::Decision::Discard { player, count, hand } = &pd.decision else {
+        panic!("expected Decision::Discard, got {:?}", pd.decision);
+    };
+    assert_eq!(*player, 0, "picker is the caster (P0)");
+    assert_eq!(*count, 1);
+    let hand_ids: Vec<CardId> = hand.iter().map(|(id, _)| *id).collect();
+    assert!(hand_ids.contains(&target));
+    assert!(hand_ids.contains(&other));
+    assert!(!hand_ids.contains(&pricey),
+        "CMC ≥ 4 should be filtered out — Inquisition only sees ≤ 3");
+
+    // Submit the choice — discard the Bolt.
+    g.submit_decision(DecisionAnswer::Discard(vec![target]))
+        .expect("decision submitted");
+    drain_stack(&mut g);
+
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == target),
+        "Targeted Bolt should hit P1's graveyard");
+    assert!(g.players[1].hand.iter().any(|c| c.id == other),
+        "Other matching card stays in hand — Inquisition only takes one");
+}
+
+#[test]
+fn chancellor_of_the_annex_taxes_opponents_first_spell() {
+    // Stock Chancellor in P0's opening hand. Start-of-game pass schedules
+    // a {1} tax on P1's first spell. P1 then needs an extra colorless to
+    // cast Lightning Bolt; the second cast goes through normally.
+    let mut g = two_player_game();
+    g.add_card_to_hand(0, catalog::chancellor_of_the_annex());
+    g.fire_start_of_game_effects();
+    assert_eq!(g.players[1].first_spell_tax_remaining, 1);
+
+    let bolt1 = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    let err = g.perform_action(GameAction::CastSpell {
+        card_id: bolt1, target: Some(Target::Player(0)), mode: None, x_value: None,
+    });
+    assert!(err.is_err(),
+        "First Bolt should require an extra {{1}} due to the Annex tax");
+
+    g.players[1].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt1, target: Some(Target::Player(0)), mode: None, x_value: None,
+    })
+    .expect("First Bolt castable for {1}{R} under the tax");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].first_spell_tax_remaining, 0,
+        "Tax should clear after the first cast");
+
+    // Second spell pays the regular {R} again.
+    let bolt2 = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt2, target: Some(Target::Player(0)), mode: None, x_value: None,
+    })
+    .expect("Second Bolt should cast for {R} (no further tax)");
+}
+
+#[test]
 fn ephemerate_rebound_exiles_then_recasts_next_upkeep() {
     // Cast Ephemerate from hand. After resolution: creature is flickered
     // back, Ephemerate is in exile (not graveyard) with a `YourNextUpkeep`

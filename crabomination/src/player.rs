@@ -20,6 +20,11 @@ pub struct Player {
     /// `TurnStarted`. Powers Damping Sphere's "second-and-onward spells
     /// cost {1} more" static.
     pub spells_cast_this_turn: u32,
+    /// Generic-mana tax to apply to this player's **next** cast spell
+    /// (then decrement). Powers Chancellor of the Annex's opening-hand
+    /// "first opp spell next turn costs {1} more" — the start-of-game
+    /// pass sets this on each opponent and the first cast consumes it.
+    pub first_spell_tax_remaining: u32,
     /// Poison counters (player loses at 10).
     pub poison_counters: u32,
     /// True once this player has lost the game (life ≤ 0, poison ≥ 10, or
@@ -44,6 +49,7 @@ impl Player {
             graveyard: Vec::new(),
             lands_played_this_turn: 0,
             spells_cast_this_turn: 0,
+            first_spell_tax_remaining: 0,
             poison_counters: 0,
             eliminated: false,
             wants_ui: false,

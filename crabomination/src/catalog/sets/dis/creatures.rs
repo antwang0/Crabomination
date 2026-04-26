@@ -24,5 +24,6 @@ pub fn azorius_first_wing() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        start_of_game_effect: None,
     }
 }

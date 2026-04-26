@@ -878,22 +878,41 @@ impl GameState {
 
             Effect::DiscardChosen { from, count, filter } => {
                 // Resolve target player(s) — usually one opponent. For each,
-                // discard `count` cards matching `filter` from their hand,
-                // picking each one via the simplest legal choice.
+                // the **caster** picks `count` cards matching `filter`
+                // from that player's hand. When the caster has `wants_ui`,
+                // the engine suspends with a `Decision::Discard` so the
+                // human picks; otherwise the decider is invoked
+                // synchronously (AutoDecider takes the first matching).
+                use crate::decision::Decision;
                 let n = self.evaluate_value(count, ctx).max(0) as usize;
                 if n == 0 { return Ok(()); }
+                let picker = ctx.controller;
                 for ent in self.resolve_selector(from, ctx) {
-                    let EntityRef::Player(p) = ent else { continue };
-                    for _ in 0..n {
-                        let pick = self.players[p].hand.iter().position(|c| {
-                            self.evaluate_requirement_on_card(filter, c, ctx.controller)
-                        });
-                        let Some(idx) = pick else { break };
-                        let card = self.players[p].hand.remove(idx);
-                        let cid = card.id;
-                        self.players[p].graveyard.push(card);
-                        events.push(GameEvent::CardDiscarded { player: p, card_id: cid });
+                    let EntityRef::Player(target_player) = ent else { continue };
+                    let candidates: Vec<(crate::card::CardId, &'static str)> = self
+                        .players[target_player]
+                        .hand
+                        .iter()
+                        .filter(|c| self.evaluate_requirement_on_card(filter, c, picker))
+                        .map(|c| (c.id, c.definition.name))
+                        .collect();
+                    if candidates.is_empty() {
+                        continue;
                     }
+                    let decision = Decision::Discard {
+                        player: picker,
+                        count: n as u32,
+                        hand: candidates,
+                    };
+                    let pending = PendingEffectState::DiscardChosenPending { target_player };
+
+                    if self.players[picker].wants_ui {
+                        self.suspend_signal = Some((decision, pending, Effect::Noop));
+                        return Ok(());
+                    }
+                    let answer = self.decider.decide(&decision);
+                    let mut applied = self.apply_pending_effect_answer(pending, &answer)?;
+                    events.append(&mut applied);
                 }
                 Ok(())
             }
@@ -944,6 +963,13 @@ impl GameState {
                     target,
                     fires_once: true,
                 });
+                Ok(())
+            }
+
+            Effect::ScheduleFirstSpellTax { who, amount } => {
+                for ent in self.resolve_players(who, ctx) {
+                    self.players[ent].first_spell_tax_remaining = *amount;
+                }
                 Ok(())
             }
 
@@ -1511,6 +1537,17 @@ impl GameState {
             let card = self.exile.remove(pos);
             let owner = card.owner;
             self.place_card_in_dest(card, owner, &resolved_dest, events);
+            return;
+        }
+        // Finally, hands. Used by start-of-game opening-hand effects
+        // (Leyline of Sanctity, Gemstone Caverns) that move a hand card
+        // to the battlefield.
+        for p in 0..self.players.len() {
+            if let Some(pos) = self.players[p].hand.iter().position(|c| c.id == cid) {
+                let card = self.players[p].hand.remove(pos);
+                self.place_card_in_dest(card, p, &resolved_dest, events);
+                return;
+            }
         }
     }
 
@@ -1630,6 +1667,7 @@ pub fn token_to_card_definition(token: &TokenDefinition) -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        start_of_game_effect: None,
     }
 }
 

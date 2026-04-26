@@ -704,10 +704,40 @@ impl GameState {
         match next_player {
             Some(p) => self.set_mulligan_decision(p, 0, None),
             None => {
-                // All players kept — game begins. Give priority to seat 0.
+                // All players kept — fire start-of-game effects from
+                // opening hands (Leyline of Sanctity, Gemstone Caverns,
+                // Chancellor of the Tangle), then begin the game with
+                // priority on seat 0.
+                self.fire_start_of_game_effects();
                 self.pending_decision = None;
                 self.give_priority_to_active();
             }
+        }
+    }
+
+    /// Walk every player's opening hand and resolve each card's
+    /// `start_of_game_effect`, if any. Effects run with the card's owner
+    /// as controller and `ctx.source = card.id`, so `Selector::This` and
+    /// `move_card_to`'s hand-fallback work for "begin in play" effects.
+    pub(crate) fn fire_start_of_game_effects(&mut self) {
+        // Collect (player, card_id, effect) up front so we don't borrow
+        // self.players while resolving (each effect may mutate state).
+        let mut to_run: Vec<(usize, CardId, crate::effect::Effect)> = Vec::new();
+        for (p_idx, player) in self.players.iter().enumerate() {
+            for card in &player.hand {
+                if let Some(eff) = card.definition.start_of_game_effect.clone() {
+                    to_run.push((p_idx, card.id, eff));
+                }
+            }
+        }
+        for (controller, source, effect) in to_run {
+            // Build a context with the source set to the card so
+            // `Selector::This` resolves to it.
+            let mut ctx = crate::game::effects::EffectContext::for_spell(
+                controller, None, 0, 0,
+            );
+            ctx.source = Some(source);
+            let _ = self.resolve_effect(&effect, &ctx);
         }
     }
 
@@ -819,6 +849,28 @@ impl GameState {
                 for _ in 0..count {
                     self.players[player].mana_pool.add(*c, 1);
                     events.push(GameEvent::ManaAdded { player, color: *c });
+                }
+                Ok(events)
+            }
+            PendingEffectState::DiscardChosenPending { target_player } => {
+                let DecisionAnswer::Discard(card_ids) = answer else {
+                    return Err(GameError::DecisionAnswerMismatch);
+                };
+                let mut events = Vec::with_capacity(card_ids.len());
+                for cid in card_ids {
+                    if let Some(pos) = self.players[target_player]
+                        .hand
+                        .iter()
+                        .position(|c| c.id == *cid)
+                    {
+                        let card = self.players[target_player].hand.remove(pos);
+                        let card_id = card.id;
+                        self.players[target_player].graveyard.push(card);
+                        events.push(GameEvent::CardDiscarded {
+                            player: target_player,
+                            card_id,
+                        });
+                    }
                 }
                 Ok(events)
             }
@@ -1053,7 +1105,8 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             StaticEffect::EntersTapped { .. }
             | StaticEffect::ExtraLandPerTurn
             | StaticEffect::CostReduction { .. }
-            | StaticEffect::AdditionalCostAfterFirstSpell { .. } => vec![],
+            | StaticEffect::AdditionalCostAfterFirstSpell { .. }
+            | StaticEffect::ControllerHasHexproof => vec![],
         })
         .collect()
 }

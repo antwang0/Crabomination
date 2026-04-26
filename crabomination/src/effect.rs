@@ -463,6 +463,11 @@ pub enum Effect {
         mana_cost: crate::mana::ManaCost,
         life_cost: u32,
     },
+    /// Set `Player.first_spell_tax_remaining = amount` on the resolved
+    /// player(s). Powers Chancellor of the Annex's opening-hand "first
+    /// opp spell next turn costs {1} more" — tax is consumed on the
+    /// player's next cast (see `extra_cost_for_spell`).
+    ScheduleFirstSpellTax { who: PlayerRef, amount: u32 },
 }
 
 /// Lightweight mirror of `crate::game::types::DelayedKind` for use inside
@@ -604,6 +609,7 @@ impl Effect {
             }
             Effect::DelayUntil { body, .. } => body.requires_target(),
             Effect::PayOrLoseGame { .. } => false,
+            Effect::ScheduleFirstSpellTax { who, .. } => player_has_target(who),
             Effect::SacrificeAndRemember { .. } => false,
             Effect::DiscardChosen { from, count, .. } => {
                 sel_has_target(from) || value_has_target(count)
@@ -743,6 +749,10 @@ pub enum StaticEffect {
     /// are taxed; the cost increase is applied at cast time when the
     /// caster's `Player.spells_cast_this_turn >= 1`.
     AdditionalCostAfterFirstSpell { filter: SelectionRequirement, amount: u32 },
+    /// "You have hexproof" — Leyline of Sanctity. While the source is on
+    /// the battlefield, opponents can't target the controller. Read by
+    /// `check_target_legality` against `Target::Player`.
+    ControllerHasHexproof,
 }
 
 // ── Triggered / activated / loyalty ability shells ───────────────────────────
