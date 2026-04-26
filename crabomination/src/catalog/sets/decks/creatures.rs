@@ -100,10 +100,10 @@ pub fn cosmogoyf() -> CardDefinition {
     }
 }
 
-/// Devourer of Destiny — {5}, 7/5 colorless Eldrazi. Real Oracle has a
-/// "scry 2 when you cast this" trigger; we approximate as ETB Scry 2 (the
-/// engine doesn't track on-cast triggers from hand yet — gameplay-equivalent
-/// except a counter would still let the scry happen on Oracle).
+/// Devourer of Destiny — {5}, 7/5 colorless Eldrazi. "When you cast this
+/// spell, scry 2." The on-cast trigger fires off the just-cast card via
+/// the engine's `SpellCast` + `SelfSource` path (the scry resolves before
+/// Devourer enters the battlefield).
 pub fn devourer_of_destiny() -> CardDefinition {
     CardDefinition {
         name: "Devourer of Destiny",
@@ -120,7 +120,7 @@ pub fn devourer_of_destiny() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            event: EventSpec::new(EventKind::SpellCast, EventScope::SelfSource),
             effect: Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
         }],
         static_abilities: vec![],
@@ -286,9 +286,10 @@ pub fn psychic_frog() -> CardDefinition {
     }
 }
 
-/// Quantum Riddler — {1}{U}{B}, 4/4 Sphinx with flying (approximation).
-/// "When Quantum Riddler enters, draw a card." Models the on-cast cantrip
-/// as an ETB Draw 1 trigger — gameplay-equivalent for the standard line.
+/// Quantum Riddler — {1}{U}{B}, 4/4 Sphinx with flying. "When you cast
+/// Quantum Riddler, draw a card." Wired as a real on-cast trigger via
+/// `SpellCast` + `SelfSource`, so the cantrip fires (and the card resolves)
+/// even if Quantum Riddler itself is countered.
 pub fn quantum_riddler() -> CardDefinition {
     CardDefinition {
         name: "Quantum Riddler",
@@ -305,7 +306,7 @@ pub fn quantum_riddler() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            event: EventSpec::new(EventKind::SpellCast, EventScope::SelfSource),
             effect: Effect::Draw {
                 who: Selector::You,
                 amount: Value::Const(1),
@@ -402,8 +403,14 @@ pub fn chancellor_of_the_annex() -> CardDefinition {
 /// triggered ability of a permanent you control to trigger, that ability
 /// triggers an additional time. Permanents entering the battlefield don't
 /// cause abilities of permanents your opponents control to trigger."
-/// Stub: vanilla 4/7 vigilance; static ETB-trigger replacements omitted.
-/// TODO: implement ETB-trigger doubling/suppression static.
+///
+/// Wired via `actions::etb_trigger_multiplier`: every ETB-trigger push
+/// site (the cast resolution path, `fire_self_etb_triggers`, etc.) consults
+/// the helper, which returns 0 if any opponent of the trigger's controller
+/// has an Elesh Norn (suppressing the trigger) or `1 + your_norns`
+/// otherwise (one extra fire per Norn under your control). Currently
+/// covers self-source ETB triggers; the AnotherOfYours scope is still
+/// unmodified (TODO).
 pub fn elesh_norn_mother_of_machines() -> CardDefinition {
     CardDefinition {
         name: "Elesh Norn, Mother of Machines",

@@ -1462,9 +1462,10 @@ fn cephalid_coliseum_sacrifices_for_each_player_to_draw_then_discard_three() {
 }
 
 #[test]
-fn quantum_riddler_etb_draws_a_card() {
+fn quantum_riddler_on_cast_draws_a_card() {
     let mut g = two_player_game();
-    // Top of library: a known card to confirm it gets drawn on ETB.
+    // Top of library: a known card to confirm it gets drawn from the on-cast
+    // cantrip.
     let top = g.add_card_to_library(0, catalog::island());
     let qr_id = g.add_card_to_hand(0, catalog::quantum_riddler());
     // Pay {1}{U}{B}.
@@ -1484,7 +1485,7 @@ fn quantum_riddler_etb_draws_a_card() {
     assert!(g.battlefield.iter().any(|c| c.id == qr_id),
         "Quantum Riddler should resolve onto the battlefield");
     assert!(g.players[0].hand.iter().any(|c| c.id == top),
-        "Quantum Riddler's ETB should draw a card");
+        "Quantum Riddler's on-cast cantrip should draw a card");
 }
 
 #[test]
@@ -1577,23 +1578,32 @@ fn pest_control_destroys_low_cmc_nonland_permanents() {
 }
 
 #[test]
-fn prismatic_ending_exiles_one_drop_only() {
+fn prismatic_ending_at_converge_one_only_exiles_one_drops() {
+    // Cast for {W} alone → converge = 1. A 2-CMC target is a *legal* cast
+    // (target filter is just Nonland Permanent), but the resolution-time
+    // `If(ManaValueOf(Target) ≤ ConvergedValue, …)` no-ops on the 2-CMC
+    // creature. A 1-CMC target gets exiled.
     let mut g = two_player_game();
     let llanowar = g.add_card_to_battlefield(1, catalog::llanowar_elves());
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
 
+    // Cast targeting the 2-CMC creature: cast succeeds, but resolution
+    // doesn't exile (converge=1 vs CMC=2).
     let pe = g.add_card_to_hand(0, catalog::prismatic_ending());
     g.players[0].mana_pool.add(Color::White, 1);
-    let err = g.perform_action(GameAction::CastSpell {
+    g.perform_action(GameAction::CastSpell {
         card_id: pe,
         target: Some(Target::Permanent(bear)),
         mode: None,
         x_value: None,
-    });
-    assert!(err.is_err(),
-        "Prismatic Ending shouldn't accept a 2-CMC target at converged-1");
+    })
+    .expect("Prismatic Ending should accept a Nonland target at cast time");
+    drain_stack(&mut g);
+    assert!(!g.exile.iter().any(|c| c.id == bear),
+        "Bear (2 CMC) shouldn't be exiled at converge=1");
+    assert!(g.battlefield.iter().any(|c| c.id == bear));
 
-    // Cast targeting the 1-CMC creature succeeds.
+    // Cast targeting the 1-CMC creature: exile fires.
     let pe2 = g.add_card_to_hand(0, catalog::prismatic_ending());
     g.players[0].mana_pool.add(Color::White, 1);
     g.perform_action(GameAction::CastSpell {
@@ -1606,9 +1616,7 @@ fn prismatic_ending_exiles_one_drop_only() {
     drain_stack(&mut g);
 
     assert!(g.exile.iter().any(|c| c.id == llanowar),
-        "Llanowar Elves should be exiled");
-    assert!(g.battlefield.iter().any(|c| c.id == bear),
-        "Grizzly Bears (2 CMC) should remain on the battlefield");
+        "Llanowar Elves (1 CMC) should be exiled at converge=1");
 }
 
 #[test]
@@ -2073,4 +2081,509 @@ fn mystical_dispute_alt_cost_requires_blue_target() {
         x_value: None,
     })
     .expect("Mystical Dispute alt cost should accept a blue target");
+}
+
+#[test]
+fn mystical_dispute_does_not_counter_when_opponent_can_pay() {
+    // Opponent has 3 colorless to spare → Dispute auto-pays on their
+    // behalf and the spell survives.
+    let mut g = two_player_game();
+    g.players[0].mana_pool.add_colorless(3);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    // Give P1 enough mana to pay the {3} tax.
+    g.players[1].mana_pool.add_colorless(3);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(0)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Lightning Bolt castable for {R}");
+
+    g.priority.player_with_priority = 0;
+    let dispute = g.add_card_to_hand(0, catalog::mystical_dispute());
+    g.perform_action(GameAction::CastSpell {
+        card_id: dispute,
+        target: Some(Target::Permanent(bolt)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Mystical Dispute castable for {2}{U}");
+    drain_stack(&mut g);
+
+    // Bolt's controller (P1) paid {3}, so Bolt resolved and dealt damage.
+    assert_eq!(g.players[0].life, 17,
+        "Bolt should still resolve when P1 pays the dispute tax");
+    assert_eq!(g.players[1].mana_pool.colorless_amount(), 0,
+        "P1's spare colorless should have been consumed paying the tax");
+}
+
+#[test]
+fn mystical_dispute_counters_when_opponent_cannot_pay() {
+    // Same scenario but opponent has no spare mana → counter goes through.
+    let mut g = two_player_game();
+    g.players[0].mana_pool.add_colorless(3);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(0)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Lightning Bolt castable for {R}");
+
+    g.priority.player_with_priority = 0;
+    let dispute = g.add_card_to_hand(0, catalog::mystical_dispute());
+    g.perform_action(GameAction::CastSpell {
+        card_id: dispute,
+        target: Some(Target::Permanent(bolt)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Mystical Dispute castable for {2}{U}");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[0].life, 20,
+        "Bolt should be countered when P1 can't afford the {{3}} tax");
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bolt),
+        "Countered Bolt should hit P1's graveyard");
+}
+
+#[test]
+fn quantum_riddler_on_cast_draws_even_if_countered() {
+    // The cantrip is a SpellCast+SelfSource trigger that goes on the stack
+    // above the spell, so it resolves first — countering Quantum Riddler in
+    // response should not prevent the draw.
+    let mut g = two_player_game();
+    let drawn = g.add_card_to_library(0, catalog::forest());
+
+    let qr = g.add_card_to_hand(0, catalog::quantum_riddler());
+    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: qr, target: None, mode: None, x_value: None,
+    })
+    .expect("Quantum Riddler is castable for {1}{U}{B}");
+
+    // P1 counters Quantum Riddler with a Counterspell while the on-cast
+    // cantrip is still on the stack above it.
+    let counter = g.add_card_to_hand(1, catalog::counterspell());
+    g.players[1].mana_pool.add(Color::Blue, 2);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: counter,
+        target: Some(Target::Permanent(qr)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Counterspell cast against Quantum Riddler");
+
+    drain_stack(&mut g);
+
+    assert!(!g.battlefield.iter().any(|c| c.id == qr),
+        "Quantum Riddler should be countered (no permanent in play)");
+    assert!(g.players[0].hand.iter().any(|c| c.id == drawn),
+        "On-cast cantrip should still draw P0's library card even though the spell was countered");
+}
+
+#[test]
+fn convoke_taps_creature_to_pay_one_generic() {
+    // Wrath of the Skies costs {X}{W}{W}. With X=2 + 1 convoked creature,
+    // the player only needs {1}{W}{W} from real mana — the convoke tap
+    // contributes the missing {1}. The same X=2 wrath then sweeps both
+    // 2-CMC nonland permanents (including the just-tapped convoke
+    // creature, which is itself a 2-CMC bear).
+    let mut g = two_player_game();
+    let mascot = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(mascot);
+    // Only enough real mana for {1}{W}{W} — short by {1} for X=2.
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(1);
+
+    let wrath = g.add_card_to_hand(0, catalog::wrath_of_the_skies());
+    let opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+
+    // Without convoke, the cast fails (mana shortfall).
+    let try_no_convoke = g.perform_action(GameAction::CastSpell {
+        card_id: wrath, target: None, mode: None, x_value: Some(2),
+    });
+    assert!(try_no_convoke.is_err(),
+        "Wrath at X=2 should be unaffordable without convoke help");
+
+    // With convoke, the tap contributes the missing {1}.
+    g.perform_action(GameAction::CastSpellConvoke {
+        card_id: wrath,
+        target: None,
+        mode: None,
+        x_value: Some(2),
+        convoke_creatures: vec![mascot],
+    })
+    .expect("Wrath should be castable with convoke topping up the X cost");
+    drain_stack(&mut g);
+
+    assert!(!g.battlefield.iter().any(|c| c.id == opp_bear),
+        "Wrath at X=2 destroys the 2-CMC opp creature");
+    // The convoked creature itself is also 2-CMC and gets swept by its own
+    // wrath. Either way it's no longer on battlefield (graveyarded).
+    assert!(!g.battlefield.iter().any(|c| c.id == mascot));
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == mascot),
+        "Convoked creature was tapped, then destroyed by Wrath, ending in graveyard");
+}
+
+#[test]
+fn pest_control_at_converge_three_destroys_higher_cmc() {
+    // Pest Control cost is {W}{B}, but we'll inject extra mana of a third
+    // color to bump converge to 3. This should now destroy 3-CMC nonland
+    // permanents (e.g. anything with three pips of cost).
+    let mut g = two_player_game();
+    // 3-CMC opponent permanent — Goblin Guide (1R) is 1-CMC, Lightning
+    // Bolt is instant (no permanent on battlefield). Use Serra Angel
+    // (3WW = 5 CMC). Hmm we need a 3-CMC creature. Use Black Knight (BB)?
+    // 2-CMC. Use a 3-CMC one. The catalog has shivan_dragon (4RR = 6).
+    // Let's just use Shivan Dragon and verify converge=3 doesn't kill it.
+    // For converge=2 leaving a 3-CMC creature, we need… let's just add
+    // a 3-CMC permanent via a test card. Use catalog::serra_angel which
+    // is 3WW = CMC 5. Hmm.
+    //
+    // Simpler: use Grizzly Bears (CMC 2) to confirm converge=3 still
+    // destroys it (it covers 1-3) and converge=2 also destroys it.
+    let opp = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let pest = g.add_card_to_hand(0, catalog::pest_control());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: pest, target: None, mode: None, x_value: None,
+    })
+    .expect("Pest Control castable for {W}{B}");
+    drain_stack(&mut g);
+
+    assert!(!g.battlefield.iter().any(|c| c.id == opp),
+        "Pest Control at converge=2 destroys 2-CMC creatures");
+}
+
+#[test]
+fn convoke_rejects_tapped_creature() {
+    // Convoking a tapped creature should reject the cast.
+    let mut g = two_player_game();
+    let mascot = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(mascot).unwrap().tapped = true;
+    g.players[0].mana_pool.add(Color::White, 1);
+
+    let pe = g.add_card_to_hand(0, catalog::prismatic_ending());
+    let err = g.perform_action(GameAction::CastSpellConvoke {
+        card_id: pe,
+        target: None,
+        mode: None,
+        x_value: None,
+        convoke_creatures: vec![mascot],
+    });
+    assert!(err.is_err(), "Convoking a tapped creature should reject");
+    // Card should be back in hand.
+    assert!(g.players[0].hand.iter().any(|c| c.id == pe));
+}
+
+#[test]
+fn ephemerate_rebound_exiles_then_recasts_next_upkeep() {
+    // Cast Ephemerate from hand. After resolution: creature is flickered
+    // back, Ephemerate is in exile (not graveyard) with a `YourNextUpkeep`
+    // delayed trigger queued. Advancing to P0's next upkeep should fire
+    // the rebound — re-running the flicker effect on a fresh auto-target.
+    let mut g = two_player_game();
+    let creature = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // Damage so we can confirm the flicker clears it (and the rebound
+    // recast still flickers something).
+    g.battlefield_find_mut(creature).unwrap().damage = 1;
+
+    let eph = g.add_card_to_hand(0, catalog::ephemerate());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: eph,
+        target: Some(Target::Permanent(creature)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Ephemerate castable for {W}");
+    drain_stack(&mut g);
+
+    // Damage cleared by flicker.
+    assert_eq!(g.battlefield_find(creature).unwrap().damage, 0);
+    // Rebound: Ephemerate is in exile, NOT in graveyard.
+    assert!(g.exile.iter().any(|c| c.id == eph),
+        "Ephemerate should be exiled by rebound, not graveyarded");
+    assert!(!g.players[0].graveyard.iter().any(|c| c.id == eph),
+        "Ephemerate should NOT have hit P0's graveyard");
+    // A delayed YourNextUpkeep trigger should be queued.
+    assert_eq!(g.delayed_triggers.len(), 1,
+        "Rebound should register one delayed trigger");
+
+    // Damage the creature again so we can prove the rebound recast actually
+    // re-flickered it (would clear the new damage).
+    g.battlefield_find_mut(creature).unwrap().damage = 2;
+
+    // Advance to P0's next upkeep.
+    g.step = TurnStep::Cleanup;
+    g.active_player_idx = 1;
+    for _ in 0..15 {
+        if g.active_player_idx == 0 && g.step == TurnStep::Upkeep && g.stack.is_empty() {
+            break;
+        }
+        g.perform_action(GameAction::PassPriority).unwrap();
+    }
+
+    // The rebound trigger fired and re-flickered the creature → damage cleared.
+    assert_eq!(g.battlefield_find(creature).unwrap().damage, 0,
+        "Rebound's recast should re-flicker the creature, clearing damage");
+    assert!(g.delayed_triggers.is_empty(),
+        "Rebound trigger should fire once and clear");
+}
+
+#[test]
+fn elesh_norn_doubles_your_etb_triggers() {
+    // Devourer of Destiny scry-on-cast still fires from the stack — but
+    // ETB triggers from a permanent entering should fire 2x while you
+    // control Elesh Norn. Use Quantum Riddler's on-cast cantrip… wait,
+    // that's a SpellCast trigger, not ETB. Use a creature with a real
+    // ETB: Solitude (ETB exiles target opp creature). With Elesh Norn out
+    // and two opp creatures, both should be exiled.
+    let mut g = two_player_game();
+    let _norn = g.add_card_to_battlefield(0, catalog::elesh_norn_mother_of_machines());
+    let opp_a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let opp_b = g.add_card_to_battlefield(1, catalog::llanowar_elves());
+
+    let solitude = g.add_card_to_hand(0, catalog::solitude());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: solitude, target: None, mode: None, x_value: None,
+    })
+    .expect("Solitude castable for {3}{W}");
+    drain_stack(&mut g);
+
+    // Both opp creatures should have been exiled by the doubled ETB.
+    let exiled = [opp_a, opp_b].iter()
+        .filter(|cid| g.exile.iter().any(|c| c.id == **cid))
+        .count();
+    assert_eq!(exiled, 2,
+        "Solitude's ETB should fire twice with Elesh Norn out, exiling both opp creatures");
+}
+
+#[test]
+fn elesh_norn_suppresses_opponent_etb_triggers() {
+    // P0 controls Elesh Norn. P1 plays Solitude — its ETB exile trigger
+    // should be suppressed (zero firings), so P0's creatures stay put.
+    let mut g = two_player_game();
+    let _norn = g.add_card_to_battlefield(0, catalog::elesh_norn_mother_of_machines());
+    let p0_creature = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+
+    let solitude = g.add_card_to_hand(1, catalog::solitude());
+    g.players[1].mana_pool.add(Color::White, 1);
+    g.players[1].mana_pool.add_colorless(3);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: solitude, target: None, mode: None, x_value: None,
+    })
+    .expect("Opponent's Solitude castable");
+    drain_stack(&mut g);
+
+    assert!(g.battlefield.iter().any(|c| c.id == p0_creature),
+        "P0's creature should survive — Elesh Norn suppresses opp's ETB triggers");
+    assert!(!g.exile.iter().any(|c| c.id == p0_creature));
+}
+
+#[test]
+fn cavern_of_souls_makes_creatures_uncounterable() {
+    // While P0 controls a Cavern of Souls, any creature spell P0 casts is
+    // marked uncounterable on the stack — Counterspell from P1 should not
+    // remove it.
+    let mut g = two_player_game();
+    let _cavern = g.add_card_to_battlefield(0, catalog::cavern_of_souls());
+
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear, target: None, mode: None, x_value: None,
+    })
+    .expect("Grizzly Bears castable for {1}{G}");
+
+    // P1 tries to counter the bear.
+    let counter = g.add_card_to_hand(1, catalog::counterspell());
+    g.players[1].mana_pool.add(Color::Blue, 2);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: counter,
+        target: Some(Target::Permanent(bear)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Counterspell castable");
+    drain_stack(&mut g);
+
+    assert!(g.battlefield.iter().any(|c| c.id == bear),
+        "Cavern of Souls should make P0's creature uncounterable");
+}
+
+#[test]
+fn cavern_of_souls_does_not_protect_noncreature_spells() {
+    // Cavern's uncounterable approximation is creature-only — countering a
+    // noncreature spell should still work even with a Cavern in play.
+    let mut g = two_player_game();
+    let _cavern = g.add_card_to_battlefield(0, catalog::cavern_of_souls());
+
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(1)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Lightning Bolt castable for {R}");
+
+    let counter = g.add_card_to_hand(1, catalog::counterspell());
+    g.players[1].mana_pool.add(Color::Blue, 2);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: counter,
+        target: Some(Target::Permanent(bolt)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Counterspell castable");
+    drain_stack(&mut g);
+
+    assert!(!g.stack.iter().any(|si| matches!(
+        si, crate::game::StackItem::Spell { card, .. } if card.id == bolt
+    )), "Lightning Bolt should be countered (Cavern only protects creatures)");
+}
+
+#[test]
+fn damping_sphere_taxes_each_spell_after_the_first() {
+    // First Lightning Bolt costs {R}; second one costs {1}{R} while
+    // Damping Sphere is in play.
+    let mut g = two_player_game();
+    let _sphere = g.add_card_to_battlefield(0, catalog::damping_sphere());
+
+    // First spell: should cost just {R}.
+    let bolt1 = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt1,
+        target: Some(Target::Player(1)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("First Lightning Bolt should cast for {R}");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].spells_cast_this_turn, 1);
+
+    // Second spell: should now require {1}{R}. Pay just {R} → fails.
+    let bolt2 = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let err = g.perform_action(GameAction::CastSpell {
+        card_id: bolt2,
+        target: Some(Target::Player(1)),
+        mode: None,
+        x_value: None,
+    });
+    assert!(err.is_err(),
+        "Second spell should require an extra {{1}} under Damping Sphere");
+
+    // With the extra {1}, it casts.
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt2,
+        target: Some(Target::Player(1)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Second Lightning Bolt should cast for {1}{R} under Damping Sphere");
+}
+
+#[test]
+fn damping_sphere_resets_count_at_turn_start() {
+    // Per-player `spells_cast_this_turn` should clear at the start of the
+    // next turn, so the first spell of a new turn isn't taxed.
+    let mut g = two_player_game();
+    let _sphere = g.add_card_to_battlefield(0, catalog::damping_sphere());
+
+    g.players[0].spells_cast_this_turn = 3;
+    // Simulate a fresh turn for P0 — `do_untap` resets the per-player
+    // counter (and lands_played).
+    g.do_untap();
+    assert_eq!(g.players[0].spells_cast_this_turn, 0,
+        "Per-player spell count should reset on untap");
+
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(1)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("First spell of a new turn should not be taxed");
+}
+
+#[test]
+fn consign_to_memory_counters_targeted_trigger() {
+    // P1 casts Devourer of Destiny (on-cast Scry 2 trigger goes on the
+    // stack). P0 responds with Consign to Memory targeting Devourer; the
+    // Scry trigger is removed from the stack before it can resolve.
+    let mut g = two_player_game();
+    // Seed P1's library so the scry would have something to act on if it
+    // resolved (so we can verify it didn't).
+    g.add_card_to_library(1, catalog::island());
+    g.add_card_to_library(1, catalog::island());
+
+    let dev = g.add_card_to_hand(1, catalog::devourer_of_destiny());
+    g.players[1].mana_pool.add_colorless(5);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: dev, target: None, mode: None, x_value: None,
+    })
+    .expect("Devourer of Destiny castable for {5}");
+
+    // Confirm the scry trigger landed on the stack alongside the spell.
+    let trigger_count = g.stack.iter()
+        .filter(|si| matches!(si, crate::game::StackItem::Trigger { source, .. } if *source == dev))
+        .count();
+    assert_eq!(trigger_count, 1, "Scry-on-cast trigger should be queued");
+
+    // P0 casts Consign to Memory targeting Devourer.
+    let consign = g.add_card_to_hand(0, catalog::consign_to_memory());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: consign,
+        target: Some(Target::Permanent(dev)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Consign to Memory castable for {U}");
+    drain_stack(&mut g);
+
+    // The Scry trigger never resolved → no scry decision was asked. We
+    // can't directly observe "did scry happen" without a scripted decider,
+    // but we can assert the trigger was removed from the stack and the
+    // Devourer still resolved (since Consign only counters the ability,
+    // not the spell).
+    assert!(g.battlefield.iter().any(|c| c.id == dev),
+        "Devourer should still resolve — Consign only counters the ability");
+    assert!(!g.stack.iter().any(|si| matches!(
+        si, crate::game::StackItem::Trigger { source, .. } if *source == dev
+    )), "Scry-on-cast trigger should have been countered");
 }

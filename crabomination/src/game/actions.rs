@@ -13,6 +13,123 @@ fn is_mana_ability(effect: &Effect) -> bool {
     }
 }
 
+/// Pull the "when you cast this spell" (`EventKind::SpellCast` +
+/// `EventScope::SelfSource`) triggers off a card. Used by the cast paths
+/// to push these onto the stack above the cast spell so they resolve
+/// before the spell itself.
+fn collect_self_cast_triggers(card: &crate::card::CardInstance) -> Vec<Effect> {
+    use crate::effect::{EventKind, EventScope};
+    card.definition
+        .triggered_abilities
+        .iter()
+        .filter(|t| {
+            t.event.kind == EventKind::SpellCast
+                && matches!(t.event.scope, EventScope::SelfSource)
+        })
+        .map(|t| t.effect.clone())
+        .collect()
+}
+
+/// Count distinct colors of mana that decreased between two pool
+/// snapshots — i.e. the spell's converge value.
+fn converge_count(before: &crate::mana::ManaPool, after: &crate::mana::ManaPool) -> u32 {
+    use crate::mana::Color;
+    let mut count = 0u32;
+    for color in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] {
+        if before.amount(color) > after.amount(color) {
+            count += 1;
+        }
+    }
+    count
+}
+
+/// Walk the battlefield's static abilities to compute the total extra
+/// generic mana the caster owes for casting `card`. Currently only honors
+/// `StaticEffect::AdditionalCostAfterFirstSpell` (Damping Sphere): if the
+/// caster has already cast at least one spell this turn and the spell
+/// matches the static's `filter`, charge `amount` more.
+fn extra_cost_for_spell(
+    state: &crate::game::GameState,
+    caster: usize,
+    card: &crate::card::CardInstance,
+) -> u32 {
+    use crate::effect::StaticEffect;
+    let already_cast = state.players[caster].spells_cast_this_turn;
+    if already_cast == 0 {
+        return 0;
+    }
+    let mut tax = 0u32;
+    for src in &state.battlefield {
+        for sa in &src.definition.static_abilities {
+            if let StaticEffect::AdditionalCostAfterFirstSpell { filter, amount } = &sa.effect {
+                if state.evaluate_requirement_on_card(filter, card, caster) {
+                    tax += amount;
+                }
+            }
+        }
+    }
+    tax
+}
+
+/// Elesh Norn, Mother of Machines: count how many times an ETB trigger
+/// from a permanent owned by `etb_controller` should fire.
+///
+/// Rules:
+/// - "Permanents entering the battlefield don't cause abilities of permanents
+///   your opponents control to trigger" → if any opponent of the
+///   permanent's controller has an Elesh Norn, the trigger is suppressed
+///   (returns 0).
+/// - "If a permanent entering the battlefield causes a triggered ability of
+///   a permanent you control to trigger, that ability triggers an additional
+///   time" → each Elesh Norn on the trigger-source's side adds one extra fire.
+///
+/// `etb_controller` is the controller of the ability's source — for self-ETB
+/// triggers, that's the entering permanent itself.
+pub(crate) fn etb_trigger_multiplier(
+    state: &crate::game::GameState,
+    etb_controller: usize,
+) -> usize {
+    let mut your_norns = 0usize;
+    let mut opp_norns = 0usize;
+    for c in &state.battlefield {
+        if c.definition.name == "Elesh Norn, Mother of Machines" {
+            if c.controller == etb_controller {
+                your_norns += 1;
+            } else {
+                opp_norns += 1;
+            }
+        }
+    }
+    if opp_norns > 0 {
+        0
+    } else {
+        1 + your_norns
+    }
+}
+
+/// Cavern of Souls approximation: when a creature spell is cast, mark it
+/// uncounterable if the caster controls a Cavern of Souls.
+///
+/// The real card requires Cavern to be tapped for mana, that mana to be
+/// spent on the cast, and the creature's type to match the named type. We
+/// don't track mana provenance or named-types, so this collapses to "any
+/// creature you cast is uncounterable while you control a Cavern" — close
+/// enough for the demo deck.
+impl crate::game::GameState {
+    pub(crate) fn caster_grants_uncounterable(
+        &self,
+        caster: usize,
+        card: &crate::card::CardInstance,
+    ) -> bool {
+        if !card.definition.is_creature() {
+            return false;
+        }
+        self.battlefield
+            .iter()
+            .any(|c| c.controller == caster && c.definition.name == "Cavern of Souls")
+    }
+}
+
 fn effect_produces_color(effect: &Effect, color: ManaColor) -> bool {
     match effect {
         Effect::AddMana { pool, .. } => match pool {
@@ -99,15 +216,20 @@ impl GameState {
                     .collect()
             })
             .unwrap_or_default();
+        // Elesh Norn replacement: zero or more copies depending on which
+        // side controls a Mother of Machines.
+        let multiplier = etb_trigger_multiplier(self, controller);
         for effect in etb_triggers {
             let auto_target = self.auto_target_for_effect(&effect, controller);
-            self.stack.push(StackItem::Trigger {
-                source: card_id,
-                controller,
-                effect: Box::new(effect),
-                target: auto_target,
-                mode: None,
-            });
+            for _ in 0..multiplier {
+                self.stack.push(StackItem::Trigger {
+                    source: card_id,
+                    controller,
+                    effect: Box::new(effect.clone()),
+                    target: auto_target.clone(),
+                    mode: None,
+                });
+            }
         }
     }
 
@@ -120,12 +242,49 @@ impl GameState {
         mode: Option<usize>,
         x_value: Option<u32>,
     ) -> Result<Vec<GameEvent>, GameError> {
+        self.cast_spell_with_convoke(card_id, target, mode, x_value, &[])
+    }
+
+    /// Internal cast-spell helper with optional convoke creatures. Each
+    /// listed creature must be untapped + controlled by the caster + the
+    /// spell must have `Keyword::Convoke`. Each tap adds {1} generic mana
+    /// to the player's pool so the rest of the cost flow consumes it
+    /// alongside lands.
+    pub(crate) fn cast_spell_with_convoke(
+        &mut self,
+        card_id: CardId,
+        target: Option<Target>,
+        mode: Option<usize>,
+        x_value: Option<u32>,
+        convoke_creatures: &[CardId],
+    ) -> Result<Vec<GameEvent>, GameError> {
         let p = self.priority.player_with_priority;
 
         if !self.players[p].has_in_hand(card_id) {
             return Err(GameError::CardNotInHand(card_id));
         }
-        let card = self.players[p].remove_from_hand(card_id).unwrap();
+        let mut card = self.players[p].remove_from_hand(card_id).unwrap();
+        card.cast_from_hand = true;
+
+        // Validate convoke creatures up-front (before any state mutation).
+        if !convoke_creatures.is_empty()
+            && !card.definition.keywords.contains(&crate::card::Keyword::Convoke)
+        {
+            self.players[p].hand.push(card);
+            return Err(GameError::SorcerySpeedOnly); // reuse: spell doesn't have convoke
+        }
+        for cid in convoke_creatures {
+            let bad = !self.battlefield.iter().any(|c| {
+                c.id == *cid
+                    && c.controller == p
+                    && c.definition.is_creature()
+                    && !c.tapped
+            });
+            if bad {
+                self.players[p].hand.push(card);
+                return Err(GameError::CardNotOnBattlefield(*cid));
+            }
+        }
 
         // Timing: sorcery-speed requires empty stack + main phase + active player priority.
         // Instant-speed (Instant type or Flash) may be cast whenever you have priority.
@@ -153,13 +312,19 @@ impl GameState {
             return Err(GameError::SelectionRequirementViolated);
         }
 
-        // Pay the cost (substitute X if present)
+        // Pay the cost (substitute X if present, then add any
+        // static-ability tax such as Damping Sphere's "{1} more after the
+        // first spell each turn").
         let base_cost = card.definition.cost.clone();
-        let cost = if base_cost.has_x() {
+        let mut cost = if base_cost.has_x() {
             base_cost.with_x_value(x_value.unwrap_or(0))
         } else {
             base_cost
         };
+        let tax = extra_cost_for_spell(self, p, &card);
+        if tax > 0 {
+            cost.symbols.push(crate::mana::ManaSymbol::Generic(tax));
+        }
 
         // Snapshot pool and tapped states before auto-tap so we can roll back
         // cleanly if the cost still can't be paid after tapping (e.g. not enough
@@ -170,6 +335,18 @@ impl GameState {
             .filter(|c| c.owner == p)
             .map(|c| (c.id, c.tapped))
             .collect();
+
+        // Convoke: tap each chosen creature and credit the player's pool
+        // with {1} generic per creature. (The full Oracle also lets the
+        // creature pay one mana of its own color identity; for now every
+        // tap pays {1}.) Convoke discounts can't reduce the cost below
+        // colored requirements — those still come from real mana sources.
+        for cid in convoke_creatures {
+            if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == *cid) {
+                c.tapped = true;
+            }
+            self.players[p].mana_pool.add_colorless(1);
+        }
 
         let mut auto_events = self.auto_tap_for_cost(p, &cost);
 
@@ -192,11 +369,23 @@ impl GameState {
             }
         }
 
+        // Compute converge: count distinct colors of mana drained from the
+        // pool by paying the cost. Convoke pips contribute generic only,
+        // so they don't raise this count.
+        let converged_value = converge_count(&pool_before, &self.players[p].mana_pool);
+
         auto_events.push(GameEvent::SpellCast { player: p, card_id });
         let events = auto_events;
 
         // Track spells cast this turn (for Storm, etc.).
         self.spells_cast_this_turn += 1;
+        self.players[p].spells_cast_this_turn += 1;
+
+        // Collect "when you cast this spell, ..." (SelfSource SpellCast)
+        // triggers off the spell before it moves into the stack item; we'll
+        // push them ABOVE the spell so they resolve first.
+        let on_cast_triggers = collect_self_cast_triggers(&card);
+        let uncounterable = self.caster_grants_uncounterable(p, &card);
 
         // Push onto the stack — spell waits there until all players pass priority.
         self.stack.push(StackItem::Spell {
@@ -205,13 +394,39 @@ impl GameState {
             target,
             mode,
             x_value: x_value.unwrap_or(0),
-            uncounterable: false,
+            converged_value,
+            uncounterable,
         });
+
+        // Push the on-cast triggers on top of the spell so they resolve first.
+        self.push_on_cast_triggers(card_id, p, on_cast_triggers);
 
         // Reset priority to active player so all players get a chance to respond.
         self.give_priority_to_active();
 
         Ok(events)
+    }
+
+    /// Push pre-collected `SpellCast`/`SelfSource` triggers from the
+    /// just-cast card onto the stack as `Trigger` items, so they resolve
+    /// before the spell itself. Caller is responsible for collecting the
+    /// effect list before the card moves into the stack item.
+    pub(crate) fn push_on_cast_triggers(
+        &mut self,
+        source: CardId,
+        controller: usize,
+        triggers: Vec<Effect>,
+    ) {
+        for effect in triggers {
+            let auto_target = self.auto_target_for_effect(&effect, controller);
+            self.stack.push(StackItem::Trigger {
+                source,
+                controller,
+                effect: Box::new(effect),
+                target: auto_target,
+                mode: None,
+            });
+        }
     }
 
     /// Cast a spell from the graveyard using its Flashback cost.
@@ -284,6 +499,10 @@ impl GameState {
 
         let events = vec![GameEvent::SpellCast { player: p, card_id }];
         self.spells_cast_this_turn += 1;
+        self.players[p].spells_cast_this_turn += 1;
+
+        let on_cast_triggers = collect_self_cast_triggers(&card);
+        let uncounterable = self.caster_grants_uncounterable(p, &card);
 
         self.stack.push(StackItem::Spell {
             card: Box::new(card),
@@ -291,8 +510,10 @@ impl GameState {
             target,
             mode,
             x_value: x_value.unwrap_or(0),
-            uncounterable: false,
+            converged_value: 0,
+            uncounterable,
         });
+        self.push_on_cast_triggers(card_id, p, on_cast_triggers);
         self.give_priority_to_active();
 
         Ok(events)
@@ -359,6 +580,7 @@ impl GameState {
         // Remove the spell card from hand now (so the pitch card doesn't
         // accidentally collide with it during validation).
         let mut card = self.players[p].remove_from_hand(card_id).unwrap();
+        card.cast_from_hand = true;
         if alt.evoke_sacrifice {
             card.evoked = true;
         }
@@ -448,6 +670,10 @@ impl GameState {
         auto_events.push(GameEvent::SpellCast { player: p, card_id });
         let events = auto_events;
         self.spells_cast_this_turn += 1;
+        self.players[p].spells_cast_this_turn += 1;
+
+        let on_cast_triggers = collect_self_cast_triggers(&card);
+        let uncounterable = self.caster_grants_uncounterable(p, &card);
 
         self.stack.push(StackItem::Spell {
             card: Box::new(card),
@@ -455,8 +681,10 @@ impl GameState {
             target,
             mode,
             x_value: x_value.unwrap_or(0),
-            uncounterable: false,
+            converged_value: 0,
+            uncounterable,
         });
+        self.push_on_cast_triggers(card_id, p, on_cast_triggers);
         self.give_priority_to_active();
 
         Ok(events)

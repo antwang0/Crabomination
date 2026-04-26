@@ -184,6 +184,11 @@ impl GameState {
         self.delayed_triggers = keep;
 
         for (source, effect, controller, target) in delayed_to_fire {
+            // If the delayed trigger was registered with no captured
+            // target (e.g. rebound's re-cast), pick a fresh auto-target at
+            // fire time so the trigger doesn't enter the stack with a
+            // None target slot.
+            let target = target.or_else(|| self.auto_target_for_effect(&effect, controller));
             self.stack.push(StackItem::Trigger {
                 source,
                 controller,
@@ -220,6 +225,7 @@ impl GameState {
                 target,
                 mode,
                 x_value,
+                converged_value,
                 uncounterable: _,
             } => {
                 let card = *card;
@@ -256,16 +262,23 @@ impl GameState {
                         });
                     }
 
-                    // Push ETB triggers onto the stack.
+                    // Push ETB triggers onto the stack — Elesh Norn
+                    // replacement adjusts the trigger count (0 = suppressed
+                    // by opponent's Norn, 1+N = each of your Norns adds an
+                    // extra fire).
+                    let etb_multiplier =
+                        crate::game::actions::etb_trigger_multiplier(self, caster);
                     for effect in etb_triggers {
                         let auto_target = self.auto_target_for_effect(&effect, caster);
-                        self.stack.push(StackItem::Trigger {
-                            source: card_id,
-                            controller: caster,
-                            effect: Box::new(effect),
-                            target: auto_target,
-                            mode: None,
-                        });
+                        for _ in 0..etb_multiplier {
+                            self.stack.push(StackItem::Trigger {
+                                source: card_id,
+                                controller: caster,
+                                effect: Box::new(effect.clone()),
+                                target: auto_target.clone(),
+                                mode: None,
+                            });
+                        }
                     }
 
                     // AnotherOfYours creature ETB triggers.
@@ -288,15 +301,23 @@ impl GameState {
                                     .map(|t| (c.id, t.effect.clone()))
                             })
                             .collect();
+                        // Elesh Norn replacement: each listener's trigger
+                        // count is determined by the listener's controller
+                        // (which equals `caster` here, so we reuse the
+                        // multiplier we'd compute for self-source above).
+                        let aoy_multiplier =
+                            crate::game::actions::etb_trigger_multiplier(self, caster);
                         for (src, effect) in other_triggers {
                             let auto_target = self.auto_target_for_effect(&effect, caster);
-                            self.stack.push(StackItem::Trigger {
-                                source: src,
-                                controller: caster,
-                                effect: Box::new(effect),
-                                target: auto_target,
-                                mode: None,
-                            });
+                            for _ in 0..aoy_multiplier {
+                                self.stack.push(StackItem::Trigger {
+                                    source: src,
+                                    controller: caster,
+                                    effect: Box::new(effect.clone()),
+                                    target: auto_target.clone(),
+                                    mode: None,
+                                });
+                            }
                         }
                     }
                 } else {
@@ -307,6 +328,7 @@ impl GameState {
                         target,
                         chosen_mode,
                         x_value,
+                        converged_value,
                         None,
                     )?;
                     events.append(&mut spell_events);
@@ -357,6 +379,7 @@ impl GameState {
             }
         }
         self.players[p].lands_played_this_turn = 0;
+        self.players[p].spells_cast_this_turn = 0;
     }
 
     pub(crate) fn do_cleanup(&mut self) {

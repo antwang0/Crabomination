@@ -44,7 +44,8 @@
       "Bash(xxd)",
       "Bash(git checkout *)",
       "Bash(git diff *)",
-      "Bash(git fetch *)"
+      "Bash(git fetch *)",
+      "Bash(grep -n \"Effect::Discard \\\\\\\\\\\\\\\\{\\\\\\\\|DiscardPending\\\\\\\\|Decision::Discard\" crabomination/src/game/effects.rs)"
     ]
   }
 }

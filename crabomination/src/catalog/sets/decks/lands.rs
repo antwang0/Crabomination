@@ -420,8 +420,13 @@ pub fn gemstone_caverns() -> CardDefinition {
 /// colorless OR mana of any color usable only to cast a creature of the
 /// chosen type, which can't be countered.
 ///
-/// Stub: tap for colorless (no creature-type choice or uncounterable yet).
-/// TODO: name-a-type ETB choice + uncounterable spell flag.
+/// Approximation: taps for colorless mana, and the cast paths in
+/// `actions.rs` flag any creature spell cast by a player who controls a
+/// Cavern as `StackItem::Spell.uncounterable = true` — `CounterSpell`
+/// skips those. The "name a type" / mana-provenance restriction is
+/// collapsed: any creature spell becomes uncounterable while you control
+/// any Cavern. Acceptable for the demo deck. TODO: full name-a-type
+/// decision + per-cast tagging via mana provenance.
 pub fn cavern_of_souls() -> CardDefinition {
     CardDefinition {
         name: "Cavern of Souls",

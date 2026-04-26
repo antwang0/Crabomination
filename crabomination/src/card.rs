@@ -185,6 +185,14 @@ pub enum Keyword {
     Changeling,
     Storm,
     Inspired,
+    /// "When you cast this spell from your hand, exile it as it resolves.
+    /// At the beginning of your next upkeep, you may cast this card from
+    /// exile without paying its mana cost." Wired in
+    /// `continue_spell_resolution`: cast-from-hand spells with Rebound go
+    /// to exile (instead of graveyard) and schedule a `YourNextUpkeep`
+    /// delayed trigger that re-runs the spell's effect with a fresh
+    /// auto-target.
+    Rebound,
 }
 
 /// Composable filter for valid targets of a spell or ability.
@@ -419,6 +427,11 @@ pub struct CardInstance {
     /// True if this card was cast via an evoke alternative cost — it will
     /// be sacrificed on ETB after its ETB triggers fire.
     pub evoked: bool,
+    /// True if this card was cast from its owner's hand on its current
+    /// trip through the stack. Used by the rebound resolution path to
+    /// distinguish hand-casts (rebound triggers) from re-casts from exile
+    /// (rebound does **not** chain).
+    pub cast_from_hand: bool,
 }
 
 impl CardInstance {
@@ -447,6 +460,7 @@ impl CardInstance {
             is_token: false,
             used_loyalty_ability_this_turn: false,
             evoked: false,
+            cast_from_hand: false,
         }
     }
 

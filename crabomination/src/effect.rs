@@ -150,6 +150,11 @@ pub enum Value {
     /// hands. Used by Wrath of the Skies (destroy each nonland with mana
     /// value X) and similar "filter by mana value" effects.
     ManaValueOf(Box<Selector>),
+    /// Converge value: the number of distinct colors of mana spent on the
+    /// spell's cost. Stashed on `StackItem::Spell` at cast time and read
+    /// from `EffectContext.converged_value` here. Used by Prismatic
+    /// Ending and Pest Control.
+    ConvergedValue,
 }
 
 impl Value {
@@ -391,6 +396,20 @@ pub enum Effect {
     // ── Stack interaction ────────────────────────────────────────────────────
     /// Counter target spell (removes from stack).
     CounterSpell { what: Selector },
+    /// Counter target activated/triggered ability. The selector resolves
+    /// to a permanent (the ability's source), and the engine removes the
+    /// topmost `StackItem::Trigger` whose `source` matches. Used by
+    /// Consign to Memory.
+    CounterAbility { what: Selector },
+    /// Counter target spell **unless** its controller pays `mana_cost`.
+    /// At resolution, the engine attempts to auto-pay on behalf of the
+    /// targeted spell's controller — if affordable, the spell stays;
+    /// otherwise it's countered. Used by Mystical Dispute (counter unless
+    /// controller pays {3}). Spells flagged `uncounterable` are skipped.
+    CounterUnlessPaid {
+        what: Selector,
+        mana_cost: crate::mana::ManaCost,
+    },
     /// Copy target spell/ability `count` times.
     CopySpell    { what: Selector, count: Value },
 
@@ -557,7 +576,9 @@ impl Effect {
             | Effect::Exile { what }
             | Effect::Tap { what }
             | Effect::Untap { what }
-            | Effect::CounterSpell { what } => sel_has_target(what),
+            | Effect::CounterSpell { what }
+            | Effect::CounterAbility { what }
+            | Effect::CounterUnlessPaid { what, .. } => sel_has_target(what),
             Effect::PumpPT { what, power, toughness, .. } => {
                 sel_has_target(what) || value_has_target(power) || value_has_target(toughness)
             }
@@ -610,6 +631,8 @@ impl Effect {
             | Effect::Tap { what }
             | Effect::Untap { what }
             | Effect::CounterSpell { what }
+            | Effect::CounterAbility { what }
+            | Effect::CounterUnlessPaid { what, .. }
             | Effect::GainControl { what, .. } => sel_filter(what),
             Effect::AddCounter { what, .. } | Effect::RemoveCounter { what, .. } => sel_filter(what),
             Effect::PumpPT { what, .. } => sel_filter(what),
@@ -660,6 +683,8 @@ impl Effect {
                 | Effect::Tap { what }
                 | Effect::Untap { what }
                 | Effect::CounterSpell { what }
+                | Effect::CounterAbility { what }
+                | Effect::CounterUnlessPaid { what, .. }
                 | Effect::GainControl { what, .. } => sel_find(what, slot),
                 Effect::PumpPT { what, .. } => sel_find(what, slot),
                 Effect::GrantKeyword { what, .. } => sel_find(what, slot),
@@ -713,6 +738,11 @@ pub enum StaticEffect {
     ExtraLandPerTurn,
     /// Generic cost reduction for spells matching filter.
     CostReduction { filter: SelectionRequirement, amount: u32 },
+    /// Damping-Sphere-style "spells cost {amount} more after the first
+    /// spell that player casts each turn." `filter` narrows which spells
+    /// are taxed; the cost increase is applied at cast time when the
+    /// caster's `Player.spells_cast_this_turn >= 1`.
+    AdditionalCostAfterFirstSpell { filter: SelectionRequirement, amount: u32 },
 }
 
 // ── Triggered / activated / loyalty ability shells ───────────────────────────

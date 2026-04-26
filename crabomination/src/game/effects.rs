@@ -29,6 +29,10 @@ pub struct EffectContext {
     /// Modal choice index (for `Effect::ChooseMode`).
     pub mode: usize,
     pub x_value: u32,
+    /// Number of distinct colors of mana spent on the spell's cost
+    /// (Pest Control, Prismatic Ending). Computed at cast time and
+    /// threaded through `StackItem::Spell`.
+    pub converged_value: u32,
 }
 
 impl EffectContext {
@@ -40,6 +44,24 @@ impl EffectContext {
             trigger_source: None,
             mode,
             x_value,
+            converged_value: 0,
+        }
+    }
+    pub fn for_spell_full(
+        caster: usize,
+        target: Option<Target>,
+        mode: usize,
+        x_value: u32,
+        converged_value: u32,
+    ) -> Self {
+        Self {
+            controller: caster,
+            source: None,
+            targets: target.into_iter().collect(),
+            trigger_source: None,
+            mode,
+            x_value,
+            converged_value,
         }
     }
     pub fn for_trigger(
@@ -55,6 +77,7 @@ impl EffectContext {
             trigger_source: Some(EntityRef::Permanent(source)),
             mode,
             x_value: 0,
+            converged_value: 0,
         }
     }
     pub fn for_ability(
@@ -69,6 +92,7 @@ impl EffectContext {
             trigger_source: Some(EntityRef::Permanent(source)),
             mode: 0,
             x_value: 0,
+            converged_value: 0,
         }
     }
 }
@@ -617,6 +641,92 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::CounterUnlessPaid { what, mana_cost } => {
+                // Counter target spell unless its controller pays `mana_cost`.
+                // Auto-pays on behalf of the spell's controller via the
+                // existing `auto_tap_for_cost` + `mana_pool.pay` path: if
+                // affordable, the spell stays; otherwise it's countered.
+                let targets = self.resolve_selector(what, ctx);
+                let target_id = targets.into_iter().find_map(|t| match t {
+                    EntityRef::Permanent(cid) | EntityRef::Card(cid) => Some(cid),
+                    _ => None,
+                });
+                let Some(cid) = target_id else { return Ok(()); };
+                let pos = self.stack.iter().position(|si| matches!(
+                    si,
+                    StackItem::Spell { card, uncounterable: false, .. } if card.id == cid
+                ));
+                let Some(pos) = pos else { return Ok(()); };
+                let StackItem::Spell { caster: spell_caster, .. } = &self.stack[pos]
+                    else { unreachable!("filtered above") };
+                let spell_caster = *spell_caster;
+
+                // Try to auto-pay on behalf of the spell's controller. We
+                // override priority temporarily so `auto_tap_for_cost`
+                // taps that player's lands.
+                let saved_priority = self.priority.player_with_priority;
+                self.priority.player_with_priority = spell_caster;
+                let pool_before = self.players[spell_caster].mana_pool.clone();
+                let tapped_before: Vec<(CardId, bool)> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| c.owner == spell_caster)
+                    .map(|c| (c.id, c.tapped))
+                    .collect();
+                self.auto_tap_for_cost(spell_caster, mana_cost);
+                let paid = self.players[spell_caster].mana_pool.pay(mana_cost).is_ok();
+                if !paid {
+                    // Roll back any tap side-effects.
+                    self.players[spell_caster].mana_pool = pool_before;
+                    for (id, was_tapped) in tapped_before {
+                        if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == id) {
+                            c.tapped = was_tapped;
+                        }
+                    }
+                }
+                self.priority.player_with_priority = saved_priority;
+
+                if !paid {
+                    if let StackItem::Spell { card, caster, .. } = self.stack.remove(pos) {
+                        self.players[caster].send_to_graveyard(*card);
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::CounterAbility { what } => {
+                // Counter target activated/triggered ability. The selector
+                // resolves to a permanent (the ability's source); we remove
+                // the topmost `StackItem::Trigger` whose `source` matches.
+                // Used by Consign to Memory.
+                let targets = self.resolve_selector(what, ctx);
+                let mut to_remove: Vec<usize> = Vec::new();
+                for t in &targets {
+                    if let EntityRef::Permanent(cid) = t {
+                        // Walk top-down so we counter the most recent
+                        // matching trigger (the one the player most likely
+                        // intends to cancel).
+                        if let Some(pos) = self
+                            .stack
+                            .iter()
+                            .enumerate()
+                            .rev()
+                            .find_map(|(i, si)| match si {
+                                StackItem::Trigger { source, .. } if source == cid => Some(i),
+                                _ => None,
+                            })
+                        {
+                            to_remove.push(pos);
+                        }
+                    }
+                }
+                to_remove.sort_unstable_by(|a, b| b.cmp(a));
+                for pos in to_remove {
+                    self.stack.remove(pos);
+                }
+                Ok(())
+            }
+
             Effect::Sacrifice { who, count, filter } => {
                 let n = self.evaluate_value(count, ctx).max(0) as usize;
                 for ent in self.resolve_selector(who, ctx) {
@@ -1130,6 +1240,7 @@ impl GameState {
             Value::Max(a, b) => self.evaluate_value(a, ctx).max(self.evaluate_value(b, ctx)),
             Value::NonNeg(v) => self.evaluate_value(v, ctx).max(0),
             Value::SacrificedPower => self.sacrificed_power.unwrap_or(0),
+            Value::ConvergedValue => ctx.converged_value as i32,
             Value::ManaValueOf(s) => self
                 .resolve_selector(s, ctx)
                 .into_iter()
