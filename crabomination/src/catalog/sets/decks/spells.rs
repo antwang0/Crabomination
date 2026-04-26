@@ -8,11 +8,11 @@
 
 use super::super::no_abilities;
 use crate::card::{
-    AlternativeCost, CardDefinition, CardType, Effect, SelectionRequirement, Subtypes,
+    AlternativeCost, CardDefinition, CardType, Effect, Predicate, SelectionRequirement, Subtypes,
 };
 use crate::effect::shortcut::{counter_target_spell, target_filtered};
 use crate::effect::{DelayedTriggerKind, PlayerRef, Selector, Value, ZoneDest};
-use crate::mana::{Color, ManaCost, b, cost, generic, r, u, w};
+use crate::mana::{Color, ManaCost, b, cost, generic, r, u, w, x};
 
 // ── BRG main-deck spells ─────────────────────────────────────────────────────
 
@@ -45,6 +45,7 @@ pub fn pact_of_negation() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        back_face: None,
     }
 }
 
@@ -91,6 +92,7 @@ pub fn plunge_into_darkness() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        back_face: None,
     }
 }
 
@@ -127,13 +129,19 @@ pub fn serum_powder() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        back_face: None,
     }
 }
 
 /// Spoils of the Vault — {B} Instant. Name a card. Reveal cards from the top
 /// of your library until you reveal the named card or 10 different cards.
-/// Stub: Effect::Noop — reveal-until-find isn't supported by the engine.
-/// TODO: wire name-and-reveal-until-find.
+/// Put the named card into your hand. You lose 1 life for each card revealed.
+///
+/// Approximation: `Search(Any → Hand) + LoseLife(3)`. Skips the name-then-
+/// reveal-until-find machinery (the engine has no naming primitive) — the
+/// caster picks any library card directly. The 3-life cost is the rough
+/// average reveal count for a non-singleton tutor target in a 60-card deck.
+/// TODO: real reveal-until-find with a chosen name + variable life cost.
 pub fn spoils_of_the_vault() -> CardDefinition {
     CardDefinition {
         name: "Spoils of the Vault",
@@ -144,13 +152,21 @@ pub fn spoils_of_the_vault() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![],
-        effect: Effect::Noop,
+        effect: Effect::Seq(vec![
+            Effect::Search {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::Any,
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+            Effect::LoseLife { who: Selector::You, amount: Value::Const(3) },
+        ]),
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        back_face: None,
     }
 }
 
@@ -189,6 +205,7 @@ pub fn summoners_pact() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        back_face: None,
     }
 }
 
@@ -228,6 +245,7 @@ pub fn thud() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        back_face: None,
     }
 }
 
@@ -260,6 +278,7 @@ pub fn inquisition_of_kozilek() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        back_face: None,
     }
 }
 
@@ -284,6 +303,7 @@ pub fn leyline_of_sanctity() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        back_face: None,
     }
 }
 
@@ -331,6 +351,7 @@ pub fn ephemerate() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        back_face: None,
     }
 }
 
@@ -374,6 +395,7 @@ pub fn faithful_mending() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        back_face: None,
     }
 }
 
@@ -405,7 +427,9 @@ pub fn force_of_negation() -> CardDefinition {
             exile_filter: Some(SelectionRequirement::HasColor(Color::Blue)),
             evoke_sacrifice: false,
             not_your_turn_only: true,
+            target_filter: None,
         }),
+        back_face: None,
     }
 }
 
@@ -459,6 +483,7 @@ pub fn goryos_vengeance() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        back_face: None,
     }
 }
 
@@ -494,6 +519,7 @@ pub fn prismatic_ending() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        back_face: None,
     }
 }
 
@@ -526,6 +552,7 @@ pub fn thoughtseize() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        back_face: None,
     }
 }
 
@@ -552,6 +579,7 @@ pub fn consign_to_memory() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        back_face: None,
     }
 }
 
@@ -577,13 +605,17 @@ pub fn damping_sphere() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        back_face: None,
     }
 }
 
 /// Mystical Dispute — {2}{U} Instant. Counter target spell unless its
 /// controller pays {3}. If the spell is blue, this costs {U} less.
-/// Stub: simple counter at hard cost; conditional cost reduction omitted.
-/// TODO: cost reduction "if target is blue".
+///
+/// The "{U} less if blue" is modeled as an alternative cost: pay {U}
+/// instead of {2}{U}, and the alt cost's `target_filter` requires the
+/// targeted stack spell to be blue. The "unless they pay {3}" rider is
+/// still ⏳ — both paths counter unconditionally.
 pub fn mystical_dispute() -> CardDefinition {
     CardDefinition {
         name: "Mystical Dispute",
@@ -600,7 +632,15 @@ pub fn mystical_dispute() -> CardDefinition {
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
-        alternative_cost: None,
+        alternative_cost: Some(AlternativeCost {
+            mana_cost: cost(&[u()]),
+            life_cost: 0,
+            exile_filter: None,
+            evoke_sacrifice: false,
+            not_your_turn_only: false,
+            target_filter: Some(SelectionRequirement::HasColor(Color::Blue)),
+        }),
+        back_face: None,
     }
 }
 
@@ -634,29 +674,51 @@ pub fn pest_control() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        back_face: None,
     }
 }
 
-/// Wrath of the Skies — {X}{W}{W} Sorcery. Destroy each nonland permanent
-/// with mana value X. Convoke.
-/// Stub: Effect::Noop.
-/// TODO: convoke + destroy-CMC-=-X.
+/// Wrath of the Skies — {X}{W}{W} Sorcery — Convoke. Destroy each nonland
+/// permanent with mana value X.
+///
+/// Implemented as `ForEach(EachPermanent(Nonland))` body that destroys the
+/// current entity if its mana value equals X (the X paid into the spell's
+/// cost). `Value::ManaValueOf(Selector::TriggerSource)` reads the iterated
+/// permanent's CMC. Convoke isn't supported, so X is just whatever generic
+/// mana the caster pumped into the X slot.
 pub fn wrath_of_the_skies() -> CardDefinition {
     CardDefinition {
         name: "Wrath of the Skies",
-        cost: cost(&[w(), w()]),
+        cost: cost(&[x(), w(), w()]),
         supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
         toughness: 0,
         keywords: vec![],
-        effect: Effect::Noop,
+        effect: Effect::ForEach {
+            selector: Selector::EachPermanent(SelectionRequirement::Nonland),
+            body: Box::new(Effect::If {
+                cond: Predicate::All(vec![
+                    Predicate::ValueAtLeast(
+                        Value::ManaValueOf(Box::new(Selector::TriggerSource)),
+                        Value::XFromCost,
+                    ),
+                    Predicate::ValueAtMost(
+                        Value::ManaValueOf(Box::new(Selector::TriggerSource)),
+                        Value::XFromCost,
+                    ),
+                ]),
+                then: Box::new(Effect::Destroy { what: Selector::TriggerSource }),
+                else_: Box::new(Effect::Noop),
+            }),
+        },
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        back_face: None,
     }
 }

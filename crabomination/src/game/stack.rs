@@ -219,6 +219,7 @@ impl GameState {
                 caster,
                 target,
                 mode,
+                x_value,
                 uncounterable: _,
             } => {
                 let card = *card;
@@ -300,8 +301,14 @@ impl GameState {
                     }
                 } else {
                     let chosen_mode = mode.unwrap_or(0);
-                    let mut spell_events =
-                        self.continue_spell_resolution(card, caster, target, chosen_mode, None)?;
+                    let mut spell_events = self.continue_spell_resolution(
+                        card,
+                        caster,
+                        target,
+                        chosen_mode,
+                        x_value,
+                        None,
+                    )?;
                     events.append(&mut spell_events);
                     if self.pending_decision.is_some() {
                         return Ok(events);

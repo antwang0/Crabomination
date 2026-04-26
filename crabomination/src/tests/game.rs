@@ -1772,3 +1772,305 @@ fn devourer_of_destiny_etb_scries_two() {
     assert_eq!(g.players[0].library[0].id, third,
         "After scry-2-to-bottom, the 3rd library card should be on top");
 }
+
+#[test]
+fn wrath_of_the_skies_destroys_permanents_with_mana_value_x() {
+    // Cast Wrath of the Skies with X=2: only nonland permanents whose CMC
+    // is exactly 2 should die. Lands and other-CMC permanents survive.
+    let mut g = two_player_game();
+    let forest = g.add_card_to_battlefield(1, catalog::forest());
+    let llanowar = g.add_card_to_battlefield(1, catalog::llanowar_elves()); // CMC 1
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());      // CMC 2
+    let dragon = g.add_card_to_battlefield(1, catalog::shivan_dragon());    // CMC 6
+
+    let wrath = g.add_card_to_hand(0, catalog::wrath_of_the_skies());
+    // Cost is {X}{W}{W}; pay {2}{W}{W} for X=2.
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: wrath,
+        target: None,
+        mode: None,
+        x_value: Some(2),
+    })
+    .expect("Wrath of the Skies should cast for {2}{W}{W}");
+    drain_stack(&mut g);
+
+    assert!(g.battlefield.iter().any(|c| c.id == forest),
+        "Lands aren't destroyed by Wrath of the Skies");
+    assert!(g.battlefield.iter().any(|c| c.id == llanowar),
+        "1-CMC creature shouldn't be destroyed when X=2");
+    assert!(!g.battlefield.iter().any(|c| c.id == bear),
+        "2-CMC creature should die when X=2");
+    assert!(g.battlefield.iter().any(|c| c.id == dragon),
+        "6-CMC creature shouldn't be destroyed when X=2");
+}
+
+#[test]
+fn spoils_of_the_vault_tutors_and_loses_three_life() {
+    // Approximates "name + reveal until find" as Search(any → hand) plus
+    // a flat 3-life cost.
+    let mut g = two_player_game();
+    let wanted = g.add_card_to_library(0, catalog::lightning_bolt());
+    g.add_card_to_library(0, catalog::swamp());
+
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(wanted))]));
+
+    let spoils = g.add_card_to_hand(0, catalog::spoils_of_the_vault());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    let life_before = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spoils,
+        target: None,
+        mode: None,
+        x_value: None,
+    })
+    .expect("Spoils of the Vault should cast for {B}");
+    drain_stack(&mut g);
+
+    assert!(g.players[0].hand.iter().any(|c| c.id == wanted),
+        "Tutored card should be in hand");
+    assert_eq!(g.players[0].life, life_before - 3,
+        "Spoils approximates the variable life cost as a flat 3");
+}
+
+#[test]
+fn atraxa_grand_unifier_etb_draws_four() {
+    // Approximation of "reveal top 10, take one of each card type" as
+    // ETB Draw 4.
+    let mut g = two_player_game();
+    for _ in 0..6 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    let lib_before = g.players[0].library.len();
+    let hand_before_cast = g.players[0].hand.len();
+    let atraxa = g.add_card_to_hand(0, catalog::atraxa_grand_unifier());
+    g.players[0].mana_pool.add_colorless(3);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: atraxa, target: None, mode: None, x_value: None,
+    })
+    .expect("Atraxa is castable for {3}{W}{U}{B}{R}{G}");
+    drain_stack(&mut g);
+
+    assert!(g.battlefield.iter().any(|c| c.id == atraxa));
+    // Hand started with Atraxa + drew 4 - cast Atraxa = +3 net change from
+    // start, but only +4 from the ETB trigger itself.
+    assert_eq!(g.players[0].hand.len(), hand_before_cast + 4,
+        "Atraxa's ETB should draw 4 cards (approximation of the reveal-and-sort)");
+    assert_eq!(g.players[0].library.len(), lib_before - 4,
+        "Library should lose 4 cards");
+}
+
+#[test]
+fn pathway_front_face_taps_for_front_color_only() {
+    // Playing Blightstep Pathway via PlayLand picks the front (Swamp / B)
+    // face. The land enters as a Swamp, has exactly one mana ability, and
+    // taps for {B}.
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::blightstep_pathway());
+    g.perform_action(GameAction::PlayLand(id))
+        .expect("PlayLand should succeed for the front face");
+
+    let card = g.battlefield_find(id).expect("card on battlefield");
+    assert_eq!(card.definition.name, "Blightstep Pathway");
+    assert!(card.definition.subtypes.land_types.contains(&crate::card::LandType::Swamp));
+    assert!(!card.definition.subtypes.land_types.contains(&crate::card::LandType::Mountain),
+        "Front face should be a Swamp only — Mountain belongs to the back face");
+    assert_eq!(card.definition.activated_abilities.len(), 1,
+        "Front face exposes only one mana ability (the front color)");
+
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None,
+    }).expect("front face taps for {B}");
+    assert_eq!(g.players[0].mana_pool.amount(Color::Black), 1);
+    assert_eq!(g.players[0].mana_pool.amount(Color::Red), 0,
+        "Front face must not produce {{R}} — that's the back face");
+}
+
+#[test]
+fn pathway_back_face_taps_for_back_color_only() {
+    // Playing Blightstep Pathway via PlayLandBack swaps to the back face
+    // (Searstep Pathway / Mountain / R) before placing on battlefield.
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::blightstep_pathway());
+    g.perform_action(GameAction::PlayLandBack(id))
+        .expect("PlayLandBack should succeed for the back face");
+
+    let card = g.battlefield_find(id).expect("card on battlefield");
+    assert_eq!(card.definition.name, "Searstep Pathway");
+    assert!(card.definition.subtypes.land_types.contains(&crate::card::LandType::Mountain));
+    assert!(!card.definition.subtypes.land_types.contains(&crate::card::LandType::Swamp));
+    assert_eq!(card.definition.activated_abilities.len(), 1);
+
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None,
+    }).expect("back face taps for {R}");
+    assert_eq!(g.players[0].mana_pool.amount(Color::Red), 1);
+    assert_eq!(g.players[0].mana_pool.amount(Color::Black), 0);
+}
+
+#[test]
+fn play_land_back_rejects_non_mdfc() {
+    // A regular basic with no `back_face` can't be played via PlayLandBack.
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::forest());
+    let err = g.perform_action(GameAction::PlayLandBack(id)).unwrap_err();
+    assert_eq!(err, GameError::NotALand(id),
+        "Playing a non-MDFC via PlayLandBack should reject");
+    // Card returns to hand, no land was played.
+    assert!(g.players[0].hand.iter().any(|c| c.id == id));
+    assert_eq!(g.players[0].lands_played_this_turn, 0);
+}
+
+#[test]
+fn gemstone_mine_etb_with_three_charge_counters() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::gemstone_mine());
+    g.perform_action(GameAction::PlayLand(id)).unwrap();
+    drain_stack(&mut g);
+    let card = g.battlefield_find(id).expect("on battlefield");
+    assert_eq!(card.counter_count(crate::card::CounterType::Charge), 3,
+        "Gemstone Mine should ETB with three charge (mining) counters");
+}
+
+#[test]
+fn gemstone_mine_taps_three_times_then_sacrifices() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::gemstone_mine());
+    // Manually seed counters since add_card_to_battlefield bypasses the ETB.
+    g.battlefield_find_mut(id).unwrap()
+        .add_counters(crate::card::CounterType::Charge, 3);
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Color(Color::White),
+        DecisionAnswer::Color(Color::Blue),
+        DecisionAnswer::Color(Color::Black),
+    ]));
+
+    // Tap #1: counter 3 → 2, no sac.
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None,
+    }).expect("tap #1 succeeds");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(id).is_some());
+    assert_eq!(g.battlefield_find(id).unwrap()
+        .counter_count(crate::card::CounterType::Charge), 2);
+    g.battlefield_find_mut(id).unwrap().tapped = false;
+
+    // Tap #2: counter 2 → 1.
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None,
+    }).expect("tap #2 succeeds");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(id).is_some());
+    assert_eq!(g.battlefield_find(id).unwrap()
+        .counter_count(crate::card::CounterType::Charge), 1);
+    g.battlefield_find_mut(id).unwrap().tapped = false;
+
+    // Tap #3: counter 1 → 0, then sacrifice.
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None,
+    }).expect("tap #3 succeeds");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == id),
+        "Gemstone Mine should sac itself when the last counter is removed");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == id),
+        "Sacrificed Gemstone Mine should land in the graveyard");
+}
+
+#[test]
+fn teferi_minus_three_returns_target_and_draws() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    // Teferi's base loyalty (4) is seeded by CardInstance::new for
+    // planeswalkers; no need to add counters manually.
+    let teferi = g.add_card_to_battlefield(0, catalog::teferi_time_raveler());
+    let opp_creature = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    // Seed P0's library so the +draw doesn't deck them out.
+    g.add_card_to_library(0, catalog::forest());
+
+    let hand_before = g.players[0].hand.len();
+    let opp_hand_before = g.players[1].hand.len();
+
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: teferi,
+        ability_index: 0, // -3
+        target: Some(Target::Permanent(opp_creature)),
+    })
+    .expect("Teferi's -3 should accept an opponent's nonland permanent");
+    drain_stack(&mut g);
+
+    assert!(!g.battlefield.iter().any(|c| c.id == opp_creature),
+        "Targeted creature should leave the battlefield");
+    assert!(g.players[1].hand.iter().any(|c| c.id == opp_creature),
+        "Bounced creature should return to its owner's hand");
+    assert_eq!(g.players[1].hand.len(), opp_hand_before + 1);
+    assert_eq!(g.players[0].hand.len(), hand_before + 1,
+        "Teferi's -3 should also draw a card");
+    assert_eq!(g.battlefield_find(teferi).unwrap()
+        .counter_count(CounterType::Loyalty), 1,
+        "Loyalty should drop from 4 to 1 after a -3 ability");
+}
+
+#[test]
+fn mystical_dispute_alt_cost_requires_blue_target() {
+    // Casting Mystical Dispute via the alt cost {U} should reject a non-blue
+    // target spell on the stack and accept a blue one.
+    let mut g = two_player_game();
+    g.players[0].mana_pool.add(Color::Blue, 1);
+
+    // Put a non-blue spell on the stack first.
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(0)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Lightning Bolt is castable for {R}");
+
+    g.priority.player_with_priority = 0;
+    let dispute = g.add_card_to_hand(0, catalog::mystical_dispute());
+    let err = g.perform_action(GameAction::CastSpellAlternative {
+        card_id: dispute,
+        pitch_card: None,
+        target: Some(Target::Permanent(bolt)),
+        mode: None,
+        x_value: None,
+    })
+    .unwrap_err();
+    assert_eq!(err, GameError::SelectionRequirementViolated,
+        "Alt cost should reject a non-blue target");
+
+    // Replace with a blue spell on the stack.
+    g.stack.clear();
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    let counterspell = g.add_card_to_hand(1, catalog::counterspell());
+    g.players[1].mana_pool.add(Color::Blue, 2);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: counterspell,
+        target: Some(Target::Permanent(bolt)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Counterspell is castable for {U}{U}");
+
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: dispute,
+        pitch_card: None,
+        target: Some(Target::Permanent(counterspell)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Mystical Dispute alt cost should accept a blue target");
+}

@@ -3,7 +3,7 @@ use std::f32::consts::PI;
 use bevy::prelude::*;
 
 use super::components::{
-    Card, CardFrontTexture, CardHighlightAssets, CardHoverLift, CardMeshAssets,
+    Card, CardFrontTexture, CardHighlightAssets, CardHoverLift, CardMeshAssets, FrontFaceMesh,
     GraveyardPile, PileHovered, PlayerTargetZone, CARD_THICKNESS,
 };
 use super::layout::{back_face_rotation, graveyard_position, player_target_zone_position};
@@ -134,6 +134,7 @@ pub fn spawn_single_card(
                     Mesh3d(card_mesh.clone()),
                     MeshMaterial3d(front_material),
                     Transform::from_xyz(0.0, 0.0, CARD_THICKNESS / 2.0),
+                    FrontFaceMesh,
                 ))
                 .observe(on_card_over)
                 .observe(on_card_out);

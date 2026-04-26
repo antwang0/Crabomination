@@ -106,6 +106,7 @@ fn dual_land_with(
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        back_face: None,
     }
 }
 
@@ -150,30 +151,70 @@ pub fn copperline_gorge() -> CardDefinition {
 
 // ── Pathways ─────────────────────────────────────────────────────────────────
 //
-// Real Oracle: each face produces only one of the two colors and the player
-// chooses a face on cast. With no MDFC support, both colors are exposed via
-// separate mana abilities — gameplay-equivalent for a 60-card deck.
-// TODO: gate behind a face-choice once MDFCs land.
+// Real Oracle: a Modal-Double-Faced-Card with a single-color land on each
+// face — the player picks a face when playing the card from hand. We model
+// this with `CardDefinition.back_face`: each pathway's *front* definition
+// lists the front face's land type / mana ability and stamps the back face's
+// definition into `back_face`. The default `GameAction::PlayLand(id)` plays
+// the front face; `GameAction::PlayLandBack(id)` plays the back face (the
+// engine swaps the `CardInstance.definition` to the back face's definition
+// before placing on battlefield).
 
+/// Single-color basic-typed land face (no ETB-tap, no triggers).
+fn pathway_face(name: &'static str, land_type: LandType, color: Color) -> CardDefinition {
+    CardDefinition {
+        name,
+        cost: ManaCost::default(),
+        supertypes: vec![],
+        card_types: vec![CardType::Land],
+        subtypes: Subtypes {
+            land_types: vec![land_type],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: vec![tap_add(color)],
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+    }
+}
+
+/// Build an MDFC pathway from front-face and back-face descriptors.
+fn pathway(
+    front_name: &'static str,
+    front_type: LandType,
+    front_color: Color,
+    back_name: &'static str,
+    back_type: LandType,
+    back_color: Color,
+) -> CardDefinition {
+    let mut front = pathway_face(front_name, front_type, front_color);
+    front.back_face = Some(Box::new(pathway_face(back_name, back_type, back_color)));
+    front
+}
+
+/// Blightstep Pathway // Searstep Pathway — B/R MDFC. Front face is a Swamp
+/// that taps for {B}; back face (Searstep Pathway) is a Mountain that taps
+/// for {R}. Played via `PlayLand(id)` (front) or `PlayLandBack(id)` (back).
 pub fn blightstep_pathway() -> CardDefinition {
-    dual_land_with(
-        "Blightstep Pathway",
-        LandType::Swamp,
-        LandType::Mountain,
-        Color::Black,
-        Color::Red,
-        vec![],
+    pathway(
+        "Blightstep Pathway", LandType::Swamp, Color::Black,
+        "Searstep Pathway",   LandType::Mountain, Color::Red,
     )
 }
 
+/// Darkbore Pathway // Slitherbore Pathway — B/G MDFC. Front is a Swamp
+/// for {B}; back (Slitherbore Pathway) is a Forest for {G}.
 pub fn darkbore_pathway() -> CardDefinition {
-    dual_land_with(
-        "Darkbore Pathway",
-        LandType::Swamp,
-        LandType::Forest,
-        Color::Black,
-        Color::Green,
-        vec![],
+    pathway(
+        "Darkbore Pathway",    LandType::Swamp, Color::Black,
+        "Slitherbore Pathway", LandType::Forest, Color::Green,
     )
 }
 
@@ -267,13 +308,21 @@ pub fn undercity_sewers() -> CardDefinition {
 
 // ── Special lands ────────────────────────────────────────────────────────────
 
-/// Gemstone Mine — Land. ETB with three mining counters; tap, remove a
-/// counter to add one mana of any color; sacrifice when last counter is
-/// removed.
+/// Gemstone Mine — Land. "Gemstone Mine enters with three mining counters
+/// on it. {T}, Remove a mining counter from Gemstone Mine: Add one mana of
+/// any color. If there are no mining counters on Gemstone Mine, sacrifice
+/// it."
 ///
-/// Stub: tap to add one mana of any color, no charge counters yet.
-/// TODO: wire charge counters + sacrifice trigger.
+/// Modeled with a self-source ETB trigger that adds 3 charge counters
+/// (engine has no `Mining` counter, so `Charge` stands in — gameplay-
+/// equivalent for any non-proliferate interactions). The activated ability
+/// folds the "remove a counter" cost into the resolved effect: remove → add
+/// mana of any color → if no counters left, sacrifice. With the natural
+/// progression (3 → 2 → 1 → 0 + sac), this taps the land for three mana
+/// total before it dies.
 pub fn gemstone_mine() -> CardDefinition {
+    use crate::card::CounterType;
+    use crate::effect::ZoneDest;
     CardDefinition {
         name: "Gemstone Mine",
         cost: ManaCost::default(),
@@ -287,18 +336,47 @@ pub fn gemstone_mine() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             mana_cost: ManaCost::default(),
-            effect: Effect::AddMana {
-                who: PlayerRef::You,
-                pool: ManaPayload::AnyOneColor(Value::Const(1)),
-            },
+            effect: Effect::Seq(vec![
+                Effect::RemoveCounter {
+                    what: Selector::This,
+                    kind: CounterType::Charge,
+                    amount: Value::Const(1),
+                },
+                Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::AnyOneColor(Value::Const(1)),
+                },
+                Effect::If {
+                    cond: Predicate::ValueAtMost(
+                        Value::CountersOn {
+                            what: Box::new(Selector::This),
+                            kind: CounterType::Charge,
+                        },
+                        Value::Const(0),
+                    ),
+                    then: Box::new(Effect::Move {
+                        what: Selector::This,
+                        to: ZoneDest::Graveyard,
+                    }),
+                    else_: Box::new(Effect::Noop),
+                },
+            ]),
             once_per_turn: false,
             sorcery_speed: false,
         }],
-        triggered_abilities: vec![],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::Charge,
+                amount: Value::Const(3),
+            },
+        }],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        back_face: None,
     }
 }
 
@@ -334,6 +412,7 @@ pub fn gemstone_caverns() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        back_face: None,
     }
 }
 
@@ -369,6 +448,7 @@ pub fn cavern_of_souls() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        back_face: None,
     }
 }
 
@@ -423,5 +503,6 @@ pub fn cephalid_coliseum() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        back_face: None,
     }
 }

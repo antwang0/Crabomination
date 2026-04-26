@@ -40,6 +40,7 @@ pub fn callous_sell_sword() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        back_face: None,
     }
 }
 
@@ -67,6 +68,7 @@ pub fn chancellor_of_the_tangle() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        back_face: None,
     }
 }
 
@@ -94,6 +96,7 @@ pub fn cosmogoyf() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        back_face: None,
     }
 }
 
@@ -124,16 +127,22 @@ pub fn devourer_of_destiny() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        back_face: None,
     }
 }
 
 // ── Goryo's creatures ────────────────────────────────────────────────────────
 
 /// Atraxa, Grand Unifier — {3}{W}{U}{B}{R}{G}, 7/7 Legendary Phyrexian
-/// Praetor. Flying, vigilance, deathtouch, lifelink. ETB reveal-top-10 and
-/// take one of each card type. Stub: vanilla 7/7 with all four keywords; ETB
-/// reveal-and-sort omitted.
-/// TODO: implement the reveal-and-sort ETB.
+/// Praetor. Flying, vigilance, deathtouch, lifelink. ETB reveals the top
+/// ten cards of your library, you may put up to one of each card type
+/// into your hand, the rest on the bottom.
+///
+/// Approximation: ETB Draw 4 — the average reveal-and-sort yield in a
+/// modern reanimator deck (lands + creatures + spell types). Skips the
+/// reveal-and-pick machinery, which would require a typed multi-pick
+/// decision the engine doesn't expose yet.
+/// TODO: implement the real reveal-and-sort ETB.
 pub fn atraxa_grand_unifier() -> CardDefinition {
     CardDefinition {
         name: "Atraxa, Grand Unifier",
@@ -154,11 +163,18 @@ pub fn atraxa_grand_unifier() -> CardDefinition {
         ],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(4),
+            },
+        }],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        back_face: None,
     }
 }
 
@@ -198,6 +214,7 @@ pub fn griselbrand() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        back_face: None,
     }
 }
 
@@ -265,6 +282,7 @@ pub fn psychic_frog() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        back_face: None,
     }
 }
 
@@ -297,6 +315,7 @@ pub fn quantum_riddler() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        back_face: None,
     }
 }
 
@@ -342,7 +361,9 @@ pub fn solitude() -> CardDefinition {
             exile_filter: Some(SelectionRequirement::HasColor(Color::White)),
             evoke_sacrifice: true,
             not_your_turn_only: false,
+            target_filter: None,
         }),
+        back_face: None,
     }
 }
 
@@ -372,6 +393,7 @@ pub fn chancellor_of_the_annex() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        back_face: None,
     }
 }
 
@@ -402,6 +424,7 @@ pub fn elesh_norn_mother_of_machines() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        back_face: None,
     }
 }
 
@@ -410,9 +433,12 @@ pub fn elesh_norn_mother_of_machines() -> CardDefinition {
 /// cast a sorcery. +1: until your next turn, you may cast sorcery spells as
 /// though they had flash. -3: return target nonland permanent an opponent
 /// controls to its owner's hand. Draw a card.
-/// Stub: 4-loyalty walker; loyalty abilities omitted.
-/// TODO: wire +1 flash and -3 bounce; static spell-timing restriction.
+///
+/// Wired loyalty ability: **-3 bounce + draw**. The +1 flash-on-sorceries
+/// and the static spell-timing restriction still need engine support
+/// (sorcery-timing override + per-spell timing veto).
 pub fn teferi_time_raveler() -> CardDefinition {
+    use crate::card::LoyaltyAbility;
     CardDefinition {
         name: "Teferi, Time Raveler",
         cost: cost(&[generic(1), w(), u()]),
@@ -430,7 +456,24 @@ pub fn teferi_time_raveler() -> CardDefinition {
         triggered_abilities: vec![],
         static_abilities: vec![],
         base_loyalty: 4,
-        loyalty_abilities: vec![],
+        loyalty_abilities: vec![LoyaltyAbility {
+            loyalty_cost: -3,
+            effect: Effect::Seq(vec![
+                Effect::Move {
+                    what: target_filtered(
+                        SelectionRequirement::Permanent
+                            .and(SelectionRequirement::Nonland)
+                            .and(SelectionRequirement::ControlledByOpponent),
+                    ),
+                    to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+                },
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
+            ]),
+        }],
         alternative_cost: None,
+        back_face: None,
     }
 }

@@ -71,6 +71,15 @@ pub struct AltCastState {
     pub pending: Option<CardId>,
 }
 
+/// Hand cards the viewer has flipped to their MDFC back face. Right-click on
+/// an MDFC hand card toggles membership; left-clicks on flipped cards send
+/// `PlayLandBack` instead of `PlayLand`. Cleared when a card leaves the
+/// viewer's hand (handled in `sync_flipped_hand_cards`).
+#[derive(Resource, Default)]
+pub struct FlippedHandCards {
+    pub flipped: std::collections::HashSet<CardId>,
+}
+
 /// Tracks player 0's blocker assignments during the DeclareBlockers step.
 #[derive(Resource, Default)]
 pub struct BlockingState {

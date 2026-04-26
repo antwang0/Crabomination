@@ -29,6 +29,19 @@ impl GameState {
     // ── Play land ─────────────────────────────────────────────────────────────
 
     pub(crate) fn play_land(&mut self, card_id: CardId) -> Result<Vec<GameEvent>, GameError> {
+        self.play_land_with_face(card_id, /* back_face */ false)
+    }
+
+    /// Shared implementation for `PlayLand` and `PlayLandBack`. When
+    /// `back_face` is true and the card has a `back_face`, the card's
+    /// definition is swapped to the back face's definition before placing on
+    /// the battlefield — so the resulting permanent has the back face's
+    /// types, mana abilities, and ETB triggers.
+    pub(crate) fn play_land_with_face(
+        &mut self,
+        card_id: CardId,
+        back_face: bool,
+    ) -> Result<Vec<GameEvent>, GameError> {
         let p = self.priority.player_with_priority;
         if !self.can_cast_sorcery_speed(p) {
             return Err(GameError::SorcerySpeedOnly);
@@ -39,7 +52,15 @@ impl GameState {
         if !self.players[p].has_in_hand(card_id) {
             return Err(GameError::CardNotInHand(card_id));
         }
-        let card = self.players[p].remove_from_hand(card_id).unwrap(); // we just checked has_in_hand
+        let mut card = self.players[p].remove_from_hand(card_id).unwrap(); // we just checked has_in_hand
+        if back_face {
+            // Swap to the back face's definition. Reject if there isn't one.
+            let Some(back) = card.definition.back_face.clone() else {
+                self.players[p].hand.push(card);
+                return Err(GameError::NotALand(card_id));
+            };
+            card.definition = *back;
+        }
         if !card.definition.is_land() {
             // Put it back then error
             self.players[p].hand.push(card);
@@ -183,6 +204,7 @@ impl GameState {
             caster: p,
             target,
             mode,
+            x_value: x_value.unwrap_or(0),
             uncounterable: false,
         });
 
@@ -268,6 +290,7 @@ impl GameState {
             caster: p,
             target,
             mode,
+            x_value: x_value.unwrap_or(0),
             uncounterable: false,
         });
         self.give_priority_to_active();
@@ -360,6 +383,16 @@ impl GameState {
             self.players[p].hand.push(card);
             return Err(GameError::SelectionRequirementViolated);
         }
+        // Alt-cost-specific target filter (e.g. Mystical Dispute's "target
+        // must be a blue spell"). Applied on top of the spell's regular
+        // target filter, only on the alternative-cast path.
+        if let Some(ref tgt) = target
+            && let Some(ref alt_filter) = alt.target_filter
+            && !self.evaluate_requirement_static(alt_filter, tgt, p)
+        {
+            self.players[p].hand.push(card);
+            return Err(GameError::SelectionRequirementViolated);
+        }
 
         // Pay the alt mana cost (with X substitution).
         let mana_cost = if alt.mana_cost.has_x() {
@@ -421,6 +454,7 @@ impl GameState {
             caster: p,
             target,
             mode,
+            x_value: x_value.unwrap_or(0),
             uncounterable: false,
         });
         self.give_priority_to_active();

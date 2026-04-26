@@ -39,6 +39,11 @@ pub enum PlayerRef {
     ControllerOf(Box<Selector>),
     /// The player who triggered the event (for triggered abilities).
     Triggerer,
+    /// A specific seat index. Used internally to flatten selector-based
+    /// player refs (e.g. `OwnerOf(Selector)`) into a concrete seat before
+    /// passing them across context boundaries — the original-card lookup
+    /// can become stale once the card has been moved out of its source zone.
+    Seat(usize),
     /// The player or planeswalker controller being attacked by the source
     /// creature. Resolves to `None` when the source isn't currently
     /// attacking. Used for "defending player" triggers (Goblin Guide,
@@ -140,6 +145,11 @@ pub enum Value {
     /// (set by `Effect::SacrificeAndRemember`). Used by Thud / Greater
     /// Gargadon-style sacrifice + damage spells.
     SacrificedPower,
+    /// Mana value (CMC) of the first card the selector resolves to.
+    /// Looks the card up across the battlefield, graveyards, exile, and
+    /// hands. Used by Wrath of the Skies (destroy each nonland with mana
+    /// value X) and similar "filter by mana value" effects.
+    ManaValueOf(Box<Selector>),
 }
 
 impl Value {
@@ -488,6 +498,7 @@ impl Effect {
                     value_has_target(a) || value_has_target(b)
                 }
                 Value::NonNeg(v) => value_has_target(v),
+                Value::ManaValueOf(s) => sel_has_target(s),
                 _ => false,
             }
         }

@@ -19,20 +19,20 @@ Both decks are wired as the default demo match (`crabomination::demo::build_demo
 | Count | Card | Status | Notes |
 |---|---|---|---|
 | 4 | Blackcleave Cliffs | ✅ | BR fastland: ETB-trigger checks lands-you-control ≥ 4 (post-ETB) and self-taps. |
-| 2 | Blightstep Pathway | ⏳ | Modal land: B or R face |
+| 2 | Blightstep Pathway | ✅ | B/R MDFC. Front face is `Blightstep Pathway` (Swamp, taps {B}); back face is `Searstep Pathway` (Mountain, taps {R}). Played via `PlayLand(id)` (front) or `PlayLandBack(id)` (back). |
 | 4 | Blooming Marsh | ✅ | BG fastland (same conditional ETB-tap trigger). |
 | 1 | Callous Sell-Sword | ⏳ | R creature with X-cost on cast |
 | 4 | Chancellor of the Tangle | ⏳ | 6/7 G; opening-hand reveal adds {G} |
 | 4 | Copperline Gorge | ✅ | RG fastland (same conditional ETB-tap trigger). |
 | 4 | Cosmogoyf | ✅ | Dynamic P/T = (distinct card types in all graveyards) / (count + 1) via injected layer-7 `SetPowerToughness` effect at `compute_battlefield` time. |
-| 2 | Darkbore Pathway | ⏳ | Modal land: B or G face |
+| 2 | Darkbore Pathway | ✅ | B/G MDFC. Front face is `Darkbore Pathway` (Swamp, taps {B}); back face is `Slitherbore Pathway` (Forest, taps {G}). Played via `PlayLand(id)` (front) or `PlayLandBack(id)` (back). |
 | 4 | Devourer of Destiny | 🟡 | 7/5 colorless Eldrazi. Scry-on-cast approximated as ETB Scry 2 (gameplay-equivalent except dig-past-counter). Test: `devourer_of_destiny_etb_scries_two`. |
 | 4 | Gemstone Caverns | ⏳ | Opening-hand: ETB with luck counter |
-| 4 | Gemstone Mine | ⏳ | Any color, 3 charge counters |
+| 4 | Gemstone Mine | ✅ | ETB self-source trigger adds 3 charge counters. `{T}` ability folds the cost into resolution: `RemoveCounter → AddMana(any one color) → If(charge ≤ 0, Move(Self → Graveyard))`. Taps three times then sacrifices itself. Tests: `gemstone_mine_etb_with_three_charge_counters`, `gemstone_mine_taps_three_times_then_sacrifices`. |
 | 4 | Pact of Negation | ✅ | Counterspell + delayed `PayOrLoseGame` trigger on next upkeep. Auto-pays if affordable; eliminates caster otherwise. |
 | 4 | Plunge into Darkness | 🟡 | `ChooseMode([SacrificeAndRemember + GainLife 3, Noop])`. Mode 0 sacrifices one creature for 3 life (instead of "any number"). Mode 1 (pay-X-life-look-at-X) still ⏳. |
 | 4 | Serum Powder | ⏳ | Mulligan helper: exile hand, draw new |
-| 4 | Spoils of the Vault | ⏳ | Name + reveal until found, lose life |
+| 4 | Spoils of the Vault | 🟡 | Approximated as `Search(Any → Hand) + LoseLife(3)`. Skips the reveal-until-find / variable life cost (no naming primitive yet). |
 | 2 | Summoner's Pact | ✅ | Search green creature into hand + delayed `PayOrLoseGame` for {2}{G}{G} on next upkeep. |
 | 1 | Swamp | ✅ | basic |
 | 4 | Thud | ✅ | `Seq([SacrificeAndRemember, DealDamage(SacrificedPower)])` — auto-picks first eligible creature via `AutoDecider`. Sac-as-additional-cost approximated by sac-on-resolution. |
@@ -52,7 +52,7 @@ Both decks are wired as the default demo match (`crabomination::demo::build_demo
 
 | Count | Card | Status | Notes |
 |---|---|---|---|
-| 4 | Atraxa, Grand Unifier | ⏳ | 7/7 Phyrexian Praetor; ETB reveal-7-and-sort |
+| 4 | Atraxa, Grand Unifier | 🟡 | 7/7 Phyrexian Praetor with flying / vigilance / deathtouch / lifelink. ETB reveal-and-sort approximated as `Draw 4` (rough average yield). |
 | 1 | Cephalid Coliseum | ✅ | Tap for {U}; ETB tapped; `{2}{U}, {T}, Sacrifice: Each player draws three then discards three` wired (sacrifice modeled as the first step of the resolved effect). Threshold gate is omitted — the ability is always the post-threshold version. |
 | 4 | Ephemerate | 🟡 | `Seq([Exile target your creature, Move target back to battlefield])`. ETB triggers refire (engine `place_card_in_dest::Battlefield` now calls `fire_self_etb_triggers`). Rebound (cast-from-exile next upkeep) still ⏳. |
 | 4 | Faithful Mending | 🟡 | `Seq([Discard 2 (you), Draw 2, GainLife 2])` + `Keyword::Flashback({1}{B})`. "Up to two" still approximated. |
@@ -85,10 +85,10 @@ Both decks are wired as the default demo match (`crabomination::demo::build_demo
 | 3 | Consign to Memory | ⏳ | Counter activated/triggered ability |
 | 2 | Damping Sphere | ⏳ | Static: extra mana to cast 2nd+ spell each turn |
 | 1 | Elesh Norn, Mother of Machines | ⏳ | Static: ETB triggers, doubles yours |
-| 3 | Mystical Dispute | ⏳ | Counter blue spell; alt cost {U} if blue |
+| 3 | Mystical Dispute | 🟡 | Regular cost {2}{U} counters any spell. Alt cost {U} via `AlternativeCost.target_filter: HasColor(Blue)` — engine extends `evaluate_requirement_static` to look up stack spells so `HasColor` works on a stack target. The "unless they pay {3}" rider still ⏳. Test: `mystical_dispute_alt_cost_requires_blue_target`. |
 | 2 | Pest Control | 🟡 | `Effect::Destroy` on every nonland permanent with mana value ≤ 2 (the spell's pinned converged value). Convoke + variable converge still ⏳. |
-| 2 | Teferi, Time Raveler | ⏳ | Planeswalker; static + +1 / -3 |
-| 2 | Wrath of the Skies | ⏳ | Convoke; destroy permanents CMC ≤ converge |
+| 2 | Teferi, Time Raveler | 🟡 | 4-loyalty walker. **-3** wired: `Move(target nonland opp permanent → owner's hand) + Draw 1`. +1 (sorceries-as-flash until your next turn) and the static spell-timing restriction still ⏳. Test: `teferi_minus_three_returns_target_and_draws`. |
+| 2 | Wrath of the Skies | 🟡 | Cost is `{X}{W}{W}`. `ForEach(EachPermanent(Nonland))` body destroys the entity if `Value::ManaValueOf(TriggerSource) == XFromCost`. X is now threaded through `StackItem::Spell`. Convoke still ⏳. Test: `wrath_of_the_skies_destroys_permanents_with_mana_value_x`. |
 
 ## Engine features
 
@@ -99,28 +99,45 @@ Both decks are wired as the default demo match (`crabomination::demo::build_demo
 | Goryo's Vengeance: reanimate-then-exile-at-EOT | ✅ | Goryo's Vengeance (uses `DelayUntil(NextEndStep)` + `Exile { Target(0) }`) |
 | Rebound (cast from exile next upkeep) | ⏳ | Ephemerate |
 | Flicker (exile and return to play) | ✅ | Ephemerate. `Effect::Seq([Exile target, Move target → battlefield])` paired with the new `place_card_in_dest::Battlefield` calling `fire_self_etb_triggers` so the refired ETB actually fires. |
-| Convoke / Converge cost-reduction | 🟡 | Prismatic Ending, Pest Control: converged value is pinned (1 / 2 respectively). Wrath of the Skies still ⏳. |
+| Convoke / Converge cost-reduction | 🟡 | Prismatic Ending, Pest Control: converged value is pinned (1 / 2 respectively). Wrath of the Skies uses X-from-cost (no convoke). Variable converge / convoke mana still ⏳. |
 | Opening-hand effects (begin in play / replace draws) | ⏳ | Chancellor of the Tangle, Chancellor of the Annex, Leyline of Sanctity, Gemstone Caverns, Serum Powder |
-| Reveal-and-sort ETB (one of each card type) | ⏳ | Atraxa, Grand Unifier |
+| Reveal-and-sort ETB (one of each card type) | 🟡 | Atraxa, Grand Unifier approximates as ETB Draw 4. Real reveal-then-multi-pick (one per card type) still ⏳. |
 | Static cost increase + storm tax | ⏳ | Damping Sphere |
 | ETB-trigger replacement (suppress / double) | ⏳ | Elesh Norn |
 | Spell-timing restriction static | ⏳ | Teferi, Time Raveler |
 | Uncounterable spell flag | 🟡 | `StackItem::Spell.uncounterable: bool` + `CounterSpell` respects it. Wiring on Cavern (name-a-type ETB + per-cast tagging) still TODO. |
 | Counter target *ability* (not spell) | ⏳ | Consign to Memory |
-| Charge-counter mana sources w/ self-sac | ⏳ | Gemstone Mine |
+| Charge-counter mana sources w/ self-sac | ✅ | Gemstone Mine. Activated ability folds the counter-removal cost into resolution and tail-checks `CountersOn(This, Charge) ≤ 0` to schedule a self-sac. |
 | Shock-land ETB choice (tapped or 2 life) | ✅ | Godless Shrine, Hallowed Fountain, Watery Grave, Overgrown Tomb. ETB trigger is a `ChooseMode([LoseLife 2, Tap This])`; AutoDecider picks pay-2-life. Note: triggered ability, not a true replacement effect — the land is briefly available untapped before the trigger resolves. |
-| Pathway / modal DFC mana abilities | ⏳ | Blightstep Pathway, Darkbore Pathway |
+| Pathway / modal DFC mana abilities | ✅ | Blightstep Pathway, Darkbore Pathway. `CardDefinition.back_face: Option<Box<CardDefinition>>` carries the alternate face. `GameAction::PlayLandBack(CardId)` swaps the `CardInstance.definition` to the back face's definition before placing on battlefield, so all subsequent abilities/types come from the back. **Client-side flip UI**: right-click an MDFC hand card to toggle to its back face — the front-face mesh repaints with the back-face's Scryfall image and the next left-click submits `PlayLandBack` instead of `PlayLand`. (Bot still defaults to the front face.) |
 | Surveil-land ETB-tapped + surveil 1 | ✅ | Meticulous Archive, Undercity Sewers, Shadowy Backstreet. `play_land` now fires self-source ETB triggers via `fire_self_etb_triggers` (lands skip the stack, so this site needs a hardcoded fire). |
 | Fastland conditional ETB-tapped | ✅ | Blackcleave Cliffs, Blooming Marsh, Copperline Gorge. ETB trigger uses `Effect::If` over `Predicate::SelectorCountAtLeast` of "lands you control" (≥ 4 post-ETB). |
 | Activated land mill (Cephalid Coliseum) | ✅ | Cephalid Coliseum: ActivatedAbility(`{2}{U}, {T}`, sacrifice-as-first-effect-step, then `Draw 3` and `Discard 3` for `EachPlayer`). |
 | Tarmogoyf-style P/T from graveyard | ✅ | Cosmogoyf (via inline `compute_battlefield` injection of a layer-7 set-PT effect with the live graveyard card-type count). |
 | X-cost creature side-effects | ⏳ | Callous Sell-Sword |
 | Sacrifice-as-cost effects | 🟡 | Thud ✅ via `SacrificeAndRemember` + `Value::SacrificedPower`; Plunge into Darkness still ⏳. |
-| Reveal-until-find search | ⏳ | Spoils of the Vault |
-| Loyalty abilities w/ static | 🟡 | Teferi, Time Raveler (only -X/+1 supported) |
+| Reveal-until-find search | 🟡 | Spoils of the Vault approximates as `Search(Any → Hand) + LoseLife(3)`. Naming primitive + reveal-until-find loop still ⏳. |
+| Loyalty abilities w/ static | 🟡 | Teferi, Time Raveler **-3** wired (bounce + draw). +1 (sorcery-as-flash) and the static spell-timing veto still ⏳. |
 
 ## Implementation log (most recent first)
 
+- **Gemstone Mine + Teferi -3 + Mystical Dispute alt cost**:
+  - **Gemstone Mine**: ETB self-source trigger adds 3 charge counters. `{T}` ability is `Seq([RemoveCounter(This, Charge, 1), AddMana(AnyOneColor), If(CountersOn(This, Charge) ≤ 0, Move(This → Graveyard))])` — counter-removal cost is folded into the resolved effect (cost-as-first-step), and the tail check sacrifices the land when the last counter comes off. Natural progression: 3 counters → 3 taps → sac. Tests: `gemstone_mine_etb_with_three_charge_counters`, `gemstone_mine_taps_three_times_then_sacrifices`.
+  - **Teferi, Time Raveler -3**: `LoyaltyAbility { loyalty_cost: -3, effect: Seq([Move(target nonland opp permanent → owner's hand), Draw 1]) }`. The static spell-timing restriction and the +1 (sorcery-as-flash) still need engine support — the -3 is the first interactive Teferi ability that actually fires. Test: `teferi_minus_three_returns_target_and_draws`. Required engine fix below.
+  - **Engine: zone-dest player resolution**: `move_card_to` now pre-flattens any selector-based `PlayerRef` (`OwnerOf`/`ControllerOf`) inside the destination `ZoneDest` against the active ctx **before** removing the card from its source zone. Previously `place_card_in_dest` built a bare ctx and resolved `OwnerOf(Selector::Target(0))` against an empty target list, so bouncing a target permanent to its owner's hand silently lost the owner. New `PlayerRef::Seat(usize)` is used as the flattened, ctx-independent encoding.
+  - **Engine: stack-spell predicate evaluation**: `evaluate_requirement_static` falls through to the stack (in addition to battlefield → graveyards → exile) when looking up the targeted card. Lets `HasColor`/`HasCardType`/etc. read from a stack spell — needed for Mystical Dispute's "alt cost only if blue".
+  - **AlternativeCost.target_filter**: new `Option<SelectionRequirement>` field that adds an extra target check applied only on the alt-cast path. Mystical Dispute's regular {2}{U} counters any spell; via alt cost {U} it requires `HasColor(Blue)`. Test: `mystical_dispute_alt_cost_requires_blue_target`.
+- **MDFC pathways (Blightstep / Darkbore)**:
+  - **Engine plumbing**: New `CardDefinition.back_face: Option<Box<CardDefinition>>` carries the alternate face's full definition. New `GameAction::PlayLandBack(CardId)` plays the card via its back face — `play_land_with_face(card_id, back_face=true)` swaps `CardInstance.definition` to the back face before pushing onto the battlefield, so all subsequent abilities, types, and mana abilities are the back's. ETB triggers fire via the existing `fire_self_etb_triggers` hook against the swapped definition. Default `PlayLand(id)` continues to play the front face (no behavior change for non-MDFC cards).
+  - **Catalog**: Pathways now expose only the front face's land type / single-color mana ability via a new `pathway_face` builder; the front's `back_face` is set to a separately-built back face. Blightstep Pathway → Searstep Pathway (Swamp/B → Mountain/R); Darkbore Pathway → Slitherbore Pathway (Swamp/B → Forest/G). Tests: `pathway_front_face_taps_for_front_color_only`, `pathway_back_face_taps_for_back_color_only`, `play_land_back_rejects_non_mdfc`.
+  - **Wire**: `KnownCard.back_face_name: Option<String>` populated from `card.definition.back_face.as_ref().map(|b| b.name)`. The viewer can use it to render a "flip" affordance on hand cards.
+  - **Client UI**: New `FlippedHandCards` resource tracks which hand cards the viewer flipped. Right-click on an MDFC hand card (no alt cost) toggles membership; left-click on a flipped land submits `PlayLandBack` instead of `PlayLand`. New `FrontFaceMesh` marker component on the front child mesh lets `sync_flipped_hand_cards` find and repaint just the front face when the flip state changes — the card's Scryfall image swaps to the back face's image. Stale flip entries are dropped automatically when a card leaves the viewer's hand.
+- **Wrath of the Skies + Spoils of the Vault + Atraxa approximations**:
+  - **Engine plumbing**: `StackItem::Spell` now carries `x_value: u32`, set from the `CastSpell` / `CastSpellAlternative` / `CastFlashback` actions and threaded into `EffectContext.x_value` at resolution time. Previously `continue_spell_resolution` hard-coded `x_value: 0`, so `Value::XFromCost` always read 0 inside spell effects. `ResumeContext::Spell` also gained the field so suspend/resume preserves it.
+  - **New `Value::ManaValueOf(Box<Selector>)`** — evaluates to the CMC of the first card the selector resolves to (battlefield → graveyard → hand → library → exile fallback). Lets effects filter / branch on a permanent's mana value at runtime instead of via a fixed `SelectionRequirement::ManaValueAtMost(u32)`.
+  - **Wrath of the Skies**: cost set to `{X}{W}{W}`. Effect is `ForEach(EachPermanent(Nonland))` that destroys the iterated permanent when `ManaValueOf(TriggerSource) == XFromCost` (modeled via `Predicate::All([ValueAtLeast, ValueAtMost])` since there's no `ValueEquals` primitive). Convoke still ⏳. Test: `wrath_of_the_skies_destroys_permanents_with_mana_value_x`.
+  - **Spoils of the Vault**: approximated as `Seq([Search(Any → Hand), LoseLife 3])` — the caster picks any library card directly, and the variable life cost is flattened to 3 (rough average reveal count for a 60-card deck). Test: `spoils_of_the_vault_tutors_and_loses_three_life`.
+  - **Atraxa, Grand Unifier**: ETB approximated as `Draw 4` (rough yield of "reveal top 10, take one of each card type" in a typical reanimator pile). Test: `atraxa_grand_unifier_etb_draws_four`.
 - **Combined claude-branches batch (lands + cantrips + flicker + sweepers + Force of Negation timing)**:
   - **Engine plumbing**: New `GameState::fire_self_etb_triggers(card_id, controller)` helper. `play_land` and `place_card_in_dest::Battlefield` both call it so triggered abilities on lands and on flickered/reanimated creatures actually fire. `place_card_in_dest::Battlefield` also clears damage / pump bonuses / `attached_to` so a permanent re-entering the battlefield is the brand-new object MTG rule 400.7 demands.
   - **Fastlands** (Blackcleave Cliffs, Blooming Marsh, Copperline Gorge): ETB trigger uses `Effect::If` over `Predicate::SelectorCountAtLeast` (≥ 4 lands-you-control, post-ETB). Tests: `fastland_enters_untapped_with_few_lands`, `fastland_enters_tapped_with_many_lands`.

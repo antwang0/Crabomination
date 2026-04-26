@@ -94,6 +94,11 @@ fn known_card(card: &CardInstance) -> KnownCard {
         card_types: card.definition.card_types.clone(),
         needs_target: spell_needs_target(&card.definition.effect),
         has_alternative_cost: card.definition.alternative_cost.is_some(),
+        back_face_name: card
+            .definition
+            .back_face
+            .as_ref()
+            .map(|b| b.name.to_string()),
     }
 }
 

@@ -39,7 +39,12 @@
       "Bash(python3)",
       "Bash(xargs grep *)",
       "Bash(CRAB_BIND=127.0.0.1:7778 CRAB_BOT=1 timeout 2 ./target/debug/crabomination_server.exe)",
-      "Bash(xargs wc *)"
+      "Bash(xargs wc *)",
+      "Bash(grep -rEh \"^\\( +\\)alternative_cost: None,$\" crabomination/src --include=\"*.rs\")",
+      "Bash(xxd)",
+      "Bash(git checkout *)",
+      "Bash(git diff *)",
+      "Bash(git fetch *)"
     ]
   }
 }

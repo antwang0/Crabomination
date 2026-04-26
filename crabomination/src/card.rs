@@ -296,6 +296,12 @@ pub struct CardDefinition {
     /// some life and exiling a card from hand matching `exile_filter`.
     /// Used for Force of Will, Force of Negation, and similar.
     pub alternative_cost: Option<AlternativeCost>,
+    /// Modal-double-faced-card back face. When `Some`, the player can play
+    /// the card via its back face (e.g. `GameAction::PlayLandBack`); the
+    /// resulting `CardInstance` adopts this definition wholesale, so all
+    /// downstream abilities, types, and costs are the back face's. Only the
+    /// front face stores `back_face` — the back's `back_face` is `None`.
+    pub back_face: Option<Box<CardDefinition>>,
 }
 
 /// An alternative (pitch) cost. Replaces the normal mana cost when the
@@ -319,6 +325,13 @@ pub struct AlternativeCost {
     /// (Force of Negation, Foundation Breaker, Force of Vigor, etc.). The
     /// engine rejects the alt cast when the caster *is* the active player.
     pub not_your_turn_only: bool,
+    /// Optional extra target filter applied **only** on the alt-cast path.
+    /// Lets a spell expose a cheaper alt cost that's restricted to a
+    /// narrower set of targets (e.g. Mystical Dispute's "{U} less if blue":
+    /// regular target is any spell, alt-cost target must be a blue spell).
+    /// When `Some`, `cast_spell_alternative` validates the chosen target
+    /// against this filter on top of the spell's normal target filter.
+    pub target_filter: Option<SelectionRequirement>,
 }
 
 impl CardDefinition {

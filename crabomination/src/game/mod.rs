@@ -391,6 +391,7 @@ impl GameState {
         }
         let events = match action {
             GameAction::PlayLand(id) => self.play_land(id),
+            GameAction::PlayLandBack(id) => self.play_land_with_face(id, true),
             GameAction::CastSpell {
                 card_id,
                 target,
@@ -592,12 +593,19 @@ impl GameState {
                 caster,
                 target,
                 mode,
+                x_value,
                 in_progress,
                 remaining,
             } => {
                 let mut evs = self.apply_pending_effect_answer(in_progress, &answer)?;
-                let mut more =
-                    self.continue_spell_resolution(*card, caster, target, mode, Some(remaining))?;
+                let mut more = self.continue_spell_resolution(
+                    *card,
+                    caster,
+                    target,
+                    mode,
+                    x_value,
+                    Some(remaining),
+                )?;
                 evs.append(&mut more);
                 evs
             }
@@ -819,10 +827,11 @@ impl GameState {
         caster: usize,
         target: Option<Target>,
         mode: usize,
+        x_value: u32,
         override_effect: Option<Effect>,
     ) -> Result<Vec<GameEvent>, GameError> {
         let effect = override_effect.unwrap_or_else(|| card.definition.effect.clone());
-        let ctx = EffectContext::for_spell(caster, target.clone(), mode, 0);
+        let ctx = EffectContext::for_spell(caster, target.clone(), mode, x_value);
         let events = self.resolve_effect(&effect, &ctx)?;
         if let Some((decision, in_progress, remaining)) = self.suspend_signal.take() {
             self.pending_decision = Some(PendingDecision {
@@ -832,6 +841,7 @@ impl GameState {
                     caster,
                     target,
                     mode,
+                    x_value,
                     in_progress,
                     remaining,
                 },

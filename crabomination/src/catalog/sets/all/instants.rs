@@ -28,6 +28,8 @@ pub fn force_of_will() -> CardDefinition {
             exile_filter: Some(SelectionRequirement::HasColor(Color::Blue)),
             evoke_sacrifice: false,
             not_your_turn_only: false,
+            target_filter: None,
         }),
+        back_face: None,
     }
 }

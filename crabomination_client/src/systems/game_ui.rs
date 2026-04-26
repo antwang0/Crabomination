@@ -36,6 +36,7 @@ pub struct GameInputResources<'w> {
     pub menu_state: ResMut<'w, AbilityMenuState>,
     pub ff: ResMut<'w, FastForward>,
     pub alt_cast: ResMut<'w, crate::game::AltCastState>,
+    pub flipped_hand: ResMut<'w, crate::game::FlippedHandCards>,
 }
 /// Drives End Turn / Next Turn fast-forward: while these flags are set,
 /// `auto_advance_p0` keeps submitting `PassPriority` each frame until the
@@ -1411,18 +1412,27 @@ pub fn handle_game_input(
 
         // Right-click P0 battlefield card → ability menu.
         // Right-click P0 hand card with an alt cost → alt-cast pitch modal.
+        // Right-click P0 hand card with a back face (MDFC) → flip face.
         if mouse.just_pressed(MouseButton::Right) {
             if let Some(game_id) = hovered_hand.iter().next() {
                 let card_id = game_id.0;
-                let has_alt = cv.players[your_seat].hand.iter().any(|h| {
-                    if let crabomination::net::HandCardView::Known(k) = h {
-                        k.id == card_id && k.has_alternative_cost
-                    } else {
-                        false
+                let known: Option<crabomination::net::KnownCard> =
+                    cv.players[your_seat].hand.iter().find_map(|h| match h {
+                        crabomination::net::HandCardView::Known(k) if k.id == card_id => {
+                            Some(k.clone())
+                        }
+                        _ => None,
+                    });
+                if let Some(k) = known {
+                    if k.has_alternative_cost {
+                        r.alt_cast.pending = Some(card_id);
+                    } else if k.back_face_name.is_some() {
+                        // Toggle MDFC flipped state. Visuals (texture swap)
+                        // are reconciled in `sync_flipped_hand_cards`.
+                        if !r.flipped_hand.flipped.insert(card_id) {
+                            r.flipped_hand.flipped.remove(&card_id);
+                        }
                     }
-                });
-                if has_alt {
-                    r.alt_cast.pending = Some(card_id);
                 }
             } else if let Some((game_id, owner)) = hovered_bf.iter().next() {
                 if owner.0 == your_seat {
@@ -1459,7 +1469,11 @@ pub fn handle_game_input(
             }) {
                 use crabomination::card::CardType;
                 if card.card_types.contains(&CardType::Land) {
-                    outbox.submit(GameAction::PlayLand(card.id));
+                    if r.flipped_hand.flipped.contains(&card.id) {
+                        outbox.submit(GameAction::PlayLandBack(card.id));
+                    } else {
+                        outbox.submit(GameAction::PlayLand(card.id));
+                    }
                 } else if card.needs_target {
                     targeting.active = true;
                     targeting.pending_card_id = Some(card.id);
@@ -1837,3 +1851,69 @@ pub fn trigger_reveal_animation(
     }
 }
 
+// ── MDFC flip sync ────────────────────────────────────────────────────────────
+
+/// Reconcile each viewer hand card's front-face material with its flipped
+/// state. When a card is in `FlippedHandCards.flipped`, its front-face mesh
+/// is repainted with the back-face's texture (and its `CardFrontTexture`
+/// path updated so the peek popup mirrors the flip). Also drops stale
+/// entries when cards leave the hand.
+#[allow(clippy::type_complexity)]
+pub fn sync_flipped_hand_cards(
+    cv: Res<CurrentView>,
+    mut flipped: ResMut<crate::game::FlippedHandCards>,
+    mut hand_cards: Query<
+        (&GameCardId, &Children, &mut crate::card::CardFrontTexture),
+        With<HandCard>,
+    >,
+    mut front_meshes: Query<
+        &mut MeshMaterial3d<StandardMaterial>,
+        With<crate::card::FrontFaceMesh>,
+    >,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    asset_server: Res<AssetServer>,
+) {
+    let Some(view) = cv.0.as_ref() else { return };
+    let viewer = view.your_seat;
+    if viewer >= view.players.len() { return; }
+
+    // Drop flips for cards that are no longer in the viewer's hand.
+    let in_hand: HashSet<CardId> = view.players[viewer]
+        .hand
+        .iter()
+        .map(|h| h.id())
+        .collect();
+    flipped.flipped.retain(|id| in_hand.contains(id));
+
+    // Reconcile front-face material against the desired (front vs back) name.
+    for (game_id, children, mut tex) in &mut hand_cards {
+        let card_id = game_id.0;
+        let known = view.players[viewer].hand.iter().find_map(|h| match h {
+            crabomination::net::HandCardView::Known(k) if k.id == card_id => Some(k),
+            _ => None,
+        });
+        let Some(known) = known else { continue };
+        let is_flipped = flipped.flipped.contains(&card_id);
+        let desired_name: &str = if is_flipped {
+            known.back_face_name.as_deref().unwrap_or(&known.name)
+        } else {
+            &known.name
+        };
+        let desired_path = crate::scryfall::card_asset_path(desired_name);
+        if tex.0 == desired_path {
+            continue;
+        }
+        // Repaint the front-face child's material.
+        for child in children.iter() {
+            if let Ok(mut mat) = front_meshes.get_mut(child) {
+                *mat = MeshMaterial3d(card_front_material(
+                    desired_name,
+                    &mut materials,
+                    &asset_server,
+                ));
+                break;
+            }
+        }
+        tex.0 = desired_path;
+    }
+}

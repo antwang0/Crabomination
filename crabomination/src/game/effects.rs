@@ -1019,6 +1019,7 @@ impl GameState {
     pub(crate) fn resolve_player(&self, pref: &PlayerRef, ctx: &EffectContext) -> Option<usize> {
         match pref {
             PlayerRef::You => Some(ctx.controller),
+            PlayerRef::Seat(p) => Some(*p),
             PlayerRef::ActivePlayer => Some(self.active_player_idx),
             PlayerRef::Triggerer => ctx.trigger_source.and_then(|e| match e {
                 EntityRef::Player(p) => Some(p),
@@ -1129,6 +1130,26 @@ impl GameState {
             Value::Max(a, b) => self.evaluate_value(a, ctx).max(self.evaluate_value(b, ctx)),
             Value::NonNeg(v) => self.evaluate_value(v, ctx).max(0),
             Value::SacrificedPower => self.sacrificed_power.unwrap_or(0),
+            Value::ManaValueOf(s) => self
+                .resolve_selector(s, ctx)
+                .into_iter()
+                .find_map(|e| match e {
+                    EntityRef::Permanent(cid) | EntityRef::Card(cid) => self
+                        .battlefield_find(cid)
+                        .or_else(|| {
+                            self.players.iter().find_map(|p| {
+                                p.graveyard
+                                    .iter()
+                                    .find(|c| c.id == cid)
+                                    .or_else(|| p.hand.iter().find(|c| c.id == cid))
+                                    .or_else(|| p.library.iter().find(|c| c.id == cid))
+                            })
+                        })
+                        .or_else(|| self.exile.iter().find(|c| c.id == cid))
+                        .map(|c| c.definition.cost.cmc() as i32),
+                    EntityRef::Player(_) => None,
+                })
+                .unwrap_or(0),
         }
     }
 
@@ -1185,13 +1206,21 @@ impl GameState {
             },
             _ => {
                 let Target::Permanent(cid) = target else { return false; };
-                // Look on the battlefield first; fall through to graveyards
-                // and exile so reanimate-style spells (Goryo's Vengeance,
-                // Reanimate, Animate Dead) can validate their targets.
+                // Look on the battlefield first; fall through to graveyards,
+                // exile, and the stack so reanimate-style spells (Goryo's
+                // Vengeance, Reanimate, Animate Dead) can validate their
+                // targets, and so counter-style spells (Mystical Dispute,
+                // Force of Negation) can read the colors of a target stack
+                // spell.
+                let stack_card = self.stack.iter().find_map(|si| match si {
+                    StackItem::Spell { card, .. } if card.id == *cid => Some(&**card),
+                    _ => None,
+                });
                 let card = self
                     .battlefield_find(*cid)
                     .or_else(|| self.players.iter().find_map(|p| p.graveyard.iter().find(|c| c.id == *cid)))
-                    .or_else(|| self.exile.iter().find(|c| c.id == *cid));
+                    .or_else(|| self.exile.iter().find(|c| c.id == *cid))
+                    .or(stack_card);
                 let Some(card) = card else { return false; };
                 match req {
                     R::Creature => card.definition.is_creature(),
@@ -1342,6 +1371,12 @@ impl GameState {
         ctx: &EffectContext,
         events: &mut Vec<GameEvent>,
     ) {
+        // Resolve any selector-based player refs in the destination *now*,
+        // while the card is still findable in its source zone — otherwise
+        // `PlayerRef::OwnerOf(Target(0))` can't see the card after we remove
+        // it. The resolved dest uses concrete `PlayerRef::You`-anchored refs.
+        let resolved_dest = self.resolve_zonedest_player(dest, ctx);
+
         // Try battlefield first.
         if let Some(pos) = self.battlefield.iter().position(|c| c.id == cid) {
             let mut card = self.battlefield.remove(pos);
@@ -1349,14 +1384,14 @@ impl GameState {
             card.damage = 0;
             card.tapped = false;
             card.attached_to = None;
-            self.place_card_in_dest(card, ctx.controller, dest, events);
+            self.place_card_in_dest(card, ctx.controller, &resolved_dest, events);
             return;
         }
         // Then graveyards.
         for p in 0..self.players.len() {
             if let Some(pos) = self.players[p].graveyard.iter().position(|c| c.id == cid) {
                 let card = self.players[p].graveyard.remove(pos);
-                self.place_card_in_dest(card, p, dest, events);
+                self.place_card_in_dest(card, p, &resolved_dest, events);
                 return;
             }
         }
@@ -1364,7 +1399,40 @@ impl GameState {
         if let Some(pos) = self.exile.iter().position(|c| c.id == cid) {
             let card = self.exile.remove(pos);
             let owner = card.owner;
-            self.place_card_in_dest(card, owner, dest, events);
+            self.place_card_in_dest(card, owner, &resolved_dest, events);
+        }
+    }
+
+    /// Pre-resolve any selector-based player refs in a `ZoneDest` against
+    /// the active ctx. `place_card_in_dest` constructs its own bare ctx and
+    /// can't see the caster's targets, so any `PlayerRef::OwnerOf(Selector)`
+    /// / `ControllerOf(Selector)` need to be flattened to a concrete
+    /// `PlayerRef::Seat(n)` while the source card is still in its origin
+    /// zone. Other ref kinds (You / ActivePlayer / etc.) pass through.
+    fn resolve_zonedest_player(&self, dest: &ZoneDest, ctx: &EffectContext) -> ZoneDest {
+        let flatten = |who: &PlayerRef| -> PlayerRef {
+            match who {
+                PlayerRef::OwnerOf(_) | PlayerRef::ControllerOf(_) => {
+                    if let Some(p) = self.resolve_player(who, ctx) {
+                        PlayerRef::Seat(p)
+                    } else {
+                        who.clone()
+                    }
+                }
+                _ => who.clone(),
+            }
+        };
+        match dest {
+            ZoneDest::Hand(who) => ZoneDest::Hand(flatten(who)),
+            ZoneDest::Library { who, pos } => ZoneDest::Library {
+                who: flatten(who),
+                pos: *pos,
+            },
+            ZoneDest::Battlefield { controller, tapped } => ZoneDest::Battlefield {
+                controller: flatten(controller),
+                tapped: *tapped,
+            },
+            ZoneDest::Graveyard | ZoneDest::Exile => dest.clone(),
         }
     }
 
@@ -1450,6 +1518,7 @@ pub fn token_to_card_definition(token: &TokenDefinition) -> CardDefinition {
         triggered_abilities: vec![],
         loyalty_abilities: vec![],
         alternative_cost: None,
+        back_face: None,
     }
 }
 
