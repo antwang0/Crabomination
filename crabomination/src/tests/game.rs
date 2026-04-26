@@ -1462,6 +1462,32 @@ fn cephalid_coliseum_sacrifices_for_each_player_to_draw_then_discard_three() {
 }
 
 #[test]
+fn quantum_riddler_etb_draws_a_card() {
+    let mut g = two_player_game();
+    // Top of library: a known card to confirm it gets drawn on ETB.
+    let top = g.add_card_to_library(0, catalog::island());
+    let qr_id = g.add_card_to_hand(0, catalog::quantum_riddler());
+    // Pay {1}{U}{B}.
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: qr_id,
+        target: None,
+        mode: None,
+        x_value: None,
+    })
+    .expect("Quantum Riddler should be castable");
+    drain_stack(&mut g);
+
+    assert!(g.battlefield.iter().any(|c| c.id == qr_id),
+        "Quantum Riddler should resolve onto the battlefield");
+    assert!(g.players[0].hand.iter().any(|c| c.id == top),
+        "Quantum Riddler's ETB should draw a card");
+}
+
+#[test]
 fn psychic_frog_discard_pumps_until_end_of_turn() {
     let mut g = two_player_game();
     let frog = g.add_card_to_battlefield(0, catalog::psychic_frog());
@@ -1642,4 +1668,78 @@ fn ephemerate_refires_solitude_etb_via_place_card_on_battlefield() {
         .count();
     assert_eq!(exiled_count, 1,
         "Solitude's ETB should refire on flicker and exile one opp creature");
+}
+
+#[test]
+fn fastland_enters_untapped_with_few_lands() {
+    // With ≤ 3 total lands you control (i.e. ≤ 2 other lands), Blackcleave
+    // Cliffs should enter untapped.
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::swamp());
+    g.add_card_to_battlefield(0, catalog::swamp());
+    let cliffs = g.add_card_to_hand(0, catalog::blackcleave_cliffs());
+    g.perform_action(GameAction::PlayLand(cliffs)).unwrap();
+    drain_stack(&mut g);
+    let cp = g.battlefield.iter().find(|c| c.id == cliffs).unwrap();
+    assert!(!cp.tapped, "Blackcleave Cliffs should enter untapped with ≤ 2 other lands");
+}
+
+#[test]
+fn fastland_enters_tapped_with_many_lands() {
+    // With 3 other lands already in play, Blackcleave Cliffs should enter
+    // tapped (post-ETB count ≥ 4).
+    let mut g = two_player_game();
+    for _ in 0..3 {
+        g.add_card_to_battlefield(0, catalog::swamp());
+    }
+    let cliffs = g.add_card_to_hand(0, catalog::blackcleave_cliffs());
+    g.perform_action(GameAction::PlayLand(cliffs)).unwrap();
+    drain_stack(&mut g);
+    let cp = g.battlefield.iter().find(|c| c.id == cliffs).unwrap();
+    assert!(cp.tapped, "Blackcleave Cliffs should enter tapped with 3+ other lands");
+}
+
+#[test]
+fn force_of_negation_alt_cost_blocked_on_your_turn() {
+    // Force of Negation's pitch alt cost is "if it's not your turn".
+    // The active player is P0 by default — the engine should reject the
+    // alt cast from P0.
+    let mut g = two_player_game();
+    let fon = g.add_card_to_hand(0, catalog::force_of_negation());
+    let pitch = g.add_card_to_hand(0, catalog::counterspell()); // a blue card
+    let err = g
+        .perform_action(GameAction::CastSpellAlternative {
+            card_id: fon,
+            pitch_card: Some(pitch),
+            target: None,
+            mode: None,
+            x_value: None,
+        })
+        .unwrap_err();
+    assert_eq!(err, GameError::NoAlternativeCost,
+        "Force of Negation's alt cost shouldn't fire on the caster's own turn");
+}
+
+#[test]
+fn force_of_negation_alt_cost_works_on_opponents_turn() {
+    let mut g = two_player_game();
+    // Make it P1's turn so P0 can pitch-cast Force of Negation.
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 0;
+    let fon = g.add_card_to_hand(0, catalog::force_of_negation());
+    let pitch = g.add_card_to_hand(0, catalog::counterspell());
+
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: fon,
+        pitch_card: Some(pitch),
+        target: None,
+        mode: None,
+        x_value: None,
+    })
+    .expect("Force of Negation alt cast should succeed on opponent's turn");
+    assert!(g.exile.iter().any(|c| c.id == pitch));
+    assert!(g.stack.iter().any(|si| matches!(
+        si,
+        crate::game::StackItem::Spell { card, .. } if card.id == fon
+    )));
 }

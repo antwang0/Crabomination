@@ -263,10 +263,9 @@ pub fn psychic_frog() -> CardDefinition {
     }
 }
 
-/// Quantum Riddler — {1}{U}{B}, 4/4 Sphinx (approximation). When this enters,
-/// draw a card. Stub: vanilla 4/4 — exact card text varies; treat as a
-/// reasonable mid-curve value creature.
-/// TODO: wire actual oracle text once confirmed.
+/// Quantum Riddler — {1}{U}{B}, 4/4 Sphinx with flying (approximation).
+/// "When Quantum Riddler enters, draw a card." Models the on-cast cantrip
+/// as an ETB Draw 1 trigger — gameplay-equivalent for the standard line.
 pub fn quantum_riddler() -> CardDefinition {
     CardDefinition {
         name: "Quantum Riddler",
@@ -282,7 +281,13 @@ pub fn quantum_riddler() -> CardDefinition {
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        }],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -331,6 +336,7 @@ pub fn solitude() -> CardDefinition {
             life_cost: 0,
             exile_filter: Some(SelectionRequirement::HasColor(Color::White)),
             evoke_sacrifice: true,
+            not_your_turn_only: false,
         }),
     }
 }

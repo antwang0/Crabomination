@@ -18,12 +18,12 @@ Both decks are wired as the default demo match (`crabomination::demo::build_demo
 
 | Count | Card | Status | Notes |
 |---|---|---|---|
-| 4 | Blackcleave Cliffs | ⏳ | BR fastland (ETB tapped if 2+ lands) |
+| 4 | Blackcleave Cliffs | ✅ | BR fastland: ETB-trigger checks lands-you-control ≥ 4 (post-ETB) and self-taps. |
 | 2 | Blightstep Pathway | ⏳ | Modal land: B or R face |
-| 4 | Blooming Marsh | ⏳ | BG fastland |
+| 4 | Blooming Marsh | ✅ | BG fastland (same conditional ETB-tap trigger). |
 | 1 | Callous Sell-Sword | ⏳ | R creature with X-cost on cast |
 | 4 | Chancellor of the Tangle | ⏳ | 6/7 G; opening-hand reveal adds {G} |
-| 4 | Copperline Gorge | ⏳ | RG fastland |
+| 4 | Copperline Gorge | ✅ | RG fastland (same conditional ETB-tap trigger). |
 | 4 | Cosmogoyf | ✅ | Dynamic P/T = (distinct card types in all graveyards) / (count + 1) via injected layer-7 `SetPowerToughness` effect at `compute_battlefield` time. |
 | 2 | Darkbore Pathway | ⏳ | Modal land: B or G face |
 | 4 | Devourer of Destiny | ⏳ | 7/5 Eldrazi colorless creature |
@@ -47,6 +47,7 @@ Both decks are wired as the default demo match (`crabomination::demo::build_demo
 | 3 | Inquisition of Kozilek | 🟡 | `DiscardChosen(EachOpponent, Nonland ∧ ManaValueAtMost(3))`. Caster auto-picks first matching card. UI for the human picker still TODO. |
 | 4 | Leyline of Sanctity | ⏳ | Opening-hand: starts in play; you have hexproof |
 
+
 ### Goryo's main deck
 
 | Count | Card | Status | Notes |
@@ -56,26 +57,26 @@ Both decks are wired as the default demo match (`crabomination::demo::build_demo
 | 4 | Ephemerate | 🟡 | `Seq([Exile target your creature, Move target back to battlefield])`. ETB triggers refire (engine `place_card_in_dest::Battlefield` now calls `fire_self_etb_triggers`). Rebound (cast-from-exile next upkeep) still ⏳. |
 | 4 | Faithful Mending | 🟡 | `Seq([Discard 2 (you), Draw 2, GainLife 2])` + `Keyword::Flashback({1}{B})`. "Up to two" still approximated. |
 | 3 | Flooded Strand | ✅ | fetchland |
-| 3 | Force of Negation | 🟡 | Counter noncreature spell; alt pitch cost wired (engine only — no client UI to invoke alt cost). "Not your turn" timing on alt cost not enforced. |
-| 1 | Godless Shrine | 🟡 | WB shockland; ETB `ChooseMode([LoseLife 2, Tap self])`. AutoDecider picks mode 0 (pay 2 life, untapped). Trigger ≠ true replacement effect — the land is briefly available untapped before the trigger resolves; close enough for the demo decks. |
+| 3 | Force of Negation | ✅ | Counter noncreature spell; alt pitch cost wired with `not_your_turn_only: true`. `cast_spell_alternative` rejects the alt cast on the caster's own turn. |
+| 1 | Godless Shrine | ✅ | WB shockland: `ChooseMode([LoseLife 2, Tap This])` ETB trigger. AutoDecider picks mode 0 (pay 2 life, ETB untapped). |
 | 4 | Goryo's Vengeance | ✅ | Reanimate legendary creature → grant haste until end of turn → delayed exile-at-end-step. Full Oracle. |
 | 1 | Griselbrand | ⏳ | 7/7 Demon flying lifelink; pay 7 life draw 7 |
-| 1 | Hallowed Fountain | 🟡 | WU shockland; same `ChooseMode([LoseLife 2, Tap self])` ETB as Godless Shrine. |
+| 1 | Hallowed Fountain | ✅ | WU shockland (same `ChooseMode` pay-2-or-tap ETB trigger). |
 | 1 | Island | ✅ | basic |
 | 3 | Marsh Flats | ✅ | fetchland |
 | 1 | Meticulous Archive | ⏳ | UW surveil land |
-| 1 | Overgrown Tomb | 🟡 | BG shockland; same `ChooseMode([LoseLife 2, Tap self])` ETB as Godless Shrine. |
+| 1 | Overgrown Tomb | ✅ | BG shockland (same ETB trigger). |
 | 1 | Plains | ✅ | basic |
 | 4 | Polluted Delta | ✅ | fetchland |
 | 4 | Prismatic Ending | 🟡 | `Effect::Exile` on `target_filtered(Permanent ∧ Nonland ∧ ManaValueAtMost(1))`. Converged value pinned to 1 (one white pip); convoke + dynamic converge still ⏳. |
 | 4 | Psychic Frog | ✅ | 1/3 flying. Two activated abilities: `Discard a card → +1/+1 EOT` and `Sacrifice → each opponent mills 4`. Costs are folded into the resolved effect (cost-as-first-step approximation). |
-| 4 | Quantum Riddler | ⏳ | UB; cantrip on cast |
+| 4 | Quantum Riddler | ✅ | UB 4/4 flying with ETB Draw 1 (approximation of "When you cast this, draw a card"). |
 | 1 | Shadowy Backstreet | ⏳ | UB surveil land |
 | 4 | Solitude | ✅ | 3/2 flash flying lifelink + ETB exile target opponent's creature + evoke (pitch a white card; sacrifice on ETB). "Nonwhite" filter approximated as "any creature". |
 | 1 | Swamp | ✅ | basic |
 | 3 | Thoughtseize | 🟡 | `Seq([DiscardChosen(EachOpponent, Nonland), LoseLife 2])`. Caster auto-picks first matching card. |
 | 1 | Undercity Sewers | ⏳ | UB surveil land |
-| 1 | Watery Grave | 🟡 | UB shockland; same `ChooseMode([LoseLife 2, Tap self])` ETB as Godless Shrine. |
+| 1 | Watery Grave | ✅ | UB shockland (same ETB trigger). |
 
 ### Goryo's sideboard
 
@@ -93,7 +94,7 @@ Both decks are wired as the default demo match (`crabomination::demo::build_demo
 
 | Feature | Status | Cards depending on it |
 |---|---|---|
-| Alternative pitch costs (pay life + exile a card) | ✅ | Engine + client. Force of Will, Force of Negation, Solitude (evoke). Right-click a hand card with `has_alternative_cost` → modal lets the player pick a pitch card. `evoke_sacrifice` flag on `AlternativeCost` schedules a self-sac trigger after ETB. |
+| Alternative pitch costs (pay life + exile a card) | ✅ | Engine + client. Force of Will, Force of Negation, Solitude (evoke). Right-click a hand card with `has_alternative_cost` → modal lets the player pick a pitch card. `evoke_sacrifice` flag on `AlternativeCost` schedules a self-sac trigger after ETB. `not_your_turn_only` flag rejects the alt cast on the caster's own turn (Force of Negation). |
 | Pact-style deferred upkeep cost | ✅ | Pact of Negation, Summoner's Pact (built on `Effect::DelayUntil` + `Effect::PayOrLoseGame`) |
 | Goryo's Vengeance: reanimate-then-exile-at-EOT | ✅ | Goryo's Vengeance (uses `DelayUntil(NextEndStep)` + `Exile { Target(0) }`) |
 | Rebound (cast from exile next upkeep) | ⏳ | Ephemerate |
@@ -107,10 +108,10 @@ Both decks are wired as the default demo match (`crabomination::demo::build_demo
 | Uncounterable spell flag | 🟡 | `StackItem::Spell.uncounterable: bool` + `CounterSpell` respects it. Wiring on Cavern (name-a-type ETB + per-cast tagging) still TODO. |
 | Counter target *ability* (not spell) | ⏳ | Consign to Memory |
 | Charge-counter mana sources w/ self-sac | ⏳ | Gemstone Mine |
-| Shock-land ETB choice (tapped or 2 life) | 🟡 | Godless Shrine, Hallowed Fountain, Watery Grave, Overgrown Tomb. ETB `ChooseMode([LoseLife 2, Tap self])`; bot defaults to mode 0. Triggered ability rather than a true ETB-replacement effect. |
+| Shock-land ETB choice (tapped or 2 life) | ✅ | Godless Shrine, Hallowed Fountain, Watery Grave, Overgrown Tomb. ETB trigger is a `ChooseMode([LoseLife 2, Tap This])`; AutoDecider picks pay-2-life. Note: triggered ability, not a true replacement effect — the land is briefly available untapped before the trigger resolves. |
 | Pathway / modal DFC mana abilities | ⏳ | Blightstep Pathway, Darkbore Pathway |
-| Surveil-land ETB-tapped + surveil 1 | ⏳ | Meticulous Archive, Undercity Sewers, Shadowy Backstreet |
-| Fastland conditional ETB-tapped | ⏳ | Blackcleave Cliffs, Blooming Marsh, Copperline Gorge |
+| Surveil-land ETB-tapped + surveil 1 | ✅ | Meticulous Archive, Undercity Sewers, Shadowy Backstreet. `play_land` now fires self-source ETB triggers via `fire_self_etb_triggers` (lands skip the stack, so this site needs a hardcoded fire). |
+| Fastland conditional ETB-tapped | ✅ | Blackcleave Cliffs, Blooming Marsh, Copperline Gorge. ETB trigger uses `Effect::If` over `Predicate::SelectorCountAtLeast` of "lands you control" (≥ 4 post-ETB). |
 | Activated land mill (Cephalid Coliseum) | ✅ | Cephalid Coliseum: ActivatedAbility(`{2}{U}, {T}`, sacrifice-as-first-effect-step, then `Draw 3` and `Discard 3` for `EachPlayer`). |
 | Tarmogoyf-style P/T from graveyard | ✅ | Cosmogoyf (via inline `compute_battlefield` injection of a layer-7 set-PT effect with the live graveyard card-type count). |
 | X-cost creature side-effects | ⏳ | Callous Sell-Sword |
@@ -120,14 +121,18 @@ Both decks are wired as the default demo match (`crabomination::demo::build_demo
 
 ## Implementation log (most recent first)
 
-- **Demo-deck promotions (shocklands, Cephalid Coliseum, Psychic Frog, Ephemerate, Pest Control, Prismatic Ending)**:
+- **Combined claude-branches batch (lands + cantrips + flicker + sweepers + Force of Negation timing)**:
   - **Engine plumbing**: New `GameState::fire_self_etb_triggers(card_id, controller)` helper. `play_land` and `place_card_in_dest::Battlefield` both call it so triggered abilities on lands and on flickered/reanimated creatures actually fire. `place_card_in_dest::Battlefield` also clears damage / pump bonuses / `attached_to` so a permanent re-entering the battlefield is the brand-new object MTG rule 400.7 demands.
-  - **Shocklands** (Godless Shrine, Hallowed Fountain, Watery Grave, Overgrown Tomb): self-source ETB `ChooseMode([LoseLife 2, Tap self])`. AutoDecider picks mode 0 = pay 2 life. Tests: `watery_grave_pays_two_life_and_stays_untapped`.
-  - **Cephalid Coliseum**: second ActivatedAbility `{2}{U}, {T}, Sacrifice → each player draws three then discards three`. Sac modeled as the first step of the resolved effect. Tests: `cephalid_coliseum_sacrifices_for_each_player_to_draw_then_discard_three`.
-  - **Psychic Frog**: two ActivatedAbilities — `Discard a card → +1/+1 EOT` and `Sacrifice → each opponent mills 4`. Tests: `psychic_frog_discard_pumps_until_end_of_turn`, `psychic_frog_sacrifice_mills_each_opponent_four`.
+  - **Fastlands** (Blackcleave Cliffs, Blooming Marsh, Copperline Gorge): ETB trigger uses `Effect::If` over `Predicate::SelectorCountAtLeast` (≥ 4 lands-you-control, post-ETB). Tests: `fastland_enters_untapped_with_few_lands`, `fastland_enters_tapped_with_many_lands`.
+  - **Shocklands** (Godless Shrine, Hallowed Fountain, Watery Grave, Overgrown Tomb): self-source ETB `ChooseMode([LoseLife 2, Tap This])`. AutoDecider picks mode 0 = pay 2 life. Tests: `watery_grave_pays_two_life_and_stays_untapped`, `shockland_enters_untapped_paying_2_life`.
+  - **Surveil lands** now actually fire their `etb_tap_then_surveil_one` triggered ability (previously silent because lands skipped the cast-resolution path).
+  - **Cephalid Coliseum**: second ActivatedAbility `{2}{U}, {T}, Sacrifice → each player draws three then discards three`. Sac modeled as the first step of the resolved effect. Test: `cephalid_coliseum_sacrifices_for_each_player_to_draw_then_discard_three`.
+  - **Quantum Riddler**: ETB Draw 1 (approximation of the on-cast cantrip). Test: `quantum_riddler_etb_draws_a_card`.
+  - **Psychic Frog**: two ActivatedAbilities — `Discard a card → +1/+1 EOT` and `Sacrifice → each opponent mills 4`. Costs folded into resolution. Tests: `psychic_frog_discard_pumps_until_end_of_turn`, `psychic_frog_sacrifice_mills_each_opponent_four`.
   - **Ephemerate**: `Seq([Exile target your creature, Move target back to battlefield])`. Refires the creature's self-source ETB triggers via the new battlefield-entry hook. Rebound still ⏳. Tests: `ephemerate_flickers_target_creature_back_to_battlefield`, `ephemerate_refires_solitude_etb_via_place_card_on_battlefield`.
-  - **Pest Control**: `Effect::Destroy` over every nonland permanent with `ManaValueAtMost(2)` (pinned converged value, no real convoke). Tests: `pest_control_destroys_low_cmc_nonland_permanents`.
-  - **Prismatic Ending**: `Effect::Exile` on `target_filtered(Permanent ∧ Nonland ∧ ManaValueAtMost(1))`. Tests: `prismatic_ending_exiles_one_drop_only`.
+  - **Pest Control**: `Effect::Destroy` over every nonland permanent with `ManaValueAtMost(2)`. Test: `pest_control_destroys_low_cmc_nonland_permanents`.
+  - **Prismatic Ending**: `Effect::Exile` on `target_filtered(Permanent ∧ Nonland ∧ ManaValueAtMost(1))`. Test: `prismatic_ending_exiles_one_drop_only`.
+  - **Force of Negation** alt cost: added `AlternativeCost.not_your_turn_only: bool`. `cast_spell_alternative` rejects the alt cast when `active_player_idx == caster`. Tests: `force_of_negation_alt_cost_blocked_on_your_turn`, `force_of_negation_alt_cost_works_on_opponents_turn`.
 - **Five-feature batch (Goryo's haste, Faithful Mending flashback, chosen-discard, Plunge modal, uncounterable flag)**:
   - Goryo's Vengeance now appends `GrantKeyword(Haste, EndOfTurn)` to the reanimated creature ahead of the EOT-exile delayed trigger.
   - Faithful Mending wires `Keyword::Flashback({1}{B})`. The hand→graveyard / cast-from-graveyard flashback path was already implemented in the engine.

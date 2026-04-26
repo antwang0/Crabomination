@@ -8,10 +8,10 @@
 
 use super::super::tap_add;
 use crate::card::{
-    CardDefinition, CardType, Effect, EventKind, EventScope, EventSpec, LandType, Selector,
-    Subtypes, TriggeredAbility, Value,
+    CardDefinition, CardType, Effect, EventKind, EventScope, EventSpec, LandType,
+    SelectionRequirement, Selector, Subtypes, TriggeredAbility, Value,
 };
-use crate::effect::{ActivatedAbility, ManaPayload, PlayerRef};
+use crate::effect::{ActivatedAbility, ManaPayload, PlayerRef, Predicate};
 use crate::mana::{Color, ManaCost, cost, generic, u};
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -32,6 +32,26 @@ fn etb_tap_then_surveil_one() -> TriggeredAbility {
             Effect::Tap { what: Selector::This },
             Effect::Surveil { who: PlayerRef::You, amount: Value::Const(1) },
         ]),
+    }
+}
+
+/// Fastland ETB trigger: "ETB tapped unless you control two or fewer other
+/// lands." Counted against the post-ETB battlefield (which already contains
+/// this land), so the threshold is "≥ 4 lands you control".
+fn fastland_etb_conditional_tap() -> TriggeredAbility {
+    TriggeredAbility {
+        event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+        effect: Effect::If {
+            cond: Predicate::SelectorCountAtLeast {
+                sel: Selector::EachPermanent(
+                    SelectionRequirement::Land
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+                n: Value::Const(4),
+            },
+            then: Box::new(Effect::Tap { what: Selector::This }),
+            else_: Box::new(Effect::Noop),
+        },
     }
 }
 
@@ -92,8 +112,8 @@ fn dual_land_with(
 // ── Fastlands ────────────────────────────────────────────────────────────────
 //
 // Real Oracle: "ENTERS tapped unless you control two or fewer other lands."
-// TODO: enforce the conditional ETB once the engine supports ETB-with-condition
-// triggers. For now they enter untapped (which is the *good* case anyway).
+// `fastland_etb_conditional_tap` evaluates the post-ETB land count: if you
+// already control 4+ lands (this land plus 3+ others) it taps itself.
 
 pub fn blackcleave_cliffs() -> CardDefinition {
     dual_land_with(
@@ -102,7 +122,7 @@ pub fn blackcleave_cliffs() -> CardDefinition {
         LandType::Mountain,
         Color::Black,
         Color::Red,
-        vec![],
+        vec![fastland_etb_conditional_tap()],
     )
 }
 
@@ -113,7 +133,7 @@ pub fn blooming_marsh() -> CardDefinition {
         LandType::Forest,
         Color::Black,
         Color::Green,
-        vec![],
+        vec![fastland_etb_conditional_tap()],
     )
 }
 
@@ -124,7 +144,7 @@ pub fn copperline_gorge() -> CardDefinition {
         LandType::Forest,
         Color::Red,
         Color::Green,
-        vec![],
+        vec![fastland_etb_conditional_tap()],
     )
 }
 

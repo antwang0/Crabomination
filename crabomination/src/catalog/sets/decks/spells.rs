@@ -378,13 +378,9 @@ pub fn faithful_mending() -> CardDefinition {
 }
 
 /// Force of Negation — {1}{U}{U} Instant. Counter target noncreature spell.
-/// Alternative cost: if it's not your turn, you may exile a blue card from
-/// your hand rather than pay this spell's mana cost.
-///
-/// The "if it's not your turn" timing restriction on the alt cost is not
-/// enforced by the engine — the player can pitch-cast Force of Negation on
-/// their own turn. Practical impact is small (you wouldn't normally want to)
-/// and will be revisited if it matters.
+/// Alternative cost: "If it's not your turn, you may exile a blue card from
+/// your hand rather than pay this spell's mana cost." `not_your_turn_only`
+/// gates the alt cast in `cast_spell_alternative`.
 pub fn force_of_negation() -> CardDefinition {
     CardDefinition {
         name: "Force of Negation",
@@ -408,6 +404,7 @@ pub fn force_of_negation() -> CardDefinition {
             life_cost: 0,
             exile_filter: Some(SelectionRequirement::HasColor(Color::Blue)),
             evoke_sacrifice: false,
+            not_your_turn_only: true,
         }),
     }
 }

@@ -1,6 +1,6 @@
 use super::*;
 use crate::card::Keyword;
-use crate::effect::{Effect, ManaPayload};
+use crate::effect::{Effect, EventKind, EventScope, ManaPayload};
 use crate::mana::{Color as ManaColor, ManaSymbol};
 
 /// Returns true if the given effect is purely a mana ability — only adds
@@ -304,6 +304,13 @@ impl GameState {
             .alternative_cost
             .clone()
             .ok_or(GameError::NoAlternativeCost)?;
+
+        // Force of Negation–style "you may pay this alt cost only if it's
+        // not your turn." Reject the alt cast on the caster's own turn —
+        // they can still pay the regular mana cost via `cast_spell`.
+        if alt.not_your_turn_only && self.active_player_idx == p {
+            return Err(GameError::NoAlternativeCost);
+        }
 
         // Validate that the pitch card matches the filter (if any).
         if let Some(filter) = &alt.exile_filter {

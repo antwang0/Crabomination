@@ -315,6 +315,10 @@ pub struct AlternativeCost {
     /// True for evoke costs — the resulting permanent is sacrificed on ETB
     /// (after its ETB triggers fire).
     pub evoke_sacrifice: bool,
+    /// True if this alt cost is only legal on a turn that isn't the caster's
+    /// (Force of Negation, Foundation Breaker, Force of Vigor, etc.). The
+    /// engine rejects the alt cast when the caster *is* the active player.
+    pub not_your_turn_only: bool,
 }
 
 impl CardDefinition {
