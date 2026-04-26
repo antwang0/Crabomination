@@ -719,6 +719,14 @@ impl GameState {
     /// `start_of_game_effect`, if any. Effects run with the card's owner
     /// as controller and `ctx.source = card.id`, so `Selector::This` and
     /// `move_card_to`'s hand-fallback work for "begin in play" effects.
+    ///
+    /// Start-of-game effects are not allowed to suspend — there's no
+    /// caller above us to convert a `suspend_signal` into a
+    /// `pending_decision` (the spell/trigger/ability resolution wrappers
+    /// own that conversion). If a future card sets `suspend_signal`
+    /// inside its start-of-game effect, we defensively drop the signal
+    /// here so it can't leak into a later spell resolution and trap the
+    /// game with a stale pending decision.
     pub(crate) fn fire_start_of_game_effects(&mut self) {
         // Collect (player, card_id, effect) up front so we don't borrow
         // self.players while resolving (each effect may mutate state).
@@ -738,6 +746,11 @@ impl GameState {
             );
             ctx.source = Some(source);
             let _ = self.resolve_effect(&effect, &ctx);
+            // Defensive drain — see doc above. Stack items pushed by ETB
+            // triggers stay; only the suspend signal is cleared.
+            if self.suspend_signal.is_some() {
+                self.suspend_signal = None;
+            }
         }
     }
 
