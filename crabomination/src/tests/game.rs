@@ -1743,3 +1743,32 @@ fn force_of_negation_alt_cost_works_on_opponents_turn() {
         crate::game::StackItem::Spell { card, .. } if card.id == fon
     )));
 }
+
+#[test]
+fn devourer_of_destiny_etb_scries_two() {
+    // ETB Scry 2: a scripted ScryOrder decision sends both top cards to
+    // the bottom; the 3rd library card should bubble up to the top.
+    let mut g = two_player_game();
+    let _bottom_a = g.add_card_to_library(0, catalog::forest());
+    let _bottom_b = g.add_card_to_library(0, catalog::plains());
+    g.add_card_to_library(0, catalog::island());
+    let third = g.players[0].library[2].id;
+    let scry_a = g.players[0].library[0].id;
+    let scry_b = g.players[0].library[1].id;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::ScryOrder {
+        kept_top: vec![],
+        bottom: vec![scry_a, scry_b],
+    }]));
+
+    let dev = g.add_card_to_hand(0, catalog::devourer_of_destiny());
+    g.players[0].mana_pool.add_colorless(5);
+    g.perform_action(GameAction::CastSpell {
+        card_id: dev, target: None, mode: None, x_value: None,
+    })
+    .expect("Devourer of Destiny is castable for {5}");
+    drain_stack(&mut g);
+
+    assert!(g.battlefield.iter().any(|c| c.id == dev));
+    assert_eq!(g.players[0].library[0].id, third,
+        "After scry-2-to-bottom, the 3rd library card should be on top");
+}

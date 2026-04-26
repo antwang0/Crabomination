@@ -1,6 +1,6 @@
 use super::*;
 use crate::card::Keyword;
-use crate::effect::{Effect, EventKind, EventScope, ManaPayload};
+use crate::effect::{Effect, ManaPayload};
 use crate::mana::{Color as ManaColor, ManaSymbol};
 
 /// Returns true if the given effect is purely a mana ability — only adds

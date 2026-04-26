@@ -97,8 +97,10 @@ pub fn cosmogoyf() -> CardDefinition {
     }
 }
 
-/// Devourer of Destiny — {5}, 7/5 colorless Eldrazi with on-cast scry. Stub:
-/// 7/5 with no scry trigger. TODO: scry-on-cast.
+/// Devourer of Destiny — {5}, 7/5 colorless Eldrazi. Real Oracle has a
+/// "scry 2 when you cast this" trigger; we approximate as ETB Scry 2 (the
+/// engine doesn't track on-cast triggers from hand yet — gameplay-equivalent
+/// except a counter would still let the scry happen on Oracle).
 pub fn devourer_of_destiny() -> CardDefinition {
     CardDefinition {
         name: "Devourer of Destiny",
@@ -114,7 +116,10 @@ pub fn devourer_of_destiny() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
+        }],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],

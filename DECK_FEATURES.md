@@ -26,7 +26,7 @@ Both decks are wired as the default demo match (`crabomination::demo::build_demo
 | 4 | Copperline Gorge | ✅ | RG fastland (same conditional ETB-tap trigger). |
 | 4 | Cosmogoyf | ✅ | Dynamic P/T = (distinct card types in all graveyards) / (count + 1) via injected layer-7 `SetPowerToughness` effect at `compute_battlefield` time. |
 | 2 | Darkbore Pathway | ⏳ | Modal land: B or G face |
-| 4 | Devourer of Destiny | ⏳ | 7/5 Eldrazi colorless creature |
+| 4 | Devourer of Destiny | 🟡 | 7/5 colorless Eldrazi. Scry-on-cast approximated as ETB Scry 2 (gameplay-equivalent except dig-past-counter). Test: `devourer_of_destiny_etb_scries_two`. |
 | 4 | Gemstone Caverns | ⏳ | Opening-hand: ETB with luck counter |
 | 4 | Gemstone Mine | ⏳ | Any color, 3 charge counters |
 | 4 | Pact of Negation | ✅ | Counterspell + delayed `PayOrLoseGame` trigger on next upkeep. Auto-pays if affordable; eliminates caster otherwise. |
