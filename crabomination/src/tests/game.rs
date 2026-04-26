@@ -1391,3 +1391,255 @@ fn preordain_scry_2_then_draws() {
     assert!(g.players[0].hand.iter().any(|c| c.id == island_top),
         "Preordain should draw what was the 3rd card after scrying top 2 to bottom");
 }
+
+// ── Demo-deck promotions ──────────────────────────────────────────────────
+
+#[test]
+fn watery_grave_pays_two_life_and_stays_untapped() {
+    // Default `AutoDecider` picks mode 0 of the shockland's ETB
+    // `ChooseMode` — pay 2 life and enter untapped.
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::watery_grave());
+    let life_before = g.players[0].life;
+    g.perform_action(GameAction::PlayLand(id)).unwrap();
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[0].life, life_before - 2,
+        "Shockland mode 0 pays 2 life on ETB");
+    let card = g.battlefield_find(id).expect("shockland is on the battlefield");
+    assert!(!card.tapped, "Shockland should stay untapped on mode 0");
+}
+
+#[test]
+fn cephalid_coliseum_sacrifices_for_each_player_to_draw_then_discard_three() {
+    let mut g = two_player_game();
+    let coli = g.add_card_to_battlefield(0, catalog::cephalid_coliseum());
+    g.clear_sickness(coli);
+    // Coliseum entered tapped via its ETB trigger. Untap it so we can
+    // activate the wheel-mini ability.
+    g.battlefield_find_mut(coli).unwrap().tapped = false;
+
+    // Stock both libraries with enough cards to draw 3 each.
+    for _ in 0..6 {
+        g.add_card_to_library(0, catalog::island());
+        g.add_card_to_library(1, catalog::island());
+    }
+    // Stock both hands with enough cards to discard 3 each.
+    for _ in 0..3 {
+        g.add_card_to_hand(0, catalog::lightning_bolt());
+        g.add_card_to_hand(1, catalog::lightning_bolt());
+    }
+
+    let p0_lib_before = g.players[0].library.len();
+    let p1_lib_before = g.players[1].library.len();
+    let p0_grave_before = g.players[0].graveyard.len();
+    let p1_grave_before = g.players[1].graveyard.len();
+
+    // Pay {2}{U} and tap.
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: coli,
+        ability_index: 1,
+        target: None,
+    })
+    .expect("Cephalid Coliseum's wheel-mini ability should activate");
+    drain_stack(&mut g);
+
+    // Coliseum sacrificed to its own graveyard.
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == coli),
+        "Coliseum should be sacrificed");
+    assert!(!g.battlefield.iter().any(|c| c.id == coli));
+
+    // Each player drew 3 then discarded 3 — library shrinks by 3,
+    // graveyard grows by ≥3 (their 3 discards; P0 also has Coliseum itself).
+    assert_eq!(g.players[0].library.len(), p0_lib_before - 3);
+    assert_eq!(g.players[1].library.len(), p1_lib_before - 3);
+    assert!(g.players[0].graveyard.len() >= p0_grave_before + 3,
+        "P0 should have ≥3 cards in graveyard from discard (plus Coliseum)");
+    assert_eq!(g.players[1].graveyard.len(), p1_grave_before + 3,
+        "P1 should have 3 discarded cards in graveyard");
+}
+
+#[test]
+fn psychic_frog_discard_pumps_until_end_of_turn() {
+    let mut g = two_player_game();
+    let frog = g.add_card_to_battlefield(0, catalog::psychic_frog());
+    g.clear_sickness(frog);
+    let to_pitch = g.add_card_to_hand(0, catalog::lightning_bolt());
+
+    let p_before = g.battlefield_find(frog).unwrap().power();
+    let t_before = g.battlefield_find(frog).unwrap().toughness();
+
+    // Activate the discard-pump ability.
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: frog,
+        ability_index: 0,
+        target: None,
+    })
+    .expect("Psychic Frog discard pump should activate");
+    drain_stack(&mut g);
+
+    // The first card in hand was discarded.
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == to_pitch),
+        "discarded card should be in graveyard");
+    // Frog gained +1/+1.
+    let card = g.battlefield_find(frog).unwrap();
+    assert_eq!(card.power(), p_before + 1);
+    assert_eq!(card.toughness(), t_before + 1);
+}
+
+#[test]
+fn psychic_frog_sacrifice_mills_each_opponent_four() {
+    let mut g = two_player_game();
+    let frog = g.add_card_to_battlefield(0, catalog::psychic_frog());
+    g.clear_sickness(frog);
+    // Stock P1's library so we can mill 4 from it.
+    for _ in 0..6 {
+        g.add_card_to_library(1, catalog::island());
+    }
+    let p1_lib_before = g.players[1].library.len();
+    let p1_grave_before = g.players[1].graveyard.len();
+
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: frog,
+        ability_index: 1,
+        target: None,
+    })
+    .expect("Psychic Frog sacrifice-mill should activate");
+    drain_stack(&mut g);
+
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == frog),
+        "Psychic Frog should sacrifice itself");
+    assert!(!g.battlefield.iter().any(|c| c.id == frog));
+    assert_eq!(g.players[1].library.len(), p1_lib_before - 4);
+    assert_eq!(g.players[1].graveyard.len(), p1_grave_before + 4);
+}
+
+#[test]
+fn pest_control_destroys_low_cmc_nonland_permanents() {
+    let mut g = two_player_game();
+    // Lands should survive (Land filter on Nonland).
+    let forest = g.add_card_to_battlefield(0, catalog::forest());
+    // Mana value 1 — should die.
+    let llanowar = g.add_card_to_battlefield(1, catalog::llanowar_elves());
+    // Mana value 2 — should die.
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    // Mana value 5 — survives.
+    let dragon = g.add_card_to_battlefield(1, catalog::shivan_dragon());
+
+    let pest = g.add_card_to_hand(0, catalog::pest_control());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: pest,
+        target: None,
+        mode: None,
+        x_value: None,
+    })
+    .expect("Pest Control should cast for {W}{B}");
+    drain_stack(&mut g);
+
+    assert!(g.battlefield.iter().any(|c| c.id == forest),
+        "Lands shouldn't be destroyed by Pest Control");
+    assert!(!g.battlefield.iter().any(|c| c.id == llanowar),
+        "1-CMC creature should die");
+    assert!(!g.battlefield.iter().any(|c| c.id == bear),
+        "2-CMC creature should die");
+    assert!(g.battlefield.iter().any(|c| c.id == dragon),
+        "5-CMC creature should survive");
+}
+
+#[test]
+fn prismatic_ending_exiles_one_drop_only() {
+    let mut g = two_player_game();
+    let llanowar = g.add_card_to_battlefield(1, catalog::llanowar_elves());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+
+    let pe = g.add_card_to_hand(0, catalog::prismatic_ending());
+    g.players[0].mana_pool.add(Color::White, 1);
+    let err = g.perform_action(GameAction::CastSpell {
+        card_id: pe,
+        target: Some(Target::Permanent(bear)),
+        mode: None,
+        x_value: None,
+    });
+    assert!(err.is_err(),
+        "Prismatic Ending shouldn't accept a 2-CMC target at converged-1");
+
+    // Cast targeting the 1-CMC creature succeeds.
+    let pe2 = g.add_card_to_hand(0, catalog::prismatic_ending());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: pe2,
+        target: Some(Target::Permanent(llanowar)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Prismatic Ending should accept a 1-CMC target");
+    drain_stack(&mut g);
+
+    assert!(g.exile.iter().any(|c| c.id == llanowar),
+        "Llanowar Elves should be exiled");
+    assert!(g.battlefield.iter().any(|c| c.id == bear),
+        "Grizzly Bears (2 CMC) should remain on the battlefield");
+}
+
+#[test]
+fn ephemerate_flickers_target_creature_back_to_battlefield() {
+    let mut g = two_player_game();
+    let creature = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // Damage it so we can verify the flicker clears damage.
+    g.battlefield_find_mut(creature).unwrap().damage = 1;
+
+    let eph = g.add_card_to_hand(0, catalog::ephemerate());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: eph,
+        target: Some(Target::Permanent(creature)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Ephemerate should accept a creature you control");
+    drain_stack(&mut g);
+
+    let card = g.battlefield_find(creature).expect("creature flickered back");
+    assert_eq!(card.damage, 0, "flicker should clear damage");
+    // Card should not still be in exile.
+    assert!(!g.exile.iter().any(|c| c.id == creature));
+}
+
+#[test]
+fn ephemerate_refires_solitude_etb_via_place_card_on_battlefield() {
+    // Solitude has a SelfSource ETB that exiles a creature an opponent
+    // controls. Flickering Solitude with Ephemerate should refire that ETB
+    // (because `place_card_in_dest::Battlefield` now calls
+    // `fire_self_etb_triggers`), exiling a second opponent creature.
+    let mut g = two_player_game();
+    let solitude = g.add_card_to_battlefield(0, catalog::solitude());
+    g.clear_sickness(solitude);
+    let opp_a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let opp_b = g.add_card_to_battlefield(1, catalog::llanowar_elves());
+
+    let eph = g.add_card_to_hand(0, catalog::ephemerate());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: eph,
+        target: Some(Target::Permanent(solitude)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Ephemerate should target your Solitude");
+    drain_stack(&mut g);
+
+    // Solitude should be back on the battlefield.
+    assert!(g.battlefield.iter().any(|c| c.id == solitude),
+        "Solitude returns from exile");
+    // One of the opponent's creatures was exiled by Solitude's refired ETB.
+    let exiled_count = [opp_a, opp_b]
+        .iter()
+        .filter(|cid| g.exile.iter().any(|c| c.id == **cid))
+        .count();
+    assert_eq!(exiled_count, 1,
+        "Solitude's ETB should refire on flicker and exile one opp creature");
+}

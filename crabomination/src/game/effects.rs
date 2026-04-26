@@ -1405,9 +1405,20 @@ impl GameState {
                 card.controller = p;
                 card.tapped = *tapped;
                 card.summoning_sick = card.definition.is_creature();
+                // A permanent entering the battlefield from another zone is
+                // a brand-new object (rule 400.7) — clear residual damage,
+                // pump bonuses, and attachment.
+                card.damage = 0;
+                card.power_bonus = 0;
+                card.toughness_bonus = 0;
+                card.attached_to = None;
                 let cid = card.id;
                 self.battlefield.push(card);
                 events.push(GameEvent::PermanentEntered { card_id: cid });
+                // Fire self-source ETB triggers so reanimate / flicker /
+                // search-to-battlefield paths trigger creature ETBs the same
+                // way casting does.
+                self.fire_self_etb_triggers(cid, p);
             }
         }
     }

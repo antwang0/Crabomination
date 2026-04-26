@@ -290,9 +290,16 @@ pub fn leyline_of_sanctity() -> CardDefinition {
 // ── Goryo's main-deck spells ────────────────────────────────────────────────
 
 /// Ephemerate — {W} Instant. Exile target creature you control, then return
-/// it to the battlefield under its owner's control. Rebound. Stub:
-/// Effect::Noop — flicker + rebound omitted.
-/// TODO: wire flicker (exile-and-return) + rebound.
+/// it to the battlefield under its owner's control. Rebound (cast-from-exile
+/// next upkeep) is still TODO.
+///
+/// Modeled as `Seq([Exile target creature you control, Move target back to
+/// the battlefield])`. The same target slot is re-resolved on the second
+/// step — `Selector::Target(0)` finds the card in exile (the engine
+/// `evaluate_requirement_static` falls through to graveyard / exile so the
+/// target stays bound), and `move_card_to` walks all zones until it finds
+/// the card. ETB triggers fire because `place_card_in_dest` now invokes
+/// `fire_self_etb_triggers` on Battlefield zone changes.
 pub fn ephemerate() -> CardDefinition {
     CardDefinition {
         name: "Ephemerate",
@@ -303,7 +310,21 @@ pub fn ephemerate() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![],
-        effect: Effect::Noop,
+        effect: Effect::Seq(vec![
+            Effect::Exile {
+                what: target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+            },
+            Effect::Move {
+                what: Selector::Target(0),
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: false,
+                },
+            },
+        ]),
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -446,8 +467,13 @@ pub fn goryos_vengeance() -> CardDefinition {
 
 /// Prismatic Ending — {W} Sorcery — Convoke. Exile target nonland permanent
 /// with mana value less than or equal to the spell's converged value.
-/// Stub: Effect::Noop. Convoke / converge isn't supported yet.
-/// TODO: convoke + exile-target-with-CMC-≤-converged.
+///
+/// Without convoke / converge support, the converged value defaults to 1
+/// (one white pip). The target slot's filter enforces "nonland permanent
+/// with mana value ≤ 1", which catches one-drops like Psychic Frog,
+/// Inquisition / Thoughtseize-grade hate bears, and most enablers without
+/// touching the deck's threats.
+/// TODO: full convoke + variable-converge integration.
 pub fn prismatic_ending() -> CardDefinition {
     CardDefinition {
         name: "Prismatic Ending",
@@ -458,7 +484,13 @@ pub fn prismatic_ending() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![],
-        effect: Effect::Noop,
+        effect: Effect::Exile {
+            what: target_filtered(
+                SelectionRequirement::Permanent
+                    .and(SelectionRequirement::Nonland)
+                    .and(SelectionRequirement::ManaValueAtMost(1)),
+            ),
+        },
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -577,8 +609,12 @@ pub fn mystical_dispute() -> CardDefinition {
 
 /// Pest Control — {W}{B} Sorcery — Convoke. Destroy each nonland permanent
 /// with mana value less than or equal to the spell's converged value.
-/// Stub: Effect::Noop.
-/// TODO: convoke + destroy-CMC-≤-converged.
+///
+/// Without convoke / converge support, the converged value defaults to 2
+/// (one white + one black pip). Resolves into a global `Destroy` over every
+/// nonland permanent with mana value ≤ 2 — wipes mana dorks, hatebears, and
+/// the early creature curve without sweeping the heavy reanimator targets.
+/// TODO: full convoke + variable-converge integration.
 pub fn pest_control() -> CardDefinition {
     CardDefinition {
         name: "Pest Control",
@@ -589,7 +625,12 @@ pub fn pest_control() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![],
-        effect: Effect::Noop,
+        effect: Effect::Destroy {
+            what: Selector::EachPermanent(
+                SelectionRequirement::Nonland
+                    .and(SelectionRequirement::ManaValueAtMost(2)),
+            ),
+        },
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],

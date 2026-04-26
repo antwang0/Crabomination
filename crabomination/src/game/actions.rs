@@ -47,10 +47,47 @@ impl GameState {
         }
         self.players[p].lands_played_this_turn += 1;
         self.battlefield.push(card);
+        // Fire self-source ETB triggers for the land (shockland pay-or-tap,
+        // surveil-land tap-and-surveil, etc.). The cast path inlines the same
+        // logic in `resolve_top_of_stack`; play_land needs an analogous push
+        // so triggered abilities on lands actually fire.
+        self.fire_self_etb_triggers(card_id, p);
         Ok(vec![
             GameEvent::LandPlayed { player: p, card_id },
             GameEvent::PermanentEntered { card_id },
         ])
+    }
+
+    /// Push the source-itself ETB triggered abilities for a permanent that
+    /// has just entered the battlefield. Used by `play_land` and by Move →
+    /// Battlefield zone changes so triggered abilities fire consistently
+    /// regardless of how the permanent arrived.
+    pub(crate) fn fire_self_etb_triggers(&mut self, card_id: CardId, controller: usize) {
+        use crate::effect::{EventKind, EventScope};
+        let etb_triggers: Vec<Effect> = self
+            .battlefield
+            .iter()
+            .find(|c| c.id == card_id)
+            .map(|c| {
+                c.definition
+                    .triggered_abilities
+                    .iter()
+                    .filter(|t| t.event.kind == EventKind::EntersBattlefield
+                        && matches!(t.event.scope, EventScope::SelfSource))
+                    .map(|t| t.effect.clone())
+                    .collect()
+            })
+            .unwrap_or_default();
+        for effect in etb_triggers {
+            let auto_target = self.auto_target_for_effect(&effect, controller);
+            self.stack.push(StackItem::Trigger {
+                source: card_id,
+                controller,
+                effect: Box::new(effect),
+                target: auto_target,
+                mode: None,
+            });
+        }
     }
 
     // ── Cast spell ────────────────────────────────────────────────────────────

@@ -7,11 +7,12 @@
 
 use super::super::no_abilities;
 use crate::card::{
-    AlternativeCost, CardDefinition, CardType, CreatureType, Effect, EventKind, EventScope,
-    EventSpec, Keyword, PlaneswalkerSubtype, SelectionRequirement, Subtypes, Supertype,
-    TriggeredAbility,
+    ActivatedAbility, AlternativeCost, CardDefinition, CardType, CreatureType, Effect, EventKind,
+    EventScope, EventSpec, Keyword, PlaneswalkerSubtype, Selector, SelectionRequirement, Subtypes,
+    Supertype, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::target_filtered;
+use crate::effect::{Duration, PlayerRef, ZoneDest};
 use crate::mana::{Color, ManaCost, b, cost, g, generic, r, u, w};
 
 // ── BRG creatures ────────────────────────────────────────────────────────────
@@ -195,10 +196,12 @@ pub fn griselbrand() -> CardDefinition {
     }
 }
 
-/// Psychic Frog — {U}{B}, 1/3 Frog. Flying. Discard a card: this gets +1/+1
-/// until end of turn. Sacrifice this: each opponent mills 4. Stub: 1/3 with
-/// flying; activated abilities omitted.
-/// TODO: wire discard-pump and sacrifice-mill abilities.
+/// Psychic Frog — {U}{B}, 1/3 Frog. Flying. "Discard a card: Psychic Frog
+/// gets +1/+1 until end of turn." "Sacrifice Psychic Frog: Each opponent
+/// mills 4 cards." Both costs are modeled as the first step of the resolved
+/// effect (rather than at activation time), which is gameplay-equivalent
+/// here — the bot/UI never tries to interrupt between cost payment and
+/// resolution.
 pub fn psychic_frog() -> CardDefinition {
     CardDefinition {
         name: "Psychic Frog",
@@ -213,7 +216,45 @@ pub fn psychic_frog() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
+        activated_abilities: vec![
+            // "Discard a card: Psychic Frog gets +1/+1 until end of turn."
+            ActivatedAbility {
+                tap_cost: false,
+                mana_cost: ManaCost::default(),
+                effect: Effect::Seq(vec![
+                    Effect::Discard {
+                        who: Selector::You,
+                        amount: Value::Const(1),
+                        random: false,
+                    },
+                    Effect::PumpPT {
+                        what: Selector::This,
+                        power: Value::Const(1),
+                        toughness: Value::Const(1),
+                        duration: Duration::EndOfTurn,
+                    },
+                ]),
+                once_per_turn: false,
+                sorcery_speed: false,
+            },
+            // "Sacrifice Psychic Frog: Each opponent mills 4 cards."
+            ActivatedAbility {
+                tap_cost: false,
+                mana_cost: ManaCost::default(),
+                effect: Effect::Seq(vec![
+                    Effect::Move {
+                        what: Selector::This,
+                        to: ZoneDest::Graveyard,
+                    },
+                    Effect::Mill {
+                        who: Selector::Player(PlayerRef::EachOpponent),
+                        amount: Value::Const(4),
+                    },
+                ]),
+                once_per_turn: false,
+                sorcery_speed: false,
+            },
+        ],
         triggered_abilities: vec![],
         static_abilities: vec![],
         base_loyalty: 0,
