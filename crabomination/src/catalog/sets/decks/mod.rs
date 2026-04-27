@@ -10,8 +10,10 @@
 
 pub mod creatures;
 pub mod lands;
+pub mod modern;
 pub mod spells;
 
 pub use creatures::*;
 pub use lands::*;
+pub use modern::*;
 pub use spells::*;

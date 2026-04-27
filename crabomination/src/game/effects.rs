@@ -460,10 +460,22 @@ impl GameState {
             }
 
             Effect::Exile { what } => {
+                // Exile accepts both `EntityRef::Permanent` (battlefield)
+                // and `EntityRef::Card` (any other zone). Battlefield exits
+                // emit `PermanentExiled` and walk through the standard
+                // remove-from-battlefield path so leaves-the-battlefield
+                // hooks fire; non-battlefield zones (graveyards, hand,
+                // exile→exile re-routes) just relocate via `move_card_to`.
                 for ent in self.resolve_selector(what, ctx) {
-                    if let EntityRef::Permanent(cid) = ent {
-                        self.remove_from_battlefield_to_exile(cid);
-                        events.push(GameEvent::PermanentExiled { card_id: cid });
+                    match ent {
+                        EntityRef::Permanent(cid) => {
+                            self.remove_from_battlefield_to_exile(cid);
+                            events.push(GameEvent::PermanentExiled { card_id: cid });
+                        }
+                        EntityRef::Card(cid) => {
+                            self.move_card_to(cid, &ZoneDest::Exile, ctx, events);
+                        }
+                        _ => {}
                     }
                 }
                 Ok(())

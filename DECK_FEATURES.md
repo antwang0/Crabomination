@@ -90,6 +90,52 @@ Both decks are wired as the default demo match (`crabomination::demo::build_demo
 | 2 | Teferi, Time Raveler | 🟡 | 4-loyalty walker. **+1** wired: `Effect::GrantSorceriesAsFlash` flips a per-player flag the cast paths consult, letting the controller skip the sorcery-timing gate until their next turn (cleared in `do_untap`). **-3** wired: `Move(target nonland opp permanent → owner's hand) + Draw 1`. The static "each opponent casts spells only at sorcery speed" half still ⏳. Tests: `teferi_minus_three_returns_target_and_draws`, `teferi_plus_one_grants_sorceries_as_flash_until_next_turn`. |
 | 2 | Wrath of the Skies | ✅ | `{X}{W}{W}` + `Keyword::Convoke`. `ForEach(EachPermanent(Nonland))` body destroys the entity if `ManaValueOf(TriggerSource) == XFromCost`. Convoke creatures pay the X-portion as generic via tap. Tests: `wrath_of_the_skies_destroys_permanents_with_mana_value_x`, `convoke_taps_creature_to_pay_one_generic`. |
 
+## Modern supplement (catalog::sets::decks::modern)
+
+A pack of 21 additional Modern-playable cards built entirely on existing
+engine primitives — no engine changes required. Each entry has at least
+one functionality test in `crabomination/src/tests/modern.rs` (registered
+via `#[path = "../tests/modern.rs"] mod tests_modern` in `game::mod`).
+
+| Card | Cost | Status | Notes |
+|---|---|---|---|
+| Ponder | {U} | ✅ | Approximated as `Scry 3 + Draw 1` (skips "may shuffle") |
+| Manamorphose | {2} | ✅ | Hybrid {R/G}{R/G} pips collapsed to {2}; gives 2 mana of any colors + draws 1 |
+| Sleight of Hand | {U} | ✅ | Approximated as `Scry 1 + Draw 1` |
+| Faithless Looting | {R} | ✅ | `Draw 2 + Discard 2` with `Keyword::Flashback({2}{R})` |
+| Sign in Blood | {B}{B} | 🟡 | Self-targeted only — `Target::Player(p)` for `Draw` not yet wired |
+| Night's Whisper | {1}{B} | ✅ | Draw 2, lose 2 life |
+| Duress | {B} | ✅ | `DiscardChosen(EachOpponent, Nonland ∧ Noncreature)` |
+| Lava Spike | {R} | ✅ | 3 damage to target player; Arcane subtype |
+| Lava Dart | {R} | 🟡 | Flashback cost approximated as `{0}` — engine has no "sacrifice a Mountain" alt-cost primitive |
+| Unburial Rites | {3}{B} | ✅ | `Move(target creature → BF)` + `Keyword::Flashback({W}{B})` |
+| Exhume | {1}{B} | 🟡 | Models "you reanimate" only; symmetrical "each player reanimates" not yet wired |
+| Buried Alive | {2}{B} | 🟡 | One-creature search; "up to three" loop simplified |
+| Entomb | {B} | ✅ | `Search(Any → Graveyard)` |
+| Burning-Tree Emissary | {2} | ✅ | Hybrid pips collapsed to {2}; ETB adds {R}{G} |
+| Putrid Imp | {B} | 🟡 | Discard outlet wired (grants Menace EOT); madness flavor stubbed |
+| Tarmogoyf | {1}{G} | ✅ | Same dynamic-P/T injection as Cosmogoyf — both names share the layer-7 `SetPowerToughness` site in `compute_battlefield`. |
+| Veil of Summer | {G} | 🟡 | Cantrip half wired; "if blue/black spell cast" gate + uncounterable rider stubbed |
+| Crop Rotation | {G} | ✅ | `Sacrifice(Land) + Search(Land → BF)` — sacrifice-as-additional-cost folded into resolution |
+| Karakas | — | ✅ | `{T}: Add {W}` + `{T}: Move target legendary creature → owner's hand` |
+| Bojuka Bog | — | ✅ | ETB-tapped + `Move(EachOpponent's graveyard → Exile)`. Uses `Move` (which handles `EntityRef::Card`) rather than `Effect::Exile` (battlefield-only) |
+
+### Engine improvements that landed alongside
+
+* **`Effect::Exile` now handles `EntityRef::Card`** in addition to
+  `EntityRef::Permanent`. Battlefield exits keep the `PermanentExiled`
+  event + leaves-the-battlefield path; cards in graveyards / hand /
+  library route through `move_card_to(.., ZoneDest::Exile, ..)`.
+  Previously graveyard-exile spells silently no-op'd.
+* **Flashback-cast spells now exile on resolution** (matching Oracle).
+  `cast_flashback` already set `card.kicked = true` as the marker, but
+  `continue_spell_resolution` only checked for Rebound — flashback
+  spells silently went to the graveyard. Test:
+  `flashback_cast_exiles_spell_on_resolution`.
+* **Tarmogoyf gets dynamic P/T** via the same layer-7 `SetPowerToughness`
+  injection that already powered Cosmogoyf. Both names now match the
+  hardcoded check in `compute_battlefield`.
+
 ## Engine features
 
 | Feature | Status | Cards depending on it |

@@ -22,6 +22,9 @@ pub(crate) mod stack;
 #[cfg(test)]
 #[path = "../tests/game.rs"]
 mod tests;
+#[cfg(test)]
+#[path = "../tests/modern.rs"]
+mod tests_modern;
 pub mod types;
 
 pub use types::*;
@@ -193,7 +196,8 @@ impl GameState {
         // ahead of time. Inject the per-card SetPT effect at compute-time.
         let goyf_n = self.distinct_card_types_in_all_graveyards() as i32;
         for card in &self.battlefield {
-            if card.definition.name == "Cosmogoyf" {
+            let name = card.definition.name;
+            if name == "Cosmogoyf" || name == "Tarmogoyf" {
                 all_effects.push(ContinuousEffect {
                     timestamp: card.id.0 as u64,
                     source: card.id,
@@ -993,6 +997,18 @@ impl GameState {
                 target: None, // re-pick at fire time
                 fires_once: true,
             });
+            self.exile.push(card);
+            return Ok(events);
+        }
+        // Flashback: a spell cast via its Flashback cost is exiled on
+        // resolution instead of going to the graveyard. `cast_flashback`
+        // marks the card with `kicked = true` to flag the path. (Use of the
+        // `kicked` field as the marker is a small overload — there's no
+        // clash because a card can't be cast normally and via flashback
+        // simultaneously, and flashback cards never have actual kicker.)
+        if card.kicked
+            && card.definition.keywords.iter().any(|k| matches!(k, crate::card::Keyword::Flashback(_)))
+        {
             self.exile.push(card);
             return Ok(events);
         }
