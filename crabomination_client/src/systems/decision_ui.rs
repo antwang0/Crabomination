@@ -197,9 +197,15 @@ pub fn spawn_decision_ui(
             state.spawned_for = Some(key);
             spawn_put_on_library_modal(&mut commands, &asset_server, hand, *count);
         }
-        DecisionWire::Mulligan { hand, mulligans_taken, .. } => {
+        DecisionWire::Mulligan { hand, mulligans_taken, serum_powders, .. } => {
             state.spawned_for = Some(key);
-            spawn_mulligan_modal(&mut commands, &asset_server, hand, *mulligans_taken);
+            spawn_mulligan_modal(
+                &mut commands,
+                &asset_server,
+                hand,
+                *mulligans_taken,
+                serum_powders,
+            );
         }
         DecisionWire::ChooseColor { legal, .. } => {
             state.spawned_for = Some(key);
@@ -572,13 +578,21 @@ pub struct PutOnLibraryCountText;
 const KEEP_BG: Color = Color::srgba(0.15, 0.45, 0.18, 0.97);
 const MULL_BG: Color = Color::srgba(0.48, 0.12, 0.10, 0.97);
 
+/// One Serum-Powder-style helper button. Carries the powder card's ID so
+/// the click handler can submit `DecisionAnswer::SerumPowder(id)`.
+#[derive(Component, Debug, Clone, Copy)]
+pub struct MulliganSerumPowderButton(pub CardId);
+
 /// Compact mulligan banner. The hand itself is rendered in 3D on the table —
-/// this banner just shows the prompt and the Keep / Mulligan buttons.
+/// this banner just shows the prompt and the Keep / Mulligan / Serum Powder
+/// buttons. `serum_powders` is one CardId per Serum-Powder-style helper
+/// currently in hand; renders one button each.
 fn spawn_mulligan_modal(
     commands: &mut Commands,
     _asset_server: &AssetServer,
     _hand: &[(CardId, String)],
     mulligans_taken: usize,
+    serum_powders: &[CardId],
 ) {
     let root = commands.spawn((
         Node {
@@ -636,6 +650,34 @@ fn spawn_mulligan_modal(
                 MulliganTakeButton,
             ))
             .with_children(|b| { b.spawn((Text::new("Mulligan (M)"), TextFont { font_size: 16.0, ..default() }, TextColor(Color::WHITE))); });
+
+            // One button per Serum-Powder-style helper currently in hand.
+            // Clicking submits DecisionAnswer::SerumPowder(id) — exiles the
+            // hand and deals a fresh seven without bumping the mulligan
+            // ladder. Multiple powders in hand stack as separate buttons.
+            for (idx, powder_id) in serum_powders.iter().enumerate() {
+                let label = if serum_powders.len() == 1 {
+                    "Serum Powder".to_string()
+                } else {
+                    format!("Serum Powder #{}", idx + 1)
+                };
+                btns.spawn((
+                    Button,
+                    Node {
+                        padding: UiRect::axes(Val::Px(24.0), Val::Px(12.0)),
+                        ..default()
+                    },
+                    BackgroundColor(REORDER_BG),
+                    MulliganSerumPowderButton(*powder_id),
+                ))
+                .with_children(|b| {
+                    b.spawn((
+                        Text::new(label),
+                        TextFont { font_size: 14.0, ..default() },
+                        TextColor(Color::WHITE),
+                    ));
+                });
+            }
         });
     });
 }
@@ -910,7 +952,8 @@ pub fn handle_put_on_library_hand_click(
     }
 }
 
-/// Handle Keep / Mulligan button presses (and keyboard shortcuts K / M).
+/// Handle Keep / Mulligan / Serum Powder button presses (and keyboard
+/// shortcuts K / M / P for the first-listed powder).
 pub fn handle_mulligan_buttons(
     view: Res<CurrentView>,
     outbox: Option<Res<NetOutbox>>,
@@ -918,23 +961,36 @@ pub fn handle_mulligan_buttons(
     keyboard: Res<ButtonInput<KeyCode>>,
     keep_q: Query<&Interaction, (Changed<Interaction>, With<MulliganKeepButton>)>,
     mull_q: Query<&Interaction, (Changed<Interaction>, With<MulliganTakeButton>)>,
+    powder_q: Query<
+        (&Interaction, &MulliganSerumPowderButton),
+        (Changed<Interaction>, With<Button>),
+    >,
 ) {
     let Some(cv) = &view.0 else { return };
-    let is_mulligan = matches!(
-        cv.pending_decision.as_ref().and_then(|p| p.decision.as_ref()),
-        Some(DecisionWire::Mulligan { .. })
-    );
-    if !is_mulligan { return; }
+    let serum_powders = match cv.pending_decision.as_ref().and_then(|p| p.decision.as_ref()) {
+        Some(DecisionWire::Mulligan { serum_powders, .. }) => serum_powders.clone(),
+        _ => return,
+    };
     let Some(outbox) = outbox else { return };
 
     let keep = keep_q.iter().any(|i| *i == Interaction::Pressed) || keyboard.just_pressed(KeyCode::KeyK);
     let mull = mull_q.iter().any(|i| *i == Interaction::Pressed) || keyboard.just_pressed(KeyCode::KeyM);
+    let pressed_powder = powder_q
+        .iter()
+        .find_map(|(int, btn)| (*int == Interaction::Pressed).then_some(btn.0))
+        .or_else(|| {
+            // P shortcut → consume the first listed powder.
+            (keyboard.just_pressed(KeyCode::KeyP)).then(|| serum_powders.first().copied()).flatten()
+        });
 
     if keep {
         outbox.submit(GameAction::SubmitDecision(DecisionAnswer::Keep));
         state.spawned_for = None;
     } else if mull {
         outbox.submit(GameAction::SubmitDecision(DecisionAnswer::TakeMulligan));
+        state.spawned_for = None;
+    } else if let Some(id) = pressed_powder {
+        outbox.submit(GameAction::SubmitDecision(DecisionAnswer::SerumPowder(id)));
         state.spawned_for = None;
     }
 }
