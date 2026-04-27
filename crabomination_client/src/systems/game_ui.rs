@@ -774,11 +774,19 @@ pub fn sync_game_visuals(
             if has_entity.contains(&card_id) { continue; }
             let target = hand_card_transform(viewer, viewer, n_seats, slot, hand_total);
             let front_mat = card_front_material(&known.name, &mut materials, &asset_server);
+            // For MDFC cards (Pathways), paint the back-child with the
+            // back face's Scryfall image instead of the cardback so a
+            // 180° flip animation reveals the alternate face.
+            let back_mat = if let Some(back_name) = known.back_face_name.as_deref() {
+                card_front_material(back_name, &mut materials, &asset_server)
+            } else {
+                card_assets.back_material.clone()
+            };
             let entity = spawn_single_card(
                 &mut commands,
                 &card_assets.card_mesh,
                 front_mat,
-                card_assets.back_material.clone(),
+                back_mat,
                 Transform::from_translation(deck_pos),
                 GameCardId(card_id),
                 &known.name,
@@ -1853,19 +1861,25 @@ pub fn trigger_reveal_animation(
 
 // ── MDFC flip sync ────────────────────────────────────────────────────────────
 
-/// Reconcile each viewer hand card's front-face material with its flipped
-/// state. When `FlippedHandCards.flipped` toggles for a card, attach an
-/// `MdfcFlipAnimation` to its visual entity — the animation does the
-/// material swap at its mid-point so the user sees a 360° spin instead
-/// of an instant texture pop. Also drops stale flip entries when cards
-/// leave the hand.
+/// Reconcile each viewer hand card's persistent flip state
+/// (`FlippedFace` marker on the entity) against the user's intent
+/// (`FlippedHandCards.flipped`). When they disagree, attach a 180°
+/// `MdfcFlipAnimation` and toggle the marker. Both card faces are
+/// already painted with their proper Scryfall images at spawn time, so
+/// the rotation alone reveals the alternate face — no material swap.
+/// Also drops stale flip entries when cards leave the hand.
 #[allow(clippy::type_complexity)]
 pub fn sync_flipped_hand_cards(
     mut commands: Commands,
     cv: Res<CurrentView>,
     mut flipped: ResMut<crate::game::FlippedHandCards>,
     hand_cards: Query<
-        (Entity, &GameCardId, &Transform, &crate::card::CardFrontTexture),
+        (
+            Entity,
+            &GameCardId,
+            &Transform,
+            Option<&crate::card::FlippedFace>,
+        ),
         (With<HandCard>, Without<crate::card::MdfcFlipAnimation>),
     >,
 ) {
@@ -1881,31 +1895,22 @@ pub fn sync_flipped_hand_cards(
         .collect();
     flipped.flipped.retain(|id| in_hand.contains(id));
 
-    // Detect mismatches between the card's painted texture and its desired
-    // flipped state; attach a flip animation to bring them into sync.
-    for (entity, game_id, transform, tex) in &hand_cards {
+    for (entity, game_id, transform, marker) in &hand_cards {
         let card_id = game_id.0;
-        let known = view.players[viewer].hand.iter().find_map(|h| match h {
-            crabomination::net::HandCardView::Known(k) if k.id == card_id => Some(k),
-            _ => None,
-        });
-        let Some(known) = known else { continue };
-        let is_flipped = flipped.flipped.contains(&card_id);
-        let desired_name: &str = if is_flipped {
-            known.back_face_name.as_deref().unwrap_or(&known.name)
-        } else {
-            &known.name
-        };
-        let desired_path = crate::scryfall::card_asset_path(desired_name);
-        if tex.0 == desired_path {
+        let should_be_flipped = flipped.flipped.contains(&card_id);
+        let is_flipped = marker.is_some();
+        if should_be_flipped == is_flipped {
             continue;
         }
         commands.entity(entity).insert(crate::card::MdfcFlipAnimation {
             progress: 0.0,
             speed: 2.5,
             start_rotation: transform.rotation,
-            target_flipped: is_flipped,
-            did_swap: false,
         });
+        if should_be_flipped {
+            commands.entity(entity).insert(crate::card::FlippedFace);
+        } else {
+            commands.entity(entity).remove::<crate::card::FlippedFace>();
+        }
     }
 }

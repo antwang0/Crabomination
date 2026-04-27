@@ -38,20 +38,32 @@ pub struct CardFrontTexture(pub String);
 #[derive(Component)]
 pub struct FrontFaceMesh;
 
-/// Spinning animation for MDFC right-click flips. Rotates the parent
-/// 360° around its local Y axis over `progress: 0.0..1.0` so the user
-/// sees the card flip end-over-end. The front-face material is swapped
-/// to the new face (front ↔ back) at `progress >= 0.5` (when the card
-/// is showing its physical back), so the swap is hidden by the rotation.
+/// Marker for the back-face child mesh of a card entity. For MDFC hand
+/// cards the back-child is painted with the back-face's Scryfall image
+/// at spawn time so flipping the card 180° actually reveals the
+/// alternate face (instead of the cardback).
+#[derive(Component)]
+pub struct BackFaceMesh;
+
+/// Marker tracking the persistent flipped state of an MDFC hand card.
+/// Inserted when a flip animation starts toward the back face; removed
+/// when it animates back to the front. `sync_flipped_hand_cards`
+/// reconciles this against `FlippedHandCards.flipped` and attaches an
+/// `MdfcFlipAnimation` whenever they disagree.
+#[derive(Component)]
+pub struct FlippedFace;
+
+/// 180° flip animation for MDFC right-clicks. Rotates the parent around
+/// its local Y axis from `start_rotation` to `start_rotation *
+/// Quat::from_rotation_y(PI)` over `progress: 0.0..1.0`. Both card
+/// faces are painted with proper Scryfall images, so the rotation by
+/// itself reveals the alternate face — no mid-animation material swap
+/// needed.
 #[derive(Component)]
 pub struct MdfcFlipAnimation {
     pub progress: f32,
     pub speed: f32,
     pub start_rotation: Quat,
-    /// `true` if this animation is flipping FROM front TO back (so the
-    /// midpoint material swap should paint the back-face image).
-    pub target_flipped: bool,
-    pub did_swap: bool,
 }
 
 /// Tracks an in-progress flip animation. `progress` goes from 0.0 to 1.0.

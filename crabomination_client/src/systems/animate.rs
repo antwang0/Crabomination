@@ -3,13 +3,11 @@ use std::f32::consts::PI;
 use bevy::prelude::*;
 
 use crate::card::{
-    hand_card_transform, Animating, CardFlipAnimation, CardFrontTexture, CardHoverLift, DeckCard,
-    DeckShuffleAnimation, DrawCardAnimation, FrontFaceMesh, GameCardId, HandCard,
-    HandSlideAnimation, MdfcFlipAnimation, PlayCardAnimation, ReturnToDeckAnimation,
-    RevealPeekAnimation, SendToGraveyardAnimation, ShufflePhase, TapAnimation,
-    CARD_WIDTH, HOVER_LIFT_SPEED,
+    hand_card_transform, Animating, CardFlipAnimation, CardHoverLift, DeckCard,
+    DeckShuffleAnimation, DrawCardAnimation, HandCard, HandSlideAnimation, MdfcFlipAnimation,
+    PlayCardAnimation, ReturnToDeckAnimation, RevealPeekAnimation, SendToGraveyardAnimation,
+    ShufflePhase, TapAnimation, CARD_WIDTH, HOVER_LIFT_SPEED,
 };
-use crate::card::card_front_material;
 use crate::net_plugin::CurrentView;
 
 /// Global animation playback speed multiplier (1.0 = normal, 2.0 = double speed, etc.).
@@ -81,70 +79,28 @@ pub fn animate_flip(
     }
 }
 
-/// Drive the MDFC flip spin: rotate the parent 360° around its local Y
-/// axis, swap the front-face material at the midpoint (when the card is
-/// physically back-facing the camera, hiding the swap), and clean up.
+/// Drive the MDFC 180° flip: rotate the parent around its local Y axis
+/// from `start_rotation` to `start_rotation * Quat::from_rotation_y(PI)`
+/// over `progress: 0.0..1.0`. Both faces are pre-painted with their
+/// proper Scryfall images, so this rotation alone reveals the alternate
+/// face. After two flips (each +180°) the parent has rotated 360° and
+/// is back at its original orientation.
 #[allow(clippy::type_complexity)]
 pub fn animate_mdfc_flip(
     mut commands: Commands,
     time: Res<Time>,
     speed: Res<AnimationSpeed>,
-    cv: Res<CurrentView>,
-    mut cards: Query<(
-        Entity,
-        &mut Transform,
-        &mut MdfcFlipAnimation,
-        &Children,
-        &mut CardFrontTexture,
-        &GameCardId,
-    )>,
-    mut front_meshes: Query<&mut MeshMaterial3d<StandardMaterial>, With<FrontFaceMesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-    asset_server: Res<AssetServer>,
+    mut cards: Query<(Entity, &mut Transform, &mut MdfcFlipAnimation)>,
 ) {
-    let viewer = match cv.0.as_ref() {
-        Some(v) if v.your_seat < v.players.len() => v.your_seat,
-        _ => return,
-    };
-    for (entity, mut transform, mut anim, children, mut tex, game_id) in &mut cards {
+    for (entity, mut transform, mut anim) in &mut cards {
         anim.progress += time.delta_secs() * speed.0 * anim.speed;
         let t = anim.progress.min(1.0);
-        let angle = t * 2.0 * PI;
+        let eased = ease_in_out(t);
+        let angle = eased * PI;
         transform.rotation = anim.start_rotation * Quat::from_rotation_y(angle);
 
-        // Swap material at the back-facing midpoint.
-        if !anim.did_swap && t >= 0.5 {
-            let view = cv.0.as_ref().unwrap();
-            let known = view.players[viewer].hand.iter().find_map(|h| match h {
-                crabomination::net::HandCardView::Known(k) if k.id == game_id.0 => Some(k.clone()),
-                _ => None,
-            });
-            if let Some(known) = known {
-                let desired_name: &str = if anim.target_flipped {
-                    known.back_face_name.as_deref().unwrap_or(&known.name)
-                } else {
-                    &known.name
-                };
-                let desired_path = crate::scryfall::card_asset_path(desired_name);
-                if tex.0 != desired_path {
-                    for child in children.iter() {
-                        if let Ok(mut mat) = front_meshes.get_mut(child) {
-                            *mat = MeshMaterial3d(card_front_material(
-                                desired_name,
-                                &mut materials,
-                                &asset_server,
-                            ));
-                            break;
-                        }
-                    }
-                    tex.0 = desired_path;
-                }
-            }
-            anim.did_swap = true;
-        }
-
         if anim.progress >= 1.0 {
-            transform.rotation = anim.start_rotation;
+            transform.rotation = anim.start_rotation * Quat::from_rotation_y(PI);
             commands.entity(entity).remove::<MdfcFlipAnimation>();
         }
     }
