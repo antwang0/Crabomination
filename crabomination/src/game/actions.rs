@@ -390,7 +390,11 @@ impl GameState {
         // Teferi, Time Raveler's +1 sets `sorceries_as_flash` on its
         // controller — those casters can ignore the sorcery-timing gate
         // until their next turn (when do_untap clears the flag).
-        if !card.definition.is_instant_speed()
+        // Teferi's static (`OpponentsSorceryTimingOnly`) flips the rule for
+        // opponents: even instants must wait until their main phase.
+        let must_be_sorcery_speed = !card.definition.is_instant_speed()
+            || self.player_locked_to_sorcery_timing(p);
+        if must_be_sorcery_speed
             && !self.can_cast_sorcery_speed(p)
             && !self.players[p].sorceries_as_flash
         {
@@ -565,8 +569,11 @@ impl GameState {
             .ok_or(GameError::SorcerySpeedOnly)?
             .clone();
 
-        // Timing: instants can be cast at instant speed, others at sorcery speed.
-        if !card.definition.is_instant_speed() && !self.can_cast_sorcery_speed(p) {
+        // Timing: instants can be cast at instant speed, others at sorcery
+        // speed. Honor Teferi-style opponent restriction.
+        let must_be_sorcery_speed = !card.definition.is_instant_speed()
+            || self.player_locked_to_sorcery_timing(p);
+        if must_be_sorcery_speed && !self.can_cast_sorcery_speed(p) {
             return Err(GameError::SorcerySpeedOnly);
         }
 
@@ -696,8 +703,11 @@ impl GameState {
             card.evoked = true;
         }
 
-        // Timing: sorcery-speed unless instant-speed.
-        if !card.definition.is_instant_speed() && !self.can_cast_sorcery_speed(p) {
+        // Timing: sorcery-speed unless instant-speed, plus Teferi-style
+        // opponent restriction.
+        let must_be_sorcery_speed = !card.definition.is_instant_speed()
+            || self.player_locked_to_sorcery_timing(p);
+        if must_be_sorcery_speed && !self.can_cast_sorcery_speed(p) {
             self.players[p].hand.push(card);
             return Err(GameError::SorcerySpeedOnly);
         }

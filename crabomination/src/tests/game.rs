@@ -3178,6 +3178,47 @@ fn deal_to_hand_draws_from_top_of_library() {
 }
 
 #[test]
+fn teferi_static_locks_opponent_to_sorcery_timing() {
+    // P0's Teferi locks every opponent into sorcery timing — even an
+    // instant in the opponent's hand can't be cast outside their own
+    // main phase.
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::teferi_time_raveler());
+    // Bob is the off-turn caster trying to cast Bolt during Alice's main.
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    let result = g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(0)),
+        mode: None,
+        x_value: None,
+    });
+    assert!(matches!(result, Err(GameError::SorcerySpeedOnly)),
+        "Teferi's static should lock opp Bolt to sorcery timing, got {:?}",
+        result);
+}
+
+#[test]
+fn teferi_static_does_not_restrict_controllers_own_casts() {
+    // Teferi only locks opponents — its controller can still cast
+    // instants on their opponent's turn.
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::teferi_time_raveler());
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 0;
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(1)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Teferi's controller can still cast instants on opp's turn");
+}
+
+#[test]
 fn teferi_plus_one_grants_sorceries_as_flash_until_next_turn() {
     // P0's Teferi +1 lets P0 cast sorceries at instant speed even when it
     // isn't their turn. Once P0's next turn rolls around (do_untap), the
