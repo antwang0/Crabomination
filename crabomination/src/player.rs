@@ -39,6 +39,13 @@ pub struct Player {
     /// `pending_decision` so a UI can respond; when false, the engine calls
     /// the installed `Decider` synchronously (bot / tests).
     pub wants_ui: bool,
+    /// Pending generic-mana tax on the next spell this player casts.
+    /// Stamped by Chancellor of the Annex's opening-hand reveal: "the first
+    /// spell that opponent casts next turn doesn't resolve unless they pay
+    /// {1}." We approximate "doesn't resolve unless" as a hard tax: the
+    /// cost gains `pending_first_spell_tax` generic mana, and the field
+    /// is reset to 0 once the first spell is cast.
+    pub pending_first_spell_tax: u32,
 }
 
 impl Player {
@@ -58,6 +65,7 @@ impl Player {
             poison_counters: 0,
             eliminated: false,
             wants_ui: false,
+            pending_first_spell_tax: 0,
         }
     }
 

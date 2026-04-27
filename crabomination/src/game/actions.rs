@@ -610,6 +610,7 @@ impl GameState {
         let events = vec![GameEvent::SpellCast { player: p, card_id }];
         self.spells_cast_this_turn += 1;
         self.players[p].spells_cast_this_turn += 1;
+        self.players[p].pending_first_spell_tax = 0;
 
         let on_cast_triggers = collect_self_cast_triggers(&card);
         let uncounterable = self.caster_grants_uncounterable(p, &card);
@@ -726,12 +727,16 @@ impl GameState {
             return Err(GameError::SelectionRequirementViolated);
         }
 
-        // Pay the alt mana cost (with X substitution).
-        let mana_cost = if alt.mana_cost.has_x() {
+        // Pay the alt mana cost (with X substitution + static-ability tax).
+        let mut mana_cost = if alt.mana_cost.has_x() {
             alt.mana_cost.with_x_value(x_value.unwrap_or(0))
         } else {
             alt.mana_cost.clone()
         };
+        let tax = extra_cost_for_spell(self, p, &card);
+        if tax > 0 {
+            mana_cost.symbols.push(crate::mana::ManaSymbol::Generic(tax));
+        }
         let pool_before = self.players[p].mana_pool.clone();
         let tapped_before: Vec<(CardId, bool)> = self
             .battlefield
@@ -781,6 +786,7 @@ impl GameState {
         let events = auto_events;
         self.spells_cast_this_turn += 1;
         self.players[p].spells_cast_this_turn += 1;
+        self.players[p].pending_first_spell_tax = 0;
 
         let on_cast_triggers = collect_self_cast_triggers(&card);
         let uncounterable = self.caster_grants_uncounterable(p, &card);
@@ -853,7 +859,6 @@ impl GameState {
         if card.has_keyword(&Keyword::Shroud) {
             return Err(GameError::TargetHasShroud(*cid));
         }
-        // Hexproof only prevents targeting by opponents.
         if card.has_keyword(&Keyword::Hexproof) && card.controller != caster {
             return Err(GameError::TargetHasHexproof(*cid));
         }
