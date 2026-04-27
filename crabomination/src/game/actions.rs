@@ -1023,6 +1023,13 @@ impl GameState {
             return Err(GameError::NotYourPriority);
         }
 
+        // Reject the activation if the chosen target has hexproof / shroud /
+        // protection / Leyline-of-Sanctity-style player hexproof. Mana-only
+        // and self-targeting abilities don't pass a target so they bypass.
+        if let Some(tgt) = &target {
+            self.check_target_legality(tgt, p)?;
+        }
+
         // Pay tap cost
         if ability.tap_cost {
             if self.battlefield[pos].tapped {

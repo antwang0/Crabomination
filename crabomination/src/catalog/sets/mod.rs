@@ -41,3 +41,4 @@ pub mod ths;
 pub mod tmp;
 pub mod zen;
 pub mod decks;
+pub mod mod_set;

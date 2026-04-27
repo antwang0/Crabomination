@@ -589,3 +589,256 @@ fn modern_card_factories_produce_valid_definitions() {
         }
     }
 }
+
+// ── mod_set: removal / counterspells / pump (catalog::sets::mod_set) ─────────
+
+#[test]
+fn path_to_exile_exiles_target_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let path = g.add_card_to_hand(0, catalog::path_to_exile());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: path,
+        target: Some(Target::Permanent(bear)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Path to Exile castable for {W}");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == bear));
+    assert!(!g.battlefield.iter().any(|c| c.id == bear));
+}
+
+#[test]
+fn fatal_push_destroys_low_cmc_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let push = g.add_card_to_hand(0, catalog::fatal_push());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: push,
+        target: Some(Target::Permanent(bear)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Fatal Push castable for {B}");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == bear));
+}
+
+#[test]
+fn fatal_push_rejects_high_cmc_creature() {
+    let mut g = two_player_game();
+    let angel = g.add_card_to_battlefield(1, catalog::serra_angel());
+    let push = g.add_card_to_hand(0, catalog::fatal_push());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    let err = g.perform_action(GameAction::CastSpell {
+        card_id: push,
+        target: Some(Target::Permanent(angel)),
+        mode: None,
+        x_value: None,
+    });
+    assert!(err.is_err(), "Fatal Push should reject Serra Angel (CMC 5)");
+}
+
+#[test]
+fn doom_blade_destroys_nonblack_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let blade = g.add_card_to_hand(0, catalog::doom_blade());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: blade,
+        target: Some(Target::Permanent(bear)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Doom Blade castable for {1}{B}");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == bear));
+}
+
+#[test]
+fn doom_blade_rejects_black_creature() {
+    let mut g = two_player_game();
+    let specter = g.add_card_to_battlefield(1, catalog::hypnotic_specter());
+    let blade = g.add_card_to_hand(0, catalog::doom_blade());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let err = g.perform_action(GameAction::CastSpell {
+        card_id: blade,
+        target: Some(Target::Permanent(specter)),
+        mode: None,
+        x_value: None,
+    });
+    assert!(err.is_err(), "Doom Blade should reject black creature");
+}
+
+#[test]
+fn vapor_snag_bounces_and_pings() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let snag = g.add_card_to_hand(0, catalog::vapor_snag());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    let life_before = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: snag,
+        target: Some(Target::Permanent(bear)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Vapor Snag castable for {U}");
+    drain_stack(&mut g);
+    assert!(g.players[1].hand.iter().any(|c| c.id == bear),
+        "creature should return to owner's hand");
+    assert_eq!(g.players[1].life, life_before - 1,
+        "controller should lose 1 life");
+}
+
+#[test]
+fn blossoming_defense_pumps_and_grants_hexproof() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let defense = g.add_card_to_hand(0, catalog::blossoming_defense());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: defense,
+        target: Some(Target::Permanent(bear)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Blossoming Defense castable for {G}");
+    drain_stack(&mut g);
+
+    let computed = g.computed_permanent(bear).unwrap();
+    assert_eq!(computed.power, 4);
+    assert_eq!(computed.toughness, 4);
+    assert!(computed.keywords.contains(&crate::card::Keyword::Hexproof));
+}
+
+#[test]
+fn spell_pierce_counters_when_unpaid() {
+    let mut g = two_player_game();
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(0)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Lightning Bolt castable");
+
+    let pierce = g.add_card_to_hand(0, catalog::spell_pierce());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: pierce,
+        target: Some(Target::Permanent(bolt)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Spell Pierce castable");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[0].life, 20, "Bolt should be countered");
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bolt));
+}
+
+#[test]
+fn mana_leak_lets_spell_through_when_paid() {
+    let mut g = two_player_game();
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.players[1].mana_pool.add_colorless(3);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(0)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Lightning Bolt castable");
+
+    let leak = g.add_card_to_hand(0, catalog::mana_leak());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: leak,
+        target: Some(Target::Permanent(bolt)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Mana Leak castable for {1}{U}");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[0].life, 17,
+        "Bolt should resolve when controller pays {{3}}");
+}
+
+#[test]
+fn anger_of_the_gods_burns_each_creature() {
+    let mut g = two_player_game();
+    let b0 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b1 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let lion = g.add_card_to_battlefield(0, catalog::savannah_lions());
+    let anger = g.add_card_to_hand(0, catalog::anger_of_the_gods());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: anger,
+        target: None,
+        mode: None,
+        x_value: None,
+    })
+    .expect("Anger castable for {1}{R}{R}");
+    drain_stack(&mut g);
+    for cid in [b0, b1, lion] {
+        assert!(!g.battlefield.iter().any(|c| c.id == cid));
+    }
+}
+
+#[test]
+fn blasphemous_act_kills_each_creature() {
+    let mut g = two_player_game();
+    let dragon = g.add_card_to_battlefield(0, catalog::shivan_dragon());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let act = g.add_card_to_hand(0, catalog::blasphemous_act());
+    g.players[0].mana_pool.add_colorless(4);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: act,
+        target: None,
+        mode: None,
+        x_value: None,
+    })
+    .expect("Blasphemous Act castable for {4}{R}");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == dragon));
+    assert!(!g.battlefield.iter().any(|c| c.id == bear));
+}
+
+#[test]
+fn leyline_of_sanctity_blocks_targeted_ability() {
+    // Tim's "{T}: deal 1 damage to any target" is an *ability* — under
+    // Leyline, opponent activates can't aim at the protected player.
+    let mut g = two_player_game();
+    let _leyline = g.add_card_to_battlefield(0, catalog::leyline_of_sanctity());
+    let tim = g.add_card_to_battlefield(1, catalog::prodigal_sorcerer());
+    g.battlefield_find_mut(tim).unwrap().summoning_sick = false;
+    g.priority.player_with_priority = 1;
+    let err = g.perform_action(GameAction::ActivateAbility {
+        card_id: tim,
+        ability_index: 0,
+        target: Some(Target::Player(0)),
+    });
+    assert!(err.is_err(),
+        "Tim's targeted ability should be rejected against Leyline-protected player; got: {err:?}");
+}
+
