@@ -25,6 +25,10 @@ pub struct Player {
     /// generic in `extra_cost_for_spell`. Set by Chancellor of the Annex's
     /// opening-hand reveal (one charge per Annex revealed by an opponent).
     pub first_spell_tax_charges: u32,
+    /// True if this player can cast sorceries at instant speed until their
+    /// next turn. Set by Teferi, Time Raveler's +1; cleared in `do_untap`
+    /// when this player's own turn begins.
+    pub sorceries_as_flash: bool,
     /// Poison counters (player loses at 10).
     pub poison_counters: u32,
     /// True once this player has lost the game (life ≤ 0, poison ≥ 10, or
@@ -50,6 +54,7 @@ impl Player {
             lands_played_this_turn: 0,
             spells_cast_this_turn: 0,
             first_spell_tax_charges: 0,
+            sorceries_as_flash: false,
             poison_counters: 0,
             eliminated: false,
             wants_ui: false,

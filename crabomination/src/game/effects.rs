@@ -996,6 +996,13 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::GrantSorceriesAsFlash { who } => {
+                for p in self.resolve_players(who, ctx) {
+                    self.players[p].sorceries_as_flash = true;
+                }
+                Ok(())
+            }
+
             Effect::RevealUntilFind {
                 who,
                 find,

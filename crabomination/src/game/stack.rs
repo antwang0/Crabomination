@@ -387,6 +387,9 @@ impl GameState {
         }
         self.players[p].lands_played_this_turn = 0;
         self.players[p].spells_cast_this_turn = 0;
+        // Clear Teferi, Time Raveler's "you may cast sorceries as though they
+        // had flash" flag — it expires on the start of your next turn.
+        self.players[p].sorceries_as_flash = false;
     }
 
     pub(crate) fn do_cleanup(&mut self) {

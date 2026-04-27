@@ -478,6 +478,11 @@ pub enum Effect {
         count: Value,
     },
 
+    /// Set `Player.sorceries_as_flash` on each resolved player so they may
+    /// cast sorcery spells at instant speed until their next turn.
+    /// Cleared in `do_untap`. Used by Teferi, Time Raveler's +1.
+    GrantSorceriesAsFlash { who: PlayerRef },
+
     /// "Reveal cards from the top of `who`'s library until you reveal a
     /// card matching `find`, or `cap` cards have been revealed. Put the
     /// found card (if any) into `to`; mill the rest, lose 1 life per
@@ -682,6 +687,7 @@ impl Effect {
             Effect::AddFirstSpellTax { who, count } => {
                 player_has_target(who) || value_has_target(count)
             }
+            Effect::GrantSorceriesAsFlash { who } => player_has_target(who),
             Effect::RevealUntilFind { who, to, cap, .. } => {
                 player_has_target(who)
                     || zonedest_has_target(to)

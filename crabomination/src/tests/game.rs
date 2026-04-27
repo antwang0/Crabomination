@@ -2030,7 +2030,8 @@ fn teferi_minus_three_returns_target_and_draws() {
 
     g.perform_action(GameAction::ActivateLoyaltyAbility {
         card_id: teferi,
-        ability_index: 0, // -3
+        // Index 1 is the -3 (the new +1 sorcery-as-flash ability sits at 0).
+        ability_index: 1,
         target: Some(Target::Permanent(opp_creature)),
     })
     .expect("Teferi's -3 should accept an opponent's nonland permanent");
@@ -3007,4 +3008,48 @@ fn deal_to_hand_draws_from_top_of_library() {
         g.players[0].hand.iter().any(|c| c.definition.name == "Lightning Bolt"),
         "deal_to_hand should draw from the top — the bolt was at index 0"
     );
+}
+
+#[test]
+fn teferi_plus_one_grants_sorceries_as_flash_until_next_turn() {
+    // P0's Teferi +1 lets P0 cast sorceries at instant speed even when it
+    // isn't their turn. Once P0's next turn rolls around (do_untap), the
+    // flag clears and the timing gate snaps back.
+    let mut g = two_player_game();
+    let teferi = g.add_card_to_battlefield(0, catalog::teferi_time_raveler());
+    g.clear_sickness(teferi);
+
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: teferi, ability_index: 0, target: None,  // +1
+    }).expect("Teferi's +1 should be sorcery-speed-castable");
+    drain_stack(&mut g);
+
+    assert!(g.players[0].sorceries_as_flash,
+        "P0 should be flagged for sorcery-as-flash");
+
+    // Hand P0 a sorcery and roll the turn over to P1's combat step. From
+    // P1's combat — normally a sorcery-illegal window — P0 still casts it.
+    let bolt_alike = g.add_card_to_hand(0, catalog::lightning_bolt());
+    let _ = bolt_alike; // (bolt is an instant; for the gate test we use
+                        // the engine path that triggers SorcerySpeedOnly:
+                        // play_land out-of-turn would error, but spells
+                        // on the cast path with `is_instant_speed` already
+                        // bypass the gate. Use a sorcery to verify.)
+
+    let sorcery = g.add_card_to_hand(0, catalog::wrath_of_god());
+    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.step = TurnStep::DeclareAttackers;
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 0;
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: sorcery, target: None, mode: None, x_value: None,
+    }).expect("Teferi +1 should let P0 cast Wrath of God outside their main phase");
+
+    // Now simulate untap on P0's turn — flag should clear.
+    g.active_player_idx = 0;
+    g.do_untap();
+    assert!(!g.players[0].sorceries_as_flash,
+        "do_untap should clear the flag at the start of P0's next turn");
 }

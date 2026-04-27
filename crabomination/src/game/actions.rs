@@ -306,7 +306,13 @@ impl GameState {
 
         // Timing: sorcery-speed requires empty stack + main phase + active player priority.
         // Instant-speed (Instant type or Flash) may be cast whenever you have priority.
-        if !card.definition.is_instant_speed() && !self.can_cast_sorcery_speed(p) {
+        // Teferi, Time Raveler's +1 sets `sorceries_as_flash` on its
+        // controller — those casters can ignore the sorcery-timing gate
+        // until their next turn (when do_untap clears the flag).
+        if !card.definition.is_instant_speed()
+            && !self.can_cast_sorcery_speed(p)
+            && !self.players[p].sorceries_as_flash
+        {
             self.players[p].hand.push(card);
             return Err(GameError::SorcerySpeedOnly);
         }

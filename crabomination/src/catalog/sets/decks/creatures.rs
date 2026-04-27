@@ -513,9 +513,16 @@ pub fn elesh_norn_mother_of_machines() -> CardDefinition {
 /// though they had flash. -3: return target nonland permanent an opponent
 /// controls to its owner's hand. Draw a card.
 ///
-/// Wired loyalty ability: **-3 bounce + draw**. The +1 flash-on-sorceries
-/// and the static spell-timing restriction still need engine support
-/// (sorcery-timing override + per-spell timing veto).
+/// Wired loyalty abilities:
+///   * **+1**: `Effect::GrantSorceriesAsFlash { who: You }` flips
+///     `Player.sorceries_as_flash` on the controller. The cast paths
+///     consult the flag and skip the sorcery-timing gate; `do_untap`
+///     clears it on the controller's next turn.
+///   * **-3**: bounce a target nonland opponent permanent to its owner's
+///     hand, then draw a card.
+///
+/// The static "each opponent can cast spells only at sorcery speed" half
+/// still needs a per-spell timing veto and isn't wired.
 pub fn teferi_time_raveler() -> CardDefinition {
     use crate::card::LoyaltyAbility;
     CardDefinition {
@@ -535,23 +542,29 @@ pub fn teferi_time_raveler() -> CardDefinition {
         triggered_abilities: vec![],
         static_abilities: vec![],
         base_loyalty: 4,
-        loyalty_abilities: vec![LoyaltyAbility {
-            loyalty_cost: -3,
-            effect: Effect::Seq(vec![
-                Effect::Move {
-                    what: target_filtered(
-                        SelectionRequirement::Permanent
-                            .and(SelectionRequirement::Nonland)
-                            .and(SelectionRequirement::ControlledByOpponent),
-                    ),
-                    to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
-                },
-                Effect::Draw {
-                    who: Selector::You,
-                    amount: Value::Const(1),
-                },
-            ]),
-        }],
+        loyalty_abilities: vec![
+            LoyaltyAbility {
+                loyalty_cost: 1,
+                effect: Effect::GrantSorceriesAsFlash { who: PlayerRef::You },
+            },
+            LoyaltyAbility {
+                loyalty_cost: -3,
+                effect: Effect::Seq(vec![
+                    Effect::Move {
+                        what: target_filtered(
+                            SelectionRequirement::Permanent
+                                .and(SelectionRequirement::Nonland)
+                                .and(SelectionRequirement::ControlledByOpponent),
+                        ),
+                        to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+                    },
+                    Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::Const(1),
+                    },
+                ]),
+            },
+        ],
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
