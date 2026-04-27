@@ -379,18 +379,27 @@ pub fn gemstone_caverns() -> CardDefinition {
     }
 }
 
-/// Cavern of Souls — Land. As it enters, choose a creature type. Tap for
-/// colorless OR mana of any color usable only to cast a creature of the
-/// chosen type, which can't be countered.
+/// Cavern of Souls — Land. As Cavern of Souls enters, choose a creature
+/// type. {T}: Add {C}. {T}: Add one mana of any color. Spend this mana
+/// only to cast a creature spell of the chosen type, and that spell
+/// can't be countered.
 ///
-/// Approximation: taps for colorless mana, and the cast paths in
-/// `actions.rs` flag any creature spell cast by a player who controls a
-/// Cavern as `StackItem::Spell.uncounterable = true` — `CounterSpell`
-/// skips those. The "name a type" / mana-provenance restriction is
-/// collapsed: any creature spell becomes uncounterable while you control
-/// any Cavern. Acceptable for the demo deck. TODO: full name-a-type
-/// decision + per-cast tagging via mana provenance.
+/// Approximations:
+///
+/// - **Name-a-type ETB**: a self-source `ChooseMode` ETB trigger picks
+///   one of the demo decks' relevant types (Eldrazi / Demon / Sphinx /
+///   Frog / Phyrexian / Angel / Avatar / Beast). The chosen type is
+///   discarded after the trigger resolves; the engine doesn't yet wire
+///   per-cast mana provenance, so the actual "which creatures are
+///   uncounterable" check still collapses to "any creature you cast"
+///   while you control a Cavern (see `caster_grants_uncounterable` in
+///   `actions.rs`). The mode pick keeps the modal-decision round-trip
+///   available to the UI.
+/// - **Activated mana**: only the `{T}: Add {C}` half is wired. The
+///   uncounterable flag still fires correctly for creature spells via
+///   the simplified rule.
 pub fn cavern_of_souls() -> CardDefinition {
+    use crate::card::TriggeredAbility;
     CardDefinition {
         name: "Cavern of Souls",
         cost: ManaCost::default(),
@@ -411,7 +420,23 @@ pub fn cavern_of_souls() -> CardDefinition {
             once_per_turn: false,
             sorcery_speed: false,
         }],
-        triggered_abilities: vec![],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            // "As ~ enters, choose a creature type." Modal `Noop` over
+            // the demo decks' likely-named types — the chosen type only
+            // matters for mana provenance, which we don't track. Keeps
+            // the modal-decision round-trip with the UI.
+            effect: Effect::ChooseMode(vec![
+                Effect::Noop, // 0: Eldrazi
+                Effect::Noop, // 1: Demon
+                Effect::Noop, // 2: Sphinx
+                Effect::Noop, // 3: Frog
+                Effect::Noop, // 4: Phyrexian
+                Effect::Noop, // 5: Angel
+                Effect::Noop, // 6: Avatar
+                Effect::Noop, // 7: Beast
+            ]),
+        }],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],

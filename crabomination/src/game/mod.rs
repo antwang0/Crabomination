@@ -768,6 +768,13 @@ impl GameState {
     /// effects in the demo decks, and a future UI can deny the reveal by
     /// returning `Bool(false)` from an `OptionalTrigger` decision (not yet
     /// surfaced — opening-hand effects auto-fire today).
+    /// Backwards-compat alias used by some tests — fires every player's
+    /// opening-hand effects immediately. Equivalent to (and delegates to)
+    /// `apply_opening_hand_effects`.
+    pub fn fire_start_of_game_effects(&mut self) {
+        self.apply_opening_hand_effects();
+    }
+
     pub(crate) fn apply_opening_hand_effects(&mut self) {
         let n = self.players.len();
         for p in 0..n {
@@ -937,6 +944,28 @@ impl GameState {
                 for _ in 0..count {
                     self.players[player].mana_pool.add(*c, 1);
                     events.push(GameEvent::ManaAdded { player, color: *c });
+                }
+                Ok(events)
+            }
+            PendingEffectState::DiscardChosenPending { target_player } => {
+                let DecisionAnswer::Discard(card_ids) = answer else {
+                    return Err(GameError::DecisionAnswerMismatch);
+                };
+                let mut events = Vec::with_capacity(card_ids.len());
+                for cid in card_ids {
+                    if let Some(pos) = self.players[target_player]
+                        .hand
+                        .iter()
+                        .position(|c| c.id == *cid)
+                    {
+                        let card = self.players[target_player].hand.remove(pos);
+                        let card_id = card.id;
+                        self.players[target_player].graveyard.push(card);
+                        events.push(GameEvent::CardDiscarded {
+                            player: target_player,
+                            card_id,
+                        });
+                    }
                 }
                 Ok(events)
             }
@@ -1185,7 +1214,12 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             | StaticEffect::CostReduction { .. }
             | StaticEffect::AdditionalCostAfterFirstSpell { .. }
             | StaticEffect::ControllerHasHexproof
-            | StaticEffect::LandsTapColorlessOnly => vec![],
+            | StaticEffect::LandsTapColorlessOnly
+            // Teferi statics — handled at cast time via dedicated checks
+            // (`player_locked_to_sorcery_timing` etc.); not modeled as
+            // continuous-layer modifications here.
+            | StaticEffect::OpponentsSorceryTimingOnly
+            | StaticEffect::ControllerSorceriesAsFlash => vec![],
         })
         .collect()
 }

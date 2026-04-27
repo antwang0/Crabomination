@@ -6,21 +6,31 @@ use std::path::Path;
 use std::thread;
 use std::time::Duration;
 
-/// Ensure card images exist locally for every card name in the list.
+/// Ensure card images exist locally for every (name, is_back_face) entry.
 /// Downloads missing images from Scryfall's API. Blocks until done.
-pub fn ensure_card_images(card_names: &[&str], assets_dir: &Path) {
+///
+/// `is_back_face` flags MDFC back-face entries (Searstep Pathway,
+/// Slitherbore Pathway). Scryfall's `format=image` returns the **front**
+/// face by default even when queried by back-face name, so back-face
+/// downloads explicitly request `&face=back`.
+pub fn ensure_card_images(card_specs: &[(&str, bool)], assets_dir: &Path) {
     let cards_dir = assets_dir.join("cards");
     fs::create_dir_all(&cards_dir).expect("failed to create assets/cards/ directory");
 
-    for name in card_names {
-        let filename = card_filename(name);
+    for (name, is_back) in card_specs {
+        let filename = if *is_back {
+            card_back_face_filename(name)
+        } else {
+            card_filename(name)
+        };
         let path = cards_dir.join(&filename);
         if path.exists() {
             continue;
         }
 
-        println!("Downloading card image: {name}...");
-        match download_card_image(name) {
+        let face_label = if *is_back { " (back face)" } else { "" };
+        println!("Downloading card image: {name}{face_label}...");
+        match download_card_image(name, *is_back) {
             Ok(bytes) => {
                 fs::write(&path, &bytes).expect("failed to write card image");
                 println!("  Saved to {}", path.display());
@@ -40,14 +50,27 @@ pub fn card_filename(name: &str) -> String {
     format!("{}.png", name.to_lowercase().replace(' ', "_"))
 }
 
+/// Filename for an MDFC back-face image. The `_back` suffix avoids
+/// colliding with a stale front-face download for the same name when
+/// the prefetch is upgraded to pass `face=back` to Scryfall.
+pub fn card_back_face_filename(name: &str) -> String {
+    format!("{}_back.png", name.to_lowercase().replace(' ', "_"))
+}
+
 /// Asset path relative to the assets/ root, for use with Bevy's AssetServer.
 pub fn card_asset_path(name: &str) -> String {
     format!("cards/{}", card_filename(name))
 }
 
-fn download_card_image(name: &str) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+/// Asset path for an MDFC back-face image.
+pub fn card_back_face_asset_path(name: &str) -> String {
+    format!("cards/{}", card_back_face_filename(name))
+}
+
+fn download_card_image(name: &str, is_back: bool) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+    let face_param = if is_back { "&face=back" } else { "" };
     let url = format!(
-        "https://api.scryfall.com/cards/named?exact={}&format=image&version=png",
+        "https://api.scryfall.com/cards/named?exact={}&format=image&version=png{face_param}",
         urlenccode(name)
     );
 

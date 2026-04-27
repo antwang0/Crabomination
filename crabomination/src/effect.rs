@@ -843,6 +843,14 @@ pub enum StaticEffect {
     /// front-face of MDFCs (which have only one ability) and on basic
     /// lands (single-color, single-mana already).
     LandsTapColorlessOnly,
+    /// Teferi, Time Raveler-style: each opponent can cast spells only any
+    /// time they could cast a sorcery. Checked at cast time on the
+    /// opponent's side.
+    OpponentsSorceryTimingOnly,
+    /// Teferi, Time Raveler +1: until your next turn, you may cast sorcery
+    /// spells as though they had flash. Tracked via `Player.sorceries_as_flash`
+    /// (set/cleared by the loyalty ability + `do_untap`).
+    ControllerSorceriesAsFlash,
 }
 
 // ── Triggered / activated / loyalty ability shells ───────────────────────────

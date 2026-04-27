@@ -16,8 +16,8 @@ use crate::card::{
     GameCardId, GraveyardPile, HandCard, HandSlideAnimation, OpponentHandCard,
     PlayCardAnimation, PlayerTargetZone, RevealPeekAnimation, SendToGraveyardAnimation,
     StackCard, TapAnimation, TapState, ValidTarget, back_face_rotation, bf_card_transform,
-    card_front_material, deck_position, graveyard_position, hand_card_transform,
-    land_card_transform, spawn_single_card,
+    card_back_face_material, card_front_material, deck_position, graveyard_position,
+    hand_card_transform, land_card_transform, spawn_single_card,
 };
 use crate::game::{AbilityMenuState, BlockingState, GameLog, TargetingState, format_mana_pool_from_pool};
 use crate::net_plugin::{CurrentView, LatestServerEvents, NetOutbox};
@@ -37,7 +37,122 @@ pub struct GameInputResources<'w> {
     pub ff: ResMut<'w, FastForward>,
     pub alt_cast: ResMut<'w, crate::game::AltCastState>,
     pub flipped_hand: ResMut<'w, crate::game::FlippedHandCards>,
+    pub card_names: ResMut<'w, crate::game::CardNames>,
 }
+/// Process `SwapFrontMaterial` markers: walk each entity's children,
+/// find the `FrontFaceMesh` child, swap its `MeshMaterial3d` to the
+/// requested handle, update the parent's `CardFrontTexture` so peek /
+/// hover popups stay in sync, and remove the marker. Used by the
+/// hand→battlefield transition for flipped MDFCs (the played-back-face
+/// image needs to land on the front-child mesh under standard bf
+/// orientation).
+#[allow(clippy::type_complexity)]
+pub fn apply_swap_front_material(
+    mut commands: Commands,
+    swap_q: Query<
+        (Entity, &Children, &crate::card::SwapFrontMaterial),
+        With<crate::card::SwapFrontMaterial>,
+    >,
+    mut front_meshes: Query<
+        &mut MeshMaterial3d<StandardMaterial>,
+        With<crate::card::FrontFaceMesh>,
+    >,
+    mut tex_q: Query<&mut crate::card::CardFrontTexture>,
+) {
+    for (entity, children, swap) in &swap_q {
+        for child in children.iter() {
+            if let Ok(mut mat) = front_meshes.get_mut(child) {
+                *mat = MeshMaterial3d(swap.new_front.clone());
+                break;
+            }
+        }
+        if let Ok(mut tex) = tex_q.get_mut(entity) {
+            tex.0 = swap.new_path.clone();
+        }
+        commands
+            .entity(entity)
+            .remove::<crate::card::SwapFrontMaterial>();
+    }
+}
+
+/// Pretty-print a `GameEventWire` for the in-game log, resolving any
+/// CardId via the running `CardNames` map so the player sees real card
+/// names instead of `CardId(N)` debug strings.
+fn format_event(ev: &crabomination::net::GameEventWire, names: &crate::game::CardNames) -> String {
+    use crabomination::net::GameEventWire as E;
+    let n = |id: crabomination::card::CardId| names.get(id);
+    match ev {
+        E::StepChanged(s) => format!("Step → {s:?}"),
+        E::TurnStarted { player, turn } => format!("Turn {turn} — P{player}"),
+        E::CardDrawn { player, card_id } => format!("P{player} drew {}", n(*card_id)),
+        E::CardDiscarded { player, card_id } => {
+            format!("P{player} discarded {}", n(*card_id))
+        }
+        E::LandPlayed { player, card_id } => format!("P{player} played {}", n(*card_id)),
+        E::SpellCast { player, card_id } => format!("P{player} cast {}", n(*card_id)),
+        E::AbilityActivated { source } => format!("{} ability activated", n(*source)),
+        E::ManaAdded { player, color } => format!("P{player} adds {color:?}"),
+        E::ColorlessManaAdded { player } => format!("P{player} adds colorless"),
+        E::PermanentEntered { card_id } => format!("{} entered the battlefield", n(*card_id)),
+        E::PermanentExiled { card_id } => format!("{} was exiled", n(*card_id)),
+        E::DamageDealt { amount, to_player, to_card } => match (to_player, to_card) {
+            (Some(p), _) => format!("{amount} damage → P{p}"),
+            (_, Some(cid)) => format!("{amount} damage → {}", n(*cid)),
+            _ => format!("{amount} damage"),
+        },
+        E::LifeLost { player, amount } => format!("P{player} loses {amount} life"),
+        E::LifeGained { player, amount } => format!("P{player} gains {amount} life"),
+        E::CreatureDied { card_id } => format!("{} died", n(*card_id)),
+        E::PumpApplied { card_id, power, toughness } => {
+            format!("{} +{power}/+{toughness}", n(*card_id))
+        }
+        E::CounterAdded { card_id, counter_type, count } => {
+            format!("+{count} {counter_type:?} on {}", n(*card_id))
+        }
+        E::CounterRemoved { card_id, counter_type, count } => {
+            format!("−{count} {counter_type:?} on {}", n(*card_id))
+        }
+        E::PermanentTapped { card_id } => format!("{} tapped", n(*card_id)),
+        E::PermanentUntapped { card_id } => format!("{} untapped", n(*card_id)),
+        E::TokenCreated { card_id } => format!("token {} created", n(*card_id)),
+        E::CardMilled { player, card_id } => format!("P{player} milled {}", n(*card_id)),
+        E::ScryPerformed { player, looked_at, bottomed } => {
+            format!("P{player} scry {looked_at} ({bottomed} to bottom)")
+        }
+        E::AttackerDeclared(cid) => format!("{} attacks", n(*cid)),
+        E::BlockerDeclared { blocker, attacker } => {
+            format!("{} blocks {}", n(*blocker), n(*attacker))
+        }
+        E::CombatResolved => "Combat resolved".into(),
+        E::FirstStrikeDamageResolved => "First-strike damage resolved".into(),
+        E::TopCardRevealed { player, card_name, .. } => {
+            format!("P{player} revealed {card_name}")
+        }
+        E::AttachmentMoved { attachment, attached_to } => match attached_to {
+            Some(target) => format!("{} attached to {}", n(*attachment), n(*target)),
+            None => format!("{} unattached", n(*attachment)),
+        },
+        E::PoisonAdded { player, amount } => format!("P{player} +{amount} poison"),
+        E::LoyaltyAbilityActivated { planeswalker, loyalty_change } => {
+            format!("{} loyalty {loyalty_change:+}", n(*planeswalker))
+        }
+        E::LoyaltyChanged { card_id, new_loyalty } => {
+            format!("{} loyalty = {new_loyalty}", n(*card_id))
+        }
+        E::PlaneswalkerDied { card_id } => format!("{} died (planeswalker)", n(*card_id)),
+        E::SpellsCopied { original, count } => {
+            format!("{} copied ×{count}", n(*original))
+        }
+        E::SurveilPerformed { player, looked_at, graveyarded } => {
+            format!("P{player} surveil {looked_at} ({graveyarded} to graveyard)")
+        }
+        E::GameOver { winner } => match winner {
+            Some(p) => format!("Game over — P{p} wins"),
+            None => "Game over — draw".into(),
+        },
+    }
+}
+
 /// Drives End Turn / Next Turn fast-forward: while these flags are set,
 /// `auto_advance_p0` keeps submitting `PassPriority` each frame until the
 /// target condition is reached.
@@ -524,6 +639,7 @@ pub fn sync_game_visuals(
             &Transform,
             Option<&StackCard>,
             &CardHoverLift,
+            Option<&crate::card::FlippedFace>,
         ),
         (With<HandCard>, Without<Animating>),
     >,
@@ -774,11 +890,21 @@ pub fn sync_game_visuals(
             if has_entity.contains(&card_id) { continue; }
             let target = hand_card_transform(viewer, viewer, n_seats, slot, hand_total);
             let front_mat = card_front_material(&known.name, &mut materials, &asset_server);
+            // For MDFC cards (Pathways), paint the back-child with the
+            // back face's Scryfall image instead of the cardback so a
+            // 180° flip animation reveals the alternate face. Uses the
+            // `_back`-suffixed asset path that the prefetch downloaded
+            // with `face=back`.
+            let back_mat = if let Some(back_name) = known.back_face_name.as_deref() {
+                card_back_face_material(back_name, &mut materials, &asset_server)
+            } else {
+                card_assets.back_material.clone()
+            };
             let entity = spawn_single_card(
                 &mut commands,
                 &card_assets.card_mesh,
                 front_mat,
-                card_assets.back_material.clone(),
+                back_mat,
                 Transform::from_translation(deck_pos),
                 GameCardId(card_id),
                 &known.name,
@@ -800,9 +926,10 @@ pub fn sync_game_visuals(
     }
 
     // ── Viewer hand → Battlefield / Stack / graveyard transitions ───────────
-    for (entity, game_id, transform, stack_card, _lift) in &hand_cards {
+    for (entity, game_id, transform, stack_card, _lift, flipped_marker) in &hand_cards {
         if bf_ids_for(viewer).contains(&game_id.0) {
-            let is_land = cv.battlefield.iter().find(|c| c.id == game_id.0).is_some_and(|c| c.is_land());
+            let bf_card = cv.battlefield.iter().find(|c| c.id == game_id.0);
+            let is_land = bf_card.is_some_and(|c| c.is_land());
             let target = if is_land {
                 land_card_transform(&cv.battlefield, viewer, viewer, n_seats, game_id.0)
                     .unwrap_or_else(|| bf_card_transform(viewer, viewer, n_seats, 0, 1, true, false))
@@ -810,6 +937,38 @@ pub fn sync_game_visuals(
                 let slot = bf_row_slot(&cv.battlefield, viewer, game_id.0, false).unwrap_or(0);
                 bf_card_transform(viewer, viewer, n_seats, slot, creature_count(viewer), false, false)
             };
+            // Flipped MDFC played as its back face: the engine swapped
+            // the card's definition to the back face, so the bf card's
+            // name is the back-face name. We need the front-child mesh
+            // to display the back-face image (via the `_back` asset
+            // path) so the played face is up on the battlefield. Animate
+            // back to the standard (un-flipped) bf rotation; without
+            // this, the play animation would un-rotate the card and
+            // expose the original front face (the wrong side).
+            // For a flipped MDFC, snap the play animation's start
+            // rotation to the bf target so it never interpolates the
+            // 180° back-flip on screen. The front-child material gets
+            // swapped to the back-face image in the same frame
+            // (`apply_swap_front_material`), so the visual stays on the
+            // back-face image throughout: the animation overwrites
+            // transform.rotation = start_rotation (target) on its first
+            // tick, before render. Both children hold the back-face
+            // image at that moment, so the snap is invisible.
+            let anim_start_rot = if flipped_marker.is_some() {
+                target.rotation
+            } else {
+                transform.rotation
+            };
+            if flipped_marker.is_some()
+                && let Some(bf) = bf_card
+            {
+                let new_front = card_back_face_material(&bf.name, &mut materials, &asset_server);
+                commands.entity(entity).insert(crate::card::SwapFrontMaterial {
+                    new_front,
+                    new_path: crate::scryfall::card_back_face_asset_path(&bf.name),
+                });
+                commands.entity(entity).remove::<crate::card::FlippedFace>();
+            }
             commands
                 .entity(entity)
                 .remove::<HandCard>()
@@ -823,7 +982,7 @@ pub fn sync_game_visuals(
                     progress: 0.0,
                     speed: 2.0,
                     start_translation: transform.translation,
-                    start_rotation: transform.rotation,
+                    start_rotation: anim_start_rot,
                     target_translation: target.translation,
                     target_rotation: target.rotation,
                 });
@@ -1104,7 +1263,7 @@ pub fn sync_game_visuals(
         .filter(|c| {
             c.owner == viewer
                 && !visual_bf_ids.contains(&c.id)
-                && !hand_cards.iter().any(|(_, gid, _, _, _)| gid.0 == c.id)
+                && !hand_cards.iter().any(|(_, gid, _, _, _, _)| gid.0 == c.id)
         })
         .map(|c| (c.id, c.name.clone(), c.is_land(), c.tapped))
         .collect();
@@ -1149,7 +1308,7 @@ pub fn sync_game_visuals(
     }
 
     // ── Rebalance viewer hand slots ──────────────────────────────────────────
-    for (entity, game_id, _transform, stack_card, lift) in &hand_cards {
+    for (entity, game_id, _transform, stack_card, lift, _flipped_marker) in &hand_cards {
         if stack_card.is_some() { continue; }
         if !hand_ids.contains(&game_id.0) { continue; }
         let Some(new_slot) = cv.players[viewer].hand.iter().position(|c| c.id() == game_id.0) else { continue };
@@ -1307,11 +1466,37 @@ pub fn handle_game_input(
     let reveal = &mut *r.reveal;
     let menu_state = &mut *r.menu_state;
     let ff = &mut *r.ff;
+    let card_names = &mut *r.card_names;
+
+    // Refresh the card-name lookup from the current view so the event
+    // formatter can resolve any CardId it sees. Hand / battlefield /
+    // graveyard / stack are all included; opponent face-down hand
+    // entries stay anonymous.
+    if let Some(cv) = view.0.as_ref() {
+        for player in &cv.players {
+            for h in &player.hand {
+                if let crabomination::net::HandCardView::Known(k) = h {
+                    card_names.by_id.insert(k.id, k.name.clone());
+                }
+            }
+            for g in &player.graveyard {
+                card_names.by_id.insert(g.id, g.name.clone());
+            }
+        }
+        for c in &cv.battlefield {
+            card_names.by_id.insert(c.id, c.name.clone());
+        }
+        for item in &cv.stack {
+            if let crabomination::net::StackItemView::Known(k) = item {
+                card_names.by_id.insert(k.source, k.name.clone());
+            }
+        }
+    }
 
     // Update game log from server events.
     for ev in &server_events.0 {
         check_reveal_wire(std::slice::from_ref(ev), reveal);
-        log.push(format!("{ev:?}"));
+        log.push(format_event(ev, card_names));
     }
 
     let Some(cv) = &view.0 else { return };
@@ -1853,25 +2038,27 @@ pub fn trigger_reveal_animation(
 
 // ── MDFC flip sync ────────────────────────────────────────────────────────────
 
-/// Reconcile each viewer hand card's front-face material with its flipped
-/// state. When a card is in `FlippedHandCards.flipped`, its front-face mesh
-/// is repainted with the back-face's texture (and its `CardFrontTexture`
-/// path updated so the peek popup mirrors the flip). Also drops stale
-/// entries when cards leave the hand.
+/// Reconcile each viewer hand card's persistent flip state
+/// (`FlippedFace` marker on the entity) against the user's intent
+/// (`FlippedHandCards.flipped`). When they disagree, attach a 180°
+/// `MdfcFlipAnimation` and toggle the marker. Both card faces are
+/// already painted with their proper Scryfall images at spawn time, so
+/// the rotation alone reveals the alternate face — no material swap.
+/// Also drops stale flip entries when cards leave the hand.
 #[allow(clippy::type_complexity)]
 pub fn sync_flipped_hand_cards(
+    mut commands: Commands,
     cv: Res<CurrentView>,
     mut flipped: ResMut<crate::game::FlippedHandCards>,
-    mut hand_cards: Query<
-        (&GameCardId, &Children, &mut crate::card::CardFrontTexture),
-        With<HandCard>,
+    hand_cards: Query<
+        (
+            Entity,
+            &GameCardId,
+            &Transform,
+            Option<&crate::card::FlippedFace>,
+        ),
+        (With<HandCard>, Without<crate::card::MdfcFlipAnimation>),
     >,
-    mut front_meshes: Query<
-        &mut MeshMaterial3d<StandardMaterial>,
-        With<crate::card::FrontFaceMesh>,
-    >,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-    asset_server: Res<AssetServer>,
 ) {
     let Some(view) = cv.0.as_ref() else { return };
     let viewer = view.your_seat;
@@ -1885,35 +2072,22 @@ pub fn sync_flipped_hand_cards(
         .collect();
     flipped.flipped.retain(|id| in_hand.contains(id));
 
-    // Reconcile front-face material against the desired (front vs back) name.
-    for (game_id, children, mut tex) in &mut hand_cards {
+    for (entity, game_id, transform, marker) in &hand_cards {
         let card_id = game_id.0;
-        let known = view.players[viewer].hand.iter().find_map(|h| match h {
-            crabomination::net::HandCardView::Known(k) if k.id == card_id => Some(k),
-            _ => None,
-        });
-        let Some(known) = known else { continue };
-        let is_flipped = flipped.flipped.contains(&card_id);
-        let desired_name: &str = if is_flipped {
-            known.back_face_name.as_deref().unwrap_or(&known.name)
-        } else {
-            &known.name
-        };
-        let desired_path = crate::scryfall::card_asset_path(desired_name);
-        if tex.0 == desired_path {
+        let should_be_flipped = flipped.flipped.contains(&card_id);
+        let is_flipped = marker.is_some();
+        if should_be_flipped == is_flipped {
             continue;
         }
-        // Repaint the front-face child's material.
-        for child in children.iter() {
-            if let Ok(mut mat) = front_meshes.get_mut(child) {
-                *mat = MeshMaterial3d(card_front_material(
-                    desired_name,
-                    &mut materials,
-                    &asset_server,
-                ));
-                break;
-            }
+        commands.entity(entity).insert(crate::card::MdfcFlipAnimation {
+            progress: 0.0,
+            speed: 2.5,
+            start_rotation: transform.rotation,
+        });
+        if should_be_flipped {
+            commands.entity(entity).insert(crate::card::FlippedFace);
+        } else {
+            commands.entity(entity).remove::<crate::card::FlippedFace>();
         }
-        tex.0 = desired_path;
     }
 }

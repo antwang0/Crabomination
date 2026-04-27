@@ -25,3 +25,7 @@ target
 # bloats the repo and goes stale when the catalog grows. Fonts stay tracked
 # (they're not auto-fetched and the UI needs them at startup).
 crabomination_client/assets/cards/
+
+# Per-user Claude Code harness settings (allow-lists, hooks, etc.).
+# Each contributor maintains their own.
+.claude/settings.local.json

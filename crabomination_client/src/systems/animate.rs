@@ -3,10 +3,10 @@ use std::f32::consts::PI;
 use bevy::prelude::*;
 
 use crate::card::{
-    hand_card_transform, Animating, CardFlipAnimation, CardHoverLift, DeckCard, DeckShuffleAnimation,
-    DrawCardAnimation, HandCard, HandSlideAnimation, PlayCardAnimation, ReturnToDeckAnimation,
-    RevealPeekAnimation, SendToGraveyardAnimation, ShufflePhase, TapAnimation,
-    CARD_WIDTH, HOVER_LIFT_SPEED,
+    hand_card_transform, Animating, CardFlipAnimation, CardHoverLift, DeckCard,
+    DeckShuffleAnimation, DrawCardAnimation, HandCard, HandSlideAnimation, MdfcFlipAnimation,
+    PlayCardAnimation, ReturnToDeckAnimation, RevealPeekAnimation, SendToGraveyardAnimation,
+    ShufflePhase, TapAnimation, CARD_WIDTH, HOVER_LIFT_SPEED,
 };
 use crate::net_plugin::CurrentView;
 
@@ -75,6 +75,33 @@ pub fn animate_flip(
             let flip_angle = t * PI;
             let y_offset = (CARD_WIDTH / 2.0) * flip_angle.sin().abs();
             transform.translation.y = anim.start_y + y_offset;
+        }
+    }
+}
+
+/// Drive the MDFC 180° flip: rotate the parent around its local Y axis
+/// from `start_rotation` to `start_rotation * Quat::from_rotation_y(PI)`
+/// over `progress: 0.0..1.0`. Both faces are pre-painted with their
+/// proper Scryfall images, so this rotation alone reveals the alternate
+/// face. After two flips (each +180°) the parent has rotated 360° and
+/// is back at its original orientation.
+#[allow(clippy::type_complexity)]
+pub fn animate_mdfc_flip(
+    mut commands: Commands,
+    time: Res<Time>,
+    speed: Res<AnimationSpeed>,
+    mut cards: Query<(Entity, &mut Transform, &mut MdfcFlipAnimation)>,
+) {
+    for (entity, mut transform, mut anim) in &mut cards {
+        anim.progress += time.delta_secs() * speed.0 * anim.speed;
+        let t = anim.progress.min(1.0);
+        let eased = ease_in_out(t);
+        let angle = eased * PI;
+        transform.rotation = anim.start_rotation * Quat::from_rotation_y(angle);
+
+        if anim.progress >= 1.0 {
+            transform.rotation = anim.start_rotation * Quat::from_rotation_y(PI);
+            commands.entity(entity).remove::<MdfcFlipAnimation>();
         }
     }
 }

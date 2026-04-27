@@ -50,6 +50,11 @@ pub struct PutOnLibrarySelectButton {
     pub card_id: CardId,
 }
 
+#[derive(Component)]
+pub struct DiscardSelectButton {
+    pub card_id: CardId,
+}
+
 /// While a hand-card visual entity is selected for bottoming during the
 /// PutOnLibrary phase, this component stores the two border child entities
 /// drawn around it. Stored separately from `CardBorderHighlight` so the
@@ -71,6 +76,8 @@ pub struct DecisionUiState {
     pub search_selected: Option<CardId>,
     /// For PutOnLibrary / Mulligan bottoming: ordered list of selected card IDs.
     pub put_on_library: Vec<CardId>,
+    /// For Discard (Inquisition / Thoughtseize picker): selected card IDs.
+    pub discard_selected: Vec<CardId>,
     /// CardId the modal was last spawned for — avoids respawning each frame.
     pub spawned_for: Option<DecisionKey>,
 }
@@ -82,6 +89,7 @@ pub enum DecisionKey {
     Scry(Vec<CardId>),
     Search(Vec<CardId>),
     PutOnLibrary(Vec<CardId>),
+    Discard(Vec<CardId>, u32),
     Mulligan(Vec<CardId>, usize),
     ChooseColor(CardId),
 }
@@ -96,6 +104,10 @@ fn decision_key(decision: &DecisionWire) -> Option<DecisionKey> {
         )),
         DecisionWire::PutOnLibrary { hand, .. } => Some(DecisionKey::PutOnLibrary(
             hand.iter().map(|(id, _)| *id).collect(),
+        )),
+        DecisionWire::Discard { hand, count, .. } => Some(DecisionKey::Discard(
+            hand.iter().map(|(id, _)| *id).collect(),
+            *count,
         )),
         DecisionWire::Mulligan { hand, mulligans_taken, .. } => Some(DecisionKey::Mulligan(
             hand.iter().map(|(id, _)| *id).collect(),
@@ -134,6 +146,7 @@ pub fn spawn_decision_ui(
         state.scry.clear();
         state.search_selected = None;
         state.put_on_library.clear();
+        state.discard_selected.clear();
         state.spawned_for = None;
         return;
     };
@@ -148,6 +161,7 @@ pub fn spawn_decision_ui(
                 state.scry.clear();
                 state.search_selected = None;
                 state.put_on_library.clear();
+                state.discard_selected.clear();
                 state.spawned_for = None;
             }
             return;
@@ -490,6 +504,120 @@ fn spawn_search_modal(
     });
 }
 
+/// Inquisition / Thoughtseize discard picker. Caster sees the target's
+/// hand and clicks `count` cards to send to the graveyard.
+fn spawn_discard_modal(
+    commands: &mut Commands,
+    asset_server: &AssetServer,
+    candidates: &[(CardId, String)],
+    count: u32,
+) {
+    let root = commands
+        .spawn((
+            Node {
+                position_type: PositionType::Absolute,
+                left: Val::Px(0.0),
+                top: Val::Px(0.0),
+                width: Val::Percent(100.0),
+                height: Val::Percent(100.0),
+                justify_content: JustifyContent::Center,
+                align_items: AlignItems::Center,
+                ..default()
+            },
+            BackgroundColor(OVERLAY_BG),
+            Button,
+            DecisionModal,
+        ))
+        .id();
+
+    let panel = commands
+        .spawn((
+            Node {
+                flex_direction: FlexDirection::Column,
+                padding: UiRect::all(Val::Px(20.0)),
+                row_gap: Val::Px(16.0),
+                align_items: AlignItems::Center,
+                max_width: Val::Percent(90.0),
+                ..default()
+            },
+            BackgroundColor(PANEL_BG),
+        ))
+        .id();
+    commands.entity(root).add_child(panel);
+
+    commands.entity(panel).with_children(|panel| {
+        panel.spawn((
+            Text::new(format!(
+                "Choose {count} card(s) to discard from your opponent's hand"
+            )),
+            TextFont { font_size: 16.0, ..default() },
+            TextColor(Color::WHITE),
+        ));
+        panel
+            .spawn(Node {
+                flex_direction: FlexDirection::Row,
+                flex_wrap: FlexWrap::Wrap,
+                column_gap: Val::Px(12.0),
+                row_gap: Val::Px(12.0),
+                justify_content: JustifyContent::Center,
+                ..default()
+            })
+            .with_children(|row| {
+                for (card_id, name) in candidates {
+                    let path = scryfall::card_asset_path(name);
+                    let texture: Handle<Image> = asset_server.load(&path);
+                    row.spawn((
+                        Button,
+                        Node {
+                            flex_direction: FlexDirection::Column,
+                            width: Val::Px(CARD_W),
+                            padding: UiRect::all(Val::Px(6.0)),
+                            align_items: AlignItems::Center,
+                            ..default()
+                        },
+                        BackgroundColor(BTN_BG_OFF),
+                        DiscardSelectButton { card_id: *card_id },
+                    ))
+                    .with_children(|cb| {
+                        cb.spawn((
+                            ImageNode { image: texture, ..default() },
+                            Node {
+                                width: Val::Px(CARD_W - 12.0),
+                                height: Val::Px(CARD_H - 12.0),
+                                ..default()
+                            },
+                            Pickable::IGNORE,
+                        ));
+                        cb.spawn((
+                            Text::new(name.clone()),
+                            TextFont { font_size: 12.0, ..default() },
+                            TextColor(Color::WHITE),
+                            Pickable::IGNORE,
+                        ));
+                    });
+                }
+            });
+        panel
+            .spawn((
+                Button,
+                Node {
+                    padding: UiRect::axes(Val::Px(20.0), Val::Px(10.0)),
+                    ..default()
+                },
+                BackgroundColor(CONFIRM_BG),
+                DecisionConfirmButton,
+            ))
+            .with_children(|b| {
+                b.spawn((
+                    Text::new("Confirm"),
+                    TextFont { font_size: 18.0, ..default() },
+                    TextColor(Color::WHITE),
+                    Pickable::IGNORE,
+                ));
+            });
+    });
+}
+
 /// Compact PutOnLibrary banner. Card selection happens by clicking the 3D
 /// hand cards directly; this banner shows the prompt, the running count of
 /// selected cards, and a Confirm button.
@@ -711,6 +839,43 @@ pub fn handle_put_on_library_select(
     }
 }
 
+/// Handle clicks on Inquisition/Thoughtseize discard candidate cards.
+/// Toggles inclusion in the selection up to `count` cards (taken from
+/// the live `DecisionWire::Discard` count). Selected cards highlight in
+/// `BTN_BG_ON`; clicking a selected card unselects it.
+#[allow(clippy::type_complexity)]
+pub fn handle_discard_select(
+    view: Res<CurrentView>,
+    mut state: ResMut<DecisionUiState>,
+    mut buttons: Query<
+        (&Interaction, &DiscardSelectButton, &mut BackgroundColor),
+        (Changed<Interaction>, With<Button>),
+    >,
+) {
+    let required_count = match view
+        .0
+        .as_ref()
+        .and_then(|v| v.pending_decision.as_ref())
+        .and_then(|p| p.decision.as_ref())
+    {
+        Some(DecisionWire::Discard { count, .. }) => *count as usize,
+        _ => return,
+    };
+    for (interaction, btn, mut bg) in buttons.iter_mut() {
+        if *interaction != Interaction::Pressed {
+            continue;
+        }
+        let id = btn.card_id;
+        if let Some(pos) = state.discard_selected.iter().position(|&x| x == id) {
+            state.discard_selected.remove(pos);
+            *bg = BackgroundColor(BTN_BG_OFF);
+        } else if state.discard_selected.len() < required_count {
+            state.discard_selected.push(id);
+            *bg = BackgroundColor(BTN_BG_ON);
+        }
+    }
+}
+
 /// Handle clicks on search candidate cards: highlight the selected card.
 #[allow(clippy::type_complexity)]
 pub fn handle_search_select(
@@ -820,6 +985,10 @@ pub fn handle_confirm(
                 if state.put_on_library.len() < *count { continue; }
                 DecisionAnswer::PutOnLibrary(state.put_on_library.clone())
             }
+            DecisionWire::Discard { count, .. } => {
+                if state.discard_selected.len() < *count as usize { continue; }
+                DecisionAnswer::Discard(state.discard_selected.clone())
+            }
             _ => continue,
         };
 
@@ -830,6 +999,7 @@ pub fn handle_confirm(
         state.scry.clear();
         state.search_selected = None;
         state.put_on_library.clear();
+        state.discard_selected.clear();
         state.spawned_for = None;
     }
 }

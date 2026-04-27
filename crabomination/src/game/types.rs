@@ -237,6 +237,10 @@ pub enum PendingEffectState {
     /// payload — Black Lotus, Birds of Paradise, Mox Diamond. The UI picks
     /// a color and the engine adds `count` mana of that color.
     AnyOneColorPending { player: usize, count: u32 },
+    /// Suspended on a `DiscardChosen` decision (Inquisition of Kozilek,
+    /// Thoughtseize). The caster picks cards from `target_player`'s hand;
+    /// the apply step removes them and graveyards them.
+    DiscardChosenPending { target_player: usize },
 }
 
 // ── Events ────────────────────────────────────────────────────────────────────

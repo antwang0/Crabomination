@@ -25,20 +25,22 @@ use card::{
 use render_quality::{ChangeQuality, RenderQuality};
 use config::GraphicsConfig;
 use game::{
-    AltCastState, BlockingState, FlippedHandCards, GameLog, GraveyardBrowserState, TargetingState,
+    AltCastState, BlockingState, CardNames, FlippedHandCards, GameLog, GraveyardBrowserState,
+    TargetingState,
 };
 use systems::game_ui::FastForward;
 use systems::animate::{
     adjust_animation_speed, animate_deck_shuffle, animate_draw_card, animate_flip,
+    animate_mdfc_flip,
     animate_hand_slide, animate_hover_lift, animate_play_card, animate_return_to_deck,
     animate_reveal_peek, animate_send_to_graveyard, animate_tap, AnimationSpeed,
 };
 use systems::game_ui::{
-    auto_advance_p0, handle_ability_menu, handle_alt_cast_buttons, handle_game_input,
-    poll_action_buttons, setup_game_hud, spawn_ability_menu, spawn_alt_cast_modal,
-    sync_flipped_hand_cards, sync_game_visuals, trigger_reveal_animation, update_log_text,
-    update_p1_text, update_hint, update_phase_chart, update_player_text, update_turn_text,
-    ButtonState, GameLogicSet,
+    apply_swap_front_material, auto_advance_p0, handle_ability_menu, handle_alt_cast_buttons,
+    handle_game_input, poll_action_buttons, setup_game_hud, spawn_ability_menu,
+    spawn_alt_cast_modal, sync_flipped_hand_cards, sync_game_visuals, trigger_reveal_animation,
+    update_log_text, update_p1_text, update_hint, update_phase_chart, update_player_text,
+    update_turn_text, ButtonState, GameLogicSet,
 };
 use systems::gizmos::{
     draw_attacker_overlays, draw_blocking_gizmos, draw_stack_arrows,
@@ -46,7 +48,7 @@ use systems::gizmos::{
 };
 use systems::quality::{setup_quality_panel, handle_quality_buttons};
 use systems::ui::{graveyard_browser, highlight_hovered_cards, peek_popup, pile_tooltip, reveal_popup, RevealPopupState};
-use systems::decision_ui::{spawn_decision_ui, handle_scry_toggles, handle_scry_reorder, handle_search_select, handle_put_on_library_select, handle_put_on_library_hand_click, update_put_on_library_count_text, update_put_on_library_visuals, handle_choose_color_buttons, handle_confirm, handle_mulligan_buttons, DecisionUiState};
+use systems::decision_ui::{spawn_decision_ui, handle_scry_toggles, handle_scry_reorder, handle_search_select, handle_put_on_library_select, handle_put_on_library_hand_click, handle_discard_select, update_put_on_library_count_text, update_put_on_library_visuals, handle_choose_color_buttons, handle_confirm, handle_mulligan_buttons, DecisionUiState};
 
 /// Marks the decorative ground plane so quality changes can update its mesh.
 #[derive(Component)]
@@ -60,15 +62,23 @@ fn main() {
     let cfg = config::load();
 
     // Preload card images by inspecting the same demo state the server uses.
+    // Track back-face names separately so the prefetch can pass `face=back`
+    // to Scryfall — `format=image` returns the front face by default even
+    // when queried by back-face name.
     let demo = crabomination::demo::build_demo_state();
-    let mut seen = std::collections::HashSet::new();
+    let mut fronts: std::collections::HashSet<&str> = std::collections::HashSet::new();
+    let mut backs: std::collections::HashSet<&str> = std::collections::HashSet::new();
     for player in &demo.players {
         for card in player.library.iter().chain(&player.hand).chain(&player.graveyard) {
-            seen.insert(card.definition.name);
+            fronts.insert(card.definition.name);
+            if let Some(back) = card.definition.back_face.as_ref() {
+                backs.insert(back.name);
+            }
         }
     }
-    let card_names: Vec<&str> = seen.into_iter().collect();
-    scryfall::ensure_card_images(&card_names, Path::new(&cfg.paths.asset_dir));
+    let mut specs: Vec<(&str, bool)> = fronts.into_iter().map(|n| (n, false)).collect();
+    specs.extend(backs.into_iter().map(|n| (n, true)));
+    scryfall::ensure_card_images(&specs, Path::new(&cfg.paths.asset_dir));
 
     let gfx = cfg.graphics;
     App::new()
@@ -107,6 +117,7 @@ fn main() {
         .insert_resource(BlockingState::default())
         .insert_resource(AltCastState::default())
         .insert_resource(FlippedHandCards::default())
+        .insert_resource(CardNames::default())
         .insert_resource(GraveyardBrowserState::default())
         .insert_resource(RevealPopupState::default())
         .insert_resource(AnimationSpeed::default())
@@ -186,6 +197,17 @@ fn main() {
             )
                 .run_if(in_state(AppState::InGame)),
         )
+        // Separate add_systems call to stay under Bevy's 20-tuple limit.
+        .add_systems(Update, animate_mdfc_flip.run_if(in_state(AppState::InGame)))
+        // Run after sync_game_visuals so SwapFrontMaterial markers
+        // queued during the hand→battlefield transition land before
+        // the next frame's render.
+        .add_systems(
+            Update,
+            apply_swap_front_material
+                .after(sync_game_visuals)
+                .run_if(in_state(AppState::InGame)),
+        )
         // Decision UI: spawn modal when pending, handle interactions, submit answer.
         .add_systems(
             Update,
@@ -196,6 +218,7 @@ fn main() {
                 handle_search_select,
                 handle_put_on_library_select,
                 handle_put_on_library_hand_click,
+                handle_discard_select,
                 update_put_on_library_count_text,
                 update_put_on_library_visuals,
                 handle_confirm,

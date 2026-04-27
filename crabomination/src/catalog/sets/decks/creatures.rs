@@ -29,15 +29,15 @@ use crate::mana::{Color, ManaCost, b, cost, g, generic, r, u, w};
 pub fn callous_sell_sword() -> CardDefinition {
     CardDefinition {
         name: "Callous Sell-Sword",
-        cost: cost(&[generic(3), r()]),
+        cost: cost(&[generic(1), r()]),
         supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human],
+            creature_types: vec![CreatureType::Human, CreatureType::Mercenary],
             ..Default::default()
         },
-        power: 4,
-        toughness: 4,
+        power: 2,
+        toughness: 1,
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
@@ -125,8 +125,10 @@ pub fn cosmogoyf() -> CardDefinition {
             creature_types: vec![CreatureType::Beast],
             ..Default::default()
         },
-        power: 4,
-        toughness: 5,
+        // Base power/toughness — overridden per-frame by the layer-7 set-PT
+        // effect injected in `compute_battlefield` based on graveyard contents.
+        power: 0,
+        toughness: 1,
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
@@ -510,10 +512,10 @@ pub fn elesh_norn_mother_of_machines() -> CardDefinition {
 }
 
 /// Teferi, Time Raveler — {1}{W}{U} Legendary Planeswalker — Teferi (4
-/// loyalty). Static: each opponent can cast spells only any time they could
-/// cast a sorcery. +1: until your next turn, you may cast sorcery spells as
-/// though they had flash. -3: return target nonland permanent an opponent
-/// controls to its owner's hand. Draw a card.
+/// loyalty). Static: each opponent can cast spells only any time they
+/// could cast a sorcery. +1: until your next turn, you may cast sorcery
+/// spells as though they had flash. -3: return target nonland permanent
+/// an opponent controls to its owner's hand. Draw a card.
 ///
 /// Wired loyalty abilities:
 ///   * **+1**: `Effect::GrantSorceriesAsFlash { who: You }` flips
@@ -526,7 +528,8 @@ pub fn elesh_norn_mother_of_machines() -> CardDefinition {
 /// The static "each opponent can cast spells only at sorcery speed" half
 /// still needs a per-spell timing veto and isn't wired.
 pub fn teferi_time_raveler() -> CardDefinition {
-    use crate::card::LoyaltyAbility;
+    use crate::card::{LoyaltyAbility, StaticAbility};
+    use crate::effect::StaticEffect;
     CardDefinition {
         name: "Teferi, Time Raveler",
         cost: cost(&[generic(1), w(), u()]),
@@ -542,7 +545,18 @@ pub fn teferi_time_raveler() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
+        static_abilities: vec![
+            StaticAbility {
+                description: "Each opponent can cast spells only any time they could cast a sorcery.",
+                effect: StaticEffect::OpponentsSorceryTimingOnly,
+            },
+            // +1's "you may cast sorcery spells as though they had flash"
+            // collapsed into a permanent static while Teferi is in play.
+            StaticAbility {
+                description: "You may cast sorcery spells as though they had flash.",
+                effect: StaticEffect::ControllerSorceriesAsFlash,
+            },
+        ],
         base_loyalty: 4,
         loyalty_abilities: vec![
             LoyaltyAbility {

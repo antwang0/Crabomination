@@ -77,6 +77,7 @@ fn extra_cost_for_spell(
             }
         }
     }
+
     tax
 }
 
@@ -473,6 +474,10 @@ impl GameState {
             }
         }
 
+        // Consume Chancellor-of-the-Annex's one-shot tax if it was set
+        // — it applied to this very cast, so clear it now.
+        consume_first_spell_tax(self, p);
+
         // Compute converge: count distinct colors of mana drained from the
         // pool by paying the cost. Convoke pips contribute generic only,
         // so they don't raise this count.
@@ -795,6 +800,35 @@ impl GameState {
         Ok(events)
     }
 
+    /// True if `player` may cast sorcery spells at instant speed —
+    /// granted while a battlefield permanent of theirs has the
+    /// `StaticEffect::ControllerSorceriesAsFlash` static (Teferi, Time
+    /// Raveler's +1 collapsed into a permanent on-board static).
+    pub(crate) fn player_has_sorceries_as_flash(&self, player: usize) -> bool {
+        use crate::effect::StaticEffect;
+        self.battlefield.iter().any(|c| {
+            c.controller == player
+                && c.definition.static_abilities.iter().any(|sa| {
+                    matches!(sa.effect, StaticEffect::ControllerSorceriesAsFlash)
+                })
+        })
+    }
+
+    /// True if `player` is restricted to sorcery-only spell timing by an
+    /// opponent's `StaticEffect::OpponentsSorceryTimingOnly` (Teferi, Time
+    /// Raveler's static "Each opponent can cast spells only any time they
+    /// could cast a sorcery"). Walked by `cast_spell` ahead of the
+    /// is-instant-speed timing check.
+    pub(crate) fn player_locked_to_sorcery_timing(&self, player: usize) -> bool {
+        use crate::effect::StaticEffect;
+        self.battlefield.iter().any(|c| {
+            c.controller != player
+                && c.definition.static_abilities.iter().any(|sa| {
+                    matches!(sa.effect, StaticEffect::OpponentsSorceryTimingOnly)
+                })
+        })
+    }
+
     /// Validate that a target is legally targetable by the given controller.
     ///
     /// Returns an error if the target has Hexproof (opponent) or Shroud (anyone),
@@ -804,7 +838,10 @@ impl GameState {
         let cid = match target {
             Target::Player(p) => {
                 if *p != caster && self.player_has_static_hexproof(*p) {
-                    return Err(GameError::InvalidTarget);
+                    // No specific card to attach — reuse the permanent-shaped
+                    // Hexproof error variant with a placeholder CardId so the
+                    // UI/server still recognizes "this is a hexproof rejection".
+                    return Err(GameError::TargetHasHexproof(crate::card::CardId(0)));
                 }
                 return Ok(());
             }
