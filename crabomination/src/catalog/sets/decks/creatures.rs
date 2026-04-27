@@ -17,25 +17,53 @@ use crate::mana::{Color, ManaCost, b, cost, g, generic, r, u, w};
 
 // ── BRG creatures ────────────────────────────────────────────────────────────
 
-/// Callous Sell-Sword — {3}{R}, 4/4 Human Mercenary. Casualty 2: copy with
-/// modal-cast on a sacrificed creature. Stub: vanilla 4/4 (casualty omitted).
-/// TODO: wire casualty mechanic.
+/// Callous Sell-Sword — {1}{R} Human Mercenary, 2/1, with *Casualty 2*
+/// + an ETB pump rolled into one approximation. The real card is a Modal-
+/// DFC whose front face is "When this enters, target creature gets +X/+0
+/// until end of turn, where X is its power"; *Casualty 2* lets you
+/// sacrifice a 2+ power creature as you cast to copy the spell.
+///
+/// Approximation: ETB sacrifices a 2+ power creature you control (via
+/// `SacrificeAndRemember`) and pumps Self by `Value::SacrificedPower`
+/// until end of turn — collapsing both the casualty branch and the ETB
+/// pump onto a single permanent. AutoDecider sacrifices the first
+/// eligible creature; if no 2+ power creature is available the casualty
+/// branch silently no-ops and Sell-Sword resolves without a buff. The
+/// back-face Burning Cinder Fury isn't modeled.
 pub fn callous_sell_sword() -> CardDefinition {
     CardDefinition {
         name: "Callous Sell-Sword",
-        cost: cost(&[generic(3), r()]),
+        cost: cost(&[generic(1), r()]),
         supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human],
+            creature_types: vec![CreatureType::Human, CreatureType::Mercenary],
             ..Default::default()
         },
-        power: 4,
-        toughness: 4,
+        power: 2,
+        toughness: 1,
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            // Casualty 2 + ETB pump rolled together: sacrifice a 2+ power
+            // creature, then pump Self by that power until end of turn.
+            effect: Effect::Seq(vec![
+                Effect::SacrificeAndRemember {
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::PowerAtLeast(2)),
+                },
+                Effect::PumpPT {
+                    what: Selector::This,
+                    power: Value::SacrificedPower,
+                    toughness: Value::Const(0),
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+        }],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -84,9 +112,10 @@ pub fn chancellor_of_the_tangle() -> CardDefinition {
 }
 
 /// Cosmogoyf — {2}{G}, *X/X+1* where X = number of different card types
-/// among cards in all graveyards. Stub: 4/5 vanilla — actual variable P/T
-/// requires graveyard inspection in the layer system.
-/// TODO: wire dynamic P/T like Tarmogoyf.
+/// among cards in all graveyards. Wired live in `compute_battlefield`: a
+/// per-card layer-7 `SetPowerToughness(N, N+1)` effect is injected at
+/// compute-time, where N is `GameState::distinct_card_types_in_all_graveyards`.
+/// Test: `cosmogoyf_pt_scales_with_card_types_in_graveyards`.
 pub fn cosmogoyf() -> CardDefinition {
     CardDefinition {
         name: "Cosmogoyf",
@@ -97,8 +126,10 @@ pub fn cosmogoyf() -> CardDefinition {
             creature_types: vec![CreatureType::Beast],
             ..Default::default()
         },
-        power: 4,
-        toughness: 5,
+        // Base power/toughness — overridden per-frame by the layer-7 set-PT
+        // effect injected in `compute_battlefield` based on graveyard contents.
+        power: 0,
+        toughness: 1,
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
@@ -464,16 +495,32 @@ pub fn elesh_norn_mother_of_machines() -> CardDefinition {
 }
 
 /// Teferi, Time Raveler — {1}{W}{U} Legendary Planeswalker — Teferi (4
-/// loyalty). Static: each opponent can cast spells only any time they could
-/// cast a sorcery. +1: until your next turn, you may cast sorcery spells as
-/// though they had flash. -3: return target nonland permanent an opponent
-/// controls to its owner's hand. Draw a card.
+/// loyalty). Static: each opponent can cast spells only any time they
+/// could cast a sorcery. +1: until your next turn, you may cast sorcery
+/// spells as though they had flash. -3: return target nonland permanent
+/// an opponent controls to its owner's hand. Draw a card.
 ///
-/// Wired loyalty ability: **-3 bounce + draw**. The +1 flash-on-sorceries
-/// and the static spell-timing restriction still need engine support
-/// (sorcery-timing override + per-spell timing veto).
+/// All three abilities wired:
+///
+/// - **Static** "each opponent can cast spells only any time they could
+///   cast a sorcery": `StaticEffect::OpponentsSorceryTimingOnly`. The
+///   cast paths consult `player_locked_to_sorcery_timing` and reject
+///   instant/flash casts from a restricted player at non-sorcery timing.
+/// - **+1** "until your next turn, you may cast sorcery spells as though
+///   they had flash": `StaticEffect::ControllerSorceriesAsFlash` on the
+///   static_abilities array. The cast paths' timing check treats
+///   Sorcery cards as instant-speed when the caster has the static.
+///   Currently the engine grants this permanently while Teferi is in
+///   play (no until-your-next-turn duration on statics yet); the +1
+///   loyalty ability still costs +1 loyalty when activated.
+/// - **-3**: `Move(target nonland opp permanent → owner's hand) + Draw 1`.
+///
+/// Tests: `teferi_minus_three_returns_target_and_draws`,
+/// `teferi_plus_one_lets_you_cast_sorceries_at_instant_speed`,
+/// `teferi_static_locks_opponents_to_sorcery_timing`.
 pub fn teferi_time_raveler() -> CardDefinition {
-    use crate::card::LoyaltyAbility;
+    use crate::card::{LoyaltyAbility, StaticAbility};
+    use crate::effect::StaticEffect;
     CardDefinition {
         name: "Teferi, Time Raveler",
         cost: cost(&[generic(1), w(), u()]),
@@ -489,25 +536,45 @@ pub fn teferi_time_raveler() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
+        static_abilities: vec![
+            StaticAbility {
+                description: "Each opponent can cast spells only any time they could cast a sorcery.",
+                effect: StaticEffect::OpponentsSorceryTimingOnly,
+            },
+            // +1's "you may cast sorcery spells as though they had flash"
+            // collapsed into a permanent static while Teferi is in play.
+            StaticAbility {
+                description: "You may cast sorcery spells as though they had flash.",
+                effect: StaticEffect::ControllerSorceriesAsFlash,
+            },
+        ],
         base_loyalty: 4,
-        loyalty_abilities: vec![LoyaltyAbility {
-            loyalty_cost: -3,
-            effect: Effect::Seq(vec![
-                Effect::Move {
-                    what: target_filtered(
-                        SelectionRequirement::Permanent
-                            .and(SelectionRequirement::Nonland)
-                            .and(SelectionRequirement::ControlledByOpponent),
-                    ),
-                    to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
-                },
-                Effect::Draw {
-                    who: Selector::You,
-                    amount: Value::Const(1),
-                },
-            ]),
-        }],
+        loyalty_abilities: vec![
+            LoyaltyAbility {
+                // +1: until your next turn, sorceries gain flash. The
+                // static above already grants this permanently; +1's
+                // body is `Noop` but the loyalty bump still applies.
+                loyalty_cost: 1,
+                effect: Effect::Noop,
+            },
+            LoyaltyAbility {
+                loyalty_cost: -3,
+                effect: Effect::Seq(vec![
+                    Effect::Move {
+                        what: target_filtered(
+                            SelectionRequirement::Permanent
+                                .and(SelectionRequirement::Nonland)
+                                .and(SelectionRequirement::ControlledByOpponent),
+                        ),
+                        to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+                    },
+                    Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::Const(1),
+                    },
+                ]),
+            },
+        ],
         alternative_cost: None,
         back_face: None,
         start_of_game_effect: None,

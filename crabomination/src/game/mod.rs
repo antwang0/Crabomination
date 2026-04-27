@@ -1119,7 +1119,9 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             | StaticEffect::ExtraLandPerTurn
             | StaticEffect::CostReduction { .. }
             | StaticEffect::AdditionalCostAfterFirstSpell { .. }
-            | StaticEffect::ControllerHasHexproof => vec![],
+            | StaticEffect::ControllerHasHexproof
+            | StaticEffect::ControllerSorceriesAsFlash
+            | StaticEffect::OpponentsSorceryTimingOnly => vec![],
         })
         .collect()
 }

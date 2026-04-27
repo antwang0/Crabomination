@@ -615,14 +615,17 @@ pub fn thoughtseize() -> CardDefinition {
 
 // ── Goryo's sideboard spells ────────────────────────────────────────────────
 
-/// Consign to Memory — {U} Instant. Counter target activated or triggered
-/// ability. (Real Oracle also has a "OR counter target legendary spell"
-/// branch — we ship just the ability-counter half for now since that's
-/// what comes up against Goryo's ETB-driven matchups.)
+/// Consign to Memory — {U} Instant. "Counter target activated or
+/// triggered ability OR counter target legendary spell." Modal:
 ///
-/// Targets a permanent (the source of the ability); the engine's
-/// `Effect::CounterAbility` handler walks the stack top-down for the most
-/// recent `StackItem::Trigger` with that source and removes it.
+/// - **Mode 0**: target a permanent → counter the topmost trigger
+///   sourced from it (`Effect::CounterAbility`).
+/// - **Mode 1**: target a legendary spell on the stack → counter it
+///   (`Effect::CounterSpell` over `IsSpellOnStack ∧ HasSupertype(Legendary)`).
+///
+/// `AutoDecider` picks mode 0 by default — the Goryo's matchup wants
+/// the ability-counter half (Atraxa ETB, Devourer Scry, etc.). The
+/// mode-1 branch is reachable via UI / scripted decisions.
 pub fn consign_to_memory() -> CardDefinition {
     CardDefinition {
         name: "Consign to Memory",
@@ -633,9 +636,19 @@ pub fn consign_to_memory() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![],
-        effect: Effect::CounterAbility {
-            what: target_filtered(SelectionRequirement::Permanent),
-        },
+        effect: Effect::ChooseMode(vec![
+            // Mode 0: counter target ability (the Goryo's-matchup default).
+            Effect::CounterAbility {
+                what: target_filtered(SelectionRequirement::Permanent),
+            },
+            // Mode 1: counter target legendary spell.
+            Effect::CounterSpell {
+                what: target_filtered(
+                    SelectionRequirement::IsSpellOnStack
+                        .and(SelectionRequirement::HasSupertype(crate::card::Supertype::Legendary)),
+                ),
+            },
+        ]),
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],

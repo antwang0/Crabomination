@@ -753,6 +753,18 @@ pub enum StaticEffect {
     /// the battlefield, opponents can't target the controller. Read by
     /// `check_target_legality` against `Target::Player`.
     ControllerHasHexproof,
+    /// "[Player] may cast sorcery spells as though they had flash."
+    /// (Teferi, Time Raveler's +1.) Granted while the source is on the
+    /// battlefield to its controller. Read by `cast_spell`'s timing
+    /// gate so a Sorcery card from the granted player is treated as
+    /// instant-speed.
+    ControllerSorceriesAsFlash,
+    /// "Each opponent can cast spells only any time they could cast a
+    /// sorcery." (Teferi, Time Raveler's static.) Read by `cast_spell`'s
+    /// timing gate alongside the regular sorcery-speed check; a flash
+    /// or instant spell from a restricted player is rejected at non-
+    /// sorcery timing.
+    OpponentsSorceryTimingOnly,
 }
 
 // ── Triggered / activated / loyalty ability shells ───────────────────────────

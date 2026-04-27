@@ -292,9 +292,21 @@ impl GameState {
             }
         }
 
-        // Timing: sorcery-speed requires empty stack + main phase + active player priority.
-        // Instant-speed (Instant type or Flash) may be cast whenever you have priority.
-        if !card.definition.is_instant_speed() && !self.can_cast_sorcery_speed(p) {
+        // Timing: sorcery-speed requires empty stack + main phase + active
+        // player priority. Instant-speed (Instant type or Flash) may
+        // normally be cast whenever the caster has priority — except a
+        // Teferi-Time-Raveler static can lock opponents into sorcery-only
+        // timing for *every* spell they cast. Conversely, a friendly
+        // SorceriesAsFlash static (Teferi +1) lets the caster ignore the
+        // sorcery-speed gate for Sorcery cards.
+        let is_locked_to_sorcery = self.player_locked_to_sorcery_timing(p);
+        let effective_instant_speed = if is_locked_to_sorcery {
+            false
+        } else {
+            card.definition.is_instant_speed()
+                || (card.definition.is_sorcery() && self.player_has_sorceries_as_flash(p))
+        };
+        if !effective_instant_speed && !self.can_cast_sorcery_speed(p) {
             self.players[p].hand.push(card);
             return Err(GameError::SorcerySpeedOnly);
         }
@@ -698,6 +710,35 @@ impl GameState {
         self.give_priority_to_active();
 
         Ok(events)
+    }
+
+    /// True if `player` may cast sorcery spells at instant speed —
+    /// granted while a battlefield permanent of theirs has the
+    /// `StaticEffect::ControllerSorceriesAsFlash` static (Teferi, Time
+    /// Raveler's +1 collapsed into a permanent on-board static).
+    pub(crate) fn player_has_sorceries_as_flash(&self, player: usize) -> bool {
+        use crate::effect::StaticEffect;
+        self.battlefield.iter().any(|c| {
+            c.controller == player
+                && c.definition.static_abilities.iter().any(|sa| {
+                    matches!(sa.effect, StaticEffect::ControllerSorceriesAsFlash)
+                })
+        })
+    }
+
+    /// True if `player` is restricted to sorcery-only spell timing by an
+    /// opponent's `StaticEffect::OpponentsSorceryTimingOnly` (Teferi, Time
+    /// Raveler's static "Each opponent can cast spells only any time they
+    /// could cast a sorcery"). Walked by `cast_spell` ahead of the
+    /// is-instant-speed timing check.
+    pub(crate) fn player_locked_to_sorcery_timing(&self, player: usize) -> bool {
+        use crate::effect::StaticEffect;
+        self.battlefield.iter().any(|c| {
+            c.controller != player
+                && c.definition.static_abilities.iter().any(|sa| {
+                    matches!(sa.effect, StaticEffect::OpponentsSorceryTimingOnly)
+                })
+        })
     }
 
     /// Validate that a target is legally targetable by the given controller.

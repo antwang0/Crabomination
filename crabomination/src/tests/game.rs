@@ -2006,7 +2006,7 @@ fn teferi_minus_three_returns_target_and_draws() {
 
     g.perform_action(GameAction::ActivateLoyaltyAbility {
         card_id: teferi,
-        ability_index: 0, // -3
+        ability_index: 1, // -3 (index 0 is the +1)
         target: Some(Target::Permanent(opp_creature)),
     })
     .expect("Teferi's -3 should accept an opponent's nonland permanent");
@@ -2737,4 +2737,117 @@ fn consign_to_memory_counters_targeted_trigger() {
     assert!(!g.stack.iter().any(|si| matches!(
         si, crate::game::StackItem::Trigger { source, .. } if *source == dev
     )), "Scry-on-cast trigger should have been countered");
+}
+
+#[test]
+fn teferi_plus_one_lets_you_cast_sorceries_at_instant_speed() {
+    // While Teferi is in play under P0, P0 can cast sorceries even when
+    // priority isn't on a main phase.
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::teferi_time_raveler());
+    // Put us in a non-main-phase step where sorcery-speed normally fails.
+    g.step = TurnStep::DeclareAttackers;
+
+    let wrath = g.add_card_to_hand(0, catalog::wrath_of_god());
+    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add(Color::White, 2);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: wrath,
+        target: None,
+        mode: None,
+        x_value: None,
+    })
+    .expect("Wrath of God should be castable at non-sorcery timing while Teferi grants flash-on-sorceries");
+}
+
+#[test]
+fn teferi_static_locks_opponents_to_sorcery_timing() {
+    // P0 controls Teferi → P1 (opponent) cannot cast a flash/instant
+    // spell at non-sorcery timing.
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::teferi_time_raveler());
+
+    let counter = g.add_card_to_hand(1, catalog::counterspell());
+    g.players[1].mana_pool.add(Color::Blue, 2);
+    g.priority.player_with_priority = 1;
+    // It's P0's turn (active_player_idx = 0), main phase. P1 normally can
+    // hold up Counterspell as instant; with Teferi out, P1 is locked to
+    // sorcery timing — so casting on P0's main phase fails (P1 isn't the
+    // active player).
+    let err = g.perform_action(GameAction::CastSpell {
+        card_id: counter,
+        target: None,
+        mode: None,
+        x_value: None,
+    }).unwrap_err();
+    assert_eq!(err, GameError::SorcerySpeedOnly,
+        "Teferi's static should force opponents to sorcery timing");
+}
+
+#[test]
+fn consign_to_memory_modal_can_counter_legendary_spell() {
+    // Mode 1 of Consign to Memory counters a legendary spell on the stack.
+    // Build a state with Atraxa already on the stack as P1's spell, then
+    // P0 casts Consign with mode=1 targeting Atraxa.
+    let mut g = two_player_game();
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    let atraxa = g.add_card_to_hand(1, catalog::atraxa_grand_unifier());
+    g.players[1].mana_pool.add_colorless(3);
+    g.players[1].mana_pool.add(Color::White, 1);
+    g.players[1].mana_pool.add(Color::Blue, 1);
+    g.players[1].mana_pool.add(Color::Black, 1);
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.players[1].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: atraxa,
+        target: None,
+        mode: None,
+        x_value: None,
+    })
+    .expect("Atraxa castable");
+
+    let consign = g.add_card_to_hand(0, catalog::consign_to_memory());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: consign,
+        target: Some(Target::Permanent(atraxa)),
+        mode: Some(1),
+        x_value: None,
+    })
+    .expect("Consign to Memory mode 1 castable for {U} targeting legendary spell");
+    drain_stack(&mut g);
+
+    assert!(!g.battlefield.iter().any(|c| c.id == atraxa),
+        "Atraxa should be countered by Consign to Memory's legendary-spell mode");
+}
+
+#[test]
+fn callous_sell_sword_casualty_pumps_self_with_sacrificed_power() {
+    // Resolving Callous Sell-Sword's ETB sacrifices a 2+ power creature and
+    // pumps the Sell-Sword by that power.
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+
+    let sell = g.add_card_to_hand(0, catalog::callous_sell_sword());
+    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: sell, target: None, mode: None, x_value: None,
+    })
+    .expect("Callous Sell-Sword castable for {1}{R}");
+    drain_stack(&mut g);
+
+    let sword = g.battlefield.iter().find(|c| c.id == sell)
+        .expect("Sell-Sword on battlefield");
+    // Bear was 2/2; ETB sacrifices the bear (power 2) and pumps Sell-Sword
+    // by +2/+0. Base 2/1 + 2/0 = 4/1.
+    assert_eq!(sword.power(), 4,
+        "Sell-Sword should be pumped by the sacrificed bear's power");
+    assert_eq!(sword.toughness(), 1);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == bear),
+        "Bear should be in the graveyard after casualty sacrifice");
 }
