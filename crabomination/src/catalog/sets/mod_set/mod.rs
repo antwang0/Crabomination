@@ -8,10 +8,14 @@
 
 pub use super::no_abilities;
 
-#[allow(dead_code)]
 mod creatures;
 mod instants;
+mod lands;
 mod sorceries;
+mod spells;
 
+pub use creatures::*;
 pub use instants::*;
+pub use lands::*;
 pub use sorceries::*;
+pub use spells::*;

@@ -6,110 +6,16 @@
 //! decks playable while the engine grows the necessary primitives. Surveil
 //! lands and tap lands enter tapped via a self-targeting `Tap` trigger.
 
-use super::super::tap_add;
+use super::super::{
+    dual_land_with, etb_tap, etb_tap_then_surveil_one, fastland_etb_conditional_tap,
+    shockland_pay_two_or_tap, tap_add,
+};
 use crate::card::{
-    CardDefinition, CardType, Effect, EventKind, EventScope, EventSpec, LandType,
-    SelectionRequirement, Selector, Subtypes, TriggeredAbility, Value,
+    CardDefinition, CardType, Effect, EventKind, EventScope, EventSpec, LandType, Selector,
+    Subtypes, TriggeredAbility, Value,
 };
 use crate::effect::{ActivatedAbility, ManaPayload, PlayerRef, Predicate};
 use crate::mana::{Color, ManaCost, cost, generic, u};
-
-// ── Helpers ──────────────────────────────────────────────────────────────────
-
-/// Triggered ability: when this permanent enters the battlefield, tap it.
-fn etb_tap() -> TriggeredAbility {
-    TriggeredAbility {
-        event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-        effect: Effect::Tap { what: Selector::This },
-    }
-}
-
-/// Triggered ability: when this permanent enters, tap it AND surveil 1.
-fn etb_tap_then_surveil_one() -> TriggeredAbility {
-    TriggeredAbility {
-        event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-        effect: Effect::Seq(vec![
-            Effect::Tap { what: Selector::This },
-            Effect::Surveil { who: PlayerRef::You, amount: Value::Const(1) },
-        ]),
-    }
-}
-
-/// Fastland ETB trigger: "ETB tapped unless you control two or fewer other
-/// lands." Counted against the post-ETB battlefield (which already contains
-/// this land), so the threshold is "≥ 4 lands you control".
-fn fastland_etb_conditional_tap() -> TriggeredAbility {
-    TriggeredAbility {
-        event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-        effect: Effect::If {
-            cond: Predicate::SelectorCountAtLeast {
-                sel: Selector::EachPermanent(
-                    SelectionRequirement::Land
-                        .and(SelectionRequirement::ControlledByYou),
-                ),
-                n: Value::Const(4),
-            },
-            then: Box::new(Effect::Tap { what: Selector::This }),
-            else_: Box::new(Effect::Noop),
-        },
-    }
-}
-
-/// Shock-land ETB choice — "As this enters, you may pay 2 life. If you don't,
-/// it enters tapped." Modeled as a self-source ETB `ChooseMode` trigger
-/// (mode 0 = pay 2 life, mode 1 = tap self). The default `AutoDecider` and
-/// the simulated bot both pick mode 0, which matches typical play (a single
-/// untap is almost always worth 2 life). Note: this is a triggered ability,
-/// not a true replacement effect — the land is briefly available untapped
-/// before the trigger resolves. Functionally close enough for the demo decks.
-fn shockland_pay_two_or_tap() -> TriggeredAbility {
-    TriggeredAbility {
-        event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-        effect: Effect::ChooseMode(vec![
-            // Mode 0: Pay 2 life, stay untapped.
-            Effect::LoseLife {
-                who: Selector::You,
-                amount: Value::Const(2),
-            },
-            // Mode 1: enter tapped.
-            Effect::Tap { what: Selector::This },
-        ]),
-    }
-}
-
-/// Skeleton for a non-basic land with two color-producing mana abilities and
-/// optionally an ETB-tapped trigger and the corresponding `LandType`s.
-fn dual_land_with(
-    name: &'static str,
-    type_a: LandType,
-    type_b: LandType,
-    color_a: Color,
-    color_b: Color,
-    triggers: Vec<TriggeredAbility>,
-) -> CardDefinition {
-    CardDefinition {
-        name,
-        cost: ManaCost::default(),
-        supertypes: vec![],
-        card_types: vec![CardType::Land],
-        subtypes: Subtypes {
-            land_types: vec![type_a, type_b],
-            ..Default::default()
-        },
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::Noop,
-        activated_abilities: vec![tap_add(color_a), tap_add(color_b)],
-        triggered_abilities: triggers,
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-    }
-}
 
 // ── Fastlands ────────────────────────────────────────────────────────────────
 //

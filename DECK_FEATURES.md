@@ -168,10 +168,44 @@ via `#[path = "../tests/modern.rs"] mod tests_modern` in `game::mod`).
 
 ## Implementation log (most recent first)
 
-- **`mod_set` interaction pack + activated-ability target validation**:
-  - **`mod_set` catalog (`crabomination/src/catalog/sets/mod_set/`)**: nine modern-staple interaction cards that aren't in `decks::modern` — Path to Exile, Fatal Push, Spell Pierce, Mana Leak, Doom Blade, Vapor Snag, Blossoming Defense (instants); Anger of the Gods, Blasphemous Act (sorceries). All built on existing primitives (`target_filtered`, `CounterUnlessPaid`, `ForEach + DealDamage`, `PumpPT + GrantKeyword`). Each card has a functionality test (most have a positive + a rejection test).
-  - **Engine fix — `activate_ability` target legality**: previously a Hexproof / Shroud / Leyline-of-Sanctity-style player target could be silently aimed at via an activated ability (Tim's tap, Goblin Sharpshooter, etc.) — costs would resolve and the effect would target the protected entity. `activate_ability` now calls `check_target_legality` on the chosen target *before* paying costs, mirroring the cast paths. Test: `leyline_of_sanctity_blocks_targeted_ability`.
-  - **Test count**: 215 passing (up from 203).
+- **Modern shocklands + creatures + auxiliary instants on top of `mod_set`**:
+  - **Lands** (6 new): Sacred Foundry, Steam Vents, Stomping Ground,
+    Temple Garden, Breeding Pool, Blood Crypt — all six remaining Ravnica
+    shocklands, sharing the demo decks' `shockland_pay_two_or_tap` ETB
+    trigger. The trigger and `dual_land_with` / `fastland_etb_conditional_tap`
+    / `etb_tap_then_surveil_one` / `etb_tap` helpers are extracted from
+    `decks/lands.rs` into `sets/mod.rs` so the new modern lands reuse them.
+  - **Creatures / enchantments** (4): Thalia, Guardian of Thraben (via
+    `StaticEffect::AdditionalCostAfterFirstSpell` filtered to Noncreature),
+    Dark Confidant (upkeep draw + flat 2-life approximation), Bloodghast
+    (Haste — the "haste while opp ≤ 10" gating still ⏳), and Phyrexian
+    Arena.
+  - **Auxiliary instants** (6, in `mod_set/spells.rs`): Disenchant,
+    Naturalize, Nature's Claim (controller-lifegain via
+    `PlayerRef::ControllerOf`), Negate, Dispel (instant-only filter), and
+    Dovin's Veto (uses the new `Keyword::CantBeCountered` flag — see below).
+  - **Engine: spell-level uncounterable keyword**:
+    `caster_grants_uncounterable` now also returns true for any spell whose
+    definition lists `Keyword::CantBeCountered`. The cast paths already
+    stamp `StackItem::Spell.uncounterable = true` from this helper, and
+    both `CounterSpell` and `CounterUnlessPaid` already skip flagged
+    items. Wires Dovin's Veto.
+  - **Engine: `auto_target_for_effect` looks in graveyards/exile**: the
+    auto-target helper used by triggered abilities and the rebound
+    re-target path now falls through battlefield → each player's graveyard
+    → exile when no battlefield permanent satisfies the requirement. Lets
+    reanimate-style spells (Goryo's Vengeance, Animate Dead, Reanimate)
+    auto-pick a graveyard target when no manual one is supplied.
+  - **Server**: standalone `crabomination_server` now cleanly
+    `shutdown(Both)`s seat 0 when seat 1's accept fails, instead of
+    dropping silently — the orphaned client gets EOF instead of a hung
+    socket.
+  - 13 new tests in `tests/modern.rs` covering shockland typing + life
+    payment, Disenchant, Nature's Claim controller lifegain, Negate /
+    Dispel target restrictions, Dovin's Veto's uncounterable flag,
+    Thalia's tax, and Phyrexian Arena's upkeep trigger.
+
+
 - **Opening-hand effects + Damping Sphere lands + Teferi +1**:
   - **Opening-hand effects**: new `OpeningHandEffect` enum (`StartInPlay { tapped, extra }`, `RevealForDelayedTrigger { kind, body }`, `MulliganHelper`) + `CardDefinition.opening_hand` field. `apply_opening_hand_effects` runs post-mulligan and dispatches: pulls the card to the battlefield (Leyline, Gemstone Caverns), or registers a delayed trigger that fires later (Chancellor of the Tangle, Chancellor of the Annex). Powers: Leyline of Sanctity (with new `StaticEffect::ControllerHasHexproof` + `player_has_static_hexproof` check on `Target::Player(_)` legality), Gemstone Caverns (with luck counter + dual {T} abilities), Chancellor of the Tangle (mana ritual on first main via new `DelayedKind::YourNextMainPhase`), Chancellor of the Annex (cost-tax via new `Player.first_spell_tax_charges` + `Effect::AddFirstSpellTax` + `consume_first_spell_tax` in cast paths), Serum Powder (mulligan-helper flag surfaced via new `Decision::Mulligan.serum_powders` field + new `DecisionAnswer::SerumPowder(id)`; client renders one button per powder ID).
   - **Damping Sphere lands clause**: new `StaticEffect::LandsTapColorlessOnly` + `play_land` consults `lands_tap_colorless_only_active()` and rewrites multi-mana lands' abilities to a single `{T}: Add {C}` on entry. Single-color basics pass through. Tests: `damping_sphere_downgrades_dual_lands_to_colorless`, `damping_sphere_leaves_basic_lands_alone`.

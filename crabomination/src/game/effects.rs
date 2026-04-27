@@ -1542,11 +1542,35 @@ impl GameState {
         if self.evaluate_requirement_static(req, &Target::Player(controller), controller) {
             return Some(Target::Player(controller));
         }
-        // Try a battlefield permanent.
-        self.battlefield
+        // Battlefield first.
+        if let Some(t) = self
+            .battlefield
             .iter()
             .find(|c| self.evaluate_requirement_static(req, &Target::Permanent(c.id), controller))
             .map(|c| Target::Permanent(c.id))
+        {
+            return Some(t);
+        }
+        // Then graveyards (so reanimate-style spells like Goryo's Vengeance,
+        // Animate Dead, Reanimate auto-pick a legal graveyard target when
+        // no manual target is supplied). `evaluate_requirement_static`
+        // already walks graveyard/exile so this just makes the auto-target
+        // path consult those zones too.
+        for player in &self.players {
+            if let Some(c) = player.graveyard.iter().find(|c| {
+                self.evaluate_requirement_static(req, &Target::Permanent(c.id), controller)
+            }) {
+                return Some(Target::Permanent(c.id));
+            }
+        }
+        // Then exile (cards that target exiled cards — Misthollow Griffin,
+        // some Ixalan stuff).
+        if let Some(c) = self.exile.iter().find(|c| {
+            self.evaluate_requirement_static(req, &Target::Permanent(c.id), controller)
+        }) {
+            return Some(Target::Permanent(c.id));
+        }
+        None
     }
 
     // ── Zone move helpers ────────────────────────────────────────────────────

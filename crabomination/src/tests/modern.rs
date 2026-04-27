@@ -842,3 +842,317 @@ fn leyline_of_sanctity_blocks_targeted_ability() {
         "Tim's targeted ability should be rejected against Leyline-protected player; got: {err:?}");
 }
 
+
+// ── Modern shocklands (mod_set/lands) ────────────────────────────────────────
+
+#[test]
+fn sacred_foundry_pays_two_life_and_stays_untapped_by_default() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::sacred_foundry());
+    g.perform_action(GameAction::PlayLand(id)).unwrap();
+    drain_stack(&mut g);
+    let card = g.battlefield_find(id).unwrap();
+    assert_eq!(card.definition.activated_abilities.len(), 2);
+    assert!(!card.tapped, "shockland enters untapped after AutoDecider picks pay-2-life");
+    assert_eq!(g.players[0].life, 18);
+}
+
+#[test]
+fn breeding_pool_is_a_forest_island_dual() {
+    let def = catalog::breeding_pool();
+    let lts = &def.subtypes.land_types;
+    assert!(lts.contains(&crate::card::LandType::Forest));
+    assert!(lts.contains(&crate::card::LandType::Island));
+}
+
+#[test]
+fn steam_vents_carries_island_and_mountain_typing() {
+    let def = catalog::steam_vents();
+    let lts = &def.subtypes.land_types;
+    assert!(lts.contains(&crate::card::LandType::Island));
+    assert!(lts.contains(&crate::card::LandType::Mountain));
+}
+
+#[test]
+fn stomping_ground_carries_mountain_and_forest_typing() {
+    let def = catalog::stomping_ground();
+    let lts = &def.subtypes.land_types;
+    assert!(lts.contains(&crate::card::LandType::Mountain));
+    assert!(lts.contains(&crate::card::LandType::Forest));
+}
+
+#[test]
+fn temple_garden_carries_forest_and_plains_typing() {
+    let def = catalog::temple_garden();
+    let lts = &def.subtypes.land_types;
+    assert!(lts.contains(&crate::card::LandType::Forest));
+    assert!(lts.contains(&crate::card::LandType::Plains));
+}
+
+#[test]
+fn blood_crypt_carries_swamp_and_mountain_typing() {
+    let def = catalog::blood_crypt();
+    let lts = &def.subtypes.land_types;
+    assert!(lts.contains(&crate::card::LandType::Swamp));
+    assert!(lts.contains(&crate::card::LandType::Mountain));
+}
+
+// ── Auxiliary instants (mod_set/spells) ──────────────────────────────────────
+
+#[test]
+fn disenchant_destroys_artifact() {
+    let mut g = two_player_game();
+    let sol_ring = g.add_card_to_battlefield(1, catalog::sol_ring());
+    let disenchant = g.add_card_to_hand(0, catalog::disenchant());
+    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: disenchant,
+        target: Some(Target::Permanent(sol_ring)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Disenchant castable for {1}{W}");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == sol_ring));
+}
+
+#[test]
+fn natures_claim_destroys_artifact_and_grants_controller_four_life() {
+    let mut g = two_player_game();
+    let sol_ring = g.add_card_to_battlefield(1, catalog::sol_ring());
+    let claim = g.add_card_to_hand(0, catalog::natures_claim());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    let opp_life_before = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: claim,
+        target: Some(Target::Permanent(sol_ring)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Nature's Claim castable for {G}");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == sol_ring));
+    assert_eq!(
+        g.players[1].life,
+        opp_life_before + 4,
+        "Sol Ring's controller should gain 4 life",
+    );
+}
+
+#[test]
+fn negate_counters_a_noncreature_spell() {
+    let mut g = two_player_game();
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(0)),
+        mode: None,
+        x_value: None,
+    })
+    .unwrap();
+
+    let negate = g.add_card_to_hand(0, catalog::negate());
+    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: negate,
+        target: Some(Target::Permanent(bolt)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Negate castable for {1}{U}");
+    drain_stack(&mut g);
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bolt));
+    assert_eq!(g.players[0].life, 20);
+}
+
+#[test]
+fn negate_rejects_creature_target_at_cast_time() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.players[1].mana_pool.add(Color::Green, 2);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear,
+        target: None,
+        mode: None,
+        x_value: None,
+    })
+    .unwrap();
+
+    let negate = g.add_card_to_hand(0, catalog::negate());
+    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.priority.player_with_priority = 0;
+    let err = g
+        .perform_action(GameAction::CastSpell {
+            card_id: negate,
+            target: Some(Target::Permanent(bear)),
+            mode: None,
+            x_value: None,
+        })
+        .unwrap_err();
+    assert_eq!(err, GameError::SelectionRequirementViolated);
+}
+
+#[test]
+fn dispel_targets_only_instants() {
+    let mut g = two_player_game();
+    // Sorcery on the stack — Dispel can't target it.
+    let wrath = g.add_card_to_hand(1, catalog::wrath_of_god());
+    g.players[1].mana_pool.add_colorless(2);
+    g.players[1].mana_pool.add(Color::White, 2);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: wrath, target: None, mode: None, x_value: None,
+    })
+    .unwrap();
+
+    let dispel = g.add_card_to_hand(0, catalog::dispel());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.priority.player_with_priority = 0;
+    let err = g
+        .perform_action(GameAction::CastSpell {
+            card_id: dispel,
+            target: Some(Target::Permanent(wrath)),
+            mode: None,
+            x_value: None,
+        })
+        .unwrap_err();
+    assert_eq!(err, GameError::SelectionRequirementViolated);
+}
+
+#[test]
+fn dovins_veto_is_uncounterable() {
+    // Alice casts a Bolt at Bob; Bob casts Dovin's Veto on the Bolt; Alice
+    // tries to Counterspell the Veto but it can't be countered, so the
+    // Veto resolves and counters the Bolt.
+    let mut g = two_player_game();
+
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(1)),
+        mode: None,
+        x_value: None,
+    })
+    .unwrap();
+
+    let veto = g.add_card_to_hand(1, catalog::dovins_veto());
+    g.players[1].mana_pool.add(Color::White, 1);
+    g.players[1].mana_pool.add(Color::Blue, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: veto,
+        target: Some(Target::Permanent(bolt)),
+        mode: None,
+        x_value: None,
+    })
+    .unwrap();
+
+    let cs = g.add_card_to_hand(0, catalog::counterspell());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: cs,
+        target: Some(Target::Permanent(veto)),
+        mode: None,
+        x_value: None,
+    })
+    .unwrap();
+
+    drain_stack(&mut g);
+
+    // Bolt is countered (by Veto, which couldn't itself be countered).
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == bolt));
+    assert_eq!(g.players[1].life, 20, "Bob took no damage — Bolt was countered");
+}
+
+// ── Modern creatures (mod_set/creatures) ─────────────────────────────────────
+
+#[test]
+fn thalia_taxes_noncreature_spells_after_first() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(1, catalog::thalia_guardian_of_thraben());
+
+    // First Bolt this turn pays no tax — passes for {R}.
+    let bolt1 = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt1,
+        target: Some(Target::Player(1)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("first noncreature spell shouldn't pay Thalia tax");
+    drain_stack(&mut g);
+
+    // Second Bolt now requires {1}{R}; only {R} fails.
+    let bolt2 = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let err = g
+        .perform_action(GameAction::CastSpell {
+            card_id: bolt2,
+            target: Some(Target::Player(1)),
+            mode: None,
+            x_value: None,
+        })
+        .unwrap_err();
+    assert!(matches!(err, GameError::Mana(_)));
+}
+
+#[test]
+fn dark_confidant_definition_has_upkeep_trigger() {
+    use crate::card::{EventKind, EventScope};
+    let def = catalog::dark_confidant();
+    assert!(def.triggered_abilities.iter().any(|t| {
+        matches!(t.event.kind, EventKind::StepBegins(crate::game::TurnStep::Upkeep))
+            && matches!(t.event.scope, EventScope::YourControl)
+    }));
+}
+
+#[test]
+fn bloodghast_ships_with_haste() {
+    use crate::card::Keyword;
+    let def = catalog::bloodghast();
+    assert!(def.keywords.contains(&Keyword::Haste));
+}
+
+#[test]
+fn phyrexian_arena_draws_card_and_loses_life_at_upkeep() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::phyrexian_arena());
+    g.add_card_to_library(0, catalog::forest());
+    let life_before = g.players[0].life;
+    let hand_before = g.players[0].hand.len();
+    let lib_before = g.players[0].library.len();
+
+    // Roll forward to Alice's next upkeep.
+    g.step = TurnStep::Cleanup;
+    g.active_player_idx = 0;
+    for _ in 0..30 {
+        if g.is_game_over() {
+            break;
+        }
+        if g.active_player_idx == 0
+            && g.step == TurnStep::Upkeep
+            && g.stack.is_empty()
+            && g.players[0].hand.len() > hand_before
+        {
+            break;
+        }
+        g.perform_action(GameAction::PassPriority).unwrap();
+    }
+
+    assert_eq!(g.players[0].hand.len(), hand_before + 1);
+    assert_eq!(g.players[0].library.len(), lib_before - 1);
+    assert_eq!(g.players[0].life, life_before - 1);
+}

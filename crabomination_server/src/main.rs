@@ -34,10 +34,17 @@ fn main() {
                 Ok(p) => p,
                 Err(e) => { eprintln!("accept failed: {e}"); continue; }
             };
-            eprintln!("seat 0: {a_peer}");
+            eprintln!("seat 0: {a_peer} (waiting for opponent)");
             let (b_stream, b_peer) = match listener.accept() {
                 Ok(p) => p,
-                Err(e) => { eprintln!("accept failed: {e}"); drop(a_stream); continue; }
+                Err(e) => {
+                    // Tell seat 0 we couldn't pair them so they get EOF
+                    // instead of a hung socket.
+                    eprintln!("accept failed for seat 1 ({e}); dropping seat 0 ({a_peer})");
+                    let _ = a_stream.shutdown(std::net::Shutdown::Both);
+                    drop(a_stream);
+                    continue;
+                }
             };
             eprintln!("seat 1: {b_peer} → starting match");
             thread::spawn(move || run_pair_match(a_stream, b_stream));

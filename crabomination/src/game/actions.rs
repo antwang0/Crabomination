@@ -173,6 +173,15 @@ impl crate::game::GameState {
         caster: usize,
         card: &crate::card::CardInstance,
     ) -> bool {
+        // The card itself is uncounterable (Dovin's Veto, Stubborn Denial,
+        // etc. — `Keyword::CantBeCountered`).
+        if card.definition.keywords.contains(&Keyword::CantBeCountered) {
+            return true;
+        }
+        // Cavern of Souls approximation: a creature spell whose caster
+        // controls a Cavern. (Real text gates on Cavern's "name a type" +
+        // mana provenance — collapsed to "any creature you cast while you
+        // control a Cavern is uncounterable".)
         if !card.definition.is_creature() {
             return false;
         }
