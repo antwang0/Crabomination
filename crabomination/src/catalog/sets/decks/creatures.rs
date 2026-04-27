@@ -109,9 +109,12 @@ pub fn chancellor_of_the_tangle() -> CardDefinition {
 }
 
 /// Cosmogoyf — {2}{G}, *X/X+1* where X = number of different card types
-/// among cards in all graveyards. Stub: 4/5 vanilla — actual variable P/T
-/// requires graveyard inspection in the layer system.
-/// TODO: wire dynamic P/T like Tarmogoyf.
+/// among cards in all graveyards.
+///
+/// Wired via a per-frame layer-7 `SetPowerToughness(N, N+1)` injected in
+/// `compute_battlefield` (where N = `distinct_card_types_in_all_graveyards`).
+/// The base power/toughness on the definition (4/5) only matters until
+/// any layer effect runs, so for any computed view it's overwritten.
 pub fn cosmogoyf() -> CardDefinition {
     CardDefinition {
         name: "Cosmogoyf",
@@ -476,12 +479,11 @@ pub fn chancellor_of_the_annex() -> CardDefinition {
 /// cause abilities of permanents your opponents control to trigger."
 ///
 /// Wired via `actions::etb_trigger_multiplier`: every ETB-trigger push
-/// site (the cast resolution path, `fire_self_etb_triggers`, etc.) consults
-/// the helper, which returns 0 if any opponent of the trigger's controller
-/// has an Elesh Norn (suppressing the trigger) or `1 + your_norns`
-/// otherwise (one extra fire per Norn under your control). Currently
-/// covers self-source ETB triggers; the AnotherOfYours scope is still
-/// unmodified (TODO).
+/// site (the cast resolution path, `fire_self_etb_triggers`, and the
+/// `AnotherOfYours` scope path in `stack.rs`) consults the helper, which
+/// returns 0 if any opponent of the trigger's controller has an Elesh
+/// Norn (suppressing the trigger) or `1 + your_norns` otherwise (one
+/// extra fire per Norn under your control).
 pub fn elesh_norn_mother_of_machines() -> CardDefinition {
     CardDefinition {
         name: "Elesh Norn, Mother of Machines",

@@ -89,6 +89,40 @@ pub(crate) fn consume_first_spell_tax(state: &mut crate::game::GameState, caster
     }
 }
 
+/// True if any battlefield permanent has `StaticEffect::LandsTapColorlessOnly`
+/// (Damping Sphere). Used by `play_land` to decide whether to downgrade
+/// multi-color/multi-mana lands to "{T}: Add {C}".
+pub(crate) fn multi_mana_ability_count(def: &crate::card::CardDefinition) -> bool {
+    use crate::effect::{Effect, ManaPayload};
+    // The Oracle says "tap to add more than one mana" — for our purposes:
+    // any land with two or more separate mana abilities, OR any single
+    // ability that produces an `AnyOneColor`/`AnyColors` payload (which
+    // could conceptually be more than one), counts. Single-color basics
+    // (one ability, `Colors([X])` of length 1) and single-color non-basics
+    // (one ability) pass through unchanged.
+    let mana_abilities: Vec<_> = def
+        .activated_abilities
+        .iter()
+        .filter(|a| match &a.effect {
+            Effect::AddMana { .. } => true,
+            _ => false,
+        })
+        .collect();
+    if mana_abilities.len() >= 2 {
+        return true;
+    }
+    if let Some(a) = mana_abilities.first() {
+        if let Effect::AddMana { pool, .. } = &a.effect {
+            return match pool {
+                ManaPayload::AnyOneColor(_) | ManaPayload::AnyColors(_) => true,
+                ManaPayload::Colors(cs) => cs.len() > 1,
+                ManaPayload::Colorless(_) => false,
+            };
+        }
+    }
+    false
+}
+
 /// Elesh Norn, Mother of Machines: count how many times an ETB trigger
 /// from a permanent owned by `etb_controller` should fire.
 ///
@@ -146,6 +180,19 @@ impl crate::game::GameState {
             .iter()
             .any(|c| c.controller == caster && c.definition.name == "Cavern of Souls")
     }
+
+    /// True if any battlefield permanent's static abilities include
+    /// `StaticEffect::LandsTapColorlessOnly` (Damping Sphere). Used by
+    /// `play_land` to downgrade multi-mana lands to colorless on entry.
+    pub(crate) fn lands_tap_colorless_only_active(&self) -> bool {
+        use crate::effect::StaticEffect;
+        self.battlefield.iter().any(|c| {
+            c.definition
+                .static_abilities
+                .iter()
+                .any(|sa| matches!(sa.effect, StaticEffect::LandsTapColorlessOnly))
+        })
+    }
 }
 
 fn effect_produces_color(effect: &Effect, color: ManaColor) -> bool {
@@ -200,6 +247,30 @@ impl GameState {
             // Put it back then error
             self.players[p].hand.push(card);
             return Err(GameError::NotALand(card_id));
+        }
+        // Damping Sphere: if any battlefield permanent grants
+        // `LandsTapColorlessOnly`, downgrade this land's mana abilities
+        // to `{T}: Add {C}` if the original would have produced more than
+        // one mana per tap. Applied in-place on the new instance's
+        // definition before the card lands on the battlefield, so all
+        // downstream activations see the replaced ability set.
+        if self.lands_tap_colorless_only_active() {
+            if multi_mana_ability_count(&card.definition) {
+                card.definition.activated_abilities = vec![
+                    crate::card::ActivatedAbility {
+                        tap_cost: true,
+                        mana_cost: crate::mana::ManaCost::default(),
+                        effect: crate::effect::Effect::AddMana {
+                            who: crate::effect::PlayerRef::You,
+                            pool: crate::effect::ManaPayload::Colorless(
+                                crate::effect::Value::Const(1),
+                            ),
+                        },
+                        once_per_turn: false,
+                        sorcery_speed: false,
+                    },
+                ];
+            }
         }
         self.players[p].lands_played_this_turn += 1;
         self.battlefield.push(card);

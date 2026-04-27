@@ -665,11 +665,14 @@ pub fn consign_to_memory() -> CardDefinition {
 /// turn, each spell that player casts costs {1} more to cast. Lands that tap
 /// to add more than one mana enter producing only {C}."
 ///
-/// Cost-tax half is wired via `StaticEffect::AdditionalCostAfterFirstSpell`:
-/// the cast paths consult the caster's per-player `spells_cast_this_turn`,
-/// and if it's ≥ 1 the spell pays an extra {1}. The "lands that tap for
-/// >1 mana enter producing only {C}" half is still ⏳ (no land-tap-output
-/// replacement primitive yet).
+/// Both halves wired:
+///   * `AdditionalCostAfterFirstSpell` — cast paths consult per-player
+///     `spells_cast_this_turn`; if ≥ 1 the spell pays an extra {1}.
+///   * `LandsTapColorlessOnly` — `play_land` consults
+///     `lands_tap_colorless_only_active()`; multi-mana / dual-color lands
+///     have their mana abilities replaced with a single `{T}: Add {C}` on
+///     ETB. Single-color basics and one-ability single-color non-basics
+///     pass through unchanged.
 pub fn damping_sphere() -> CardDefinition {
     use crate::card::StaticAbility;
     use crate::effect::StaticEffect;
@@ -685,13 +688,19 @@ pub fn damping_sphere() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![StaticAbility {
-            description: "Each spell a player casts after their first this turn costs {1} more.",
-            effect: StaticEffect::AdditionalCostAfterFirstSpell {
-                filter: SelectionRequirement::Any,
-                amount: 1,
+        static_abilities: vec![
+            StaticAbility {
+                description: "Each spell a player casts after their first this turn costs {1} more.",
+                effect: StaticEffect::AdditionalCostAfterFirstSpell {
+                    filter: SelectionRequirement::Any,
+                    amount: 1,
+                },
             },
-        }],
+            StaticAbility {
+                description: "Lands that tap to add more than one mana enter producing only {C}.",
+                effect: StaticEffect::LandsTapColorlessOnly,
+            },
+        ],
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,

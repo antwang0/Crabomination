@@ -3053,3 +3053,56 @@ fn teferi_plus_one_grants_sorceries_as_flash_until_next_turn() {
     assert!(!g.players[0].sorceries_as_flash,
         "do_untap should clear the flag at the start of P0's next turn");
 }
+
+#[test]
+fn damping_sphere_downgrades_dual_lands_to_colorless() {
+    // With Damping Sphere on the battlefield, a Watery Grave (dual UB)
+    // should ETB with only a single "{T}: Add {C}" ability. A subsequent
+    // tap activates the new colorless ability, producing 1 colorless mana.
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::damping_sphere());
+
+    // Watery Grave originally has two activated abilities (tap for {U},
+    // tap for {B}) plus the ETB shock-trigger. When entering under
+    // Damping Sphere it should be reduced to a single {T}: Add {C}.
+    let lands = g.add_card_to_hand(0, catalog::watery_grave());
+    g.perform_action(GameAction::PlayLand(lands)).expect("play Watery Grave");
+    drain_stack(&mut g);
+
+    let land = g.battlefield_find(lands).expect("Watery Grave on battlefield");
+    assert_eq!(
+        land.definition.activated_abilities.len(),
+        1,
+        "Damping Sphere should leave only one mana ability on dual lands"
+    );
+
+    // Activate it — it should produce {C}, not {U} or {B}.
+    g.clear_sickness(lands);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: lands, ability_index: 0, target: None,
+    }).expect("the downgraded ability should activate");
+    assert_eq!(g.players[0].mana_pool.colorless_amount(), 1);
+    assert_eq!(g.players[0].mana_pool.amount(Color::Blue), 0);
+    assert_eq!(g.players[0].mana_pool.amount(Color::Black), 0);
+}
+
+#[test]
+fn damping_sphere_leaves_basic_lands_alone() {
+    // A single-color basic (Forest) should pass through unchanged: still
+    // exactly one ability, still produces {G}.
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::damping_sphere());
+    let f = g.add_card_to_hand(0, catalog::forest());
+    g.perform_action(GameAction::PlayLand(f)).expect("play Forest");
+    let forest = g.battlefield_find(f).expect("Forest on battlefield");
+    assert_eq!(
+        forest.definition.activated_abilities.len(),
+        1,
+        "single-color basic should keep its sole mana ability"
+    );
+    g.clear_sickness(f);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: f, ability_index: 0, target: None,
+    }).expect("Forest should still tap for {G}");
+    assert_eq!(g.players[0].mana_pool.amount(Color::Green), 1);
+}

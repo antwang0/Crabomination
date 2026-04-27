@@ -835,6 +835,14 @@ pub enum StaticEffect {
     /// target the source's controller with spells or abilities they
     /// control. Checked by `check_target_legality` for `Target::Player(_)`.
     ControllerHasHexproof,
+    /// Damping-Sphere-style "lands that tap for more than one mana enter
+    /// producing only {C}". Detected at `play_land` time: if any active
+    /// `LandsTapColorlessOnly` static is in play, the entering land's
+    /// mana abilities are replaced with a single `{T}: Add {C}` ability
+    /// when the original would produce > 1 mana per tap. Skipped on the
+    /// front-face of MDFCs (which have only one ability) and on basic
+    /// lands (single-color, single-mana already).
+    LandsTapColorlessOnly,
 }
 
 // ── Triggered / activated / loyalty ability shells ───────────────────────────
