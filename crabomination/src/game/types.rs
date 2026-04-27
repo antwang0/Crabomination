@@ -158,6 +158,10 @@ pub enum DelayedKind {
     YourNextUpkeep,
     /// At the beginning of the next end step (any player's).
     NextEndStep,
+    /// At the beginning of `controller`'s first main phase. The mulligan
+    /// flow registers these from opening-hand reveal effects (Chancellor
+    /// of the Tangle); they fire once and clear.
+    YourFirstMain,
 }
 
 // ── Pending decisions (suspendable resolution) ───────────────────────────────

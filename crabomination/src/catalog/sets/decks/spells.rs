@@ -46,6 +46,7 @@ pub fn pact_of_negation() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand_effect: None,
     }
 }
 
@@ -56,8 +57,10 @@ pub fn pact_of_negation() -> CardDefinition {
 ///
 /// Engine model: `ChooseMode` between two simplified branches:
 /// mode 0 — sacrifice one creature you control + gain 3 life;
-/// mode 1 — Effect::Noop (the look-at-X / library manipulation requires a
-/// custom decision UI we don't have yet).
+/// mode 1 — pay 3 life, look at the top 3 cards (the engine's `LookAtTop`
+/// already lets the player rearrange / bottom them via the surveil-style
+/// scry decision; here it's collapsed to a simple peek — the caster keeps
+/// the top one in hand by drawing it as part of the seq, then pays 3 life).
 /// AutoDecider picks mode 0, which matches the typical play (sac for life).
 pub fn plunge_into_darkness() -> CardDefinition {
     CardDefinition {
@@ -83,8 +86,18 @@ pub fn plunge_into_darkness() -> CardDefinition {
                     amount: Value::Const(3),
                 },
             ]),
-            // Mode 1: pay-X-life, look-at-X, pick one — unimplemented.
-            Effect::Noop,
+            // Mode 1: pay 3 life → look at top 3 → draw 1 (approximation of
+            // "look at X, put one in your hand and the rest on bottom"). The
+            // existing `LookAtTop` surfaces a scry decision so the player
+            // can already rearrange the top of the library; the `Draw 1`
+            // pulls the chosen card into hand. Real Oracle is variable X;
+            // the engine has no "pay any amount of life" decision yet —
+            // hard-coded at 3 to match the digestible default.
+            Effect::Seq(vec![
+                Effect::LoseLife { who: Selector::You, amount: Value::Const(3) },
+                Effect::LookAtTop { who: PlayerRef::You, amount: Value::Const(3) },
+                Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            ]),
         ]),
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
@@ -93,13 +106,18 @@ pub fn plunge_into_darkness() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand_effect: None,
     }
 }
 
 /// Serum Powder — {3} Artifact. {T}: Add {1}. "Any time you could mulligan
 /// and Serum Powder is in your hand, you may exile all the cards from your
-/// hand, then draw that many cards." Stub: vanilla 3-cost mana rock for {1}.
-/// TODO: opening-hand exile-and-redraw mulligan helper.
+/// hand, then draw that many cards." The mulligan-helper half is wired via
+/// `DecisionAnswer::ExileFromHandAndRedraw(ids)` — the engine validates
+/// that at least one of the listed IDs is a Serum Powder in hand, exiles
+/// every listed card, shuffles the library, and draws back to the same
+/// hand size; then re-prompts the same mulligan decision (so the count
+/// doesn't advance for a Powder swap, matching Oracle).
 pub fn serum_powder() -> CardDefinition {
     use crate::card::ActivatedAbility;
     use crate::effect::ManaPayload;
@@ -130,6 +148,7 @@ pub fn serum_powder() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand_effect: None,
     }
 }
 
@@ -167,6 +186,7 @@ pub fn spoils_of_the_vault() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand_effect: None,
     }
 }
 
@@ -206,6 +226,7 @@ pub fn summoners_pact() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand_effect: None,
     }
 }
 
@@ -246,6 +267,7 @@ pub fn thud() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand_effect: None,
     }
 }
 
@@ -279,14 +301,22 @@ pub fn inquisition_of_kozilek() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand_effect: None,
     }
 }
 
 /// Leyline of Sanctity — {2}{W}{W} Enchantment. "If Leyline of Sanctity is in
 /// your opening hand, you may begin the game with it on the battlefield. You
-/// have hexproof." Stub: vanilla 4-cost enchantment with no game effect.
-/// TODO: opening-hand-into-play + you-have-hexproof static.
+/// have hexproof." Wired via two pieces:
+/// - `OpeningHandEffect::BeginInPlay { tapped: false, counters: None }` —
+///   the engine moves Leyline from the opening hand to the battlefield as
+///   the mulligan phase concludes.
+/// - `StaticEffect::PlayerHexproof` — `check_target_legality` returns
+///   `TargetHasHexproof` for `Target::Player(controller)` casts/abilities
+///   from any opponent.
 pub fn leyline_of_sanctity() -> CardDefinition {
+    use crate::card::{OpeningHandEffect, StaticAbility};
+    use crate::effect::StaticEffect;
     CardDefinition {
         name: "Leyline of Sanctity",
         cost: cost(&[generic(2), w(), w()]),
@@ -299,11 +329,18 @@ pub fn leyline_of_sanctity() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
+        static_abilities: vec![StaticAbility {
+            description: "You have hexproof.",
+            effect: StaticEffect::PlayerHexproof,
+        }],
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand_effect: Some(OpeningHandEffect::BeginInPlay {
+            tapped: false,
+            counters: None,
+        }),
     }
 }
 
@@ -356,6 +393,7 @@ pub fn ephemerate() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand_effect: None,
     }
 }
 
@@ -410,6 +448,7 @@ pub fn faithful_mending() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand_effect: None,
     }
 }
 
@@ -444,6 +483,7 @@ pub fn force_of_negation() -> CardDefinition {
             target_filter: None,
         }),
         back_face: None,
+        opening_hand_effect: None,
     }
 }
 
@@ -498,6 +538,7 @@ pub fn goryos_vengeance() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand_effect: None,
     }
 }
 
@@ -539,6 +580,7 @@ pub fn prismatic_ending() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand_effect: None,
     }
 }
 
@@ -572,6 +614,7 @@ pub fn thoughtseize() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand_effect: None,
     }
 }
 
@@ -605,6 +648,7 @@ pub fn consign_to_memory() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand_effect: None,
     }
 }
 
@@ -643,6 +687,7 @@ pub fn damping_sphere() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand_effect: None,
     }
 }
 
@@ -683,6 +728,7 @@ pub fn mystical_dispute() -> CardDefinition {
             target_filter: Some(SelectionRequirement::HasColor(Color::Blue)),
         }),
         back_face: None,
+        opening_hand_effect: None,
     }
 }
 
@@ -724,6 +770,7 @@ pub fn pest_control() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand_effect: None,
     }
 }
 
@@ -770,5 +817,6 @@ pub fn wrath_of_the_skies() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand_effect: None,
     }
 }

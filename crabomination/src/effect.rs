@@ -472,6 +472,9 @@ pub enum Effect {
 pub enum DelayedTriggerKind {
     YourNextUpkeep,
     NextEndStep,
+    /// At the beginning of `controller`'s first main phase (this game).
+    /// Used by Chancellor of the Tangle's "add {G} on T1 main" reveal.
+    YourFirstMain,
 }
 
 impl Effect {
@@ -743,6 +746,11 @@ pub enum StaticEffect {
     /// are taxed; the cost increase is applied at cast time when the
     /// caster's `Player.spells_cast_this_turn >= 1`.
     AdditionalCostAfterFirstSpell { filter: SelectionRequirement, amount: u32 },
+    /// "You have hexproof." The controller of the source can't be the
+    /// target of spells or abilities the source's opponents control.
+    /// Leyline of Sanctity. Checked in `check_target_legality` for player
+    /// targets via `state.player_has_hexproof(controller)`.
+    PlayerHexproof,
 }
 
 // ── Triggered / activated / loyalty ability shells ───────────────────────────

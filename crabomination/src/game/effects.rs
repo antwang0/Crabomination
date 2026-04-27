@@ -935,6 +935,7 @@ impl GameState {
                 let delayed_kind = match kind {
                     crate::effect::DelayedTriggerKind::YourNextUpkeep => DelayedKind::YourNextUpkeep,
                     crate::effect::DelayedTriggerKind::NextEndStep => DelayedKind::NextEndStep,
+                    crate::effect::DelayedTriggerKind::YourFirstMain => DelayedKind::YourFirstMain,
                 };
                 self.delayed_triggers.push(DelayedTrigger {
                     controller: ctx.controller,
@@ -1630,6 +1631,7 @@ pub fn token_to_card_definition(token: &TokenDefinition) -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand_effect: None,
     }
 }
 

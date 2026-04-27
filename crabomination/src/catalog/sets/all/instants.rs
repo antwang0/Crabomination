@@ -31,5 +31,6 @@ pub fn force_of_will() -> CardDefinition {
             target_filter: None,
         }),
         back_face: None,
+        opening_hand_effect: None,
     }
 }

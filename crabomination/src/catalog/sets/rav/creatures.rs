@@ -24,5 +24,6 @@ pub fn watchwolf() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand_effect: None,
     }
 }

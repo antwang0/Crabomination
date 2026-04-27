@@ -91,6 +91,12 @@ pub enum DecisionAnswer {
     Keep,
     /// Shuffle the current hand back and draw a new one.
     TakeMulligan,
+    /// Serum Powder–style "exile some cards from hand, draw that many" — the
+    /// engine resolves it by removing the listed cards from hand to exile,
+    /// then drawing equal-count fresh cards. Triggered as a side-branch of
+    /// the Mulligan decision; the player retains the same mulligan count
+    /// after performing this swap.
+    ExileFromHandAndRedraw(Vec<CardId>),
 }
 
 pub trait Decider {

@@ -17,10 +17,18 @@ use crate::mana::{Color, ManaCost, b, cost, g, generic, r, u, w};
 
 // ── BRG creatures ────────────────────────────────────────────────────────────
 
-/// Callous Sell-Sword — {3}{R}, 4/4 Human Mercenary. Casualty 2: copy with
-/// modal-cast on a sacrificed creature. Stub: vanilla 4/4 (casualty omitted).
-/// TODO: wire casualty mechanic.
+/// Callous Sell-Sword — {3}{R}, 4/4 Human Mercenary. Approximated as a
+/// sacrifice-pump engine: "Sacrifice a creature: Callous Sell-Sword gets
+/// +X/+0 until end of turn, where X is that creature's power." Wired via
+/// the existing `SacrificeAndRemember` + `Value::SacrificedPower` plumbing
+/// (same primitive as Thud). Activation has no mana cost — the sacrifice
+/// is the cost (folded into resolution as the first step). The full Oracle
+/// for the modern reprint is more involved (modal-flavored sacrifice
+/// mechanic); this captures the deck-relevant payoff.
 pub fn callous_sell_sword() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    use crate::effect::{Duration, PlayerRef};
+    use crate::mana::ManaCost;
     CardDefinition {
         name: "Callous Sell-Sword",
         cost: cost(&[generic(3), r()]),
@@ -34,21 +42,42 @@ pub fn callous_sell_sword() -> CardDefinition {
         toughness: 4,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: false,
+            mana_cost: ManaCost::default(),
+            effect: Effect::Seq(vec![
+                Effect::SacrificeAndRemember {
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou),
+                },
+                Effect::PumpPT {
+                    what: Selector::This,
+                    power: Value::SacrificedPower,
+                    toughness: Value::Const(0),
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+            once_per_turn: false,
+            sorcery_speed: false,
+        }],
         triggered_abilities: vec![],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand_effect: None,
     }
 }
 
 /// Chancellor of the Tangle — {5}{G}, 6/7 Avatar Incarnation. "You may reveal
 /// this card from your opening hand. If you do, at the beginning of your
-/// first main phase, add {G}." Stub: vanilla 6/7 (opening-hand mana omitted).
-/// TODO: opening-hand reveal trigger that grants {G} on turn 1 main.
+/// first main phase, add {G}." Wired via
+/// `OpeningHandEffect::AddManaOnFirstMain { Green, 1 }` — the engine
+/// registers a `YourFirstMain` delayed trigger as the mulligan phase ends.
 pub fn chancellor_of_the_tangle() -> CardDefinition {
+    use crate::card::OpeningHandEffect;
     CardDefinition {
         name: "Chancellor of the Tangle",
         cost: cost(&[generic(5), g()]),
@@ -69,6 +98,10 @@ pub fn chancellor_of_the_tangle() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand_effect: Some(OpeningHandEffect::AddManaOnFirstMain {
+            color: Color::Green,
+            amount: 1,
+        }),
     }
 }
 
@@ -97,6 +130,7 @@ pub fn cosmogoyf() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand_effect: None,
     }
 }
 
@@ -128,6 +162,7 @@ pub fn devourer_of_destiny() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand_effect: None,
     }
 }
 
@@ -175,6 +210,7 @@ pub fn atraxa_grand_unifier() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand_effect: None,
     }
 }
 
@@ -215,6 +251,7 @@ pub fn griselbrand() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand_effect: None,
     }
 }
 
@@ -283,6 +320,7 @@ pub fn psychic_frog() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand_effect: None,
     }
 }
 
@@ -317,6 +355,7 @@ pub fn quantum_riddler() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand_effect: None,
     }
 }
 
@@ -365,6 +404,7 @@ pub fn solitude() -> CardDefinition {
             target_filter: None,
         }),
         back_face: None,
+        opening_hand_effect: None,
     }
 }
 
@@ -372,9 +412,14 @@ pub fn solitude() -> CardDefinition {
 
 /// Chancellor of the Annex — {4}{W}{W}, 5/6 Avatar. Flying. "You may reveal
 /// this from your opening hand. If you do, the first spell an opponent casts
-/// next turn doesn't resolve unless they pay {1}." Stub: vanilla 5/6 flier.
-/// TODO: opening-hand annex tax.
+/// next turn doesn't resolve unless they pay {1}." Wired via
+/// `OpeningHandEffect::OpponentFirstSpellTax { amount: 1 }` — each opponent
+/// gets `Player.pending_first_spell_tax += 1`, which is consumed by the
+/// next cast paid by that player. Approximation: "doesn't resolve unless"
+/// is collapsed to a hard "{1} more to cast." (engine has no
+/// "unless they pay" interrupt for player-initiated casts).
 pub fn chancellor_of_the_annex() -> CardDefinition {
+    use crate::card::OpeningHandEffect;
     CardDefinition {
         name: "Chancellor of the Annex",
         cost: cost(&[generic(4), w(), w()]),
@@ -395,6 +440,7 @@ pub fn chancellor_of_the_annex() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand_effect: Some(OpeningHandEffect::OpponentFirstSpellTax { amount: 1 }),
     }
 }
 
@@ -432,6 +478,7 @@ pub fn elesh_norn_mother_of_machines() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand_effect: None,
     }
 }
 
@@ -482,5 +529,6 @@ pub fn teferi_time_raveler() -> CardDefinition {
         }],
         alternative_cost: None,
         back_face: None,
+        opening_hand_effect: None,
     }
 }

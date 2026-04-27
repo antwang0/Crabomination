@@ -22,6 +22,7 @@ pub fn mox_pearl() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand_effect: None,
     }
 }
 
@@ -44,6 +45,7 @@ pub fn mox_sapphire() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand_effect: None,
     }
 }
 
@@ -66,6 +68,7 @@ pub fn mox_jet() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand_effect: None,
     }
 }
 
@@ -88,6 +91,7 @@ pub fn mox_ruby() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand_effect: None,
     }
 }
 
@@ -110,6 +114,7 @@ pub fn mox_emerald() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand_effect: None,
     }
 }
 
@@ -141,6 +146,7 @@ pub fn black_lotus() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand_effect: None,
     }
 }
 
@@ -172,6 +178,7 @@ pub fn sol_ring() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand_effect: None,
     }
 }
 
@@ -210,5 +217,6 @@ pub fn nevinyrrals_disk() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand_effect: None,
     }
 }

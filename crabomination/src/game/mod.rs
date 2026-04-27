@@ -558,9 +558,12 @@ impl GameState {
     }
 
     fn deal_to_hand(&mut self, seat: usize, count: usize) {
+        // The library convention is top = front (`library[0]`); `draw_top`
+        // removes from the front. Use it directly so the mulligan deal is
+        // consistent with `Draw` and `Mill` (which both work off the top).
         for _ in 0..count {
-            if let Some(card) = self.players[seat].library.pop() {
-                self.players[seat].hand.push(card);
+            if self.players[seat].draw_top().is_none() {
+                break;
             }
         }
     }
@@ -655,6 +658,43 @@ impl GameState {
                         self.set_mulligan_decision(player, mulligans_taken + 1, next_player);
                         return Ok(vec![]);
                     }
+                    DecisionAnswer::ExileFromHandAndRedraw(ref ids) => {
+                        // Serum Powder: any of the chosen cards must in
+                        // fact be a Serum Powder in hand (it's the cost of
+                        // the activation). Validate at least one is, then
+                        // exile every listed card and draw the same count.
+                        // The player stays on the *same* mulligan decision
+                        // after performing the swap.
+                        let has_powder = ids.iter().any(|id| {
+                            self.players[player].hand.iter().any(|c| {
+                                c.id == *id && c.definition.name == "Serum Powder"
+                            })
+                        });
+                        if !has_powder {
+                            return Err(GameError::InvalidTarget);
+                        }
+                        let mut removed = 0usize;
+                        for id in ids {
+                            if let Some(pos) = self.players[player].hand.iter().position(|c| c.id == *id) {
+                                let card = self.players[player].hand.remove(pos);
+                                self.exile.push(card);
+                                removed += 1;
+                            }
+                        }
+                        // Shuffle library, then draw `removed` fresh cards
+                        // (top of library = `library[0]`, matching `draw_top`).
+                        use rand::seq::SliceRandom;
+                        let mut rng = rand::rng();
+                        self.players[player].library.shuffle(&mut rng);
+                        for _ in 0..removed {
+                            if self.players[player].draw_top().is_none() {
+                                break;
+                            }
+                        }
+                        // Re-prompt the same mulligan window.
+                        self.set_mulligan_decision(player, mulligans_taken, next_player);
+                        return Ok(vec![]);
+                    }
                     DecisionAnswer::Keep => {
                         if mulligans_taken > 0 {
                             let hand = self.players[player].hand
@@ -704,11 +744,85 @@ impl GameState {
         match next_player {
             Some(p) => self.set_mulligan_decision(p, 0, None),
             None => {
-                // All players kept — game begins. Give priority to seat 0.
+                // All players kept — apply opening-hand reveal effects from
+                // each player's hand (Leyline-style begin-in-play, Chancellor
+                // mana rituals / spell taxes, etc.) before the first turn.
+                for p in 0..self.players.len() {
+                    self.apply_opening_hand_effects(p);
+                }
                 self.pending_decision = None;
                 self.give_priority_to_active();
             }
         }
+    }
+
+    /// Walk `player`'s hand for cards with an `OpeningHandEffect` and apply
+    /// each one. Called from `advance_mulligan` once every player has Kept.
+    /// Real Magic offers each card as an optional reveal; we always reveal
+    /// (every effect in the BRG/Goryo's roster is strictly upside, so the
+    /// AutoDecider would always say yes).
+    pub(crate) fn apply_opening_hand_effects(&mut self, player: usize) {
+        use crate::card::OpeningHandEffect;
+        // Snapshot the relevant hand-card descriptors so we can mutate the
+        // game state below without holding a borrow on the player's hand.
+        let revealed: Vec<(crate::card::CardId, OpeningHandEffect)> = self.players[player]
+            .hand
+            .iter()
+            .filter_map(|c| c.definition.opening_hand_effect.clone().map(|e| (c.id, e)))
+            .collect();
+        for (card_id, effect) in revealed {
+            match effect {
+                OpeningHandEffect::BeginInPlay { tapped, counters } => {
+                    let Some(mut card) = self.players[player].remove_from_hand(card_id) else {
+                        continue;
+                    };
+                    card.tapped = tapped;
+                    if let Some((kind, n)) = counters {
+                        card.add_counters(kind, n);
+                    }
+                    let id = card.id;
+                    self.battlefield.push(card);
+                    self.fire_self_etb_triggers(id, player);
+                }
+                OpeningHandEffect::AddManaOnFirstMain { color, amount } => {
+                    use crate::effect::{ManaPayload, PlayerRef};
+                    let body = Effect::AddMana {
+                        who: PlayerRef::You,
+                        pool: ManaPayload::Colors(vec![color; amount as usize]),
+                    };
+                    self.delayed_triggers.push(crate::game::types::DelayedTrigger {
+                        controller: player,
+                        source: card_id,
+                        kind: crate::game::types::DelayedKind::YourFirstMain,
+                        effect: body,
+                        target: None,
+                        fires_once: true,
+                    });
+                }
+                OpeningHandEffect::OpponentFirstSpellTax { amount } => {
+                    let n = self.players.len();
+                    for opp in 0..n {
+                        if opp != player {
+                            self.players[opp].pending_first_spell_tax += amount;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /// True if any battlefield permanent grants `player` "you have hexproof"
+    /// (Leyline of Sanctity static). Read by `check_target_legality` for
+    /// player targets.
+    pub fn player_has_hexproof(&self, player: usize) -> bool {
+        use crate::effect::StaticEffect;
+        self.battlefield.iter().any(|c| {
+            c.controller == player
+                && c.definition
+                    .static_abilities
+                    .iter()
+                    .any(|sa| matches!(sa.effect, StaticEffect::PlayerHexproof))
+        })
     }
 
     /// Complete the suspended effect using the player's answer. Returns the
@@ -1053,7 +1167,10 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             StaticEffect::EntersTapped { .. }
             | StaticEffect::ExtraLandPerTurn
             | StaticEffect::CostReduction { .. }
-            | StaticEffect::AdditionalCostAfterFirstSpell { .. } => vec![],
+            | StaticEffect::AdditionalCostAfterFirstSpell { .. }
+            // PlayerHexproof is a player-target check (not a permanent
+            // modification) — handled directly in `check_target_legality`.
+            | StaticEffect::PlayerHexproof => vec![],
         })
         .collect()
 }

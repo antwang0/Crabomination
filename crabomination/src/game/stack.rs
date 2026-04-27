@@ -100,6 +100,13 @@ impl GameState {
                 self.fire_step_triggers(TurnStep::Upkeep);
                 self.give_priority_to_active();
             }
+            TurnStep::PreCombatMain => {
+                // Fire main-phase delayed triggers (Chancellor of the
+                // Tangle's "add {G} on first main", etc.). Step-based
+                // triggered abilities for PreCombatMain also fire here.
+                self.fire_step_triggers(TurnStep::PreCombatMain);
+                self.give_priority_to_active();
+            }
             TurnStep::BeginCombat => {
                 self.fire_step_triggers(TurnStep::BeginCombat);
                 self.give_priority_to_active();
@@ -170,6 +177,7 @@ impl GameState {
             let matches = match (dt.kind, step) {
                 (DelayedKind::YourNextUpkeep, TurnStep::Upkeep) => dt.controller == active,
                 (DelayedKind::NextEndStep, TurnStep::End) => true,
+                (DelayedKind::YourFirstMain, TurnStep::PreCombatMain) => dt.controller == active,
                 _ => false,
             };
             if matches {

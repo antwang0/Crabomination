@@ -310,6 +310,37 @@ pub struct CardDefinition {
     /// downstream abilities, types, and costs are the back face's. Only the
     /// front face stores `back_face` — the back's `back_face` is `None`.
     pub back_face: Option<Box<CardDefinition>>,
+    /// Optional "you may reveal this from your opening hand" effect. After
+    /// the mulligan phase concludes (every player has Kept), `GameState`
+    /// walks each player's hand for cards with `opening_hand_effect` and
+    /// applies them. Used by Leyline of Sanctity (begin-in-play),
+    /// Chancellor of the Tangle (T1 mana ritual), Chancellor of the Annex
+    /// (opp first-spell tax), Gemstone Caverns (begin-in-play tapped).
+    pub opening_hand_effect: Option<OpeningHandEffect>,
+}
+
+/// Effects that fire from a card revealed in the opening hand. Applied by
+/// `GameState::apply_opening_hand_effects` once the pre-game mulligan phase
+/// concludes (all players have Kept their hand).
+#[derive(Debug, Clone)]
+pub enum OpeningHandEffect {
+    /// Move this card from hand to the battlefield under its owner's
+    /// control before the first turn begins. `tapped` controls whether
+    /// it enters tapped (Gemstone Caverns) or untapped (Leyline). The
+    /// optional `(counter, n)` adds counters on entry — Gemstone Caverns
+    /// uses this for its "luck counter".
+    BeginInPlay {
+        tapped: bool,
+        counters: Option<(CounterType, u32)>,
+    },
+    /// "At the beginning of your first main phase, add the listed mana to
+    /// your pool." Chancellor of the Tangle. Modeled by registering a
+    /// `YourFirstMain` delayed trigger whose effect adds the mana.
+    AddManaOnFirstMain { color: crate::mana::Color, amount: u32 },
+    /// "Until end of opponent's next turn, the first spell that opponent
+    /// casts costs `amount` more to cast." Chancellor of the Annex.
+    /// Stamps a `pending_first_spell_tax` on each opponent player.
+    OpponentFirstSpellTax { amount: u32 },
 }
 
 /// An alternative (pitch) cost. Replaces the normal mana cost when the

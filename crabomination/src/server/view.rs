@@ -6,7 +6,7 @@
 //! gains reveal-to-seat metadata, this file is where it plugs in.
 
 use crate::card::{CardId, CardInstance};
-use crate::effect::{Effect, Selector};
+use crate::effect::Effect;
 use crate::game::{GameState, StackItem};
 use crate::mana::ManaSymbol;
 use crate::net::{
@@ -210,22 +210,11 @@ fn is_mana_ability(effect: &Effect) -> bool {
 }
 
 fn spell_needs_target(effect: &Effect) -> bool {
-    fn has_target_selector(e: &Effect) -> bool {
-        match e {
-            Effect::DealDamage { to, .. } => matches!(to, Selector::Target(_)),
-            Effect::Destroy { what }
-            | Effect::Exile { what }
-            | Effect::CounterSpell { what }
-            | Effect::Move { what, .. } => matches!(what, Selector::Target(_)),
-            Effect::PumpPT { what, .. } => matches!(what, Selector::Target(_)),
-            Effect::Seq(steps) => steps.iter().any(has_target_selector),
-            Effect::If { then, else_, .. } => {
-                has_target_selector(then) || has_target_selector(else_)
-            }
-            _ => false,
-        }
-    }
-    has_target_selector(effect)
+    // Defer to the engine's `Effect::requires_target` walker — it already
+    // covers every selector shape (`Target`, `TargetFiltered`, nested
+    // selectors, modal branches, delayed bodies). A bespoke walker here
+    // would drift out of sync any time a new effect variant is added.
+    effect.requires_target()
 }
 
 fn project_stack(item: &StackItem, state: &GameState, _viewer_seat: usize) -> StackItemView {

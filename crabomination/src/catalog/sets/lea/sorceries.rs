@@ -24,6 +24,7 @@ pub fn wrath_of_god() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand_effect: None,
     }
 }
 
@@ -48,6 +49,7 @@ pub fn armageddon() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand_effect: None,
     }
 }
 
@@ -74,6 +76,7 @@ pub fn demonic_tutor() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand_effect: None,
     }
 }
 
@@ -109,5 +112,6 @@ pub fn wheel_of_fortune() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand_effect: None,
     }
 }

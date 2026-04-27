@@ -44,26 +44,28 @@ fn converge_count(before: &crate::mana::ManaPool, after: &crate::mana::ManaPool)
 }
 
 /// Walk the battlefield's static abilities to compute the total extra
-/// generic mana the caster owes for casting `card`. Currently only honors
-/// `StaticEffect::AdditionalCostAfterFirstSpell` (Damping Sphere): if the
-/// caster has already cast at least one spell this turn and the spell
-/// matches the static's `filter`, charge `amount` more.
+/// generic mana the caster owes for casting `card`. Honors:
+/// - `StaticEffect::AdditionalCostAfterFirstSpell` (Damping Sphere): if
+///   the caster has already cast at least one spell this turn and the
+///   spell matches the static's `filter`, charge `amount` more.
+/// - `Player.pending_first_spell_tax` (Chancellor of the Annex's opening-
+///   hand reveal): a one-shot generic tax on the next spell the player
+///   casts. Consumed by `cast_spell_with_convoke` after the cost is paid.
 fn extra_cost_for_spell(
     state: &crate::game::GameState,
     caster: usize,
     card: &crate::card::CardInstance,
 ) -> u32 {
     use crate::effect::StaticEffect;
+    let mut tax = state.players[caster].pending_first_spell_tax;
     let already_cast = state.players[caster].spells_cast_this_turn;
-    if already_cast == 0 {
-        return 0;
-    }
-    let mut tax = 0u32;
-    for src in &state.battlefield {
-        for sa in &src.definition.static_abilities {
-            if let StaticEffect::AdditionalCostAfterFirstSpell { filter, amount } = &sa.effect {
-                if state.evaluate_requirement_on_card(filter, card, caster) {
-                    tax += amount;
+    if already_cast > 0 {
+        for src in &state.battlefield {
+            for sa in &src.definition.static_abilities {
+                if let StaticEffect::AdditionalCostAfterFirstSpell { filter, amount } = &sa.effect {
+                    if state.evaluate_requirement_on_card(filter, card, caster) {
+                        tax += amount;
+                    }
                 }
             }
         }
@@ -380,6 +382,10 @@ impl GameState {
         // Track spells cast this turn (for Storm, etc.).
         self.spells_cast_this_turn += 1;
         self.players[p].spells_cast_this_turn += 1;
+        // Chancellor of the Annex's opening-hand tax is one-shot. Consume it
+        // now that the first spell has paid it (regardless of which path —
+        // the tax was already added to `cost` via `extra_cost_for_spell`).
+        self.players[p].pending_first_spell_tax = 0;
 
         // Collect "when you cast this spell, ..." (SelfSource SpellCast)
         // triggers off the spell before it moves into the stack item; we'll
@@ -500,6 +506,7 @@ impl GameState {
         let events = vec![GameEvent::SpellCast { player: p, card_id }];
         self.spells_cast_this_turn += 1;
         self.players[p].spells_cast_this_turn += 1;
+        self.players[p].pending_first_spell_tax = 0;
 
         let on_cast_triggers = collect_self_cast_triggers(&card);
         let uncounterable = self.caster_grants_uncounterable(p, &card);
@@ -616,12 +623,16 @@ impl GameState {
             return Err(GameError::SelectionRequirementViolated);
         }
 
-        // Pay the alt mana cost (with X substitution).
-        let mana_cost = if alt.mana_cost.has_x() {
+        // Pay the alt mana cost (with X substitution + static-ability tax).
+        let mut mana_cost = if alt.mana_cost.has_x() {
             alt.mana_cost.with_x_value(x_value.unwrap_or(0))
         } else {
             alt.mana_cost.clone()
         };
+        let tax = extra_cost_for_spell(self, p, &card);
+        if tax > 0 {
+            mana_cost.symbols.push(crate::mana::ManaSymbol::Generic(tax));
+        }
         let pool_before = self.players[p].mana_pool.clone();
         let tapped_before: Vec<(CardId, bool)> = self
             .battlefield
@@ -671,6 +682,7 @@ impl GameState {
         let events = auto_events;
         self.spells_cast_this_turn += 1;
         self.players[p].spells_cast_this_turn += 1;
+        self.players[p].pending_first_spell_tax = 0;
 
         let on_cast_triggers = collect_self_cast_triggers(&card);
         let uncounterable = self.caster_grants_uncounterable(p, &card);
@@ -695,20 +707,33 @@ impl GameState {
     /// Returns an error if the target has Hexproof (opponent) or Shroud (anyone),
     /// or has Protection from the caster's color identity.
     fn check_target_legality(&self, target: &Target, caster: usize) -> Result<(), GameError> {
-        let Target::Permanent(cid) = target else {
-            return Ok(()); // Player targets have no hexproof/shroud
-        };
-        let Some(card) = self.battlefield_find(*cid) else {
-            return Ok(());
-        };
-        if card.has_keyword(&Keyword::Shroud) {
-            return Err(GameError::TargetHasShroud(*cid));
+        match target {
+            Target::Player(p) => {
+                // "You have hexproof" (Leyline of Sanctity static): player
+                // can't be targeted by spells/abilities controlled by their
+                // opponents. Hexproof never blocks self-targeting.
+                if *p != caster && self.player_has_hexproof(*p) {
+                    // Reuse the permanent-hexproof error variant for now —
+                    // we don't have a player-target-shaped equivalent and
+                    // adding one would ripple through error handling.
+                    return Err(GameError::TargetHasHexproof(crate::card::CardId(0)));
+                }
+                Ok(())
+            }
+            Target::Permanent(cid) => {
+                let Some(card) = self.battlefield_find(*cid) else {
+                    return Ok(());
+                };
+                if card.has_keyword(&Keyword::Shroud) {
+                    return Err(GameError::TargetHasShroud(*cid));
+                }
+                // Hexproof only prevents targeting by opponents.
+                if card.has_keyword(&Keyword::Hexproof) && card.controller != caster {
+                    return Err(GameError::TargetHasHexproof(*cid));
+                }
+                Ok(())
+            }
         }
-        // Hexproof only prevents targeting by opponents.
-        if card.has_keyword(&Keyword::Hexproof) && card.controller != caster {
-            return Err(GameError::TargetHasHexproof(*cid));
-        }
-        Ok(())
     }
 
     /// Push `SpellCast` triggered abilities (e.g. Prowess) onto the stack.

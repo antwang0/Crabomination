@@ -2587,3 +2587,295 @@ fn consign_to_memory_counters_targeted_trigger() {
         si, crate::game::StackItem::Trigger { source, .. } if *source == dev
     )), "Scry-on-cast trigger should have been countered");
 }
+
+// ── Demo-deck coverage: Griselbrand activated ability ───────────────────
+
+#[test]
+fn griselbrand_pays_seven_life_to_draw_seven() {
+    // Griselbrand on the battlefield + 7 life: activating its ability
+    // should pay 7 life and place 7 cards into the controller's hand.
+    let mut g = two_player_game();
+    let grisel = g.add_card_to_battlefield(0, catalog::griselbrand());
+    g.clear_sickness(grisel);
+    // Stock the library with 7 known cards so we can confirm the draw.
+    for _ in 0..7 { g.add_card_to_library(0, catalog::island()); }
+    let life_before = g.players[0].life;
+    let hand_before = g.players[0].hand.len();
+
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: grisel, ability_index: 0, target: None,
+    })
+    .expect("Griselbrand's draw-7 ability should activate");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[0].life, life_before - 7, "should pay 7 life");
+    assert_eq!(g.players[0].hand.len(), hand_before + 7, "should draw 7 cards");
+}
+
+// ── Opening-hand framework + per-card behavior ─────────────────────────
+
+#[test]
+fn leyline_of_sanctity_begins_in_play_when_revealed() {
+    // P0's mulligan-phase hand contains Leyline of Sanctity. After Keep
+    // resolves the opening-hand effect, Leyline should be on the battlefield.
+    let mut g = GameState::new(vec![Player::new(0, "A"), Player::new(1, "B")]);
+    // Stack P0's library so the top 7 includes a Leyline.
+    g.add_card_to_library(0, catalog::leyline_of_sanctity());
+    for _ in 0..6 { g.add_card_to_library(0, catalog::island()); }
+    for _ in 0..7 { g.add_card_to_library(1, catalog::forest()); }
+
+    g.start_mulligan_phase();
+    // Both players Keep; engine applies opening-hand effects on the second Keep.
+    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Keep)).unwrap();
+    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Keep)).unwrap();
+
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Leyline of Sanctity"),
+        "Leyline should begin on the battlefield");
+    assert!(!g.players[0].hand.iter().any(|c| c.definition.name == "Leyline of Sanctity"),
+        "Leyline should no longer be in P0's hand");
+}
+
+#[test]
+fn leyline_of_sanctity_grants_player_hexproof_against_opponents() {
+    // P0 has a Leyline of Sanctity on the battlefield (skip the mulligan
+    // path; we just want the static). P1 tries to target P0 with
+    // Lightning Bolt — should fail with TargetHasHexproof.
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::leyline_of_sanctity());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+
+    let err = g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(0)),
+        mode: None,
+        x_value: None,
+    }).unwrap_err();
+    assert!(matches!(err, GameError::TargetHasHexproof(_)),
+        "Bolt at P0 should be denied by Leyline's player-hexproof, got {err:?}");
+}
+
+#[test]
+fn leyline_of_sanctity_does_not_block_self_targeting() {
+    // P0's own spells should still be able to target P0 (e.g. self-life-loss).
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::leyline_of_sanctity());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(0)),
+        mode: None,
+        x_value: None,
+    }).expect("self-target should bypass Leyline's player-hexproof");
+}
+
+#[test]
+fn chancellor_of_the_tangle_adds_g_on_first_main() {
+    // Reveal Chancellor in opening hand → delayed `YourFirstMain` trigger
+    // adds {G} to P0's pool. Drive turn 1 to PreCombatMain and assert the
+    // pool contains green.
+    let mut g = GameState::new(vec![Player::new(0, "A"), Player::new(1, "B")]);
+    g.add_card_to_library(0, catalog::chancellor_of_the_tangle());
+    for _ in 0..40 { g.add_card_to_library(0, catalog::forest()); }
+    for _ in 0..40 { g.add_card_to_library(1, catalog::forest()); }
+
+    g.start_mulligan_phase();
+    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Keep)).unwrap();
+    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Keep)).unwrap();
+
+    // The delayed trigger should be queued for YourFirstMain.
+    assert_eq!(g.delayed_triggers.len(), 1, "one ChancellorOfTheTangle ritual queued");
+    // Walk priority through the early steps until the trigger resolves.
+    for _ in 0..50 {
+        if g.is_game_over() { break; }
+        if g.players[0].mana_pool.amount(Color::Green) > 0 { break; }
+        let _ = g.perform_action(GameAction::PassPriority);
+    }
+    assert!(g.players[0].mana_pool.amount(Color::Green) >= 1,
+        "Tangle's {{G}} should be in P0's pool by PreCombatMain");
+}
+
+#[test]
+fn chancellor_of_the_annex_taxes_opponents_first_spell() {
+    // P0 reveals Chancellor of the Annex. P1's first spell next turn pays
+    // {1} more — Lightning Bolt at {R} should fail without an extra source.
+    let mut g = GameState::new(vec![Player::new(0, "A"), Player::new(1, "B")]);
+    g.add_card_to_library(0, catalog::chancellor_of_the_annex());
+    for _ in 0..6 { g.add_card_to_library(0, catalog::plains()); }
+    for _ in 0..7 { g.add_card_to_library(1, catalog::forest()); }
+
+    g.start_mulligan_phase();
+    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Keep)).unwrap();
+    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Keep)).unwrap();
+
+    assert_eq!(g.players[1].pending_first_spell_tax, 1,
+        "Annex stamps a {{1}} tax on each opponent");
+
+    // Set up P1 to try casting Bolt with only {R} — the +{1} tax should
+    // make it unaffordable.
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.step = TurnStep::PreCombatMain;
+    let err = g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)), mode: None, x_value: None,
+    }).unwrap_err();
+    assert!(matches!(err, GameError::Mana(_)),
+        "Bolt at {{R}} should fail due to Annex's +{{1}} tax, got {err:?}");
+}
+
+#[test]
+fn chancellor_of_the_annex_tax_consumed_after_first_cast() {
+    // Same setup as above, but now P1 has enough mana to pay the tax. The
+    // tax should drop to 0 after that first spell, so the second casts
+    // normally.
+    let mut g = two_player_game();
+    g.players[1].pending_first_spell_tax = 1;
+
+    let bolt1 = g.add_card_to_hand(1, catalog::lightning_bolt());
+    let bolt2 = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.players[1].mana_pool.add_colorless(1); // pays the tax
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt1, target: Some(Target::Player(0)), mode: None, x_value: None,
+    }).expect("Bolt + {1} tax pays cleanly");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].pending_first_spell_tax, 0, "tax consumed");
+
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt2, target: Some(Target::Player(0)), mode: None, x_value: None,
+    }).expect("Second Bolt should not be taxed");
+}
+
+#[test]
+fn gemstone_caverns_begins_in_play_tapped_with_charge() {
+    // Reveal Gemstone Caverns in opening hand → it begins on the battlefield
+    // tapped with one Charge counter.
+    let mut g = GameState::new(vec![Player::new(0, "A"), Player::new(1, "B")]);
+    g.add_card_to_library(0, catalog::gemstone_caverns());
+    for _ in 0..6 { g.add_card_to_library(0, catalog::forest()); }
+    for _ in 0..7 { g.add_card_to_library(1, catalog::forest()); }
+
+    g.start_mulligan_phase();
+    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Keep)).unwrap();
+    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Keep)).unwrap();
+
+    let caverns = g.battlefield.iter().find(|c| c.definition.name == "Gemstone Caverns")
+        .expect("Caverns should be in play");
+    assert!(caverns.tapped, "begins-in-play tapped");
+    assert_eq!(caverns.counter_count(crate::card::CounterType::Charge), 1,
+        "Caverns has its luck-equivalent Charge counter");
+}
+
+#[test]
+fn callous_sell_sword_pumps_via_sacrifice() {
+    // Sacrifice a Bear (2/2) to give Sell-Sword +2/+0 EOT (4/4 → 6/4).
+    // (`SacrificeAndRemember` picks the first matching battlefield creature,
+    // so we add the bear *first* so the auto-pick spares the Sell-Sword.)
+    let mut g = two_player_game();
+    let _bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    let sell = g.add_card_to_battlefield(0, catalog::callous_sell_sword());
+    g.clear_sickness(sell);
+
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: sell, ability_index: 0, target: None,
+    }).expect("activated ability with sac cost should fire");
+    drain_stack(&mut g);
+
+    let sell_card = g.battlefield_find(sell).expect("Sell-Sword still around");
+    assert_eq!(sell_card.power(), 4 + 2, "+X = sacrificed power");
+    assert_eq!(sell_card.toughness(), 4, "toughness unchanged");
+}
+
+#[test]
+fn plunge_into_darkness_mode_one_loses_three_life() {
+    // Mode 1 path: pay 3 life, look at top 3, draw a card.
+    let mut g = two_player_game();
+    let plunge = g.add_card_to_hand(0, catalog::plunge_into_darkness());
+    for _ in 0..5 { g.add_card_to_library(0, catalog::island()); }
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    let life_before = g.players[0].life;
+    let hand_before = g.players[0].hand.len();
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: plunge, target: None,
+        mode: Some(1), x_value: None,
+    }).expect("Plunge mode 1 should be castable");
+    // The look-at-top + scry decision suspends; the AutoDecider will keep
+    // top order and we drain all subsequent priority passes.
+    drain_stack(&mut g);
+    if g.pending_decision.is_some() {
+        // AutoDecider might submit the answer through perform_action
+        // already; if not, just step through any leftover decisions.
+        let _ = g.perform_action(GameAction::SubmitDecision(
+            DecisionAnswer::ScryOrder { kept_top: vec![], bottom: vec![] }
+        ));
+        drain_stack(&mut g);
+    }
+
+    assert_eq!(g.players[0].life, life_before - 3, "Plunge mode 1 costs 3 life");
+    assert_eq!(g.players[0].hand.len(), hand_before - 1 + 1,
+        "Plunge mode 1 draws 1 card (net -1 hand from cast, +1 from draw)");
+}
+
+#[test]
+fn serum_powder_exile_and_redraw_during_mulligan() {
+    // P0's opening hand contains a Serum Powder. Submitting
+    // ExileFromHandAndRedraw([powder, ...]) should exile the listed cards
+    // and refill the hand from the library; mulligan count stays the same.
+    let mut g = GameState::new(vec![Player::new(0, "A"), Player::new(1, "B")]);
+    g.add_card_to_library(0, catalog::serum_powder());
+    for _ in 0..6 { g.add_card_to_library(0, catalog::island()); }
+    // Library deeper for the redraw to come from.
+    for _ in 0..20 { g.add_card_to_library(0, catalog::forest()); }
+    for _ in 0..7 { g.add_card_to_library(1, catalog::forest()); }
+
+    g.start_mulligan_phase();
+    let powder_id = g.players[0].hand.iter()
+        .find(|c| c.definition.name == "Serum Powder")
+        .expect("powder dealt").id;
+    let other_ids: Vec<_> = g.players[0].hand.iter()
+        .filter(|c| c.id != powder_id)
+        .map(|c| c.id)
+        .collect();
+
+    let mut exile_set = vec![powder_id];
+    exile_set.extend(other_ids.iter().take(3).copied());
+    let exile_count = exile_set.len();
+
+    g.perform_action(GameAction::SubmitDecision(
+        DecisionAnswer::ExileFromHandAndRedraw(exile_set.clone())
+    )).expect("ExileFromHandAndRedraw should succeed");
+
+    // Same hand size, none of the exiled IDs left in hand, all in exile.
+    assert_eq!(g.players[0].hand.len(), 7, "still 7 cards after Powder swap");
+    for id in &exile_set {
+        assert!(g.exile.iter().any(|c| c.id == *id),
+            "card {id:?} exiled");
+        assert!(!g.players[0].hand.iter().any(|c| c.id == *id),
+            "card {id:?} not in hand");
+    }
+    assert_eq!(exile_count, 4); // sanity: we asked for 4 exiles
+
+    // The mulligan decision should re-prompt for the same player at the
+    // same count (Powder doesn't take a mulligan).
+    let pd = g.pending_decision.as_ref().expect("re-prompted");
+    match &pd.decision {
+        crate::decision::Decision::Mulligan { player, mulligans_taken, .. } => {
+            assert_eq!(*player, 0);
+            assert_eq!(*mulligans_taken, 0, "Powder doesn't burn a mulligan");
+        }
+        other => panic!("expected re-prompted Mulligan, got {other:?}"),
+    }
+}
