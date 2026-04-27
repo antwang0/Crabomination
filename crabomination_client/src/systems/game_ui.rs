@@ -945,6 +945,20 @@ pub fn sync_game_visuals(
             // back to the standard (un-flipped) bf rotation; without
             // this, the play animation would un-rotate the card and
             // expose the original front face (the wrong side).
+            // For a flipped MDFC, snap the play animation's start
+            // rotation to the bf target so it never interpolates the
+            // 180° back-flip on screen. The front-child material gets
+            // swapped to the back-face image in the same frame
+            // (`apply_swap_front_material`), so the visual stays on the
+            // back-face image throughout: the animation overwrites
+            // transform.rotation = start_rotation (target) on its first
+            // tick, before render. Both children hold the back-face
+            // image at that moment, so the snap is invisible.
+            let anim_start_rot = if flipped_marker.is_some() {
+                target.rotation
+            } else {
+                transform.rotation
+            };
             if flipped_marker.is_some()
                 && let Some(bf) = bf_card
             {
@@ -968,7 +982,7 @@ pub fn sync_game_visuals(
                     progress: 0.0,
                     speed: 2.0,
                     start_translation: transform.translation,
-                    start_rotation: transform.rotation,
+                    start_rotation: anim_start_rot,
                     target_translation: target.translation,
                     target_rotation: target.rotation,
                 });
