@@ -6,7 +6,7 @@
 //! gains reveal-to-seat metadata, this file is where it plugs in.
 
 use crate::card::{CardId, CardInstance};
-use crate::effect::{Effect, Selector};
+use crate::effect::Effect;
 use crate::game::{GameState, StackItem};
 use crate::mana::ManaSymbol;
 use crate::net::{
@@ -92,7 +92,7 @@ fn known_card(card: &CardInstance) -> KnownCard {
         name: card.definition.name.to_string(),
         cost: card.definition.cost.clone(),
         card_types: card.definition.card_types.clone(),
-        needs_target: spell_needs_target(&card.definition.effect),
+        needs_target: card.definition.effect.requires_target(),
         has_alternative_cost: card.definition.alternative_cost.is_some(),
         back_face_name: card
             .definition
@@ -148,7 +148,7 @@ fn project_abilities(card: &CardInstance) -> Vec<AbilityView> {
             index: i,
             cost_label: ability_cost_label(a),
             effect_label: ability_effect_label(&a.effect).to_string(),
-            needs_target: spell_needs_target(&a.effect),
+            needs_target: a.effect.requires_target(),
             is_mana: is_mana_ability(&a.effect),
         })
         .collect()
@@ -177,17 +177,56 @@ fn ability_cost_label(ability: &crate::effect::ActivatedAbility) -> String {
 fn ability_effect_label(effect: &Effect) -> &'static str {
     match effect {
         Effect::AddMana { .. } => "Add mana",
-        Effect::Seq(steps) => steps.first().map(ability_effect_label).unwrap_or("Activate"),
+        // Walk into structural combinators: pick the most representative
+        // child for the label rather than degenerating to "Activate".
+        Effect::Seq(steps) => steps
+            .iter()
+            .map(ability_effect_label)
+            .find(|l| *l != "Activate")
+            .unwrap_or("Activate"),
+        Effect::If { then, else_, .. } => {
+            // Prefer the `then` branch's label — that's the active outcome
+            // when the gate passes (Gemstone Caverns luck-removal etc.).
+            let lt = ability_effect_label(then);
+            if lt != "Activate" { lt } else { ability_effect_label(else_) }
+        }
+        Effect::ChooseMode(modes) => modes
+            .iter()
+            .map(ability_effect_label)
+            .find(|l| *l != "Activate")
+            .unwrap_or("Activate"),
+        Effect::ForEach { body, .. } | Effect::Repeat { body, .. } => ability_effect_label(body),
         Effect::LoseLife { .. } => "Pay life / fetch land",
         Effect::Search { .. } => "Search library",
         Effect::Move { .. } => "Move permanent",
         Effect::DealDamage { .. } => "Deal damage",
         Effect::Draw { .. } => "Draw cards",
+        Effect::Discard { .. } => "Discard",
         Effect::Destroy { .. } => "Destroy permanent",
         Effect::Exile { .. } => "Exile permanent",
         Effect::GainLife { .. } => "Gain life",
+        Effect::Mill { .. } => "Mill",
+        Effect::Scry { .. } => "Scry",
+        Effect::Surveil { .. } => "Surveil",
         Effect::AddCounter { .. } => "Add counter",
+        Effect::RemoveCounter { .. } => "Remove counter",
         Effect::CreateToken { .. } => "Create token",
+        Effect::CounterSpell { .. } => "Counter spell",
+        Effect::CounterAbility { .. } => "Counter ability",
+        Effect::CounterUnlessPaid { .. } => "Counter unless paid",
+        Effect::Sacrifice { .. } | Effect::SacrificeAndRemember { .. } => "Sacrifice",
+        Effect::DiscardChosen { .. } => "Discard chosen",
+        Effect::PayOrLoseGame { .. } => "Pay or lose",
+        Effect::DelayUntil { .. } => "Delayed trigger",
+        Effect::Tap { .. } => "Tap",
+        Effect::Untap { .. } => "Untap",
+        Effect::PumpPT { .. } => "Pump",
+        Effect::GrantKeyword { .. } => "Grant keyword",
+        Effect::AddPoison { .. } => "Add poison",
+        Effect::RevealUntilFind { .. } => "Reveal until find",
+        Effect::AddFirstSpellTax { .. } => "Cost tax",
+        Effect::Drain { .. } => "Drain",
+        Effect::Proliferate => "Proliferate",
         _ => "Activate",
     }
 }
@@ -207,25 +246,6 @@ fn is_mana_ability(effect: &Effect) -> bool {
         Effect::Seq(steps) => !steps.is_empty() && steps.iter().all(is_mana_ability),
         _ => false,
     }
-}
-
-fn spell_needs_target(effect: &Effect) -> bool {
-    fn has_target_selector(e: &Effect) -> bool {
-        match e {
-            Effect::DealDamage { to, .. } => matches!(to, Selector::Target(_)),
-            Effect::Destroy { what }
-            | Effect::Exile { what }
-            | Effect::CounterSpell { what }
-            | Effect::Move { what, .. } => matches!(what, Selector::Target(_)),
-            Effect::PumpPT { what, .. } => matches!(what, Selector::Target(_)),
-            Effect::Seq(steps) => steps.iter().any(has_target_selector),
-            Effect::If { then, else_, .. } => {
-                has_target_selector(then) || has_target_selector(else_)
-            }
-            _ => false,
-        }
-    }
-    has_target_selector(effect)
 }
 
 fn project_stack(item: &StackItem, state: &GameState, _viewer_seat: usize) -> StackItemView {

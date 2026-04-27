@@ -2940,7 +2940,7 @@ fn first_spell_tax_charges_default_zero() {
 #[test]
 fn reveal_until_find_caps_at_n_when_no_match() {
     // No matching card on top → mill `cap` cards, lose `cap * life` life.
-    use crate::effect::{Effect, OpeningHandEffect as _, ZoneDest};
+    use crate::effect::{Effect, ZoneDest};
     use crate::card::SelectionRequirement;
     let mut g = two_player_game();
     // Library: 5 lands. With `find: Creature`, none match → mill all 5.
@@ -2967,4 +2967,44 @@ fn reveal_until_find_caps_at_n_when_no_match() {
         "milled cards land in graveyard");
     assert_eq!(g.players[0].life, life_before - 5,
         "5 cards revealed → 5 life lost");
+}
+
+#[test]
+fn add_first_spell_tax_increments_per_opponent() {
+    // `Effect::AddFirstSpellTax` against `EachOpponent` adds one charge to
+    // each opponent (not the controller).
+    let mut g = two_player_game();
+    let ctx = EffectContext::for_ability(crate::card::CardId(0), 0, None);
+    g.resolve_effect(
+        &Effect::AddFirstSpellTax {
+            who: PlayerRef::EachOpponent,
+            count: Value::Const(2),
+        },
+        &ctx,
+    ).unwrap();
+    assert_eq!(g.players[0].first_spell_tax_charges, 0,
+        "controller is not an opponent of themselves");
+    assert_eq!(g.players[1].first_spell_tax_charges, 2,
+        "opponent should receive 2 charges");
+}
+
+#[test]
+fn deal_to_hand_draws_from_top_of_library() {
+    // Regression: deal_to_hand used to call library.pop() (bottom of library)
+    // — for an unshuffled fixture that produced wrong opening hands.
+    let mut g = two_player_game();
+    // Push lightning bolt (top), then 6 forests below.
+    g.add_card_to_library(0, catalog::lightning_bolt());
+    for _ in 0..6 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    for _ in 0..7 {
+        g.add_card_to_library(1, catalog::forest());
+    }
+    g.start_mulligan_phase();
+    // Opening hand should include the bolt (top of library).
+    assert!(
+        g.players[0].hand.iter().any(|c| c.definition.name == "Lightning Bolt"),
+        "deal_to_hand should draw from the top — the bolt was at index 0"
+    );
 }

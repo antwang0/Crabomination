@@ -10,7 +10,6 @@ use rand::{RngExt, rng};
 
 use crate::card::{CardDefinition, CardId, Keyword};
 use crate::decision::{AutoDecider, Decider};
-use crate::effect::{Effect, Selector};
 use crate::game::{Attack, AttackTarget, GameAction, GameState, Target, TurnStep};
 use crate::mana::ManaPool;
 
@@ -145,7 +144,10 @@ fn main_phase_action(state: &GameState, seat: usize) -> GameAction {
         .filter(|c| !c.definition.is_land())
         .filter(|c| can_afford(&c.definition, &state.players[seat].mana_pool))
         .filter(|c| {
-            if effect_needs_target(&c.definition.effect) {
+            // Skip targeted spells when no legal auto-target exists, or
+            // we'd loop forever submitting cast attempts that bounce on
+            // SelectionRequirementViolated.
+            if c.definition.effect.requires_target() {
                 state.auto_target_for_effect(&c.definition.effect, seat).is_some()
             } else {
                 true
@@ -236,20 +238,4 @@ pub fn can_afford(def: &CardDefinition, pool: &ManaPool) -> bool {
 /// engine's shared targeting heuristic.
 pub fn choose_target(state: &GameState, def: &CardDefinition, caster: usize) -> Option<Target> {
     state.auto_target_for_effect(&def.effect, caster)
-}
-
-/// Returns true if the effect contains any `Selector::Target` — i.e. the
-/// spell requires a chosen target to do anything useful.
-fn effect_needs_target(effect: &Effect) -> bool {
-    match effect {
-        Effect::DealDamage { to, .. } => matches!(to, Selector::Target(_)),
-        Effect::Destroy { what }
-        | Effect::Exile { what }
-        | Effect::CounterSpell { what }
-        | Effect::Move { what, .. } => matches!(what, Selector::Target(_)),
-        Effect::PumpPT { what, .. } => matches!(what, Selector::Target(_)),
-        Effect::Seq(steps) => steps.iter().any(effect_needs_target),
-        Effect::If { then, else_, .. } => effect_needs_target(then) || effect_needs_target(else_),
-        _ => false,
-    }
 }
