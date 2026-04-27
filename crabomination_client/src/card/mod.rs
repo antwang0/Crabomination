@@ -7,14 +7,12 @@ pub mod spawn;
 pub use components::{
     Animating, BattlefieldCard, Card, CardBorderHighlight, CardFlipAnimation, CardFrontTexture,
     CardHighlightAssets, CardHoverLift, CardHovered, CardMeshAssets, CardOwner, DeckCard,
-    DeckPile, DeckShuffleAnimation, DrawCardAnimation, FlippedFace, GameCardId, GraveyardPile,
-    HandCard, HandSlideAnimation, MdfcFlipAnimation, OpponentHandCard, PileHovered,
+    DeckPile, DeckShuffleAnimation, DrawCardAnimation, FlippedFace, FrontFaceMesh, GameCardId,
+    GraveyardPile, HandCard, HandSlideAnimation, MdfcFlipAnimation, OpponentHandCard, PileHovered,
     PlayCardAnimation, PlayerTargetZone, RevealPeekAnimation, ReturnToDeckAnimation,
-    SendToGraveyardAnimation, ShufflePhase, StackCard, TapAnimation, TapState, ValidTarget,
-    CARD_HEIGHT, CARD_THICKNESS, CARD_WIDTH, DECK_CARD_Y_STEP, HOVER_LIFT_SPEED,
+    SendToGraveyardAnimation, ShufflePhase, StackCard, SwapFrontMaterial, TapAnimation, TapState,
+    ValidTarget, CARD_HEIGHT, CARD_THICKNESS, CARD_WIDTH, DECK_CARD_Y_STEP, HOVER_LIFT_SPEED,
 };
-// `FrontFaceMesh` / `BackFaceMesh` are spawn-internal markers not used
-// outside `card::spawn`, so they're not re-exported.
 pub use layout::{
     back_face_rotation, bf_card_transform, deck_position, graveyard_position,
     hand_card_transform, land_card_transform,

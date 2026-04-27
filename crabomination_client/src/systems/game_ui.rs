@@ -39,6 +39,42 @@ pub struct GameInputResources<'w> {
     pub flipped_hand: ResMut<'w, crate::game::FlippedHandCards>,
     pub card_names: ResMut<'w, crate::game::CardNames>,
 }
+/// Process `SwapFrontMaterial` markers: walk each entity's children,
+/// find the `FrontFaceMesh` child, swap its `MeshMaterial3d` to the
+/// requested handle, update the parent's `CardFrontTexture` so peek /
+/// hover popups stay in sync, and remove the marker. Used by the
+/// hand→battlefield transition for flipped MDFCs (the played-back-face
+/// image needs to land on the front-child mesh under standard bf
+/// orientation).
+#[allow(clippy::type_complexity)]
+pub fn apply_swap_front_material(
+    mut commands: Commands,
+    swap_q: Query<
+        (Entity, &Children, &crate::card::SwapFrontMaterial),
+        With<crate::card::SwapFrontMaterial>,
+    >,
+    mut front_meshes: Query<
+        &mut MeshMaterial3d<StandardMaterial>,
+        With<crate::card::FrontFaceMesh>,
+    >,
+    mut tex_q: Query<&mut crate::card::CardFrontTexture>,
+) {
+    for (entity, children, swap) in &swap_q {
+        for child in children.iter() {
+            if let Ok(mut mat) = front_meshes.get_mut(child) {
+                *mat = MeshMaterial3d(swap.new_front.clone());
+                break;
+            }
+        }
+        if let Ok(mut tex) = tex_q.get_mut(entity) {
+            tex.0 = swap.new_path.clone();
+        }
+        commands
+            .entity(entity)
+            .remove::<crate::card::SwapFrontMaterial>();
+    }
+}
+
 /// Pretty-print a `GameEventWire` for the in-game log, resolving any
 /// CardId via the running `CardNames` map so the player sees real card
 /// names instead of `CardId(N)` debug strings.
@@ -603,6 +639,7 @@ pub fn sync_game_visuals(
             &Transform,
             Option<&StackCard>,
             &CardHoverLift,
+            Option<&crate::card::FlippedFace>,
         ),
         (With<HandCard>, Without<Animating>),
     >,
@@ -889,9 +926,10 @@ pub fn sync_game_visuals(
     }
 
     // ── Viewer hand → Battlefield / Stack / graveyard transitions ───────────
-    for (entity, game_id, transform, stack_card, _lift) in &hand_cards {
+    for (entity, game_id, transform, stack_card, _lift, flipped_marker) in &hand_cards {
         if bf_ids_for(viewer).contains(&game_id.0) {
-            let is_land = cv.battlefield.iter().find(|c| c.id == game_id.0).is_some_and(|c| c.is_land());
+            let bf_card = cv.battlefield.iter().find(|c| c.id == game_id.0);
+            let is_land = bf_card.is_some_and(|c| c.is_land());
             let target = if is_land {
                 land_card_transform(&cv.battlefield, viewer, viewer, n_seats, game_id.0)
                     .unwrap_or_else(|| bf_card_transform(viewer, viewer, n_seats, 0, 1, true, false))
@@ -899,6 +937,24 @@ pub fn sync_game_visuals(
                 let slot = bf_row_slot(&cv.battlefield, viewer, game_id.0, false).unwrap_or(0);
                 bf_card_transform(viewer, viewer, n_seats, slot, creature_count(viewer), false, false)
             };
+            // Flipped MDFC played as its back face: the engine swapped
+            // the card's definition to the back face, so the bf card's
+            // name is the back-face name. We need the front-child mesh
+            // to display the back-face image (via the `_back` asset
+            // path) so the played face is up on the battlefield. Animate
+            // back to the standard (un-flipped) bf rotation; without
+            // this, the play animation would un-rotate the card and
+            // expose the original front face (the wrong side).
+            if flipped_marker.is_some()
+                && let Some(bf) = bf_card
+            {
+                let new_front = card_back_face_material(&bf.name, &mut materials, &asset_server);
+                commands.entity(entity).insert(crate::card::SwapFrontMaterial {
+                    new_front,
+                    new_path: crate::scryfall::card_back_face_asset_path(&bf.name),
+                });
+                commands.entity(entity).remove::<crate::card::FlippedFace>();
+            }
             commands
                 .entity(entity)
                 .remove::<HandCard>()
@@ -1193,7 +1249,7 @@ pub fn sync_game_visuals(
         .filter(|c| {
             c.owner == viewer
                 && !visual_bf_ids.contains(&c.id)
-                && !hand_cards.iter().any(|(_, gid, _, _, _)| gid.0 == c.id)
+                && !hand_cards.iter().any(|(_, gid, _, _, _, _)| gid.0 == c.id)
         })
         .map(|c| (c.id, c.name.clone(), c.is_land(), c.tapped))
         .collect();
@@ -1238,7 +1294,7 @@ pub fn sync_game_visuals(
     }
 
     // ── Rebalance viewer hand slots ──────────────────────────────────────────
-    for (entity, game_id, _transform, stack_card, lift) in &hand_cards {
+    for (entity, game_id, _transform, stack_card, lift, _flipped_marker) in &hand_cards {
         if stack_card.is_some() { continue; }
         if !hand_ids.contains(&game_id.0) { continue; }
         let Some(new_slot) = cv.players[viewer].hand.iter().position(|c| c.id() == game_id.0) else { continue };

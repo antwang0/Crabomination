@@ -36,11 +36,11 @@ use systems::animate::{
     animate_reveal_peek, animate_send_to_graveyard, animate_tap, AnimationSpeed,
 };
 use systems::game_ui::{
-    auto_advance_p0, handle_ability_menu, handle_alt_cast_buttons, handle_game_input,
-    poll_action_buttons, setup_game_hud, spawn_ability_menu, spawn_alt_cast_modal,
-    sync_flipped_hand_cards, sync_game_visuals, trigger_reveal_animation, update_log_text,
-    update_p1_text, update_hint, update_phase_chart, update_player_text, update_turn_text,
-    ButtonState, GameLogicSet,
+    apply_swap_front_material, auto_advance_p0, handle_ability_menu, handle_alt_cast_buttons,
+    handle_game_input, poll_action_buttons, setup_game_hud, spawn_ability_menu,
+    spawn_alt_cast_modal, sync_flipped_hand_cards, sync_game_visuals, trigger_reveal_animation,
+    update_log_text, update_p1_text, update_hint, update_phase_chart, update_player_text,
+    update_turn_text, ButtonState, GameLogicSet,
 };
 use systems::gizmos::{
     draw_attacker_overlays, draw_blocking_gizmos, draw_stack_arrows,
@@ -199,6 +199,15 @@ fn main() {
         )
         // Separate add_systems call to stay under Bevy's 20-tuple limit.
         .add_systems(Update, animate_mdfc_flip.run_if(in_state(AppState::InGame)))
+        // Run after sync_game_visuals so SwapFrontMaterial markers
+        // queued during the hand→battlefield transition land before
+        // the next frame's render.
+        .add_systems(
+            Update,
+            apply_swap_front_material
+                .after(sync_game_visuals)
+                .run_if(in_state(AppState::InGame)),
+        )
         // Decision UI: spawn modal when pending, handle interactions, submit answer.
         .add_systems(
             Update,
