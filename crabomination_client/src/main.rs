@@ -25,7 +25,8 @@ use card::{
 use render_quality::{ChangeQuality, RenderQuality};
 use config::GraphicsConfig;
 use game::{
-    AltCastState, BlockingState, FlippedHandCards, GameLog, GraveyardBrowserState, TargetingState,
+    AltCastState, BlockingState, CardNames, FlippedHandCards, GameLog, GraveyardBrowserState,
+    TargetingState,
 };
 use systems::game_ui::FastForward;
 use systems::animate::{
@@ -61,20 +62,23 @@ fn main() {
     let cfg = config::load();
 
     // Preload card images by inspecting the same demo state the server uses.
-    // Also pull MDFC back-face names so the right-click flip animation has
-    // a real Scryfall image instead of a missing-asset blank.
+    // Track back-face names separately so the prefetch can pass `face=back`
+    // to Scryfall — `format=image` returns the front face by default even
+    // when queried by back-face name.
     let demo = crabomination::demo::build_demo_state();
-    let mut seen: std::collections::HashSet<&str> = std::collections::HashSet::new();
+    let mut fronts: std::collections::HashSet<&str> = std::collections::HashSet::new();
+    let mut backs: std::collections::HashSet<&str> = std::collections::HashSet::new();
     for player in &demo.players {
         for card in player.library.iter().chain(&player.hand).chain(&player.graveyard) {
-            seen.insert(card.definition.name);
+            fronts.insert(card.definition.name);
             if let Some(back) = card.definition.back_face.as_ref() {
-                seen.insert(back.name);
+                backs.insert(back.name);
             }
         }
     }
-    let card_names: Vec<&str> = seen.into_iter().collect();
-    scryfall::ensure_card_images(&card_names, Path::new(&cfg.paths.asset_dir));
+    let mut specs: Vec<(&str, bool)> = fronts.into_iter().map(|n| (n, false)).collect();
+    specs.extend(backs.into_iter().map(|n| (n, true)));
+    scryfall::ensure_card_images(&specs, Path::new(&cfg.paths.asset_dir));
 
     let gfx = cfg.graphics;
     App::new()
@@ -113,6 +117,7 @@ fn main() {
         .insert_resource(BlockingState::default())
         .insert_resource(AltCastState::default())
         .insert_resource(FlippedHandCards::default())
+        .insert_resource(CardNames::default())
         .insert_resource(GraveyardBrowserState::default())
         .insert_resource(RevealPopupState::default())
         .insert_resource(AnimationSpeed::default())

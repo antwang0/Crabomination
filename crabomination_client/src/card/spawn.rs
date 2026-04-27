@@ -191,3 +191,21 @@ pub fn card_front_material(
         ..default()
     })
 }
+
+/// Build a textured material for an MDFC back-face image. Loads from the
+/// `_back`-suffixed asset path so stale front-face downloads with the
+/// same name don't collide.
+pub fn card_back_face_material(
+    name: &str,
+    materials: &mut Assets<StandardMaterial>,
+    asset_server: &AssetServer,
+) -> Handle<StandardMaterial> {
+    let asset_path = scryfall::card_back_face_asset_path(name);
+    let texture: Handle<Image> = asset_server.load(&asset_path);
+    materials.add(StandardMaterial {
+        base_color_texture: Some(texture),
+        perceptual_roughness: 0.85,
+        metallic: 0.0,
+        ..default()
+    })
+}

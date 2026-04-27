@@ -16,8 +16,8 @@ use crate::card::{
     GameCardId, GraveyardPile, HandCard, HandSlideAnimation, OpponentHandCard,
     PlayCardAnimation, PlayerTargetZone, RevealPeekAnimation, SendToGraveyardAnimation,
     StackCard, TapAnimation, TapState, ValidTarget, back_face_rotation, bf_card_transform,
-    card_front_material, deck_position, graveyard_position, hand_card_transform,
-    land_card_transform, spawn_single_card,
+    card_back_face_material, card_front_material, deck_position, graveyard_position,
+    hand_card_transform, land_card_transform, spawn_single_card,
 };
 use crate::game::{AbilityMenuState, BlockingState, GameLog, TargetingState, format_mana_pool_from_pool};
 use crate::net_plugin::{CurrentView, LatestServerEvents, NetOutbox};
@@ -37,7 +37,86 @@ pub struct GameInputResources<'w> {
     pub ff: ResMut<'w, FastForward>,
     pub alt_cast: ResMut<'w, crate::game::AltCastState>,
     pub flipped_hand: ResMut<'w, crate::game::FlippedHandCards>,
+    pub card_names: ResMut<'w, crate::game::CardNames>,
 }
+/// Pretty-print a `GameEventWire` for the in-game log, resolving any
+/// CardId via the running `CardNames` map so the player sees real card
+/// names instead of `CardId(N)` debug strings.
+fn format_event(ev: &crabomination::net::GameEventWire, names: &crate::game::CardNames) -> String {
+    use crabomination::net::GameEventWire as E;
+    let n = |id: crabomination::card::CardId| names.get(id);
+    match ev {
+        E::StepChanged(s) => format!("Step → {s:?}"),
+        E::TurnStarted { player, turn } => format!("Turn {turn} — P{player}"),
+        E::CardDrawn { player, card_id } => format!("P{player} drew {}", n(*card_id)),
+        E::CardDiscarded { player, card_id } => {
+            format!("P{player} discarded {}", n(*card_id))
+        }
+        E::LandPlayed { player, card_id } => format!("P{player} played {}", n(*card_id)),
+        E::SpellCast { player, card_id } => format!("P{player} cast {}", n(*card_id)),
+        E::AbilityActivated { source } => format!("{} ability activated", n(*source)),
+        E::ManaAdded { player, color } => format!("P{player} adds {color:?}"),
+        E::ColorlessManaAdded { player } => format!("P{player} adds colorless"),
+        E::PermanentEntered { card_id } => format!("{} entered the battlefield", n(*card_id)),
+        E::PermanentExiled { card_id } => format!("{} was exiled", n(*card_id)),
+        E::DamageDealt { amount, to_player, to_card } => match (to_player, to_card) {
+            (Some(p), _) => format!("{amount} damage → P{p}"),
+            (_, Some(cid)) => format!("{amount} damage → {}", n(*cid)),
+            _ => format!("{amount} damage"),
+        },
+        E::LifeLost { player, amount } => format!("P{player} loses {amount} life"),
+        E::LifeGained { player, amount } => format!("P{player} gains {amount} life"),
+        E::CreatureDied { card_id } => format!("{} died", n(*card_id)),
+        E::PumpApplied { card_id, power, toughness } => {
+            format!("{} +{power}/+{toughness}", n(*card_id))
+        }
+        E::CounterAdded { card_id, counter_type, count } => {
+            format!("+{count} {counter_type:?} on {}", n(*card_id))
+        }
+        E::CounterRemoved { card_id, counter_type, count } => {
+            format!("−{count} {counter_type:?} on {}", n(*card_id))
+        }
+        E::PermanentTapped { card_id } => format!("{} tapped", n(*card_id)),
+        E::PermanentUntapped { card_id } => format!("{} untapped", n(*card_id)),
+        E::TokenCreated { card_id } => format!("token {} created", n(*card_id)),
+        E::CardMilled { player, card_id } => format!("P{player} milled {}", n(*card_id)),
+        E::ScryPerformed { player, looked_at, bottomed } => {
+            format!("P{player} scry {looked_at} ({bottomed} to bottom)")
+        }
+        E::AttackerDeclared(cid) => format!("{} attacks", n(*cid)),
+        E::BlockerDeclared { blocker, attacker } => {
+            format!("{} blocks {}", n(*blocker), n(*attacker))
+        }
+        E::CombatResolved => "Combat resolved".into(),
+        E::FirstStrikeDamageResolved => "First-strike damage resolved".into(),
+        E::TopCardRevealed { player, card_name, .. } => {
+            format!("P{player} revealed {card_name}")
+        }
+        E::AttachmentMoved { attachment, attached_to } => match attached_to {
+            Some(target) => format!("{} attached to {}", n(*attachment), n(*target)),
+            None => format!("{} unattached", n(*attachment)),
+        },
+        E::PoisonAdded { player, amount } => format!("P{player} +{amount} poison"),
+        E::LoyaltyAbilityActivated { planeswalker, loyalty_change } => {
+            format!("{} loyalty {loyalty_change:+}", n(*planeswalker))
+        }
+        E::LoyaltyChanged { card_id, new_loyalty } => {
+            format!("{} loyalty = {new_loyalty}", n(*card_id))
+        }
+        E::PlaneswalkerDied { card_id } => format!("{} died (planeswalker)", n(*card_id)),
+        E::SpellsCopied { original, count } => {
+            format!("{} copied ×{count}", n(*original))
+        }
+        E::SurveilPerformed { player, looked_at, graveyarded } => {
+            format!("P{player} surveil {looked_at} ({graveyarded} to graveyard)")
+        }
+        E::GameOver { winner } => match winner {
+            Some(p) => format!("Game over — P{p} wins"),
+            None => "Game over — draw".into(),
+        },
+    }
+}
+
 /// Drives End Turn / Next Turn fast-forward: while these flags are set,
 /// `auto_advance_p0` keeps submitting `PassPriority` each frame until the
 /// target condition is reached.
@@ -776,9 +855,11 @@ pub fn sync_game_visuals(
             let front_mat = card_front_material(&known.name, &mut materials, &asset_server);
             // For MDFC cards (Pathways), paint the back-child with the
             // back face's Scryfall image instead of the cardback so a
-            // 180° flip animation reveals the alternate face.
+            // 180° flip animation reveals the alternate face. Uses the
+            // `_back`-suffixed asset path that the prefetch downloaded
+            // with `face=back`.
             let back_mat = if let Some(back_name) = known.back_face_name.as_deref() {
-                card_front_material(back_name, &mut materials, &asset_server)
+                card_back_face_material(back_name, &mut materials, &asset_server)
             } else {
                 card_assets.back_material.clone()
             };
@@ -1315,11 +1396,37 @@ pub fn handle_game_input(
     let reveal = &mut *r.reveal;
     let menu_state = &mut *r.menu_state;
     let ff = &mut *r.ff;
+    let card_names = &mut *r.card_names;
+
+    // Refresh the card-name lookup from the current view so the event
+    // formatter can resolve any CardId it sees. Hand / battlefield /
+    // graveyard / stack are all included; opponent face-down hand
+    // entries stay anonymous.
+    if let Some(cv) = view.0.as_ref() {
+        for player in &cv.players {
+            for h in &player.hand {
+                if let crabomination::net::HandCardView::Known(k) = h {
+                    card_names.by_id.insert(k.id, k.name.clone());
+                }
+            }
+            for g in &player.graveyard {
+                card_names.by_id.insert(g.id, g.name.clone());
+            }
+        }
+        for c in &cv.battlefield {
+            card_names.by_id.insert(c.id, c.name.clone());
+        }
+        for item in &cv.stack {
+            if let crabomination::net::StackItemView::Known(k) = item {
+                card_names.by_id.insert(k.source, k.name.clone());
+            }
+        }
+    }
 
     // Update game log from server events.
     for ev in &server_events.0 {
         check_reveal_wire(std::slice::from_ref(ev), reveal);
-        log.push(format!("{ev:?}"));
+        log.push(format_event(ev, card_names));
     }
 
     let Some(cv) = &view.0 else { return };

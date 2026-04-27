@@ -20,4 +20,4 @@ pub use layout::{
     hand_card_transform, land_card_transform,
 };
 pub use mesh::{create_border_mesh, create_rounded_rect_mesh, BORDER_WIDTH, CORNER_RADIUS};
-pub use spawn::{card_front_material, init_shared_assets, spawn_single_card};
+pub use spawn::{card_back_face_material, card_front_material, init_shared_assets, spawn_single_card};
