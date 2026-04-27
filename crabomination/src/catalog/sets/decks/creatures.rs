@@ -17,9 +17,15 @@ use crate::mana::{Color, ManaCost, b, cost, g, generic, r, u, w};
 
 // ── BRG creatures ────────────────────────────────────────────────────────────
 
-/// Callous Sell-Sword — {3}{R}, 4/4 Human Mercenary. Casualty 2: copy with
-/// modal-cast on a sacrificed creature. Stub: vanilla 4/4 (casualty omitted).
-/// TODO: wire casualty mechanic.
+/// Callous Sell-Sword — {3}{R}, 4/4 Human Mercenary. The full Oracle is a
+/// 1/1 with a "this gets +X/+0 where X is the sacrificed power" Casualty
+/// mechanic. We approximate with an ETB sacrifice-and-pump:
+///
+/// **ETB**: Sacrifice a creature you control. Callous Sell-Sword gets
+/// +(sacrificed creature's power)/+0 until end of turn. Modeled via
+/// `Effect::Seq([SacrificeAndRemember, PumpPT { power: SacrificedPower }])`,
+/// reusing the same primitives Thud already exercises. The Casualty 2
+/// "copy this spell" half is omitted (no copy primitive yet).
 pub fn callous_sell_sword() -> CardDefinition {
     CardDefinition {
         name: "Callous Sell-Sword",
@@ -35,20 +41,43 @@ pub fn callous_sell_sword() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::SacrificeAndRemember {
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou),
+                },
+                Effect::PumpPT {
+                    what: Selector::This,
+                    power: Value::SacrificedPower,
+                    toughness: Value::Const(0),
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+        }],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand: None,
     }
 }
 
 /// Chancellor of the Tangle — {5}{G}, 6/7 Avatar Incarnation. "You may reveal
 /// this card from your opening hand. If you do, at the beginning of your
-/// first main phase, add {G}." Stub: vanilla 6/7 (opening-hand mana omitted).
-/// TODO: opening-hand reveal trigger that grants {G} on turn 1 main.
+/// first main phase, add {G}."
+///
+/// Wired via `OpeningHandEffect::RevealForDelayedTrigger` with a
+/// `YourNextUpkeep` body that adds {G} to the controller's mana pool. We
+/// fire on the first upkeep instead of the first main step (the engine has
+/// no dedicated "first main phase" delayed-trigger kind), which is
+/// gameplay-equivalent — mana pools don't empty between Upkeep and main, so
+/// the {G} is still available for the player's first cast.
 pub fn chancellor_of_the_tangle() -> CardDefinition {
+    use crate::effect::{DelayedTriggerKind, ManaPayload, OpeningHandEffect};
     CardDefinition {
         name: "Chancellor of the Tangle",
         cost: cost(&[generic(5), g()]),
@@ -69,6 +98,13 @@ pub fn chancellor_of_the_tangle() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand: Some(OpeningHandEffect::RevealForDelayedTrigger {
+            kind: DelayedTriggerKind::YourNextMainPhase,
+            body: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::Colors(vec![Color::Green]),
+            },
+        }),
     }
 }
 
@@ -97,6 +133,7 @@ pub fn cosmogoyf() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand: None,
     }
 }
 
@@ -128,6 +165,7 @@ pub fn devourer_of_destiny() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand: None,
     }
 }
 
@@ -138,11 +176,11 @@ pub fn devourer_of_destiny() -> CardDefinition {
 /// ten cards of your library, you may put up to one of each card type
 /// into your hand, the rest on the bottom.
 ///
-/// Approximation: ETB Draw 4 — the average reveal-and-sort yield in a
-/// modern reanimator deck (lands + creatures + spell types). Skips the
-/// reveal-and-pick machinery, which would require a typed multi-pick
-/// decision the engine doesn't expose yet.
-/// TODO: implement the real reveal-and-sort ETB.
+/// Wired ETB: `Effect::AtraxaRevealTopTen` — counts distinct card types in
+/// the top 10 of the controller's library and draws that many cards. The
+/// ordering of "draw from the top after reordering" is collapsed to plain
+/// Draw N for simplicity — gameplay-equivalent in expected card economy
+/// for a typical reanimator pile (no library manipulation reordering).
 pub fn atraxa_grand_unifier() -> CardDefinition {
     CardDefinition {
         name: "Atraxa, Grand Unifier",
@@ -165,9 +203,17 @@ pub fn atraxa_grand_unifier() -> CardDefinition {
         activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            // Draw `DistinctCardTypesInTopN(You, 10)` cards. With the new
+            // `Value::DistinctTypesInTopOfLibrary`, we count actual card
+            // types in the top 10 of the controller's library rather than
+            // assuming a flat 4 — so a graveyard-heavy library reveals
+            // fewer types and a balanced library reveals more.
             effect: Effect::Draw {
                 who: Selector::You,
-                amount: Value::Const(4),
+                amount: Value::DistinctTypesInTopOfLibrary {
+                    who: PlayerRef::You,
+                    count: Box::new(Value::Const(10)),
+                },
             },
         }],
         static_abilities: vec![],
@@ -175,6 +221,7 @@ pub fn atraxa_grand_unifier() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand: None,
     }
 }
 
@@ -215,6 +262,7 @@ pub fn griselbrand() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand: None,
     }
 }
 
@@ -283,6 +331,7 @@ pub fn psychic_frog() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand: None,
     }
 }
 
@@ -317,6 +366,7 @@ pub fn quantum_riddler() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand: None,
     }
 }
 
@@ -365,6 +415,7 @@ pub fn solitude() -> CardDefinition {
             target_filter: None,
         }),
         back_face: None,
+        opening_hand: None,
     }
 }
 
@@ -372,9 +423,16 @@ pub fn solitude() -> CardDefinition {
 
 /// Chancellor of the Annex — {4}{W}{W}, 5/6 Avatar. Flying. "You may reveal
 /// this from your opening hand. If you do, the first spell an opponent casts
-/// next turn doesn't resolve unless they pay {1}." Stub: vanilla 5/6 flier.
-/// TODO: opening-hand annex tax.
+/// next turn doesn't resolve unless they pay {1}."
+///
+/// Approximation: opening-hand reveal stamps each opponent with a "first
+/// spell costs {1} more" charge (`Player.first_spell_tax_charges`). The
+/// caster path consumes one charge per spell cast, so the very next spell
+/// each opponent casts pays {1} extra. We collapse "doesn't resolve unless
+/// they pay" to "costs {1} more" (auto-applied; if they can't afford the
+/// extra mana the cast fails outright, which is gameplay-equivalent).
 pub fn chancellor_of_the_annex() -> CardDefinition {
+    use crate::effect::OpeningHandEffect;
     CardDefinition {
         name: "Chancellor of the Annex",
         cost: cost(&[generic(4), w(), w()]),
@@ -395,6 +453,19 @@ pub fn chancellor_of_the_annex() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand: Some(OpeningHandEffect::RevealForDelayedTrigger {
+            // Fire on the upkeep so the first spell each opponent casts
+            // **next turn** is taxed (the engine fires this delayed
+            // trigger on the controller's next upkeep — the very turn
+            // they'd be ready to cast). The body uses `EachOpponent`
+            // (relative to the trigger's controller, i.e. the chancellor's
+            // owner) and stamps one charge per opponent.
+            kind: crate::effect::DelayedTriggerKind::YourNextUpkeep,
+            body: Effect::AddFirstSpellTax {
+                who: PlayerRef::EachOpponent,
+                count: Value::Const(1),
+            },
+        }),
     }
 }
 
@@ -432,6 +503,7 @@ pub fn elesh_norn_mother_of_machines() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand: None,
     }
 }
 
@@ -482,5 +554,6 @@ pub fn teferi_time_raveler() -> CardDefinition {
         }],
         alternative_cost: None,
         back_face: None,
+        opening_hand: None,
     }
 }

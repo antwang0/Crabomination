@@ -24,5 +24,6 @@ pub fn mourning_thrull() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand: None,
     }
 }

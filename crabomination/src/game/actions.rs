@@ -43,32 +43,50 @@ fn converge_count(before: &crate::mana::ManaPool, after: &crate::mana::ManaPool)
     count
 }
 
-/// Walk the battlefield's static abilities to compute the total extra
-/// generic mana the caster owes for casting `card`. Currently only honors
-/// `StaticEffect::AdditionalCostAfterFirstSpell` (Damping Sphere): if the
-/// caster has already cast at least one spell this turn and the spell
-/// matches the static's `filter`, charge `amount` more.
+/// Walk the battlefield's static abilities + per-player tax charges to
+/// compute the total extra generic mana the caster owes for casting `card`.
+///
+/// Honors:
+///   * `StaticEffect::AdditionalCostAfterFirstSpell` (Damping Sphere): if
+///     the caster has already cast at least one spell this turn and the
+///     spell matches the static's `filter`, charge `amount` more.
+///   * `Player.first_spell_tax_charges` (Chancellor of the Annex): each
+///     pending charge taxes the caster's *next* spell {1} more. Consumed by
+///     the caller on a successful cast (we only **read** here so callers
+///     can see the tax before payment; the caster path decrements after).
 fn extra_cost_for_spell(
     state: &crate::game::GameState,
     caster: usize,
     card: &crate::card::CardInstance,
 ) -> u32 {
     use crate::effect::StaticEffect;
-    let already_cast = state.players[caster].spells_cast_this_turn;
-    if already_cast == 0 {
-        return 0;
-    }
     let mut tax = 0u32;
-    for src in &state.battlefield {
-        for sa in &src.definition.static_abilities {
-            if let StaticEffect::AdditionalCostAfterFirstSpell { filter, amount } = &sa.effect {
-                if state.evaluate_requirement_on_card(filter, card, caster) {
-                    tax += amount;
+    if state.players[caster].first_spell_tax_charges > 0 {
+        tax += 1;
+    }
+    let already_cast = state.players[caster].spells_cast_this_turn;
+    if already_cast > 0 {
+        for src in &state.battlefield {
+            for sa in &src.definition.static_abilities {
+                if let StaticEffect::AdditionalCostAfterFirstSpell { filter, amount } = &sa.effect
+                {
+                    if state.evaluate_requirement_on_card(filter, card, caster) {
+                        tax += amount;
+                    }
                 }
             }
         }
     }
     tax
+}
+
+/// Consume one Chancellor-of-the-Annex tax charge from `caster`, if any.
+/// Called by every cast path immediately after the spell successfully
+/// resolves payment, so each first-spell-tax charge is single-use.
+pub(crate) fn consume_first_spell_tax(state: &mut crate::game::GameState, caster: usize) {
+    if state.players[caster].first_spell_tax_charges > 0 {
+        state.players[caster].first_spell_tax_charges -= 1;
+    }
 }
 
 /// Elesh Norn, Mother of Machines: count how many times an ETB trigger
@@ -380,6 +398,7 @@ impl GameState {
         // Track spells cast this turn (for Storm, etc.).
         self.spells_cast_this_turn += 1;
         self.players[p].spells_cast_this_turn += 1;
+        consume_first_spell_tax(self, p);
 
         // Collect "when you cast this spell, ..." (SelfSource SpellCast)
         // triggers off the spell before it moves into the stack item; we'll
@@ -693,10 +712,17 @@ impl GameState {
     /// Validate that a target is legally targetable by the given controller.
     ///
     /// Returns an error if the target has Hexproof (opponent) or Shroud (anyone),
-    /// or has Protection from the caster's color identity.
+    /// or has Protection from the caster's color identity. For player targets,
+    /// also checks the `ControllerHasHexproof` static (Leyline of Sanctity).
     fn check_target_legality(&self, target: &Target, caster: usize) -> Result<(), GameError> {
-        let Target::Permanent(cid) = target else {
-            return Ok(()); // Player targets have no hexproof/shroud
+        let cid = match target {
+            Target::Player(p) => {
+                if *p != caster && self.player_has_static_hexproof(*p) {
+                    return Err(GameError::InvalidTarget);
+                }
+                return Ok(());
+            }
+            Target::Permanent(c) => c,
         };
         let Some(card) = self.battlefield_find(*cid) else {
             return Ok(());
@@ -709,6 +735,19 @@ impl GameState {
             return Err(GameError::TargetHasHexproof(*cid));
         }
         Ok(())
+    }
+
+    /// True if `player` controls any permanent granting "you have hexproof"
+    /// via `StaticEffect::ControllerHasHexproof` (Leyline of Sanctity).
+    pub(crate) fn player_has_static_hexproof(&self, player: usize) -> bool {
+        use crate::effect::StaticEffect;
+        self.battlefield.iter().any(|c| {
+            c.controller == player
+                && c.definition
+                    .static_abilities
+                    .iter()
+                    .any(|sa| matches!(sa.effect, StaticEffect::ControllerHasHexproof))
+        })
     }
 
     /// Push `SpellCast` triggered abilities (e.g. Prowess) onto the stack.

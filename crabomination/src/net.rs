@@ -248,6 +248,10 @@ pub enum DecisionWire {
         player: usize,
         hand: Vec<(CardId, String)>,
         mulligans_taken: usize,
+        /// IDs of in-hand Serum-Powder-style mulligan helpers. The client
+        /// renders one button per ID alongside the standard Keep/Mulligan
+        /// pair; clicking sends `DecisionAnswer::SerumPowder(id)`.
+        serum_powders: Vec<CardId>,
     },
 }
 
@@ -291,11 +295,14 @@ impl From<&Decision> for DecisionWire {
                 count: *count,
                 hand: hand.iter().map(|(id, n)| (*id, (*n).to_string())).collect(),
             },
-            Decision::Mulligan { player, hand, mulligans_taken } => DecisionWire::Mulligan {
-                player: *player,
-                hand: hand.iter().map(|(id, n)| (*id, (*n).to_string())).collect(),
-                mulligans_taken: *mulligans_taken,
-            },
+            Decision::Mulligan { player, hand, mulligans_taken, serum_powders } => {
+                DecisionWire::Mulligan {
+                    player: *player,
+                    hand: hand.iter().map(|(id, n)| (*id, (*n).to_string())).collect(),
+                    mulligans_taken: *mulligans_taken,
+                    serum_powders: serum_powders.clone(),
+                }
+            }
         }
     }
 }

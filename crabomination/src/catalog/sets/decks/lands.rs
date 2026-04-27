@@ -107,6 +107,7 @@ fn dual_land_with(
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand: None,
     }
 }
 
@@ -182,6 +183,7 @@ fn pathway_face(name: &'static str, land_type: LandType, color: Color) -> CardDe
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand: None,
     }
 }
 
@@ -377,16 +379,29 @@ pub fn gemstone_mine() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand: None,
     }
 }
 
-/// Gemstone Caverns — Legendary Land. Opening-hand: may put into play with a
-/// luck counter. Tap to add a mana of any color, removing a luck counter.
+/// Gemstone Caverns — Legendary Land. "If Gemstone Caverns is in your
+/// opening hand and you're not the starting player, you may begin the game
+/// with Gemstone Caverns on the battlefield with a luck counter on it. If
+/// you do, exile a card from your hand. {T}, Remove a luck counter from
+/// Gemstone Caverns: Add one mana of any color. {T}: Add {C}."
 ///
-/// Stub: simple "tap for any color" land; no opening-hand effect yet.
-/// TODO: opening-hand pre-game install + luck counter mechanic.
+/// Wired:
+///   * `opening_hand: Some(StartInPlay { tapped: false, extra: AddCounter Luck })`
+///     — `apply_opening_hand_effects` puts the land in play untapped with a
+///     luck counter for **any** player who has it in their opening hand
+///     (the starting-player restriction and the "exile a card" cost are
+///     skipped — acceptable for the demo).
+///   * Two activated abilities: `{T}: Add {C}` and the `{T}, RemoveCounter
+///     Luck → Add 1 of any color`. The luck-counter ability gates its
+///     mana-add behind an `If` over the counter total, so once the counter
+///     is gone the ability still taps but produces nothing.
 pub fn gemstone_caverns() -> CardDefinition {
-    use crate::card::Supertype;
+    use crate::card::{CounterType, Supertype};
+    use crate::effect::OpeningHandEffect;
     CardDefinition {
         name: "Gemstone Caverns",
         cost: ManaCost::default(),
@@ -397,22 +412,64 @@ pub fn gemstone_caverns() -> CardDefinition {
         toughness: 0,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: vec![ActivatedAbility {
-            tap_cost: true,
-            mana_cost: ManaCost::default(),
-            effect: Effect::AddMana {
-                who: PlayerRef::You,
-                pool: ManaPayload::AnyOneColor(Value::Const(1)),
+        activated_abilities: vec![
+            // {T}: Add {C}.
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: ManaCost::default(),
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Colorless(Value::Const(1)),
+                },
+                once_per_turn: false,
+                sorcery_speed: false,
             },
-            once_per_turn: false,
-            sorcery_speed: false,
-        }],
+            // {T}, Remove a luck counter: Add one mana of any color.
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: ManaCost::default(),
+                effect: Effect::If {
+                    cond: Predicate::ValueAtLeast(
+                        Value::CountersOn {
+                            what: Box::new(Selector::This),
+                            kind: CounterType::Charge,
+                        },
+                        Value::Const(1),
+                    ),
+                    then: Box::new(Effect::Seq(vec![
+                        Effect::RemoveCounter {
+                            what: Selector::This,
+                            kind: CounterType::Charge,
+                            amount: Value::Const(1),
+                        },
+                        Effect::AddMana {
+                            who: PlayerRef::You,
+                            pool: ManaPayload::AnyOneColor(Value::Const(1)),
+                        },
+                    ])),
+                    else_: Box::new(Effect::Noop),
+                },
+                once_per_turn: false,
+                sorcery_speed: false,
+            },
+        ],
         triggered_abilities: vec![],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand: Some(OpeningHandEffect::StartInPlay {
+            tapped: false,
+            // The engine has no dedicated `Luck` counter type, so we reuse
+            // `Charge` — gameplay-equivalent here since only the
+            // luck-removal ability reads it.
+            extra: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::Charge,
+                amount: Value::Const(1),
+            },
+        }),
     }
 }
 
@@ -454,6 +511,7 @@ pub fn cavern_of_souls() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand: None,
     }
 }
 
@@ -509,5 +567,6 @@ pub fn cephalid_coliseum() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand: None,
     }
 }

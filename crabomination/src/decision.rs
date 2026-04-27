@@ -62,11 +62,15 @@ pub enum Decision {
     },
 
     /// Opening-hand keep-or-mulligan decision. The player sees their current
-    /// hand and decides whether to keep or shuffle back and draw again.
+    /// hand and decides whether to keep, shuffle back and draw again, or use
+    /// a Serum Powder to exile the hand and draw a fresh seven (the
+    /// `serum_powders` field lists the mulligan-helper card IDs in hand —
+    /// empty when none are present).
     Mulligan {
         player: usize,
         hand: Vec<(CardId, &'static str)>,
         mulligans_taken: usize,
+        serum_powders: Vec<CardId>,
     },
 }
 
@@ -91,6 +95,10 @@ pub enum DecisionAnswer {
     Keep,
     /// Shuffle the current hand back and draw a new one.
     TakeMulligan,
+    /// Serum Powder: exile the current hand (including the named Serum
+    /// Powder) and draw a fresh seven cards. Doesn't count as a mulligan
+    /// (no London-mulligan card-bottoming on subsequent keep).
+    SerumPowder(CardId),
 }
 
 pub trait Decider {
@@ -125,6 +133,7 @@ impl Decider for AutoDecider {
                 hand.iter().take(*count).map(|(id, _)| *id).collect(),
             ),
             Decision::Mulligan { .. } => DecisionAnswer::Keep,
+            // (above match handles every variant; no fall-through needed)
         }
     }
 }

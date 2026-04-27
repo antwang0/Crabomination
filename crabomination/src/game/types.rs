@@ -158,6 +158,12 @@ pub enum DelayedKind {
     YourNextUpkeep,
     /// At the beginning of the next end step (any player's).
     NextEndStep,
+    /// At the beginning of `controller`'s next pre-combat main phase.
+    /// Used by Chancellor of the Tangle ("at the beginning of your first
+    /// main phase, add {G}"). Fires once on the controller's PreCombatMain
+    /// step so the mana lands in the pool with main-phase windows still
+    /// open (mana pools empty on step transition, MTG rule 500.4).
+    YourNextMainPhase,
 }
 
 // ── Pending decisions (suspendable resolution) ───────────────────────────────

@@ -558,10 +558,15 @@ impl GameState {
     }
 
     fn deal_to_hand(&mut self, seat: usize, count: usize) {
+        // Top of library is `library[0]` — `pop()` would deal from the
+        // bottom, which produces the wrong opening hand for unshuffled
+        // (test-fixture) decks. Drain the top `count` cards instead.
         for _ in 0..count {
-            if let Some(card) = self.players[seat].library.pop() {
-                self.players[seat].hand.push(card);
+            if self.players[seat].library.is_empty() {
+                break;
             }
+            let card = self.players[seat].library.remove(0);
+            self.players[seat].hand.push(card);
         }
     }
 
@@ -576,12 +581,22 @@ impl GameState {
     }
 
     fn set_mulligan_decision(&mut self, player: usize, mulligans_taken: usize, next_player: Option<usize>) {
-        let hand = self.players[player].hand
+        let hand: Vec<_> = self.players[player].hand
             .iter()
             .map(|c| (c.id, c.definition.name))
             .collect();
+        // Surface any in-hand Serum Powder–style mulligan helpers so the
+        // decider can pick an alternative answer.
+        let serum_powders: Vec<_> = self.players[player].hand
+            .iter()
+            .filter(|c| matches!(
+                c.definition.opening_hand,
+                Some(crate::effect::OpeningHandEffect::MulliganHelper),
+            ))
+            .map(|c| c.id)
+            .collect();
         self.pending_decision = Some(PendingDecision {
-            decision: Decision::Mulligan { player, hand, mulligans_taken },
+            decision: Decision::Mulligan { player, hand, mulligans_taken, serum_powders },
             resume: ResumeContext::Mulligan { player, mulligans_taken, next_player },
         });
     }
@@ -690,6 +705,34 @@ impl GameState {
                         self.advance_mulligan(next_player);
                         return Ok(vec![]);
                     }
+                    DecisionAnswer::SerumPowder(powder_id) => {
+                        // Serum Powder: exile the entire current hand (the
+                        // powder card itself goes with it), then draw a new
+                        // seven. Doesn't bump `mulligans_taken` — Serum
+                        // Powder is intentionally separate from the London
+                        // mulligan ladder (so multiple powders can stack
+                        // without progressively shrinking the eventual hand).
+                        // Reject if the named Serum Powder isn't actually in
+                        // hand or doesn't carry the `MulliganHelper` flag.
+                        let valid = self.players[player].hand.iter().any(|c| {
+                            c.id == powder_id
+                                && matches!(
+                                    c.definition.opening_hand,
+                                    Some(crate::effect::OpeningHandEffect::MulliganHelper),
+                                )
+                        });
+                        if !valid {
+                            return Err(GameError::DecisionAnswerMismatch);
+                        }
+                        let exiled: Vec<crate::card::CardInstance> =
+                            std::mem::take(&mut self.players[player].hand);
+                        for card in exiled {
+                            self.exile.push(card);
+                        }
+                        self.deal_to_hand(player, 7);
+                        self.set_mulligan_decision(player, mulligans_taken, next_player);
+                        return Ok(vec![]);
+                    }
                     _ => return Err(GameError::DecisionAnswerMismatch),
                 }
             }
@@ -704,9 +747,80 @@ impl GameState {
         match next_player {
             Some(p) => self.set_mulligan_decision(p, 0, None),
             None => {
-                // All players kept — game begins. Give priority to seat 0.
+                // All players kept — apply opening-hand effects (Leyline of
+                // Sanctity / Gemstone Caverns start in play; Chancellor reveals
+                // schedule delayed triggers) and start the game with priority
+                // on seat 0.
+                self.apply_opening_hand_effects();
                 self.pending_decision = None;
                 self.give_priority_to_active();
+            }
+        }
+    }
+
+    /// Walk every player's opening hand and apply each card's
+    /// `OpeningHandEffect`. The default `Decider` answers "yes" to every
+    /// optional reveal — the `AutoDecider` and the bot benefit from these
+    /// effects in the demo decks, and a future UI can deny the reveal by
+    /// returning `Bool(false)` from an `OptionalTrigger` decision (not yet
+    /// surfaced — opening-hand effects auto-fire today).
+    pub(crate) fn apply_opening_hand_effects(&mut self) {
+        let n = self.players.len();
+        for p in 0..n {
+            // Snapshot ids first so we can iterate without aliasing the hand.
+            let ids: Vec<crate::card::CardId> =
+                self.players[p].hand.iter().map(|c| c.id).collect();
+            for cid in ids {
+                let oh = self.players[p]
+                    .hand
+                    .iter()
+                    .find(|c| c.id == cid)
+                    .and_then(|c| c.definition.opening_hand.clone());
+                let Some(oh) = oh else { continue };
+                match oh {
+                    crate::effect::OpeningHandEffect::StartInPlay { tapped, extra } => {
+                        // Pull the card out of hand and place it on the
+                        // battlefield under its owner's control.
+                        if let Some(pos) = self.players[p].hand.iter().position(|c| c.id == cid) {
+                            let mut card = self.players[p].hand.remove(pos);
+                            card.controller = p;
+                            card.tapped = tapped;
+                            card.summoning_sick = card.definition.is_creature();
+                            self.battlefield.push(card);
+                            // Run the optional follow-up effect (e.g. Gemstone
+                            // Caverns wants a luck counter on its newly-entered
+                            // self).
+                            if !matches!(extra, crate::effect::Effect::Noop) {
+                                let ctx = crate::game::effects::EffectContext::for_ability(
+                                    cid, p, None,
+                                );
+                                let _ = self.resolve_effect(&extra, &ctx);
+                            }
+                            // Fire any self-source ETB triggers (the same hook
+                            // play_land uses), so static-as-replaced abilities
+                            // and "enters with N counters" still fire if the
+                            // card uses that idiom in addition to `extra`.
+                            self.fire_self_etb_triggers(cid, p);
+                        }
+                    }
+                    crate::effect::OpeningHandEffect::RevealForDelayedTrigger { kind, body } => {
+                        // Card stays in hand; register a delayed trigger that
+                        // fires later (next upkeep / first main / end step).
+                        use crate::game::types::DelayedTrigger;
+                        let dk = crate::game::effects::delayed_kind_from_effect(kind);
+                        self.delayed_triggers.push(DelayedTrigger {
+                            controller: p,
+                            source: cid,
+                            kind: dk,
+                            effect: body,
+                            target: None,
+                            fires_once: true,
+                        });
+                    }
+                    crate::effect::OpeningHandEffect::MulliganHelper => {
+                        // Surfaces during mulligan only; nothing to do here.
+                    }
+                }
             }
         }
     }
@@ -1053,7 +1167,8 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             StaticEffect::EntersTapped { .. }
             | StaticEffect::ExtraLandPerTurn
             | StaticEffect::CostReduction { .. }
-            | StaticEffect::AdditionalCostAfterFirstSpell { .. } => vec![],
+            | StaticEffect::AdditionalCostAfterFirstSpell { .. }
+            | StaticEffect::ControllerHasHexproof => vec![],
         })
         .collect()
 }

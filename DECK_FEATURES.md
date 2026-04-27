@@ -21,18 +21,18 @@ Both decks are wired as the default demo match (`crabomination::demo::build_demo
 | 4 | Blackcleave Cliffs | ✅ | BR fastland: ETB-trigger checks lands-you-control ≥ 4 (post-ETB) and self-taps. |
 | 2 | Blightstep Pathway | ✅ | B/R MDFC. Front face is `Blightstep Pathway` (Swamp, taps {B}); back face is `Searstep Pathway` (Mountain, taps {R}). Played via `PlayLand(id)` (front) or `PlayLandBack(id)` (back). |
 | 4 | Blooming Marsh | ✅ | BG fastland (same conditional ETB-tap trigger). |
-| 1 | Callous Sell-Sword | ⏳ | R creature with X-cost on cast |
-| 4 | Chancellor of the Tangle | ⏳ | 6/7 G; opening-hand reveal adds {G} |
+| 1 | Callous Sell-Sword | 🟡 | 4/4 with ETB "sacrifice a creature; +(sacrificed power)/+0 EOT". Casualty 2 "copy this spell" half omitted (no copy primitive yet). |
+| 4 | Chancellor of the Tangle | ✅ | 6/7 G. Opening-hand reveal registers a `YourNextMainPhase` delayed trigger that adds {G} on the controller's first main step (mana pools persist into main, so it can be spent that turn). |
 | 4 | Copperline Gorge | ✅ | RG fastland (same conditional ETB-tap trigger). |
 | 4 | Cosmogoyf | ✅ | Dynamic P/T = (distinct card types in all graveyards) / (count + 1) via injected layer-7 `SetPowerToughness` effect at `compute_battlefield` time. |
 | 2 | Darkbore Pathway | ✅ | B/G MDFC. Front face is `Darkbore Pathway` (Swamp, taps {B}); back face is `Slitherbore Pathway` (Forest, taps {G}). Played via `PlayLand(id)` (front) or `PlayLandBack(id)` (back). |
 | 4 | Devourer of Destiny | ✅ | 7/5 colorless Eldrazi. Real on-cast Scry 2 via `EventKind::SpellCast` + `EventScope::SelfSource` — the scry trigger goes on the stack above Devourer and resolves first (so a counter can't suppress the scry). Test: `devourer_of_destiny_etb_scries_two`. |
-| 4 | Gemstone Caverns | ⏳ | Opening-hand: ETB with luck counter |
+| 4 | Gemstone Caverns | ✅ | Opening-hand: starts in play untapped with one luck counter (modeled as a Charge counter — gameplay-equivalent here since only the mana ability reads it). Two activated abilities: `{T}: Add {C}` and `{T}, RemoveCounter Luck → Add 1 of any color`. |
 | 4 | Gemstone Mine | ✅ | ETB self-source trigger adds 3 charge counters. `{T}` ability folds the cost into resolution: `RemoveCounter → AddMana(any one color) → If(charge ≤ 0, Move(Self → Graveyard))`. Taps three times then sacrifices itself. Tests: `gemstone_mine_etb_with_three_charge_counters`, `gemstone_mine_taps_three_times_then_sacrifices`. |
 | 4 | Pact of Negation | ✅ | Counterspell + delayed `PayOrLoseGame` trigger on next upkeep. Auto-pays if affordable; eliminates caster otherwise. |
-| 4 | Plunge into Darkness | 🟡 | `ChooseMode([SacrificeAndRemember + GainLife 3, Noop])`. Mode 0 sacrifices one creature for 3 life (instead of "any number"). Mode 1 (pay-X-life-look-at-X) still ⏳. |
-| 4 | Serum Powder | ⏳ | Mulligan helper: exile hand, draw new |
-| 4 | Spoils of the Vault | 🟡 | Approximated as `Search(Any → Hand) + LoseLife(3)`. Skips the reveal-until-find / variable life cost (no naming primitive yet). |
+| 4 | Plunge into Darkness | 🟡 | `ChooseMode([SacrificeAndRemember + GainLife 3, LoseLife 4 + Search → Hand])`. Mode 0 sacrifices one creature for 3 life. Mode 1 pays 4 life and tutors any card (approximation of "pay X life, look at top X, take one"). Tests: `plunge_into_darkness_mode_one_pays_four_life_and_tutors`. |
+| 4 | Serum Powder | ✅ | Mulligan helper: opening-hand reveals `MulliganHelper`, surfaced via `Decision::Mulligan.serum_powders`. Answering with `DecisionAnswer::SerumPowder(id)` exiles the entire hand and deals a fresh 7. Doesn't bump the London-mulligan ladder, so multiple powders stack. {3} artifact, {T}: Add {1} otherwise. |
+| 4 | Spoils of the Vault | 🟡 | Wired to `Effect::RevealUntilFind { find: Any, cap: 10, life_per_revealed: 1 }`: walks the top of the library until a match (or cap), mills the misses, deducts 1 life per revealed card. With `find: Any` the very first card is taken (1 life). The "name a card" half is still pending a naming primitive. |
 | 2 | Summoner's Pact | ✅ | Search green creature into hand + delayed `PayOrLoseGame` for {2}{G}{G} on next upkeep. |
 | 1 | Swamp | ✅ | basic |
 | 4 | Thud | ✅ | `Seq([SacrificeAndRemember, DealDamage(SacrificedPower)])` — auto-picks first eligible creature via `AutoDecider`. Sac-as-additional-cost approximated by sac-on-resolution. |
@@ -42,17 +42,17 @@ Both decks are wired as the default demo match (`crabomination::demo::build_demo
 | Count | Card | Status | Notes |
 |---|---|---|---|
 | 3 | Cavern of Souls | 🟡 | Taps for {C}. Cast paths (`cast_spell`/`cast_spell_alternative`/`cast_flashback`) now flag any creature spell as `StackItem::Spell.uncounterable = true` if the caster controls a Cavern; `CounterSpell` skips those. The "name a type" gate + mana-provenance restriction is collapsed (any Cavern protects any creature) — acceptable for the demo deck. Tests: `cavern_of_souls_makes_creatures_uncounterable`, `cavern_of_souls_does_not_protect_noncreature_spells`. |
-| 4 | Chancellor of the Annex | ⏳ | 5/6 W; opening-hand reveal: opponent's first spell costs {1} more |
+| 4 | Chancellor of the Annex | ✅ | 5/6 W flying. Opening-hand reveal registers a `YourNextMainPhase` delayed trigger whose body `AddFirstSpellTax(EachOpponent, 1)` stamps one tax charge on each opponent. Each charge taxes that player's next spell {1} more (consumed at cast time via `consume_first_spell_tax`). The "doesn't resolve unless they pay" half collapses to "costs {1} more" — auto-applied; if they can't pay the cast fails outright. |
 | 1 | Forest | ✅ | basic |
 | 3 | Inquisition of Kozilek | 🟡 | `DiscardChosen(EachOpponent, Nonland ∧ ManaValueAtMost(3))`. Caster auto-picks first matching card. UI for the human picker still TODO. |
-| 4 | Leyline of Sanctity | ⏳ | Opening-hand: starts in play; you have hexproof |
+| 4 | Leyline of Sanctity | ✅ | Opening-hand: starts in play under owner's control via `OpeningHandEffect::StartInPlay`. New `StaticEffect::ControllerHasHexproof` + `player_has_static_hexproof` check in `check_target_legality` rejects opponent-controlled `Target::Player(_)` aimed at the leyline's controller. Tests: `leyline_of_sanctity_starts_in_play_after_mulligan`, `leyline_of_sanctity_grants_player_hexproof`. |
 
 
 ### Goryo's main deck
 
 | Count | Card | Status | Notes |
 |---|---|---|---|
-| 4 | Atraxa, Grand Unifier | 🟡 | 7/7 Phyrexian Praetor with flying / vigilance / deathtouch / lifelink. ETB reveal-and-sort approximated as `Draw 4` (rough average yield). |
+| 4 | Atraxa, Grand Unifier | 🟡 | 7/7 Phyrexian Praetor with flying / vigilance / deathtouch / lifelink. ETB now uses `Value::DistinctTypesInTopOfLibrary { who: You, count: 10 }` — counts actual distinct card types in the top 10 of the controller's library and draws that many cards (instead of a flat 4). Reordering after the reveal is still flattened. |
 | 1 | Cephalid Coliseum | ✅ | Tap for {U}; ETB tapped; `{2}{U}, {T}, Sacrifice: Each player draws three then discards three` wired (sacrifice modeled as the first step of the resolved effect). Threshold gate is omitted — the ability is always the post-threshold version. |
 | 4 | Ephemerate | ✅ | `Seq([Exile target your creature, Move target back to battlefield])` + `Keyword::Rebound`. ETB triggers refire on flicker. Rebound: cast-from-hand spells with the keyword exile on resolution and schedule a `YourNextUpkeep` `DelayedTrigger` whose body re-runs the spell's effect with a fresh auto-target. Test: `ephemerate_rebound_exiles_then_recasts_next_upkeep`. |
 | 4 | Faithful Mending | ✅ | `Seq([ChooseMode([Discard 2, Discard 1, Noop]), Draw 2, GainLife 2])` + `Keyword::Flashback({1}{B})`. Mode 0 is the full discard so AutoDecider/bot keep the gameplay-optimal pick (graveyard-fill); the UI can pick mode 1 or 2. |
@@ -60,7 +60,7 @@ Both decks are wired as the default demo match (`crabomination::demo::build_demo
 | 3 | Force of Negation | ✅ | Counter noncreature spell; alt pitch cost wired with `not_your_turn_only: true`. `cast_spell_alternative` rejects the alt cast on the caster's own turn. |
 | 1 | Godless Shrine | ✅ | WB shockland: `ChooseMode([LoseLife 2, Tap This])` ETB trigger. AutoDecider picks mode 0 (pay 2 life, ETB untapped). |
 | 4 | Goryo's Vengeance | ✅ | Reanimate legendary creature → grant haste until end of turn → delayed exile-at-end-step. Full Oracle. |
-| 1 | Griselbrand | ⏳ | 7/7 Demon flying lifelink; pay 7 life draw 7 |
+| 1 | Griselbrand | ✅ | 7/7 Legendary Demon, flying + lifelink. Activated ability `Pay 7 life: Draw 7 cards` modeled as `Seq([LoseLife 7, Draw 7])`. |
 | 1 | Hallowed Fountain | ✅ | WU shockland (same `ChooseMode` pay-2-or-tap ETB trigger). |
 | 1 | Island | ✅ | basic |
 | 3 | Marsh Flats | ✅ | fetchland |
@@ -100,8 +100,8 @@ Both decks are wired as the default demo match (`crabomination::demo::build_demo
 | Rebound (cast from exile next upkeep) | ✅ | Ephemerate. New `Keyword::Rebound` + `CardInstance.cast_from_hand` flag (set by `cast_spell` and `cast_spell_alternative`). `continue_spell_resolution` checks for the combo: rebound spells go to exile and register a `YourNextUpkeep` delayed trigger whose body is the spell's own effect. The fire path now auto-targets when the trigger has no captured target, so the rebound recast picks a fresh creature each fire. Modeled as effect-replay rather than true cast-from-exile (no on-cast triggers from the recast), which is gameplay-equivalent for Ephemerate. |
 | Flicker (exile and return to play) | ✅ | Ephemerate. `Effect::Seq([Exile target, Move target → battlefield])` paired with the new `place_card_in_dest::Battlefield` calling `fire_self_etb_triggers` so the refired ETB actually fires. |
 | Convoke / Converge cost-reduction | ✅ | New `GameAction::CastSpellConvoke { card_id, target, mode, x_value, convoke_creatures }` + internal `cast_spell_with_convoke`. Each listed creature is validated (untapped, controlled by caster, spell has `Keyword::Convoke`), tapped, and contributes {1} generic mana to the player's pool before paying the cost. Converge is computed by snapshotting the mana pool before paying and counting distinct colors that decreased; the count is stashed on `StackItem::Spell.converged_value` and threaded through to `EffectContext`. New `Value::ConvergedValue` reads it inside the spell's effect. Currently: convoke pips contribute generic only (don't raise converge). Used by Prismatic Ending, Pest Control, Wrath of the Skies. |
-| Opening-hand effects (begin in play / replace draws) | ⏳ | Chancellor of the Tangle, Chancellor of the Annex, Leyline of Sanctity, Gemstone Caverns, Serum Powder |
-| Reveal-and-sort ETB (one of each card type) | 🟡 | Atraxa, Grand Unifier approximates as ETB Draw 4. Real reveal-then-multi-pick (one per card type) still ⏳. |
+| Opening-hand effects (begin in play / replace draws) | ✅ | New `OpeningHandEffect` enum + `CardDefinition.opening_hand` field. `apply_opening_hand_effects` runs post-mulligan and dispatches: `StartInPlay { tapped, extra }` (Leyline, Gemstone Caverns), `RevealForDelayedTrigger { kind, body }` (Chancellor of the Tangle, Chancellor of the Annex), `MulliganHelper` (Serum Powder — surfaces in the mulligan decision). `Decision::Mulligan` gained a `serum_powders: Vec<CardId>` field; new `DecisionAnswer::SerumPowder(id)` exiles the hand and redraws. New `DelayedKind::YourNextMainPhase` so chancellor mana lands during main rather than getting emptied between steps. |
+| Reveal-and-sort ETB (one of each card type) | 🟡 | Atraxa, Grand Unifier now uses `Value::DistinctTypesInTopOfLibrary` to draw N cards where N = distinct types in the top 10. Real reveal-then-multi-pick (typed library reorder + one-per-type pick UI) still ⏳. |
 | Static cost increase + storm tax | 🟡 | Damping Sphere's "second-and-onwards spells cost {1} more" wired via `StaticEffect::AdditionalCostAfterFirstSpell { filter, amount }` + new per-player `Player.spells_cast_this_turn` counter (reset on `do_untap`). Cast paths walk active static abilities and tack the tax onto the cost. Storm-style scaling and Damping Sphere's land-output clause still ⏳. |
 | ETB-trigger replacement (suppress / double) | ✅ | Elesh Norn, Mother of Machines via `etb_trigger_multiplier(state, etb_controller)` — returns 0 (any opp Norn → suppress) or `1 + your_norns` (each Norn on your side adds an extra fire). Hooked into both `fire_self_etb_triggers` and the cast-resolution ETB push paths in `stack.rs` (self-source AND `AnotherOfYours`). `continue_trigger_resolution` re-picks a fresh auto-target if the stored one is no longer valid, so doubled triggers don't all fizzle on a single shared target. |
 | Spell-timing restriction static | ⏳ | Teferi, Time Raveler |
@@ -114,9 +114,9 @@ Both decks are wired as the default demo match (`crabomination::demo::build_demo
 | Fastland conditional ETB-tapped | ✅ | Blackcleave Cliffs, Blooming Marsh, Copperline Gorge. ETB trigger uses `Effect::If` over `Predicate::SelectorCountAtLeast` of "lands you control" (≥ 4 post-ETB). |
 | Activated land mill (Cephalid Coliseum) | ✅ | Cephalid Coliseum: ActivatedAbility(`{2}{U}, {T}`, sacrifice-as-first-effect-step, then `Draw 3` and `Discard 3` for `EachPlayer`). |
 | Tarmogoyf-style P/T from graveyard | ✅ | Cosmogoyf (via inline `compute_battlefield` injection of a layer-7 set-PT effect with the live graveyard card-type count). |
-| X-cost creature side-effects | ⏳ | Callous Sell-Sword |
+| X-cost creature side-effects | 🟡 | Callous Sell-Sword now ETBs via `Seq([SacrificeAndRemember, PumpPT { power: SacrificedPower, EOT }])`. Casualty's "copy this spell" branch still ⏳ (no spell-copy-modal primitive). |
 | Sacrifice-as-cost effects | 🟡 | Thud ✅ via `SacrificeAndRemember` + `Value::SacrificedPower`; Plunge into Darkness still ⏳. |
-| Reveal-until-find search | 🟡 | Spoils of the Vault approximates as `Search(Any → Hand) + LoseLife(3)`. Naming primitive + reveal-until-find loop still ⏳. |
+| Reveal-until-find search | ✅ | New `Effect::RevealUntilFind { who, find, to, cap, life_per_revealed }` walks the top of `who`'s library until a match (up to `cap` reveals), mills the misses, and pays `life_per_revealed × revealed` life. Used by Spoils of the Vault. The "name a card" half (matching the named card via `find`) is still pending a naming primitive. |
 | Loyalty abilities w/ static | 🟡 | Teferi, Time Raveler **-3** wired (bounce + draw). +1 (sorcery-as-flash) and the static spell-timing veto still ⏳. |
 | On-cast self triggers ("when you cast this …") | ✅ | Devourer of Destiny (Scry 2 on cast), Quantum Riddler (Draw 1 on cast). Each cast path (`cast_spell`, `cast_spell_alternative`, `cast_flashback`) collects `EventKind::SpellCast` + `EventScope::SelfSource` triggers off the just-cast card and pushes them onto the stack **above** the spell, so the trigger resolves first (and still fires if the spell itself is countered in response). |
 

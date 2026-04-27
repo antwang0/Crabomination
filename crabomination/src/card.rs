@@ -3,8 +3,8 @@ use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 
 pub use crate::effect::{
-    ActivatedAbility, Effect, EventKind, EventScope, EventSpec, LoyaltyAbility, Predicate,
-    Selector, StaticAbility, StaticEffect, TriggeredAbility, Value,
+    ActivatedAbility, Effect, EventKind, EventScope, EventSpec, LoyaltyAbility, OpeningHandEffect,
+    Predicate, Selector, StaticAbility, StaticEffect, TriggeredAbility, Value,
 };
 use crate::mana::{Color, ManaCost};
 
@@ -310,6 +310,12 @@ pub struct CardDefinition {
     /// downstream abilities, types, and costs are the back face's. Only the
     /// front face stores `back_face` — the back's `back_face` is `None`.
     pub back_face: Option<Box<CardDefinition>>,
+    /// Opening-hand effect ("If this card is in your opening hand…"): start
+    /// in play (Leyline of Sanctity, Gemstone Caverns), reveal for a delayed
+    /// effect (Chancellor of the Tangle, Chancellor of the Annex), or mark
+    /// as a mulligan helper (Serum Powder). Resolved post-mulligan by
+    /// `GameState::apply_opening_hand_effects`.
+    pub opening_hand: Option<OpeningHandEffect>,
 }
 
 /// An alternative (pitch) cost. Replaces the normal mana cost when the

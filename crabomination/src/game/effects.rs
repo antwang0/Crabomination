@@ -932,14 +932,10 @@ impl GameState {
                 // wants to exile the same creature it reanimated).
                 let target = ctx.targets.first().cloned();
                 let source = ctx.source.unwrap_or(crate::card::CardId(0));
-                let delayed_kind = match kind {
-                    crate::effect::DelayedTriggerKind::YourNextUpkeep => DelayedKind::YourNextUpkeep,
-                    crate::effect::DelayedTriggerKind::NextEndStep => DelayedKind::NextEndStep,
-                };
                 self.delayed_triggers.push(DelayedTrigger {
                     controller: ctx.controller,
                     source,
-                    kind: delayed_kind,
+                    kind: delayed_kind_from_effect(*kind),
                     effect: (**body).clone(),
                     target,
                     fires_once: true,
@@ -985,6 +981,72 @@ impl GameState {
                     let mut sba = self.check_state_based_actions();
                     events.append(&mut sba);
                 }
+                Ok(())
+            }
+
+            Effect::AddFirstSpellTax { who, count } => {
+                let n = self.evaluate_value(count, ctx).max(0) as u32;
+                if n == 0 {
+                    return Ok(());
+                }
+                for p in self.resolve_players(who, ctx) {
+                    self.players[p].first_spell_tax_charges =
+                        self.players[p].first_spell_tax_charges.saturating_add(n);
+                }
+                Ok(())
+            }
+
+            Effect::RevealUntilFind {
+                who,
+                find,
+                to,
+                cap,
+                life_per_revealed,
+            } => {
+                // Walk the top of `who`'s library until we either find a
+                // matching card or hit the cap. Mill the misses.
+                let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
+                let cap_n = self.evaluate_value(cap, ctx).max(0) as usize;
+                if cap_n == 0 {
+                    return Ok(());
+                }
+                let resolved_dest = self.resolve_zonedest_player(to, ctx);
+                let mut revealed = 0usize;
+                let mut found_idx: Option<usize> = None;
+                for i in 0..cap_n.min(self.players[p].library.len()) {
+                    revealed += 1;
+                    let card = &self.players[p].library[i];
+                    if self.evaluate_requirement_on_card(find, card, ctx.controller) {
+                        found_idx = Some(i);
+                        break;
+                    }
+                }
+                // Move the misses (everything before `found_idx`, or
+                // everything if no match) into the graveyard.
+                let mill_count = found_idx.unwrap_or(revealed);
+                for _ in 0..mill_count {
+                    if self.players[p].library.is_empty() {
+                        break;
+                    }
+                    let card = self.players[p].library.remove(0);
+                    let cid = card.id;
+                    self.players[p].graveyard.push(card);
+                    events.push(GameEvent::CardMilled { player: p, card_id: cid });
+                }
+                // If we found a match, take it off the (now-shifted) top
+                // and place it via the requested destination.
+                if found_idx.is_some() && !self.players[p].library.is_empty() {
+                    let card = self.players[p].library.remove(0);
+                    self.place_card_in_dest(card, p, &resolved_dest, events);
+                }
+                // Lose 1 life per revealed card (Spoils of the Vault rider).
+                let life = (revealed as u32).saturating_mul(*life_per_revealed);
+                if life > 0 {
+                    self.players[p].life -= life as i32;
+                    events.push(GameEvent::LifeLost { player: p, amount: life });
+                }
+                let mut sba = self.check_state_based_actions();
+                events.append(&mut sba);
                 Ok(())
             }
 
@@ -1261,6 +1323,18 @@ impl GameState {
                     EntityRef::Player(_) => None,
                 })
                 .unwrap_or(0),
+            Value::DistinctTypesInTopOfLibrary { who, count } => {
+                let Some(p) = self.resolve_player(who, ctx) else { return 0; };
+                let n = self.evaluate_value(count, ctx).max(0) as usize;
+                let mut seen: std::collections::HashSet<CardType> =
+                    std::collections::HashSet::new();
+                for card in self.players[p].library.iter().take(n) {
+                    for t in &card.definition.card_types {
+                        seen.insert(t.clone());
+                    }
+                }
+                seen.len() as i32
+            }
         }
     }
 
@@ -1630,6 +1704,7 @@ pub fn token_to_card_definition(token: &TokenDefinition) -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand: None,
     }
 }
 
@@ -1796,5 +1871,20 @@ pub fn clue_token() -> TokenDefinition {
             artifact_subtypes: vec![ArtifactSubtype::Clue],
             ..Default::default()
         },
+    }
+}
+
+/// Translate an `Effect`-side `DelayedTriggerKind` to its game-state mirror
+/// `DelayedKind`. Centralized so adding a new delayed-trigger kind requires
+/// only this one pattern match update.
+pub(crate) fn delayed_kind_from_effect(
+    k: crate::effect::DelayedTriggerKind,
+) -> super::DelayedKind {
+    use crate::effect::DelayedTriggerKind;
+    use super::DelayedKind;
+    match k {
+        DelayedTriggerKind::YourNextUpkeep => DelayedKind::YourNextUpkeep,
+        DelayedTriggerKind::NextEndStep => DelayedKind::NextEndStep,
+        DelayedTriggerKind::YourNextMainPhase => DelayedKind::YourNextMainPhase,
     }
 }

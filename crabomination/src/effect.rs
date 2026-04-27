@@ -155,6 +155,11 @@ pub enum Value {
     /// from `EffectContext.converged_value` here. Used by Prismatic
     /// Ending and Pest Control.
     ConvergedValue,
+    /// Number of distinct card types in the top `count` cards of `who`'s
+    /// library. Used by Atraxa, Grand Unifier's reveal-and-sort ETB —
+    /// "reveal the top 10, take up to one of each card type" is
+    /// approximated as "draw N where N = distinct types in those 10".
+    DistinctTypesInTopOfLibrary { who: PlayerRef, count: Box<Value> },
 }
 
 impl Value {
@@ -463,6 +468,34 @@ pub enum Effect {
         mana_cost: crate::mana::ManaCost,
         life_cost: u32,
     },
+
+    /// Add `count` "first-spell tax" charges against each player resolved
+    /// by the selector. Each charge taxes that player's next spell {1}
+    /// more (consumed at cast time via `consume_first_spell_tax`). Used by
+    /// Chancellor of the Annex's opening-hand reveal — `who: EachOpponent`.
+    AddFirstSpellTax {
+        who: PlayerRef,
+        count: Value,
+    },
+
+    /// "Reveal cards from the top of `who`'s library until you reveal a
+    /// card matching `find`, or `cap` cards have been revealed. Put the
+    /// found card (if any) into `to`; mill the rest, lose 1 life per
+    /// card revealed." Used by Spoils of the Vault.
+    ///
+    /// The auto-decider picks the **first** matching card (so the search
+    /// resolves deterministically in tests). Real Oracle has the player
+    /// name a card up-front; we bypass that, instead matching anything
+    /// passing `find`. The "lose 1 per revealed" rider is wired to
+    /// `life_per_revealed` so callers can disable it (Spoils → 1; future
+    /// "search until type, no life cost" cards → 0).
+    RevealUntilFind {
+        who: PlayerRef,
+        find: SelectionRequirement,
+        to: ZoneDest,
+        cap: Value,
+        life_per_revealed: u32,
+    },
 }
 
 /// Lightweight mirror of `crate::game::types::DelayedKind` for use inside
@@ -472,6 +505,47 @@ pub enum Effect {
 pub enum DelayedTriggerKind {
     YourNextUpkeep,
     NextEndStep,
+    /// "At the beginning of your next pre-combat main phase, …" Used by
+    /// Chancellor of the Tangle's opening-hand reveal — the mana ritual
+    /// fires on main rather than upkeep so the {G} doesn't empty out of
+    /// the pool before the player can spend it (mana pools clear on
+    /// step transition, MTG rule 500.4).
+    YourNextMainPhase,
+}
+
+/// Opening-hand ("if this is in your opening hand, you may ...") effect.
+/// Resolved by `GameState::apply_opening_hand_effects` after all players
+/// finish mulligans and before the first turn begins.
+///
+/// Each variant covers one of the canonical Magic shapes:
+/// * **Leyline / Gemstone Caverns** — the card begins the game on the
+///   battlefield instead of in hand.
+/// * **Chancellor of the Tangle / of the Annex** — the card stays in hand,
+///   but reveals at game start to register a one-shot trigger that fires
+///   later.
+#[derive(Debug, Clone)]
+pub enum OpeningHandEffect {
+    /// "If [card] is in your opening hand, you may begin the game with it
+    /// on the battlefield." After moving to play, run `extra` so cards like
+    /// Gemstone Caverns can stamp themselves with a luck counter (or any
+    /// other one-shot ETB-style follow-up).
+    StartInPlay {
+        tapped: bool,
+        extra: Effect,
+    },
+    /// "You may reveal [card] from your opening hand. If you do, [body]."
+    /// The card stays in hand; we register a `DelayedTrigger` of `kind`
+    /// whose effect is `body`. Used by the Chancellors.
+    RevealForDelayedTrigger {
+        kind: DelayedTriggerKind,
+        body: Effect,
+    },
+    /// "Any time you could mulligan and [card] is in your hand, you may
+    /// exile all the cards from your hand, then draw that many cards."
+    /// Surfaces as an additional answer in the mulligan decision; not run
+    /// post-mulligan. The variant exists so the catalog can declaratively
+    /// flag the card and `apply_opening_hand_effects` skips it.
+    MulliganHelper,
 }
 
 impl Effect {
@@ -605,6 +679,14 @@ impl Effect {
             Effect::DelayUntil { body, .. } => body.requires_target(),
             Effect::PayOrLoseGame { .. } => false,
             Effect::SacrificeAndRemember { .. } => false,
+            Effect::AddFirstSpellTax { who, count } => {
+                player_has_target(who) || value_has_target(count)
+            }
+            Effect::RevealUntilFind { who, to, cap, .. } => {
+                player_has_target(who)
+                    || zonedest_has_target(to)
+                    || value_has_target(cap)
+            }
             Effect::DiscardChosen { from, count, .. } => {
                 sel_has_target(from) || value_has_target(count)
             }
@@ -743,6 +825,10 @@ pub enum StaticEffect {
     /// are taxed; the cost increase is applied at cast time when the
     /// caster's `Player.spells_cast_this_turn >= 1`.
     AdditionalCostAfterFirstSpell { filter: SelectionRequirement, amount: u32 },
+    /// Leyline-of-Sanctity-style "you have hexproof": opponents can't
+    /// target the source's controller with spells or abilities they
+    /// control. Checked by `check_target_legality` for `Target::Player(_)`.
+    ControllerHasHexproof,
 }
 
 // ── Triggered / activated / loyalty ability shells ───────────────────────────

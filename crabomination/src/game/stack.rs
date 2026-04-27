@@ -100,6 +100,10 @@ impl GameState {
                 self.fire_step_triggers(TurnStep::Upkeep);
                 self.give_priority_to_active();
             }
+            TurnStep::PreCombatMain => {
+                self.fire_step_triggers(TurnStep::PreCombatMain);
+                self.give_priority_to_active();
+            }
             TurnStep::BeginCombat => {
                 self.fire_step_triggers(TurnStep::BeginCombat);
                 self.give_priority_to_active();
@@ -169,6 +173,9 @@ impl GameState {
         for dt in std::mem::take(&mut self.delayed_triggers) {
             let matches = match (dt.kind, step) {
                 (DelayedKind::YourNextUpkeep, TurnStep::Upkeep) => dt.controller == active,
+                (DelayedKind::YourNextMainPhase, TurnStep::PreCombatMain) => {
+                    dt.controller == active
+                }
                 (DelayedKind::NextEndStep, TurnStep::End) => true,
                 _ => false,
             };

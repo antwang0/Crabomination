@@ -1816,13 +1816,13 @@ fn wrath_of_the_skies_destroys_permanents_with_mana_value_x() {
 
 #[test]
 fn spoils_of_the_vault_tutors_and_loses_three_life() {
-    // Approximates "name + reveal until find" as Search(any → hand) plus
-    // a flat 3-life cost.
+    // Now wired to `Effect::RevealUntilFind` with `find: Any`: the first
+    // card off the top is taken into hand and 1 life is paid per revealed
+    // card. With `Any`, exactly one card is ever revealed, so the life
+    // total drops by exactly 1.
     let mut g = two_player_game();
     let wanted = g.add_card_to_library(0, catalog::lightning_bolt());
     g.add_card_to_library(0, catalog::swamp());
-
-    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(wanted))]));
 
     let spoils = g.add_card_to_hand(0, catalog::spoils_of_the_vault());
     g.players[0].mana_pool.add(Color::Black, 1);
@@ -1837,15 +1837,15 @@ fn spoils_of_the_vault_tutors_and_loses_three_life() {
     drain_stack(&mut g);
 
     assert!(g.players[0].hand.iter().any(|c| c.id == wanted),
-        "Tutored card should be in hand");
-    assert_eq!(g.players[0].life, life_before - 3,
-        "Spoils approximates the variable life cost as a flat 3");
+        "First-card-off-the-top should land in hand");
+    assert_eq!(g.players[0].life, life_before - 1,
+        "RevealUntilFind with `Any` reveals exactly one card → 1 life lost");
 }
 
 #[test]
-fn atraxa_grand_unifier_etb_draws_four() {
-    // Approximation of "reveal top 10, take one of each card type" as
-    // ETB Draw 4.
+fn atraxa_grand_unifier_etb_draws_per_distinct_type() {
+    // ETB now draws `DistinctTypesInTopOfLibrary(top 10)` cards. Library
+    // here is 6 forests (Land), so distinct = 1 → draw 1.
     let mut g = two_player_game();
     for _ in 0..6 {
         g.add_card_to_library(0, catalog::forest());
@@ -1866,12 +1866,36 @@ fn atraxa_grand_unifier_etb_draws_four() {
     drain_stack(&mut g);
 
     assert!(g.battlefield.iter().any(|c| c.id == atraxa));
-    // Hand started with Atraxa + drew 4 - cast Atraxa = +3 net change from
-    // start, but only +4 from the ETB trigger itself.
-    assert_eq!(g.players[0].hand.len(), hand_before_cast + 4,
-        "Atraxa's ETB should draw 4 cards (approximation of the reveal-and-sort)");
-    assert_eq!(g.players[0].library.len(), lib_before - 4,
-        "Library should lose 4 cards");
+    assert_eq!(g.players[0].hand.len(), hand_before_cast + 1,
+        "Library is all Forests (one type) → ETB draws 1");
+    assert_eq!(g.players[0].library.len(), lib_before - 1,
+        "Library should lose exactly one card");
+}
+
+#[test]
+fn atraxa_grand_unifier_draws_per_card_type_diverse_library() {
+    // Top of library has a Forest, a Lightning Bolt (Instant), Grizzly
+    // Bears (Creature) → 3 distinct types → draw 3.
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::forest());
+    g.add_card_to_library(0, catalog::lightning_bolt());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let hand_before_cast = g.players[0].hand.len();
+    let atraxa = g.add_card_to_hand(0, catalog::atraxa_grand_unifier());
+    g.players[0].mana_pool.add_colorless(3);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: atraxa, target: None, mode: None, x_value: None,
+    })
+    .expect("Atraxa is castable for {3}{W}{U}{B}{R}{G}");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[0].hand.len(), hand_before_cast + 3,
+        "3 distinct card types in library → draw 3");
 }
 
 #[test]
@@ -2586,4 +2610,361 @@ fn consign_to_memory_counters_targeted_trigger() {
     assert!(!g.stack.iter().any(|si| matches!(
         si, crate::game::StackItem::Trigger { source, .. } if *source == dev
     )), "Scry-on-cast trigger should have been countered");
+}
+
+// ── Opening-hand effects ─────────────────────────────────────────────────────
+
+#[test]
+fn leyline_of_sanctity_starts_in_play_after_mulligan() {
+    // After a kept opening hand that contains Leyline of Sanctity, the
+    // engine moves the leyline from hand to its owner's battlefield.
+    let mut g = two_player_game();
+    // Seed each player's library so the mulligan can deal 7 cards. Leyline
+    // is the FIRST factory pushed → it'll end up on top of the library →
+    // dealt as part of the opening 7.
+    g.add_card_to_library(0, catalog::leyline_of_sanctity());
+    for _ in 0..7 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    for _ in 0..7 {
+        g.add_card_to_library(1, catalog::forest());
+    }
+    g.start_mulligan_phase();
+
+    // Both players keep, no London-mulligan dance.
+    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Keep)).unwrap();
+    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Keep)).unwrap();
+
+    assert!(
+        g.battlefield.iter().any(|c| c.definition.name == "Leyline of Sanctity"),
+        "Leyline should start in play"
+    );
+    assert!(
+        !g.players[0].hand.iter().any(|c| c.definition.name == "Leyline of Sanctity"),
+        "Leyline should leave hand"
+    );
+}
+
+#[test]
+fn leyline_of_sanctity_grants_player_hexproof() {
+    // Bolt aimed at the Leyline's controller is rejected as InvalidTarget.
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::leyline_of_sanctity());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    let err = g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(0)),
+        mode: None,
+        x_value: None,
+    }).unwrap_err();
+    assert_eq!(err, GameError::InvalidTarget);
+    // Self-targeting still works: Leyline doesn't block your own spells.
+    let bolt2 = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt2,
+        target: Some(Target::Player(0)),
+        mode: None,
+        x_value: None,
+    }).expect("you can target yourself even with Leyline up");
+}
+
+#[test]
+fn gemstone_caverns_starts_in_play_with_luck_counter() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::gemstone_caverns());
+    for _ in 0..7 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    for _ in 0..7 {
+        g.add_card_to_library(1, catalog::forest());
+    }
+    g.start_mulligan_phase();
+    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Keep)).unwrap();
+    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Keep)).unwrap();
+
+    let caverns = g.battlefield.iter()
+        .find(|c| c.definition.name == "Gemstone Caverns")
+        .expect("Gemstone Caverns should start in play");
+    assert!(
+        !caverns.tapped,
+        "Gemstone Caverns starts untapped"
+    );
+    assert_eq!(
+        caverns.counter_count(crate::card::CounterType::Charge),
+        1,
+        "Gemstone Caverns should ETB with one luck counter (modeled as Charge)"
+    );
+}
+
+#[test]
+fn chancellor_of_the_tangle_adds_green_on_first_main() {
+    // P0 starts the game with Chancellor of the Tangle in opening hand.
+    // The reveal registers a `YourNextMainPhase` delayed trigger; when P0
+    // enters PreCombatMain on turn 1, the trigger pushes onto the stack
+    // and resolves to add {G}.
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::chancellor_of_the_tangle());
+    for _ in 0..7 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    for _ in 0..7 {
+        g.add_card_to_library(1, catalog::forest());
+    }
+    // Start the mulligan window from the natural pre-game step (Untap).
+    // `two_player_game()` defaults to PreCombatMain — wind it back so the
+    // turn 1 PreCombatMain transition actually happens during the test.
+    g.step = TurnStep::Untap;
+    g.start_mulligan_phase();
+    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Keep)).unwrap();
+    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Keep)).unwrap();
+
+    assert_eq!(g.players[0].mana_pool.amount(Color::Green), 0,
+        "no mana yet — the trigger fires on the main step");
+
+    // Walk turn 1 until PreCombatMain. The trigger is queued when the
+    // engine enters PreCombatMain; drain the stack once more after the
+    // loop to actually resolve it.
+    while !matches!(g.step, TurnStep::PreCombatMain) && !g.is_game_over() {
+        g.perform_action(GameAction::PassPriority).unwrap();
+    }
+    drain_stack(&mut g);
+    assert_eq!(
+        g.players[0].mana_pool.amount(Color::Green), 1,
+        "Chancellor of the Tangle should grant {{G}} during turn 1's first main"
+    );
+}
+
+#[test]
+fn chancellor_of_the_annex_taxes_first_opponent_spell() {
+    // P1 has Chancellor of the Annex in opening hand → P0's first spell
+    // next turn costs {1} more. Cast Lightning Bolt with only {R}: it fails
+    // because the tax pushes it to {1}{R}.
+    let mut g = two_player_game();
+    g.add_card_to_library(1, catalog::chancellor_of_the_annex());
+    for _ in 0..7 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    for _ in 0..7 {
+        g.add_card_to_library(1, catalog::forest());
+    }
+    g.start_mulligan_phase();
+    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Keep)).unwrap();
+    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Keep)).unwrap();
+
+    // Walk to P0's first upkeep so the delayed reveal trigger fires and
+    // stamps the tax charge on P0.
+    while !matches!(g.step, TurnStep::Upkeep) && !g.is_game_over() {
+        g.perform_action(GameAction::PassPriority).unwrap();
+    }
+    drain_stack(&mut g);
+    assert_eq!(
+        g.players[0].first_spell_tax_charges, 1,
+        "Annex should stamp one tax charge on P0"
+    );
+
+    // P0 tries to cast Bolt on their own turn with exactly {R}. The {1}
+    // tax pushes the cost to {1}{R} — they can't afford it.
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.active_player_idx = 0;
+    let err = g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)), mode: None, x_value: None,
+    });
+    assert!(err.is_err(), "Tax should make Bolt unaffordable with only {{R}}");
+
+    // Pay the extra and the cast succeeds; tax is consumed.
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)), mode: None, x_value: None,
+    }).expect("Bolt castable with the {1} extra");
+    assert_eq!(
+        g.players[0].first_spell_tax_charges, 0,
+        "Tax should be consumed by the cast"
+    );
+}
+
+#[test]
+fn serum_powder_exiles_hand_and_redraws() {
+    // Mulligan with a Serum Powder in hand. Submitting `SerumPowder(id)`
+    // exiles the hand and deals a fresh 7. The London-mulligan ladder
+    // doesn't advance.
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::serum_powder());
+    for _ in 0..6 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    for _ in 0..7 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    for _ in 0..7 {
+        g.add_card_to_library(1, catalog::forest());
+    }
+    g.start_mulligan_phase();
+
+    let powder_id = g.players[0].hand.iter()
+        .find(|c| c.definition.name == "Serum Powder")
+        .map(|c| c.id)
+        .expect("Serum Powder should be in opening hand (top of library)");
+
+    // Submit the powder.
+    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::SerumPowder(powder_id))).unwrap();
+
+    // The fresh seven shouldn't include the original powder — it was exiled.
+    assert_eq!(g.players[0].hand.len(), 7, "fresh hand of 7 after powder");
+    assert!(
+        g.exile.iter().any(|c| c.id == powder_id),
+        "the consumed Serum Powder should be in exile"
+    );
+    // We're still on player 0's mulligan window (no advance).
+    assert!(matches!(
+        g.pending_decision.as_ref().map(|pd| &pd.decision),
+        Some(crate::decision::Decision::Mulligan { player: 0, .. }),
+    ));
+}
+
+// ── Card behavior tests ──────────────────────────────────────────────────────
+
+#[test]
+fn callous_sell_sword_etb_sacrifices_and_pumps() {
+    // Put a Forest and a Bear-equivalent token-creature on P0's board, then
+    // ETB Callous Sell-Sword. The auto-decider sacrifices the first
+    // controller-controlled creature (the bear), and the sell-sword gets
+    // +(bear's power)/+0 until end of turn.
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    g.clear_sickness(bear);
+    let css = g.add_card_to_hand(0, catalog::callous_sell_sword());
+    g.players[0].mana_pool.add_colorless(3);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: css, target: None, mode: None, x_value: None,
+    }).expect("Callous Sell-Sword castable for {3}{R}");
+    drain_stack(&mut g);
+
+    // The bear should have been sacrificed, and the sell-sword should be
+    // 4 + 2 = 6 power until end of turn.
+    assert!(
+        !g.battlefield.iter().any(|c| c.id == bear),
+        "Sell-Sword's ETB should have sacrificed the bear"
+    );
+    let sell = g.battlefield.iter()
+        .find(|c| c.id == css)
+        .expect("Sell-Sword should be on the battlefield");
+    assert_eq!(sell.power(), 6,
+        "Base 4 + sacrificed bear's power 2 = 6");
+}
+
+#[test]
+fn plunge_into_darkness_mode_one_pays_four_life_and_tutors() {
+    // Mode 1 (`ChooseMode` index 1): pay 4 life and search any card
+    // from the library into hand.
+    let mut g = two_player_game();
+    let target = g.add_card_to_library(0, catalog::lightning_bolt());
+    g.add_card_to_library(0, catalog::swamp());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(target))]));
+
+    let plunge = g.add_card_to_hand(0, catalog::plunge_into_darkness());
+    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    let life_before = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: plunge, target: None, mode: Some(1), x_value: None,
+    }).expect("Plunge castable for {1}{B}");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[0].life, life_before - 4,
+        "Mode 1 deducts 4 life as the X cost");
+    assert!(g.players[0].hand.iter().any(|c| c.id == target),
+        "tutored card should land in hand");
+}
+
+#[test]
+fn spoils_of_the_vault_reveals_until_find() {
+    // With `find: Any`, the very first card is taken into hand and
+    // exactly 1 life is paid.
+    let mut g = two_player_game();
+    let top = g.add_card_to_library(0, catalog::lightning_bolt());
+    g.add_card_to_library(0, catalog::swamp());
+    let spoils = g.add_card_to_hand(0, catalog::spoils_of_the_vault());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    let life_before = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spoils, target: None, mode: None, x_value: None,
+    }).expect("Spoils castable for {B}");
+    drain_stack(&mut g);
+
+    assert!(g.players[0].hand.iter().any(|c| c.id == top),
+        "first-card-off-the-top lands in hand");
+    assert_eq!(g.players[0].life, life_before - 1,
+        "exactly one card revealed → 1 life paid");
+}
+
+#[test]
+fn mulligan_decision_lists_serum_powders() {
+    // A mulligan-phase decision should expose every Serum-Powder-style
+    // helper currently in hand so the UI can render a "use powder" button.
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::serum_powder());
+    g.add_card_to_library(0, catalog::serum_powder());
+    for _ in 0..5 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    for _ in 0..7 {
+        g.add_card_to_library(1, catalog::forest());
+    }
+    g.start_mulligan_phase();
+
+    let pd = g.pending_decision.as_ref().expect("mulligan decision pending");
+    let crate::decision::Decision::Mulligan { serum_powders, .. } = &pd.decision else {
+        panic!("expected Mulligan decision");
+    };
+    assert_eq!(serum_powders.len(), 2,
+        "both powders in P0's opening hand should be listed");
+}
+
+#[test]
+fn first_spell_tax_charges_default_zero() {
+    // Sanity check: a fresh player has no Annex tax pending.
+    let g = two_player_game();
+    assert_eq!(g.players[0].first_spell_tax_charges, 0);
+    assert_eq!(g.players[1].first_spell_tax_charges, 0);
+}
+
+#[test]
+fn reveal_until_find_caps_at_n_when_no_match() {
+    // No matching card on top → mill `cap` cards, lose `cap * life` life.
+    use crate::effect::{Effect, OpeningHandEffect as _, ZoneDest};
+    use crate::card::SelectionRequirement;
+    let mut g = two_player_game();
+    // Library: 5 lands. With `find: Creature`, none match → mill all 5.
+    for _ in 0..5 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    let lib_before = g.players[0].library.len();
+    let life_before = g.players[0].life;
+    let ctx = EffectContext::for_spell(0, None, 0, 0);
+    g.resolve_effect(
+        &Effect::RevealUntilFind {
+            who: PlayerRef::You,
+            find: SelectionRequirement::Creature,
+            to: ZoneDest::Hand(PlayerRef::You),
+            cap: Value::Const(10),
+            life_per_revealed: 1,
+        },
+        &ctx,
+    ).unwrap();
+
+    assert_eq!(g.players[0].library.len(), 0,
+        "all 5 lands should mill (no creature found)");
+    assert_eq!(g.players[0].graveyard.len(), lib_before,
+        "milled cards land in graveyard");
+    assert_eq!(g.players[0].life, life_before - 5,
+        "5 cards revealed → 5 life lost");
 }
