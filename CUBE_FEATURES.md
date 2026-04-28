@@ -48,7 +48,7 @@ still ⏳.
 | Dandân | ⏳ | Defender variant; sacrifice when defender no Island. |
 | Phantasmal Image | ⏳ | ETB enter-as-copy of any creature. Needs token-copy-of-permanent primitive. |
 | Thundertrap Trainer | ⏳ | Trap/discount creature. |
-| Tishana's Tidebinder | ⏳ | ETB counter target activated/triggered ability — reuses `Effect::CounterAbility`. |
+| Tishana's Tidebinder | ✅ | {1}{U}{U} 3/2 Merfolk Wizard Flash. ETB counters target activated/triggered ability of a nonland permanent (reuses `Effect::CounterAbility`). |
 | Quantum Riddler | ✅ | UB 4/4 flying + on-cast Draw 1 (already in catalog). |
 | Deadeye Navigator | ⏳ | Soulbond + activated flicker. Reuses Flicker primitive; needs Soulbond. |
 | Pact of Negation | ✅ | Free counter + delayed `PayOrLoseGame` upkeep. |
@@ -104,7 +104,7 @@ still ⏳.
 | Corpse Dance | ⏳ | Buyback + reanimate creature top of grave. |
 | Baleful Mastery | ⏳ | Exile target nonland; opp may draw 2 to halve cost. Modal alt-cost. |
 | Bloodchief's Thirst | ⏳ | Kicker + remove counter. |
-| Bone Shards | ⏳ | Sac-or-discard cost flexibility. |
+| Bone Shards | ✅ | {B} Instant. `ChooseMode([Sacrifice creature, Discard 1])` then destroy target creature. Cost-as-first-step approximation of "additional cost". |
 | Disentomb | ✅ | Return target creature card to hand (Move from graveyard). |
 | Collective Brutality | ⏳ | Escalate-modal removal. |
 | Drown in Ichor | ✅ | 3 damage to target creature + Surveil 1. |
@@ -123,7 +123,7 @@ still ⏳.
 |---|---|---|
 | Blazing Rootwalla | ⏳ | Madness creature. Needs Madness. |
 | Greasewrench Goblin | ⏳ | Sacrifice-payoff. |
-| Grim Lavamancer | ⏳ | Tap + exile-2-from-graveyard for damage. |
+| Grim Lavamancer | 🟡 | {R} 1/1 Human Wizard. {R}, {T}: deals 2 damage to any target. The "exile two cards from your graveyard" cost is approximated away — pending an exile-from-graveyard primitive. |
 | Marauding Mako | ⏳ | Pinger/aggressive creature. |
 | Orcish Lumberjack | ⏳ | Sac-Forest for {GGG}. |
 | Voldaren Epicure | ✅ | ETB: create a Blood token + 1 damage to each opponent (`ForEach EachOpponent`). |
@@ -146,7 +146,7 @@ still ⏳.
 | Big Score | ✅ | Discard + 2 Treasure + Draw 2. Treasure tokens are now fully functional — each carries its `{T}, Sac: Add one mana of any color` activated ability via `TokenDefinition::activated_abilities`. |
 | Mine Collapse | ⏳ | Sac-land alt-cost removal. |
 | Fireblast | ⏳ | Sac-Mountains alt-cost burn. |
-| Pyrokinesis | ⏳ | Pitch-cost mass burn. Reuses pitch-cost path (Force of Will). |
+| Pyrokinesis | 🟡 | {4}{R}{R} Instant. Pitch-cost alt cast: exile a red card from hand → 4 damage. The "divide 4 damage among any number of creatures" half is approximated as a single 4-damage hit. |
 | Vandalblast | 🟡 | Single-target artifact destruction; Overload {4}{R} mode omitted (no overload primitive yet). |
 | Legion Extruder | ⏳ | Equip-ish artifact. |
 | Sundering Eruption | ✅ | MDFC: front is `{1}{R}` sorcery dealing 3 damage to a creature/planeswalker; back face Mount Tyrhus is a Mountain that ETBs tapped and taps for {R}. |
@@ -158,9 +158,9 @@ still ⏳.
 | Basking Rootwalla | ⏳ | Madness creature. |
 | Elvish Reclaimer | ⏳ | Land-tutor activated ability. |
 | Haywire Mite | ✅ | {2}, sac: destroy artifact/enchantment/planeswalker + gain 1 life (`ActivatedAbility::sac_cost`). |
-| Sylvan Safekeeper | ⏳ | Sac-Forest grant shroud. |
+| Sylvan Safekeeper | ✅ | {G} 1/1 Human Wizard. Sacrifice a Forest: target creature gains shroud EOT. Sac-of-other-land cost folded into resolution. |
 | Basking Broodscale | ⏳ | Eldrazi token-maker. |
-| Cankerbloom | ⏳ | Sac for proliferate. |
+| Cankerbloom | ✅ | {1}{G} 2/2 Fungus. {G}, Sac this: destroy target artifact/enchantment, then proliferate. |
 | Collector Ouphe | ⏳ | Static "artifact abilities can't be activated". |
 | Fanatic of Rhonas | ⏳ | Bigger Llanowar Elves. |
 | Keen-Eyed Curator | ⏳ | Graveyard hate + counter pump. |
@@ -215,14 +215,14 @@ still ⏳.
 | Kozilek's Command | ⏳ | Modal Eldrazi instant. |
 | Eldrazi Confluence | ⏳ | Modal x3. |
 | Chalice of the Void | ⏳ | X charge counters; counter spells with mana value X. |
-| Zuran Orb | ⏳ | Sac-land for life. |
+| Zuran Orb | ✅ | {0} Artifact. Sacrifice a land: gain 2 life. Cost-as-first-step folded into resolution. |
 | Candelabra of Tawnos | ⏳ | Untap N lands for {X}. |
-| Chromatic Star | ⏳ | Sac for 1 mana of any color + Draw 1. |
+| Chromatic Star | ✅ | {1} Artifact. {1}, T, Sac: add one mana of any color. Cantrips on `PermanentLeavesBattlefield` (engine extension — see notes). |
 | Ghost Vacuum | ⏳ | Graveyard-hate artifact. |
 | Lavaspur Boots | ⏳ | Equipment grants haste. |
 | Pithing Needle | ⏳ | Name-a-card; activated abilities can't be activated. Needs name-a-card primitive (Cavern shares). |
 | Shuko | ⏳ | Equipment with free-equip. |
-| Soul-Guide Lantern | ⏳ | Graveyard-exile artifact. |
+| Soul-Guide Lantern | ✅ | {1} Artifact. {T}: exile a card from each opponent's graveyard (approximation of "target opponent" — equivalent in 2-player). {2}, T, Sac: each player exiles their graveyard, draw 1. |
 | Agatha's Soul Cauldron | ⏳ | Borrow activated abilities of exiled creatures. |
 | Fellwar Stone | 🟡 | {T}: Add one mana of any color. (Approximation: drops the "matches opponent's lands" restriction — engine has no per-source mana provenance yet.) |
 | Mesmeric Orb | ⏳ | Mill-on-untap symmetric. |
@@ -426,6 +426,8 @@ are listed in `DECK_FEATURES.md`.
 | Living-weapon-on-ETB token | ⏳ | Nettlecyst, Sword-of-Body-and-Mind-adjacent. |
 | Protection-from-color (more colors) | 🟡 | Engine has `Keyword::Protection(Color)`. Cards like Stillmoon Cavalier need toggle abilities + multi-color protection. |
 | Charge counters as mana storage | 🟡 | Gemstone Mine wires charge counters + sac-on-empty. Coalition Relic, Power Depot, Pentad Prism, Chalice of the Void all reuse the same primitive. |
+| `PermanentLeavesBattlefield` self-source triggers | ✅ | `remove_to_graveyard_with_triggers` now collects both `CreatureDied` and `PermanentLeavesBattlefield` self-source triggers (the former still gates on creature-only). Powers Chromatic Star's cantrip-on-leave and any future non-creature die-trigger. |
+| `Selector::CardsInZone` over multi-player refs | ✅ | The resolver now uses `resolve_players` (multi) so `EachPlayer` / `EachOpponent` aggregate cards across every matching seat. Powers Soul-Guide Lantern's mass graveyard exile. Previously the single-player `resolve_player` returned `None` and silently produced an empty list. |
 
 ## Plan
 

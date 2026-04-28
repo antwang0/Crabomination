@@ -103,14 +103,14 @@ via `#[path = "../tests/modern.rs"] mod tests_modern` in `game::mod`).
 | Manamorphose | {2} | ✅ | Hybrid {R/G}{R/G} pips collapsed to {2}; gives 2 mana of any colors + draws 1 |
 | Sleight of Hand | {U} | ✅ | Approximated as `Scry 1 + Draw 1` |
 | Faithless Looting | {R} | ✅ | `Draw 2 + Discard 2` with `Keyword::Flashback({2}{R})` |
-| Sign in Blood | {B}{B} | 🟡 | Self-targeted only — `Target::Player(p)` for `Draw` not yet wired |
+| Sign in Blood | {B}{B} | ✅ | "Target player draws 2 + loses 2 life" via `target_filtered(Player)` threaded into both `Draw` and `LoseLife`. |
 | Night's Whisper | {1}{B} | ✅ | Draw 2, lose 2 life |
 | Duress | {B} | ✅ | `DiscardChosen(EachOpponent, Nonland ∧ Noncreature)` |
 | Lava Spike | {R} | ✅ | 3 damage to target player; Arcane subtype |
 | Lava Dart | {R} | 🟡 | Flashback cost approximated as `{0}` — engine has no "sacrifice a Mountain" alt-cost primitive |
 | Unburial Rites | {3}{B} | ✅ | `Move(target creature → BF)` + `Keyword::Flashback({W}{B})` |
 | Exhume | {1}{B} | 🟡 | Models "you reanimate" only; symmetrical "each player reanimates" not yet wired |
-| Buried Alive | {2}{B} | 🟡 | One-creature search; "up to three" loop simplified |
+| Buried Alive | {2}{B} | ✅ | "Up to three" search wired via `Repeat(3, Search)`. Decider can answer `Search(None)` to opt out of any iteration. |
 | Entomb | {B} | ✅ | `Search(Any → Graveyard)` |
 | Burning-Tree Emissary | {2} | ✅ | Hybrid pips collapsed to {2}; ETB adds {R}{G} |
 | Putrid Imp | {B} | 🟡 | Discard outlet wired (grants Menace EOT); madness flavor stubbed |
@@ -167,6 +167,79 @@ via `#[path = "../tests/modern.rs"] mod tests_modern` in `game::mod`).
 | On-cast self triggers ("when you cast this …") | ✅ | Devourer of Destiny (Scry 2 on cast), Quantum Riddler (Draw 1 on cast). Each cast path (`cast_spell`, `cast_spell_alternative`, `cast_flashback`) collects `EventKind::SpellCast` + `EventScope::SelfSource` triggers off the just-cast card and pushes them onto the stack **above** the spell, so the trigger resolves first (and still fires if the spell itself is countered in response). |
 
 ## Implementation log (most recent first)
+
+- **modern_decks-2: 10 new cards + DECK_FEATURES finishes + engine cleanup**:
+  - **DECK_FEATURES finishes** (🟡 → ✅):
+    - **Buried Alive** now uses `Repeat(3, Search(Creature → Graveyard))` to
+      cover the real "up to three" Oracle. The decider can answer
+      `DecisionAnswer::Search(None)` to opt out of any iteration — the
+      existing `do_search` pathway already honors a `None` answer. Tests:
+      `buried_alive_searches_creature_into_graveyard`,
+      `buried_alive_pulls_up_to_three_creatures`.
+    - **Sign in Blood** is now a real "target player" effect — both
+      `Draw` and `LoseLife` run against `target_filtered(Player)` /
+      `Selector::Player(PlayerRef::Target(0))`. Auto-target picks the
+      opponent when no manual target is supplied; the existing
+      "self-cantrip" line still works by passing `Target::Player(0)`
+      explicitly. Tests:
+      `sign_in_blood_draws_two_loses_two_life`,
+      `sign_in_blood_can_target_opponent`.
+    - **Reanimate** (Tempest) — the engine's `Tempest` `reanimate` was
+      a stub that just moved the card. Replaced with the real Oracle:
+      `LoseLife(ManaValueOf(Target(0))) + Move(target → BF)`. The
+      life-loss runs first so `Value::ManaValueOf` resolves while the
+      target is still in the graveyard. Tests:
+      `reanimate_puts_creature_into_play_and_pays_cmc_life`,
+      `reanimate_life_cost_scales_with_mana_value`.
+  - **CUBE_FEATURES new cards** (⏳ → ✅):
+    - **Bone Shards** ({B} instant) — `ChooseMode([Sacrifice, Discard]) +
+      Destroy(target creature)`. Modal additional cost folded into
+      resolution.
+    - **Pyrokinesis** ({4}{R}{R} instant) — pitch-cost alt cast: exile
+      a red card from hand → 4 damage. Reuses
+      `AlternativeCost.exile_filter`.
+    - **Tishana's Tidebinder** ({1}{U}{U} 3/2 Merfolk Wizard Flash) — ETB
+      counters a target activated/triggered ability of a nonland
+      permanent. Reuses `Effect::CounterAbility`.
+    - **Sylvan Safekeeper** ({G} 1/1 Human Wizard) — Sacrifice a Forest:
+      target creature gains shroud EOT. Cost folded into resolution.
+    - **Grim Lavamancer** ({R} 1/1 Human Wizard) — `{R}, {T}: 2 damage to
+      any target`. Graveyard-exile cost still 🟡 pending an exile-from-
+      graveyard primitive.
+    - **Zuran Orb** ({0} artifact) — sac a land for 2 life.
+    - **Chromatic Star** ({1} artifact) — sac for any color of mana +
+      cantrip on leaving the battlefield.
+    - **Soul-Guide Lantern** ({1} artifact) — both abilities wired
+      (target-opp graveyard exile approximated as each-opp).
+    - **Cankerbloom** ({1}{G} 2/2 Fungus) — sac to destroy artifact/
+      enchantment + proliferate.
+  - **Engine: non-creature die-triggers fire**:
+    `remove_to_graveyard_with_triggers` now also collects
+    `EventKind::PermanentLeavesBattlefield` self-source triggers, in
+    addition to `CreatureDied`. The latter still gates on creature-only
+    so Solitude evoke-sac etc. behave the same; the new path lets
+    Chromatic Star (and any future non-creature die-trigger) fire when
+    sacrificed/destroyed instead of silently fizzling.
+  - **Engine: `Selector::CardsInZone` aggregates across players**: the
+    resolver was using single-player `resolve_player`, which returns
+    `None` on multi-player refs and silently produced an empty list.
+    Switched to multi-player `resolve_players` so `EachPlayer` /
+    `EachOpponent` collects cards from every matching seat. Powers
+    Soul-Guide Lantern's mass graveyard exile and any future
+    "each-player's-graveyard" effect.
+  - **Engine cleanup**: dropped `player_has_sorceries_as_flash` (the
+    static-flag detour was never reached — only the per-player flag set
+    by `Effect::GrantSorceriesAsFlash` is consulted) and the unused
+    `ActivatedAbility`/`ManaCost` imports inside `callous_sell_sword`.
+    All warnings now resolve.
+  - **Server: format selector**: `crabomination_server` now honors
+    `CRAB_FORMAT=cube` to build matches with random two-color cube decks
+    (`build_cube_state`) instead of the default BRG/Goryo's demo. Format
+    is read once at boot and threaded into match threads via `Arc<Format>`.
+  - **Cube wiring**: 9 of the 10 new cards are now part of the cube card
+    pool (Reanimate already was, but as a stub).
+  - 16 new tests in `tests/modern.rs` (104 → 120 tests in that file).
+    Total suite: 320 tests pass.
 
 - **Modern shocklands + creatures + auxiliary instants on top of `mod_set`**:
   - **Lands** (6 new): Sacred Foundry, Steam Vents, Stomping Ground,
