@@ -173,7 +173,10 @@ fn sign_in_blood_draws_two_loses_two_life() {
     let hand_before = g.players[0].hand.len();
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id,
+        target: Some(Target::Player(0)),
+        mode: None,
+        x_value: None,
     })
     .expect("Sign in Blood castable for {B}{B}");
     drain_stack(&mut g);
@@ -181,6 +184,40 @@ fn sign_in_blood_draws_two_loses_two_life() {
     assert_eq!(g.players[0].life, life_before - 2);
     // Hand: -1 cast +2 draw = +1.
     assert_eq!(g.players[0].hand.len(), hand_before + 1);
+}
+
+/// Sign in Blood is now real-Oracle "target player". Targeting the opponent
+/// makes them draw the cards and pay the life — a powerful sideboard line
+/// against a low-life opponent. Verifies the new `target_filter(Player)`
+/// path threads the targeted player into both `Draw` and `LoseLife`.
+#[test]
+fn sign_in_blood_can_target_opponent() {
+    let mut g = two_player_game();
+    for _ in 0..3 {
+        g.add_card_to_library(1, catalog::island());
+    }
+    let id = g.add_card_to_hand(0, catalog::sign_in_blood());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    let p0_life_before = g.players[0].life;
+    let p1_life_before = g.players[1].life;
+    let p0_hand_before = g.players[0].hand.len();
+    let p1_hand_before = g.players[1].hand.len();
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Player(1)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Sign in Blood castable for {B}{B}");
+    drain_stack(&mut g);
+
+    // Caster (P0) life unchanged; target (P1) lost 2.
+    assert_eq!(g.players[0].life, p0_life_before);
+    assert_eq!(g.players[1].life, p1_life_before - 2);
+    // P0 lost the cast card from hand; P1 drew 2.
+    assert_eq!(g.players[0].hand.len(), p0_hand_before - 1);
+    assert_eq!(g.players[1].hand.len(), p1_hand_before + 2);
 }
 
 #[test]
@@ -345,7 +382,14 @@ fn entomb_searches_library_into_graveyard() {
 fn buried_alive_searches_creature_into_graveyard() {
     let mut g = two_player_game();
     let creature = g.add_card_to_library(0, catalog::grizzly_bears());
-    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(creature))]));
+    // Buried Alive now repeats the search up to 3 times. Answer the first
+    // pull with the creature, then `Search(None)` to opt out of the
+    // remaining iterations.
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Search(Some(creature)),
+        DecisionAnswer::Search(None),
+        DecisionAnswer::Search(None),
+    ]));
 
     let id = g.add_card_to_hand(0, catalog::buried_alive());
     g.players[0].mana_pool.add(Color::Black, 1);
@@ -359,6 +403,38 @@ fn buried_alive_searches_creature_into_graveyard() {
 
     assert!(g.players[0].graveyard.iter().any(|c| c.id == creature),
         "Buried Alive should pull a creature card into the graveyard");
+}
+
+/// Buried Alive's full Oracle is "search for up to three creature cards" —
+/// the engine wires that as `Repeat(3, Search(...))`. Stocking three
+/// creatures in the library and answering each pull with a different one
+/// should land all three in the graveyard.
+#[test]
+fn buried_alive_pulls_up_to_three_creatures() {
+    let mut g = two_player_game();
+    let c1 = g.add_card_to_library(0, catalog::grizzly_bears());
+    let c2 = g.add_card_to_library(0, catalog::grizzly_bears());
+    let c3 = g.add_card_to_library(0, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Search(Some(c1)),
+        DecisionAnswer::Search(Some(c2)),
+        DecisionAnswer::Search(Some(c3)),
+    ]));
+
+    let id = g.add_card_to_hand(0, catalog::buried_alive());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Buried Alive castable for {2}{B}");
+    drain_stack(&mut g);
+
+    for cid in [c1, c2, c3] {
+        assert!(g.players[0].graveyard.iter().any(|c| c.id == cid),
+            "All three searched creatures should be in the graveyard");
+    }
 }
 
 #[test]

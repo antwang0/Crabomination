@@ -152,12 +152,11 @@ pub fn faithless_looting() -> CardDefinition {
 /// Sign in Blood — {B}{B} Sorcery. Target player draws two cards and loses
 /// 2 life.
 ///
-/// We collapse the targeted-player aspect to "you" + a generic damage to the
-/// chosen target — the demo always uses Sign in Blood as a self-cantrip, and
-/// the engine doesn't yet expose `Target::Player(p)` for `Draw`. The real
-/// Oracle behaviour against an opponent is subtly different (they discard if
-/// they would deck, etc.) but the typical use as a 2-mana "draw two for 2
-/// life" is faithfully modeled.
+/// Targets any player via `target_filtered(Player)`; both effects run
+/// against `Selector::Player(PlayerRef::Target(0))` (same pattern Thought
+/// Scour and Vapor Snag already use). Auto-targeting picks the caster
+/// when no target is supplied, so the BRG demo's "self-cantrip" line
+/// keeps working.
 pub fn sign_in_blood() -> CardDefinition {
     CardDefinition {
         name: "Sign in Blood",
@@ -169,8 +168,14 @@ pub fn sign_in_blood() -> CardDefinition {
         toughness: 0,
         keywords: vec![],
         effect: Effect::Seq(vec![
-            Effect::Draw { who: Selector::You, amount: Value::Const(2) },
-            Effect::LoseLife { who: Selector::You, amount: Value::Const(2) },
+            Effect::Draw {
+                who: target_filtered(SelectionRequirement::Player),
+                amount: Value::Const(2),
+            },
+            Effect::LoseLife {
+                who: Selector::Player(PlayerRef::Target(0)),
+                amount: Value::Const(2),
+            },
         ]),
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
@@ -376,11 +381,11 @@ pub fn exhume() -> CardDefinition {
 /// Buried Alive — {2}{B} Sorcery. Search your library for up to three
 /// creature cards, put them into your graveyard, then shuffle.
 ///
-/// Approximation: searches your library for one creature card and places
-/// it directly into your graveyard. The full "up to three" loop would
-/// require three sequential `Search`-into-graveyard steps with the player
-/// optionally stopping early — workable but louder; we ship the single-pull
-/// version for now (it's still a powerful enabler).
+/// Wired as `Repeat(3, Search(Creature → Graveyard))`. The decider can
+/// answer `Search(None)` to short-circuit out of any iteration when the
+/// "up to three" upper bound shouldn't be hit — `do_search` already
+/// honors a `None` answer as "decline this search". The library's
+/// implicit shuffle runs after each successful pull.
 pub fn buried_alive() -> CardDefinition {
     CardDefinition {
         name: "Buried Alive",
@@ -391,10 +396,13 @@ pub fn buried_alive() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![],
-        effect: Effect::Search {
-            who: PlayerRef::You,
-            filter: SelectionRequirement::Creature,
-            to: ZoneDest::Graveyard,
+        effect: Effect::Repeat {
+            count: Value::Const(3),
+            body: Box::new(Effect::Search {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::Creature,
+                to: ZoneDest::Graveyard,
+            }),
         },
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
