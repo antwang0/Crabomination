@@ -397,6 +397,12 @@ fn spawn_search_modal(
     asset_server: &AssetServer,
     candidates: &[(CardId, String)],
 ) {
+    // Search candidates are typically the entire library (60 cards). The
+    // generic CARD_W of 180px would overflow the viewport vertically; use
+    // a compact size for this dialog and scroll the grid when it spills.
+    const SEARCH_CARD_W: f32 = 110.0;
+    let search_card_h = SEARCH_CARD_W * CARD_ASPECT_RATIO;
+
     let root = commands
         .spawn((
             Node {
@@ -420,9 +426,10 @@ fn spawn_search_modal(
             Node {
                 flex_direction: FlexDirection::Column,
                 padding: UiRect::all(Val::Px(20.0)),
-                row_gap: Val::Px(16.0),
+                row_gap: Val::Px(12.0),
                 align_items: AlignItems::Center,
-                max_width: Val::Percent(90.0),
+                max_width: Val::Percent(85.0),
+                max_height: Val::Percent(90.0),
                 ..default()
             },
             BackgroundColor(PANEL_BG),
@@ -431,22 +438,36 @@ fn spawn_search_modal(
 
     commands.entity(root).add_child(panel);
 
+    let count = candidates.len();
     commands.entity(panel).with_children(|panel| {
         panel.spawn((
-            Text::new("Search your library — click a card to select it"),
+            Text::new(format!(
+                "Search your library — click a card to select it ({count} card{s})",
+                s = if count == 1 { "" } else { "s" }
+            )),
             TextFont { font_size: 16.0, ..default() },
             TextColor(Color::WHITE),
         ));
 
+        // Scrollable grid: bounded height + Overflow::scroll_y so the
+        // mouse wheel pages through long candidate lists. Without the
+        // bound the panel sizes itself to the children and overflows the
+        // window.
         panel
-            .spawn(Node {
-                flex_direction: FlexDirection::Row,
-                flex_wrap: FlexWrap::Wrap,
-                column_gap: Val::Px(12.0),
-                row_gap: Val::Px(12.0),
-                justify_content: JustifyContent::Center,
-                ..default()
-            })
+            .spawn((
+                Node {
+                    flex_direction: FlexDirection::Row,
+                    flex_wrap: FlexWrap::Wrap,
+                    column_gap: Val::Px(8.0),
+                    row_gap: Val::Px(8.0),
+                    justify_content: JustifyContent::Center,
+                    align_content: AlignContent::FlexStart,
+                    max_height: Val::Vh(70.0),
+                    overflow: Overflow::scroll_y(),
+                    ..default()
+                },
+                Pickable::default(),
+            ))
             .with_children(|row| {
                 for (card_id, name) in candidates {
                     let path = scryfall::card_asset_path(name);
@@ -455,8 +476,8 @@ fn spawn_search_modal(
                         Button,
                         Node {
                             flex_direction: FlexDirection::Column,
-                            width: Val::Px(CARD_W),
-                            padding: UiRect::all(Val::Px(6.0)),
+                            width: Val::Px(SEARCH_CARD_W),
+                            padding: UiRect::all(Val::Px(4.0)),
                             align_items: AlignItems::Center,
                             ..default()
                         },
@@ -467,15 +488,15 @@ fn spawn_search_modal(
                         cb.spawn((
                             ImageNode { image: texture, ..default() },
                             Node {
-                                width: Val::Px(CARD_W - 12.0),
-                                height: Val::Px(CARD_H - 12.0),
+                                width: Val::Px(SEARCH_CARD_W - 8.0),
+                                height: Val::Px(search_card_h - 8.0),
                                 ..default()
                             },
                             Pickable::IGNORE,
                         ));
                         cb.spawn((
                             Text::new(name.clone()),
-                            TextFont { font_size: 12.0, ..default() },
+                            TextFont { font_size: 10.0, ..default() },
                             TextColor(Color::WHITE),
                             Pickable::IGNORE,
                         ));
@@ -876,21 +897,27 @@ pub fn handle_discard_select(
     }
 }
 
-/// Handle clicks on search candidate cards: highlight the selected card.
+/// Handle clicks on search candidate cards: highlight the selected card and
+/// clear the highlight on whichever card was previously selected. The model
+/// only carries `Option<CardId>`, so without resetting the prior button the
+/// UI would show every clicked card as still selected even though only the
+/// latest click counts.
 #[allow(clippy::type_complexity)]
 pub fn handle_search_select(
     mut state: ResMut<DecisionUiState>,
-    mut buttons: Query<
-        (&Interaction, &SearchSelectButton, &mut BackgroundColor),
-        (Changed<Interaction>, With<Button>),
-    >,
+    mut buttons: Query<(&Interaction, &SearchSelectButton, &mut BackgroundColor), With<Button>>,
 ) {
-    for (interaction, btn, mut bg) in buttons.iter_mut() {
-        if *interaction != Interaction::Pressed {
-            continue;
-        }
-        state.search_selected = Some(btn.card_id);
-        *bg = BackgroundColor(BTN_BG_ON);
+    let pressed = buttons
+        .iter()
+        .find_map(|(i, btn, _)| (*i == Interaction::Pressed).then_some(btn.card_id));
+    let Some(picked) = pressed else { return };
+    state.search_selected = Some(picked);
+    for (_, btn, mut bg) in buttons.iter_mut() {
+        *bg = BackgroundColor(if btn.card_id == picked {
+            BTN_BG_ON
+        } else {
+            BTN_BG_OFF
+        });
     }
 }
 

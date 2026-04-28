@@ -861,13 +861,21 @@ pub struct TriggeredAbility {
     pub effect: Effect,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ActivatedAbility {
     pub tap_cost: bool,
     pub mana_cost: crate::mana::ManaCost,
     pub effect: Effect,
     pub once_per_turn: bool,
     pub sorcery_speed: bool,
+    /// True if activating this ability requires sacrificing the source
+    /// permanent as part of its cost. The sacrifice is applied **after**
+    /// tap and mana payment succeed but **before** the effect is queued
+    /// for resolution — so by the time the effect runs (or is pushed onto
+    /// the stack), the source is already in the graveyard. Used by cards
+    /// like Mind Stone (`{1}, {T}, Sacrifice this: Draw a card`),
+    /// Cathar Commando, Greater Good, Zuran Orb, etc.
+    pub sac_cost: bool,
 }
 
 #[derive(Debug, Clone)]

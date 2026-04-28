@@ -278,6 +278,7 @@ impl GameState {
                         },
                         once_per_turn: false,
                         sorcery_speed: false,
+                        sac_cost: false,
                     },
                 ];
             }
@@ -435,15 +436,10 @@ impl GameState {
             cost.symbols.push(crate::mana::ManaSymbol::Generic(tax));
         }
 
-        // Snapshot pool and tapped states before auto-tap so we can roll back
-        // cleanly if the cost still can't be paid after tapping (e.g. not enough
-        // of the right colours).
-        let pool_before = self.players[p].mana_pool.clone();
-        let tapped_before: Vec<(crate::card::CardId, bool)> = self.battlefield
-            .iter()
-            .filter(|c| c.owner == p)
-            .map(|c| (c.id, c.tapped))
-            .collect();
+        // Snapshot pristine state before convoke + auto-tap mutate it, so a
+        // failed payment can revert both convoke taps and any lands that
+        // auto-tap tapped.
+        let snapshot = self.snapshot_payment_state(p);
 
         // Convoke: tap each chosen creature and credit the player's pool
         // with {1} generic per creature. (The full Oracle also lets the
@@ -457,25 +453,15 @@ impl GameState {
             self.players[p].mana_pool.add_colorless(1);
         }
 
-        let mut auto_events = self.auto_tap_for_cost(p, &cost);
-
-        match self.players[p].mana_pool.pay(&cost) {
+        let receipt = match self.try_pay_after_snapshot(p, &cost, snapshot) {
+            Ok(r) => r,
             Err(e) => {
-                // Rollback: restore pool and untap any lands that auto-tap tapped.
-                self.players[p].mana_pool = pool_before;
-                for (id, was_tapped) in tapped_before {
-                    if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == id) {
-                        c.tapped = was_tapped;
-                    }
-                }
                 self.players[p].hand.push(card);
-                return Err(GameError::Mana(e));
+                return Err(e);
             }
-            Ok(side_effects) => {
-                if side_effects.life_lost > 0 {
-                    self.players[p].life -= side_effects.life_lost as i32;
-                }
-            }
+        };
+        if receipt.side_effects.life_lost > 0 {
+            self.players[p].life -= receipt.side_effects.life_lost as i32;
         }
 
         // Consume Chancellor-of-the-Annex's one-shot tax if it was set
@@ -485,8 +471,9 @@ impl GameState {
         // Compute converge: count distinct colors of mana drained from the
         // pool by paying the cost. Convoke pips contribute generic only,
         // so they don't raise this count.
-        let converged_value = converge_count(&pool_before, &self.players[p].mana_pool);
+        let converged_value = converge_count(&receipt.pool_before, &self.players[p].mana_pool);
 
+        let mut auto_events = receipt.auto_events;
         auto_events.push(GameEvent::SpellCast { player: p, card_id });
         let events = auto_events;
 
@@ -588,25 +575,9 @@ impl GameState {
         } else {
             flashback_cost
         };
-        let pool_before = self.players[p].mana_pool.clone();
-        let tapped_before: Vec<(crate::card::CardId, bool)> = self.battlefield
-            .iter().filter(|c| c.owner == p).map(|c| (c.id, c.tapped)).collect();
-        self.auto_tap_for_cost(p, &cost);
-        match self.players[p].mana_pool.pay(&cost) {
-            Err(e) => {
-                self.players[p].mana_pool = pool_before;
-                for (id, was_tapped) in tapped_before {
-                    if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == id) {
-                        c.tapped = was_tapped;
-                    }
-                }
-                return Err(GameError::Mana(e));
-            }
-            Ok(side_effects) => {
-                if side_effects.life_lost > 0 {
-                    self.players[p].life -= side_effects.life_lost as i32;
-                }
-            }
+        let receipt = self.try_pay_with_auto_tap(p, &cost)?;
+        if receipt.side_effects.life_lost > 0 {
+            self.players[p].life -= receipt.side_effects.life_lost as i32;
         }
 
         // Remove from graveyard.
@@ -747,31 +718,17 @@ impl GameState {
         if tax > 0 {
             mana_cost.symbols.push(crate::mana::ManaSymbol::Generic(tax));
         }
-        let pool_before = self.players[p].mana_pool.clone();
-        let tapped_before: Vec<(CardId, bool)> = self
-            .battlefield
-            .iter()
-            .filter(|c| c.owner == p)
-            .map(|c| (c.id, c.tapped))
-            .collect();
-        let mut auto_events = self.auto_tap_for_cost(p, &mana_cost);
-        match self.players[p].mana_pool.pay(&mana_cost) {
+        let receipt = match self.try_pay_with_auto_tap(p, &mana_cost) {
+            Ok(r) => r,
             Err(e) => {
-                self.players[p].mana_pool = pool_before;
-                for (id, was_tapped) in tapped_before {
-                    if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == id) {
-                        c.tapped = was_tapped;
-                    }
-                }
                 self.players[p].hand.push(card);
-                return Err(GameError::Mana(e));
+                return Err(e);
             }
-            Ok(side_effects) => {
-                if side_effects.life_lost > 0 {
-                    self.players[p].life -= side_effects.life_lost as i32;
-                }
-            }
+        };
+        if receipt.side_effects.life_lost > 0 {
+            self.players[p].life -= receipt.side_effects.life_lost as i32;
         }
+        let mut auto_events = receipt.auto_events;
 
         // Pay the life portion of the alt cost.
         if alt.life_cost > 0 {
@@ -888,11 +845,21 @@ impl GameState {
         })
     }
 
-    /// Push `SpellCast` triggered abilities (e.g. Prowess) onto the stack.
-    /// They will resolve when priority is passed through.
-    pub(crate) fn fire_spell_cast_triggers(&mut self, controller: usize, _is_noncreature: bool) {
+    /// Push `SpellCast` triggered abilities (e.g. Prowess, Up the Beanstalk)
+    /// onto the stack. They will resolve when priority is passed through.
+    /// `cast_card` is the id of the spell that just resolved (or just got
+    /// cast); the trigger's optional `EventSpec::filter` predicate is
+    /// evaluated with `Selector::TriggerSource` bound to this card so
+    /// "whenever you cast a spell with property X" filters can read the
+    /// cast spell's mana value, color, type, etc.
+    pub(crate) fn fire_spell_cast_triggers(
+        &mut self,
+        controller: usize,
+        cast_card: CardId,
+        _is_noncreature: bool,
+    ) {
         use crate::effect::{EventKind, EventScope};
-        let triggers: Vec<(CardId, Effect)> = self
+        let candidates: Vec<(CardId, Effect, Option<crate::effect::Predicate>)> = self
             .battlefield
             .iter()
             .filter(|c| c.controller == controller)
@@ -907,11 +874,25 @@ impl GameState {
                                 EventScope::YourControl | EventScope::AnyPlayer
                             )
                     })
-                    .map(|t| (c.id, t.effect.clone()))
+                    .map(|t| (c.id, t.effect.clone(), t.event.filter.clone()))
             })
             .collect();
 
-        for (source, effect) in triggers {
+        for (source, effect, filter) in candidates {
+            if let Some(filter) = filter {
+                let ctx = crate::game::effects::EffectContext {
+                    controller,
+                    source: Some(source),
+                    targets: vec![],
+                    trigger_source: Some(crate::game::effects::EntityRef::Card(cast_card)),
+                    mode: 0,
+                    x_value: 0,
+                    converged_value: 0,
+                };
+                if !self.evaluate_predicate(&filter, &ctx) {
+                    continue;
+                }
+            }
             let auto_target = self.auto_target_for_effect(&effect, controller);
             self.stack.push(StackItem::Trigger {
                 source,
@@ -920,6 +901,73 @@ impl GameState {
                 target: auto_target,
                 mode: None,
             });
+        }
+    }
+
+    // ── Payment snapshot / restore ───────────────────────────────────────────
+
+    /// Capture mana pool + tapped state of every permanent owned by `payer`.
+    /// Used by the cast/activate/counter paths so a payment that fails
+    /// mid-way (after auto-tap has already tapped lands) can be reverted to
+    /// pristine state.
+    pub(crate) fn snapshot_payment_state(&self, payer: usize) -> PaymentSnapshot {
+        PaymentSnapshot {
+            pool: self.players[payer].mana_pool.clone(),
+            tapped: self
+                .battlefield
+                .iter()
+                .filter(|c| c.owner == payer)
+                .map(|c| (c.id, c.tapped))
+                .collect(),
+        }
+    }
+
+    /// Restore the mana pool and tapped state captured by a prior
+    /// `snapshot_payment_state`. Skips cards that have since left the
+    /// battlefield (the caller is responsible for any zone-change rollback).
+    pub(crate) fn restore_payment_state(&mut self, payer: usize, snapshot: PaymentSnapshot) {
+        self.players[payer].mana_pool = snapshot.pool;
+        for (id, was_tapped) in snapshot.tapped {
+            if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == id) {
+                c.tapped = was_tapped;
+            }
+        }
+    }
+
+    /// Snapshot, auto-tap, and pay `cost` atomically. Returns the auto-tap
+    /// events plus the pre-payment pool snapshot (callers like `cast_spell`
+    /// use it to compute converge). On payment failure the snapshot is
+    /// restored — pool and tapped flags revert to the pre-call state.
+    pub(crate) fn try_pay_with_auto_tap(
+        &mut self,
+        payer: usize,
+        cost: &crate::mana::ManaCost,
+    ) -> Result<PaymentReceipt, GameError> {
+        let snapshot = self.snapshot_payment_state(payer);
+        self.try_pay_after_snapshot(payer, cost, snapshot)
+    }
+
+    /// Same as `try_pay_with_auto_tap` but uses a snapshot the caller
+    /// already captured — for paths that mutate state between snapshot and
+    /// payment (e.g. convoke taps creatures in between, activate_ability
+    /// applies its tap-cost in between).
+    pub(crate) fn try_pay_after_snapshot(
+        &mut self,
+        payer: usize,
+        cost: &crate::mana::ManaCost,
+        snapshot: PaymentSnapshot,
+    ) -> Result<PaymentReceipt, GameError> {
+        let auto_events = self.auto_tap_for_cost(payer, cost);
+        match self.players[payer].mana_pool.pay(cost) {
+            Ok(side_effects) => Ok(PaymentReceipt {
+                auto_events,
+                side_effects,
+                pool_before: snapshot.pool,
+            }),
+            Err(e) => {
+                self.restore_payment_state(payer, snapshot);
+                Err(GameError::Mana(e))
+            }
         }
     }
 
@@ -1091,6 +1139,12 @@ impl GameState {
             self.check_target_legality(tgt, p)?;
         }
 
+        // Snapshot pristine state before applying tap-cost so a failed mana
+        // payment rolls back both the auto-tap of mana sources AND the
+        // tap-cost on the source itself.
+        let needs_payment = !ability.mana_cost.symbols.is_empty();
+        let pre_snapshot = needs_payment.then(|| self.snapshot_payment_state(p));
+
         // Pay tap cost
         if ability.tap_cost {
             if self.battlefield[pos].tapped {
@@ -1099,39 +1153,37 @@ impl GameState {
             self.battlefield[pos].tapped = true;
         }
 
-        // Pay mana cost (auto-tap if needed)
         let mut auto_mana_events = Vec::new();
-        if !ability.mana_cost.symbols.is_empty() {
-            let pool_before = self.players[p].mana_pool.clone();
-            let tapped_before: Vec<(CardId, bool)> = self.battlefield
-                .iter().filter(|c| c.owner == p).map(|c| (c.id, c.tapped)).collect();
-            auto_mana_events = self.auto_tap_for_cost(p, &ability.mana_cost);
-            match self.players[p].mana_pool.pay(&ability.mana_cost) {
-                Ok(side_effects) => {
-                    if side_effects.life_lost > 0 {
-                        self.players[p].life -= side_effects.life_lost as i32;
-                    }
-                }
-                Err(e) => {
-                    self.players[p].mana_pool = pool_before;
-                    for (id, was_tapped) in tapped_before {
-                        if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == id) {
-                            c.tapped = was_tapped;
-                        }
-                    }
-                    // Also undo the tap cost on the ability source itself.
-                    if ability.tap_cost
-                        && let Some(c) = self.battlefield.iter_mut().find(|c| c.id == card_id)
-                    {
-                        c.tapped = false;
-                    }
-                    return Err(GameError::Mana(e));
-                }
+        if let Some(snapshot) = pre_snapshot {
+            let receipt = self.try_pay_after_snapshot(p, &ability.mana_cost, snapshot)?;
+            if receipt.side_effects.life_lost > 0 {
+                self.players[p].life -= receipt.side_effects.life_lost as i32;
             }
+            auto_mana_events = receipt.auto_events;
         }
 
         let mut events = auto_mana_events;
         events.push(GameEvent::AbilityActivated { source: card_id });
+
+        // Sacrifice-as-cost: with tap and mana costs paid, sacrifice the
+        // source. The effect runs/queues after, and any selectors that
+        // reference the source by id will miss it on the battlefield —
+        // which matches the Oracle (sac is part of the activation cost,
+        // so the source is in the graveyard by the time the ability
+        // resolves). Cards whose effect references self after sacrifice
+        // (Greater Good's "draw cards equal to its power") need to
+        // capture that data via `Effect::SacrificeAndRemember` instead.
+        if ability.sac_cost {
+            let is_creature = self
+                .battlefield_find(card_id)
+                .map(|c| c.definition.is_creature())
+                .unwrap_or(false);
+            if is_creature {
+                events.push(GameEvent::CreatureDied { card_id });
+            }
+            let mut die_evs = self.remove_to_graveyard_with_triggers(card_id);
+            events.append(&mut die_evs);
+        }
 
         // Mana abilities resolve immediately (no stack, no priority reset).
         let is_mana_ab = is_mana_ability(&ability.effect);
@@ -1155,4 +1207,20 @@ impl GameState {
 
         Ok(events)
     }
+}
+
+/// Pre-payment state captured by `snapshot_payment_state` so a failed
+/// payment can revert mana pool and tap-state mutations.
+pub(crate) struct PaymentSnapshot {
+    pub pool: crate::mana::ManaPool,
+    pub tapped: Vec<(CardId, bool)>,
+}
+
+/// What a successful payment yields: events from auto-tapping mana sources,
+/// any side-effects (Phyrexian life loss), and the pool state from before
+/// the payment (for convergence / similar metrics).
+pub(crate) struct PaymentReceipt {
+    pub auto_events: Vec<GameEvent>,
+    pub side_effects: crate::mana::PaymentSideEffects,
+    pub pool_before: crate::mana::ManaPool,
 }

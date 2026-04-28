@@ -18,6 +18,7 @@ pub fn tap_add(color: Color) -> ActivatedAbility {
         },
         once_per_turn: false,
         sorcery_speed: false,
+        sac_cost: false,
     }
 }
 

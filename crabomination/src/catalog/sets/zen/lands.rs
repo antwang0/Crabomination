@@ -32,6 +32,7 @@ fn fetch_ability(type_a: LandType, type_b: LandType) -> ActivatedAbility {
         ]),
         once_per_turn: false,
         sorcery_speed: false,
+        sac_cost: false,
     }
 }
 

@@ -61,19 +61,34 @@ struct MainCamera;
 fn main() {
     let cfg = config::load();
 
-    // Preload card images by inspecting the same demo state the server uses.
+    // Preload card images for every card the player could possibly see —
+    // the demo (Modern) decks and the full cube card universe. Cube
+    // matches roll a random deck per seat *after* startup, so we can't
+    // narrow the prefetch to "cards in this match"; the full union keeps
+    // Scryfall fetches off the critical path of gameplay.
+    //
     // Track back-face names separately so the prefetch can pass `face=back`
     // to Scryfall — `format=image` returns the front face by default even
     // when queried by back-face name.
-    let demo = crabomination::demo::build_demo_state();
     let mut fronts: std::collections::HashSet<&str> = std::collections::HashSet::new();
     let mut backs: std::collections::HashSet<&str> = std::collections::HashSet::new();
+    let demo = crabomination::demo::build_demo_state();
     for player in &demo.players {
         for card in player.library.iter().chain(&player.hand).chain(&player.graveyard) {
             fronts.insert(card.definition.name);
             if let Some(back) = card.definition.back_face.as_ref() {
                 backs.insert(back.name);
             }
+        }
+    }
+    for factory in crabomination::cube::all_cube_cards() {
+        let def = factory();
+        // `CardDefinition::name` is `&'static str` (string literals from
+        // catalog factories), so we can copy the slice out — it outlives
+        // `def`.
+        fronts.insert(def.name);
+        if let Some(back) = def.back_face.as_ref() {
+            backs.insert(back.name);
         }
     }
     let mut specs: Vec<(&str, bool)> = fronts.into_iter().map(|n| (n, false)).collect();

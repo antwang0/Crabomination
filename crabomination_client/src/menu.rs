@@ -20,7 +20,9 @@ use std::sync::Mutex;
 use bevy::input::keyboard::{Key, KeyboardInput};
 use bevy::prelude::*;
 
+use crabomination::cube::build_cube_state;
 use crabomination::demo::build_demo_state;
+use crabomination::game::GameState;
 use crabomination::server::{
     ClientChannel, RandomBot, SeatOccupant, run_match, seat_pair, tcp_client, tcp_seat,
 };
@@ -39,8 +41,10 @@ pub enum AppState {
 
 /// Filled in by the menu when the user picks an option; drained by
 /// [`crate::net_plugin::start_net_session`] when entering `InGame`.
+/// Carries the chosen format alongside the network mode so the in-game
+/// match builder can pick the right deck pool.
 #[derive(Resource, Default)]
-pub struct PendingNetMode(pub Option<NetMode>);
+pub struct PendingNetMode(pub Option<(NetMode, MatchFormat)>);
 
 #[derive(Clone, Debug)]
 pub enum NetMode {
@@ -51,6 +55,32 @@ pub enum NetMode {
     HostLan { port: u16 },
     /// Connect a TCP client to `addr` (host:port).
     JoinLan { addr: String },
+}
+
+/// Which deck pool the match draws from. Modern uses the BRG / Goryo's
+/// demo decks (`demo::build_demo_state`). Cube rolls a fresh random
+/// 2-color deck per seat from the curated cube pools (`cube::build_cube_state`).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
+pub enum MatchFormat {
+    #[default]
+    Modern,
+    Cube,
+}
+
+impl MatchFormat {
+    fn build_state(self) -> GameState {
+        match self {
+            MatchFormat::Modern => build_demo_state(),
+            MatchFormat::Cube => build_cube_state(),
+        }
+    }
+
+    fn label(self) -> &'static str {
+        match self {
+            MatchFormat::Modern => "Modern",
+            MatchFormat::Cube => "Cube",
+        }
+    }
 }
 
 /// Active text-edit field in the menu.
@@ -67,6 +97,7 @@ struct MenuFields {
     host_port: String,
     join_addr: String,
     focused: FocusedField,
+    format: MatchFormat,
 }
 
 impl Default for MenuFields {
@@ -79,6 +110,7 @@ impl Default for MenuFields {
             join_addr: std::env::var("CRAB_SERVER")
                 .unwrap_or_else(|_| "127.0.0.1:7777".to_string()),
             focused: FocusedField::None,
+            format: MatchFormat::default(),
         }
     }
 }
@@ -103,6 +135,9 @@ struct FieldButton(FocusedField);
 #[derive(Component)]
 struct FieldText(FocusedField);
 
+#[derive(Component)]
+struct FormatToggleButton(MatchFormat);
+
 // ── Plugin ───────────────────────────────────────────────────────────────────
 
 pub struct MenuPlugin;
@@ -120,6 +155,8 @@ impl Plugin for MenuPlugin {
                     handle_field_focus,
                     handle_text_input,
                     refresh_field_text,
+                    handle_format_toggle,
+                    refresh_format_toggle_visuals,
                     handle_action_buttons,
                 )
                     .run_if(in_state(AppState::Menu)),
@@ -177,6 +214,31 @@ fn spawn_menu(mut commands: Commands, asset_server: Res<AssetServer>) {
                     tf(28.0),
                     TextColor(Color::srgb(1.0, 0.85, 0.55)),
                 ));
+
+                // Format selector — Modern (BRG / Goryo's demo decks) vs
+                // Cube (random 2-color deck per seat).
+                p.spawn(Node {
+                    flex_direction: FlexDirection::Column,
+                    align_items: AlignItems::Center,
+                    row_gap: Val::Px(4.0),
+                    ..default()
+                })
+                .with_children(|fmt| {
+                    fmt.spawn((
+                        Text::new("Format"),
+                        tf(13.0),
+                        TextColor(Color::srgba(0.85, 0.85, 0.85, 1.0)),
+                    ));
+                    fmt.spawn(Node {
+                        flex_direction: FlexDirection::Row,
+                        column_gap: Val::Px(8.0),
+                        ..default()
+                    })
+                    .with_children(|row| {
+                        format_toggle(row, &tf, MatchFormat::Modern);
+                        format_toggle(row, &tf, MatchFormat::Cube);
+                    });
+                });
 
                 // Play vs Bot
                 button(p, &tf, "Play vs Bot", PLAY_BG, PlayBotButton);
@@ -296,6 +358,31 @@ fn field(
         });
 }
 
+fn format_toggle(
+    parent: &mut ChildSpawnerCommands,
+    tf: &impl Fn(f32) -> TextFont,
+    format: MatchFormat,
+) {
+    parent
+        .spawn((
+            Button,
+            Node {
+                padding: UiRect::axes(Val::Px(14.0), Val::Px(6.0)),
+                ..default()
+            },
+            BackgroundColor(FIELD_BG_OFF),
+            FormatToggleButton(format),
+        ))
+        .with_children(|b| {
+            b.spawn((
+                Text::new(format.label()),
+                tf(13.0),
+                TextColor(Color::WHITE),
+                Pickable::IGNORE,
+            ));
+        });
+}
+
 fn despawn_menu(mut commands: Commands, q: Query<Entity, With<MenuRoot>>) {
     for e in &q {
         commands.entity(e).despawn();
@@ -400,6 +487,33 @@ fn refresh_field_text(
     }
 }
 
+fn handle_format_toggle(
+    mut fields: ResMut<MenuFields>,
+    buttons: Query<(&Interaction, &FormatToggleButton), Changed<Interaction>>,
+) {
+    for (interaction, toggle) in &buttons {
+        if *interaction == Interaction::Pressed {
+            fields.format = toggle.0;
+        }
+    }
+}
+
+fn refresh_format_toggle_visuals(
+    fields: Res<MenuFields>,
+    mut buttons: Query<(&FormatToggleButton, &mut BackgroundColor)>,
+) {
+    if !fields.is_changed() {
+        return;
+    }
+    for (toggle, mut bg) in &mut buttons {
+        *bg = BackgroundColor(if toggle.0 == fields.format {
+            FIELD_BG_ON
+        } else {
+            FIELD_BG_OFF
+        });
+    }
+}
+
 fn handle_action_buttons(
     mut next_state: ResMut<NextState<AppState>>,
     mut pending: ResMut<PendingNetMode>,
@@ -408,14 +522,15 @@ fn handle_action_buttons(
     host_q: Query<&Interaction, (Changed<Interaction>, With<HostButton>)>,
     join_q: Query<&Interaction, (Changed<Interaction>, With<JoinButton>)>,
 ) {
+    let format = fields.format;
     if play_q.iter().any(|i| *i == Interaction::Pressed) {
-        pending.0 = Some(NetMode::LocalBot);
+        pending.0 = Some((NetMode::LocalBot, format));
         next_state.set(AppState::InGame);
         return;
     }
     if host_q.iter().any(|i| *i == Interaction::Pressed) {
         if let Ok(port) = fields.host_port.parse::<u16>() {
-            pending.0 = Some(NetMode::HostLan { port });
+            pending.0 = Some((NetMode::HostLan { port }, format));
             next_state.set(AppState::InGame);
         } else {
             eprintln!("menu: invalid host port `{}`", fields.host_port);
@@ -425,7 +540,7 @@ fn handle_action_buttons(
     if join_q.iter().any(|i| *i == Interaction::Pressed) {
         let addr = fields.join_addr.trim().to_string();
         if !addr.is_empty() {
-            pending.0 = Some(NetMode::JoinLan { addr });
+            pending.0 = Some((NetMode::JoinLan { addr }, format));
             next_state.set(AppState::InGame);
         }
     }
@@ -434,38 +549,41 @@ fn handle_action_buttons(
 // ── Network setup invoked by `OnEnter(InGame)` ───────────────────────────────
 
 /// Read the queued `PendingNetMode` and install `NetOutbox`/`NetInbox`. Falls
-/// back to a local-bot match if no choice was queued (e.g. tests bypass the
-/// menu).
+/// back to a local Modern bot match if no choice was queued (e.g. tests
+/// bypass the menu).
 pub fn start_net_session_from_menu(world: &mut World) {
-    let mode = world
+    let (mode, format) = world
         .get_resource_mut::<PendingNetMode>()
         .and_then(|mut r| r.0.take())
-        .unwrap_or(NetMode::LocalBot);
+        .unwrap_or((NetMode::LocalBot, MatchFormat::Modern));
 
     match mode {
-        NetMode::LocalBot => spawn_inprocess_bot(world),
-        NetMode::HostLan { port } => match spawn_host_lan(world, port) {
-            Ok(()) => eprintln!("net: hosting on 0.0.0.0:{port} — waiting for opponent"),
+        NetMode::LocalBot => spawn_inprocess_bot(world, format),
+        NetMode::HostLan { port } => match spawn_host_lan(world, port, format) {
+            Ok(()) => eprintln!(
+                "net: hosting {fmt:?} on 0.0.0.0:{port} — waiting for opponent",
+                fmt = format
+            ),
             Err(e) => {
                 eprintln!("net: host failed ({e}); falling back to local bot");
-                spawn_inprocess_bot(world);
+                spawn_inprocess_bot(world, format);
             }
         },
         NetMode::JoinLan { addr } => match spawn_join_lan(world, &addr) {
             Ok(()) => eprintln!("net: connected to {addr}"),
             Err(e) => {
                 eprintln!("net: join {addr} failed ({e}); falling back to local bot");
-                spawn_inprocess_bot(world);
+                spawn_inprocess_bot(world, format);
             }
         },
     }
 }
 
-fn spawn_inprocess_bot(world: &mut World) {
+fn spawn_inprocess_bot(world: &mut World, format: MatchFormat) {
     let (server_seat, ClientChannel { tx, rx }) = seat_pair();
     std::thread::spawn(move || {
         run_match(
-            build_demo_state(),
+            format.build_state(),
             vec![
                 SeatOccupant::Human(server_seat),
                 SeatOccupant::Bot(Box::new(RandomBot::new())),
@@ -476,7 +594,7 @@ fn spawn_inprocess_bot(world: &mut World) {
     world.insert_resource(NetInbox(Mutex::new(rx)));
 }
 
-fn spawn_host_lan(world: &mut World, port: u16) -> std::io::Result<()> {
+fn spawn_host_lan(world: &mut World, port: u16, format: MatchFormat) -> std::io::Result<()> {
     let bind = format!("0.0.0.0:{port}");
     let listener = TcpListener::bind(&bind)?;
     let (server_seat0, ClientChannel { tx, rx }) = seat_pair();
@@ -498,7 +616,7 @@ fn spawn_host_lan(world: &mut World, port: u16) -> std::io::Result<()> {
             }
         };
         run_match(
-            build_demo_state(),
+            format.build_state(),
             vec![
                 SeatOccupant::Human(server_seat0),
                 SeatOccupant::Human(server_seat1),

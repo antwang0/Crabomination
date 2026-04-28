@@ -513,6 +513,7 @@ pub fn putrid_imp() -> CardDefinition {
             ]),
             once_per_turn: false,
             sorcery_speed: false,
+            sac_cost: false,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -668,6 +669,7 @@ pub fn karakas() -> CardDefinition {
                 },
                 once_per_turn: false,
                 sorcery_speed: false,
+                sac_cost: false,
             },
             // {T}: Return target legendary creature to its owner's hand.
             ActivatedAbility {
@@ -682,6 +684,7 @@ pub fn karakas() -> CardDefinition {
                 },
                 once_per_turn: false,
                 sorcery_speed: false,
+                sac_cost: false,
             },
         ],
         triggered_abilities: vec![],
@@ -743,6 +746,7 @@ pub fn bojuka_bog() -> CardDefinition {
             },
             once_per_turn: false,
             sorcery_speed: false,
+            sac_cost: false,
         }],
         triggered_abilities: vec![etb],
         static_abilities: vec![],

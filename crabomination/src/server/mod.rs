@@ -393,4 +393,185 @@ mod tests {
         drop(c0);
         handle.join().unwrap();
     }
+
+    // ── Concurrency ──────────────────────────────────────────────────────────
+
+    use std::time::{Duration, Instant};
+
+    /// Drain up to `cap` messages from `rx` within `timeout`. Returns whatever
+    /// arrived; useful when the order between two concurrent senders is
+    /// non-deterministic but we want to assert on the multiset of outcomes.
+    fn drain_within(
+        rx: &mpsc::Receiver<ServerMsg>,
+        cap: usize,
+        timeout: Duration,
+    ) -> Vec<ServerMsg> {
+        let deadline = Instant::now() + timeout;
+        let mut out = Vec::new();
+        while out.len() < cap {
+            let now = Instant::now();
+            if now >= deadline {
+                break;
+            }
+            match rx.recv_timeout(deadline - now) {
+                Ok(m) => out.push(m),
+                Err(_) => break,
+            }
+        }
+        out
+    }
+
+    /// Two human seats fire `PlayLand` from independent sender threads. The
+    /// actor processes them serially — seat 0 holds priority so its play is
+    /// accepted (broadcast lands on both seats), and seat 1's attempt is
+    /// rejected with an `ActionError`. The point of this test is to confirm
+    /// concurrent submissions don't deadlock or interleave the broadcast with
+    /// itself: each accepted action emits a single `Events + View` pair to
+    /// every seat, in order.
+    #[test]
+    fn concurrent_submissions_processed_serially() {
+        let mut state = two_player_game();
+        let s0_card = state.add_card_to_hand(0, catalog::plains());
+        let s1_card = state.add_card_to_hand(1, catalog::plains());
+
+        let (s0, c0) = seat_pair();
+        let (s1, c1) = seat_pair();
+        let handle = thread::spawn(move || {
+            run_match(state, vec![SeatOccupant::Human(s0), SeatOccupant::Human(s1)])
+        });
+
+        drain_initial(&c0);
+        drain_initial(&c1);
+
+        // Two independent threads submit at roughly the same moment.
+        let t0 = c0.tx.clone();
+        let t1 = c1.tx.clone();
+        let h0 = thread::spawn(move || {
+            t0.send(ClientMsg::SubmitAction(GameAction::PlayLand(s0_card)))
+                .unwrap();
+        });
+        let h1 = thread::spawn(move || {
+            t1.send(ClientMsg::SubmitAction(GameAction::PlayLand(s1_card)))
+                .unwrap();
+        });
+        h0.join().unwrap();
+        h1.join().unwrap();
+
+        let m0 = drain_within(&c0.rx, 6, Duration::from_secs(2));
+        let m1 = drain_within(&c1.rx, 6, Duration::from_secs(2));
+
+        let events0 = m0.iter().filter(|m| matches!(m, ServerMsg::Events(_))).count();
+        let views0 = m0.iter().filter(|m| matches!(m, ServerMsg::View(_))).count();
+        let errs1 = m1.iter().filter(|m| matches!(m, ServerMsg::ActionError(_))).count();
+        let events1 = m1.iter().filter(|m| matches!(m, ServerMsg::Events(_))).count();
+
+        assert_eq!(events0, 1, "c0 should see exactly one Events broadcast: {m0:?}");
+        assert_eq!(views0, 1, "c0 should see exactly one View broadcast: {m0:?}");
+        assert_eq!(errs1, 1, "c1 should see exactly one ActionError: {m1:?}");
+        assert_eq!(events1, 1, "c1 should see exactly one Events broadcast: {m1:?}");
+
+        drop(c0);
+        drop(c1);
+        handle.join().unwrap();
+    }
+
+    /// One human dropping their channel mid-match must not crash the actor or
+    /// stop it from servicing the remaining human. The forwarder thread for
+    /// the dropped seat exits when its `recv` returns Err; the seat's `tx`
+    /// is still in `seat_tx` but `let _ = tx.send(...)` swallows the error
+    /// so broadcasts don't propagate the panic.
+    #[test]
+    fn human_disconnect_mid_match_does_not_crash_actor() {
+        let mut state = two_player_game();
+        let card_id = state.add_card_to_hand(0, catalog::plains());
+
+        let (s0, c0) = seat_pair();
+        let (s1, c1) = seat_pair();
+        let handle = thread::spawn(move || {
+            run_match(state, vec![SeatOccupant::Human(s0), SeatOccupant::Human(s1)])
+        });
+
+        drain_initial(&c0);
+        drain_initial(&c1);
+
+        // Seat 1 disconnects before doing anything. Give the forwarder
+        // thread a moment to notice and exit.
+        drop(c1);
+        thread::sleep(Duration::from_millis(20));
+
+        // Seat 0 keeps playing — this must succeed and produce a normal
+        // Events + View pair on c0, no panic on the broadcast to the
+        // already-dead seat 1.
+        c0.tx
+            .send(ClientMsg::SubmitAction(GameAction::PlayLand(card_id)))
+            .unwrap();
+
+        let m0 = drain_within(&c0.rx, 2, Duration::from_secs(2));
+        assert!(
+            m0.iter().any(|m| matches!(m, ServerMsg::Events(_))),
+            "c0 missing Events after peer disconnect: {m0:?}"
+        );
+
+        drop(c0);
+        handle.join().unwrap();
+    }
+
+    /// When every human seat drops, the match thread must terminate cleanly
+    /// — the merged receive on the actor side errors out (all forwarder
+    /// threads have exited and dropped their `merged_tx` clones), and
+    /// `run_match` returns rather than spinning.
+    #[test]
+    fn all_humans_disconnect_terminates_match() {
+        let state = two_player_game();
+        let (s0, c0) = seat_pair();
+        let (s1, c1) = seat_pair();
+        let handle = thread::spawn(move || {
+            run_match(state, vec![SeatOccupant::Human(s0), SeatOccupant::Human(s1)])
+        });
+
+        drop(c0);
+        drop(c1);
+
+        // The match must end on its own within a reasonable window; we
+        // wrap join in a timeout via a signaling channel.
+        let (done_tx, done_rx) = mpsc::channel();
+        let watcher = thread::spawn(move || {
+            handle.join().unwrap();
+            let _ = done_tx.send(());
+        });
+        done_rx
+            .recv_timeout(Duration::from_secs(5))
+            .expect("run_match should terminate after all humans disconnect");
+        watcher.join().unwrap();
+    }
+
+    /// A bot-only match has no merged_rx blocking step: the actor pumps
+    /// `drive_bots` until the game ends. With both players at 1 life and a
+    /// hasted attacker, combat damage in turn 1 wins the game — exercising
+    /// the no-humans branch end-to-end.
+    #[test]
+    fn bot_vs_bot_runs_to_completion() {
+        let mut state = two_player_game();
+        state.players[0].life = 1;
+        state.players[1].life = 1;
+        let bear = state.add_card_to_battlefield(0, catalog::grizzly_bears());
+        state.clear_sickness(bear);
+
+        let (done_tx, done_rx) = mpsc::channel();
+        let handle = thread::spawn(move || {
+            run_match(
+                state,
+                vec![
+                    SeatOccupant::Bot(Box::new(RandomBot::new())),
+                    SeatOccupant::Bot(Box::new(RandomBot::new())),
+                ],
+            );
+            let _ = done_tx.send(());
+        });
+
+        done_rx
+            .recv_timeout(Duration::from_secs(10))
+            .expect("bot-vs-bot match should reach game over within 10s");
+        handle.join().unwrap();
+    }
 }

@@ -22,20 +22,20 @@ still ⏳.
 | Card | Status | Notes |
 |---|---|---|
 | Descendant of Storms | ⏳ | Spirit token + tap-trigger; needs the Spirit creature-token primitive. |
-| Cathar Commando | ⏳ | Flash + sac-to-destroy artifact/enchantment. Needs sac-as-cost activated ability. |
+| Cathar Commando | ✅ | Flash + {1}, sac: destroy artifact/enchantment (`ActivatedAbility::sac_cost`). |
 | Containment Priest | ⏳ | Replacement effect: nontoken creatures entering tapped get exiled. Needs ETB-replacement primitive. |
 | Lion Sash | ⏳ | Equipment + grow via exile-from-graveyard. Needs equipment + counters wiring. |
 | Elite Spellbinder | ⏳ | ETB look-at-opp-hand + cost-tax static while in play. Reuses `AdditionalCostAfterFirstSpell`-style hooks. |
 | Enduring Innocence | ⏳ | Lifelink + draw-on-creature-ETB trigger; "Roomba"-style return-from-exile post-death. Needs ETB-other listener + delayed self-revive. |
-| Flickerwisp | ⏳ | ETB exile target permanent until end of turn (Flicker primitive already exists for Ephemerate). |
+| Flickerwisp | ✅ | 3/1 Flying; ETB exile target permanent + `DelayUntil(NextEndStep, Move-back-to-OwnerOf)`. |
 | Heliod, Sun-Crowned | ⏳ | Lifelink-grant ability + counter combo (with Walking Ballista). Needs +1/+1-on-life-gain trigger primitive. |
-| Loran of the Third Path | ⏳ | ETB destroy artifact/enchantment + tap-for-draw activated ability. |
-| Ranger-Captain of Eos | ⏳ | ETB tutor for ≤1-CMC creature + sac-for-no-noncreature-spells static. |
-| Restoration Angel | ⏳ | Flash + ETB flicker target non-Angel creature you control. Reuses Flicker primitive. |
+| Loran of the Third Path | ✅ | 1/3 Vigilance; ETB destroy artifact/enchantment; {T}: you and target opponent each draw a card. |
+| Ranger-Captain of Eos | 🟡 | ETB tutor for ≤1-CMC creature. The sac-for-no-noncreature-spells static is omitted (no sac-as-cost activation primitive). |
+| Restoration Angel | ✅ | Flash + ETB exile-and-return target non-Angel creature you control (`Exile + Move-back` flicker pattern). |
 | Guardian Scalelord | ⏳ | Flying + grant flying to attackers via attack trigger. |
 | Serra Angel | ✅ | Already in `crate::catalog::serra_angel` (4/4 flying + vigilance). |
 | Intervention Pact | ⏳ | Free prevent-damage + delayed `PayOrLoseGame` upkeep cost (reuses Pact primitive). |
-| Isolate | ⏳ | Exile target permanent with mana value 1. |
+| Isolate | ✅ | Exile target permanent with mana value 1 (`ManaValueAtLeast(1) ∧ ManaValueAtMost(1)` filter). |
 | Tempt with Bunnies | ⏳ | Tempting offer (chain-creating) — needs multi-player choice primitive. |
 | Static Prison | ⏳ | Pay X to enter with X stun counters; tap target permanent. |
 | Virtue of Loyalty | ⏳ | Adventure + enchantment side. Needs Adventure cost-mode primitive. |
@@ -52,16 +52,16 @@ still ⏳.
 | Quantum Riddler | ✅ | UB 4/4 flying + on-cast Draw 1 (already in catalog). |
 | Deadeye Navigator | ⏳ | Soulbond + activated flicker. Reuses Flicker primitive; needs Soulbond. |
 | Pact of Negation | ✅ | Free counter + delayed `PayOrLoseGame` upkeep. |
-| Consider | ⏳ | Surveil 1, draw 1. Surveil primitive exists. |
-| Spell Snare | ⏳ | Counter mana-value 2 spell. Reuses CounterSpell with a `ManaValueAtMost(2)` filter. |
-| Swan Song | ⏳ | Counter target enchantment/instant/sorcery, controller gets a 2/2 Bird. |
-| Thought Scour | ⏳ | Mill 2 + draw 1. |
+| Consider | ✅ | Surveil 1 then Draw 1 (reuses Surveil + Draw primitives). |
+| Spell Snare | ✅ | Counter target spell with mana value 2 (CounterSpell + `ManaValueAt{Most,Least}(2)` sandwich). |
+| Swan Song | 🟡 | Counter enchantment/instant/sorcery; 2/2 Flying Bird token. (Token goes to caster's opponents — equivalent in 2-player; engine has no `ControllerOf` lookup for stack/graveyard cards.) |
+| Thought Scour | ✅ | Mill 2 + draw 1. |
 | Consult the Star Charts | ⏳ | Look-at-top-N + draw — needs Foretell-adjacent decision. |
-| Daze | ⏳ | Free counter unless caster pays {1}. Reuses `CounterUnlessPaid`; alt cost is "return Island". |
+| Daze | 🟡 | Counter target spell unless its controller pays {1}. The "return an Island" alt cost is omitted (alt-cost model only supports exile-from-hand). |
 | Lose Focus | ⏳ | Counter spell + delve. |
-| Frantic Search | ⏳ | Draw 2, discard 2, untap 3 lands. |
+| Frantic Search | 🟡 | Draw 2, discard 2, untap your tapped lands (approximation: untaps every tapped land you control rather than "up to three"). |
 | Cryptic Command | ⏳ | Modal four-way counterspell. Reuses ChooseMode + counter/draw/tap/return. |
-| Paradoxical Outcome | ⏳ | Return non-land permanents you control + draw equal. |
+| Paradoxical Outcome | ✅ | Return each non-land permanent you control + draw equal (`ForEach + Move + Draw 1`). |
 | Turnabout | ⏳ | Tap/untap target permanent type. |
 | Gush | ⏳ | Free draw if pitching two Islands; alternative cost variant. |
 | Gather Specimens | ⏳ | Replace creature ETB control-shift. Replacement effect primitive. |
@@ -69,9 +69,9 @@ still ⏳.
 | Dig Through Time | ⏳ | Delve + look at top 7, take 2. Multi-pick primitive. |
 | Windfall | ⏳ | Each player discards then draws equal. |
 | Mind's Desire | ⏳ | Storm + cast-from-top. Needs Storm count + cast-from-top primitive. |
-| Upheaval | ⏳ | Mass return-permanents-to-hand. |
+| Upheaval | ✅ | Return all permanents to their owners' hands (`ForEach + Move → Hand(OwnerOf)`). |
 | Treasure Cruise | ⏳ | Delve + Draw 3. Needs Delve cost reduction. |
-| Aether Spellbomb | ⏳ | Activated bounce + cycle. |
+| Aether Spellbomb | ✅ | {U}, sac: return target creature to hand. {1}, sac: draw a card. Both via `ActivatedAbility::sac_cost`. |
 | The Everflowing Well | ⏳ | Saga land flip; needs Saga lore counters + DFC. |
 | Proft's Eidetic Memory | ⏳ | Investigate + scaling +1/+1. Needs investigate (Clue). |
 | Back to Basics | ⏳ | Static "nonbasic lands don't untap". Needs land-untap restriction. |
@@ -99,19 +99,19 @@ still ⏳.
 | Crabomination | ⏳ | Custom card — TBD. |
 | Doomsday Excruciator | ⏳ | Doomsday-adjacent. |
 | Metamorphosis Fanatic | ⏳ | Unknown — TBD. |
-| Slaughter Pact | ⏳ | Pact primitive (reuses `PayOrLoseGame`). |
+| Slaughter Pact | ✅ | Destroy nonblack creature + delayed `PayOrLoseGame` upkeep ({2}{B}). |
 | Deadly Dispute | ⏳ | Sac creature/artifact + draw 2 + Treasure. Needs Treasure tokens. |
 | Corpse Dance | ⏳ | Buyback + reanimate creature top of grave. |
 | Baleful Mastery | ⏳ | Exile target nonland; opp may draw 2 to halve cost. Modal alt-cost. |
 | Bloodchief's Thirst | ⏳ | Kicker + remove counter. |
 | Bone Shards | ⏳ | Sac-or-discard cost flexibility. |
-| Disentomb | ⏳ | Reanimate basic. |
+| Disentomb | ✅ | Return target creature card to hand (Move from graveyard). |
 | Collective Brutality | ⏳ | Escalate-modal removal. |
-| Drown in Ichor | ⏳ | Removal + Surveil. |
-| Fell | ⏳ | Removal. |
-| Night's Whisper | ⏳ | Pay 2 life + Draw 2. |
+| Drown in Ichor | ✅ | 3 damage to target creature + Surveil 1. |
+| Fell | ✅ | Destroy target tapped creature + Surveil 2. |
+| Night's Whisper | ✅ | Pay 2 life + Draw 2 (already in `decks::modern`). |
 | Dread Return | ⏳ | Sac-3-creatures flashback reanimation. Reuses Flashback. |
-| Blasphemous Edict | ⏳ | Each player sacs N. |
+| Blasphemous Edict | ✅ | Each player sacrifices a creature (`Sacrifice` + `EachPlayer`). |
 | Wishclaw Talisman | ⏳ | Wish-style tutor with downside. |
 | Parallax Dementia | ⏳ | Fading + reanimate; needs fade counters. |
 | Parallax Nexus | ⏳ | Fading + hand-strip. |
@@ -126,7 +126,7 @@ still ⏳.
 | Grim Lavamancer | ⏳ | Tap + exile-2-from-graveyard for damage. |
 | Marauding Mako | ⏳ | Pinger/aggressive creature. |
 | Orcish Lumberjack | ⏳ | Sac-Forest for {GGG}. |
-| Voldaren Epicure | ⏳ | Blood token. Needs Blood tokens. |
+| Voldaren Epicure | ✅ | ETB: create a Blood token + 1 damage to each opponent (`ForEach EachOpponent`). |
 | Amped Raptor | ⏳ | ETB cast spell from top. |
 | Cam and Farrik, Havoc Duo | ⏳ | Dual creature. |
 | Dreadhorde Arcanist | ⏳ | Attack-trigger flashback from grave. Reuses Flashback. |
@@ -137,19 +137,19 @@ still ⏳.
 | Detective's Phoenix | ⏳ | Recurring Phoenix variant. |
 | Simian Spirit Guide | ⏳ | Exile from hand for {R}. Needs alt-cost-from-hand. |
 | Arclight Phoenix | ⏳ | Three-spell-cast trigger from graveyard. Needs spells-cast-this-turn count + recursion. |
-| Goldspan Dragon | ⏳ | Treasure on attack/target. |
+| Goldspan Dragon | 🟡 | 4/4 Flying Haste; attack-trigger Treasure (using the now-functional Treasure mana ability). "Becomes target of a spell" trigger and the Treasure-2-mana static rider are omitted. |
 | Shivan Dragon | ✅ | Already in catalog. |
 | Balefire Dragon | ⏳ | Combat damage trigger; needs filtered DealDamage(EachCreature). |
-| Pact of the Titan | ⏳ | Pact primitive (reuses `PayOrLoseGame`); creates a 4/4 token. |
-| Tarfire | ⏳ | Tribal instant. |
+| Pact of the Titan | ✅ | 4/4 red Giant token + delayed `PayOrLoseGame` upkeep ({4}{R}). |
+| Tarfire | 🟡 | 2 damage to any target. Tribal type omitted (engine has no Tribal card type). |
 | Chaos Warp | ⏳ | Shuffle target permanent + reveal-from-top. |
-| Big Score | ⏳ | Discard + 2 Treasure + Draw 2. |
+| Big Score | ✅ | Discard + 2 Treasure + Draw 2. Treasure tokens are now fully functional — each carries its `{T}, Sac: Add one mana of any color` activated ability via `TokenDefinition::activated_abilities`. |
 | Mine Collapse | ⏳ | Sac-land alt-cost removal. |
 | Fireblast | ⏳ | Sac-Mountains alt-cost burn. |
 | Pyrokinesis | ⏳ | Pitch-cost mass burn. Reuses pitch-cost path (Force of Will). |
-| Vandalblast | ⏳ | One-sided artifact wipe. |
+| Vandalblast | 🟡 | Single-target artifact destruction; Overload {4}{R} mode omitted (no overload primitive yet). |
 | Legion Extruder | ⏳ | Equip-ish artifact. |
-| Sundering Eruption | ⏳ | DFC red sorcery / land. |
+| Sundering Eruption | ✅ | MDFC: front is `{1}{R}` sorcery dealing 3 damage to a creature/planeswalker; back face Mount Tyrhus is a Mountain that ETBs tapped and taps for {R}. |
 
 ### Green
 
@@ -157,7 +157,7 @@ still ⏳.
 |---|---|---|
 | Basking Rootwalla | ⏳ | Madness creature. |
 | Elvish Reclaimer | ⏳ | Land-tutor activated ability. |
-| Haywire Mite | ⏳ | Sac-to-destroy artifact + lifegain. |
+| Haywire Mite | ✅ | {2}, sac: destroy artifact/enchantment/planeswalker + gain 1 life (`ActivatedAbility::sac_cost`). |
 | Sylvan Safekeeper | ⏳ | Sac-Forest grant shroud. |
 | Basking Broodscale | ⏳ | Eldrazi token-maker. |
 | Cankerbloom | ⏳ | Sac for proliferate. |
@@ -166,14 +166,14 @@ still ⏳.
 | Keen-Eyed Curator | ⏳ | Graveyard hate + counter pump. |
 | Rofellos, Llanowar Emissary | ⏳ | Tap for {G}{G} per Forest. |
 | Satyr Wayfinder | ⏳ | ETB top-4 mill, take a land. |
-| Sylvan Caryatid | ⏳ | Hexproof mana dork (any color). Reuses AnyOneColor. |
+| Sylvan Caryatid | ✅ | 0/3 Hexproof Defender; {T}: Add one mana of any color. |
 | Elvish Spirit Guide | ⏳ | Exile-from-hand for {G}. |
 | Enduring Vitality | ⏳ | Roomba-style return on death + creature mana untap. |
 | Hauntwoods Shrieker | ⏳ | Token + transform. |
 | Mossborn Hydra | ⏳ | Hydra +1/+1 counter scaling. |
 | Mutable Explorer | ⏳ | Mutate primitive. |
-| Sentinel of the Nameless City | ⏳ | Token on attack. |
-| Tireless Tracker | ⏳ | Investigate; Clue tokens. |
+| Sentinel of the Nameless City | 🟡 | Vigilance + attack-trigger 1/1 green Citizen token. Ward 2 omitted (keyword exists but not enforced at targeting time); Plant subtype dropped (no `Plant` in `CreatureType`). |
+| Tireless Tracker | 🟡 | Filtered ETB-other trigger: when a land enters under your control, investigate (create a Clue). Sac-Clue +1/+1 ability omitted (no sac-of-other-permanent activation primitive). |
 | Ursine Monstrosity | ⏳ | Adapt-style P/T scaling. |
 | Baloth Prime | ⏳ | TBD. |
 | Icetill Explorer | ⏳ | TBD. |
@@ -193,12 +193,12 @@ still ⏳.
 | Archdruid's Charm | ⏳ | Modal — destroy land/artifact, search creature, +1/+1 counters. |
 | Finale of Devastation | ⏳ | Tutor + pump scaling with X. |
 | Life from the Loam | ⏳ | Return up-to-3 lands; Dredge 3. |
-| Nature's Lore | ⏳ | Forest-search untapped. |
+| Nature's Lore | ✅ | Search Forest, put onto battlefield untapped. |
 | Kodama's Reach | ⏳ | Two-basic ramp. |
 | Biorhythm | ⏳ | Each player's life = creatures. |
 | Esika's Chariot | ⏳ | Vehicle + crew + token. |
 | Springleaf Parade | ⏳ | TBD. |
-| Up the Beanstalk | ⏳ | Cast 5+CMC for Draw 1. |
+| Up the Beanstalk | ✅ | ETB Draw 1 + filtered SpellCast trigger (mana value ≥ 5 → Draw 1). |
 | Aluren | ⏳ | Free-cast 3 or less creatures. |
 | Greater Good | ⏳ | Sac creature + Draw P. |
 | Shifting Woodland | ⏳ | DFC land. |
@@ -207,8 +207,8 @@ still ⏳.
 
 | Card | Status | Notes |
 |---|---|---|
-| Ornithopter | ⏳ | Flying 0/2 artifact creature. |
-| Ornithopter of Paradise | ⏳ | Flying mana dork. |
+| Ornithopter | ✅ | {0} Artifact creature 0/2 with Flying. |
+| Ornithopter of Paradise | ✅ | {1} Artifact creature 0/2 Flying; {T}: Add one mana of any color. |
 | Glaring Fleshraker | ⏳ | TBD. |
 | Tezzeret, Cruel Captain | ⏳ | Planeswalker — loyalty abilities + ult. |
 | Karn, Scion of Urza | ⏳ | +1 / -1 / -2 walker; constructs. |
@@ -224,10 +224,10 @@ still ⏳.
 | Shuko | ⏳ | Equipment with free-equip. |
 | Soul-Guide Lantern | ⏳ | Graveyard-exile artifact. |
 | Agatha's Soul Cauldron | ⏳ | Borrow activated abilities of exiled creatures. |
-| Fellwar Stone | ⏳ | Mana rock matching opponent's land colors. |
+| Fellwar Stone | 🟡 | {T}: Add one mana of any color. (Approximation: drops the "matches opponent's lands" restriction — engine has no per-source mana provenance yet.) |
 | Mesmeric Orb | ⏳ | Mill-on-untap symmetric. |
-| Millstone | ⏳ | Tap to mill 2. |
-| Mind Stone | ⏳ | Mana rock + sac for Draw 1. |
+| Millstone | ✅ | {2}, {T}: target player mills 2. |
+| Mind Stone | ✅ | {T}: Add {C}. {1}, {T}, Sacrifice this: Draw a card. Both abilities wired (uses `ActivatedAbility::sac_cost`). |
 | Pentad Prism | ⏳ | Sunburst counters; tap for one mana. |
 | Smuggler's Copter | ⏳ | Vehicle + crew + loot trigger. Needs Vehicle primitive. |
 | Coalition Relic | ⏳ | Mana rock + charge counter. |
@@ -252,7 +252,7 @@ still ⏳.
 | Ashiok, Nightmare Weaver | ⏳ | Planeswalker — exile/scry/copy. |
 | Master of Death | ⏳ | UB recursion + discard. |
 | Fallen Shinobi | ⏳ | Ninjitsu + reveal-and-take. |
-| Bloodtithe Harvester | ⏳ | Blood token + drain. |
+| Bloodtithe Harvester | 🟡 | ETB and attack triggers each create a Blood token. Sac-Blood ping ability omitted (no sac-of-other-permanent activation primitive). |
 | Terminate | ✅ | Already in catalog (destroy can't-regenerate). |
 | Carnage Interpreter | ⏳ | TBD. |
 | Kolaghan's Command | ⏳ | Modal x2. |
@@ -294,7 +294,7 @@ still ⏳.
 | Geyadrone Dihada | ⏳ | Planeswalker. |
 | Lord Xander, the Collector | ⏳ | ETB / attack / death triggers. |
 | Korvold, Fae-Cursed King | ⏳ | Sac-trigger draw + +1/+1. |
-| Temur Ascendancy | ⏳ | Haste + draw on big creatures. |
+| Temur Ascendancy | 🟡 | Filtered ETB trigger (creatures w/ power ≥ 4 entering under your control → Draw 1). Static "creatures you control have haste" currently grants haste to all your creatures rather than only ≥ 4 power (selector-decomposer doesn't yet thread `PowerAtLeast` into static-effect targeting). |
 | Loot, the Pathfinder | ⏳ | TBD. |
 | Dragonback Assault | ⏳ | TBD. |
 | Rediscover the Way | ⏳ | TBD. |
@@ -303,7 +303,7 @@ still ⏳.
 | Fangkeeper's Familiar | ⏳ | TBD. |
 | Teval, Arbiter of Virtue | ⏳ | TBD. |
 | Muldrotha, the Gravetide | ⏳ | Cast from graveyard each turn (one of each card type). |
-| Rakshasa's Bargain | ⏳ | Pay life + draw. |
+| Rakshasa's Bargain | 🟡 | Pay 4 life + Draw 4. The "exile creature card from your graveyard" alternate additional cost is folded away (modal additional-cost not modeled). |
 | Omnath, Locus of Creation | ⏳ | Landfall-quad-color. |
 | Atraxa, Grand Unifier | 🟡 | Already wired with ETB Draw 4 approximation. Real reveal-and-sort still ⏳. |
 | Leyline of the Guildpact | ⏳ | "Your permanents are all colors." Needs is-all-colors primitive. |
@@ -319,9 +319,9 @@ still ⏳.
 | Celestial Colonnade | ⏳ | UW manland. |
 | Meticulous Archive | ✅ | UW surveil land (catalog). |
 | Razortide Bridge | ⏳ | UW bridge — colorless tap; pay life for color. |
-| Seachrome Coast | ⏳ | UW fastland (reuses fastland trigger). |
+| Seachrome Coast | ✅ | UW fastland (reuses fastland trigger). |
 | Creeping Tar Pit | ⏳ | UB manland. |
-| Darkslick Shores | ⏳ | UB fastland. |
+| Darkslick Shores | ✅ | UB fastland. |
 | Mistvault Bridge | ⏳ | UB bridge. |
 | Undercity Sewers | ✅ | UB surveil land (catalog). |
 | Blackcleave Cliffs | ✅ | BR fastland (catalog). |
@@ -334,48 +334,48 @@ still ⏳.
 | Thornspire Verge | ⏳ | RG verge. |
 | Horizon Canopy | ⏳ | GW horizon canopy: pay 1 + life to draw. |
 | Lush Portico | ⏳ | GW surveil land. |
-| Razorverge Thicket | ⏳ | GW fastland. |
+| Razorverge Thicket | ✅ | GW fastland. |
 | Thornglint Bridge | ⏳ | GW bridge. |
 | Bleachbone Verge | ⏳ | WB verge. |
-| Concealed Courtyard | ⏳ | WB fastland. |
+| Concealed Courtyard | ✅ | WB fastland. |
 | Goldmire Bridge | ⏳ | WB bridge. |
 | Shadowy Backstreet | ✅ | WB surveil land (catalog). |
 | Riverpyre Verge | ⏳ | UR verge. |
 | Silverbluff Bridge | ⏳ | UR bridge. |
-| Spirebluff Canal | ⏳ | UR fastland. |
+| Spirebluff Canal | ✅ | UR fastland. |
 | Thundering Falls | ⏳ | UR surveil land. |
 | Blooming Marsh | ✅ | BG fastland (catalog). |
 | Darkmoss Bridge | ⏳ | BG bridge. |
 | Underground Mortuary | ⏳ | BG surveil land. |
 | Wastewood Verge | ⏳ | BG verge. |
 | Elegant Parlor | ⏳ | RW surveil land. |
-| Inspiring Vantage | ⏳ | RW fastland. |
+| Inspiring Vantage | ✅ | RW fastland. |
 | Rustvale Bridge | ⏳ | RW bridge. |
 | Sunbaked Canyon | ⏳ | RW horizon canopy. |
-| Botanical Sanctum | ⏳ | UG fastland. |
+| Botanical Sanctum | ✅ | UG fastland. |
 | Hedge Maze | ⏳ | UG surveil land. |
 | Tanglepool Bridge | ⏳ | UG bridge. |
 | Waterlogged Grove | ⏳ | UG horizon canopy. |
 | Twisted Landscape | ⏳ | Tri-color landcycle. |
 | Sheltering Landscape | ⏳ | Tri-color landcycle. |
 | Bountiful Landscape | ⏳ | Tri-color landcycle. |
-| Ancient Den | ⏳ | Artifact land — Plains. |
+| Ancient Den | ✅ | Artifact land — Plains. {T}: Add {W}. |
 | Cloudpost | ⏳ | Locus mana scaling. |
-| Darksteel Citadel | ⏳ | Indestructible artifact land. |
+| Darksteel Citadel | ✅ | Indestructible artifact land. {T}: Add {C}. |
 | Evolving Wilds | ⏳ | Sac-search basic. |
 | Exotic Orchard | ⏳ | Mana matching opponents' lands. |
 | Glimmerpost | ⏳ | Locus + lifegain. |
-| Great Furnace | ⏳ | Artifact-Mountain. |
+| Great Furnace | ✅ | Artifact-Mountain. {T}: Add {R}. |
 | Lotus Field | ⏳ | ETB sac-2-lands; tap for {GGG}/{UUU}/etc. |
 | Planar Nexus | ⏳ | Tri-color rainbow. |
 | Power Depot | ⏳ | Charge-counter mana storage. |
 | Rishadan Port | ⏳ | Tap-to-tap-opp-land. |
-| Seat of the Synod | ⏳ | Artifact-Island. |
+| Seat of the Synod | ✅ | Artifact-Island. {T}: Add {U}. |
 | Talon Gates of Madara | ⏳ | TBD. |
 | Three Tree City | ⏳ | TBD. |
-| Tree of Tales | ⏳ | Artifact-Forest. |
+| Tree of Tales | ✅ | Artifact-Forest. {T}: Add {G}. |
 | Trenchpost | ⏳ | TBD. |
-| Vault of Whispers | ⏳ | Artifact-Swamp. |
+| Vault of Whispers | ✅ | Artifact-Swamp. {T}: Add {B}. |
 
 ## Engine features needed
 
@@ -386,9 +386,11 @@ are listed in `DECK_FEATURES.md`.
 
 | Feature | Status | Cards depending on it |
 |---|---|---|
+| Sacrifice-as-activation-cost (`ActivatedAbility::sac_cost`) | ✅ | Mind Stone, Aether Spellbomb, Cathar Commando, Haywire Mite — and any token-sac mana ability (Treasure, Food, Blood, Clue). |
+| Token activated abilities (`TokenDefinition::activated_abilities`) | ✅ | Treasure (`{T}, Sac: Add any color`), Food (`{2}, {T}, Sac: Gain 3 life`), Clue (`{2}, Sac: Draw 1`), Blood (loot). |
+| Trigger-filter enforcement (`EventSpec::filter` evaluated in `dispatch_triggers_for_events` + `fire_spell_cast_triggers`) | ✅ | Up the Beanstalk, Temur Ascendancy, and any future "whenever you cast a spell with property X" / "whenever a creature enters with property Y" trigger. |
 | Equipment + equip-cost activated ability | ⏳ | Lion Sash, Shuko, Lavaspur Boots, Nettlecyst, Sword of Body and Mind, Helm of the Host. |
 | Vehicles + Crew | ⏳ | Smuggler's Copter, Esika's Chariot, Shorikai, Pinnacle Emissary, Coveted Jewel-adjacent. |
-| Treasure / Blood / Clue / Food token primitives | ⏳ | Magda, Goldspan Dragon, Big Score, Deadeye-adjacent, Voldaren Epicure, Bloodtithe Harvester, Tireless Tracker, Lonis, Proft's Eidetic Memory. |
 | Madness | ⏳ | Anje's Ravager, Blazing Rootwalla, Basking Rootwalla. |
 | Cycling | ⏳ | Aether Spellbomb (cycle), Sundering Eruption-adjacent. |
 | Adventure (cost-mode duality) | ⏳ | Virtue of Loyalty. |

@@ -452,21 +452,55 @@ impl GameState {
         if events.is_empty() {
             return;
         }
-        let mut matched: Vec<(CardId, Effect, usize)> = Vec::new();
+        // Phase 1: collect (source, effect, controller, optional filter,
+        // event subject) tuples while the borrow on `self.battlefield` is
+        // shared.
+        let mut candidates: Vec<(
+            CardId,
+            Effect,
+            usize,
+            Option<crate::effect::Predicate>,
+            Option<crate::game::effects::EntityRef>,
+        )> = Vec::new();
         for card in &self.battlefield {
             for ta in &card.definition.triggered_abilities {
                 for ev in events {
-                    if is_event_hardcoded(ev) {
+                    if is_event_hardcoded(ev, &ta.event) {
                         continue;
                     }
-                    if crate::game::effects::event_matches_spec(ev, &ta.event, card) {
-                        matched.push((card.id, ta.effect.clone(), card.controller));
+                    if crate::game::effects::event_matches_spec(self, ev, &ta.event, card) {
+                        candidates.push((
+                            card.id,
+                            ta.effect.clone(),
+                            card.controller,
+                            ta.event.filter.clone(),
+                            crate::game::effects::event_subject(ev),
+                        ));
                         break;
                     }
                 }
             }
         }
-        for (source, effect, controller) in matched {
+        // Phase 2: enforce the optional `EventSpec::filter` predicate now
+        // that we're free to call `&self.evaluate_predicate`. The trigger's
+        // source permanent is bound as `ctx.source`, and the event's
+        // subject (cast spell, dying creature, attacker, etc.) is bound as
+        // `Selector::TriggerSource` so filters can reference it.
+        for (source, effect, controller, filter, subject) in candidates {
+            if let Some(filter) = filter {
+                let ctx = crate::game::effects::EffectContext {
+                    controller,
+                    source: Some(source),
+                    targets: vec![],
+                    trigger_source: subject,
+                    mode: 0,
+                    x_value: 0,
+                    converged_value: 0,
+                };
+                if !self.evaluate_predicate(&filter, &ctx) {
+                    continue;
+                }
+            }
             let auto_target = self.auto_target_for_effect(&effect, controller);
             self.stack.push(StackItem::Trigger {
                 source,
@@ -1154,19 +1188,32 @@ impl GameState {
     }
 }
 
-/// Events already fired by hardcoded sites. Skip them in the unified dispatcher
-/// to prevent double-firing. Dies triggers are captured by SBA before the
-/// creature leaves the battlefield, so `SelfSource` Dies triggers wouldn't
-/// match after-the-fact anyway — keep them hardcoded.
-fn is_event_hardcoded(ev: &GameEvent) -> bool {
-    matches!(
-        ev,
-        GameEvent::PermanentEntered { .. }
-            | GameEvent::AttackerDeclared(_)
-            | GameEvent::SpellCast { .. }
-            | GameEvent::CreatureDied { .. }
-            | GameEvent::StepChanged(_)
-    )
+/// Whether `ev` is already handled by a hardcoded trigger site for the
+/// given `spec.scope`. Dispatched triggers should skip events for which
+/// the hardcoded site would already fire — but other scopes still need
+/// the unified dispatcher.
+///
+/// Coverage of hardcoded sites:
+/// - `EnterBattlefield` + `SelfSource` → `fire_self_etb_triggers`
+/// - `Attacks` + `SelfSource` → `declare_attackers`
+/// - `CreatureDied` + `SelfSource` → SBA-time hook in remove-to-graveyard
+/// - `SpellCast` (any scope) → `collect_self_cast_triggers` (SelfSource)
+///   plus `fire_spell_cast_triggers` (YourControl/AnyPlayer)
+/// - `StepBegins` (any scope) → `fire_step_triggers`
+///
+/// Non-SelfSource scopes for ETB / Attacks / CreatureDied are NOT covered
+/// by a hardcoded site and need the unified dispatcher (Temur Ascendancy's
+/// "another creature you control enters" trigger, etc.).
+fn is_event_hardcoded(ev: &GameEvent, spec: &crate::effect::EventSpec) -> bool {
+    use crate::effect::EventScope;
+    match ev {
+        GameEvent::PermanentEntered { .. } => matches!(spec.scope, EventScope::SelfSource),
+        GameEvent::AttackerDeclared(_) => matches!(spec.scope, EventScope::SelfSource),
+        GameEvent::CreatureDied { .. } => matches!(spec.scope, EventScope::SelfSource),
+        GameEvent::SpellCast { .. } => true,
+        GameEvent::StepChanged(_) => true,
+        _ => false,
+    }
 }
 
 // ── Static ability conversion ─────────────────────────────────────────────────

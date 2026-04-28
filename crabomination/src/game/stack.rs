@@ -345,7 +345,7 @@ impl GameState {
                 }
 
                 // SpellCast triggers fire after the spell resolves (e.g. Prowess).
-                self.fire_spell_cast_triggers(caster, is_noncreature);
+                self.fire_spell_cast_triggers(caster, card_id, is_noncreature);
             }
             StackItem::Trigger {
                 source,

@@ -675,27 +675,11 @@ impl GameState {
 
                 // Try to auto-pay on behalf of the spell's controller. We
                 // override priority temporarily so `auto_tap_for_cost`
-                // taps that player's lands.
+                // taps that player's lands. `try_pay_with_auto_tap` rolls
+                // back the pool + tap state on payment failure.
                 let saved_priority = self.priority.player_with_priority;
                 self.priority.player_with_priority = spell_caster;
-                let pool_before = self.players[spell_caster].mana_pool.clone();
-                let tapped_before: Vec<(CardId, bool)> = self
-                    .battlefield
-                    .iter()
-                    .filter(|c| c.owner == spell_caster)
-                    .map(|c| (c.id, c.tapped))
-                    .collect();
-                self.auto_tap_for_cost(spell_caster, mana_cost);
-                let paid = self.players[spell_caster].mana_pool.pay(mana_cost).is_ok();
-                if !paid {
-                    // Roll back any tap side-effects.
-                    self.players[spell_caster].mana_pool = pool_before;
-                    for (id, was_tapped) in tapped_before {
-                        if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == id) {
-                            c.tapped = was_tapped;
-                        }
-                    }
-                }
+                let paid = self.try_pay_with_auto_tap(spell_caster, mana_cost).is_ok();
                 self.priority.player_with_priority = saved_priority;
 
                 if !paid {
@@ -984,13 +968,11 @@ impl GameState {
                 } else {
                     mana_cost.clone()
                 };
-                let pool_before = self.players[p].mana_pool.clone();
-                let tapped_before: Vec<(CardId, bool)> = self
-                    .battlefield
-                    .iter()
-                    .filter(|c| c.owner == p)
-                    .map(|c| (c.id, c.tapped))
-                    .collect();
+                // We can't go through `try_pay_with_auto_tap` directly:
+                // even on a successful pay, we may need to roll back if
+                // `life_cost` would lose the game. Snapshot manually,
+                // commit on success, restore on either failure path.
+                let snapshot = self.snapshot_payment_state(p);
                 let mut paid_events = self.auto_tap_for_cost(p, &cost_subbed);
                 let mana_paid = self.players[p].mana_pool.pay(&cost_subbed).is_ok();
                 let life_ok = self.players[p].life > *life_cost as i32;
@@ -1001,13 +983,7 @@ impl GameState {
                     }
                     events.append(&mut paid_events);
                 } else {
-                    // Roll back the auto-tap and pool change.
-                    self.players[p].mana_pool = pool_before;
-                    for (id, was_tapped) in tapped_before {
-                        if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == id) {
-                            c.tapped = was_tapped;
-                        }
-                    }
+                    self.restore_payment_state(p, snapshot);
                     self.players[p].eliminated = true;
                     let mut sba = self.check_state_based_actions();
                     events.append(&mut sba);
@@ -1357,6 +1333,15 @@ impl GameState {
                             })
                         })
                         .or_else(|| self.exile.iter().find(|c| c.id == cid))
+                        // Walk the stack last so a SpellCast trigger's
+                        // filter predicate can read the mana value of the
+                        // spell that just went on the stack but hasn't
+                        // resolved yet (Up the Beanstalk, Mind's Desire,
+                        // etc.).
+                        .or_else(|| self.stack.iter().find_map(|si| match si {
+                            StackItem::Spell { card, .. } if card.id == cid => Some(&**card),
+                            _ => None,
+                        }))
                         .map(|c| c.definition.cost.cmc() as i32),
                     EntityRef::Player(_) => None,
                 })
@@ -1772,7 +1757,7 @@ pub fn token_to_card_definition(token: &TokenDefinition) -> CardDefinition {
         keywords: token.keywords.clone(),
         static_abilities: vec![],
         effect: Effect::Noop,
-        activated_abilities: vec![],
+        activated_abilities: token.activated_abilities.clone(),
         triggered_abilities: vec![],
         loyalty_abilities: vec![],
         alternative_cost: None,
@@ -1787,6 +1772,7 @@ pub fn token_to_card_definition(token: &TokenDefinition) -> CardDefinition {
 /// on the battlefield). Used by `fire_triggers_for_event` to decide whether a
 /// triggered ability should be pushed onto the stack.
 pub(crate) fn event_matches_spec(
+    state: &GameState,
     event: &GameEvent,
     spec: &EventSpec,
     source: &CardInstance,
@@ -1827,8 +1813,10 @@ pub(crate) fn event_matches_spec(
             event,
             GameEvent::BlockerDeclared { attacker, .. } if *attacker == source.id
         ),
-        EventScope::YourControl => event_player(event).is_some_and(|p| p == source.controller),
-        EventScope::OpponentControl => event_player(event).is_some_and(|p| p != source.controller),
+        EventScope::YourControl => event_actor(state, event)
+            .is_some_and(|p| p == source.controller),
+        EventScope::OpponentControl => event_actor(state, event)
+            .is_some_and(|p| p != source.controller),
         EventScope::AnyPlayer | EventScope::ActivePlayer => true,
         EventScope::AnotherOfYours => {
             // ETB/die triggers for "another creature"
@@ -1846,6 +1834,28 @@ pub(crate) fn event_matches_spec(
     true
 }
 
+/// The "actor" of an event for `EventScope::YourControl` /
+/// `OpponentControl` checks: the player whose action / permanent the
+/// event hangs off. For player-keyed events (CardDrawn, LifeGained, etc.)
+/// this is the event's `player` field; for permanent-keyed events
+/// (PermanentEntered, AttackerDeclared, CreatureDied) this is the
+/// permanent's controller, looked up on the battlefield. CreatureDied
+/// fires after the card has left the battlefield, so we fall back to the
+/// graveyard owner — close enough for "your creature died" triggers.
+pub(crate) fn event_actor(state: &GameState, event: &GameEvent) -> Option<usize> {
+    if let Some(p) = event_player(event) {
+        return Some(p);
+    }
+    let cid = event_card(event)?;
+    if let Some(c) = state.battlefield_find(cid) {
+        return Some(c.controller);
+    }
+    state
+        .players
+        .iter()
+        .position(|p| p.graveyard.iter().any(|c| c.id == cid))
+}
+
 fn event_player(event: &GameEvent) -> Option<usize> {
     match event {
         GameEvent::CardDrawn { player, .. }
@@ -1859,6 +1869,35 @@ fn event_player(event: &GameEvent) -> Option<usize> {
         | GameEvent::ManaAdded { player, .. }
         | GameEvent::ColorlessManaAdded { player }
         | GameEvent::TurnStarted { player, .. } => Some(*player),
+        _ => None,
+    }
+}
+
+/// Extract the "subject" of an event as an `EntityRef` — the entity the
+/// trigger's filter predicate should treat as `Selector::TriggerSource`.
+/// For card-subject events (cast spell, ETB permanent, attacker, etc.)
+/// this is the card; for player-subject events (life gain/loss, draw,
+/// discard) it's the player. Used by `dispatch_triggers_for_events` so
+/// filters like `Predicate::ValueAtLeast(ManaValueOf(TriggerSource), 5)`
+/// can pin-point the cast spell on the stack.
+pub(crate) fn event_subject(event: &GameEvent) -> Option<EntityRef> {
+    match event {
+        GameEvent::SpellCast { card_id, .. } => Some(EntityRef::Card(*card_id)),
+        GameEvent::PermanentEntered { card_id } => Some(EntityRef::Permanent(*card_id)),
+        GameEvent::CreatureDied { card_id } => Some(EntityRef::Card(*card_id)),
+        GameEvent::AttackerDeclared(card_id) => Some(EntityRef::Permanent(*card_id)),
+        GameEvent::BlockerDeclared { blocker, .. } => Some(EntityRef::Permanent(*blocker)),
+        GameEvent::LandPlayed { card_id, .. } => Some(EntityRef::Permanent(*card_id)),
+        GameEvent::PermanentTapped { card_id } => Some(EntityRef::Permanent(*card_id)),
+        GameEvent::PermanentUntapped { card_id } => Some(EntityRef::Permanent(*card_id)),
+        GameEvent::TokenCreated { card_id } => Some(EntityRef::Permanent(*card_id)),
+        GameEvent::CardDrawn { player, .. }
+        | GameEvent::CardDiscarded { player, .. }
+        | GameEvent::CardMilled { player, .. }
+        | GameEvent::LifeGained { player, .. }
+        | GameEvent::LifeLost { player, .. }
+        | GameEvent::ManaAdded { player, .. }
+        | GameEvent::ColorlessManaAdded { player } => Some(EntityRef::Player(*player)),
         _ => None,
     }
 }
@@ -1893,6 +1932,20 @@ pub fn food_token() -> TokenDefinition {
             artifact_subtypes: vec![ArtifactSubtype::Food],
             ..Default::default()
         },
+        // {2}, {T}, Sacrifice this artifact: Gain 3 life.
+        activated_abilities: vec![crate::card::ActivatedAbility {
+            tap_cost: true,
+            mana_cost: ManaCost {
+                symbols: vec![ManaSymbol::Generic(2)],
+            },
+            effect: Effect::GainLife {
+                who: crate::card::Selector::You,
+                amount: crate::card::Value::Const(3),
+            },
+            once_per_turn: false,
+            sorcery_speed: false,
+            sac_cost: true,
+        }],
     }
 }
 
@@ -1910,6 +1963,18 @@ pub fn treasure_token() -> TokenDefinition {
             artifact_subtypes: vec![ArtifactSubtype::Treasure],
             ..Default::default()
         },
+        // {T}, Sacrifice this artifact: Add one mana of any color.
+        activated_abilities: vec![crate::card::ActivatedAbility {
+            tap_cost: true,
+            mana_cost: ManaCost::default(),
+            effect: Effect::AddMana {
+                who: crate::effect::PlayerRef::You,
+                pool: crate::effect::ManaPayload::AnyOneColor(crate::card::Value::Const(1)),
+            },
+            once_per_turn: false,
+            sorcery_speed: false,
+            sac_cost: true,
+        }],
     }
 }
 
@@ -1927,6 +1992,30 @@ pub fn blood_token() -> TokenDefinition {
             artifact_subtypes: vec![ArtifactSubtype::Blood],
             ..Default::default()
         },
+        // {1}, {T}, Discard a card, Sacrifice this artifact: Draw a card.
+        // The discard piece isn't a discard-as-cost (no primitive yet) so we
+        // fold it into the resolution sequence. AutoDecider picks the first
+        // hand card to discard.
+        activated_abilities: vec![crate::card::ActivatedAbility {
+            tap_cost: true,
+            mana_cost: ManaCost {
+                symbols: vec![ManaSymbol::Generic(1)],
+            },
+            effect: Effect::Seq(vec![
+                Effect::Discard {
+                    who: crate::card::Selector::You,
+                    amount: crate::card::Value::Const(1),
+                    random: false,
+                },
+                Effect::Draw {
+                    who: crate::card::Selector::You,
+                    amount: crate::card::Value::Const(1),
+                },
+            ]),
+            once_per_turn: false,
+            sorcery_speed: false,
+            sac_cost: true,
+        }],
     }
 }
 
@@ -1944,6 +2033,20 @@ pub fn clue_token() -> TokenDefinition {
             artifact_subtypes: vec![ArtifactSubtype::Clue],
             ..Default::default()
         },
+        // {2}, Sacrifice this artifact: Draw a card.
+        activated_abilities: vec![crate::card::ActivatedAbility {
+            tap_cost: false,
+            mana_cost: ManaCost {
+                symbols: vec![ManaSymbol::Generic(2)],
+            },
+            effect: Effect::Draw {
+                who: crate::card::Selector::You,
+                amount: crate::card::Value::Const(1),
+            },
+            once_per_turn: false,
+            sorcery_speed: false,
+            sac_cost: true,
+        }],
     }
 }
 

@@ -147,6 +147,7 @@ pub fn serum_powder() -> CardDefinition {
             },
             once_per_turn: false,
             sorcery_speed: false,
+            sac_cost: false,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],

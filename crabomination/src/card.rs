@@ -263,6 +263,11 @@ pub struct TokenDefinition {
     pub colors: Vec<Color>,
     pub supertypes: Vec<Supertype>,
     pub subtypes: Subtypes,
+    /// Activated abilities the token enters with. Used for Treasures
+    /// (`{T}, Sac: Add one mana of any color`), Food (`{2}, {T}, Sac:
+    /// Gain 3 life`), Clues (`{2}, Sac: Draw a card`), etc. Copied into
+    /// the resulting `CardDefinition` by `token_to_card_definition`.
+    pub activated_abilities: Vec<ActivatedAbility>,
 }
 
 // TokenDefinition's Subtypes needs PartialEq/Eq — derive it too.

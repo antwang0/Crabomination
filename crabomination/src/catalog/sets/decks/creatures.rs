@@ -263,6 +263,7 @@ pub fn griselbrand() -> CardDefinition {
             ]),
             once_per_turn: false,
             sorcery_speed: false,
+            sac_cost: false,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -314,6 +315,7 @@ pub fn psychic_frog() -> CardDefinition {
                 ]),
                 once_per_turn: false,
                 sorcery_speed: false,
+                sac_cost: false,
             },
             // "Sacrifice Psychic Frog: Each opponent mills 4 cards."
             ActivatedAbility {
@@ -331,6 +333,7 @@ pub fn psychic_frog() -> CardDefinition {
                 ]),
                 once_per_turn: false,
                 sorcery_speed: false,
+                sac_cost: false,
             },
         ],
         triggered_abilities: vec![],
