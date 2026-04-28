@@ -2375,3 +2375,167 @@ fn loran_etb_destroys_artifact_and_tap_ability_lets_both_draw() {
     assert_eq!(g.players[0].hand.len(), p0_hand + 1);
     assert_eq!(g.players[1].hand.len(), p1_hand + 1);
 }
+
+// ── New cube/Modern additions ─────────────────────────────────────────────────
+
+/// Reanimate puts a creature card from a graveyard onto the battlefield
+/// under the caster's control, and the caster loses life equal to its
+/// mana value. Atraxa has CMC 8 ({3}{W}{U}{B}{R}{G}) → caster pays 8 life.
+#[test]
+fn reanimate_puts_creature_into_play_and_pays_cmc_life() {
+    let mut g = two_player_game();
+    let atraxa = g.add_card_to_library(0, catalog::atraxa_grand_unifier());
+    let pos = g.players[0].library.iter().position(|c| c.id == atraxa).unwrap();
+    let card = g.players[0].library.remove(pos);
+    g.players[0].graveyard.push(card);
+
+    let id = g.add_card_to_hand(0, catalog::reanimate());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    let life_before = g.players[0].life;
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(atraxa)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Reanimate castable for {B}");
+    drain_stack(&mut g);
+
+    assert!(g.battlefield.iter().any(|c| c.id == atraxa),
+        "Atraxa should be on the battlefield");
+    assert_eq!(g.players[0].life, life_before - 8,
+        "Caster should lose CMC=8 life for reanimating Atraxa");
+}
+
+/// Reanimate's life-loss reads the actual mana value. Reanimating a 2-cost
+/// creature should only cost 2 life — not the flat 7 the previous stub used.
+#[test]
+fn reanimate_life_cost_scales_with_mana_value() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_library(0, catalog::grizzly_bears()); // {1}{G} = CMC 2
+    let pos = g.players[0].library.iter().position(|c| c.id == bear).unwrap();
+    let card = g.players[0].library.remove(pos);
+    g.players[0].graveyard.push(card);
+
+    let id = g.add_card_to_hand(0, catalog::reanimate());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    let life_before = g.players[0].life;
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(bear)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Reanimate castable for {B}");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[0].life, life_before - 2,
+        "Reanimating a 2-cost creature should cost 2 life");
+}
+
+/// Bone Shards' default mode (sacrifice) should sac one of the caster's
+/// creatures and destroy the targeted creature.
+#[test]
+fn bone_shards_sacrifices_creature_and_destroys_target() {
+    let mut g = two_player_game();
+    let sac_target = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let kill_target = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+
+    let id = g.add_card_to_hand(0, catalog::bone_shards());
+    g.players[0].mana_pool.add(Color::Black, 1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(kill_target)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Bone Shards castable for {B}");
+    drain_stack(&mut g);
+
+    // Sacrificed creature in P0's graveyard; destroyed creature in P1's graveyard.
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == sac_target),
+        "Caster's creature should be sacrificed (mode 0)");
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == kill_target),
+        "Targeted opponent creature should be destroyed");
+    assert!(!g.battlefield.iter().any(|c| c.id == sac_target));
+    assert!(!g.battlefield.iter().any(|c| c.id == kill_target));
+}
+
+/// Bone Shards mode 1 — discard a card instead of sacrificing — should
+/// cost a card from the caster's hand and still destroy the targeted
+/// creature.
+#[test]
+fn bone_shards_can_discard_instead_of_sacrifice() {
+    let mut g = two_player_game();
+    let to_discard = g.add_card_to_hand(0, catalog::lightning_bolt());
+    let kill_target = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+
+    let id = g.add_card_to_hand(0, catalog::bone_shards());
+    g.players[0].mana_pool.add(Color::Black, 1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(kill_target)),
+        mode: Some(1),
+        x_value: None,
+    })
+    .expect("Bone Shards castable for {B}");
+    drain_stack(&mut g);
+
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == to_discard),
+        "Discarded card should be in caster's graveyard");
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == kill_target),
+        "Targeted creature should be destroyed");
+}
+
+/// Pyrokinesis can be cast via its alt-cost (exile a red card from your
+/// hand) for free. The targeted creature takes 4 damage.
+#[test]
+fn pyrokinesis_alt_cost_exiles_red_card_and_deals_four_damage() {
+    let mut g = two_player_game();
+    let serra = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4 → dies to 4
+    let red_card = g.add_card_to_hand(0, catalog::lightning_bolt()); // red
+
+    let id = g.add_card_to_hand(0, catalog::pyrokinesis());
+    // No mana paid — alt cost is "exile a red card".
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: id,
+        pitch_card: Some(red_card),
+        target: Some(Target::Permanent(serra)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Pyrokinesis alt-castable by exiling a red card");
+    drain_stack(&mut g);
+
+    // The exiled pitch card is in exile.
+    assert!(g.exile.iter().any(|c| c.id == red_card),
+        "Pitched red card should be in exile");
+    // Serra Angel (4/4) takes 4 damage → dies.
+    assert!(!g.battlefield.iter().any(|c| c.id == serra),
+        "Serra Angel should die to 4 damage");
+}
+
+/// Pyrokinesis's alt cost requires a red card — pitching a non-red card
+/// should be rejected by the engine's `exile_filter` check.
+#[test]
+fn pyrokinesis_alt_cost_rejects_non_red_pitch() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    // Counterspell is blue — should be rejected as the pitch.
+    let blue_card = g.add_card_to_hand(0, catalog::counterspell());
+
+    let id = g.add_card_to_hand(0, catalog::pyrokinesis());
+    let result = g.perform_action(GameAction::CastSpellAlternative {
+        card_id: id,
+        pitch_card: Some(blue_card),
+        target: Some(Target::Permanent(bear)),
+        mode: None,
+        x_value: None,
+    });
+    assert!(result.is_err(),
+        "Pyrokinesis alt cost must reject a non-red pitch card");
+}

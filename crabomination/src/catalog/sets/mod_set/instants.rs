@@ -7,7 +7,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::target_filtered;
 use crate::effect::{DelayedTriggerKind, Duration, PlayerRef, Selector, Value, ZoneDest};
-use crate::mana::{Color, b, cost, g, generic, r, u, w};
+use crate::mana::{Color, ManaCost, b, cost, g, generic, r, u, w};
 
 /// Path to Exile — {W} Instant. Exile target creature; its controller may
 /// search their library for a basic land card, put it onto the battlefield
@@ -629,6 +629,97 @@ pub fn isolate() -> CardDefinition {
                     .and(SelectionRequirement::ManaValueAtMost(1)),
             ),
         },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+/// Pyrokinesis — {4}{R}{R} Instant. You may exile a red card from your
+/// hand rather than pay this spell's mana cost. Pyrokinesis deals 4
+/// damage divided as you choose among any number of target creatures.
+///
+/// Wires the existing pitch alt-cost (same shape as Force of Will). The
+/// "divide 4 damage among any number of creatures" half is approximated
+/// as 4 damage to a single creature target — the engine has no
+/// damage-distribution primitive yet. AutoDecider picks the highest-
+/// toughness opponent creature first.
+pub fn pyrokinesis() -> CardDefinition {
+    use crate::card::AlternativeCost;
+    CardDefinition {
+        name: "Pyrokinesis",
+        cost: cost(&[generic(4), r(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::DealDamage {
+            to: target_filtered(SelectionRequirement::Creature),
+            amount: Value::Const(4),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: Some(AlternativeCost {
+            mana_cost: ManaCost::default(),
+            life_cost: 0,
+            exile_filter: Some(SelectionRequirement::HasColor(Color::Red)),
+            evoke_sacrifice: false,
+            not_your_turn_only: false,
+            target_filter: None,
+        }),
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+/// Bone Shards — {B} Instant. As an additional cost, sacrifice a creature
+/// or discard a card. Destroy target creature.
+///
+/// The modal additional cost is wired as a `ChooseMode([Sacrifice, Discard])`
+/// run before the destroy. Mode 0 sacs a creature; mode 1 discards a card.
+/// Either way the destroy then resolves on the targeted creature. This
+/// reuses the same "cost-as-first-step" pattern as Thud, Plunge into
+/// Darkness, and Crop Rotation — the engine doesn't yet model true
+/// additional costs paid at cast time, but folding them into the
+/// resolution sequence is gameplay-equivalent for the bulk of plays.
+/// AutoDecider picks mode 0 (sacrifice) by default.
+pub fn bone_shards() -> CardDefinition {
+    CardDefinition {
+        name: "Bone Shards",
+        cost: cost(&[b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::ChooseMode(vec![
+                Effect::Sacrifice {
+                    who: Selector::You,
+                    count: Value::Const(1),
+                    filter: SelectionRequirement::Creature,
+                },
+                Effect::Discard {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                    random: false,
+                },
+            ]),
+            Effect::Destroy {
+                what: target_filtered(SelectionRequirement::Creature),
+            },
+        ]),
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],
