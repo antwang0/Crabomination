@@ -211,6 +211,9 @@ fn colorless_pool() -> Vec<CardFactory> {
         millstone,
         aether_spellbomb,
         damping_sphere,
+        zuran_orb,
+        chromatic_star,
+        soul_guide_lantern,
     ]
 }
 
@@ -292,6 +295,7 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         mahamoti_djinn,
         prodigal_sorcerer,
         quantum_riddler,
+        tishanas_tidebinder,
     ];
     if pair_contains(pair, Color::Green) {
         v.push(gaeas_skyfolk);
@@ -320,6 +324,7 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         rakshasas_bargain,
         disentomb,
         reanimate,
+        bone_shards,
         animate_dead,
         hymn_to_tourach,
         hypnotic_specter,
@@ -361,6 +366,8 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         anger_of_the_gods,
         goldspan_dragon,
         sundering_eruption,
+        grim_lavamancer,
+        pyrokinesis,
     ];
     if pair_contains(pair, Color::White) {
         v.push(lightning_helix);
@@ -398,6 +405,8 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         up_the_beanstalk,
         cosmogoyf,
         naturalize,
+        sylvan_safekeeper,
+        cankerbloom,
     ];
     if pair_contains(pair, Color::White) {
         v.push(watchwolf);

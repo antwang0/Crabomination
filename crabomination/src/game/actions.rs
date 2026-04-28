@@ -773,19 +773,6 @@ impl GameState {
         Ok(events)
     }
 
-    /// True if `player` may cast sorcery spells at instant speed —
-    /// granted while a battlefield permanent of theirs has the
-    /// `StaticEffect::ControllerSorceriesAsFlash` static (Teferi, Time
-    /// Raveler's +1 collapsed into a permanent on-board static).
-    pub(crate) fn player_has_sorceries_as_flash(&self, player: usize) -> bool {
-        use crate::effect::StaticEffect;
-        self.battlefield.iter().any(|c| {
-            c.controller == player
-                && c.definition.static_abilities.iter().any(|sa| {
-                    matches!(sa.effect, StaticEffect::ControllerSorceriesAsFlash)
-                })
-        })
-    }
 
     /// True if `player` is restricted to sorcery-only spell timing by an
     /// opponent's `StaticEffect::OpponentsSorceryTimingOnly` (Teferi, Time

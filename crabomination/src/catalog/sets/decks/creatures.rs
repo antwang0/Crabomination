@@ -27,9 +27,7 @@ use crate::mana::{Color, ManaCost, b, cost, g, generic, r, u, w};
 /// reusing the same primitives Thud already exercises. The Casualty 2
 /// "copy this spell" half is omitted (no copy primitive yet).
 pub fn callous_sell_sword() -> CardDefinition {
-    use crate::card::ActivatedAbility;
     use crate::effect::{Duration, PlayerRef};
-    use crate::mana::ManaCost;
     CardDefinition {
         name: "Callous Sell-Sword",
         cost: cost(&[generic(1), r()]),
