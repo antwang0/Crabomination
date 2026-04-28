@@ -2642,3 +2642,153 @@ fn grim_lavamancer_activated_ability_deals_two_damage() {
     let card = g.battlefield_find(lava).unwrap();
     assert!(card.tapped, "Tap-cost ability should leave the source tapped");
 }
+
+/// Zuran Orb sacrifices a land to gain 2 life.
+#[test]
+fn zuran_orb_sacrifices_a_land_for_two_life() {
+    let mut g = two_player_game();
+    let orb = g.add_card_to_battlefield(0, catalog::zuran_orb());
+    let forest = g.add_card_to_battlefield(0, catalog::forest());
+    g.clear_sickness(orb);
+    let life_before = g.players[0].life;
+
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: orb, ability_index: 0, target: None,
+    })
+    .expect("Zuran Orb activates");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[0].life, life_before + 2);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == forest),
+        "Sacrificed Forest should be in the graveyard");
+    // The Orb itself is still on the battlefield (it's not sacrificed).
+    assert!(g.battlefield.iter().any(|c| c.id == orb));
+}
+
+/// Chromatic Star: tap and sac for any color of mana, then draw a card
+/// when it lands in the graveyard.
+#[test]
+fn chromatic_star_sacrifices_for_mana_and_cantrips_on_leave() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let star = g.add_card_to_battlefield(0, catalog::chromatic_star());
+    g.clear_sickness(star);
+    g.players[0].mana_pool.add_colorless(1);
+    let hand_before = g.players[0].hand.len();
+
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: star, ability_index: 0, target: None,
+    })
+    .expect("Chromatic Star activates");
+    drain_stack(&mut g);
+
+    // The sac put the Star in the graveyard.
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == star),
+        "Star should be sacrificed to the graveyard");
+    // One mana of any color was added (then spent on the activation? no — the
+    // {1} cost was paid up front, and the AddMana effect runs after. So we
+    // gained one mana and drew a card from the leaves trigger.
+    let pool = g.players[0].mana_pool.total();
+    assert_eq!(pool, 1, "Star adds one mana of any color when activated");
+    assert_eq!(g.players[0].hand.len(), hand_before + 1,
+        "Star's leaves-the-battlefield trigger should draw a card");
+}
+
+/// Soul-Guide Lantern's first ability exiles a card from each opponent's
+/// graveyard (approximation of "target opponent exiles one"). For the
+/// 2-player demo it's gameplay-equivalent.
+#[test]
+fn soul_guide_lantern_first_ability_exiles_from_opponent_graveyard() {
+    let mut g = two_player_game();
+    let lantern = g.add_card_to_battlefield(0, catalog::soul_guide_lantern());
+    g.clear_sickness(lantern);
+    // Stock P1's graveyard with one card.
+    let trash = g.add_card_to_library(1, catalog::lightning_bolt());
+    let pos = g.players[1].library.iter().position(|c| c.id == trash).unwrap();
+    let card = g.players[1].library.remove(pos);
+    g.players[1].graveyard.push(card);
+
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: lantern, ability_index: 0, target: None,
+    })
+    .expect("Lantern's tap ability activates");
+    drain_stack(&mut g);
+
+    assert!(g.exile.iter().any(|c| c.id == trash),
+        "Opponent's graveyard card should be in exile");
+    assert!(!g.players[1].graveyard.iter().any(|c| c.id == trash));
+}
+
+/// Soul-Guide Lantern's second ability exiles every player's graveyard,
+/// sacrifices itself, and draws a card.
+#[test]
+fn soul_guide_lantern_second_ability_clears_graveyards_and_draws() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let lantern = g.add_card_to_battlefield(0, catalog::soul_guide_lantern());
+    g.clear_sickness(lantern);
+    // Each player has a graveyard card.
+    let p0_card = g.add_card_to_library(0, catalog::lightning_bolt());
+    let pos = g.players[0].library.iter().position(|c| c.id == p0_card).unwrap();
+    let card = g.players[0].library.remove(pos);
+    g.players[0].graveyard.push(card);
+    let p1_card = g.add_card_to_library(1, catalog::lightning_bolt());
+    let pos = g.players[1].library.iter().position(|c| c.id == p1_card).unwrap();
+    let card = g.players[1].library.remove(pos);
+    g.players[1].graveyard.push(card);
+
+    g.players[0].mana_pool.add_colorless(2);
+    let hand_before = g.players[0].hand.len();
+
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: lantern, ability_index: 1, target: None,
+    })
+    .expect("Lantern's sac ability activates");
+    drain_stack(&mut g);
+
+    // Both graveyards are cleared (modulo the sacrificed Lantern itself).
+    assert!(g.exile.iter().any(|c| c.id == p0_card));
+    assert!(g.exile.iter().any(|c| c.id == p1_card));
+    assert!(!g.battlefield.iter().any(|c| c.id == lantern),
+        "Lantern is sacrificed");
+    assert_eq!(g.players[0].hand.len(), hand_before + 1,
+        "Sac ability draws a card");
+}
+
+/// Cankerbloom sacrifices itself to destroy an artifact or enchantment,
+/// then proliferates. We can verify the destroy half cleanly; proliferate
+/// in isolation is gameplay-equivalent to "no-op when nothing has counters",
+/// so we set up a counter to assert the proliferate fired.
+#[test]
+fn cankerbloom_sacs_to_destroy_and_proliferate() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let canker = g.add_card_to_battlefield(0, catalog::cankerbloom());
+    let opp_artifact = g.add_card_to_battlefield(1, catalog::sol_ring());
+    // Put a counter on something so proliferate has work to do.
+    let counted = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    {
+        let bear = g.battlefield.iter_mut().find(|c| c.id == counted).unwrap();
+        *bear.counters.entry(CounterType::PlusOnePlusOne).or_insert(0) = 1;
+    }
+    g.clear_sickness(canker);
+    g.players[0].mana_pool.add(Color::Green, 1);
+
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: canker,
+        ability_index: 0,
+        target: Some(Target::Permanent(opp_artifact)),
+    })
+    .expect("Cankerbloom activates");
+    drain_stack(&mut g);
+
+    // The opp Sol Ring is destroyed; Cankerbloom is sacrificed.
+    assert!(!g.battlefield.iter().any(|c| c.id == opp_artifact));
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == opp_artifact));
+    assert!(!g.battlefield.iter().any(|c| c.id == canker));
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == canker));
+    // Proliferate added one more +1/+1 counter.
+    let bear_view = g.battlefield.iter().find(|c| c.id == counted).unwrap();
+    assert_eq!(*bear_view.counters.get(&CounterType::PlusOnePlusOne).unwrap_or(&0), 2,
+        "Proliferate should bump the +1/+1 counter from 1 to 2");
+}

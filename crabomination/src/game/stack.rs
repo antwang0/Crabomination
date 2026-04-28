@@ -668,21 +668,33 @@ impl GameState {
     /// `Dies` triggered abilities, returning them as events after the fact.
     /// (This is the version used by destroy/damage effects that want to fire triggers.)
     pub(crate) fn remove_to_graveyard_with_triggers(&mut self, id: CardId) -> Vec<GameEvent> {
-        let die_triggers: Vec<(CardId, Effect, usize)> = self
+        // Collect both `CreatureDied` and `PermanentLeavesBattlefield`
+        // self-source triggers off the leaving permanent. CreatureDied
+        // only matters for creatures (Solitude evoke-sac etc.);
+        // PermanentLeavesBattlefield is the broader "when this leaves the
+        // battlefield" hook used by Chromatic Star, Roomba-style cards,
+        // and any future non-creature die-trigger.
+        let leave_triggers: Vec<(CardId, Effect, usize)> = self
             .battlefield
             .iter()
             .find(|c| c.id == id)
             .map(|c| {
+                let is_creature = c.definition.is_creature();
                 c.definition
                     .triggered_abilities
                     .iter()
-                    .filter(|t| t.event.kind == EventKind::CreatureDied)
+                    .filter(|t| matches!(t.event.scope, EventScope::SelfSource))
+                    .filter(|t| match t.event.kind {
+                        EventKind::PermanentLeavesBattlefield => true,
+                        EventKind::CreatureDied => is_creature,
+                        _ => false,
+                    })
                     .map(|t| (c.id, t.effect.clone(), c.controller))
                     .collect()
             })
             .unwrap_or_default();
         self.remove_from_battlefield_to_graveyard(id);
-        for (source, effect, controller) in die_triggers {
+        for (source, effect, controller) in leave_triggers {
             let auto_target = self.auto_target_for_effect(&effect, controller);
             self.stack.push(StackItem::Trigger {
                 source,

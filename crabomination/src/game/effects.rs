@@ -1162,20 +1162,35 @@ impl GameState {
                 }
             }
             Selector::CardsInZone { who, zone, filter } => {
-                let Some(p) = self.resolve_player(who, ctx) else { return vec![]; };
-                let cards: Vec<&CardInstance> = match zone {
-                    Zone::Hand => self.players[p].hand.iter().collect(),
-                    Zone::Graveyard => self.players[p].graveyard.iter().collect(),
-                    Zone::Library => self.players[p].library.iter().collect(),
-                    Zone::Exile => self.exile.iter().filter(|c| c.owner == p).collect(),
-                    Zone::Battlefield => self.battlefield.iter().filter(|c| c.controller == p).collect(),
-                    Zone::Stack | Zone::Command => vec![],
-                };
-                cards
-                    .into_iter()
-                    .filter(|c| self.evaluate_requirement_static(filter, &Target::Permanent(c.id), ctx.controller))
-                    .map(|c| if matches!(zone, Zone::Battlefield) { EntityRef::Permanent(c.id) } else { EntityRef::Card(c.id) })
-                    .collect()
+                // Use the multi-player resolver so EachPlayer / EachOpponent
+                // aggregate cards from every matching seat (Soul-Guide
+                // Lantern's mass-graveyard exile, Bojuka Bog–style effects,
+                // future Windfall-shape primitives all need this).
+                let players = self.resolve_players(who, ctx);
+                let mut out: Vec<EntityRef> = Vec::new();
+                for p in players {
+                    let cards: Vec<&CardInstance> = match zone {
+                        Zone::Hand => self.players[p].hand.iter().collect(),
+                        Zone::Graveyard => self.players[p].graveyard.iter().collect(),
+                        Zone::Library => self.players[p].library.iter().collect(),
+                        Zone::Exile => self.exile.iter().filter(|c| c.owner == p).collect(),
+                        Zone::Battlefield => self.battlefield.iter().filter(|c| c.controller == p).collect(),
+                        Zone::Stack | Zone::Command => vec![],
+                    };
+                    out.extend(
+                        cards
+                            .into_iter()
+                            .filter(|c| self.evaluate_requirement_static(
+                                filter, &Target::Permanent(c.id), ctx.controller,
+                            ))
+                            .map(|c| if matches!(zone, Zone::Battlefield) {
+                                EntityRef::Permanent(c.id)
+                            } else {
+                                EntityRef::Card(c.id)
+                            }),
+                    );
+                }
+                out
             }
 
             Selector::Player(p) => self
