@@ -774,6 +774,167 @@ pub fn up_the_beanstalk() -> CardDefinition {
     }
 }
 
+/// Tishana's Tidebinder — {1}{U}{U}, 3/2 Merfolk Wizard with Flash. ETB:
+/// counter target activated or triggered ability of an artifact, creature,
+/// enchantment, or planeswalker (a "nonland permanent" — Battles aren't
+/// modeled).
+///
+/// Reuses `Effect::CounterAbility` (which Consign to Memory introduced),
+/// targeting any nonland permanent and removing the topmost
+/// `StackItem::Trigger` whose source matches. Auto-target picks the
+/// most-recent opponent permanent's pending trigger first (via the
+/// stack-aware fallback in `auto_target_for_effect`).
+pub fn tishanas_tidebinder() -> CardDefinition {
+    use crate::card::TriggeredAbility;
+    use crate::effect::shortcut::target_filtered;
+    use crate::mana::u;
+    CardDefinition {
+        name: "Tishana's Tidebinder",
+        cost: cost(&[generic(1), u(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Flash],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::CounterAbility {
+                what: target_filtered(
+                    SelectionRequirement::Permanent.and(SelectionRequirement::Nonland),
+                ),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+/// Sylvan Safekeeper — {G}, 1/1 Human Wizard. Sacrifice a Forest: Target
+/// creature gains shroud until end of turn.
+///
+/// The sac-of-other-permanent activation primitive isn't yet a thing
+/// (only sac-of-self via `ActivatedAbility::sac_cost` is wired), so the
+/// sacrifice is folded into the resolved effect: the activation runs
+/// `Sacrifice(your-Forest, count=1, filter=Forest) + GrantKeyword(target,
+/// Shroud, EOT)`. Bot/AutoDecider activates only when it controls at
+/// least one Forest, so the cost is paid honestly even though the
+/// engine doesn't gate it pre-resolution.
+pub fn sylvan_safekeeper() -> CardDefinition {
+    use crate::card::{ActivatedAbility, LandType};
+    use crate::effect::shortcut::target_filtered;
+    use crate::effect::Duration;
+    CardDefinition {
+        name: "Sylvan Safekeeper",
+        cost: cost(&[g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: false,
+            mana_cost: ManaCost::default(),
+            effect: Effect::Seq(vec![
+                Effect::Sacrifice {
+                    who: Selector::You,
+                    count: Value::Const(1),
+                    filter: SelectionRequirement::Land
+                        .and(SelectionRequirement::HasLandType(LandType::Forest)),
+                },
+                Effect::GrantKeyword {
+                    what: target_filtered(SelectionRequirement::Creature),
+                    keyword: Keyword::Shroud,
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+            once_per_turn: false,
+            sorcery_speed: false,
+            sac_cost: false,
+        }],
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+/// Grim Lavamancer — {R}, 1/1 Human Wizard. {R}, {T}, Exile two cards from
+/// your graveyard: Grim Lavamancer deals 2 damage to any target.
+///
+/// The "exile two cards from your graveyard" cost is approximated by a
+/// `Sacrifice`-style fold-in step: at resolution we run
+/// `Repeat(2, Move(EachCard in your graveyard → Exile))`. Since
+/// `Sacrifice` only handles battlefield permanents, we instead use
+/// `ForEach` over a graveyard selector but the engine doesn't yet
+/// support EachCardInGraveyard. We compromise: the cost is simply
+/// `Effect::Mill` on yourself two times — wrong direction (mill puts
+/// cards into the graveyard) — so we use a real exile path via
+/// `RevealUntilFind` over the graveyard? That's not quite right either.
+///
+/// Simpler: drop the cost and ship as `{R}, {T}: 2 damage`. The
+/// graveyard-exile cost is documented as 🟡 in CUBE_FEATURES. For an
+/// honest gameplay model the bot-AI and decision flow rarely care
+/// about whether 2 cards are exiled (the gating is "do I have 2+ cards
+/// in my graveyard?" which the human can self-enforce).
+///
+/// TODO: when an `Effect::ExileNFromYourGraveyard` primitive lands,
+/// fold it back into the activation as the first step of the seq.
+pub fn grim_lavamancer() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    use crate::effect::shortcut::target_filtered;
+    use crate::mana::r;
+    CardDefinition {
+        name: "Grim Lavamancer",
+        cost: cost(&[r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[r()]),
+            effect: Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Any),
+                amount: Value::Const(2),
+            },
+            once_per_turn: false,
+            sorcery_speed: false,
+            sac_cost: false,
+        }],
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
 /// Temur Ascendancy — {U}{R}{G} Enchantment. Creatures you control with
 /// power 4 or greater have haste. Whenever a creature with power 4 or
 /// greater enters under your control, draw a card.

@@ -2539,3 +2539,106 @@ fn pyrokinesis_alt_cost_rejects_non_red_pitch() {
     assert!(result.is_err(),
         "Pyrokinesis alt cost must reject a non-red pitch card");
 }
+
+/// Tishana's Tidebinder ETB counters target activated/triggered ability.
+/// Same setup as the Consign-to-Memory test: P1 casts Devourer of Destiny
+/// (Scry-2 on-cast trigger lands above the spell), then P0 flashes in
+/// Tidebinder targeting Devourer to counter the Scry trigger before it
+/// resolves.
+#[test]
+fn tishanas_tidebinder_etb_counters_target_ability() {
+    let mut g = two_player_game();
+    g.add_card_to_library(1, catalog::island());
+    g.add_card_to_library(1, catalog::island());
+
+    let dev = g.add_card_to_hand(1, catalog::devourer_of_destiny());
+    g.players[1].mana_pool.add_colorless(5);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: dev, target: None, mode: None, x_value: None,
+    })
+    .expect("Devourer castable for {5}");
+
+    // Confirm the scry trigger landed on the stack.
+    let trigger_count = g.stack.iter()
+        .filter(|si| matches!(si, crate::game::StackItem::Trigger { source, .. } if *source == dev))
+        .count();
+    assert_eq!(trigger_count, 1, "Scry-on-cast trigger should be queued");
+
+    // P0 flashes in Tidebinder; its ETB counters the Scry trigger.
+    let tide = g.add_card_to_hand(0, catalog::tishanas_tidebinder());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: tide,
+        target: Some(Target::Permanent(dev)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Tidebinder castable at instant speed (Flash)");
+    drain_stack(&mut g);
+
+    // Devourer resolves (Tidebinder only counters the ability, not the spell).
+    assert!(g.battlefield.iter().any(|c| c.id == dev),
+        "Devourer should still resolve");
+    assert!(g.battlefield.iter().any(|c| c.id == tide),
+        "Tidebinder should be on the battlefield");
+    // Scry trigger is gone.
+    assert!(!g.stack.iter().any(|si| matches!(
+        si, crate::game::StackItem::Trigger { source, .. } if *source == dev
+    )), "Scry-on-cast trigger should have been countered");
+}
+
+/// Sylvan Safekeeper sacrifices a Forest to grant a creature shroud EOT.
+#[test]
+fn sylvan_safekeeper_sacs_forest_to_grant_shroud() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let sk = g.add_card_to_battlefield(0, catalog::sylvan_safekeeper());
+    let forest = g.add_card_to_battlefield(0, catalog::forest());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(sk);
+
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: sk,
+        ability_index: 0,
+        target: Some(Target::Permanent(bear)),
+    })
+    .expect("Sylvan Safekeeper activates");
+    drain_stack(&mut g);
+
+    // The Forest is sacrificed.
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == forest),
+        "Forest should be sacrificed");
+    // The bear has Shroud until end of turn (computed via the layer view).
+    let computed = g.compute_battlefield();
+    let view = computed.iter().find(|c| c.id == bear).unwrap();
+    assert!(view.keywords.contains(&Keyword::Shroud),
+        "Bear should gain shroud until end of turn");
+}
+
+/// Grim Lavamancer's activated ability deals 2 damage to any target. The
+/// graveyard-exile cost is currently approximated away; the damage half is
+/// the load-bearing test.
+#[test]
+fn grim_lavamancer_activated_ability_deals_two_damage() {
+    let mut g = two_player_game();
+    let lava = g.add_card_to_battlefield(0, catalog::grim_lavamancer());
+    g.clear_sickness(lava);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let life_before = g.players[1].life;
+
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: lava,
+        ability_index: 0,
+        target: Some(Target::Player(1)),
+    })
+    .expect("Grim Lavamancer activates");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[1].life, life_before - 2);
+    let card = g.battlefield_find(lava).unwrap();
+    assert!(card.tapped, "Tap-cost ability should leave the source tapped");
+}
