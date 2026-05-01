@@ -105,6 +105,14 @@ pub enum Selector {
     /// up to one *target* creature".
     CastSpellTarget(u8),
 
+    /// All cards discarded so far in the current effect resolution
+    /// (as filtered by `filter`). Backed by
+    /// `GameState.cards_discarded_this_resolution_ids`, reset on every
+    /// `resolve_effect` entry. Used by Mind Roots's "Put up to one
+    /// land card discarded this way onto the battlefield tapped".
+    /// Wrap with `Selector::Take(_, 1)` to pick exactly one.
+    DiscardedThisResolution(SelectionRequirement),
+
     /// All game objects matching `filter` in `zone`.
     EachMatching { zone: ZoneRef, filter: SelectionRequirement },
     /// All permanents on the battlefield matching `filter`.
@@ -230,6 +238,14 @@ pub enum Value {
     /// always read the spell's controller instead of the iterated
     /// player.
     PermanentCountControlledBy(PlayerRef),
+    /// Number of cards discarded so far in the current effect
+    /// resolution (across all `Effect::Discard` invocations in the
+    /// same `Effect::Seq`). Backed by
+    /// `GameState.cards_discarded_this_resolution`, reset to zero on
+    /// every `resolve_effect` entry. Used by Borrowed Knowledge mode
+    /// 1 ("draw cards equal to the number of cards discarded this
+    /// way") and Colossus of the Blood Age's death rider.
+    CardsDiscardedThisResolution,
 }
 
 impl Value {

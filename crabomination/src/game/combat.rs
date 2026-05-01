@@ -1,6 +1,6 @@
 use super::*;
 use crate::card::Keyword;
-use crate::effect::{Effect, EventKind};
+use crate::effect::{Effect, EventKind, EventScope};
 use crate::game::layers::ComputedPermanent;
 
 impl GameState {
@@ -81,10 +81,57 @@ impl GameState {
             }
             self.attacking.push(atk);
             events.push(GameEvent::AttackerDeclared(id));
+            // Self-source attack triggers (the attacker's own
+            // "Whenever this creature attacks, ..." abilities).
             for t in &card.definition.triggered_abilities {
                 if t.event.kind == EventKind::Attacks {
                     triggers.push((id, t.effect.clone(), p));
                 }
+            }
+            // Broadcast the AttackerDeclared event to other permanents
+            // controlled by the attacker's controller — this lets
+            // enchantments / artifacts with "Whenever you attack /
+            // whenever a creature you control attacks" triggers fire
+            // (Sparring Regimen's per-attacker pump). The trigger's
+            // body picks the attacker via `Selector::Target(0)`, so
+            // we pre-bind the just-declared attacker as the target.
+            // The `AnotherOfYours` scope check filters out the
+            // attacker's own self-source triggers, which we already
+            // added above.
+            let attacker_id = id;
+            let other_triggers: Vec<(CardId, Effect, Target)> = self
+                .battlefield
+                .iter()
+                .filter(|c| c.controller == p && c.id != attacker_id)
+                .flat_map(|c| {
+                    let cid = c.id;
+                    c.definition.triggered_abilities.iter().filter_map(move |t| {
+                        if t.event.kind == EventKind::Attacks
+                            && matches!(
+                                t.event.scope,
+                                EventScope::AnotherOfYours
+                                    | EventScope::YourControl
+                                    | EventScope::AnyPlayer
+                            )
+                        {
+                            Some((cid, t.effect.clone(), Target::Permanent(attacker_id)))
+                        } else {
+                            None
+                        }
+                    })
+                })
+                .collect();
+            for (src, eff, tgt) in other_triggers {
+                let auto_target = Some(tgt);
+                self.stack.push(StackItem::Trigger {
+                    source: src,
+                    controller: p,
+                    effect: Box::new(eff),
+                    target: auto_target,
+                    mode: None,
+                    x_value: 0,
+                    converged_value: 0,
+                });
             }
             // Annihilator: TODO — translate to Effect tree (no-op for now).
             let _annihilator_n = computed_kw(id).iter().find_map(|kw| {

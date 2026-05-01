@@ -7,6 +7,63 @@ See `CUBE_FEATURES.md` (cube-card implementation status) and
 
 ## Recent additions
 
+- ✅ **SOS push XVII (2026-05-01)**: 4 engine primitives + 5 SOS card
+  promotions + 8 new STX 2021 card factories. Tests at 1050 (+13
+  net):
+  - **`Value::CardsDiscardedThisResolution`** + sibling
+    **`Selector::DiscardedThisResolution(SelectionRequirement)`** —
+    per-resolution counter (u32) and id list (Vec<CardId>) bumped by
+    every `Effect::Discard` invocation in the same `Effect::Seq`
+    resolution. Reset on every entry to `resolve_effect`. Both
+    player-chosen `DiscardChosen` and random-discard
+    (`Effect::Discard{ random: true }`) feed the tally so callers
+    don't need to know which discard mode is in play. The selector
+    walks each player's graveyard to locate the discarded
+    `CardInstance`, runs the card-level filter on it, and yields the
+    matching ids as `EntityRef::Card`. Promoted Borrowed Knowledge
+    mode 1 (now exact-printed via the value), Colossus of the Blood
+    Age's death rider (discard hand → draw discarded+1), and Mind
+    Roots's "Put up to one land card discarded this way onto the
+    battlefield tapped" (the second half was previously dropped
+    entirely).
+  - **`resolve_zonedest_player` flatten-You fix** — the helper that
+    pre-resolves selector-based `PlayerRef` in `ZoneDest` was only
+    flattening `OwnerOf`/`ControllerOf`, leaving `PlayerRef::You`
+    unresolved. Caused `place_card_in_dest` to mis-resolve `You` to
+    the wrong seat when the source card lived in a different
+    player's zone. Mind Roots's "discard from opp → land to *your*
+    bf" silently routed the land to the opponent's battlefield.
+    Now flattens every non-`Seat` variant via `resolve_player(ctx)`.
+  - **Combat-side broadcast for `EventKind::Attacks/AnotherOfYours`**
+    — `declare_attackers` now consults all your permanents'
+    `Attacks/AnotherOfYours` triggers, pre-binding the just-declared
+    attacker as `Target(0)`. Promotes Sparring Regimen's
+    "whenever you attack, put a +1/+1 counter on each attacking
+    creature" rider to ✅. The self-source attack-trigger walk on
+    the attacker's own card unchanged.
+  - **`Value::CountersOn` graveyard fallback** — extended the
+    counter lookup to walk graveyards when the source is no longer
+    on battlefield. Promotes Scolding Administrator's death-
+    trigger counter transfer (`If it had counters on it, put those
+    counters on up to one target creature`). The counters survive
+    the bf-to-gy transition (engine only clears
+    `damage`/`tapped`/`attached_to`), so the Value reads the right
+    count off the graveyard-resident card.
+  - **5 SOS promotions (🟡 → 🟡 with full wiring)**: Borrowed
+    Knowledge mode 1, Colossus death rider, Mind Roots,
+    Scolding Administrator, Sparring Regimen.
+  - **8 new STX 2021 card factories** (`catalog::sets::stx::mono`):
+    Charge Through ({G} ✅: pump+trample+draw), Resculpt ({1}{U} ✅:
+    exile artifact/creature, owner mints 4/4 Elemental), Letter of
+    Acceptance ({3} ✅: Scry+Draw artifact with sac-draw activation),
+    Reduce to Memory ({2}{U} 🟡: exile + Inkling token), Defend the
+    Campus ({3}{R}{W} 🟡: -3/-0 EOT on attacker), Conspiracy
+    Theorist ({R} 🟡: 1/3 body), Honor Troll ({2}{W} 🟡: 0/3 body),
+    Manifestation Sage ({2}{G}{U} 🟡: 3/3 Flying with Magecraft
+    HandSize-3 pump).
+  - 14 new tests in `tests::sos::*` and `tests::stx::*`. All 1050
+    lib tests pass (was 1037).
+
 - ✅ **SOS push XVI (2026-05-01)**: 5 engine primitives + 10 SOS/STX
   card promotions. Tests at 1025 (+13 net):
   - **`Predicate::CastSpellHasX`** — cast-time introspection on the
@@ -779,13 +836,20 @@ life). A `cost.life: Value` field on `CardDefinition` (or an
 `alternative_cost` variant whose payment also requires the life)
 would make this faithful.
 
-### "Track Cards Discarded by This Effect" Counter
-Borrowed Knowledge ("draw cards equal to the number of cards
+### "Track Cards Discarded by This Effect" Counter ✅ DONE
+~~Borrowed Knowledge ("draw cards equal to the number of cards
 discarded this way") needs a per-resolution counter that
 `Effect::Discard` increments. The mode 1 path is currently
 approximated as "draw 7" — a flat-7 reload that misses the printed
 "draw exactly as many as you discarded" precision but preserves the
-card-advantage tally for typical hand sizes.
+card-advantage tally for typical hand sizes.~~ Done in push XVII:
+`Value::CardsDiscardedThisResolution` + sibling
+`Selector::DiscardedThisResolution(SelectionRequirement)` are now
+first-class. Backed by `GameState.cards_discarded_this_resolution`
+(u32) + `cards_discarded_this_resolution_ids` (Vec<CardId>); both
+reset on every `resolve_effect` entry. Promoted: Borrowed Knowledge
+mode 1, Colossus of the Blood Age death rider, Mind Roots's "land
+discarded → bf tapped" half.
 
 ### Capture-As-Target From Selector (Repartee Exile-Until-End-Step)
 Conciliator's Duelist's Repartee body wants to:
@@ -1629,3 +1693,72 @@ listed here so the next pass can pick them up without re-deriving.
   pool-decrease is silent. A `LifePaid`-style `ManaPaidForOptional`
   event (with source CardId + amount) would help replays diagnose
   surprising pool drops.
+
+## New suggestions (added 2026-05-01 push XVII)
+
+### Engine
+
+- **`AnotherOfYours` / `YourControl` event broadcast for non-Attacks
+  events**. Push XVII added a combat-side broadcast in
+  `declare_attackers` so other-permanent attack-triggers fire (Sparring
+  Regimen). The same pattern would unblock `EventKind::CreatureDied
+  /AnotherOfYours` on enchantments / artifacts, `EventKind::CardDrawn
+  /YourControl` on cards-drawn-payoffs, etc. Some of these already
+  fire via `flush_pending_triggers`; an audit of the event-dispatch
+  matrix would show which kinds still rely on the per-source walk
+  vs. the global trigger queue.
+
+- **`Selector::DiscardedThisResolution` semantic uniformity**. The
+  new selector walks each player's graveyard for the discarded id,
+  but `Effect::Move` from this selector currently routes through
+  `move_card_to`'s graveyard branch. That emits a `CardLeftGraveyard`
+  event for the *opponent's* graveyard (since that's where the
+  discarded card lives). Mind Roots's "discard from opp →
+  battlefield to *your*" therefore bumps the opp's
+  `cards_left_graveyard_this_turn` tally — semantically correct for
+  Lorehold "cards leave your graveyard" payoffs (it left the
+  opponent's, not yours), but a future "graveyards you control"
+  filter on these payoffs would surface this asymmetry.
+
+- **Choose-N for Effect::Discard**. Colossus of the Blood Age's
+  "discard any number" is currently approximated as "discard your
+  entire hand" (the optimal greedy answer). Real "any number"
+  semantics need a player prompt with a range (0..hand) instead of
+  a fixed count. Adding `Effect::DiscardChoose { who, max,
+  filter }` (vs. the existing `DiscardChosen { count }` which
+  forces an exact count) would close this gap and unblock other
+  "discard up to N" payoffs (Liliana of the Veil's −2, Library of
+  Alexandria's discard mode, etc.).
+
+### Card promotions ready (no new primitive)
+
+- **Pursue the Past** 🟡 → ✅ — fully wired via push XV's `Effect::MayDo`
+  for the optional discard half + Flashback keyword. Ready to flip
+  the doc status.
+
+- **Witherbloom Charm** 🟡 → ✅ — mode 0 wired via push XV's
+  `Effect::MayDo`; modes 1 and 2 always resolved correctly. Ready to
+  flip.
+
+- **Stadium Tidalmage** 🟡 → ✅ — ETB + attack loots wired via push
+  XV's `Effect::MayDo`. Ready to flip.
+
+- **Heated Argument** 🟡 → ✅ — gy-exile + 2-to-controller now a
+  paired MayDo. Ready to flip.
+
+### UI
+
+- **Discard tally HUD hint**. Push XVII's
+  `Value::CardsDiscardedThisResolution` is invisible at the UI
+  layer. Adding a "draws = N" preview on Borrowed Knowledge / Mind
+  Roots / Colossus death-trigger card panels would help the
+  player understand the scaling. Same shape as the existing
+  Quandrix `cards_drawn_this_turn` preview.
+
+### Server
+
+- **`Selector::DiscardedThisResolution` view rendering**. The
+  server's `SelectorView` rendering doesn't yet know about the new
+  selector variant — falls through to the generic catch-all. A
+  short-form label ("cards discarded this way") would surface it
+  properly in mouse-over tooltips and replay logs.

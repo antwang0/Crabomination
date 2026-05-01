@@ -130,6 +130,13 @@ impl GameState {
         // Reset last-created-token scratch — `Selector::LastCreatedToken`
         // only refers to a token created by *this* resolution.
         self.last_created_token = None;
+        // Reset per-resolution discard tally so
+        // `Value::CardsDiscardedThisResolution` only sees the count
+        // of cards discarded by *this* resolving effect (Borrowed
+        // Knowledge mode 1, Colossus death rider). Also reset the
+        // sibling id list used by Mind Roots et al.
+        self.cards_discarded_this_resolution = 0;
+        self.cards_discarded_this_resolution_ids.clear();
         let mut events = vec![];
         self.run_effect(effect, ctx, &mut events)?;
         Ok(events)
@@ -396,6 +403,9 @@ impl GameState {
                             let cid = card.id;
                             self.players[p].graveyard.push(card);
                             events.push(GameEvent::CardDiscarded { player: p, card_id: cid });
+                            self.cards_discarded_this_resolution =
+                                self.cards_discarded_this_resolution.saturating_add(1);
+                            self.cards_discarded_this_resolution_ids.push(cid);
                         }
                         continue;
                     }
@@ -1357,6 +1367,30 @@ impl GameState {
                 }
             }
 
+            Selector::DiscardedThisResolution(filter) => {
+                // Resolve to the cards discarded so far this resolution
+                // whose now-graveyard residence matches the filter.
+                // Mind Roots: "Put up to one land card discarded this
+                // way onto the battlefield tapped". The card is in
+                // the discarder's graveyard at this point, so we walk
+                // each player's graveyard to locate the instance and
+                // run the card-level filter on it.
+                self.cards_discarded_this_resolution_ids
+                    .iter()
+                    .filter_map(|cid| {
+                        let inst = self
+                            .players
+                            .iter()
+                            .find_map(|p| p.graveyard.iter().find(|c| c.id == *cid))?;
+                        if self.evaluate_requirement_on_card(filter, inst, ctx.controller) {
+                            Some(EntityRef::Card(*cid))
+                        } else {
+                            None
+                        }
+                    })
+                    .collect()
+            }
+
             Selector::EachMatching { zone, filter } => self.entities_in_zone(zone, filter, ctx),
             Selector::EachPermanent(filter) => self
                 .battlefield
@@ -1600,7 +1634,25 @@ impl GameState {
             Value::CountersOn { what, kind } => self
                 .resolve_selector(what, ctx)
                 .into_iter()
-                .find_map(|e| if let EntityRef::Permanent(cid) = e { self.battlefield_find(cid).map(|c| c.counter_count(*kind) as i32) } else { None })
+                .find_map(|e| {
+                    let cid = match e {
+                        EntityRef::Permanent(cid) | EntityRef::Card(cid) => cid,
+                        _ => return None,
+                    };
+                    // Battlefield first, then graveyards (counters
+                    // persist on a card after move-to-graveyard, so a
+                    // death trigger reading "counters on this dying
+                    // creature" still sees them — Scolding
+                    // Administrator's "if it had counters on it, put
+                    // those counters on up to one target creature".
+                    self.battlefield_find(cid)
+                        .or_else(|| {
+                            self.players
+                                .iter()
+                                .find_map(|p| p.graveyard.iter().find(|c| c.id == cid))
+                        })
+                        .map(|c| c.counter_count(*kind) as i32)
+                })
                 .unwrap_or(0),
             Value::Sum(vs) => vs.iter().map(|v| self.evaluate_value(v, ctx)).sum(),
             Value::Diff(a, b) => self.evaluate_value(a, ctx) - self.evaluate_value(b, ctx),
@@ -1669,6 +1721,7 @@ impl GameState {
                         .count() as i32
                 })
                 .unwrap_or(0),
+            Value::CardsDiscardedThisResolution => self.cards_discarded_this_resolution as i32,
         }
     }
 
@@ -2184,16 +2237,24 @@ impl GameState {
     /// `PlayerRef::Seat(n)` while the source card is still in its origin
     /// zone. Other ref kinds (You / ActivePlayer / etc.) pass through.
     fn resolve_zonedest_player(&self, dest: &ZoneDest, ctx: &EffectContext) -> ZoneDest {
+        // Flatten any context-relative `PlayerRef` (You, OwnerOf, ControllerOf,
+        // EachOpponent, Triggerer) to a concrete `Seat(p)` based on the
+        // resolution context. This is necessary so a follow-up
+        // `place_card_in_dest` call — which builds its own dummy
+        // `EffectContext(default_player)` — doesn't mis-resolve `You` to
+        // the wrong seat. Mind Roots's "discard from opp → land to *your*
+        // bf" hit this when the card was located in the opp's graveyard
+        // (default_player=opp) and `You` stayed unresolved.
         let flatten = |who: &PlayerRef| -> PlayerRef {
             match who {
-                PlayerRef::OwnerOf(_) | PlayerRef::ControllerOf(_) => {
+                PlayerRef::Seat(_) => who.clone(),
+                _ => {
                     if let Some(p) = self.resolve_player(who, ctx) {
                         PlayerRef::Seat(p)
                     } else {
                         who.clone()
                     }
                 }
-                _ => who.clone(),
             }
         };
         match dest {

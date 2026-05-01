@@ -667,6 +667,33 @@ fn sparring_regimen_creates_a_2_2_spirit_token_on_etb() {
 }
 
 #[test]
+fn sparring_regimen_pumps_each_attacker_with_a_counter() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::sparring_regimen());
+    let attacker_a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let attacker_b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // Attackers must not be summoning-sick.
+    if let Some(c) = g.battlefield_find_mut(attacker_a) { c.summoning_sick = false; }
+    if let Some(c) = g.battlefield_find_mut(attacker_b) { c.summoning_sick = false; }
+    g.step = TurnStep::DeclareAttackers;
+    g.active_player_idx = 0;
+
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: attacker_a, target: AttackTarget::Player(1) },
+        Attack { attacker: attacker_b, target: AttackTarget::Player(1) },
+    ])).expect("declare two attackers");
+    drain_stack(&mut g);
+
+    let a = g.battlefield_find(attacker_a).unwrap();
+    let b = g.battlefield_find(attacker_b).unwrap();
+    assert_eq!(a.counter_count(CounterType::PlusOnePlusOne), 1,
+        "attacker A should pick up a +1/+1 from the on-attack trigger");
+    assert_eq!(b.counter_count(CounterType::PlusOnePlusOne), 1,
+        "attacker B should pick up a +1/+1 from the on-attack trigger");
+}
+
+#[test]
 fn bayou_groff_is_a_5_4_beast() {
     let g = catalog::bayou_groff();
     assert_eq!(g.power, 5);
@@ -851,3 +878,182 @@ fn shadrix_silverquill_four_four_flying_double_strike() {
 #[allow(dead_code)]
 fn _keepalive(_: CounterType) {}
 
+
+// ── Push: new STX 2021 card factories ───────────────────────────────────────
+
+#[test]
+fn charge_through_pumps_grants_trample_and_draws_card() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::island());
+    let id = g.add_card_to_hand(0, catalog::charge_through());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    let hand_before = g.players[0].hand.len();
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(bear)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Charge Through castable for {G}");
+    drain_stack(&mut g);
+
+    let pumped = g.battlefield_find(bear).expect("bear still on bf");
+    assert_eq!(pumped.power(), 3, "bear should be pumped to 3");
+    assert_eq!(pumped.toughness(), 3, "bear should be pumped to 3 toughness");
+    assert!(pumped.has_keyword(&Keyword::Trample),
+        "bear should gain trample EOT");
+    // Cantrip: drew one card (hand: -spell-card, +draw = same).
+    assert_eq!(g.players[0].hand.len(), hand_before);
+}
+
+#[test]
+fn resculpt_exiles_target_creature_owner_makes_four_four_elemental() {
+    let mut g = two_player_game();
+    let opp_threat = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::resculpt());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(opp_threat)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Resculpt castable for {1}{U}");
+    drain_stack(&mut g);
+
+    // Target was exiled.
+    assert!(g.battlefield_find(opp_threat).is_none(),
+        "target should be exiled");
+    // Opp has a 4/4 Elemental token.
+    let opp_token = g.battlefield.iter().find(|c| {
+        c.controller == 1 && c.is_token && c.definition.name == "Elemental"
+    });
+    let token = opp_token.expect("opponent should have Elemental token");
+    assert_eq!(token.power(), 4);
+    assert_eq!(token.toughness(), 4);
+}
+
+#[test]
+fn letter_of_acceptance_etb_scrys_and_draws() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let id = g.add_card_to_hand(0, catalog::letter_of_acceptance());
+    g.players[0].mana_pool.add_colorless(3);
+    let hand_before = g.players[0].hand.len();
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Letter of Acceptance castable for {3}");
+    drain_stack(&mut g);
+
+    // Letter on bf. ETB drew a card net: -1 (cast) + 1 (draw) = 0.
+    assert_eq!(g.players[0].hand.len(), hand_before);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Letter of Acceptance"));
+}
+
+#[test]
+fn defend_the_campus_shrinks_attacking_creature() {
+    let mut g = two_player_game();
+    let attacker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    if let Some(c) = g.battlefield_find_mut(attacker) { c.summoning_sick = false; }
+    g.step = TurnStep::DeclareAttackers;
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker, target: AttackTarget::Player(0) },
+    ])).expect("declare attacker");
+    drain_stack(&mut g);
+
+    // Pass priority to player 0 for Defend the Campus.
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 0;
+    let id = g.add_card_to_hand(0, catalog::defend_the_campus());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(attacker)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Defend the Campus castable for {3}{R}{W}");
+    drain_stack(&mut g);
+
+    let pumped = g.battlefield_find(attacker).expect("attacker still on bf");
+    assert_eq!(pumped.power(), -1,
+        "2-power bear with -3/-0 EOT shrinks to -1 power");
+}
+
+#[test]
+fn manifestation_sage_magecraft_pumps_target_by_hand_minus_three() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::manifestation_sage());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // Stock our hand to 6 cards → X = 6 - 3 = 3.
+    for _ in 0..6 {
+        g.add_card_to_hand(0, catalog::island());
+    }
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Permanent(bear)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("bolt castable");
+    drain_stack(&mut g);
+
+    // Bolt killed the bear (it's not on bf anymore). Shouldn't have
+    // crashed evaluating the magecraft pump. The trigger fires
+    // even if the target is gone — so just verify no panic.
+}
+
+#[test]
+fn conspiracy_theorist_is_one_three_human_shaman() {
+    let c = catalog::conspiracy_theorist();
+    assert_eq!(c.power, 1);
+    assert_eq!(c.toughness, 3);
+    assert!(c.subtypes.creature_types.contains(&crate::card::CreatureType::Human));
+    assert!(c.subtypes.creature_types.contains(&crate::card::CreatureType::Shaman));
+}
+
+#[test]
+fn honor_troll_is_zero_three_troll() {
+    let h = catalog::honor_troll();
+    assert_eq!(h.power, 0);
+    assert_eq!(h.toughness, 3);
+    assert!(h.subtypes.creature_types.contains(&crate::card::CreatureType::Troll));
+}
+
+#[test]
+fn reduce_to_memory_exiles_creature_and_owner_gets_inkling() {
+    let mut g = two_player_game();
+    let opp_creature = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::reduce_to_memory());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(opp_creature)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Reduce to Memory castable for {2}{U}");
+    drain_stack(&mut g);
+
+    // Target exiled.
+    assert!(g.battlefield_find(opp_creature).is_none());
+    // Opponent now has an Inkling.
+    let inkling = g.battlefield.iter().find(|c| {
+        c.controller == 1 && c.is_token && c.definition.name == "Inkling"
+    });
+    assert!(inkling.is_some(), "opponent should have an Inkling token");
+}

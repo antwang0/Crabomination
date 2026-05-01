@@ -768,18 +768,9 @@ pub fn vicious_rivalry() -> CardDefinition {
 /// hand at resolution time.
 ///
 /// Mode 1: discard your hand, then draw cards equal to the number of
-/// cards discarded this way. This is approximated as **discard then
-/// draw your hand size** — the engine doesn't track "cards discarded
-/// by this effect" yet, so we substitute "cards discarded" ≈ "your
-/// hand size at cast time". Caveat: hand size shrinks during the
-/// discard step, so we read `HandSizeOf(You)` *before* the discard
-/// (via reading at the start of the Seq); this matches the printed
-/// behaviour because cards-discarded-this-effect equals the hand size
-/// at cast time. The `Value::HandSizeOf(You)` evaluator runs at the
-/// start of the draw effect resolution, after the discard has already
-/// emptied the hand, so without engineering a "snapshot" we'd draw 0.
-/// To work around that, mode 1 is collapsed to "discard hand, then
-/// draw 7" (a typical hand size) — playing as a flat-7 reload card.
+/// cards discarded this way — wired faithfully via the new
+/// `Value::CardsDiscardedThisResolution` primitive (a per-resolution
+/// counter bumped by every `Effect::Discard` in the same `Seq`).
 pub fn borrowed_knowledge() -> CardDefinition {
     use crate::mana::r;
     CardDefinition {
@@ -804,8 +795,9 @@ pub fn borrowed_knowledge() -> CardDefinition {
                     amount: Value::HandSizeOf(PlayerRef::Target(0)),
                 },
             ]),
-            // Mode 1: discard hand, then draw 7 (approximation — see
-            // card-level docs).
+            // Mode 1: discard hand, then draw cards equal to the number
+            // of cards discarded this way — wired faithfully via
+            // `Value::CardsDiscardedThisResolution`.
             Effect::Seq(vec![
                 Effect::Discard {
                     who: Selector::You,
@@ -814,7 +806,7 @@ pub fn borrowed_knowledge() -> CardDefinition {
                 },
                 Effect::Draw {
                     who: Selector::You,
-                    amount: Value::Const(7),
+                    amount: Value::CardsDiscardedThisResolution,
                 },
             ]),
         ]),
@@ -1305,13 +1297,14 @@ pub fn cost_of_brilliance() -> CardDefinition {
 /// "Target player discards two cards. Put up to one land card discarded
 /// this way onto the battlefield tapped under your control."
 ///
-/// Approximation: the "land card discarded this way → battlefield" half
-/// is omitted (the engine has no "track a card discarded by this
-/// effect" handle yet). The discard half uses `EachOpponent` so the
-/// caster never targets themselves — keeps the spell aligned with its
-/// hand-disruption role even though the printed card lets the caster
-/// target any player.
+/// The "land card discarded this way → battlefield" rider is now wired
+/// via the new `Selector::DiscardedThisResolution(IsLand)` primitive
+/// + `Selector::one_of(...)` to clamp to one land. The discard half
+/// uses `EachOpponent` so the caster never targets themselves — keeps
+/// the spell aligned with its hand-disruption role even though the
+/// printed card lets the caster target any player.
 pub fn mind_roots() -> CardDefinition {
+    use crate::effect::ZoneDest;
     use crate::mana::g;
     CardDefinition {
         name: "Mind Roots",
@@ -1322,11 +1315,25 @@ pub fn mind_roots() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![],
-        effect: Effect::Discard {
-            who: Selector::Player(PlayerRef::EachOpponent),
-            amount: Value::Const(2),
-            random: false,
-        },
+        effect: Effect::Seq(vec![
+            Effect::Discard {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(2),
+                random: false,
+            },
+            // "Put up to one land card discarded this way onto the
+            // battlefield tapped under your control." Filter the
+            // per-resolution discard list to lands and pick one.
+            Effect::Move {
+                what: Selector::one_of(Selector::DiscardedThisResolution(
+                    SelectionRequirement::Land,
+                )),
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: true,
+                },
+            },
+        ]),
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],

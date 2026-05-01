@@ -123,6 +123,23 @@ pub struct GameState {
     /// independent resolutions.
     #[serde(skip)]
     pub(crate) last_created_token: Option<CardId>,
+    /// Transient: number of cards discarded so far during the current
+    /// effect resolution (across all `Effect::Discard` invocations in
+    /// the same `Effect::Seq`). Read by `Value::CardsDiscardedThisResolution`
+    /// — used by Borrowed Knowledge's "draw cards equal to the number
+    /// of cards discarded this way" mode and Colossus of the Blood
+    /// Age's "discard any number, draw that many plus one" death rider.
+    /// Reset to zero on every entry to `resolve_effect`.
+    #[serde(skip, default)]
+    pub(crate) cards_discarded_this_resolution: u32,
+    /// Transient: ids of cards discarded so far in the current effect
+    /// resolution. Used by Mind Roots ("Put up to one land card
+    /// discarded this way onto the battlefield tapped under your
+    /// control") and similar "find a discarded X" payoffs that need
+    /// the actual card identities, not just the count. Same lifetime
+    /// as `cards_discarded_this_resolution`.
+    #[serde(skip, default)]
+    pub(crate) cards_discarded_this_resolution_ids: Vec<CardId>,
     /// Transient: which face / cast path the in-progress cast is using.
     /// Set by `cast_spell_back_face` (`Back`) and `cast_flashback`
     /// (`Flashback`); reset to `Front` after each emitted SpellCast
@@ -179,6 +196,8 @@ impl Clone for GameState {
             delayed_triggers: self.delayed_triggers.clone(),
             sacrificed_power: self.sacrificed_power,
             last_created_token: self.last_created_token,
+            cards_discarded_this_resolution: self.cards_discarded_this_resolution,
+            cards_discarded_this_resolution_ids: self.cards_discarded_this_resolution_ids.clone(),
             pending_cast_face: self.pending_cast_face,
             decider: self.decider.kind().into_boxed(),
             pending_decision: self.pending_decision.clone(),
@@ -217,6 +236,8 @@ impl GameState {
             delayed_triggers: Vec::new(),
             sacrificed_power: None,
             last_created_token: None,
+            cards_discarded_this_resolution: 0,
+            cards_discarded_this_resolution_ids: Vec::new(),
             pending_cast_face: CastFace::Front,
             decider: Box::new(AutoDecider),
             pending_decision: None,
@@ -1275,6 +1296,9 @@ impl GameState {
                             player: target_player,
                             card_id,
                         });
+                        self.cards_discarded_this_resolution =
+                            self.cards_discarded_this_resolution.saturating_add(1);
+                        self.cards_discarded_this_resolution_ids.push(card_id);
                     }
                 }
                 Ok(events)

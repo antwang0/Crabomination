@@ -1507,8 +1507,8 @@ fn cost_of_brilliance_draws_two_loses_two_pumps_creature() {
 fn mind_roots_makes_opponent_discard_two() {
     let mut g = two_player_game();
     g.add_card_to_hand(1, catalog::lightning_bolt());
-    g.add_card_to_hand(1, catalog::island());
-    g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.add_card_to_hand(1, catalog::lightning_bolt());
     let id = g.add_card_to_hand(0, catalog::mind_roots());
     g.players[0].mana_pool.add(Color::Black, 1);
     g.players[0].mana_pool.add(Color::Green, 1);
@@ -1523,6 +1523,39 @@ fn mind_roots_makes_opponent_discard_two() {
 
     assert_eq!(g.players[1].hand.len(), opp_hand_before - 2,
         "Opponent should have discarded 2 cards");
+    // No lands were discarded → no land hits the battlefield.
+    assert!(!g.battlefield.iter().any(|c| c.controller == 0
+        && c.definition.is_land()),
+        "no land discarded → no land on bf");
+}
+
+#[test]
+fn mind_roots_puts_discarded_land_onto_battlefield_tapped() {
+    // The opponent has a land in hand that gets discarded → it pops
+    // onto our battlefield tapped via the new
+    // `Selector::DiscardedThisResolution(Land)` primitive.
+    let mut g = two_player_game();
+    g.add_card_to_hand(1, catalog::island());
+    g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.add_card_to_hand(1, catalog::lightning_bolt());
+    let id = g.add_card_to_hand(0, catalog::mind_roots());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Mind Roots castable for {1}{B}{G}");
+    drain_stack(&mut g);
+
+    // We now control a tapped Island — the discarded land moved
+    // from opponent's graveyard to our battlefield tapped.
+    let our_island = g.battlefield.iter().find(|c| {
+        c.controller == 0 && c.definition.name == "Island"
+    });
+    assert!(our_island.is_some(), "discarded Island should be on our bf");
+    assert!(our_island.unwrap().tapped, "land enters tapped");
 }
 
 // ── Stadium Tidalmage ───────────────────────────────────────────────────────
@@ -2979,13 +3012,18 @@ fn lorehold_charm_pump_mode_pumps_creatures() {
 // ── Borrowed Knowledge ──────────────────────────────────────────────────────
 
 #[test]
-fn borrowed_knowledge_mode_one_discards_hand_and_draws_seven() {
+fn borrowed_knowledge_mode_one_draws_equal_to_cards_discarded() {
+    // Push: with the new `Value::CardsDiscardedThisResolution`,
+    // mode 1 is now exact-printed: discard hand, draw N where N =
+    // count of cards discarded by this effect.
     let mut g = two_player_game();
-    // Seed our library with 10 cards so we can draw 7.
+    // Seed our library so we have cards to draw.
     for _ in 0..10 {
         g.add_card_to_library(0, catalog::island());
     }
-    // Add a couple of cards to our hand we'll discard.
+    // Pre-cast hand: 2 lands. Casting the spell adds 1 card. After
+    // payment leaves 2 cards in hand (the spell exits hand into
+    // resolution). Discard hand = 2; draw 2.
     g.add_card_to_hand(0, catalog::island());
     g.add_card_to_hand(0, catalog::island());
 
@@ -3000,8 +3038,36 @@ fn borrowed_knowledge_mode_one_discards_hand_and_draws_seven() {
     .expect("Borrowed Knowledge castable in mode 1");
     drain_stack(&mut g);
 
-    // Drew 7 fresh cards, discarded all but the cast spell.
-    assert_eq!(g.players[0].hand.len(), 7, "Should end with 7 cards in hand");
+    // The two pre-cast hand cards were discarded; we drew exactly 2.
+    assert_eq!(g.players[0].hand.len(), 2, "draw equals discard count (2)");
+    assert_eq!(g.players[0].graveyard.len(), 3,
+        "2 discards + the spell card = 3 in graveyard");
+}
+
+#[test]
+fn borrowed_knowledge_mode_one_with_empty_hand_draws_zero() {
+    // Edge case: zero cards in hand at trigger time means
+    // `CardsDiscardedThisResolution` is 0, so we draw 0 cards. The
+    // spell card itself moved to the stack and won't be in hand.
+    let mut g = two_player_game();
+    for _ in 0..5 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let id = g.add_card_to_hand(0, catalog::borrowed_knowledge());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+
+    let lib_before = g.players[0].library.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: Some(1), x_value: None,
+    })
+    .expect("Borrowed Knowledge castable in mode 1 with empty hand");
+    drain_stack(&mut g);
+
+    // Drew zero cards — library hasn't shrunk.
+    assert_eq!(g.players[0].library.len(), lib_before);
+    assert_eq!(g.players[0].hand.len(), 0);
 }
 
 // ── Planar Engineering ──────────────────────────────────────────────────────
@@ -3373,6 +3439,45 @@ fn scolding_administrator_has_menace() {
     assert!(card.definition.has_creature_type(crate::card::CreatureType::Cleric));
 }
 
+#[test]
+fn scolding_administrator_dies_transfers_counters_to_target_creature() {
+    // Push: when a Scolding Administrator with N +1/+1 counters dies,
+    // those counters now go on a target creature via the new
+    // `Value::CountersOn(TriggerSource)` graveyard fallback.
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let admin = g.add_card_to_battlefield(0, catalog::scolding_administrator());
+    // Stack 3 +1/+1 counters on the admin.
+    if let Some(c) = g.battlefield_find_mut(admin) {
+        c.add_counters(CounterType::PlusOnePlusOne, 3);
+    }
+    // Target a friendly bear.
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+
+    let _ = g.remove_to_graveyard_with_triggers(admin);
+    drain_stack(&mut g);
+
+    let bear_now = g.battlefield_find(bear).expect("bear still on bf");
+    assert_eq!(bear_now.counter_count(CounterType::PlusOnePlusOne), 3,
+        "3 counters should transfer from dying Scolding Admin to target bear");
+}
+
+#[test]
+fn scolding_administrator_dies_without_counters_no_op() {
+    // Edge case: dies with zero counters → no trigger fires (gated).
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let admin = g.add_card_to_battlefield(0, catalog::scolding_administrator());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+
+    let _ = g.remove_to_graveyard_with_triggers(admin);
+    drain_stack(&mut g);
+
+    let bear_now = g.battlefield_find(bear).expect("bear still on bf");
+    assert_eq!(bear_now.counter_count(CounterType::PlusOnePlusOne), 0,
+        "no counters → no transfer");
+}
+
 // ── modern_decks 2026-04-30 push (post-push III) ───────────────────────────
 
 #[test]
@@ -3697,23 +3802,50 @@ fn colossus_etb_drains_three_each_opponent() {
 }
 
 #[test]
-fn colossus_dies_loots_one_for_two() {
+fn colossus_dies_discards_hand_and_draws_n_plus_one() {
+    // Push: with `Value::CardsDiscardedThisResolution`, the printed
+    // "discard any number, draw that many plus one" is now wired as
+    // "discard your entire hand, draw discarded+1". Hand size 3 →
+    // discard 3, draw 4, net +1 + redraw rotation.
     let mut g = two_player_game();
     let cid = g.add_card_to_battlefield(0, catalog::colossus_of_the_blood_age());
-    // Stock library and a discard target.
+    // Library has plenty of cards to draw.
+    for _ in 0..10 {
+        let nid = g.next_id();
+        g.players[0].add_to_library_top(nid, catalog::grizzly_bears());
+    }
+    g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.add_card_to_hand(0, catalog::grizzly_bears());
+    let hand_before = g.players[0].hand.len();
+    assert_eq!(hand_before, 3);
+
+    let _ = g.remove_to_graveyard_with_triggers(cid);
+    drain_stack(&mut g);
+
+    // Hand state: discarded 3, drew 4 → 4 cards in hand.
+    assert_eq!(g.players[0].hand.len(), 4, "discarded 3, drew 3+1 = 4");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == cid));
+}
+
+#[test]
+fn colossus_dies_with_empty_hand_still_draws_one() {
+    // Edge case: empty hand → discard 0 → draw 0+1 = 1 card. The "+1
+    // floor" matches the printed "draw that many plus one".
+    let mut g = two_player_game();
+    let cid = g.add_card_to_battlefield(0, catalog::colossus_of_the_blood_age());
     for _ in 0..3 {
         let nid = g.next_id();
         g.players[0].add_to_library_top(nid, catalog::grizzly_bears());
     }
-    let _discard_target = g.add_card_to_hand(0, catalog::grizzly_bears());
+    assert_eq!(g.players[0].hand.len(), 0);
+    let lib_before = g.players[0].library.len();
 
-    let hand_before = g.players[0].hand.len();
     let _ = g.remove_to_graveyard_with_triggers(cid);
     drain_stack(&mut g);
 
-    // Death trigger: discard 1 + draw 2 = +1 net hand.
-    assert_eq!(g.players[0].hand.len(), hand_before + 1);
-    assert!(g.players[0].graveyard.iter().any(|c| c.id == cid));
+    assert_eq!(g.players[0].hand.len(), 1, "+1 floor draws 1 even from 0");
+    assert_eq!(g.players[0].library.len(), lib_before - 1);
 }
 
 #[test]

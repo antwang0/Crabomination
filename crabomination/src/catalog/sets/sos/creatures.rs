@@ -1213,8 +1213,9 @@ pub fn snooping_page() -> CardDefinition {
 /// creature dies, …" trigger is not implemented (oracle text was clipped
 /// in the gen script — pending an oracle-fetch refresh).
 pub fn scolding_administrator() -> CardDefinition {
-    use crate::card::CounterType;
-    use crate::effect::shortcut::repartee;
+    use crate::card::{CounterType, EventKind, EventScope, EventSpec, Predicate, TriggeredAbility};
+    use crate::effect::shortcut::{repartee, target_filtered};
+    use crate::card::SelectionRequirement;
     CardDefinition {
         name: "Scolding Administrator",
         cost: cost(&[w(), b()]),
@@ -1229,11 +1230,38 @@ pub fn scolding_administrator() -> CardDefinition {
         keywords: vec![Keyword::Menace],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![repartee(Effect::AddCounter {
-            what: Selector::This,
-            kind: CounterType::PlusOnePlusOne,
-            amount: Value::Const(1),
-        })],
+        triggered_abilities: vec![
+            repartee(Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            }),
+            // "When this creature dies, if it had counters on it, put
+            // those counters on up to one target creature." Wired via
+            // the SelfSource death trigger; the counter count is read
+            // off the dying card via `Value::CountersOn` (which now
+            // walks graveyards as a fallback). Gated on
+            // `ValueAtLeast(CountersOn(SelfSource), 1)` so the trigger
+            // no-ops when there are no counters to move.
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource)
+                    .with_filter(Predicate::ValueAtLeast(
+                        Value::CountersOn {
+                            what: Box::new(Selector::TriggerSource),
+                            kind: CounterType::PlusOnePlusOne,
+                        },
+                        Value::Const(1),
+                    )),
+                effect: Effect::AddCounter {
+                    what: target_filtered(SelectionRequirement::Creature),
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::CountersOn {
+                        what: Box::new(Selector::TriggerSource),
+                        kind: CounterType::PlusOnePlusOne,
+                    },
+                },
+            },
+        ],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -3339,15 +3367,27 @@ pub fn colossus_of_the_blood_age() -> CardDefinition {
             },
             TriggeredAbility {
                 event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+                // "Discard any number of cards, then draw that many
+                // cards plus one." Approximated as "discard your
+                // entire hand, then draw cards-discarded-this-way + 1"
+                // — the engine has no "choose any number" prompt, so
+                // we treat "any number" as the optimal greedy answer
+                // (all of them) and read the count via the new
+                // `Value::CardsDiscardedThisResolution`. The "+1"
+                // floor always draws at least one card even with an
+                // empty hand at trigger time.
                 effect: Effect::Seq(vec![
                     Effect::Discard {
                         who: Selector::You,
-                        amount: Value::Const(1),
+                        amount: Value::HandSizeOf(PlayerRef::You),
                         random: false,
                     },
                     Effect::Draw {
                         who: Selector::You,
-                        amount: Value::Const(2),
+                        amount: Value::Sum(vec![
+                            Value::CardsDiscardedThisResolution,
+                            Value::Const(1),
+                        ]),
                     },
                 ]),
             },

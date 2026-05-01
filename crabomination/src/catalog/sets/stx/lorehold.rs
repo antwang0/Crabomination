@@ -204,12 +204,16 @@ pub fn heated_debate() -> CardDefinition {
 /// you attack, put a +1/+1 counter on each attacking creature you
 /// control."
 ///
-/// 🟡 Mainline ETB token wired. The "whenever you attack" trigger that
-/// pumps each attacker is omitted — the engine has a `DeclareAttackers`
-/// event but the trigger here wants to enumerate every declared
-/// attacker, not just one source. Tracked under TODO.md "Triggered-
-/// Ability Event Gaps" → `PlayerAttackedWith`.
+/// All three abilities now wired. The "whenever you attack" trigger
+/// fan-out fires per-declared-attacker via the new combat-side
+/// broadcast (declare_attackers now consults all your permanents'
+/// `Attacks/AnotherOfYours` triggers, binding the just-declared
+/// attacker as `TriggerSource`). The +1/+1 counter is added on the
+/// attacker that fired this instance. Net result: each declared
+/// attacker ends up with one new counter, matching the printed
+/// "+1/+1 counter on each attacking creature".
 pub fn sparring_regimen() -> CardDefinition {
+    use crate::card::CounterType;
     CardDefinition {
         name: "Sparring Regimen",
         cost: cost(&[generic(2), r(), w()]),
@@ -221,14 +225,26 @@ pub fn sparring_regimen() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::CreateToken {
-                who: PlayerRef::You,
-                count: Value::Const(1),
-                definition: lorehold_spirit_token(),
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: lorehold_spirit_token(),
+                },
             },
-        }],
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::AnotherOfYours),
+                // The attacker is pre-bound as `Target(0)` by the
+                // combat-side broadcast in `declare_attackers`.
+                effect: Effect::AddCounter {
+                    what: Selector::Target(0),
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                },
+            },
+        ],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
