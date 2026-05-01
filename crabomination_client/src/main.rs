@@ -8,6 +8,7 @@ use bevy::{anti_alias::smaa::Smaa, color::palettes::basic::SILVER, prelude::*};
 
 mod card;
 mod config;
+mod debug_export;
 mod game;
 mod menu;
 mod net_plugin;
@@ -25,28 +26,39 @@ use card::{
 use render_quality::{ChangeQuality, RenderQuality};
 use config::GraphicsConfig;
 use game::{
-    AltCastState, BlockingState, FlippedHandCards, GameLog, GraveyardBrowserState, TargetingState,
+    AltCastState, BlockingState, CardNames, FlippedHandCards, GameLog, GraveyardBrowserState,
+    TargetingState,
 };
 use systems::game_ui::FastForward;
 use systems::animate::{
     adjust_animation_speed, animate_deck_shuffle, animate_draw_card, animate_flip,
+    dispatch_animation_queue,
+    animate_mdfc_flip,
     animate_hand_slide, animate_hover_lift, animate_play_card, animate_return_to_deck,
-    animate_reveal_peek, animate_send_to_graveyard, animate_tap, AnimationSpeed,
+    animate_return_to_hand, animate_reveal_peek, animate_send_to_graveyard, animate_tap,
+    AnimationSpeed,
 };
 use systems::game_ui::{
-    auto_advance_p0, handle_ability_menu, handle_alt_cast_buttons, handle_game_input,
-    poll_action_buttons, setup_game_hud, spawn_ability_menu, spawn_alt_cast_modal,
-    sync_flipped_hand_cards, sync_game_visuals, trigger_reveal_animation, update_log_text,
-    update_p1_text, update_hint, update_phase_chart, update_player_text, update_turn_text,
-    ButtonState, GameLogicSet,
+    apply_swap_front_material, auto_advance_p0, handle_ability_menu, handle_alt_cast_buttons,
+    handle_export_keypress, handle_game_input, poll_action_buttons, setup_game_hud,
+    spawn_ability_menu, spawn_alt_cast_modal, sync_flipped_hand_cards, sync_game_visuals,
+    trigger_reveal_animation, update_attack_all_visibility, update_log_text, update_p1_text,
+    update_hint, update_pass_button, update_phase_chart, update_player_text,
+    update_stack_panel, update_turn_text, ButtonState, GameLogicSet,
 };
 use systems::gizmos::{
-    draw_attacker_overlays, draw_blocking_gizmos, draw_stack_arrows,
-    AttackerGizmos, BlockingGizmos, StackGizmos,
+    draw_attacker_overlays, draw_blocking_gizmos, draw_pt_modified_overlays,
+    draw_stack_arrows, AttackerGizmos, BlockingGizmos, PtModifiedGizmos, StackGizmos,
 };
-use systems::quality::{setup_quality_panel, handle_quality_buttons};
-use systems::ui::{graveyard_browser, highlight_hovered_cards, peek_popup, pile_tooltip, reveal_popup, RevealPopupState};
-use systems::decision_ui::{spawn_decision_ui, handle_scry_toggles, handle_scry_reorder, handle_search_select, handle_put_on_library_select, handle_put_on_library_hand_click, update_put_on_library_count_text, update_put_on_library_visuals, handle_choose_color_buttons, handle_confirm, handle_mulligan_buttons, DecisionUiState};
+use systems::quality::{
+    handle_quality_buttons, handle_speed_slider, setup_quality_panel,
+    update_speed_slider_visuals,
+};
+use systems::ui::{
+    graveyard_browser, graveyard_card_hover_name, highlight_hovered_cards, peek_popup,
+    pile_tooltip, reveal_popup, RevealPopupState,
+};
+use systems::decision_ui::{spawn_decision_ui, handle_scry_toggles, handle_scry_reorder, handle_search_select, handle_put_on_library_select, handle_put_on_library_hand_click, handle_discard_select, update_put_on_library_count_text, update_put_on_library_visuals, handle_choose_color_buttons, handle_confirm, handle_mulligan_buttons, DecisionUiState};
 
 /// Marks the decorative ground plane so quality changes can update its mesh.
 #[derive(Component)]
@@ -59,16 +71,76 @@ struct MainCamera;
 fn main() {
     let cfg = config::load();
 
-    // Preload card images by inspecting the same demo state the server uses.
+    // CLI: `--load-state <path>` boots straight into inspection mode on
+    // the named debug snapshot, skipping the menu. Anything else (no
+    // args, unknown flags) falls through to the normal menu flow.
+    let load_state_arg: Option<std::path::PathBuf> = std::env::args()
+        .skip(1)
+        .collect::<Vec<_>>()
+        .windows(2)
+        .find_map(|w| (w[0] == "--load-state").then(|| std::path::PathBuf::from(&w[1])));
+
+    // Preload card images for every card the player could possibly see —
+    // the demo (Modern) decks and the full cube card universe. Cube
+    // matches roll a random deck per seat *after* startup, so we can't
+    // narrow the prefetch to "cards in this match"; the full union keeps
+    // Scryfall fetches off the critical path of gameplay.
+    //
+    // For each MDFC we record both faces _and the front→back link_ so
+    // the prefetcher can query Scryfall by the front name with
+    // `face=back`. Querying by back name alone 404s for most MDFCs.
+    use scryfall::CardImage;
+    use std::collections::HashSet;
+    let mut fronts: HashSet<&'static str> = HashSet::new();
+    let mut mdfc_pairs: HashSet<(&'static str, &'static str)> = HashSet::new();
+    let mut visit = |def: &crabomination::card::CardDefinition| {
+        fronts.insert(def.name);
+        if let Some(back) = def.back_face.as_ref() {
+            mdfc_pairs.insert((def.name, back.name));
+        }
+    };
     let demo = crabomination::demo::build_demo_state();
-    let mut seen = std::collections::HashSet::new();
     for player in &demo.players {
         for card in player.library.iter().chain(&player.hand).chain(&player.graveyard) {
-            seen.insert(card.definition.name);
+            visit(&card.definition);
         }
     }
-    let card_names: Vec<&str> = seen.into_iter().collect();
-    scryfall::ensure_card_images(&card_names, Path::new(&cfg.paths.asset_dir));
+    for factory in crabomination::cube::all_cube_cards() {
+        visit(&factory());
+    }
+    for factory in crabomination::sos_mode::all_sos_cards() {
+        visit(&factory());
+    }
+    // Token names: created mid-game by `Effect::CreateToken` factories,
+    // never present in deck definitions, so the catalog walk above
+    // doesn't see them. They use a separate Scryfall query path
+    // (`is:token+t:<name>`) since the bare type name doesn't resolve
+    // on `cards/named`.
+    let token_names: &[&'static str] = &[
+        // Cube / demo tokens.
+        "Bird", "Citizen", "Faerie", "Giant",
+        "Clue", "Treasure", "Food", "Blood",
+        // Cube-extras created by Soldier / Beast / Construct / Elephant /
+        // Cat token cards (Raise the Alarm, Beast Within, Karn Scion of
+        // Urza, Mascot Exhibition).
+        "Soldier", "Beast", "Construct", "Elephant", "Cat",
+        // Strixhaven / SoS-specific tokens. Without these the client
+        // prefetch never downloads art for Fractal Anomaly's payload, the
+        // Inkling tokens that Eager Glyphmage and friends produce, the
+        // Pest tokens (Pest Mascot, Pest Summoning), or the R/W Spirit
+        // tokens (Antiquities on the Loose, Group Project), so they
+        // render with a missing-asset placeholder in the 3-D view.
+        "Fractal", "Inkling", "Pest", "Spirit",
+    ];
+
+    let mut specs: Vec<CardImage> = fronts.into_iter().map(CardImage::Front).collect();
+    specs.extend(
+        mdfc_pairs
+            .into_iter()
+            .map(|(front, back)| CardImage::MdfcBack { front, back }),
+    );
+    specs.extend(token_names.iter().map(|name| CardImage::Token { name }));
+    scryfall::ensure_card_images(&specs, Path::new(&cfg.paths.asset_dir));
 
     let gfx = cfg.graphics;
     App::new()
@@ -96,6 +168,7 @@ fn main() {
         .init_gizmo_group::<BlockingGizmos>()
         .init_gizmo_group::<AttackerGizmos>()
         .init_gizmo_group::<StackGizmos>()
+        .init_gizmo_group::<PtModifiedGizmos>()
         .add_systems(Startup, configure_gizmos)
         .insert_resource(DirectionalLightShadowMap { size: gfx.shadow_map_size })
         .insert_resource(gfx)
@@ -107,12 +180,15 @@ fn main() {
         .insert_resource(BlockingState::default())
         .insert_resource(AltCastState::default())
         .insert_resource(FlippedHandCards::default())
+        .insert_resource(CardNames::default())
         .insert_resource(GraveyardBrowserState::default())
         .insert_resource(RevealPopupState::default())
         .insert_resource(AnimationSpeed::default())
         .insert_resource(ButtonState::default())
         .insert_resource(DecisionUiState::default())
         .init_resource::<game::AbilityMenuState>()
+        .init_resource::<systems::export_prompt::ExportPromptState>()
+        .insert_resource(menu::CliBootHint(load_state_arg))
         .add_systems(Startup, setup)
         // HUD scaffolding + network connection only spawn once the menu picks
         // a mode and we transition into the in-game state.
@@ -155,6 +231,9 @@ fn main() {
                 update_hint,
                 update_phase_chart,
                 update_log_text,
+                update_stack_panel,
+                update_pass_button,
+                update_attack_all_visibility,
             )
                 .after(handle_game_input)
                 .run_if(in_state(AppState::InGame)),
@@ -186,6 +265,75 @@ fn main() {
             )
                 .run_if(in_state(AppState::InGame)),
         )
+        // Separate add_systems call to stay under Bevy's 20-tuple limit.
+        .add_systems(Update, animate_mdfc_flip.run_if(in_state(AppState::InGame)))
+        .add_systems(Update, animate_return_to_hand.run_if(in_state(AppState::InGame)))
+        // Pop the next queued animation onto an entity once it stops
+        // animating, so chained transitions (e.g. play-then-tap on a
+        // freshly-played land) play sequentially.
+        .add_systems(Update, dispatch_animation_queue.run_if(in_state(AppState::InGame)))
+        // Counter coins (3-D cylinders on top of permanents).
+        .add_systems(
+            Update,
+            crate::systems::counter_coins::sync_counter_coins
+                .run_if(in_state(AppState::InGame)),
+        )
+        // Alt-key tooltip with counter detail + modified P/T.
+        .add_systems(
+            Update,
+            crate::systems::counter_tooltip::update_alt_tooltip
+                .run_if(in_state(AppState::InGame)),
+        )
+        .add_systems(
+            Update,
+            draw_pt_modified_overlays.run_if(in_state(AppState::InGame)),
+        )
+        .add_systems(
+            Update,
+            graveyard_card_hover_name
+                .after(graveyard_browser)
+                .run_if(in_state(AppState::InGame)),
+        )
+        .add_systems(
+            Update,
+            (
+                handle_export_keypress,
+                systems::export_prompt::handle_export_prompt_input,
+                systems::export_prompt::sync_export_prompt_ui,
+            )
+                .chain()
+                .run_if(in_state(AppState::InGame)),
+        )
+        .init_resource::<systems::game_over::AutoRematchState>()
+        .init_resource::<systems::game_over::ActiveMatchKind>()
+        .add_systems(
+            Update,
+            (
+                systems::game_over::sync_game_over_modal,
+                systems::game_over::handle_auto_rematch_focus,
+                systems::game_over::handle_auto_rematch_keys,
+                systems::game_over::handle_auto_rematch_set,
+                systems::game_over::refresh_auto_rematch_text,
+                systems::game_over::handle_rematch_button,
+                systems::game_over::handle_new_game_button,
+                systems::game_over::apply_auto_rematch_on_game_over,
+            )
+                .chain()
+                .run_if(in_state(AppState::InGame)),
+        )
+        .add_systems(
+            OnExit(AppState::InGame),
+            systems::game_over::cleanup_in_game_entities,
+        )
+        // Run after sync_game_visuals so SwapFrontMaterial markers
+        // queued during the hand→battlefield transition land before
+        // the next frame's render.
+        .add_systems(
+            Update,
+            apply_swap_front_material
+                .after(sync_game_visuals)
+                .run_if(in_state(AppState::InGame)),
+        )
         // Decision UI: spawn modal when pending, handle interactions, submit answer.
         .add_systems(
             Update,
@@ -196,6 +344,7 @@ fn main() {
                 handle_search_select,
                 handle_put_on_library_select,
                 handle_put_on_library_hand_click,
+                handle_discard_select,
                 update_put_on_library_count_text,
                 update_put_on_library_visuals,
                 handle_confirm,
@@ -230,6 +379,13 @@ fn main() {
                 .chain()
                 .run_if(in_state(AppState::InGame)),
         )
+        // Animation-speed slider: drag to set, label/fill mirror state.
+        .add_systems(
+            Update,
+            (handle_speed_slider, update_speed_slider_visuals)
+                .chain()
+                .run_if(in_state(AppState::InGame)),
+        )
         .run();
 }
 
@@ -240,6 +396,8 @@ fn configure_gizmos(mut store: ResMut<GizmoConfigStore>) {
     config.line.width = 3.0;
     let (config, _) = store.config_mut::<StackGizmos>();
     config.line.width = 3.0;
+    let (config, _) = store.config_mut::<PtModifiedGizmos>();
+    config.line.width = 4.0;
 }
 
 fn setup(
@@ -266,6 +424,11 @@ fn setup(
         quality.corner_segments(),
         n_seats,
         viewer_seat,
+    );
+    crate::systems::counter_coins::init_counter_coin_assets(
+        &mut commands,
+        &mut meshes,
+        &mut materials,
     );
 
     // Ambient fill light — softens harsh shadows.
@@ -311,7 +474,7 @@ fn setup(
 
     commands.spawn((
         Camera3d::default(),
-        Transform::from_xyz(0.0, 22.0, 26.0).looking_at(Vec3::ZERO, Vec3::Y),
+        Transform::from_xyz(0.0, 32.0, 14.0).looking_at(Vec3::ZERO, Vec3::Y),
         Smaa { preset: gfx.smaa_preset.to_bevy() },
         quality.msaa(),
         MainCamera,

@@ -56,10 +56,18 @@ impl GameState {
 
         for atk in attacks {
             let id = atk.attacker;
+            // Filter by *controller*, not *owner* — a creature you've
+            // stolen (Threaten / Mind Control) attacks for you, even
+            // though its `owner` field still points at the original
+            // player. Captured at
+            // `debug/deadlock-t9-1777413906-987970800.json` where
+            // bot 0 controlled a Cosmogoyf with `owner=1, controller=0`
+            // and `declare_attackers` rejected the cast with
+            // `CardNotOnBattlefield(93)`.
             let card = self
                 .battlefield
                 .iter_mut()
-                .find(|c| c.id == id && c.owner == p)
+                .find(|c| c.id == id && c.controller == p)
                 .ok_or(GameError::CardNotOnBattlefield(id))?;
 
             if !card.can_attack() {
@@ -88,13 +96,16 @@ impl GameState {
             });
         }
         for (source, effect, controller) in triggers {
-            let auto_target = self.auto_target_for_effect(&effect, controller);
+            let auto_target =
+                self.auto_target_for_effect_avoiding(&effect, controller, Some(source));
             self.stack.push(StackItem::Trigger {
                 source,
                 controller,
                 effect: Box::new(effect),
                 target: auto_target,
                 mode: None,
+                x_value: 0,
+                converged_value: 0,
             });
         }
         self.give_priority_to_active();
@@ -142,6 +153,14 @@ impl GameState {
             }
 
             if !blocker.can_block() {
+                return Err(GameError::CannotBlock(blocker_id));
+            }
+
+            // `Keyword::CantBlock` is enforced from the *computed* keyword
+            // set so transient grants (e.g. SOS Duel Tactics's "this
+            // creature can't block this turn", Postmortem Professor's
+            // static restriction) take effect immediately.
+            if kws_of(blocker_id).contains(&Keyword::CantBlock) {
                 return Err(GameError::CannotBlock(blocker_id));
             }
 
@@ -302,6 +321,8 @@ impl GameState {
                     if atk.has_lifelink {
                         let a = self.active_player_idx;
                         self.players[a].life += atk.power;
+                        self.players[a].life_gained_this_turn =
+                            self.players[a].life_gained_this_turn.saturating_add(amount);
                         events.push(GameEvent::LifeGained { player: a, amount });
                     }
                 }
@@ -356,11 +377,11 @@ impl GameState {
 
                 if atk.has_lifelink && lifelink_dealt > 0 {
                     let a = self.active_player_idx;
+                    let amt = lifelink_dealt as u32;
                     self.players[a].life += lifelink_dealt;
-                    events.push(GameEvent::LifeGained {
-                        player: a,
-                        amount: lifelink_dealt as u32,
-                    });
+                    self.players[a].life_gained_this_turn =
+                        self.players[a].life_gained_this_turn.saturating_add(amt);
+                    events.push(GameEvent::LifeGained { player: a, amount: amt });
                 }
 
                 let blocker_damage_to_attacker: i32 = blocker_ids
@@ -434,11 +455,11 @@ impl GameState {
                     }
                     for (player, gained) in lifelink_by_controller {
                         if gained > 0 {
+                            let amt = gained as u32;
                             self.players[player].life += gained;
-                            events.push(GameEvent::LifeGained {
-                                player,
-                                amount: gained as u32,
-                            });
+                            self.players[player].life_gained_this_turn =
+                                self.players[player].life_gained_this_turn.saturating_add(amt);
+                            events.push(GameEvent::LifeGained { player, amount: amt });
                         }
                     }
                 }
@@ -533,6 +554,8 @@ impl GameState {
                 effect: Box::new(effect),
                 target: Some(Target::Player(damaged_player)),
                 mode: None,
+                x_value: 0,
+                converged_value: 0,
             });
         }
     }

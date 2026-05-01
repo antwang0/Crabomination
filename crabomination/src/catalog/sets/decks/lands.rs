@@ -6,109 +6,16 @@
 //! decks playable while the engine grows the necessary primitives. Surveil
 //! lands and tap lands enter tapped via a self-targeting `Tap` trigger.
 
-use super::super::tap_add;
+use super::super::{
+    dual_land_with, etb_tap, etb_tap_then_surveil_one, fastland_etb_conditional_tap,
+    shockland_pay_two_or_tap, tap_add,
+};
 use crate::card::{
-    CardDefinition, CardType, Effect, EventKind, EventScope, EventSpec, LandType,
-    SelectionRequirement, Selector, Subtypes, TriggeredAbility, Value,
+    CardDefinition, CardType, Effect, EventKind, EventScope, EventSpec, LandType, Selector,
+    Subtypes, TriggeredAbility, Value,
 };
 use crate::effect::{ActivatedAbility, ManaPayload, PlayerRef, Predicate};
 use crate::mana::{Color, ManaCost, cost, generic, u};
-
-// ── Helpers ──────────────────────────────────────────────────────────────────
-
-/// Triggered ability: when this permanent enters the battlefield, tap it.
-fn etb_tap() -> TriggeredAbility {
-    TriggeredAbility {
-        event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-        effect: Effect::Tap { what: Selector::This },
-    }
-}
-
-/// Triggered ability: when this permanent enters, tap it AND surveil 1.
-fn etb_tap_then_surveil_one() -> TriggeredAbility {
-    TriggeredAbility {
-        event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-        effect: Effect::Seq(vec![
-            Effect::Tap { what: Selector::This },
-            Effect::Surveil { who: PlayerRef::You, amount: Value::Const(1) },
-        ]),
-    }
-}
-
-/// Fastland ETB trigger: "ETB tapped unless you control two or fewer other
-/// lands." Counted against the post-ETB battlefield (which already contains
-/// this land), so the threshold is "≥ 4 lands you control".
-fn fastland_etb_conditional_tap() -> TriggeredAbility {
-    TriggeredAbility {
-        event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-        effect: Effect::If {
-            cond: Predicate::SelectorCountAtLeast {
-                sel: Selector::EachPermanent(
-                    SelectionRequirement::Land
-                        .and(SelectionRequirement::ControlledByYou),
-                ),
-                n: Value::Const(4),
-            },
-            then: Box::new(Effect::Tap { what: Selector::This }),
-            else_: Box::new(Effect::Noop),
-        },
-    }
-}
-
-/// Shock-land ETB choice — "As this enters, you may pay 2 life. If you don't,
-/// it enters tapped." Modeled as a self-source ETB `ChooseMode` trigger
-/// (mode 0 = pay 2 life, mode 1 = tap self). The default `AutoDecider` and
-/// the simulated bot both pick mode 0, which matches typical play (a single
-/// untap is almost always worth 2 life). Note: this is a triggered ability,
-/// not a true replacement effect — the land is briefly available untapped
-/// before the trigger resolves. Functionally close enough for the demo decks.
-fn shockland_pay_two_or_tap() -> TriggeredAbility {
-    TriggeredAbility {
-        event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-        effect: Effect::ChooseMode(vec![
-            // Mode 0: Pay 2 life, stay untapped.
-            Effect::LoseLife {
-                who: Selector::You,
-                amount: Value::Const(2),
-            },
-            // Mode 1: enter tapped.
-            Effect::Tap { what: Selector::This },
-        ]),
-    }
-}
-
-/// Skeleton for a non-basic land with two color-producing mana abilities and
-/// optionally an ETB-tapped trigger and the corresponding `LandType`s.
-fn dual_land_with(
-    name: &'static str,
-    type_a: LandType,
-    type_b: LandType,
-    color_a: Color,
-    color_b: Color,
-    triggers: Vec<TriggeredAbility>,
-) -> CardDefinition {
-    CardDefinition {
-        name,
-        cost: ManaCost::default(),
-        supertypes: vec![],
-        card_types: vec![CardType::Land],
-        subtypes: Subtypes {
-            land_types: vec![type_a, type_b],
-            ..Default::default()
-        },
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::Noop,
-        activated_abilities: vec![tap_add(color_a), tap_add(color_b)],
-        triggered_abilities: triggers,
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-    }
-}
 
 // ── Fastlands ────────────────────────────────────────────────────────────────
 //
@@ -182,6 +89,7 @@ fn pathway_face(name: &'static str, land_type: LandType, color: Color) -> CardDe
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand: None,
     }
 }
 
@@ -363,6 +271,9 @@ pub fn gemstone_mine() -> CardDefinition {
             ]),
             once_per_turn: false,
             sorcery_speed: false,
+            sac_cost: false,
+            condition: None,
+            life_cost: 0,
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -377,16 +288,29 @@ pub fn gemstone_mine() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand: None,
     }
 }
 
-/// Gemstone Caverns — Legendary Land. Opening-hand: may put into play with a
-/// luck counter. Tap to add a mana of any color, removing a luck counter.
+/// Gemstone Caverns — Legendary Land. "If Gemstone Caverns is in your
+/// opening hand and you're not the starting player, you may begin the game
+/// with Gemstone Caverns on the battlefield with a luck counter on it. If
+/// you do, exile a card from your hand. {T}, Remove a luck counter from
+/// Gemstone Caverns: Add one mana of any color. {T}: Add {C}."
 ///
-/// Stub: simple "tap for any color" land; no opening-hand effect yet.
-/// TODO: opening-hand pre-game install + luck counter mechanic.
+/// Wired:
+///   * `opening_hand: Some(StartInPlay { tapped: false, extra: AddCounter Luck })`
+///     — `apply_opening_hand_effects` puts the land in play untapped with a
+///     luck counter for **any** player who has it in their opening hand
+///     (the starting-player restriction and the "exile a card" cost are
+///     skipped — acceptable for the demo).
+///   * Two activated abilities: `{T}: Add {C}` and the `{T}, RemoveCounter
+///     Luck → Add 1 of any color`. The luck-counter ability gates its
+///     mana-add behind an `If` over the counter total, so once the counter
+///     is gone the ability still taps but produces nothing.
 pub fn gemstone_caverns() -> CardDefinition {
-    use crate::card::Supertype;
+    use crate::card::{CounterType, Supertype};
+    use crate::effect::OpeningHandEffect;
     CardDefinition {
         name: "Gemstone Caverns",
         cost: ManaCost::default(),
@@ -397,37 +321,94 @@ pub fn gemstone_caverns() -> CardDefinition {
         toughness: 0,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: vec![ActivatedAbility {
-            tap_cost: true,
-            mana_cost: ManaCost::default(),
-            effect: Effect::AddMana {
-                who: PlayerRef::You,
-                pool: ManaPayload::AnyOneColor(Value::Const(1)),
+        activated_abilities: vec![
+            // {T}: Add {C}.
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: ManaCost::default(),
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Colorless(Value::Const(1)),
+                },
+                once_per_turn: false,
+                sorcery_speed: false,
+                sac_cost: false,
+                condition: None,
+            life_cost: 0,
             },
-            once_per_turn: false,
-            sorcery_speed: false,
-        }],
+            // {T}, Remove a luck counter: Add one mana of any color.
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: ManaCost::default(),
+                effect: Effect::If {
+                    cond: Predicate::ValueAtLeast(
+                        Value::CountersOn {
+                            what: Box::new(Selector::This),
+                            kind: CounterType::Charge,
+                        },
+                        Value::Const(1),
+                    ),
+                    then: Box::new(Effect::Seq(vec![
+                        Effect::RemoveCounter {
+                            what: Selector::This,
+                            kind: CounterType::Charge,
+                            amount: Value::Const(1),
+                        },
+                        Effect::AddMana {
+                            who: PlayerRef::You,
+                            pool: ManaPayload::AnyOneColor(Value::Const(1)),
+                        },
+                    ])),
+                    else_: Box::new(Effect::Noop),
+                },
+                once_per_turn: false,
+                sorcery_speed: false,
+                sac_cost: false,
+                condition: None,
+            life_cost: 0,
+            },
+        ],
         triggered_abilities: vec![],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand: Some(OpeningHandEffect::StartInPlay {
+            tapped: false,
+            // The engine has no dedicated `Luck` counter type, so we reuse
+            // `Charge` — gameplay-equivalent here since only the
+            // luck-removal ability reads it.
+            extra: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::Charge,
+                amount: Value::Const(1),
+            },
+        }),
     }
 }
 
-/// Cavern of Souls — Land. As it enters, choose a creature type. Tap for
-/// colorless OR mana of any color usable only to cast a creature of the
-/// chosen type, which can't be countered.
+/// Cavern of Souls — Land. As Cavern of Souls enters, choose a creature
+/// type. {T}: Add {C}. {T}: Add one mana of any color. Spend this mana
+/// only to cast a creature spell of the chosen type, and that spell
+/// can't be countered.
 ///
-/// Approximation: taps for colorless mana, and the cast paths in
-/// `actions.rs` flag any creature spell cast by a player who controls a
-/// Cavern as `StackItem::Spell.uncounterable = true` — `CounterSpell`
-/// skips those. The "name a type" / mana-provenance restriction is
-/// collapsed: any creature spell becomes uncounterable while you control
-/// any Cavern. Acceptable for the demo deck. TODO: full name-a-type
-/// decision + per-cast tagging via mana provenance.
+/// Approximations:
+///
+/// - **Name-a-type ETB**: a self-source `ChooseMode` ETB trigger picks
+///   one of the demo decks' relevant types (Eldrazi / Demon / Sphinx /
+///   Frog / Phyrexian / Angel / Avatar / Beast). The chosen type is
+///   discarded after the trigger resolves; the engine doesn't yet wire
+///   per-cast mana provenance, so the actual "which creatures are
+///   uncounterable" check still collapses to "any creature you cast"
+///   while you control a Cavern (see `caster_grants_uncounterable` in
+///   `actions.rs`). The mode pick keeps the modal-decision round-trip
+///   available to the UI.
+/// - **Activated mana**: only the `{T}: Add {C}` half is wired. The
+///   uncounterable flag still fires correctly for creature spells via
+///   the simplified rule.
 pub fn cavern_of_souls() -> CardDefinition {
+    use crate::card::TriggeredAbility;
     CardDefinition {
         name: "Cavern of Souls",
         cost: ManaCost::default(),
@@ -447,13 +428,29 @@ pub fn cavern_of_souls() -> CardDefinition {
             },
             once_per_turn: false,
             sorcery_speed: false,
+            sac_cost: false,
+            condition: None,
+            life_cost: 0,
         }],
-        triggered_abilities: vec![],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            // "As ~ enters, choose a creature type." `NameCreatureType`
+            // surfaces a `Decision::ChooseCreatureType` to the controller
+            // (AutoDecider picks Demon, matching the demo Goryo's deck's
+            // Griselbrand). The chosen type is stored on the Cavern's
+            // `CardInstance.chosen_creature_type` and consulted by
+            // `caster_grants_uncounterable` to gate which creature spells
+            // the Cavern actually protects.
+            effect: Effect::NameCreatureType {
+                what: Selector::This,
+            },
+        }],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand: None,
     }
 }
 
@@ -501,6 +498,9 @@ pub fn cephalid_coliseum() -> CardDefinition {
                 ]),
                 once_per_turn: false,
                 sorcery_speed: false,
+                sac_cost: false,
+                condition: None,
+            life_cost: 0,
             },
         ],
         triggered_abilities: vec![etb_tap()],
@@ -509,5 +509,6 @@ pub fn cephalid_coliseum() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand: None,
     }
 }

@@ -16,8 +16,8 @@ use crate::card::{
     GameCardId, GraveyardPile, HandCard, HandSlideAnimation, OpponentHandCard,
     PlayCardAnimation, PlayerTargetZone, RevealPeekAnimation, SendToGraveyardAnimation,
     StackCard, TapAnimation, TapState, ValidTarget, back_face_rotation, bf_card_transform,
-    card_front_material, deck_position, graveyard_position, hand_card_transform,
-    land_card_transform, spawn_single_card,
+    card_back_face_material, card_front_material, deck_position, graveyard_position,
+    hand_card_transform, land_card_transform, spawn_single_card,
 };
 use crate::game::{AbilityMenuState, BlockingState, GameLog, TargetingState, format_mana_pool_from_pool};
 use crate::net_plugin::{CurrentView, LatestServerEvents, NetOutbox};
@@ -25,6 +25,14 @@ use crate::net_plugin::{CurrentView, LatestServerEvents, NetOutbox};
 /// System set label for the ordered game-logic chain (mulligan → advance → input).
 #[derive(bevy::ecs::schedule::SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct GameLogicSet;
+
+/// In-flight bf→{hand, graveyard} animation queries bundled together so
+/// `sync_game_visuals` stays under Bevy's 16-param tuple limit.
+#[derive(bevy::ecs::system::SystemParam)]
+pub struct InFlightAnims<'w, 's> {
+    pub gy: Query<'w, 's, &'static SendToGraveyardAnimation>,
+    pub to_hand: Query<'w, 's, (&'static GameCardId, &'static crate::card::ReturnToHandAnimation)>,
+}
 
 /// Bundled mutable resources for `handle_game_input` to stay within Bevy's 16-param limit.
 #[derive(bevy::ecs::system::SystemParam)]
@@ -37,7 +45,126 @@ pub struct GameInputResources<'w> {
     pub ff: ResMut<'w, FastForward>,
     pub alt_cast: ResMut<'w, crate::game::AltCastState>,
     pub flipped_hand: ResMut<'w, crate::game::FlippedHandCards>,
+    pub card_names: ResMut<'w, crate::game::CardNames>,
+    pub export_prompt: ResMut<'w, crate::systems::export_prompt::ExportPromptState>,
 }
+/// Process `SwapFrontMaterial` markers: walk each entity's children,
+/// find the `FrontFaceMesh` child, swap its `MeshMaterial3d` to the
+/// requested handle, update the parent's `CardFrontTexture` so peek /
+/// hover popups stay in sync, and remove the marker. Used by the
+/// hand→battlefield transition for flipped MDFCs (the played-back-face
+/// image needs to land on the front-child mesh under standard bf
+/// orientation).
+#[allow(clippy::type_complexity)]
+pub fn apply_swap_front_material(
+    mut commands: Commands,
+    swap_q: Query<
+        (Entity, &Children, &crate::card::SwapFrontMaterial),
+        With<crate::card::SwapFrontMaterial>,
+    >,
+    mut front_meshes: Query<
+        &mut MeshMaterial3d<StandardMaterial>,
+        With<crate::card::FrontFaceMesh>,
+    >,
+    mut tex_q: Query<&mut crate::card::CardFrontTexture>,
+) {
+    for (entity, children, swap) in &swap_q {
+        for child in children.iter() {
+            if let Ok(mut mat) = front_meshes.get_mut(child) {
+                *mat = MeshMaterial3d(swap.new_front.clone());
+                break;
+            }
+        }
+        if let Ok(mut tex) = tex_q.get_mut(entity) {
+            tex.0 = swap.new_path.clone();
+        }
+        commands
+            .entity(entity)
+            .remove::<crate::card::SwapFrontMaterial>();
+    }
+}
+
+/// Pretty-print a `GameEventWire` for the in-game log, resolving any
+/// CardId via the running `CardNames` map so the player sees real card
+/// names instead of `CardId(N)` debug strings.
+fn format_event(ev: &crabomination::net::GameEventWire, names: &crate::game::CardNames) -> String {
+    use crabomination::net::GameEventWire as E;
+    let n = |id: crabomination::card::CardId| names.get(id);
+    match ev {
+        E::StepChanged(s) => format!("Step → {s:?}"),
+        E::TurnStarted { player, turn } => format!("Turn {turn} — P{player}"),
+        E::CardDrawn { player, card_id } => format!("P{player} drew {}", n(*card_id)),
+        E::CardDiscarded { player, card_id } => {
+            format!("P{player} discarded {}", n(*card_id))
+        }
+        E::LandPlayed { player, card_id } => format!("P{player} played {}", n(*card_id)),
+        E::SpellCast { player, card_id, .. } => format!("P{player} cast {}", n(*card_id)),
+        E::AbilityActivated { source } => format!("{} ability activated", n(*source)),
+        E::ManaAdded { player, color } => format!("P{player} adds {color:?}"),
+        E::ColorlessManaAdded { player } => format!("P{player} adds colorless"),
+        E::PermanentEntered { card_id } => format!("{} entered the battlefield", n(*card_id)),
+        E::PermanentExiled { card_id } => format!("{} was exiled", n(*card_id)),
+        E::DamageDealt { amount, to_player, to_card } => match (to_player, to_card) {
+            (Some(p), _) => format!("{amount} damage → P{p}"),
+            (_, Some(cid)) => format!("{amount} damage → {}", n(*cid)),
+            _ => format!("{amount} damage"),
+        },
+        E::LifeLost { player, amount } => format!("P{player} loses {amount} life"),
+        E::LifeGained { player, amount } => format!("P{player} gains {amount} life"),
+        E::CreatureDied { card_id } => format!("{} died", n(*card_id)),
+        E::PumpApplied { card_id, power, toughness } => {
+            format!("{} +{power}/+{toughness}", n(*card_id))
+        }
+        E::CounterAdded { card_id, counter_type, count } => {
+            format!("+{count} {counter_type:?} on {}", n(*card_id))
+        }
+        E::CounterRemoved { card_id, counter_type, count } => {
+            format!("−{count} {counter_type:?} on {}", n(*card_id))
+        }
+        E::PermanentTapped { card_id } => format!("{} tapped", n(*card_id)),
+        E::PermanentUntapped { card_id } => format!("{} untapped", n(*card_id)),
+        E::TokenCreated { card_id } => format!("token {} created", n(*card_id)),
+        E::CardMilled { player, card_id } => format!("P{player} milled {}", n(*card_id)),
+        E::ScryPerformed { player, looked_at, bottomed } => {
+            format!("P{player} scry {looked_at} ({bottomed} to bottom)")
+        }
+        E::AttackerDeclared(cid) => format!("{} attacks", n(*cid)),
+        E::BlockerDeclared { blocker, attacker } => {
+            format!("{} blocks {}", n(*blocker), n(*attacker))
+        }
+        E::CombatResolved => "Combat resolved".into(),
+        E::FirstStrikeDamageResolved => "First-strike damage resolved".into(),
+        E::TopCardRevealed { player, card_name, .. } => {
+            format!("P{player} revealed {card_name}")
+        }
+        E::AttachmentMoved { attachment, attached_to } => match attached_to {
+            Some(target) => format!("{} attached to {}", n(*attachment), n(*target)),
+            None => format!("{} unattached", n(*attachment)),
+        },
+        E::PoisonAdded { player, amount } => format!("P{player} +{amount} poison"),
+        E::LoyaltyAbilityActivated { planeswalker, loyalty_change } => {
+            format!("{} loyalty {loyalty_change:+}", n(*planeswalker))
+        }
+        E::LoyaltyChanged { card_id, new_loyalty } => {
+            format!("{} loyalty = {new_loyalty}", n(*card_id))
+        }
+        E::PlaneswalkerDied { card_id } => format!("{} died (planeswalker)", n(*card_id)),
+        E::SpellsCopied { original, count } => {
+            format!("{} copied ×{count}", n(*original))
+        }
+        E::SurveilPerformed { player, looked_at, graveyarded } => {
+            format!("P{player} surveil {looked_at} ({graveyarded} to graveyard)")
+        }
+        E::CardLeftGraveyard { player, card_id } => {
+            format!("P{player} {} left graveyard", n(*card_id))
+        }
+        E::GameOver { winner } => match winner {
+            Some(p) => format!("Game over — P{p} wins"),
+            None => "Game over — draw".into(),
+        },
+    }
+}
+
 /// Drives End Turn / Next Turn fast-forward: while these flags are set,
 /// `auto_advance_p0` keeps submitting `PassPriority` each frame until the
 /// target condition is reached.
@@ -72,11 +199,43 @@ pub struct PassPriorityButton;
 #[derive(Component)]
 pub struct AttackAllButton;
 
+/// Container for the Attack All button — toggled visible only during
+/// the viewer's `DeclareAttackers` step when at least one creature is
+/// eligible to attack.
+#[derive(Component)]
+pub struct AttackAllPanel;
+
 #[derive(Component)]
 pub struct EndTurnButton;
 
 #[derive(Component)]
 pub struct NextTurnButton;
+
+#[derive(Component)]
+pub struct ExportStateButton;
+
+/// Marker for every top-level UI node spawned while in `AppState::InGame`.
+/// `OnExit(AppState::InGame)` despawns all of them so a return to the
+/// menu doesn't leak the HUD on top of the menu UI, and so a follow-up
+/// `OnEnter(InGame)` re-runs `setup_game_hud` from scratch without
+/// stacking duplicates.
+#[derive(Component)]
+pub struct InGameRoot;
+
+/// Root of the dynamic stack display panel.  Children are rebuilt each time
+/// the view changes.  `Node::display` is toggled between `None` / `Flex`
+/// depending on whether the stack is empty.
+#[derive(Component)]
+pub struct StackPanel;
+
+/// Marker on the text label inside `PassPriorityButton` so `update_pass_button`
+/// can find it without a nested child walk.
+#[derive(Component)]
+pub struct PassButtonLabel;
+
+/// (Removed: `BadgeOverlay` 2-D screen-space badges — replaced by
+/// 3-D coin counters on the battlefield + an Alt-key tooltip showing
+/// modified P/T and counter detail. See `systems::counter_coins`.)
 
 #[derive(Component)]
 pub struct PhaseStepLabel(pub TurnStep);
@@ -101,6 +260,7 @@ pub struct ButtonState {
     pub attack: bool,
     pub end_turn: bool,
     pub next_turn: bool,
+    pub export: bool,
 }
 
 /// Reads all action-button `Interaction` components and writes results into
@@ -111,11 +271,13 @@ pub fn poll_action_buttons(
     attack_btn: Query<&Interaction, (Changed<Interaction>, With<AttackAllButton>)>,
     end_turn_btn: Query<&Interaction, (Changed<Interaction>, With<EndTurnButton>)>,
     next_turn_btn: Query<&Interaction, (Changed<Interaction>, With<NextTurnButton>)>,
+    export_btn: Query<&Interaction, (Changed<Interaction>, With<ExportStateButton>)>,
 ) {
     state.pass = pass_btn.iter().any(|i| *i == Interaction::Pressed);
     state.attack = attack_btn.iter().any(|i| *i == Interaction::Pressed);
     state.end_turn = end_turn_btn.iter().any(|i| *i == Interaction::Pressed);
     state.next_turn = next_turn_btn.iter().any(|i| *i == Interaction::Pressed);
+    state.export = export_btn.iter().any(|i| *i == Interaction::Pressed);
 }
 
 // ── HUD setup ─────────────────────────────────────────────────────────────────
@@ -139,6 +301,7 @@ pub fn setup_game_hud(mut commands: Commands, asset_server: Res<AssetServer>) {
                 ..default()
             },
             BackgroundColor(Color::srgba(0.0, 0.0, 0.0, 0.78)),
+            InGameRoot,
         ))
         .with_children(|p| {
             p.spawn((
@@ -177,6 +340,7 @@ pub fn setup_game_hud(mut commands: Commands, asset_server: Res<AssetServer>) {
                 ..default()
             },
             BackgroundColor(Color::srgba(0.0, 0.0, 0.0, 0.72)),
+            InGameRoot,
         ))
         .with_children(|p| {
             for (step, label) in &all_steps {
@@ -203,6 +367,7 @@ pub fn setup_game_hud(mut commands: Commands, asset_server: Res<AssetServer>) {
                 ..default()
             },
             BackgroundColor(Color::srgba(0.25, 0.0, 0.0, 0.82)),
+            InGameRoot,
         ))
         .with_children(|p| {
             p.spawn((
@@ -225,6 +390,7 @@ pub fn setup_game_hud(mut commands: Commands, asset_server: Res<AssetServer>) {
                 ..default()
             },
             BackgroundColor(Color::srgba(0.0, 0.0, 0.0, 0.62)),
+            InGameRoot,
         ))
         .with_children(|p| {
             p.spawn((
@@ -249,6 +415,7 @@ pub fn setup_game_hud(mut commands: Commands, asset_server: Res<AssetServer>) {
                 ..default()
             },
             BackgroundColor(Color::srgba(0.0, 0.1, 0.22, 0.82)),
+            InGameRoot,
         ))
         .with_children(|p| {
             p.spawn((
@@ -276,29 +443,17 @@ pub fn setup_game_hud(mut commands: Commands, asset_server: Res<AssetServer>) {
                         padding: UiRect::all(Val::Px(8.0)),
                         ..default()
                     },
-                    BackgroundColor(Color::srgb(0.45, 0.08, 0.08)),
-                    Button,
-                    AttackAllButton,
-                ))
-                .with_children(|p| {
-                    p.spawn((
-                        Text::new("Attack All (A)"),
-                        tf(13.0),
-                        TextColor(Color::WHITE),
-                    ));
-                });
-
-                p.spawn((
-                    Node {
-                        padding: UiRect::all(Val::Px(8.0)),
-                        ..default()
-                    },
                     BackgroundColor(Color::srgb(0.08, 0.28, 0.48)),
                     Button,
                     PassPriorityButton,
                 ))
                 .with_children(|p| {
-                    p.spawn((Text::new("Pass (Space)"), tf(13.0), TextColor(Color::WHITE)));
+                    p.spawn((
+                        Text::new("Pass (Space)"),
+                        tf(13.0),
+                        TextColor(Color::WHITE),
+                        PassButtonLabel,
+                    ));
                 });
 
                 p.spawn((
@@ -330,8 +485,127 @@ pub fn setup_game_hud(mut commands: Commands, asset_server: Res<AssetServer>) {
                         TextColor(Color::WHITE),
                     ));
                 });
+
+                p.spawn((
+                    Node {
+                        padding: UiRect::all(Val::Px(8.0)),
+                        ..default()
+                    },
+                    BackgroundColor(Color::srgb(0.18, 0.18, 0.28)),
+                    Button,
+                    ExportStateButton,
+                ))
+                .with_children(|p| {
+                    p.spawn((
+                        Text::new("Export State (X)"),
+                        tf(13.0),
+                        TextColor(Color::WHITE),
+                    ));
+                });
             });
         });
+
+    // Bottom-center attack-prompt panel — only visible during the viewer's
+    // own DeclareAttackers step when there's at least one creature able to
+    // attack. `update_attack_all_visibility` flips Display::None / Flex.
+    commands
+        .spawn((
+            Node {
+                position_type: PositionType::Absolute,
+                bottom: Val::Px(140.0),
+                left: Val::Px(0.0),
+                right: Val::Px(0.0),
+                display: Display::None,
+                justify_content: JustifyContent::Center,
+                align_items: AlignItems::FlexEnd,
+                ..default()
+            },
+            AttackAllPanel,
+            InGameRoot,
+        ))
+        .with_children(|p| {
+            p.spawn((
+                Node {
+                    padding: UiRect::axes(Val::Px(14.0), Val::Px(10.0)),
+                    ..default()
+                },
+                BackgroundColor(Color::srgb(0.55, 0.1, 0.1)),
+                Button,
+                AttackAllButton,
+            ))
+            .with_children(|p| {
+                p.spawn((
+                    Text::new("Attack All (A)"),
+                    tf(15.0),
+                    TextColor(Color::WHITE),
+                ));
+            });
+        });
+
+    // Bottom-center: stack panel (hidden when stack is empty; rebuilt each frame).
+    // Outer node is full-width and transparent — it just centers its child.
+    commands
+        .spawn((
+            Node {
+                position_type: PositionType::Absolute,
+                bottom: Val::Px(140.0),
+                left: Val::Px(0.0),
+                right: Val::Px(0.0),
+                justify_content: JustifyContent::Center,
+                align_items: AlignItems::FlexEnd,
+                ..default()
+            },
+            InGameRoot,
+        ))
+        .with_children(|p| {
+            p.spawn((
+                Node {
+                    display: Display::None,
+                    flex_direction: FlexDirection::Column,
+                    padding: UiRect::all(Val::Px(10.0)),
+                    row_gap: Val::Px(3.0),
+                    min_width: Val::Px(420.0),
+                    max_width: Val::Px(560.0),
+                    ..default()
+                },
+                BackgroundColor(Color::srgba(0.04, 0.06, 0.16, 0.93)),
+                StackPanel,
+            ));
+        });
+}
+
+/// Show the Attack All panel iff: it's the viewer's `DeclareAttackers`
+/// step, and the viewer has at least one creature legally able to attack
+/// (untapped, no summoning sickness without haste, no Defender).
+pub fn update_attack_all_visibility(
+    view: Res<CurrentView>,
+    mut q: Query<&mut Node, With<AttackAllPanel>>,
+) {
+    let Ok(mut node) = q.single_mut() else { return };
+    let Some(cv) = &view.0 else {
+        node.display = Display::None;
+        return;
+    };
+    if cv.game_over.is_some() {
+        node.display = Display::None;
+        return;
+    }
+    let your_seat = cv.your_seat;
+    let attacking_step =
+        cv.step == TurnStep::DeclareAttackers && cv.active_player == your_seat;
+    if !attacking_step {
+        node.display = Display::None;
+        return;
+    }
+    use crabomination::card::Keyword;
+    let has_attackers = cv.battlefield.iter().any(|c| {
+        c.owner == your_seat
+            && !c.is_land()
+            && !c.tapped
+            && (!c.summoning_sick || c.keywords.contains(&Keyword::Haste))
+            && !c.keywords.contains(&Keyword::Defender)
+    });
+    node.display = if has_attackers { Display::Flex } else { Display::None };
 }
 
 // ── HUD text update ───────────────────────────────────────────────────────────
@@ -342,11 +616,10 @@ pub fn update_turn_text(
 ) {
     let Ok(mut t) = q.single_mut() else { return };
     let Some(cv) = &view.0 else { return };
-    t.0 = if let Some(winner) = cv.game_over {
-        match winner {
-            Some(p) => format!("GAME OVER — {} wins!", player_name(cv, p)),
-            None => "GAME OVER — Draw!".into(),
-        }
+    // The dedicated centered Game Over modal owns the end-game UI; the
+    // corner HUD just holds a placeholder so it isn't visually empty.
+    t.0 = if cv.game_over.is_some() {
+        String::new()
     } else {
         format!(
             "Turn {} | {:?} | {}'s turn",
@@ -456,9 +729,37 @@ pub fn update_hint(
         t.0 = "Click a target (creature or opponent). Right-click/Esc to cancel.".into();
         return;
     }
-    let stack_size = cv.stack.len();
-    if stack_size > 0 {
-        t.0 = format!("{stack_size} item(s) on stack. P = Resolve.");
+    if !cv.stack.is_empty() {
+        let your_priority = cv.priority == cv.your_seat;
+        t.0 = if your_priority {
+            // Describe the top item so the player knows what they're responding to.
+            match cv.stack.last() {
+                Some(StackItemView::Known(k)) => {
+                    let ctrl = if k.controller == cv.your_seat {
+                        "Your".to_string()
+                    } else {
+                        format!("{}'s", player_name(cv, k.controller))
+                    };
+                    let tgt = match &k.target {
+                        Some(Target::Player(s)) => format!(
+                            " targeting {}",
+                            if *s == cv.your_seat { "you".into() } else { player_name(cv, *s) }
+                        ),
+                        Some(Target::Permanent(id)) => cv
+                            .battlefield
+                            .iter()
+                            .find(|p| p.id == *id)
+                            .map(|p| format!(" targeting {}", p.name))
+                            .unwrap_or_default(),
+                        None => String::new(),
+                    };
+                    format!("{} {} on stack{}. Respond from hand, or Space to let it resolve.", ctrl, k.name, tgt)
+                }
+                _ => format!("{} item(s) on stack. Space = let it resolve.", cv.stack.len()),
+            }
+        } else {
+            format!("Waiting for {} to act on the stack.", player_name(cv, cv.priority))
+        };
         return;
     }
     let your_seat = cv.your_seat;
@@ -485,6 +786,195 @@ pub fn update_hint(
         (true, _) => String::new(),
         (false, _) => format!("{} is thinking...", player_name(cv, cv.active_player)),
     };
+}
+
+// ── Stack panel ───────────────────────────────────────────────────────────────
+
+/// Resolve a `Target` to a display string given the current view.
+fn target_display(cv: &crabomination::net::ClientView, tgt: &Target) -> String {
+    match tgt {
+        Target::Player(s) => {
+            if *s == cv.your_seat { "you".into() } else { player_name(cv, *s) }
+        }
+        Target::Permanent(id) => cv
+            .battlefield
+            .iter()
+            .find(|p| p.id == *id)
+            .map(|p| p.name.clone())
+            .or_else(|| {
+                // Check graveyards (e.g. Goryo's Vengeance).
+                cv.players.iter().flat_map(|p| &p.graveyard)
+                    .find(|g| g.id == *id)
+                    .map(|g| g.name.clone())
+            })
+            .unwrap_or_else(|| "target".into()),
+    }
+}
+
+/// Rebuild the `StackPanel` children whenever the view changes.
+/// Stack is LIFO: the last element resolves next.  We show top-of-stack first.
+pub fn update_stack_panel(
+    view: Res<CurrentView>,
+    mut commands: Commands,
+    mut panel_q: Query<(Entity, &mut Node), With<StackPanel>>,
+    asset_server: Res<AssetServer>,
+) {
+    if !view.is_changed() {
+        return;
+    }
+    let Ok((panel_entity, mut node)) = panel_q.single_mut() else { return };
+
+    // Always wipe and rebuild — stack changes are infrequent.
+    commands.entity(panel_entity).despawn_children();
+
+    let Some(cv) = &view.0 else {
+        node.display = Display::None;
+        return;
+    };
+
+    if cv.stack.is_empty() {
+        node.display = Display::None;
+        return;
+    }
+
+    node.display = Display::Flex;
+
+    let font = asset_server.load("fonts/MiranoExtendedFreebie-Light.ttf");
+    let tf = |size: f32| TextFont { font: font.clone(), font_size: size, ..default() };
+
+    let your_priority = cv.priority == cv.your_seat;
+    let priority_name = if your_priority {
+        "You".to_string()
+    } else {
+        player_name(cv, cv.priority)
+    };
+    let header = format!(
+        "Stack  {}  |  {} has priority",
+        if cv.stack.len() == 1 { "1 item".to_string() } else { format!("{} items", cv.stack.len()) },
+        priority_name,
+    );
+
+    commands.entity(panel_entity).with_children(|p| {
+        // Header row
+        p.spawn((
+            Text::new(header),
+            tf(12.0),
+            TextColor(Color::srgb(0.72, 0.72, 0.8)),
+        ));
+        // Divider
+        p.spawn(Node {
+            width: Val::Percent(100.0),
+            height: Val::Px(1.0),
+            margin: UiRect::vertical(Val::Px(2.0)),
+            ..default()
+        });
+
+        // Items: top of stack (last index) shown first — that's what resolves next.
+        use crabomination::net::{StackItemKind, StackItemView};
+        for item in cv.stack.iter().rev() {
+            let (kind_str, kind_color, name, ctrl_str, tgt_str) = match item {
+                StackItemView::Known(k) => {
+                    let (kstr, kcol) = match k.kind {
+                        StackItemKind::Spell   => ("SPELL",   Color::srgb(1.0,  0.65, 0.2)),
+                        StackItemKind::Trigger => ("TRIGGER", Color::srgb(0.45, 0.75, 1.0)),
+                    };
+                    let ctrl = if k.controller == cv.your_seat {
+                        "You".to_string()
+                    } else {
+                        player_name(cv, k.controller)
+                    };
+                    let tgt = k.target.as_ref()
+                        .map(|t| format!("  →  {}", target_display(cv, t)))
+                        .unwrap_or_default();
+                    (kstr, kcol, k.name.clone(), ctrl, tgt)
+                }
+                StackItemView::Hidden { controller, .. } => {
+                    let ctrl = if *controller == cv.your_seat {
+                        "You".to_string()
+                    } else {
+                        player_name(cv, *controller)
+                    };
+                    ("?", Color::srgb(0.55, 0.55, 0.55), "Hidden card".to_string(), ctrl, String::new())
+                }
+            };
+
+            // Row
+            p.spawn(Node {
+                flex_direction: FlexDirection::Row,
+                align_items: AlignItems::Center,
+                column_gap: Val::Px(6.0),
+                padding: UiRect::vertical(Val::Px(2.0)),
+                ..default()
+            })
+            .with_children(|row| {
+                // Kind badge
+                row.spawn((
+                    Node {
+                        padding: UiRect::axes(Val::Px(5.0), Val::Px(2.0)),
+                        ..default()
+                    },
+                    BackgroundColor(Color::srgba(
+                        kind_color.to_srgba().red,
+                        kind_color.to_srgba().green,
+                        kind_color.to_srgba().blue,
+                        0.22,
+                    )),
+                ))
+                .with_children(|badge| {
+                    badge.spawn((Text::new(kind_str), tf(10.0), TextColor(kind_color)));
+                });
+
+                // Name  ·  controller  →  target
+                let label = format!("{}  ·  {}{}", name, ctrl_str, tgt_str);
+                row.spawn((Text::new(label), tf(12.0), TextColor(Color::WHITE)));
+            });
+        }
+    });
+}
+
+/// Update the Pass Priority button's background color and label to reflect
+/// whether the viewer has priority and what the stack looks like.
+pub fn update_pass_button(
+    view: Res<CurrentView>,
+    mut btn_q: Query<&mut BackgroundColor, With<PassPriorityButton>>,
+    mut label_q: Query<&mut Text, With<PassButtonLabel>>,
+) {
+    if !view.is_changed() {
+        return;
+    }
+    let Ok(mut bg) = btn_q.single_mut() else { return };
+    let Ok(mut label) = label_q.single_mut() else { return };
+
+    let Some(cv) = &view.0 else { return };
+
+    let your_priority = cv.priority == cv.your_seat;
+
+    // Classify the top stack item if any.
+    use crabomination::net::{StackItemKind, StackItemView};
+    let top_is_opp_spell = cv.stack.last().map_or(false, |item| {
+        matches!(item,
+            StackItemView::Known(k)
+            if k.controller != cv.your_seat && k.kind == StackItemKind::Spell
+        )
+    });
+
+    if your_priority && top_is_opp_spell {
+        // Urgent: opponent has a spell on stack waiting for a response.
+        *bg = BackgroundColor(Color::srgb(0.75, 0.55, 0.05));
+        label.0 = "Pass / Respond (Space)".into();
+    } else if your_priority && !cv.stack.is_empty() {
+        // Have priority with something on stack (own spell or trigger).
+        *bg = BackgroundColor(Color::srgb(0.08, 0.42, 0.18));
+        label.0 = "Pass (Space)".into();
+    } else if your_priority {
+        // Have priority, empty stack (main phase).
+        *bg = BackgroundColor(Color::srgb(0.08, 0.28, 0.48));
+        label.0 = "Pass (Space)".into();
+    } else {
+        // Waiting for another player.
+        *bg = BackgroundColor(Color::srgba(0.08, 0.15, 0.25, 0.5));
+        label.0 = "Pass (Space)".into();
+    }
 }
 
 // ── Visual sync: reconcile 3D card entities with the server-projected view ───
@@ -524,6 +1014,7 @@ pub fn sync_game_visuals(
             &Transform,
             Option<&StackCard>,
             &CardHoverLift,
+            Option<&crate::card::FlippedFace>,
         ),
         (With<HandCard>, Without<Animating>),
     >,
@@ -560,9 +1051,11 @@ pub fn sync_game_visuals(
         (Entity, &OpponentHandCard, &Transform, Has<Animating>),
         (Without<DeckPile>, Without<GraveyardPile>),
     >,
-    gy_anims: Query<&SendToGraveyardAnimation>,
+    inflight: InFlightAnims,
     all_bf_entities: Query<&GameCardId, With<BattlefieldCard>>,
     all_hand_entity_ids: Query<&GameCardId, With<HandCard>>,
+    // Entities currently on the stack (StackCard but not HandCard = opponent cards).
+    all_stack_entities: Query<(Entity, &GameCardId, &Transform), (With<StackCard>, Without<HandCard>)>,
 ) {
     let Some(cv) = &view.0 else { return };
     let viewer = cv.your_seat;
@@ -621,7 +1114,7 @@ pub fn sync_game_visuals(
     }
 
     let mut gy_in_flight: std::collections::HashMap<usize, usize> = std::collections::HashMap::new();
-    for anim in &gy_anims {
+    for anim in &inflight.gy {
         *gy_in_flight.entry(anim.owner).or_default() += 1;
     }
 
@@ -721,6 +1214,9 @@ pub fn sync_game_visuals(
     let hand_total = hand_ids.len();
     let all_bf_ids: HashSet<CardId> = cv.battlefield.iter().map(|c| c.id).collect();
     let visual_bf_ids: HashSet<CardId> = all_bf_entities.iter().map(|gid| gid.0).collect();
+    // Opponent stack-card entities that already have a 3-D visual.
+    let visual_opp_stack_ids: HashSet<CardId> =
+        all_stack_entities.iter().map(|(_, gid, _)| gid.0).collect();
     // IDs visible in any player's graveyard. Used to disambiguate where a
     // disappeared hand card actually went: present in a graveyard → was
     // discarded/resolved-as-spell → fly to graveyard. Absent → it was
@@ -763,6 +1259,12 @@ pub fn sync_game_visuals(
     {
         let has_entity: HashSet<CardId> = all_hand_entity_ids.iter().map(|gid| gid.0)
             .chain(deck_cards.iter().map(|(_, gid, _, _)| gid.0))
+            // A bf permanent currently animating back to hand will become
+            // a HandCard entity once the animation completes — don't spawn
+            // a duplicate hand card in the meantime.
+            .chain(inflight.to_hand.iter().filter_map(|(gid, anim)| {
+                anim.to_viewer.then_some(gid.0)
+            }))
             .collect();
         let deck_base = deck_position(viewer, viewer, n_seats);
         let deck_y = cv.players[viewer].library.size as f32 * DECK_CARD_Y_STEP + 0.5;
@@ -774,11 +1276,21 @@ pub fn sync_game_visuals(
             if has_entity.contains(&card_id) { continue; }
             let target = hand_card_transform(viewer, viewer, n_seats, slot, hand_total);
             let front_mat = card_front_material(&known.name, &mut materials, &asset_server);
+            // For MDFC cards (Pathways), paint the back-child with the
+            // back face's Scryfall image instead of the cardback so a
+            // 180° flip animation reveals the alternate face. Uses the
+            // `_back`-suffixed asset path that the prefetch downloaded
+            // with `face=back`.
+            let back_mat = if let Some(back_name) = known.back_face_name.as_deref() {
+                card_back_face_material(back_name, &mut materials, &asset_server)
+            } else {
+                card_assets.back_material.clone()
+            };
             let entity = spawn_single_card(
                 &mut commands,
                 &card_assets.card_mesh,
                 front_mat,
-                card_assets.back_material.clone(),
+                back_mat,
                 Transform::from_translation(deck_pos),
                 GameCardId(card_id),
                 &known.name,
@@ -800,9 +1312,10 @@ pub fn sync_game_visuals(
     }
 
     // ── Viewer hand → Battlefield / Stack / graveyard transitions ───────────
-    for (entity, game_id, transform, stack_card, _lift) in &hand_cards {
+    for (entity, game_id, transform, stack_card, _lift, flipped_marker) in &hand_cards {
         if bf_ids_for(viewer).contains(&game_id.0) {
-            let is_land = cv.battlefield.iter().find(|c| c.id == game_id.0).is_some_and(|c| c.is_land());
+            let bf_card = cv.battlefield.iter().find(|c| c.id == game_id.0);
+            let is_land = bf_card.is_some_and(|c| c.is_land());
             let target = if is_land {
                 land_card_transform(&cv.battlefield, viewer, viewer, n_seats, game_id.0)
                     .unwrap_or_else(|| bf_card_transform(viewer, viewer, n_seats, 0, 1, true, false))
@@ -810,12 +1323,45 @@ pub fn sync_game_visuals(
                 let slot = bf_row_slot(&cv.battlefield, viewer, game_id.0, false).unwrap_or(0);
                 bf_card_transform(viewer, viewer, n_seats, slot, creature_count(viewer), false, false)
             };
+            // Flipped MDFC played as its back face: the engine swapped
+            // the card's definition to the back face, so the bf card's
+            // name is the back-face name. We need the front-child mesh
+            // to display the back-face image (via the `_back` asset
+            // path) so the played face is up on the battlefield. Animate
+            // back to the standard (un-flipped) bf rotation; without
+            // this, the play animation would un-rotate the card and
+            // expose the original front face (the wrong side).
+            // For a flipped MDFC, snap the play animation's start
+            // rotation to the bf target so it never interpolates the
+            // 180° back-flip on screen. The front-child material gets
+            // swapped to the back-face image in the same frame
+            // (`apply_swap_front_material`), so the visual stays on the
+            // back-face image throughout: the animation overwrites
+            // transform.rotation = start_rotation (target) on its first
+            // tick, before render. Both children hold the back-face
+            // image at that moment, so the snap is invisible.
+            let anim_start_rot = if flipped_marker.is_some() {
+                target.rotation
+            } else {
+                transform.rotation
+            };
+            if flipped_marker.is_some()
+                && let Some(bf) = bf_card
+            {
+                let new_front = card_back_face_material(&bf.name, &mut materials, &asset_server);
+                commands.entity(entity).insert(crate::card::SwapFrontMaterial {
+                    new_front,
+                    new_path: crate::scryfall::card_back_face_asset_path(&bf.name),
+                });
+                commands.entity(entity).remove::<crate::card::FlippedFace>();
+            }
+            let is_token = bf_card.is_some_and(|c| c.is_token);
             commands
                 .entity(entity)
                 .remove::<HandCard>()
                 .remove::<StackCard>()
                 .remove::<CardHovered>()
-                .insert(BattlefieldCard { is_land })
+                .insert(BattlefieldCard { is_land, is_token })
                 .insert(CardOwner(viewer))
                 .insert(TapState { tapped: false })
                 .insert(Animating)
@@ -823,7 +1369,7 @@ pub fn sync_game_visuals(
                     progress: 0.0,
                     speed: 2.0,
                     start_translation: transform.translation,
-                    start_rotation: transform.rotation,
+                    start_rotation: anim_start_rot,
                     target_translation: target.translation,
                     target_rotation: target.rotation,
                 });
@@ -886,27 +1432,119 @@ pub fn sync_game_visuals(
         }
     }
 
-    // ── Battlefield → Graveyard transitions ──────────────────────────────────
-    for (entity, game_id, owner, _bf, transform, _) in &bf_cards {
-        if !all_bf_ids.contains(&game_id.0) {
-            let gy_pos = graveyard_position(owner.0, viewer, n_seats);
-            let gy_rot = back_face_rotation(owner.0, viewer);
+    // ── Battlefield → {Hand, Graveyard, despawn} transitions ─────────────────
+    // A permanent that has left the battlefield could have:
+    //   • been bounced to its owner's hand (Unsummon, Boomerang) — fly back
+    //     to the hand fan;
+    //   • been a token whose state-based action removed it — despawn outright
+    //     (no graveyard pile entry; CR 704.5d);
+    //   • died / been destroyed / sacrificed — fly to the graveyard pile.
+    let viewer_hand_ids: HashSet<CardId> = cv.players[viewer]
+        .hand
+        .iter()
+        .map(|c| c.id())
+        .collect();
+    let opp_hand_card_ids: HashSet<(usize, CardId)> = cv
+        .players
+        .iter()
+        .filter(|p| p.seat != viewer)
+        .flat_map(|p| p.hand.iter().map(|c| (p.seat, c.id())))
+        .collect();
+    for (entity, game_id, owner, bf, transform, _) in &bf_cards {
+        if all_bf_ids.contains(&game_id.0) { continue; }
+        // Tokens leaving the battlefield: just despawn (no graveyard arc).
+        if bf.is_token {
+            commands.entity(entity).despawn();
+            continue;
+        }
+        // Bounced to viewer's hand — animate to a hand slot and convert.
+        if viewer_hand_ids.contains(&game_id.0) {
+            let slot = cv.players[viewer]
+                .hand
+                .iter()
+                .position(|c| c.id() == game_id.0)
+                .unwrap_or(hand_total.saturating_sub(1));
+            let target = hand_card_transform(viewer, viewer, n_seats, slot, hand_total);
             commands
                 .entity(entity)
                 .remove::<BattlefieldCard>()
                 .remove::<TapState>()
+                .remove::<CardOwner>()
                 .remove::<CardHovered>()
                 .insert(Animating)
-                .insert(SendToGraveyardAnimation {
+                .insert(crate::card::ReturnToHandAnimation {
                     progress: 0.0,
                     speed: 1.5,
                     start_translation: transform.translation,
                     start_rotation: transform.rotation,
-                    target_translation: gy_pos,
-                    target_rotation: gy_rot,
-                    owner: owner.0,
+                    target_translation: target.translation,
+                    target_rotation: target.rotation,
+                    to_viewer: true,
+                    target_slot: slot,
+                    target_owner: viewer,
                 });
+            continue;
         }
+        // Bounced to an opponent's hand — fly toward their hand area, then
+        // despawn so the next sync frame replaces it with a face-down
+        // OpponentHandCard at the correct slot.
+        if opp_hand_card_ids.iter().any(|(_, id)| *id == game_id.0) {
+            let opp_seat = opp_hand_card_ids
+                .iter()
+                .find(|(_, id)| *id == game_id.0)
+                .map(|(s, _)| *s)
+                .unwrap_or(owner.0);
+            let opp_hand_size = cv
+                .players
+                .iter()
+                .find(|p| p.seat == opp_seat)
+                .map(|p| p.hand.len())
+                .unwrap_or(1);
+            let target = hand_card_transform(
+                opp_seat,
+                viewer,
+                n_seats,
+                opp_hand_size.saturating_sub(1),
+                opp_hand_size.max(1),
+            );
+            commands
+                .entity(entity)
+                .remove::<BattlefieldCard>()
+                .remove::<TapState>()
+                .remove::<CardOwner>()
+                .remove::<CardHovered>()
+                .insert(Animating)
+                .insert(crate::card::ReturnToHandAnimation {
+                    progress: 0.0,
+                    speed: 1.5,
+                    start_translation: transform.translation,
+                    start_rotation: transform.rotation,
+                    target_translation: target.translation,
+                    target_rotation: target.rotation,
+                    to_viewer: false,
+                    target_slot: 0,
+                    target_owner: opp_seat,
+                });
+            continue;
+        }
+        // Default: fly to the owner's graveyard pile.
+        let gy_pos = graveyard_position(owner.0, viewer, n_seats);
+        let gy_rot = back_face_rotation(owner.0, viewer);
+        commands
+            .entity(entity)
+            .remove::<BattlefieldCard>()
+            .remove::<TapState>()
+            .remove::<CardHovered>()
+            .insert(Animating)
+            .insert(SendToGraveyardAnimation {
+                progress: 0.0,
+                speed: 1.5,
+                start_translation: transform.translation,
+                start_rotation: transform.rotation,
+                target_translation: gy_pos,
+                target_rotation: gy_rot,
+                owner: owner.0,
+            });
     }
 
     // ── Spawn new opponent battlefield cards (one pass per opponent seat) ───
@@ -914,21 +1552,34 @@ pub fn sync_game_visuals(
         if seat == viewer {
             continue;
         }
-        let to_spawn: Vec<(CardId, String, bool, bool)> = cv
+        let to_spawn: Vec<(CardId, String, bool, bool, bool)> = cv
             .battlefield
             .iter()
-            .filter(|c| c.owner == seat && !visual_bf_ids.contains(&c.id))
-            .map(|c| (c.id, c.name.clone(), c.is_land(), c.tapped))
+            .filter(|c| {
+                c.owner == seat
+                    && !visual_bf_ids.contains(&c.id)
+                    // Already on-screen as a stack-card entity (transition step above handles it).
+                    && !visual_opp_stack_ids.contains(&c.id)
+            })
+            .map(|c| (c.id, c.name.clone(), c.is_land(), c.tapped, c.is_token))
             .collect();
 
-        for (card_id, card_name, is_land, tapped) in to_spawn {
+        for (card_id, card_name, is_land, tapped, is_token) in to_spawn {
+            // Always animate to the *untapped* battlefield pose first. If the
+            // engine state already has the card tapped (typical for a land
+            // played-and-auto-tapped to pay a spell cost in the same tick),
+            // the tap-state-sync pass below detects the resulting mismatch
+            // on the next frame and queues the tap animation as a chained
+            // follow-up. This used to spawn directly into the tapped pose,
+            // making the tap invisible.
             let target = if is_land {
                 land_card_transform(&cv.battlefield, seat, viewer, n_seats, card_id)
                     .unwrap_or_else(|| bf_card_transform(seat, viewer, n_seats, 0, 1, true, false))
             } else {
                 let slot = bf_row_slot(&cv.battlefield, seat, card_id, false).unwrap_or(0);
-                bf_card_transform(seat, viewer, n_seats, slot, creature_count(seat), false, tapped)
+                bf_card_transform(seat, viewer, n_seats, slot, creature_count(seat), false, false)
             };
+            let _ = tapped; // tap state applied on the next sync pass.
 
             // Consume one of this opponent's face-down hand visuals as the
             // animation start (so the card appears to fly out of their hand).
@@ -966,9 +1617,11 @@ pub fn sync_game_visuals(
                 target.translation,
             );
             commands.entity(entity).insert((
-                BattlefieldCard { is_land },
+                BattlefieldCard { is_land, is_token },
                 CardOwner(seat),
-                TapState { tapped },
+                // Spawn untapped so the tap-state-sync pass below detects
+                // the engine vs visual mismatch and animates the tap.
+                TapState { tapped: false },
                 Animating,
                 PlayCardAnimation {
                     progress: 0.0,
@@ -980,6 +1633,95 @@ pub fn sync_game_visuals(
                 },
             ));
         }
+    }
+
+    // ── Opponent stack-card visuals ──────────────────────────────────────────
+    // For each opponent spell on the stack that doesn't yet have a 3-D entity,
+    // consume one face-down hand visual and spawn a face-up card that animates
+    // to the stack hover position (matching how the viewer's own spells behave).
+    use crabomination::net::StackItemView;
+    for (idx, item) in cv.stack.iter().enumerate() {
+        let StackItemView::Known(k) = item else { continue };
+        if k.controller == viewer { continue; }
+        if visual_opp_stack_ids.contains(&k.source) { continue; }
+        if visual_bf_ids.contains(&k.source) { continue; }
+
+        let seat = k.controller;
+        let total = stack_ids.len();
+        let target = stack_card_transform(idx, total);
+
+        let pool = hand_pool_by_owner.entry(seat).or_default();
+        let (start_pos, start_rot) = if let Some((hand_entity, pos, rot)) = pool.pop() {
+            commands.entity(hand_entity).despawn();
+            promoted.insert(hand_entity);
+            (pos, rot)
+        } else {
+            let base = deck_position(seat, viewer, n_seats);
+            let lib_size = cv.players.iter().find(|p| p.seat == seat)
+                .map(|p| p.library.size).unwrap_or(0);
+            let y = lib_size as f32 * DECK_CARD_Y_STEP + 0.5;
+            (Vec3::new(base.x, y, base.z), back_face_rotation(seat, viewer))
+        };
+
+        let front_mat = card_front_material(&k.name, &mut materials, &asset_server);
+        let entity = spawn_single_card(
+            &mut commands,
+            &card_assets.card_mesh,
+            front_mat,
+            card_assets.back_material.clone(),
+            Transform::from_translation(start_pos).with_rotation(start_rot),
+            GameCardId(k.source),
+            &k.name,
+            target.translation,
+        );
+        commands.entity(entity).insert((
+            StackCard,
+            CardOwner(seat),
+            Animating,
+            PlayCardAnimation {
+                progress: 0.0,
+                speed: 2.0,
+                start_translation: start_pos,
+                start_rotation: start_rot,
+                target_translation: target.translation,
+                target_rotation: target.rotation,
+            },
+        ));
+    }
+
+    // Transition opponent stack entities whose spell resolved to the battlefield.
+    for (entity, game_id, transform) in all_stack_entities.iter() {
+        let Some(bf_card) = cv.battlefield.iter().find(|c| c.id == game_id.0) else {
+            // Not on battlefield — still on stack or resolved to graveyard.
+            if !stack_ids.contains(&game_id.0) {
+                // Spell has left the stack (resolved to graveyard / exile).
+                commands.entity(entity).despawn();
+            }
+            continue;
+        };
+        let seat = bf_card.owner;
+        let is_land = bf_card.is_land();
+        let target = if is_land {
+            land_card_transform(&cv.battlefield, seat, viewer, n_seats, game_id.0)
+                .unwrap_or_else(|| bf_card_transform(seat, viewer, n_seats, 0, 1, true, false))
+        } else {
+            let slot = bf_row_slot(&cv.battlefield, seat, game_id.0, false).unwrap_or(0);
+            bf_card_transform(seat, viewer, n_seats, slot, creature_count(seat), false, bf_card.tapped)
+        };
+        commands.entity(entity)
+            .remove::<StackCard>()
+            .insert(BattlefieldCard { is_land, is_token: bf_card.is_token })
+            .insert(CardOwner(seat))
+            .insert(TapState { tapped: bf_card.tapped })
+            .insert(Animating)
+            .insert(PlayCardAnimation {
+                progress: 0.0,
+                speed: 2.0,
+                start_translation: transform.translation,
+                start_rotation: transform.rotation,
+                target_translation: target.translation,
+                target_rotation: target.rotation,
+            });
     }
 
     // ── Opponent hand reconciliation (one pass per opponent seat) ───────────
@@ -999,10 +1741,21 @@ pub fn sync_game_visuals(
             .iter()
             .filter(|(_, owner, _, _, _, _)| *owner == seat)
             .collect();
+        // In-flight bounces toward this opponent count as already-spawned
+        // hand visuals — they despawn on completion and the next sync
+        // frame sees a normal OpponentHandCard for the bounced card. Without
+        // this, the reconciler races the bounce by spawning a duplicate
+        // face-down placeholder.
+        let inflight_to_seat = inflight
+            .to_hand
+            .iter()
+            .filter(|(_, anim)| !anim.to_viewer && anim.target_owner == seat)
+            .count();
         let visual_count = opp_hand_for_seat
             .iter()
             .filter(|(e, _, _, _, _, _)| !promoted.contains(e))
-            .count();
+            .count()
+            + inflight_to_seat;
 
         if visual_count > target_hand_size {
             let mut sorted: Vec<_> = opp_hand_for_seat
@@ -1098,29 +1851,33 @@ pub fn sync_game_visuals(
     }
 
     // ── Spawn new viewer battlefield cards that don't have entities yet ──────
-    let viewer_to_spawn: Vec<(CardId, String, bool, bool)> = cv
+    let viewer_to_spawn: Vec<(CardId, String, bool, bool, bool)> = cv
         .battlefield
         .iter()
         .filter(|c| {
             c.owner == viewer
                 && !visual_bf_ids.contains(&c.id)
-                && !hand_cards.iter().any(|(_, gid, _, _, _)| gid.0 == c.id)
+                && !hand_cards.iter().any(|(_, gid, _, _, _, _)| gid.0 == c.id)
         })
-        .map(|c| (c.id, c.name.clone(), c.is_land(), c.tapped))
+        .map(|c| (c.id, c.name.clone(), c.is_land(), c.tapped, c.is_token))
         .collect();
 
     // Battlefield cards that didn't come from the viewer's hand (fetchlands,
     // tutors that drop directly onto the battlefield, reanimate, tokens) get
     // a `library → battlefield` arc animation starting from the top of the
     // viewer's deck pile, instead of teleporting in.
-    for (card_id, card_name, is_land, tapped) in viewer_to_spawn {
+    for (card_id, card_name, is_land, tapped, is_token) in viewer_to_spawn {
+        // Same untapped-spawn pattern as the opponent path above: land at
+        // the untapped pose, let tap-state-sync animate the tap on the
+        // next frame if the engine state has the card already tapped.
         let target = if is_land {
             land_card_transform(&cv.battlefield, viewer, viewer, n_seats, card_id)
                 .unwrap_or_else(|| bf_card_transform(viewer, viewer, n_seats, 0, 1, true, false))
         } else {
             let slot = bf_row_slot(&cv.battlefield, viewer, card_id, false).unwrap_or(0);
-            bf_card_transform(viewer, viewer, n_seats, slot, creature_count(viewer), false, tapped)
+            bf_card_transform(viewer, viewer, n_seats, slot, creature_count(viewer), false, false)
         };
+        let _ = tapped;
         let front_mat = card_front_material(&card_name, &mut materials, &asset_server);
         let entity = spawn_single_card(
             &mut commands,
@@ -1133,9 +1890,9 @@ pub fn sync_game_visuals(
             target.translation,
         );
         commands.entity(entity).insert((
-            BattlefieldCard { is_land },
+            BattlefieldCard { is_land, is_token },
             CardOwner(viewer),
-            TapState { tapped },
+            TapState { tapped: false },
             Animating,
             PlayCardAnimation {
                 progress: 0.0,
@@ -1149,7 +1906,7 @@ pub fn sync_game_visuals(
     }
 
     // ── Rebalance viewer hand slots ──────────────────────────────────────────
-    for (entity, game_id, _transform, stack_card, lift) in &hand_cards {
+    for (entity, game_id, _transform, stack_card, lift, _flipped_marker) in &hand_cards {
         if stack_card.is_some() { continue; }
         if !hand_ids.contains(&game_id.0) { continue; }
         let Some(new_slot) = cv.players[viewer].hand.iter().position(|c| c.id() == game_id.0) else { continue };
@@ -1266,8 +2023,59 @@ pub fn auto_advance_p0(
     }
 
     // Don't auto-advance during interactive blocking when the viewer is
-    // defending against any opponent's attack.
+    // defending against any opponent's attack — *unless* there's nothing
+    // to block: with Next Turn pressed, also skip blocker declaration when
+    // either no attacker is targeting the viewer or the viewer has no
+    // creature able to block (untapped, no Defender restriction —
+    // summoning-sick creatures CAN block).
     if cv.step == TurnStep::DeclareBlockers && cv.active_player != your_seat {
+        use crabomination::card::Keyword;
+        // We only get to DeclareBlockers if at least one attacker was
+        // declared — but we still gate the *skip* on having a viable
+        // blocker too. An untapped, non-Defender creature you control
+        // is a candidate; summoning-sick creatures CAN block, only
+        // attacking is restricted.
+        let any_attacker = cv.battlefield.iter().any(|c| c.attacking);
+        let any_blocker = cv.battlefield.iter().any(|c| {
+            c.owner == your_seat
+                && !c.is_land()
+                && !c.tapped
+                && !c.keywords.contains(&Keyword::Defender)
+        });
+        let nothing_to_block = !any_attacker || !any_blocker;
+        if !(ff.next_turn && nothing_to_block) {
+            return;
+        }
+    }
+
+    // Auto-pass on bookkeeping windows: non-main steps, the opponent's
+    // turn (when no response is needed), and fast-forward frames.
+    // On your own main phase, also auto-pass when the only things on
+    // the stack are your own triggered/activated abilities (ETBs,
+    // investigate, attack triggers, etc.) — those are pure bookkeeping.
+    //
+    // Crucially: if an opponent has a SPELL on the stack (e.g. they just
+    // cast Birds of Paradise), we must NOT auto-pass — the viewer may
+    // want to cast a counterspell or other response before it resolves.
+    use crabomination::net::{StackItemKind, StackItemView};
+
+    let stack_has_opp_spell = cv.stack.iter().any(|item| matches!(
+        item,
+        StackItemView::Known(k)
+            if k.controller != your_seat && k.kind == StackItemKind::Spell
+    ));
+
+    let stack_is_own_triggers_only = !cv.stack.is_empty()
+        && cv.stack.iter().all(|item| matches!(
+            item,
+            StackItemView::Known(k)
+                if k.controller == your_seat && k.kind == StackItemKind::Trigger
+        ));
+
+    // End Turn (E) stops at opponent spells so the player can respond.
+    // Next Turn (N) means "skip everything until my next main phase" —
+    // it intentionally passes through opponent spells too.
+    if stack_has_opp_spell && !ff.next_turn {
         return;
     }
 
@@ -1276,7 +2084,8 @@ pub fn auto_advance_p0(
         TurnStep::Untap | TurnStep::Upkeep | TurnStep::Draw
             | TurnStep::BeginCombat | TurnStep::CombatDamage
             | TurnStep::EndCombat | TurnStep::End | TurnStep::Cleanup
-    ) || cv.active_player != your_seat;
+    ) || cv.active_player != your_seat
+        || stack_is_own_triggers_only;
 
     if should_advance {
         outbox.submit(GameAction::PassPriority);
@@ -1307,16 +2116,49 @@ pub fn handle_game_input(
     let reveal = &mut *r.reveal;
     let menu_state = &mut *r.menu_state;
     let ff = &mut *r.ff;
+    let card_names = &mut *r.card_names;
+
+    // Refresh the card-name lookup from the current view so the event
+    // formatter can resolve any CardId it sees. Hand / battlefield /
+    // graveyard / stack are all included; opponent face-down hand
+    // entries stay anonymous.
+    if let Some(cv) = view.0.as_ref() {
+        for player in &cv.players {
+            for h in &player.hand {
+                if let crabomination::net::HandCardView::Known(k) = h {
+                    card_names.by_id.insert(k.id, k.name.clone());
+                }
+            }
+            for g in &player.graveyard {
+                card_names.by_id.insert(g.id, g.name.clone());
+            }
+        }
+        for c in &cv.battlefield {
+            card_names.by_id.insert(c.id, c.name.clone());
+        }
+        for item in &cv.stack {
+            if let crabomination::net::StackItemView::Known(k) = item {
+                card_names.by_id.insert(k.source, k.name.clone());
+            }
+        }
+    }
 
     // Update game log from server events.
     for ev in &server_events.0 {
         check_reveal_wire(std::slice::from_ref(ev), reveal);
-        log.push(format!("{ev:?}"));
+        log.push(format_event(ev, card_names));
     }
 
     let Some(cv) = &view.0 else { return };
     let Some(outbox) = outbox else { return };
     let your_seat = cv.your_seat;
+
+    // While the export-state prompt is open the dedicated prompt system
+    // owns the keyboard — bail out so typing the bug-description doesn't
+    // also trigger gameplay shortcuts (Space → pass priority, etc.).
+    if r.export_prompt.active {
+        return;
+    }
 
     // While a decision is pending for this viewer (mulligan, scry, search,
     // put-on-library, …), drop into decision-handling mode: the dedicated
@@ -1376,6 +2218,7 @@ pub fn handle_game_input(
             }
             if mouse.just_pressed(MouseButton::Left) {
                 let is_ability_target = targeting.pending_ability_source.is_some();
+                let cast_back = targeting.back_face_pending;
                 for (game_id, _owner) in &hovered_bf {
                     let target = Target::Permanent(game_id.0);
                     if is_ability_target {
@@ -1385,7 +2228,12 @@ pub fn handle_game_input(
                             return;
                         }
                     } else if let Some(pending_id) = targeting.pending_card_id {
-                        outbox.submit(GameAction::CastSpell { card_id: pending_id, target: Some(target), mode: None, x_value: None });
+                        let action = if cast_back {
+                            GameAction::CastSpellBack { card_id: pending_id, target: Some(target), mode: None, x_value: None }
+                        } else {
+                            GameAction::CastSpell { card_id: pending_id, target: Some(target), mode: None, x_value: None }
+                        };
+                        outbox.submit(action);
                         cancel_targeting(&mut commands, targeting, &valid_targets);
                         return;
                     }
@@ -1399,7 +2247,12 @@ pub fn handle_game_input(
                             return;
                         }
                     } else if let Some(pending_id) = targeting.pending_card_id {
-                        outbox.submit(GameAction::CastSpell { card_id: pending_id, target: Some(target), mode: None, x_value: None });
+                        let action = if cast_back {
+                            GameAction::CastSpellBack { card_id: pending_id, target: Some(target), mode: None, x_value: None }
+                        } else {
+                            GameAction::CastSpell { card_id: pending_id, target: Some(target), mode: None, x_value: None }
+                        };
+                        outbox.submit(action);
                         cancel_targeting(&mut commands, targeting, &valid_targets);
                         return;
                     }
@@ -1468,15 +2321,36 @@ pub fn handle_game_input(
                 if let crabomination::net::HandCardView::Known(k) = h && k.id == game_id.0 { return Some(k.clone()); } None
             }) {
                 use crabomination::card::CardType;
+                let is_flipped = r.flipped_hand.flipped.contains(&card.id);
+                let has_back = card.back_face_name.is_some();
                 if card.card_types.contains(&CardType::Land) {
-                    if r.flipped_hand.flipped.contains(&card.id) {
+                    if is_flipped {
                         outbox.submit(GameAction::PlayLandBack(card.id));
                     } else {
                         outbox.submit(GameAction::PlayLand(card.id));
                     }
+                } else if has_back && is_flipped {
+                    // Non-land MDFC played via its back face (a creature/
+                    // instant/sorcery on the front means the back is one of
+                    // those — the engine's `cast_spell_back_face` swaps the
+                    // definition before validating cost / type / effect).
+                    // We don't know whether the back face takes a target, so
+                    // play it through the targeting-prompt branch when the
+                    // front does — close-enough for the SOS MDFC cycles
+                    // whose backs are creature-targeting spells.
+                    if card.needs_target {
+                        targeting.active = true;
+                        targeting.pending_card_id = Some(card.id);
+                        targeting.back_face_pending = true;
+                    } else {
+                        outbox.submit(GameAction::CastSpellBack {
+                            card_id: card.id, target: None, mode: None, x_value: None,
+                        });
+                    }
                 } else if card.needs_target {
                     targeting.active = true;
                     targeting.pending_card_id = Some(card.id);
+                    targeting.back_face_pending = false;
                 } else {
                     outbox.submit(GameAction::CastSpell { card_id: card.id, target: None, mode: None, x_value: None });
                 }
@@ -1494,10 +2368,17 @@ pub fn handle_game_input(
                 .map(|p| p.seat)
                 .find(|s| *s != your_seat)
                 .unwrap_or(your_seat);
+            use crabomination::card::Keyword;
             let attacks: Vec<Attack> = cv
                 .battlefield
                 .iter()
-                .filter(|c| c.owner == your_seat && !c.is_land() && !c.tapped && !c.summoning_sick)
+                .filter(|c| {
+                    c.owner == your_seat
+                        && !c.is_land()
+                        && !c.tapped
+                        && (!c.summoning_sick || c.keywords.contains(&Keyword::Haste))
+                        && !c.keywords.contains(&Keyword::Defender)
+                })
                 .map(|c| Attack {
                     attacker: c.id,
                     target: AttackTarget::Player(next_opp),
@@ -1525,6 +2406,30 @@ pub fn handle_game_input(
             ff.next_turn = true;
             outbox.submit(GameAction::PassPriority);
         }
+
+    }
+}
+
+/// Always-on export-prompt opener. Lives outside `handle_game_input`
+/// because the export feature must work even when:
+///   * a pending decision is blocking gameplay input,
+///   * the bot loop has deadlocked / panicked (NetOutbox is dead),
+///   * or no game view has arrived yet.
+///
+/// Without this hoist, pressing `X` inside `handle_game_input` is
+/// gated by a stack of early-returns (no view, no outbox, decision
+/// pending, etc.) — exactly the conditions where the user is most
+/// likely to want to file a bug report.
+pub fn handle_export_keypress(
+    keyboard: Res<ButtonInput<KeyCode>>,
+    btns: Res<ButtonState>,
+    mut state: ResMut<crate::systems::export_prompt::ExportPromptState>,
+) {
+    if state.active {
+        return;
+    }
+    if keyboard.just_pressed(KeyCode::KeyX) || btns.export {
+        crate::systems::export_prompt::open_export_prompt(&mut state);
     }
 }
 
@@ -1537,6 +2442,7 @@ fn cancel_targeting(
     targeting.pending_card_id = None;
     targeting.pending_ability_source = None;
     targeting.pending_ability_index = None;
+    targeting.back_face_pending = false;
     for entity in valid_targets.iter() {
         commands.entity(entity).remove::<ValidTarget>();
     }
@@ -1559,9 +2465,18 @@ pub fn spawn_ability_menu(
     let Some(cv) = view.0.as_ref() else { return };
     let Some(pv) = cv.battlefield.iter().find(|p| p.id == card_id) else { return };
 
-    let abilities: Vec<(usize, String)> = pv.abilities.iter()
+    // Project (index, label, used_this_turn) so the menu can grey out
+    // once-per-turn abilities that have already been activated.
+    let abilities: Vec<(usize, String, bool)> = pv.abilities.iter()
         .filter(|a| !a.is_mana)
-        .map(|a| (a.index, format!("{}: {}", a.cost_label, a.effect_label)))
+        .map(|a| {
+            let label = if a.once_per_turn_used {
+                format!("{}: {} (used)", a.cost_label, a.effect_label)
+            } else {
+                format!("{}: {}", a.cost_label, a.effect_label)
+            };
+            (a.index, label, a.once_per_turn_used)
+        })
         .collect();
     if abilities.is_empty() { return; }
     let card_name = pv.name.clone();
@@ -1588,21 +2503,35 @@ pub fn spawn_ability_menu(
                 TextFont { font_size: 13.0, ..default() },
                 TextColor(Color::srgba(0.8, 0.8, 1.0, 1.0)),
             ));
-            for (ability_index, label) in abilities {
+            for (ability_index, label, used) in abilities {
+                let bg = if used {
+                    // Greyed-out background for once-per-turn abilities
+                    // already activated this turn — clicks still go
+                    // through, but the engine returns
+                    // `AbilityAlreadyUsedThisTurn`.
+                    Color::srgba(0.10, 0.10, 0.14, 0.95)
+                } else {
+                    Color::srgba(0.20, 0.22, 0.32, 0.95)
+                };
+                let fg = if used {
+                    Color::srgba(0.55, 0.55, 0.55, 1.0)
+                } else {
+                    Color::WHITE
+                };
                 menu.spawn((
                     Button,
                     Node {
                         padding: UiRect::axes(Val::Px(10.0), Val::Px(6.0)),
                         ..default()
                     },
-                    BackgroundColor(Color::srgba(0.20, 0.22, 0.32, 0.95)),
+                    BackgroundColor(bg),
                     AbilityMenuItem { card_id, ability_index },
                 ))
                 .with_children(|b| {
                     b.spawn((
                         Text::new(label),
                         TextFont { font_size: 13.0, ..default() },
-                        TextColor(Color::WHITE),
+                        TextColor(fg),
                         Pickable::IGNORE,
                     ));
                 });
@@ -1853,25 +2782,27 @@ pub fn trigger_reveal_animation(
 
 // ── MDFC flip sync ────────────────────────────────────────────────────────────
 
-/// Reconcile each viewer hand card's front-face material with its flipped
-/// state. When a card is in `FlippedHandCards.flipped`, its front-face mesh
-/// is repainted with the back-face's texture (and its `CardFrontTexture`
-/// path updated so the peek popup mirrors the flip). Also drops stale
-/// entries when cards leave the hand.
+/// Reconcile each viewer hand card's persistent flip state
+/// (`FlippedFace` marker on the entity) against the user's intent
+/// (`FlippedHandCards.flipped`). When they disagree, attach a 180°
+/// `MdfcFlipAnimation` and toggle the marker. Both card faces are
+/// already painted with their proper Scryfall images at spawn time, so
+/// the rotation alone reveals the alternate face — no material swap.
+/// Also drops stale flip entries when cards leave the hand.
 #[allow(clippy::type_complexity)]
 pub fn sync_flipped_hand_cards(
+    mut commands: Commands,
     cv: Res<CurrentView>,
     mut flipped: ResMut<crate::game::FlippedHandCards>,
-    mut hand_cards: Query<
-        (&GameCardId, &Children, &mut crate::card::CardFrontTexture),
-        With<HandCard>,
+    hand_cards: Query<
+        (
+            Entity,
+            &GameCardId,
+            &Transform,
+            Option<&crate::card::FlippedFace>,
+        ),
+        (With<HandCard>, Without<crate::card::MdfcFlipAnimation>),
     >,
-    mut front_meshes: Query<
-        &mut MeshMaterial3d<StandardMaterial>,
-        With<crate::card::FrontFaceMesh>,
-    >,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-    asset_server: Res<AssetServer>,
 ) {
     let Some(view) = cv.0.as_ref() else { return };
     let viewer = view.your_seat;
@@ -1885,35 +2816,22 @@ pub fn sync_flipped_hand_cards(
         .collect();
     flipped.flipped.retain(|id| in_hand.contains(id));
 
-    // Reconcile front-face material against the desired (front vs back) name.
-    for (game_id, children, mut tex) in &mut hand_cards {
+    for (entity, game_id, transform, marker) in &hand_cards {
         let card_id = game_id.0;
-        let known = view.players[viewer].hand.iter().find_map(|h| match h {
-            crabomination::net::HandCardView::Known(k) if k.id == card_id => Some(k),
-            _ => None,
-        });
-        let Some(known) = known else { continue };
-        let is_flipped = flipped.flipped.contains(&card_id);
-        let desired_name: &str = if is_flipped {
-            known.back_face_name.as_deref().unwrap_or(&known.name)
-        } else {
-            &known.name
-        };
-        let desired_path = crate::scryfall::card_asset_path(desired_name);
-        if tex.0 == desired_path {
+        let should_be_flipped = flipped.flipped.contains(&card_id);
+        let is_flipped = marker.is_some();
+        if should_be_flipped == is_flipped {
             continue;
         }
-        // Repaint the front-face child's material.
-        for child in children.iter() {
-            if let Ok(mut mat) = front_meshes.get_mut(child) {
-                *mat = MeshMaterial3d(card_front_material(
-                    desired_name,
-                    &mut materials,
-                    &asset_server,
-                ));
-                break;
-            }
+        commands.entity(entity).insert(crate::card::MdfcFlipAnimation {
+            progress: 0.0,
+            speed: 2.5,
+            start_rotation: transform.rotation,
+        });
+        if should_be_flipped {
+            commands.entity(entity).insert(crate::card::FlippedFace);
+        } else {
+            commands.entity(entity).remove::<crate::card::FlippedFace>();
         }
-        tex.0 = desired_path;
     }
 }

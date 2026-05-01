@@ -21,8 +21,10 @@ pub const HAND_FAN_Y_DROP: f32 = 0.3;
 
 const HAND_CENTER_Z: f32 = 12.0;
 const HAND_Y: f32 = CARD_HEIGHT / 2.0;
-// Tilt so the viewer's hand cards face the camera (camera at y=22, z=26).
-const HAND_TILT_X: f32 = -0.57;
+// Tilt so the card face points at the camera (0, 32, 14).
+// Camera direction from scene: normalize(0, 32, 14) = (0, 0.916, 0.401).
+// Face after rotation_x(θ) is (0, −sinθ, cosθ); solving: θ = −atan2(32, 14) ≈ −1.16.
+const HAND_TILT_X: f32 = -1.16;
 
 // ── Battlefield layout constants ─────────────────────────────────────────────
 

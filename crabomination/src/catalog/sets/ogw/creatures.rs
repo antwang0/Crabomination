@@ -2,7 +2,7 @@ use super::no_abilities;
 use crate::card::{CardDefinition, CardType, CreatureType, Effect, Keyword, Subtypes};
 use crate::mana::{cost, generic, r, u};
 
-/// Stormchaser Mage — {1}{U}{R} 1/3 Flying Haste
+/// Stormchaser Mage — {1}{U}{R} 1/3 Flying Haste Prowess
 pub fn stormchaser_mage() -> CardDefinition {
     CardDefinition {
         name: "Stormchaser Mage",
@@ -15,7 +15,7 @@ pub fn stormchaser_mage() -> CardDefinition {
         },
         power: 1,
         toughness: 3,
-        keywords: vec![Keyword::Flying, Keyword::Haste],
+        keywords: vec![Keyword::Flying, Keyword::Haste, Keyword::Prowess],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
@@ -24,5 +24,6 @@ pub fn stormchaser_mage() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand: None,
     }
 }

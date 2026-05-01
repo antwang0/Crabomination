@@ -23,6 +23,9 @@ pub struct AttackerGizmos;
 #[derive(Default, Reflect, GizmoConfigGroup)]
 pub struct StackGizmos;
 
+#[derive(Default, Reflect, GizmoConfigGroup)]
+pub struct PtModifiedGizmos;
+
 pub fn draw_blocking_gizmos(
     view: Res<CurrentView>,
     blocking: Res<BlockingState>,
@@ -135,6 +138,47 @@ pub fn draw_stack_arrows(
 
         if let (Some(from), Some(to)) = (from, to) {
             gizmos.arrow(from, to, color).with_tip_length(0.7);
+        }
+    }
+}
+
+/// Draw a colored ring above any battlefield creature whose computed P/T
+/// differs from the card's printed (base) P/T. Green when buffed, red when
+/// debuffed, yellow on a mixed change. Helps the player notice that a
+/// creature has counters, a Giant Growth pump, an anthem effect, etc.,
+/// even though the 3D card face still shows the printed values.
+pub fn draw_pt_modified_overlays(
+    view: Res<CurrentView>,
+    bf_cards: Query<(&Transform, &GameCardId), With<BattlefieldCard>>,
+    mut gizmos: Gizmos<PtModifiedGizmos>,
+) {
+    let Some(cv) = &view.0 else { return };
+    let mut positions: HashMap<CardId, Vec3> = HashMap::new();
+    for (t, gid) in &bf_cards {
+        positions.insert(gid.0, t.translation);
+    }
+    for p in &cv.battlefield {
+        if !p.card_types.contains(&crabomination::card::CardType::Creature) { continue; }
+        let dp = p.power - p.base_power;
+        let dt = p.toughness - p.base_toughness;
+        if dp == 0 && dt == 0 { continue; }
+        let Some(&pos) = positions.get(&p.id) else { continue };
+        let color = if dp > 0 && dt > 0 {
+            Color::srgb(0.2, 0.95, 0.35)
+        } else if dp < 0 || dt < 0 {
+            Color::srgb(0.95, 0.25, 0.2)
+        } else {
+            Color::srgb(0.95, 0.85, 0.15)
+        };
+        let center = pos + Vec3::Y * 0.18;
+        let n = 24;
+        let r = 1.05;
+        for i in 0..n {
+            let a0 = (i as f32) / (n as f32) * std::f32::consts::TAU;
+            let a1 = ((i + 1) as f32) / (n as f32) * std::f32::consts::TAU;
+            let p0 = center + Vec3::new(a0.cos() * r, 0.0, a0.sin() * r);
+            let p1 = center + Vec3::new(a1.cos() * r, 0.0, a1.sin() * r);
+            gizmos.line(p0, p1, color);
         }
     }
 }

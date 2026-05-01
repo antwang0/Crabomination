@@ -50,6 +50,11 @@ pub struct PutOnLibrarySelectButton {
     pub card_id: CardId,
 }
 
+#[derive(Component)]
+pub struct DiscardSelectButton {
+    pub card_id: CardId,
+}
+
 /// While a hand-card visual entity is selected for bottoming during the
 /// PutOnLibrary phase, this component stores the two border child entities
 /// drawn around it. Stored separately from `CardBorderHighlight` so the
@@ -71,6 +76,8 @@ pub struct DecisionUiState {
     pub search_selected: Option<CardId>,
     /// For PutOnLibrary / Mulligan bottoming: ordered list of selected card IDs.
     pub put_on_library: Vec<CardId>,
+    /// For Discard (Inquisition / Thoughtseize picker): selected card IDs.
+    pub discard_selected: Vec<CardId>,
     /// CardId the modal was last spawned for — avoids respawning each frame.
     pub spawned_for: Option<DecisionKey>,
 }
@@ -82,6 +89,7 @@ pub enum DecisionKey {
     Scry(Vec<CardId>),
     Search(Vec<CardId>),
     PutOnLibrary(Vec<CardId>),
+    Discard(Vec<CardId>, u32),
     Mulligan(Vec<CardId>, usize),
     ChooseColor(CardId),
 }
@@ -96,6 +104,10 @@ fn decision_key(decision: &DecisionWire) -> Option<DecisionKey> {
         )),
         DecisionWire::PutOnLibrary { hand, .. } => Some(DecisionKey::PutOnLibrary(
             hand.iter().map(|(id, _)| *id).collect(),
+        )),
+        DecisionWire::Discard { hand, count, .. } => Some(DecisionKey::Discard(
+            hand.iter().map(|(id, _)| *id).collect(),
+            *count,
         )),
         DecisionWire::Mulligan { hand, mulligans_taken, .. } => Some(DecisionKey::Mulligan(
             hand.iter().map(|(id, _)| *id).collect(),
@@ -134,6 +146,7 @@ pub fn spawn_decision_ui(
         state.scry.clear();
         state.search_selected = None;
         state.put_on_library.clear();
+        state.discard_selected.clear();
         state.spawned_for = None;
         return;
     };
@@ -148,6 +161,7 @@ pub fn spawn_decision_ui(
                 state.scry.clear();
                 state.search_selected = None;
                 state.put_on_library.clear();
+                state.discard_selected.clear();
                 state.spawned_for = None;
             }
             return;
@@ -197,13 +211,24 @@ pub fn spawn_decision_ui(
             state.spawned_for = Some(key);
             spawn_put_on_library_modal(&mut commands, &asset_server, hand, *count);
         }
-        DecisionWire::Mulligan { hand, mulligans_taken, .. } => {
+        DecisionWire::Mulligan { hand, mulligans_taken, serum_powders, .. } => {
             state.spawned_for = Some(key);
-            spawn_mulligan_modal(&mut commands, &asset_server, hand, *mulligans_taken);
+            spawn_mulligan_modal(
+                &mut commands,
+                &asset_server,
+                hand,
+                *mulligans_taken,
+                serum_powders,
+            );
         }
         DecisionWire::ChooseColor { legal, .. } => {
             state.spawned_for = Some(key);
             spawn_choose_color_modal(&mut commands, legal);
+        }
+        DecisionWire::Discard { count, hand, .. } => {
+            state.discard_selected.clear();
+            state.spawned_for = Some(key);
+            spawn_discard_modal(&mut commands, &asset_server, hand, *count);
         }
         _ => {}
     }
@@ -377,6 +402,147 @@ fn spawn_search_modal(
     asset_server: &AssetServer,
     candidates: &[(CardId, String)],
 ) {
+    // Search candidates are typically the entire library (60 cards). The
+    // generic CARD_W of 180px would overflow the viewport vertically; use
+    // a compact size for this dialog and scroll the grid when it spills.
+    const SEARCH_CARD_W: f32 = 110.0;
+    let search_card_h = SEARCH_CARD_W * CARD_ASPECT_RATIO;
+
+    let root = commands
+        .spawn((
+            Node {
+                position_type: PositionType::Absolute,
+                left: Val::Px(0.0),
+                top: Val::Px(0.0),
+                width: Val::Percent(100.0),
+                height: Val::Percent(100.0),
+                justify_content: JustifyContent::Center,
+                align_items: AlignItems::Center,
+                ..default()
+            },
+            BackgroundColor(OVERLAY_BG),
+            Button,
+            DecisionModal,
+        ))
+        .id();
+
+    let panel = commands
+        .spawn((
+            Node {
+                flex_direction: FlexDirection::Column,
+                padding: UiRect::all(Val::Px(20.0)),
+                row_gap: Val::Px(12.0),
+                align_items: AlignItems::Center,
+                max_width: Val::Percent(85.0),
+                max_height: Val::Percent(90.0),
+                ..default()
+            },
+            BackgroundColor(PANEL_BG),
+        ))
+        .id();
+
+    commands.entity(root).add_child(panel);
+
+    let count = candidates.len();
+    commands.entity(panel).with_children(|panel| {
+        panel.spawn((
+            Text::new(format!(
+                "Search your library — click a card to select it ({count} card{s})",
+                s = if count == 1 { "" } else { "s" }
+            )),
+            TextFont { font_size: 16.0, ..default() },
+            TextColor(Color::WHITE),
+        ));
+
+        // Scrollable grid: bounded height + Overflow::scroll_y so the
+        // mouse wheel pages through long candidate lists. Without the
+        // bound the panel sizes itself to the children and overflows the
+        // window.
+        panel
+            .spawn((
+                Node {
+                    flex_direction: FlexDirection::Row,
+                    flex_wrap: FlexWrap::Wrap,
+                    column_gap: Val::Px(8.0),
+                    row_gap: Val::Px(8.0),
+                    justify_content: JustifyContent::Center,
+                    align_content: AlignContent::FlexStart,
+                    max_height: Val::Vh(70.0),
+                    overflow: Overflow::scroll_y(),
+                    ..default()
+                },
+                Pickable::default(),
+            ))
+            .with_children(|row| {
+                for (card_id, name) in candidates {
+                    let path = scryfall::card_asset_path(name);
+                    let texture: Handle<Image> = asset_server.load(&path);
+                    row.spawn((
+                        Button,
+                        Node {
+                            flex_direction: FlexDirection::Column,
+                            width: Val::Px(SEARCH_CARD_W),
+                            padding: UiRect::all(Val::Px(4.0)),
+                            align_items: AlignItems::Center,
+                            ..default()
+                        },
+                        BackgroundColor(BTN_BG_OFF),
+                        SearchSelectButton { card_id: *card_id },
+                    ))
+                    .with_children(|cb| {
+                        cb.spawn((
+                            ImageNode { image: texture, ..default() },
+                            Node {
+                                width: Val::Px(SEARCH_CARD_W - 8.0),
+                                height: Val::Px(search_card_h - 8.0),
+                                ..default()
+                            },
+                            Pickable::IGNORE,
+                        ));
+                        cb.spawn((
+                            Text::new(name.clone()),
+                            TextFont { font_size: 10.0, ..default() },
+                            TextColor(Color::WHITE),
+                            Pickable::IGNORE,
+                        ));
+                    });
+                }
+            });
+
+        panel
+            .spawn((
+                Button,
+                Node {
+                    padding: UiRect::axes(Val::Px(20.0), Val::Px(10.0)),
+                    ..default()
+                },
+                BackgroundColor(CONFIRM_BG),
+                DecisionConfirmButton,
+            ))
+            .with_children(|b| {
+                b.spawn((
+                    Text::new("Confirm"),
+                    TextFont { font_size: 18.0, ..default() },
+                    TextColor(Color::WHITE),
+                    Pickable::IGNORE,
+                ));
+            });
+    });
+}
+
+/// Discard picker. Used in two cases that share the same wire format:
+///
+/// - **Self-discard** (Charging Strifeknight, Faithless Looting, Frantic
+///   Search, etc.) — `Effect::Discard { random: false }`. The modal shows
+///   the player's own hand.
+/// - **Inquisition / Thoughtseize** — `Effect::DiscardChosen`. The caster
+///   sees the target opponent's hand and picks for them.
+fn spawn_discard_modal(
+    commands: &mut Commands,
+    asset_server: &AssetServer,
+    candidates: &[(CardId, String)],
+    count: u32,
+) {
     let root = commands
         .spawn((
             Node {
@@ -408,16 +574,14 @@ fn spawn_search_modal(
             BackgroundColor(PANEL_BG),
         ))
         .id();
-
     commands.entity(root).add_child(panel);
 
     commands.entity(panel).with_children(|panel| {
         panel.spawn((
-            Text::new("Search your library — click a card to select it"),
+            Text::new(format!("Choose {count} card(s) to discard")),
             TextFont { font_size: 16.0, ..default() },
             TextColor(Color::WHITE),
         ));
-
         panel
             .spawn(Node {
                 flex_direction: FlexDirection::Row,
@@ -441,7 +605,7 @@ fn spawn_search_modal(
                             ..default()
                         },
                         BackgroundColor(BTN_BG_OFF),
-                        SearchSelectButton { card_id: *card_id },
+                        DiscardSelectButton { card_id: *card_id },
                     ))
                     .with_children(|cb| {
                         cb.spawn((
@@ -462,7 +626,6 @@ fn spawn_search_modal(
                     });
                 }
             });
-
         panel
             .spawn((
                 Button,
@@ -572,13 +735,21 @@ pub struct PutOnLibraryCountText;
 const KEEP_BG: Color = Color::srgba(0.15, 0.45, 0.18, 0.97);
 const MULL_BG: Color = Color::srgba(0.48, 0.12, 0.10, 0.97);
 
+/// One Serum-Powder-style helper button. Carries the powder card's ID so
+/// the click handler can submit `DecisionAnswer::SerumPowder(id)`.
+#[derive(Component, Debug, Clone, Copy)]
+pub struct MulliganSerumPowderButton(pub CardId);
+
 /// Compact mulligan banner. The hand itself is rendered in 3D on the table —
-/// this banner just shows the prompt and the Keep / Mulligan buttons.
+/// this banner just shows the prompt and the Keep / Mulligan / Serum Powder
+/// buttons. `serum_powders` is one CardId per Serum-Powder-style helper
+/// currently in hand; renders one button each.
 fn spawn_mulligan_modal(
     commands: &mut Commands,
     _asset_server: &AssetServer,
     _hand: &[(CardId, String)],
     mulligans_taken: usize,
+    serum_powders: &[CardId],
 ) {
     let root = commands.spawn((
         Node {
@@ -636,6 +807,34 @@ fn spawn_mulligan_modal(
                 MulliganTakeButton,
             ))
             .with_children(|b| { b.spawn((Text::new("Mulligan (M)"), TextFont { font_size: 16.0, ..default() }, TextColor(Color::WHITE))); });
+
+            // One button per Serum-Powder-style helper currently in hand.
+            // Clicking submits DecisionAnswer::SerumPowder(id) — exiles the
+            // hand and deals a fresh seven without bumping the mulligan
+            // ladder. Multiple powders in hand stack as separate buttons.
+            for (idx, powder_id) in serum_powders.iter().enumerate() {
+                let label = if serum_powders.len() == 1 {
+                    "Serum Powder".to_string()
+                } else {
+                    format!("Serum Powder #{}", idx + 1)
+                };
+                btns.spawn((
+                    Button,
+                    Node {
+                        padding: UiRect::axes(Val::Px(24.0), Val::Px(12.0)),
+                        ..default()
+                    },
+                    BackgroundColor(REORDER_BG),
+                    MulliganSerumPowderButton(*powder_id),
+                ))
+                .with_children(|b| {
+                    b.spawn((
+                        Text::new(label),
+                        TextFont { font_size: 14.0, ..default() },
+                        TextColor(Color::WHITE),
+                    ));
+                });
+            }
         });
     });
 }
@@ -669,21 +868,64 @@ pub fn handle_put_on_library_select(
     }
 }
 
-/// Handle clicks on search candidate cards: highlight the selected card.
+/// Handle clicks on Inquisition/Thoughtseize discard candidate cards.
+/// Toggles inclusion in the selection up to `count` cards (taken from
+/// the live `DecisionWire::Discard` count). Selected cards highlight in
+/// `BTN_BG_ON`; clicking a selected card unselects it.
 #[allow(clippy::type_complexity)]
-pub fn handle_search_select(
+pub fn handle_discard_select(
+    view: Res<CurrentView>,
     mut state: ResMut<DecisionUiState>,
     mut buttons: Query<
-        (&Interaction, &SearchSelectButton, &mut BackgroundColor),
+        (&Interaction, &DiscardSelectButton, &mut BackgroundColor),
         (Changed<Interaction>, With<Button>),
     >,
 ) {
+    let required_count = match view
+        .0
+        .as_ref()
+        .and_then(|v| v.pending_decision.as_ref())
+        .and_then(|p| p.decision.as_ref())
+    {
+        Some(DecisionWire::Discard { count, .. }) => *count as usize,
+        _ => return,
+    };
     for (interaction, btn, mut bg) in buttons.iter_mut() {
         if *interaction != Interaction::Pressed {
             continue;
         }
-        state.search_selected = Some(btn.card_id);
-        *bg = BackgroundColor(BTN_BG_ON);
+        let id = btn.card_id;
+        if let Some(pos) = state.discard_selected.iter().position(|&x| x == id) {
+            state.discard_selected.remove(pos);
+            *bg = BackgroundColor(BTN_BG_OFF);
+        } else if state.discard_selected.len() < required_count {
+            state.discard_selected.push(id);
+            *bg = BackgroundColor(BTN_BG_ON);
+        }
+    }
+}
+
+/// Handle clicks on search candidate cards: highlight the selected card and
+/// clear the highlight on whichever card was previously selected. The model
+/// only carries `Option<CardId>`, so without resetting the prior button the
+/// UI would show every clicked card as still selected even though only the
+/// latest click counts.
+#[allow(clippy::type_complexity)]
+pub fn handle_search_select(
+    mut state: ResMut<DecisionUiState>,
+    mut buttons: Query<(&Interaction, &SearchSelectButton, &mut BackgroundColor), With<Button>>,
+) {
+    let pressed = buttons
+        .iter()
+        .find_map(|(i, btn, _)| (*i == Interaction::Pressed).then_some(btn.card_id));
+    let Some(picked) = pressed else { return };
+    state.search_selected = Some(picked);
+    for (_, btn, mut bg) in buttons.iter_mut() {
+        *bg = BackgroundColor(if btn.card_id == picked {
+            BTN_BG_ON
+        } else {
+            BTN_BG_OFF
+        });
     }
 }
 
@@ -778,6 +1020,10 @@ pub fn handle_confirm(
                 if state.put_on_library.len() < *count { continue; }
                 DecisionAnswer::PutOnLibrary(state.put_on_library.clone())
             }
+            DecisionWire::Discard { count, .. } => {
+                if state.discard_selected.len() < *count as usize { continue; }
+                DecisionAnswer::Discard(state.discard_selected.clone())
+            }
             _ => continue,
         };
 
@@ -788,6 +1034,7 @@ pub fn handle_confirm(
         state.scry.clear();
         state.search_selected = None;
         state.put_on_library.clear();
+        state.discard_selected.clear();
         state.spawned_for = None;
     }
 }
@@ -910,7 +1157,8 @@ pub fn handle_put_on_library_hand_click(
     }
 }
 
-/// Handle Keep / Mulligan button presses (and keyboard shortcuts K / M).
+/// Handle Keep / Mulligan / Serum Powder button presses (and keyboard
+/// shortcuts K / M / P for the first-listed powder).
 pub fn handle_mulligan_buttons(
     view: Res<CurrentView>,
     outbox: Option<Res<NetOutbox>>,
@@ -918,23 +1166,36 @@ pub fn handle_mulligan_buttons(
     keyboard: Res<ButtonInput<KeyCode>>,
     keep_q: Query<&Interaction, (Changed<Interaction>, With<MulliganKeepButton>)>,
     mull_q: Query<&Interaction, (Changed<Interaction>, With<MulliganTakeButton>)>,
+    powder_q: Query<
+        (&Interaction, &MulliganSerumPowderButton),
+        (Changed<Interaction>, With<Button>),
+    >,
 ) {
     let Some(cv) = &view.0 else { return };
-    let is_mulligan = matches!(
-        cv.pending_decision.as_ref().and_then(|p| p.decision.as_ref()),
-        Some(DecisionWire::Mulligan { .. })
-    );
-    if !is_mulligan { return; }
+    let serum_powders = match cv.pending_decision.as_ref().and_then(|p| p.decision.as_ref()) {
+        Some(DecisionWire::Mulligan { serum_powders, .. }) => serum_powders.clone(),
+        _ => return,
+    };
     let Some(outbox) = outbox else { return };
 
     let keep = keep_q.iter().any(|i| *i == Interaction::Pressed) || keyboard.just_pressed(KeyCode::KeyK);
     let mull = mull_q.iter().any(|i| *i == Interaction::Pressed) || keyboard.just_pressed(KeyCode::KeyM);
+    let pressed_powder = powder_q
+        .iter()
+        .find_map(|(int, btn)| (*int == Interaction::Pressed).then_some(btn.0))
+        .or_else(|| {
+            // P shortcut → consume the first listed powder.
+            (keyboard.just_pressed(KeyCode::KeyP)).then(|| serum_powders.first().copied()).flatten()
+        });
 
     if keep {
         outbox.submit(GameAction::SubmitDecision(DecisionAnswer::Keep));
         state.spawned_for = None;
     } else if mull {
         outbox.submit(GameAction::SubmitDecision(DecisionAnswer::TakeMulligan));
+        state.spawned_for = None;
+    } else if let Some(id) = pressed_powder {
+        outbox.submit(GameAction::SubmitDecision(DecisionAnswer::SerumPowder(id)));
         state.spawned_for = None;
     }
 }

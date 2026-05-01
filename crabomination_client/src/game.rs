@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 use crabomination::card::CardId;
 use crabomination::mana::Color as ManaColor;
+use std::collections::HashMap;
 
 /// Per-frame log of human-readable events shown in the right-side overlay.
 #[derive(Resource, Default)]
@@ -47,6 +48,11 @@ pub struct TargetingState {
     /// When targeting for an activated ability rather than a spell.
     pub pending_ability_source: Option<CardId>,
     pub pending_ability_index: Option<usize>,
+    /// When `true`, the pending target picks resolve through
+    /// `GameAction::CastSpellBack` instead of `CastSpell` — used for
+    /// non-land MDFCs being played via their back face. The flag is
+    /// cleared once the cast is submitted (or cancelled).
+    pub back_face_pending: bool,
 }
 
 /// State for the activated-ability context menu (right-click on P0 battlefield card).
@@ -78,6 +84,24 @@ pub struct AltCastState {
 #[derive(Resource, Default)]
 pub struct FlippedHandCards {
     pub flipped: std::collections::HashSet<CardId>,
+}
+
+/// Running card-id → name map used by the log formatter so events
+/// surface human-readable names instead of opaque `CardId(N)` debug
+/// strings. Populated each frame from the current `ClientView`.
+#[derive(Resource, Default)]
+pub struct CardNames {
+    pub by_id: HashMap<CardId, String>,
+}
+
+impl CardNames {
+    /// Look up a card's name; falls back to the bare ID if unknown.
+    pub fn get(&self, id: CardId) -> String {
+        self.by_id
+            .get(&id)
+            .cloned()
+            .unwrap_or_else(|| format!("#{}", id.0))
+    }
 }
 
 /// Tracks player 0's blocker assignments during the DeclareBlockers step.

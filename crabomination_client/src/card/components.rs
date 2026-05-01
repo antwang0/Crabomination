@@ -38,6 +38,46 @@ pub struct CardFrontTexture(pub String);
 #[derive(Component)]
 pub struct FrontFaceMesh;
 
+/// Deferred marker: on the next frame, walk this entity's children,
+/// find the `FrontFaceMesh` child, replace its `MeshMaterial3d` with
+/// `new_front`, update the parent's `CardFrontTexture` to `new_path`,
+/// then remove this component. Used by the hand→battlefield transition
+/// for flipped MDFCs so the played (back) face shows on the bf via the
+/// front-child mesh under standard orientation.
+#[derive(Component)]
+pub struct SwapFrontMaterial {
+    pub new_front: Handle<StandardMaterial>,
+    pub new_path: String,
+}
+
+/// Marker for the back-face child mesh of a card entity. For MDFC hand
+/// cards the back-child is painted with the back-face's Scryfall image
+/// at spawn time so flipping the card 180° actually reveals the
+/// alternate face (instead of the cardback).
+#[derive(Component)]
+pub struct BackFaceMesh;
+
+/// Marker tracking the persistent flipped state of an MDFC hand card.
+/// Inserted when a flip animation starts toward the back face; removed
+/// when it animates back to the front. `sync_flipped_hand_cards`
+/// reconciles this against `FlippedHandCards.flipped` and attaches an
+/// `MdfcFlipAnimation` whenever they disagree.
+#[derive(Component)]
+pub struct FlippedFace;
+
+/// 180° flip animation for MDFC right-clicks. Rotates the parent around
+/// its local Y axis from `start_rotation` to `start_rotation *
+/// Quat::from_rotation_y(PI)` over `progress: 0.0..1.0`. Both card
+/// faces are painted with proper Scryfall images, so the rotation by
+/// itself reveals the alternate face — no mid-animation material swap
+/// needed.
+#[derive(Component)]
+pub struct MdfcFlipAnimation {
+    pub progress: f32,
+    pub speed: f32,
+    pub start_rotation: Quat,
+}
+
 /// Tracks an in-progress flip animation. `progress` goes from 0.0 to 1.0.
 #[derive(Component)]
 pub struct CardFlipAnimation {
@@ -144,6 +184,13 @@ pub struct CardOwner(pub usize);
 #[derive(Component)]
 pub struct BattlefieldCard {
     pub is_land: bool,
+    /// Token permanents despawn (instead of flying to a graveyard pile)
+    /// when they leave the battlefield. The visual layer mirrors the
+    /// MTG "tokens cease to exist" rule via state-based actions but
+    /// needs to know after the engine has already removed the card
+    /// from `cv.battlefield`, hence this flag is mirrored on the
+    /// 3-D entity.
+    pub is_token: bool,
 }
 
 /// Tracks a card's visual tapped state for animation.
@@ -198,6 +245,32 @@ pub struct SendToGraveyardAnimation {
     pub target_rotation: Quat,
     /// Which player's graveyard this card is headed to.
     pub owner: usize,
+}
+
+/// Animates a permanent flying back to its owner's hand (e.g. after
+/// Unsummon, Boomerang). On completion the entity either restores its
+/// `HandCard` slot (viewer's hand — keep it visible face-up) or
+/// despawns (opponent's hand — the regular `OpponentHandCard` spawn
+/// loop will replace it with a face-down placeholder).
+#[derive(Component)]
+pub struct ReturnToHandAnimation {
+    pub progress: f32,
+    pub speed: f32,
+    pub start_translation: Vec3,
+    pub start_rotation: Quat,
+    pub target_translation: Vec3,
+    pub target_rotation: Quat,
+    /// True when bouncing into the viewer's own hand. Drives whether
+    /// the entity is converted to a HandCard on completion (true) or
+    /// despawned and re-spawned face-down by the opponent-hand sync (false).
+    pub to_viewer: bool,
+    /// Hand slot to restore on completion (only meaningful when `to_viewer`).
+    pub target_slot: usize,
+    /// Seat that owns the destination hand. Used by the opponent-hand
+    /// reconciliation pass to count an in-flight bounce as one of that
+    /// seat's hand visuals — otherwise the reconciler spawns a
+    /// duplicate face-down placeholder while the bounce is mid-arc.
+    pub target_owner: usize,
 }
 
 /// Animates a hand card back to the deck position during a mulligan.

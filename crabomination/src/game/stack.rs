@@ -100,6 +100,10 @@ impl GameState {
                 self.fire_step_triggers(TurnStep::Upkeep);
                 self.give_priority_to_active();
             }
+            TurnStep::PreCombatMain => {
+                self.fire_step_triggers(TurnStep::PreCombatMain);
+                self.give_priority_to_active();
+            }
             TurnStep::BeginCombat => {
                 self.fire_step_triggers(TurnStep::BeginCombat);
                 self.give_priority_to_active();
@@ -140,7 +144,7 @@ impl GameState {
     pub(crate) fn fire_step_triggers(&mut self, step: TurnStep) {
         let active = self.active_player_idx;
         let kind = EventKind::StepBegins(step);
-        let triggers: Vec<(CardId, Effect, usize)> = self
+        let mut triggers: Vec<(CardId, Effect, usize)> = self
             .battlefield
             .iter()
             .flat_map(|c| {
@@ -155,10 +159,24 @@ impl GameState {
                         }
                         EventScope::OpponentControl => c.controller != active,
                         EventScope::AnotherOfYours => false,
+                        EventScope::FromYourGraveyard => false, // walked separately below
                     })
                     .map(|t| (c.id, t.effect.clone(), c.controller))
             })
             .collect();
+        // Walk the active player's graveyard for `FromYourGraveyard`
+        // step triggers (Ichorid's "at the beginning of your upkeep").
+        if let Some(player) = self.players.get(active) {
+            for c in &player.graveyard {
+                for t in &c.definition.triggered_abilities {
+                    if t.event.kind == kind
+                        && matches!(t.event.scope, EventScope::FromYourGraveyard)
+                    {
+                        triggers.push((c.id, t.effect.clone(), c.owner));
+                    }
+                }
+            }
+        }
 
         // Drain matching delayed triggers off the queue and queue them up
         // alongside the regular battlefield triggers. Fires-once triggers
@@ -169,6 +187,9 @@ impl GameState {
         for dt in std::mem::take(&mut self.delayed_triggers) {
             let matches = match (dt.kind, step) {
                 (DelayedKind::YourNextUpkeep, TurnStep::Upkeep) => dt.controller == active,
+                (DelayedKind::YourNextMainPhase, TurnStep::PreCombatMain) => {
+                    dt.controller == active
+                }
                 (DelayedKind::NextEndStep, TurnStep::End) => true,
                 _ => false,
             };
@@ -188,24 +209,34 @@ impl GameState {
             // target (e.g. rebound's re-cast), pick a fresh auto-target at
             // fire time so the trigger doesn't enter the stack with a
             // None target slot.
-            let target = target.or_else(|| self.auto_target_for_effect(&effect, controller));
+            let target = target.or_else(|| {
+                self.auto_target_for_effect_avoiding(&effect, controller, Some(source))
+            });
             self.stack.push(StackItem::Trigger {
                 source,
                 controller,
                 effect: Box::new(effect),
                 target,
                 mode: None,
+                x_value: 0,
+                converged_value: 0,
             });
         }
 
         for (source, effect, controller) in triggers {
-            let auto_target = self.auto_target_for_effect(&effect, controller);
+            // Triggered abilities pass the trigger source so the picker
+            // can avoid pumping the source itself when a better target
+            // exists (Strixhaven Magecraft / Repartee, etc.).
+            let auto_target =
+                self.auto_target_for_effect_avoiding(&effect, controller, Some(source));
             self.stack.push(StackItem::Trigger {
                 source,
                 controller,
                 effect: Box::new(effect),
                 target: auto_target,
                 mode: None,
+                x_value: 0,
+                converged_value: 0,
             });
         }
     }
@@ -259,17 +290,26 @@ impl GameState {
                             }),
                             target: None,
                             mode: None,
+                            x_value: 0,
+                            converged_value: 0,
                         });
                     }
 
                     // Push ETB triggers onto the stack — Elesh Norn
                     // replacement adjusts the trigger count (0 = suppressed
                     // by opponent's Norn, 1+N = each of your Norns adds an
-                    // extra fire).
+                    // extra fire). The spell's `x_value` is threaded so
+                    // ETB-trigger expressions like `Effect::AddCounter
+                    // { amount: Value::XFromCost }` (Pterafractyl, Static
+                    // Prison) read the actual paid X.
                     let etb_multiplier =
                         crate::game::actions::etb_trigger_multiplier(self, caster);
                     for effect in etb_triggers {
-                        let auto_target = self.auto_target_for_effect(&effect, caster);
+                        let auto_target = self.auto_target_for_effect_avoiding(
+                            &effect,
+                            caster,
+                            Some(card_id),
+                        );
                         for _ in 0..etb_multiplier {
                             self.stack.push(StackItem::Trigger {
                                 source: card_id,
@@ -277,6 +317,8 @@ impl GameState {
                                 effect: Box::new(effect.clone()),
                                 target: auto_target.clone(),
                                 mode: None,
+                                x_value,
+                                converged_value,
                             });
                         }
                     }
@@ -308,7 +350,8 @@ impl GameState {
                         let aoy_multiplier =
                             crate::game::actions::etb_trigger_multiplier(self, caster);
                         for (src, effect) in other_triggers {
-                            let auto_target = self.auto_target_for_effect(&effect, caster);
+                            let auto_target =
+                                self.auto_target_for_effect_avoiding(&effect, caster, Some(src));
                             for _ in 0..aoy_multiplier {
                                 self.stack.push(StackItem::Trigger {
                                     source: src,
@@ -316,6 +359,8 @@ impl GameState {
                                     effect: Box::new(effect.clone()),
                                     target: auto_target.clone(),
                                     mode: None,
+                                    x_value: 0,
+                                    converged_value: 0,
                                 });
                             }
                         }
@@ -337,8 +382,12 @@ impl GameState {
                     }
                 }
 
-                // SpellCast triggers fire after the spell resolves (e.g. Prowess).
-                self.fire_spell_cast_triggers(caster, is_noncreature);
+                // SpellCast / YourControl triggers (Prowess, Magecraft,
+                // Repartee, …) fire at *cast time* now (see
+                // `finalize_cast`). The post-resolve fire here would
+                // double-fire them. Kept the call site as a placeholder
+                // for any future "after spell resolves" trigger types.
+                let _ = (caster, card_id, is_noncreature);
             }
             StackItem::Trigger {
                 source,
@@ -346,6 +395,8 @@ impl GameState {
                 effect,
                 target,
                 mode,
+                x_value,
+                converged_value,
             } => {
                 let chosen_mode = mode.unwrap_or(0);
                 let mut trig_events = self.continue_trigger_resolution(
@@ -354,6 +405,8 @@ impl GameState {
                     *effect,
                     target,
                     chosen_mode,
+                    x_value,
+                    converged_value,
                 )?;
                 events.append(&mut trig_events);
                 if self.pending_decision.is_some() {
@@ -372,14 +425,52 @@ impl GameState {
 
     pub(crate) fn do_untap(&mut self) {
         let p = self.active_player_idx;
+        // Untap permanents YOU CONTROL on your untap step, not just
+        // those you originally owned. A creature you've stolen
+        // (Threaten / Mind Control) untaps on your turn; one of yours
+        // that's been stolen does not. Filtering by `owner` here would
+        // leave stolen permanents permanently tapped (or, conversely,
+        // un-tap a stolen permanent on the wrong player's turn).
         for card in &mut self.battlefield {
-            if card.owner == p {
+            if card.controller == p {
                 card.tapped = false;
                 card.summoning_sick = false;
             }
         }
         self.players[p].lands_played_this_turn = 0;
         self.players[p].spells_cast_this_turn = 0;
+        // Reset Infusion / "if you gained life this turn" tracking for the
+        // active player at the start of their turn. Other players' counters
+        // tick down only at their own untaps so symmetric "this turn"
+        // checks remain accurate per-player. (Same convention as
+        // `lands_played_this_turn` and `spells_cast_this_turn`.)
+        self.players[p].life_gained_this_turn = 0;
+        // Reset cards-drawn tally for the active player. Powers Quandrix
+        // scaling cards (Fractal Anomaly's "X = cards drawn this turn"
+        // and similar). Other players' tallies advance independently
+        // and are reset on their own untap.
+        self.players[p].cards_drawn_this_turn = 0;
+        // Reset the "cards left your graveyard this turn" tally; powers
+        // Lorehold "if a card left your graveyard this turn" payoffs
+        // (Living History, Primary Research, Wilt in the Heat) per turn.
+        self.players[p].cards_left_graveyard_this_turn = 0;
+        // Reset the "creatures died under your control this turn" tally;
+        // powers Witherbloom "if a creature died under your control this
+        // turn" end-step payoffs (Essenceknit Scholar).
+        self.players[p].creatures_died_this_turn = 0;
+        // Reset the "cards exiled this turn" tally; powers Strixhaven
+        // "if one or more cards were put into exile this turn" payoffs
+        // (Ennis the Debate Moderator) per turn.
+        self.players[p].cards_exiled_this_turn = 0;
+        // Reset per-spell-type tallies (instant/sorcery vs creature
+        // casts). These refine `spells_cast_this_turn` for cards that
+        // need exact-type filtering (Potioner's Trove "instant or
+        // sorcery only" gate, future Magecraft variants).
+        self.players[p].instants_or_sorceries_cast_this_turn = 0;
+        self.players[p].creatures_cast_this_turn = 0;
+        // Clear Teferi, Time Raveler's "you may cast sorceries as though they
+        // had flash" flag — it expires on the start of your next turn.
+        self.players[p].sorceries_as_flash = false;
     }
 
     pub(crate) fn do_cleanup(&mut self) {
@@ -525,16 +616,26 @@ impl GameState {
                     )
                 })
                 .unwrap_or_default();
+            // Bump the controller's per-turn died-creature tally for
+            // Witherbloom "if a creature died under your control this
+            // turn" payoffs (Essenceknit Scholar).
+            if controller_idx < self.players.len() {
+                self.players[controller_idx].creatures_died_this_turn =
+                    self.players[controller_idx].creatures_died_this_turn.saturating_add(1);
+            }
             self.remove_from_battlefield_to_graveyard(id);
             // Push Dies triggers to the stack for resolution.
             for (source, effect, controller) in die_triggers {
-                let auto_target = self.auto_target_for_effect(&effect, controller);
+                let auto_target =
+                    self.auto_target_for_effect_avoiding(&effect, controller, Some(source));
                 self.stack.push(StackItem::Trigger {
                     source,
                     controller,
                     effect: Box::new(effect),
                     target: auto_target,
                     mode: None,
+                    x_value: 0,
+                    converged_value: 0,
                 });
             }
             // Persist: return to battlefield with -1/-1 counter if it had no -1/-1 counter.
@@ -546,10 +647,13 @@ impl GameState {
                     .position(|c| c.id == id)
                 {
                     let mut returned = self.players[owner].graveyard.remove(pos);
+                    self.players[owner].cards_left_graveyard_this_turn =
+                        self.players[owner].cards_left_graveyard_this_turn.saturating_add(1);
                     returned.damage = 0;
                     returned.summoning_sick = true;
                     returned.add_counters(crate::card::CounterType::MinusOneMinusOne, 1);
                     let rid = returned.id;
+                    events.push(GameEvent::CardLeftGraveyard { player: owner, card_id: rid });
                     self.battlefield.push(returned);
                     events.push(GameEvent::PermanentEntered { card_id: rid });
                 }
@@ -562,10 +666,13 @@ impl GameState {
                     .position(|c| c.id == id)
             {
                 let mut returned = self.players[owner].graveyard.remove(pos);
+                self.players[owner].cards_left_graveyard_this_turn =
+                    self.players[owner].cards_left_graveyard_this_turn.saturating_add(1);
                 returned.damage = 0;
                 returned.summoning_sick = true;
                 returned.add_counters(crate::card::CounterType::PlusOnePlusOne, 1);
                 let rid = returned.id;
+                events.push(GameEvent::CardLeftGraveyard { player: owner, card_id: rid });
                 self.battlefield.push(returned);
                 events.push(GameEvent::PermanentEntered { card_id: rid });
             }
@@ -603,6 +710,19 @@ impl GameState {
         for id in orphaned_auras {
             self.remove_from_battlefield_to_graveyard(id);
         }
+
+        // CR 704.5d — a token that's not on the battlefield ceases to exist.
+        // Dies / leaves-battlefield triggers have already fired by this point
+        // (they queue into the events vec before this scan), so dropping the
+        // token from its post-bf zone now matches the timing real MTG would
+        // produce. Without this, dead tokens linger in graveyards (and would
+        // count toward graveyard-size effects, mill prompts, etc.).
+        for player in &mut self.players {
+            player.graveyard.retain(|c| !c.is_token);
+            player.hand.retain(|c| !c.is_token);
+            player.library.retain(|c| !c.is_token);
+        }
+        self.exile.retain(|c| !c.is_token);
 
         // Player loss conditions (CR 704.5a/b/c). Eliminated players are
         // removed from turn/priority rotation; the game ends when ≤ 1 alive.
@@ -658,28 +778,56 @@ impl GameState {
     /// `Dies` triggered abilities, returning them as events after the fact.
     /// (This is the version used by destroy/damage effects that want to fire triggers.)
     pub(crate) fn remove_to_graveyard_with_triggers(&mut self, id: CardId) -> Vec<GameEvent> {
-        let die_triggers: Vec<(CardId, Effect, usize)> = self
+        // Collect both `CreatureDied` and `PermanentLeavesBattlefield`
+        // self-source triggers off the leaving permanent. CreatureDied
+        // only matters for creatures (Solitude evoke-sac etc.);
+        // PermanentLeavesBattlefield is the broader "when this leaves the
+        // battlefield" hook used by Chromatic Star, Roomba-style cards,
+        // and any future non-creature die-trigger.
+        let (leave_triggers, dying_creature_controller): (Vec<(CardId, Effect, usize)>, Option<usize>) = self
             .battlefield
             .iter()
             .find(|c| c.id == id)
             .map(|c| {
-                c.definition
+                let is_creature = c.definition.is_creature();
+                let triggers = c.definition
                     .triggered_abilities
                     .iter()
-                    .filter(|t| t.event.kind == EventKind::CreatureDied)
+                    .filter(|t| matches!(t.event.scope, EventScope::SelfSource))
+                    .filter(|t| match t.event.kind {
+                        EventKind::PermanentLeavesBattlefield => true,
+                        EventKind::CreatureDied => is_creature,
+                        _ => false,
+                    })
                     .map(|t| (c.id, t.effect.clone(), c.controller))
-                    .collect()
+                    .collect();
+                let creature_controller = if is_creature { Some(c.controller) } else { None };
+                (triggers, creature_controller)
             })
             .unwrap_or_default();
+        // Bump the controller's per-turn died-creature tally for
+        // Witherbloom payoffs (Essenceknit Scholar). This path is the
+        // standard destroy / damage-lethal route that bypasses the SBA
+        // dies handler in `apply_state_based_actions`; we duplicate the
+        // bump so all destroy paths agree.
+        if let Some(controller_idx) = dying_creature_controller
+            && controller_idx < self.players.len()
+        {
+            self.players[controller_idx].creatures_died_this_turn =
+                self.players[controller_idx].creatures_died_this_turn.saturating_add(1);
+        }
         self.remove_from_battlefield_to_graveyard(id);
-        for (source, effect, controller) in die_triggers {
-            let auto_target = self.auto_target_for_effect(&effect, controller);
+        for (source, effect, controller) in leave_triggers {
+            let auto_target =
+                self.auto_target_for_effect_avoiding(&effect, controller, Some(source));
             self.stack.push(StackItem::Trigger {
                 source,
                 controller,
                 effect: Box::new(effect),
                 target: auto_target,
                 mode: None,
+                x_value: 0,
+                converged_value: 0,
             });
         }
         vec![] // Trigger events are on the stack; callers resolve them via pass_priority.

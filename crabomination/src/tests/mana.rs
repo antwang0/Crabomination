@@ -89,3 +89,56 @@ fn pay_does_not_partially_drain_on_failure() {
     assert!(err.is_err());
     assert_eq!(pool.amount(Color::White), 2); // still intact
 }
+
+#[test]
+fn color_short_name_matches_mtg_abbreviations() {
+    assert_eq!(Color::White.short_name(), 'W');
+    assert_eq!(Color::Blue.short_name(),  'U');
+    assert_eq!(Color::Black.short_name(), 'B');
+    assert_eq!(Color::Red.short_name(),   'R');
+    assert_eq!(Color::Green.short_name(), 'G');
+}
+
+#[test]
+fn color_display_matches_short_name() {
+    assert_eq!(format!("{}", Color::Blue), "U");
+    assert_eq!(format!("{{{}}}", Color::Red), "{R}",
+        "Color::Display can be inlined into format!() to render mana pips");
+}
+
+#[test]
+fn distinct_colors_counts_colored_pips() {
+    // Mono-color: 1.
+    assert_eq!(cost(&[r()]).distinct_colors(), 1);
+    // Multicolored ({R}{W}): 2.
+    assert_eq!(cost(&[r(), w()]).distinct_colors(), 2);
+    // Generic only: 0.
+    assert_eq!(cost(&[generic(3)]).distinct_colors(), 0);
+    // Three colors with duplicates ({W}{W}{B}{R}): 3 (W, B, R distinct).
+    assert_eq!(cost(&[w(), w(), b(), r()]).distinct_colors(), 3);
+    // Free spell: 0.
+    assert_eq!(ManaCost::default().distinct_colors(), 0);
+}
+
+#[test]
+fn distinct_colors_handles_hybrid_and_phyrexian() {
+    use crate::mana::{hybrid, phyrexian};
+    // Hybrid {W/B} contributes both halves.
+    assert_eq!(cost(&[hybrid(Color::White, Color::Black)]).distinct_colors(), 2);
+    // Phyrexian {B/P} contributes its colored side.
+    assert_eq!(cost(&[phyrexian(Color::Black)]).distinct_colors(), 1);
+    // Colorless artifacts ({2}) — 0 distinct colors.
+    assert_eq!(cost(&[generic(2)]).distinct_colors(), 0);
+}
+
+#[test]
+fn distinct_colors_does_not_count_x_or_snow_or_colorless() {
+    use crate::mana::{snow_mana, x};
+    assert_eq!(cost(&[x(), x(), u()]).distinct_colors(), 1);
+    assert_eq!(cost(&[snow_mana()]).distinct_colors(), 0);
+    assert_eq!(
+        cost(&[crate::mana::colorless(2)]).distinct_colors(),
+        0,
+        "Colorless pips are not colored"
+    );
+}

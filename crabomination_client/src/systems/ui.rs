@@ -23,6 +23,18 @@ pub struct PeekPopup;
 #[derive(Component)]
 pub struct GraveyardBrowser;
 
+/// One card tile inside the graveyard browser. Stores the card's
+/// display name so the hover-name-tooltip system can render it.
+#[derive(Component)]
+pub struct GraveyardCardItem {
+    pub name: String,
+}
+
+/// Marker for the live name tooltip rendered above the graveyard
+/// browser whenever the user hovers a card tile.
+#[derive(Component)]
+pub struct GraveyardCardNameTooltip;
+
 #[derive(Component)]
 pub struct RevealPopup;
 
@@ -255,15 +267,37 @@ pub fn graveyard_browser(
                             for name in &card_names {
                                 let path = scryfall::card_asset_path(name);
                                 let texture: Handle<Image> = asset_server.load(&path);
+                                // Each tile is a Button so Bevy's
+                                // `Interaction` component reports
+                                // hover/press. The ImageNode inside
+                                // is `Pickable::IGNORE` so events
+                                // bubble up to the button rather than
+                                // landing on the image directly. The
+                                // outer button captures clicks too,
+                                // which prevents accidental close-on-
+                                // click since the dim overlay used to
+                                // swallow clicks that passed through
+                                // the cards.
                                 grid.spawn((
-                                    ImageNode { image: texture, ..default() },
+                                    Button,
                                     Node {
                                         width: Val::Px(BROWSER_CARD_WIDTH),
                                         height: Val::Px(BROWSER_CARD_HEIGHT),
                                         ..default()
                                     },
-                                    Pickable::IGNORE,
-                                ));
+                                    GraveyardCardItem { name: name.clone() },
+                                ))
+                                .with_children(|tile| {
+                                    tile.spawn((
+                                        ImageNode { image: texture, ..default() },
+                                        Node {
+                                            width: Val::Percent(100.0),
+                                            height: Val::Percent(100.0),
+                                            ..default()
+                                        },
+                                        Pickable::IGNORE,
+                                    ));
+                                });
                             }
                         });
                 }
@@ -353,6 +387,70 @@ pub fn pile_tooltip(
             commands.entity(entity).despawn();
         }
     }
+}
+
+/// Show the name of the graveyard card currently being hovered as
+/// a tooltip pinned to the top of the browser panel. Despawns when
+/// the cursor leaves all card tiles, or when the browser closes.
+pub fn graveyard_card_hover_name(
+    mut commands: Commands,
+    items: Query<(&Interaction, &GraveyardCardItem)>,
+    existing: Query<Entity, With<GraveyardCardNameTooltip>>,
+    browser: Query<(), With<GraveyardBrowser>>,
+    mut current_text: Query<&mut Text, With<GraveyardCardNameTooltip>>,
+) {
+    // No browser open → drop the tooltip.
+    if browser.is_empty() {
+        for e in &existing {
+            commands.entity(e).despawn();
+        }
+        return;
+    }
+
+    let hovered_name = items
+        .iter()
+        .find(|(i, _)| matches!(**i, Interaction::Hovered | Interaction::Pressed))
+        .map(|(_, item)| item.name.clone());
+
+    let Some(name) = hovered_name else {
+        for e in &existing {
+            commands.entity(e).despawn();
+        }
+        return;
+    };
+
+    // Tooltip already exists — just refresh its text.
+    if let Ok(mut t) = current_text.single_mut() {
+        if t.0 != name {
+            t.0 = name;
+        }
+        return;
+    }
+
+    // Spawn the tooltip pinned near the top of the screen so it's
+    // always visible even when scrolling deep into a long graveyard.
+    // Marker lives on the Text entity (parent + child) — keeping it
+    // single-entity makes both the despawn and the text-refresh
+    // queries straightforward.
+    commands
+        .spawn((
+            Node {
+                position_type: PositionType::Absolute,
+                top: Val::Px(20.0),
+                left: Val::Percent(50.0),
+                margin: UiRect::left(Val::Px(-110.0)),
+                width: Val::Px(220.0),
+                padding: UiRect::axes(Val::Px(14.0), Val::Px(8.0)),
+                justify_content: JustifyContent::Center,
+                ..default()
+            },
+            BackgroundColor(Color::srgba(0.0, 0.0, 0.0, 0.92)),
+            Pickable::IGNORE,
+            Text::new(name),
+            TextFont { font_size: 16.0, ..default() },
+            TextColor(Color::srgb(1.0, 0.85, 0.55)),
+            GraveyardCardNameTooltip,
+        ));
 }
 
 /// Drives the top-card reveal popup — stays visible until the user clicks anywhere.

@@ -32,6 +32,9 @@ fn fetch_ability(type_a: LandType, type_b: LandType) -> ActivatedAbility {
         ]),
         once_per_turn: false,
         sorcery_speed: false,
+        sac_cost: false,
+        condition: None,
+            life_cost: 0,
     }
 }
 
@@ -57,6 +60,7 @@ fn fetch_land(
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand: None,
     }
 }
 

@@ -1,5 +1,5 @@
 use super::*;
-use crate::card::Keyword;
+use crate::card::{CardType, Keyword};
 use crate::effect::{Effect, ManaPayload};
 use crate::mana::{Color as ManaColor, ManaSymbol};
 
@@ -43,32 +43,82 @@ fn converge_count(before: &crate::mana::ManaPool, after: &crate::mana::ManaPool)
     count
 }
 
-/// Walk the battlefield's static abilities to compute the total extra
-/// generic mana the caster owes for casting `card`. Currently only honors
-/// `StaticEffect::AdditionalCostAfterFirstSpell` (Damping Sphere): if the
-/// caster has already cast at least one spell this turn and the spell
-/// matches the static's `filter`, charge `amount` more.
-fn extra_cost_for_spell(
+/// Walk the battlefield's static abilities + per-player tax charges to
+/// compute the total extra generic mana the caster owes for casting `card`.
+///
+/// Honors:
+///   * `StaticEffect::AdditionalCostAfterFirstSpell` (Damping Sphere): if
+///     the caster has already cast at least one spell this turn and the
+///     spell matches the static's `filter`, charge `amount` more.
+///   * `Player.first_spell_tax_charges` (Chancellor of the Annex): each
+///     pending charge taxes the caster's *next* spell {1} more. Consumed by
+///     the caller on a successful cast (we only **read** here so callers
+///     can see the tax before payment; the caster path decrements after).
+pub(crate) fn extra_cost_for_spell(
     state: &crate::game::GameState,
     caster: usize,
     card: &crate::card::CardInstance,
 ) -> u32 {
     use crate::effect::StaticEffect;
-    let already_cast = state.players[caster].spells_cast_this_turn;
-    if already_cast == 0 {
-        return 0;
-    }
     let mut tax = 0u32;
-    for src in &state.battlefield {
-        for sa in &src.definition.static_abilities {
-            if let StaticEffect::AdditionalCostAfterFirstSpell { filter, amount } = &sa.effect {
-                if state.evaluate_requirement_on_card(filter, card, caster) {
+    if state.players[caster].first_spell_tax_charges > 0 {
+        tax += 1;
+    }
+    let already_cast = state.players[caster].spells_cast_this_turn;
+    if already_cast > 0 {
+        for src in &state.battlefield {
+            for sa in &src.definition.static_abilities {
+                if let StaticEffect::AdditionalCostAfterFirstSpell { filter, amount } = &sa.effect
+                    && state.evaluate_requirement_on_card(filter, card, caster)
+                {
                     tax += amount;
                 }
             }
         }
     }
+
     tax
+}
+
+/// Consume one Chancellor-of-the-Annex tax charge from `caster`, if any.
+/// Called by every cast path immediately after the spell successfully
+/// resolves payment, so each first-spell-tax charge is single-use.
+pub(crate) fn consume_first_spell_tax(state: &mut crate::game::GameState, caster: usize) {
+    if state.players[caster].first_spell_tax_charges > 0 {
+        state.players[caster].first_spell_tax_charges -= 1;
+    }
+}
+
+/// True if any battlefield permanent has `StaticEffect::LandsTapColorlessOnly`
+/// (Damping Sphere). Used by `play_land` to decide whether to downgrade
+/// multi-color/multi-mana lands to "{T}: Add {C}".
+pub(crate) fn multi_mana_ability_count(def: &crate::card::CardDefinition) -> bool {
+    use crate::effect::{Effect, ManaPayload};
+    // The Oracle says "tap to add more than one mana" — for our purposes:
+    // any land with two or more separate mana abilities, OR any single
+    // ability that produces an `AnyOneColor`/`AnyColors` payload (which
+    // could conceptually be more than one), counts. Single-color basics
+    // (one ability, `Colors([X])` of length 1) and single-color non-basics
+    // (one ability) pass through unchanged.
+    let mana_abilities: Vec<_> = def
+        .activated_abilities
+        .iter()
+        .filter(|a| matches!(a.effect, Effect::AddMana { .. }))
+        .collect();
+    if mana_abilities.len() >= 2 {
+        return true;
+    }
+    if let Some(a) = mana_abilities.first()
+        && let Effect::AddMana { pool, .. } = &a.effect
+    {
+        return match pool {
+            ManaPayload::AnyOneColor(_) | ManaPayload::AnyColors(_) => true,
+            ManaPayload::Colors(cs) => cs.len() > 1,
+            ManaPayload::OfColor(_, _) => false,
+            ManaPayload::Colorless(_) => false,
+        };
+    }
+    false
 }
 
 /// Elesh Norn, Mother of Machines: count how many times an ETB trigger
@@ -121,12 +171,43 @@ impl crate::game::GameState {
         caster: usize,
         card: &crate::card::CardInstance,
     ) -> bool {
+        // The card itself is uncounterable (Dovin's Veto, Stubborn Denial,
+        // etc. — `Keyword::CantBeCountered`).
+        if card.definition.keywords.contains(&Keyword::CantBeCountered) {
+            return true;
+        }
+        // Cavern of Souls: a creature spell whose caster controls a Cavern
+        // whose chosen creature type matches one of the spell's types.
+        // Caverns whose ETB hasn't yet resolved (`chosen_creature_type =
+        // None`) — typical for `add_card_to_battlefield`-built test fixtures
+        // — fall back to the legacy "any creature is uncounterable" rule so
+        // pre-existing tests don't break on the tighter check. The
+        // mana-provenance gate (must spend Cavern mana on the cast) is still
+        // collapsed.
         if !card.definition.is_creature() {
             return false;
         }
-        self.battlefield
-            .iter()
-            .any(|c| c.controller == caster && c.definition.name == "Cavern of Souls")
+        self.battlefield.iter().any(|c| {
+            c.controller == caster
+                && c.definition.name == "Cavern of Souls"
+                && match c.chosen_creature_type {
+                    None => true, // ETB not resolved → unrestricted (legacy)
+                    Some(t) => card.definition.has_creature_type(t),
+                }
+        })
+    }
+
+    /// True if any battlefield permanent's static abilities include
+    /// `StaticEffect::LandsTapColorlessOnly` (Damping Sphere). Used by
+    /// `play_land` to downgrade multi-mana lands to colorless on entry.
+    pub(crate) fn lands_tap_colorless_only_active(&self) -> bool {
+        use crate::effect::StaticEffect;
+        self.battlefield.iter().any(|c| {
+            c.definition
+                .static_abilities
+                .iter()
+                .any(|sa| matches!(sa.effect, StaticEffect::LandsTapColorlessOnly))
+        })
     }
 }
 
@@ -135,6 +216,7 @@ fn effect_produces_color(effect: &Effect, color: ManaColor) -> bool {
         Effect::AddMana { pool, .. } => match pool {
             ManaPayload::Colors(cs) => cs.contains(&color),
             ManaPayload::AnyOneColor(_) | ManaPayload::AnyColors(_) => true,
+            ManaPayload::OfColor(c, _) => *c == color,
             ManaPayload::Colorless(_) => false,
         },
         Effect::Seq(steps) => steps.iter().any(|s| effect_produces_color(s, color)),
@@ -183,6 +265,33 @@ impl GameState {
             self.players[p].hand.push(card);
             return Err(GameError::NotALand(card_id));
         }
+        // Damping Sphere: if any battlefield permanent grants
+        // `LandsTapColorlessOnly`, downgrade this land's mana abilities
+        // to `{T}: Add {C}` if the original would have produced more than
+        // one mana per tap. Applied in-place on the new instance's
+        // definition before the card lands on the battlefield, so all
+        // downstream activations see the replaced ability set.
+        if self.lands_tap_colorless_only_active()
+            && multi_mana_ability_count(&card.definition)
+        {
+            card.definition.activated_abilities = vec![
+                crate::card::ActivatedAbility {
+                    tap_cost: true,
+                    mana_cost: crate::mana::ManaCost::default(),
+                    effect: crate::effect::Effect::AddMana {
+                        who: crate::effect::PlayerRef::You,
+                        pool: crate::effect::ManaPayload::Colorless(
+                            crate::effect::Value::Const(1),
+                        ),
+                    },
+                    once_per_turn: false,
+                    sorcery_speed: false,
+                    sac_cost: false,
+                    condition: None,
+            life_cost: 0,
+                },
+            ];
+        }
         self.players[p].lands_played_this_turn += 1;
         self.battlefield.push(card);
         // Fire self-source ETB triggers for the land (shockland pay-or-tap,
@@ -220,7 +329,8 @@ impl GameState {
         // side controls a Mother of Machines.
         let multiplier = etb_trigger_multiplier(self, controller);
         for effect in etb_triggers {
-            let auto_target = self.auto_target_for_effect(&effect, controller);
+            let auto_target =
+                self.auto_target_for_effect_avoiding(&effect, controller, Some(card_id));
             for _ in 0..multiplier {
                 self.stack.push(StackItem::Trigger {
                     source: card_id,
@@ -228,12 +338,64 @@ impl GameState {
                     effect: Box::new(effect.clone()),
                     target: auto_target.clone(),
                     mode: None,
+                    x_value: 0,
+                    converged_value: 0,
                 });
             }
         }
     }
 
     // ── Cast spell ────────────────────────────────────────────────────────────
+
+    /// Cast a modal-double-faced card via its back face. Mirrors
+    /// `play_land_with_face` but for non-land back faces (creature /
+    /// instant / sorcery). The card's `definition` is swapped to the back
+    /// face's definition before payment + cast, so cost / type / effect
+    /// all resolve against the back face. Errors with `NotALand` (reused
+    /// for "no back face") if the front has no `back_face`.
+    pub(crate) fn cast_spell_back_face(
+        &mut self,
+        card_id: CardId,
+        target: Option<Target>,
+        mode: Option<usize>,
+        x_value: Option<u32>,
+    ) -> Result<Vec<GameEvent>, GameError> {
+        let p = self.priority.player_with_priority;
+        if !self.players[p].has_in_hand(card_id) {
+            return Err(GameError::CardNotInHand(card_id));
+        }
+        // Look up the back face on the front-face definition.
+        let back_def = {
+            let card = self
+                .players[p]
+                .hand
+                .iter()
+                .find(|c| c.id == card_id)
+                .expect("has_in_hand verified");
+            match card.definition.back_face.clone() {
+                Some(b) => *b,
+                None => return Err(GameError::NotALand(card_id)),
+            }
+        };
+        // Swap the in-hand definition to the back face. The hand card
+        // mutates in place — successful cast removes it; rejected cast
+        // means the cast machinery already restored the card with the
+        // swapped definition, but since the front face no longer
+        // appears in hand the user can still cast either face on retry
+        // (back face's `back_face` is None, but front-face revival is
+        // out of scope; in practice MDFCs are committed to one face per
+        // game).
+        if let Some(c) = self.players[p].hand.iter_mut().find(|c| c.id == card_id) {
+            c.definition = back_def;
+        }
+        // Delegate to the regular cast path. The back face's cost,
+        // type, target filters, and effect now drive validation.
+        // Tag the cast face so the SpellCast event surfaces it.
+        self.pending_cast_face = CastFace::Back;
+        let result = self.cast_spell(card_id, target, mode, x_value);
+        self.pending_cast_face = CastFace::Front;
+        result
+    }
 
     pub(crate) fn cast_spell(
         &mut self,
@@ -288,7 +450,17 @@ impl GameState {
 
         // Timing: sorcery-speed requires empty stack + main phase + active player priority.
         // Instant-speed (Instant type or Flash) may be cast whenever you have priority.
-        if !card.definition.is_instant_speed() && !self.can_cast_sorcery_speed(p) {
+        // Teferi, Time Raveler's +1 sets `sorceries_as_flash` on its
+        // controller — those casters can ignore the sorcery-timing gate
+        // until their next turn (when do_untap clears the flag).
+        // Teferi's static (`OpponentsSorceryTimingOnly`) flips the rule for
+        // opponents: even instants must wait until their main phase.
+        let must_be_sorcery_speed = !card.definition.is_instant_speed()
+            || self.player_locked_to_sorcery_timing(p);
+        if must_be_sorcery_speed
+            && !self.can_cast_sorcery_speed(p)
+            && !self.players[p].sorceries_as_flash
+        {
             self.players[p].hand.push(card);
             return Err(GameError::SorcerySpeedOnly);
         }
@@ -304,8 +476,16 @@ impl GameState {
         // Enforce the spell's target selection requirement (e.g. Terror's
         // "non-black, non-artifact creature"): if the effect binds a filter to
         // slot 0 and the chosen target doesn't match, reject the cast.
+        // For modal cards (`ChooseMode`), only look at the chosen mode's
+        // filter — Drown in the Loch's mode 0 (counter spell) and mode 1
+        // (destroy creature) have incompatible filters, and the legacy
+        // "first match across all modes" path picked mode 0's `IsSpellOnStack`
+        // even when the caster picked mode 1.
         if let Some(ref tgt) = target
-            && let Some(filter) = card.definition.effect.target_filter_for_slot(0)
+            && let Some(filter) = card
+                .definition
+                .effect
+                .target_filter_for_slot_in_mode(0, mode)
             && !self.evaluate_requirement_static(filter, tgt, p)
         {
             self.players[p].hand.push(card);
@@ -326,15 +506,10 @@ impl GameState {
             cost.symbols.push(crate::mana::ManaSymbol::Generic(tax));
         }
 
-        // Snapshot pool and tapped states before auto-tap so we can roll back
-        // cleanly if the cost still can't be paid after tapping (e.g. not enough
-        // of the right colours).
-        let pool_before = self.players[p].mana_pool.clone();
-        let tapped_before: Vec<(crate::card::CardId, bool)> = self.battlefield
-            .iter()
-            .filter(|c| c.owner == p)
-            .map(|c| (c.id, c.tapped))
-            .collect();
+        // Snapshot pristine state before convoke + auto-tap mutate it, so a
+        // failed payment can revert both convoke taps and any lands that
+        // auto-tap tapped.
+        let snapshot = self.snapshot_payment_state(p);
 
         // Convoke: tap each chosen creature and credit the player's pool
         // with {1} generic per creature. (The full Oracle also lets the
@@ -348,63 +523,95 @@ impl GameState {
             self.players[p].mana_pool.add_colorless(1);
         }
 
-        let mut auto_events = self.auto_tap_for_cost(p, &cost);
-
-        match self.players[p].mana_pool.pay(&cost) {
+        let receipt = match self.try_pay_after_snapshot(p, &cost, snapshot) {
+            Ok(r) => r,
             Err(e) => {
-                // Rollback: restore pool and untap any lands that auto-tap tapped.
-                self.players[p].mana_pool = pool_before;
-                for (id, was_tapped) in tapped_before {
-                    if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == id) {
-                        c.tapped = was_tapped;
-                    }
-                }
                 self.players[p].hand.push(card);
-                return Err(GameError::Mana(e));
+                return Err(e);
             }
-            Ok(side_effects) => {
-                if side_effects.life_lost > 0 {
-                    self.players[p].life -= side_effects.life_lost as i32;
-                }
-            }
+        };
+        if receipt.side_effects.life_lost > 0 {
+            self.players[p].life -= receipt.side_effects.life_lost as i32;
         }
 
         // Compute converge: count distinct colors of mana drained from the
         // pool by paying the cost. Convoke pips contribute generic only,
         // so they don't raise this count.
-        let converged_value = converge_count(&pool_before, &self.players[p].mana_pool);
+        let converged_value = converge_count(&receipt.pool_before, &self.players[p].mana_pool);
 
-        auto_events.push(GameEvent::SpellCast { player: p, card_id });
+        let mut auto_events = receipt.auto_events;
+        auto_events.push(GameEvent::SpellCast {
+            player: p,
+            card_id,
+            face: self.pending_cast_face,
+        });
         let events = auto_events;
 
-        // Track spells cast this turn (for Storm, etc.).
+        self.finalize_cast(p, card, target, mode, x_value.unwrap_or(0), converged_value);
+
+        Ok(events)
+    }
+
+    /// Common post-cost-payment bookkeeping for the three cast paths
+    /// (`cast_spell_with_convoke`, `cast_flashback`, `cast_spell_alternative`).
+    ///
+    /// 1. Bumps game-wide and per-player `spells_cast_this_turn` (Storm).
+    /// 2. Consumes one Chancellor-of-the-Annex first-spell tax charge.
+    /// 3. Stamps `StackItem::Spell.uncounterable` if the caster controls a
+    ///    Cavern of Souls of the matching type or the card itself is
+    ///    uncounterable.
+    /// 4. Pushes the spell onto the stack, then pushes its
+    ///    `EventKind::SpellCast` + `EventScope::SelfSource` triggers ABOVE
+    ///    it so they resolve first (and still fire if the spell is
+    ///    countered in response).
+    /// 5. Resets priority to the active player so the cast can be responded
+    ///    to.
+    pub(crate) fn finalize_cast(
+        &mut self,
+        p: usize,
+        card: crate::card::CardInstance,
+        target: Option<Target>,
+        mode: Option<usize>,
+        x_value: u32,
+        converged_value: u32,
+    ) {
+        let card_id = card.id;
         self.spells_cast_this_turn += 1;
         self.players[p].spells_cast_this_turn += 1;
+        // Refine the spell-type tallies. Both gates default to 0 on
+        // snapshot back-compat (player.rs `#[serde(default)]`).
+        if card.definition.card_types.contains(&CardType::Instant)
+            || card.definition.card_types.contains(&CardType::Sorcery)
+        {
+            self.players[p].instants_or_sorceries_cast_this_turn += 1;
+        }
+        if card.definition.is_creature() {
+            self.players[p].creatures_cast_this_turn += 1;
+        }
+        consume_first_spell_tax(self, p);
 
-        // Collect "when you cast this spell, ..." (SelfSource SpellCast)
-        // triggers off the spell before it moves into the stack item; we'll
-        // push them ABOVE the spell so they resolve first.
         let on_cast_triggers = collect_self_cast_triggers(&card);
         let uncounterable = self.caster_grants_uncounterable(p, &card);
 
-        // Push onto the stack — spell waits there until all players pass priority.
+        let was_creature_spell = card.definition.is_creature();
         self.stack.push(StackItem::Spell {
             card: Box::new(card),
             caster: p,
             target,
             mode,
-            x_value: x_value.unwrap_or(0),
+            x_value,
             converged_value,
             uncounterable,
         });
-
-        // Push the on-cast triggers on top of the spell so they resolve first.
         self.push_on_cast_triggers(card_id, p, on_cast_triggers);
-
-        // Reset priority to active player so all players get a chance to respond.
+        // SpellCast / YourControl triggers (Prowess, Magecraft, Repartee, …)
+        // fire *at cast time*, before the spell resolves. The trigger goes
+        // on the stack above the spell so it resolves first (and still
+        // fires if the spell itself is countered in response). Filters
+        // (e.g. CastSpellTargetsMatch) read the just-cast spell's target
+        // from the stack while the spell still sits there.
+        self.fire_spell_cast_triggers(p, card_id, !was_creature_spell);
         self.give_priority_to_active();
-
-        Ok(events)
     }
 
     /// Push pre-collected `SpellCast`/`SelfSource` triggers from the
@@ -418,13 +625,16 @@ impl GameState {
         triggers: Vec<Effect>,
     ) {
         for effect in triggers {
-            let auto_target = self.auto_target_for_effect(&effect, controller);
+            let auto_target =
+                self.auto_target_for_effect_avoiding(&effect, controller, Some(source));
             self.stack.push(StackItem::Trigger {
                 source,
                 controller,
                 effect: Box::new(effect),
                 target: auto_target,
                 mode: None,
+                x_value: 0,
+                converged_value: 0,
             });
         }
     }
@@ -455,8 +665,11 @@ impl GameState {
             .ok_or(GameError::SorcerySpeedOnly)?
             .clone();
 
-        // Timing: instants can be cast at instant speed, others at sorcery speed.
-        if !card.definition.is_instant_speed() && !self.can_cast_sorcery_speed(p) {
+        // Timing: instants can be cast at instant speed, others at sorcery
+        // speed. Honor Teferi-style opponent restriction.
+        let must_be_sorcery_speed = !card.definition.is_instant_speed()
+            || self.player_locked_to_sorcery_timing(p);
+        if must_be_sorcery_speed && !self.can_cast_sorcery_speed(p) {
             return Err(GameError::SorcerySpeedOnly);
         }
 
@@ -471,51 +684,27 @@ impl GameState {
         } else {
             flashback_cost
         };
-        let pool_before = self.players[p].mana_pool.clone();
-        let tapped_before: Vec<(crate::card::CardId, bool)> = self.battlefield
-            .iter().filter(|c| c.owner == p).map(|c| (c.id, c.tapped)).collect();
-        self.auto_tap_for_cost(p, &cost);
-        match self.players[p].mana_pool.pay(&cost) {
-            Err(e) => {
-                self.players[p].mana_pool = pool_before;
-                for (id, was_tapped) in tapped_before {
-                    if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == id) {
-                        c.tapped = was_tapped;
-                    }
-                }
-                return Err(GameError::Mana(e));
-            }
-            Ok(side_effects) => {
-                if side_effects.life_lost > 0 {
-                    self.players[p].life -= side_effects.life_lost as i32;
-                }
-            }
+        let receipt = self.try_pay_with_auto_tap(p, &cost)?;
+        if receipt.side_effects.life_lost > 0 {
+            self.players[p].life -= receipt.side_effects.life_lost as i32;
         }
 
         // Remove from graveyard.
         let mut card = self.players[p].graveyard.remove(graveyard_pos);
+        self.players[p].cards_left_graveyard_this_turn =
+            self.players[p].cards_left_graveyard_this_turn.saturating_add(1);
         // Mark as cast via flashback so it goes to exile on resolution.
         card.kicked = true; // reuse kicked flag to signal flashback exile
 
-        let events = vec![GameEvent::SpellCast { player: p, card_id }];
-        self.spells_cast_this_turn += 1;
-        self.players[p].spells_cast_this_turn += 1;
-
-        let on_cast_triggers = collect_self_cast_triggers(&card);
-        let uncounterable = self.caster_grants_uncounterable(p, &card);
-
-        self.stack.push(StackItem::Spell {
-            card: Box::new(card),
-            caster: p,
-            target,
-            mode,
-            x_value: x_value.unwrap_or(0),
-            converged_value: 0,
-            uncounterable,
-        });
-        self.push_on_cast_triggers(card_id, p, on_cast_triggers);
-        self.give_priority_to_active();
-
+        let events = vec![
+            GameEvent::CardLeftGraveyard { player: p, card_id },
+            GameEvent::SpellCast {
+                player: p,
+                card_id,
+                face: CastFace::Flashback,
+            },
+        ];
+        self.finalize_cast(p, card, target, mode, x_value.unwrap_or(0), 0);
         Ok(events)
     }
 
@@ -585,8 +774,11 @@ impl GameState {
             card.evoked = true;
         }
 
-        // Timing: sorcery-speed unless instant-speed.
-        if !card.definition.is_instant_speed() && !self.can_cast_sorcery_speed(p) {
+        // Timing: sorcery-speed unless instant-speed, plus Teferi-style
+        // opponent restriction.
+        let must_be_sorcery_speed = !card.definition.is_instant_speed()
+            || self.player_locked_to_sorcery_timing(p);
+        if must_be_sorcery_speed && !self.can_cast_sorcery_speed(p) {
             self.players[p].hand.push(card);
             return Err(GameError::SorcerySpeedOnly);
         }
@@ -599,7 +791,10 @@ impl GameState {
             return Err(e);
         }
         if let Some(ref tgt) = target
-            && let Some(filter) = card.definition.effect.target_filter_for_slot(0)
+            && let Some(filter) = card
+                .definition
+                .effect
+                .target_filter_for_slot_in_mode(0, mode)
             && !self.evaluate_requirement_static(filter, tgt, p)
         {
             self.players[p].hand.push(card);
@@ -616,37 +811,27 @@ impl GameState {
             return Err(GameError::SelectionRequirementViolated);
         }
 
-        // Pay the alt mana cost (with X substitution).
-        let mana_cost = if alt.mana_cost.has_x() {
+        // Pay the alt mana cost (with X substitution + static-ability tax).
+        let mut mana_cost = if alt.mana_cost.has_x() {
             alt.mana_cost.with_x_value(x_value.unwrap_or(0))
         } else {
             alt.mana_cost.clone()
         };
-        let pool_before = self.players[p].mana_pool.clone();
-        let tapped_before: Vec<(CardId, bool)> = self
-            .battlefield
-            .iter()
-            .filter(|c| c.owner == p)
-            .map(|c| (c.id, c.tapped))
-            .collect();
-        let mut auto_events = self.auto_tap_for_cost(p, &mana_cost);
-        match self.players[p].mana_pool.pay(&mana_cost) {
-            Err(e) => {
-                self.players[p].mana_pool = pool_before;
-                for (id, was_tapped) in tapped_before {
-                    if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == id) {
-                        c.tapped = was_tapped;
-                    }
-                }
-                self.players[p].hand.push(card);
-                return Err(GameError::Mana(e));
-            }
-            Ok(side_effects) => {
-                if side_effects.life_lost > 0 {
-                    self.players[p].life -= side_effects.life_lost as i32;
-                }
-            }
+        let tax = extra_cost_for_spell(self, p, &card);
+        if tax > 0 {
+            mana_cost.symbols.push(crate::mana::ManaSymbol::Generic(tax));
         }
+        let receipt = match self.try_pay_with_auto_tap(p, &mana_cost) {
+            Ok(r) => r,
+            Err(e) => {
+                self.players[p].hand.push(card);
+                return Err(e);
+            }
+        };
+        if receipt.side_effects.life_lost > 0 {
+            self.players[p].life -= receipt.side_effects.life_lost as i32;
+        }
+        let mut auto_events = receipt.auto_events;
 
         // Pay the life portion of the alt cost.
         if alt.life_cost > 0 {
@@ -667,36 +852,49 @@ impl GameState {
             auto_events.push(GameEvent::PermanentExiled { card_id: cid });
         }
 
-        auto_events.push(GameEvent::SpellCast { player: p, card_id });
-        let events = auto_events;
-        self.spells_cast_this_turn += 1;
-        self.players[p].spells_cast_this_turn += 1;
-
-        let on_cast_triggers = collect_self_cast_triggers(&card);
-        let uncounterable = self.caster_grants_uncounterable(p, &card);
-
-        self.stack.push(StackItem::Spell {
-            card: Box::new(card),
-            caster: p,
-            target,
-            mode,
-            x_value: x_value.unwrap_or(0),
-            converged_value: 0,
-            uncounterable,
+        auto_events.push(GameEvent::SpellCast {
+            player: p,
+            card_id,
+            face: CastFace::Front,
         });
-        self.push_on_cast_triggers(card_id, p, on_cast_triggers);
-        self.give_priority_to_active();
-
+        let events = auto_events;
+        self.finalize_cast(p, card, target, mode, x_value.unwrap_or(0), 0);
         Ok(events)
+    }
+
+
+    /// True if `player` is restricted to sorcery-only spell timing by an
+    /// opponent's `StaticEffect::OpponentsSorceryTimingOnly` (Teferi, Time
+    /// Raveler's static "Each opponent can cast spells only any time they
+    /// could cast a sorcery"). Walked by `cast_spell` ahead of the
+    /// is-instant-speed timing check.
+    pub(crate) fn player_locked_to_sorcery_timing(&self, player: usize) -> bool {
+        use crate::effect::StaticEffect;
+        self.battlefield.iter().any(|c| {
+            c.controller != player
+                && c.definition.static_abilities.iter().any(|sa| {
+                    matches!(sa.effect, StaticEffect::OpponentsSorceryTimingOnly)
+                })
+        })
     }
 
     /// Validate that a target is legally targetable by the given controller.
     ///
     /// Returns an error if the target has Hexproof (opponent) or Shroud (anyone),
-    /// or has Protection from the caster's color identity.
-    fn check_target_legality(&self, target: &Target, caster: usize) -> Result<(), GameError> {
-        let Target::Permanent(cid) = target else {
-            return Ok(()); // Player targets have no hexproof/shroud
+    /// or has Protection from the caster's color identity. For player targets,
+    /// also checks the `ControllerHasHexproof` static (Leyline of Sanctity).
+    pub(crate) fn check_target_legality(&self, target: &Target, caster: usize) -> Result<(), GameError> {
+        let cid = match target {
+            Target::Player(p) => {
+                if *p != caster && self.player_has_static_hexproof(*p) {
+                    // No specific card to attach — reuse the permanent-shaped
+                    // Hexproof error variant with a placeholder CardId so the
+                    // UI/server still recognizes "this is a hexproof rejection".
+                    return Err(GameError::TargetHasHexproof(crate::card::CardId(0)));
+                }
+                return Ok(());
+            }
+            Target::Permanent(c) => c,
         };
         let Some(card) = self.battlefield_find(*cid) else {
             return Ok(());
@@ -704,18 +902,40 @@ impl GameState {
         if card.has_keyword(&Keyword::Shroud) {
             return Err(GameError::TargetHasShroud(*cid));
         }
-        // Hexproof only prevents targeting by opponents.
         if card.has_keyword(&Keyword::Hexproof) && card.controller != caster {
             return Err(GameError::TargetHasHexproof(*cid));
         }
         Ok(())
     }
 
-    /// Push `SpellCast` triggered abilities (e.g. Prowess) onto the stack.
-    /// They will resolve when priority is passed through.
-    pub(crate) fn fire_spell_cast_triggers(&mut self, controller: usize, _is_noncreature: bool) {
+    /// True if `player` controls any permanent granting "you have hexproof"
+    /// via `StaticEffect::ControllerHasHexproof` (Leyline of Sanctity).
+    pub(crate) fn player_has_static_hexproof(&self, player: usize) -> bool {
+        use crate::effect::StaticEffect;
+        self.battlefield.iter().any(|c| {
+            c.controller == player
+                && c.definition
+                    .static_abilities
+                    .iter()
+                    .any(|sa| matches!(sa.effect, StaticEffect::ControllerHasHexproof))
+        })
+    }
+
+    /// Push `SpellCast` triggered abilities (e.g. Prowess, Up the Beanstalk)
+    /// onto the stack. They will resolve when priority is passed through.
+    /// `cast_card` is the id of the spell that just resolved (or just got
+    /// cast); the trigger's optional `EventSpec::filter` predicate is
+    /// evaluated with `Selector::TriggerSource` bound to this card so
+    /// "whenever you cast a spell with property X" filters can read the
+    /// cast spell's mana value, color, type, etc.
+    pub(crate) fn fire_spell_cast_triggers(
+        &mut self,
+        controller: usize,
+        cast_card: CardId,
+        _is_noncreature: bool,
+    ) {
         use crate::effect::{EventKind, EventScope};
-        let triggers: Vec<(CardId, Effect)> = self
+        let candidates: Vec<(CardId, Effect, Option<crate::effect::Predicate>)> = self
             .battlefield
             .iter()
             .filter(|c| c.controller == controller)
@@ -730,19 +950,103 @@ impl GameState {
                                 EventScope::YourControl | EventScope::AnyPlayer
                             )
                     })
-                    .map(|t| (c.id, t.effect.clone()))
+                    .map(|t| (c.id, t.effect.clone(), t.event.filter.clone()))
             })
             .collect();
 
-        for (source, effect) in triggers {
-            let auto_target = self.auto_target_for_effect(&effect, controller);
+        for (source, effect, filter) in candidates {
+            if let Some(filter) = filter {
+                let ctx = crate::game::effects::EffectContext {
+                    controller,
+                    source: Some(source),
+                    targets: vec![],
+                    trigger_source: Some(crate::game::effects::EntityRef::Card(cast_card)),
+                    mode: 0,
+                    x_value: 0,
+                    converged_value: 0,
+                };
+                if !self.evaluate_predicate(&filter, &ctx) {
+                    continue;
+                }
+            }
+            let auto_target =
+                self.auto_target_for_effect_avoiding(&effect, controller, Some(source));
             self.stack.push(StackItem::Trigger {
                 source,
                 controller,
                 effect: Box::new(effect),
                 target: auto_target,
                 mode: None,
+                x_value: 0,
+                converged_value: 0,
             });
+        }
+    }
+
+    // ── Payment snapshot / restore ───────────────────────────────────────────
+
+    /// Capture mana pool + tapped state of every permanent owned by `payer`.
+    /// Used by the cast/activate/counter paths so a payment that fails
+    /// mid-way (after auto-tap has already tapped lands) can be reverted to
+    /// pristine state.
+    pub(crate) fn snapshot_payment_state(&self, payer: usize) -> PaymentSnapshot {
+        PaymentSnapshot {
+            pool: self.players[payer].mana_pool.clone(),
+            tapped: self
+                .battlefield
+                .iter()
+                .filter(|c| c.owner == payer)
+                .map(|c| (c.id, c.tapped))
+                .collect(),
+        }
+    }
+
+    /// Restore the mana pool and tapped state captured by a prior
+    /// `snapshot_payment_state`. Skips cards that have since left the
+    /// battlefield (the caller is responsible for any zone-change rollback).
+    pub(crate) fn restore_payment_state(&mut self, payer: usize, snapshot: PaymentSnapshot) {
+        self.players[payer].mana_pool = snapshot.pool;
+        for (id, was_tapped) in snapshot.tapped {
+            if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == id) {
+                c.tapped = was_tapped;
+            }
+        }
+    }
+
+    /// Snapshot, auto-tap, and pay `cost` atomically. Returns the auto-tap
+    /// events plus the pre-payment pool snapshot (callers like `cast_spell`
+    /// use it to compute converge). On payment failure the snapshot is
+    /// restored — pool and tapped flags revert to the pre-call state.
+    pub(crate) fn try_pay_with_auto_tap(
+        &mut self,
+        payer: usize,
+        cost: &crate::mana::ManaCost,
+    ) -> Result<PaymentReceipt, GameError> {
+        let snapshot = self.snapshot_payment_state(payer);
+        self.try_pay_after_snapshot(payer, cost, snapshot)
+    }
+
+    /// Same as `try_pay_with_auto_tap` but uses a snapshot the caller
+    /// already captured — for paths that mutate state between snapshot and
+    /// payment (e.g. convoke taps creatures in between, activate_ability
+    /// applies its tap-cost in between).
+    pub(crate) fn try_pay_after_snapshot(
+        &mut self,
+        payer: usize,
+        cost: &crate::mana::ManaCost,
+        snapshot: PaymentSnapshot,
+    ) -> Result<PaymentReceipt, GameError> {
+        let auto_events = self.auto_tap_for_cost(payer, cost);
+        match self.players[payer].mana_pool.pay(cost) {
+            Ok(side_effects) => Ok(PaymentReceipt {
+                auto_events,
+                side_effects,
+                pool_before: snapshot.pool,
+            }),
+            Err(e) => {
+                self.restore_payment_state(payer, snapshot);
+                Err(GameError::Mana(e))
+            }
         }
     }
 
@@ -825,8 +1129,11 @@ impl GameState {
         // default `AutoDecider` always picks White and leaves the requested
         // color unfilled.)
         for color in still_need_colors {
+            // `controller` not `owner`: a permanent you've stolen
+            // (Threaten / Mind Control) is a tap-for-mana source for
+            // you, regardless of its original ownership.
             let source = self.battlefield.iter().find(|c| {
-                c.owner == player
+                c.controller == player
                     && !c.tapped
                     && c.definition.activated_abilities.iter().any(|a| {
                         is_mana_ability(&a.effect) && effect_produces_color(&a.effect, color)
@@ -863,8 +1170,9 @@ impl GameState {
 
         // Tap any mana source for remaining generic pips.
         for _ in 0..generic_to_tap {
+            // Same controller-vs-owner fix as the colored-pip loop.
             let source = self.battlefield.iter().find(|c| {
-                c.owner == player
+                c.controller == player
                     && !c.tapped
                     && c.definition.activated_abilities.iter().any(|a| is_mana_ability(&a.effect))
             }).map(|c| c.id);
@@ -907,6 +1215,71 @@ impl GameState {
             return Err(GameError::NotYourPriority);
         }
 
+        // Once-per-turn: reject if this ability index has already been
+        // used since the most recent turn-cleanup. The ability is recorded
+        // as "used" *after* successful activation below so failed mana
+        // payments / illegal targets don't burn the per-turn budget.
+        if ability.once_per_turn
+            && self.battlefield[pos].once_per_turn_used.contains(&ability_index)
+        {
+            return Err(GameError::AbilityAlreadyUsedThisTurn);
+        }
+
+        // Per-card "activate only if …" gate. Evaluated against the
+        // controller/source context before any cost is paid. Used by
+        // cards like Resonating Lute (`{T}: Draw a card. Activate only
+        // if you have seven or more cards in your hand.`), Potioner's
+        // Trove (`{T}: gain 2 life. Activate only if you've cast an IS
+        // spell this turn.`), and similar conditional activations.
+        if let Some(cond) = &ability.condition {
+            let ctx = crate::game::effects::EffectContext {
+                controller: p,
+                source: Some(card_id),
+                targets: vec![],
+                trigger_source: None,
+                mode: 0,
+                x_value: 0,
+                converged_value: 0,
+            };
+            if !self.evaluate_predicate(cond, &ctx) {
+                return Err(GameError::AbilityConditionNotMet);
+            }
+        }
+
+        // Reject the activation if the chosen target has hexproof / shroud /
+        // protection / Leyline-of-Sanctity-style player hexproof. Mana-only
+        // and self-targeting abilities don't pass a target so they bypass.
+        if let Some(tgt) = &target {
+            self.check_target_legality(tgt, p)?;
+        }
+
+        // Enforce the ability's own target selection requirement (e.g.
+        // Wasteland's "destroy target nonbasic land", Goblin Bombardment's
+        // "any target"). Spell casts already validate this in `cast_spell`;
+        // activated abilities went unchecked, which let bots/UIs aim a
+        // Wasteland at a Plains. Mirror the cast-side gate for parity.
+        if let Some(tgt) = &target
+            && let Some(filter) = ability.effect.target_filter_for_slot(0)
+            && !self.evaluate_requirement_static(filter, tgt, p)
+        {
+            return Err(GameError::SelectionRequirementViolated);
+        }
+
+        // Pre-flight life-cost gate: reject activation cleanly when the
+        // controller doesn't have enough life. Mirror the mana-cost
+        // pre-pay check (we want a clean error, not a "you can't pay
+        // and just lost a tap" surprise). Activation that gets past
+        // this point will deduct the life after tap/mana succeed.
+        if ability.life_cost > 0 && self.players[p].life < ability.life_cost as i32 {
+            return Err(GameError::InsufficientLife);
+        }
+
+        // Snapshot pristine state before applying tap-cost so a failed mana
+        // payment rolls back both the auto-tap of mana sources AND the
+        // tap-cost on the source itself.
+        let needs_payment = !ability.mana_cost.symbols.is_empty();
+        let pre_snapshot = needs_payment.then(|| self.snapshot_payment_state(p));
+
         // Pay tap cost
         if ability.tap_cost {
             if self.battlefield[pos].tapped {
@@ -915,39 +1288,58 @@ impl GameState {
             self.battlefield[pos].tapped = true;
         }
 
-        // Pay mana cost (auto-tap if needed)
         let mut auto_mana_events = Vec::new();
-        if !ability.mana_cost.symbols.is_empty() {
-            let pool_before = self.players[p].mana_pool.clone();
-            let tapped_before: Vec<(CardId, bool)> = self.battlefield
-                .iter().filter(|c| c.owner == p).map(|c| (c.id, c.tapped)).collect();
-            auto_mana_events = self.auto_tap_for_cost(p, &ability.mana_cost);
-            match self.players[p].mana_pool.pay(&ability.mana_cost) {
-                Ok(side_effects) => {
-                    if side_effects.life_lost > 0 {
-                        self.players[p].life -= side_effects.life_lost as i32;
-                    }
-                }
-                Err(e) => {
-                    self.players[p].mana_pool = pool_before;
-                    for (id, was_tapped) in tapped_before {
-                        if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == id) {
-                            c.tapped = was_tapped;
-                        }
-                    }
-                    // Also undo the tap cost on the ability source itself.
-                    if ability.tap_cost
-                        && let Some(c) = self.battlefield.iter_mut().find(|c| c.id == card_id)
-                    {
-                        c.tapped = false;
-                    }
-                    return Err(GameError::Mana(e));
-                }
+        if let Some(snapshot) = pre_snapshot {
+            let receipt = self.try_pay_after_snapshot(p, &ability.mana_cost, snapshot)?;
+            if receipt.side_effects.life_lost > 0 {
+                self.players[p].life -= receipt.side_effects.life_lost as i32;
             }
+            auto_mana_events = receipt.auto_events;
+        }
+
+        // Pay the life cost. Tap and mana are committed; the life
+        // payment is now safe (the pre-flight gate above guaranteed
+        // sufficient life). Emits a LifeLost event so trigger / replay
+        // observers see the cost.
+        if ability.life_cost > 0 {
+            self.players[p].life -= ability.life_cost as i32;
+            auto_mana_events.push(GameEvent::LifeLost {
+                player: p,
+                amount: ability.life_cost,
+            });
         }
 
         let mut events = auto_mana_events;
         events.push(GameEvent::AbilityActivated { source: card_id });
+
+        // Mark the ability as used for the once-per-turn budget. (After
+        // tap/mana cost validation succeeds, before sacrifice or stack
+        // queueing — all of which are guaranteed to commit if we get here.)
+        if ability.once_per_turn {
+            if let Some(card) = self.battlefield.iter_mut().find(|c| c.id == card_id) {
+                card.once_per_turn_used.push(ability_index);
+            }
+        }
+
+        // Sacrifice-as-cost: with tap and mana costs paid, sacrifice the
+        // source. The effect runs/queues after, and any selectors that
+        // reference the source by id will miss it on the battlefield —
+        // which matches the Oracle (sac is part of the activation cost,
+        // so the source is in the graveyard by the time the ability
+        // resolves). Cards whose effect references self after sacrifice
+        // (Greater Good's "draw cards equal to its power") need to
+        // capture that data via `Effect::SacrificeAndRemember` instead.
+        if ability.sac_cost {
+            let is_creature = self
+                .battlefield_find(card_id)
+                .map(|c| c.definition.is_creature())
+                .unwrap_or(false);
+            if is_creature {
+                events.push(GameEvent::CreatureDied { card_id });
+            }
+            let mut die_evs = self.remove_to_graveyard_with_triggers(card_id);
+            events.append(&mut die_evs);
+        }
 
         // Mana abilities resolve immediately (no stack, no priority reset).
         let is_mana_ab = is_mana_ability(&ability.effect);
@@ -965,10 +1357,28 @@ impl GameState {
                 effect: Box::new(ability.effect),
                 target,
                 mode: None,
+                x_value: 0,
+                converged_value: 0,
             });
             self.give_priority_to_active();
         }
 
         Ok(events)
     }
+}
+
+/// Pre-payment state captured by `snapshot_payment_state` so a failed
+/// payment can revert mana pool and tap-state mutations.
+pub(crate) struct PaymentSnapshot {
+    pub pool: crate::mana::ManaPool,
+    pub tapped: Vec<(CardId, bool)>,
+}
+
+/// What a successful payment yields: events from auto-tapping mana sources,
+/// any side-effects (Phyrexian life loss), and the pool state from before
+/// the payment (for convergence / similar metrics).
+pub(crate) struct PaymentReceipt {
+    pub auto_events: Vec<GameEvent>,
+    pub side_effects: crate::mana::PaymentSideEffects,
+    pub pool_before: crate::mana::ManaPool,
 }

@@ -41,7 +41,7 @@ pub fn build_demo_state() -> GameState {
 }
 
 /// 60-card BRG combo deck (Cosmogoyf + Thud + Pact). Player 0's deck.
-fn brg_combo_deck() -> &'static [CardFactory] {
+pub fn brg_combo_deck() -> &'static [CardFactory] {
     &[
         // Lands (25)
         blackcleave_cliffs, blackcleave_cliffs, blackcleave_cliffs, blackcleave_cliffs,
@@ -68,7 +68,7 @@ fn brg_combo_deck() -> &'static [CardFactory] {
 }
 
 /// 60-card Goryo's Vengeance reanimator deck. Player 1's deck.
-fn goryos_vengeance_deck() -> &'static [CardFactory] {
+pub fn goryos_vengeance_deck() -> &'static [CardFactory] {
     &[
         // Lands (24)
         cephalid_coliseum,

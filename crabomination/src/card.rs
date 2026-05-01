@@ -3,8 +3,8 @@ use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 
 pub use crate::effect::{
-    ActivatedAbility, Effect, EventKind, EventScope, EventSpec, LoyaltyAbility, Predicate,
-    Selector, StaticAbility, StaticEffect, TriggeredAbility, Value,
+    ActivatedAbility, Effect, EventKind, EventScope, EventSpec, LoyaltyAbility, OpeningHandEffect,
+    Predicate, Selector, StaticAbility, StaticEffect, TriggeredAbility, Value,
 };
 use crate::mana::{Color, ManaCost};
 
@@ -27,7 +27,7 @@ pub enum CardType {
 }
 
 /// Supertypes that modify a card's identity and rules interactions.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Supertype {
     Basic,
     Legendary,
@@ -36,7 +36,7 @@ pub enum Supertype {
 }
 
 /// Creature subtypes (race/class).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum CreatureType {
     Human, Elf, Goblin, Merfolk, Zombie, Vampire, Angel, Demon, Dragon,
     Knight, Soldier, Wizard, Cleric, Rogue, Warrior, Beast, Bird,
@@ -47,48 +47,65 @@ pub enum CreatureType {
     Hydra, Sphinx, Phoenix, Minotaur, Centaur, Cyclops, Satyr, Nymph,
     Kithkin, Viashino, Eldrazi, Sliver, Shapeshifter, Troll,
     Imp, Nightmare, Shade, Minion, Thrull, Carrier,
-    Drake, Griffin, Pegasus, Unicorn, Horse, Hound, Wolf, Fox,
+    Drake, Griffin, Pegasus, Unicorn, Horse, Hound, Wolf, Fox, Dog,
     Serpent, Fish, Octopus, Squid, Jellyfish, Crab, Turtle, Frog, Crocodile,
     Dinosaur, Lizard, Snake, Scorpion, Bat, Squirrel, Ox, Boar, Goat,
-    Elephant, Rhino, Hippo, Mammoth, Whale, Leviathan, Kraken,
+    Elephant, Rhino, Hippo, Mammoth, Whale, Leviathan, Kraken, Elk,
     Lion, Kavu, Lhurgoyf, Atog, Noggle, Vedalken, Kor, Ally,
     Avatar, Phyrexian, Praetor, Incarnation, Mercenary,
+    Construct, Golem,
+    Ooze, Plant,
+    // Strixhaven-era subtypes.
+    Inkling, Pest, Fractal,
+    Orc, Warlock, Bard, Sorcerer, Pilot,
+    // Misc. subtypes used by SOS body-only cards.
+    Dwarf, Badger, Salamander, Giraffe,
+    // SOS Witherbloom Dryad subtype (Essenceknit Scholar).
+    Dryad,
+    // Strixhaven Elder Dragon legendary creatures (Lorehold, Prismari,
+    // Quandrix, Silverquill, Witherbloom, the Balancer).
+    Elder,
+    // Lorehold Sloth subtype (Pestbrood Sloth, Startled Relic Sloth).
+    Sloth,
 }
 
 /// Land subtypes (basic land types + others).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum LandType {
     Plains, Island, Swamp, Mountain, Forest,
     Desert, Gate, Locus, Mine, Tower, PowerPlant, Urza,
 }
 
 /// Artifact subtypes.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum ArtifactSubtype {
     Equipment, Vehicle, Food, Treasure, Clue, Blood, Fortification, Contraption,
 }
 
 /// Enchantment subtypes.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum EnchantmentSubtype {
     Aura, Saga, Shrine, Cartouche, Curse, Room, Class, Case, Background, Role,
 }
 
 /// Spell subtypes (for instants/sorceries).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum SpellSubtype {
     Adventure, Lesson, Trap, Arcane,
 }
 
 /// Planeswalker subtypes.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum PlaneswalkerSubtype {
     Chandra, Jace, Liliana, Ajani, Garruk, Elspeth, Gideon, Nissa, Sorin,
     Teferi, Karn, Ugin, Bolas, Ashiok, Nahiri, Vraska, Domri, Ral, Vivien,
+    Tezzeret,
+    // SOS Witherbloom Dellian planeswalker subtype (Professor Dellian Fel).
+    Dellian,
 }
 
 /// All subtype categories collected into one struct for CardDefinition.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Subtypes {
     pub creature_types: Vec<CreatureType>,
     pub land_types: Vec<LandType>,
@@ -117,10 +134,20 @@ pub enum CounterType {
     Verse,
     Shield,
     Wish,
+    /// Page counter — Strixhaven Book artifacts (Diary of Dreams). Builds
+    /// up on instant/sorcery cast and discounts the host's activated
+    /// ability one for one. The counter-scaled cost reduction itself is
+    /// not yet wired (see TODO.md), but counters tick up correctly.
+    Page,
+    /// Growth counter — used on enchantments that count tutoring or
+    /// life-gain progress (Comforting Counsel, "as long as N or more
+    /// growth counters …"). Distinct from `Charge` so the static-toggle
+    /// variants don't collide.
+    Growth,
 }
 
 /// Every zone a card can occupy.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Zone {
     Library,
     Hand,
@@ -185,6 +212,12 @@ pub enum Keyword {
     Changeling,
     Storm,
     Inspired,
+    /// "This creature can't block." A static restriction on the creature
+    /// that holds the keyword (Postmortem Professor, Goblin Goon, etc.)
+    /// or a transient grant from a pump spell (Duel Tactics, Volley
+    /// Veteran). Enforced inside `declare_blockers` — any blocker
+    /// declaration involving a creature with this keyword is rejected.
+    CantBlock,
     /// "When you cast this spell from your hand, exile it as it resolves.
     /// At the beginning of your next upkeep, you may cast this card from
     /// exile without paying its mana cost." Wired in
@@ -196,7 +229,7 @@ pub enum Keyword {
 }
 
 /// Composable filter for valid targets of a spell or ability.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum SelectionRequirement {
     Any,
     Player,
@@ -233,6 +266,25 @@ pub enum SelectionRequirement {
     ManaValueAtMost(u32),
     ManaValueAtLeast(u32),
     HasCardType(CardType),
+    /// True when the card's printed mana cost contains at least one
+    /// `{X}` symbol. Used by SOS Paradox Surveyor's reveal filter
+    /// ("you may reveal a land card *or a card with {X} in its mana
+    /// cost*"). Library / hand / graveyard searches consult this on
+    /// the candidate cards' definitions; for `evaluate_requirement_*`
+    /// targeting, the on-battlefield permanent's printed cost is read
+    /// the same way.
+    HasXInCost,
+    /// True when the card's mana cost contains two or more *distinct*
+    /// colored pips. Hybrid pips (`{W/B}`) count both halves; Phyrexian
+    /// pips count their colored half only. Used by Mage Tower Referee
+    /// ("Whenever you cast a multicolored spell, …") and similar
+    /// "multicolored spell"/permanent payoffs.
+    Multicolored,
+    /// True when the card's mana cost contains *no* colored pips
+    /// (generic + colorless + Snow only). Used by colorless-spell
+    /// payoffs and the "colorless permanent" variant of various
+    /// Eldrazi/devoid hooks.
+    Colorless,
     And(Box<SelectionRequirement>, Box<SelectionRequirement>),
     Or(Box<SelectionRequirement>, Box<SelectionRequirement>),
     Not(Box<SelectionRequirement>),
@@ -253,9 +305,14 @@ impl SelectionRequirement {
 // ── Token definition ──────────────────────────────────────────────────────────
 
 /// Describes a token to be created on the battlefield.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct TokenDefinition {
-    pub name: &'static str,
+    /// Token name. Stored as `String` (rather than `&'static str` like
+    /// `CardDefinition.name`) so `Effect::CreateToken { definition: ... }`
+    /// can round-trip through serde without a static-lifetime borrow
+    /// constraint. The catalog still constructs token names from string
+    /// literals; they're cloned into a `String` once at construction time.
+    pub name: String,
     pub power: i32,
     pub toughness: i32,
     pub keywords: Vec<Keyword>,
@@ -263,26 +320,36 @@ pub struct TokenDefinition {
     pub colors: Vec<Color>,
     pub supertypes: Vec<Supertype>,
     pub subtypes: Subtypes,
+    /// Activated abilities the token enters with. Used for Treasures
+    /// (`{T}, Sac: Add one mana of any color`), Food (`{2}, {T}, Sac:
+    /// Gain 3 life`), Clues (`{2}, Sac: Draw a card`), etc. Copied into
+    /// the resulting `CardDefinition` by `token_to_card_definition`.
+    pub activated_abilities: Vec<ActivatedAbility>,
+    /// Triggered abilities the token enters with. Used for SOS Pest
+    /// tokens (`Whenever this token attacks, you gain 1 life`),
+    /// Strixhaven Spirit tokens (combat triggers), Inkling tokens, and
+    /// any future "the token has X" rider on a `CreateToken` effect.
+    /// Copied into the resulting `CardDefinition` by
+    /// `token_to_card_definition`.
+    #[serde(default)]
+    pub triggered_abilities: Vec<TriggeredAbility>,
 }
-
-// TokenDefinition's Subtypes needs PartialEq/Eq — derive it too.
-impl PartialEq for Subtypes {
-    fn eq(&self, other: &Self) -> bool {
-        self.creature_types == other.creature_types
-            && self.land_types == other.land_types
-            && self.artifact_subtypes == other.artifact_subtypes
-            && self.enchantment_subtypes == other.enchantment_subtypes
-            && self.spell_subtypes == other.spell_subtypes
-            && self.planeswalker_subtypes == other.planeswalker_subtypes
-    }
-}
-impl Eq for Subtypes {}
 
 // ── Card definition ───────────────────────────────────────────────────────────
 
 /// Static blueprint for a card; cloned into `CardInstance` at game-time.
-#[derive(Debug, Clone)]
+///
+/// `Default` is derived so card constructors can use
+/// `..Default::default()` to skip boilerplate fields. Default values:
+/// `name = ""`, `cost = ManaCost::default()` (free), all `Vec`s empty,
+/// `effect = Effect::Noop`, and all `Option`s = `None`. Numeric fields
+/// (`power`, `toughness`, `base_loyalty`) default to 0. New cards
+/// usually only need to set `name`, `cost`, `card_types`, P/T (for
+/// creatures), and the relevant ability/effect fields.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(bound = "")]
 pub struct CardDefinition {
+    #[serde(with = "crate::static_str_serde")]
     pub name: &'static str,
     pub cost: ManaCost,
     pub supertypes: Vec<Supertype>,
@@ -310,13 +377,19 @@ pub struct CardDefinition {
     /// downstream abilities, types, and costs are the back face's. Only the
     /// front face stores `back_face` — the back's `back_face` is `None`.
     pub back_face: Option<Box<CardDefinition>>,
+    /// Opening-hand effect ("If this card is in your opening hand…"): start
+    /// in play (Leyline of Sanctity, Gemstone Caverns), reveal for a delayed
+    /// effect (Chancellor of the Tangle, Chancellor of the Annex), or mark
+    /// as a mulligan helper (Serum Powder). Resolved post-mulligan by
+    /// `GameState::apply_opening_hand_effects`.
+    pub opening_hand: Option<OpeningHandEffect>,
 }
 
 /// An alternative (pitch) cost. Replaces the normal mana cost when the
 /// player chooses to cast via this path. Models pitch (Force of Will,
 /// Force of Negation) and evoke (Solitude) — the latter additionally
 /// sacrifices the resulting permanent on ETB via `evoke_sacrifice`.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AlternativeCost {
     /// Mana paid for the alternative cast (often empty / `{0}` for pitch
     /// spells, but non-empty for evoke or kicker-style alternatives).
@@ -407,6 +480,14 @@ impl CardDefinition {
 // ── Runtime card instance ─────────────────────────────────────────────────────
 
 /// A card in play.  Tracks mutable game state layered on top of the static definition.
+///
+/// `Serialize`/`Deserialize` are implemented manually below — `definition`
+/// is round-tripped by *card name* (via `catalog::lookup_by_name`) rather
+/// than by serializing the full `CardDefinition` tree, which would force
+/// the parent's `Deserialize<'de>` impl to bound `'de: 'static` because
+/// of the `&'static str` name field. Manual impls let `CardInstance` be
+/// `Deserialize<'de>` for any `'de`, which is a hard requirement for
+/// containers like `Box<CardInstance>` inside `StackItem`.
 #[derive(Debug, Clone)]
 pub struct CardInstance {
     pub id: CardId,
@@ -432,6 +513,18 @@ pub struct CardInstance {
     /// distinguish hand-casts (rebound triggers) from re-casts from exile
     /// (rebound does **not** chain).
     pub cast_from_hand: bool,
+    /// "As [this] enters, choose a creature type." Cavern of Souls. The
+    /// chosen type narrows which creature spells the controller can cast as
+    /// uncounterable through this permanent. `None` until the ETB choice
+    /// resolves — `caster_grants_uncounterable` treats `None` as
+    /// "unrestricted" (legacy behaviour, used by tests that hand-craft a
+    /// Cavern via `add_card_to_battlefield` without firing its ETB).
+    pub chosen_creature_type: Option<CreatureType>,
+    /// Indices of activated abilities flagged `once_per_turn` that have
+    /// already been used this turn. Cleared at the start of each turn by
+    /// `clean_per_turn_state`. Empty for the common case (most abilities
+    /// don't have the flag set).
+    pub once_per_turn_used: Vec<usize>,
 }
 
 impl CardInstance {
@@ -461,6 +554,8 @@ impl CardInstance {
             used_loyalty_ability_this_turn: false,
             evoked: false,
             cast_from_hand: false,
+            chosen_creature_type: None,
+            once_per_turn_used: Vec::new(),
         }
     }
 
@@ -526,6 +621,95 @@ impl CardInstance {
         self.power_bonus = 0;
         self.toughness_bonus = 0;
         self.used_loyalty_ability_this_turn = false;
+        self.once_per_turn_used.clear();
+    }
+}
+
+// ── CardInstance serde: round-trip the definition by name ────────────────────
+//
+// Manual impls so `CardInstance: Deserialize<'de>` for *any* `'de` —
+// derived `Deserialize` would inherit `'de: 'static` from the
+// `CardDefinition`'s `&'static str name`. We side-step by serializing
+// the card's name and re-resolving through `catalog::lookup_by_name`
+// at deserialize time. Tokens whose definitions aren't in the standard
+// catalog (Clue/Treasure/Food/Blood are; ad-hoc tokens are not) will
+// fail to round-trip with `unknown card name: ...`.
+
+#[derive(Serialize, Deserialize)]
+struct CardInstanceWire {
+    id: CardId,
+    name: String,
+    owner: usize,
+    controller: usize,
+    tapped: bool,
+    damage: u32,
+    summoning_sick: bool,
+    power_bonus: i32,
+    toughness_bonus: i32,
+    counters: Vec<(CounterType, u32)>,
+    attached_to: Option<CardId>,
+    kicked: bool,
+    face_down: bool,
+    is_token: bool,
+    used_loyalty_ability_this_turn: bool,
+    evoked: bool,
+    cast_from_hand: bool,
+    chosen_creature_type: Option<CreatureType>,
+    #[serde(default)]
+    once_per_turn_used: Vec<usize>,
+}
+
+impl serde::Serialize for CardInstance {
+    fn serialize<S: serde::Serializer>(&self, ser: S) -> Result<S::Ok, S::Error> {
+        let wire = CardInstanceWire {
+            id: self.id,
+            name: self.definition.name.to_string(),
+            owner: self.owner,
+            controller: self.controller,
+            tapped: self.tapped,
+            damage: self.damage,
+            summoning_sick: self.summoning_sick,
+            power_bonus: self.power_bonus,
+            toughness_bonus: self.toughness_bonus,
+            counters: self.counters.iter().map(|(k, v)| (*k, *v)).collect(),
+            attached_to: self.attached_to,
+            kicked: self.kicked,
+            face_down: self.face_down,
+            is_token: self.is_token,
+            used_loyalty_ability_this_turn: self.used_loyalty_ability_this_turn,
+            evoked: self.evoked,
+            cast_from_hand: self.cast_from_hand,
+            chosen_creature_type: self.chosen_creature_type,
+            once_per_turn_used: self.once_per_turn_used.clone(),
+        };
+        wire.serialize(ser)
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for CardInstance {
+    fn deserialize<D: serde::Deserializer<'de>>(de: D) -> Result<Self, D::Error> {
+        let wire = CardInstanceWire::deserialize(de)?;
+        let def = crate::catalog::lookup_by_name(&wire.name).ok_or_else(|| {
+            serde::de::Error::custom(format!("unknown card name: {:?}", wire.name))
+        })?;
+        let mut c = CardInstance::new(wire.id, def, wire.owner);
+        c.controller = wire.controller;
+        c.tapped = wire.tapped;
+        c.damage = wire.damage;
+        c.summoning_sick = wire.summoning_sick;
+        c.power_bonus = wire.power_bonus;
+        c.toughness_bonus = wire.toughness_bonus;
+        c.counters = wire.counters.into_iter().collect();
+        c.attached_to = wire.attached_to;
+        c.kicked = wire.kicked;
+        c.face_down = wire.face_down;
+        c.is_token = wire.is_token;
+        c.used_loyalty_ability_this_turn = wire.used_loyalty_ability_this_turn;
+        c.evoked = wire.evoked;
+        c.cast_from_hand = wire.cast_from_hand;
+        c.chosen_creature_type = wire.chosen_creature_type;
+        c.once_per_turn_used = wire.once_per_turn_used;
+        Ok(c)
     }
 }
 

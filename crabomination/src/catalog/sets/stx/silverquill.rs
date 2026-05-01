@@ -1,0 +1,429 @@
+//! Silverquill (W/B) college cards from Strixhaven.
+//!
+//! Common shapes:
+//! - **Magecraft** triggers (Eager First-Year): "whenever you cast or copy
+//!   an instant or sorcery spell, …". Implemented via the spell-cast trigger
+//!   path with an `EventSpec.filter` predicate that gates on the just-cast
+//!   spell's card type. See `fire_spell_cast_triggers` in
+//!   `crabomination::game::actions`.
+//! - **Learn** (Eyetwitch death trigger, Hunt for Specimens rider). The full
+//!   Oracle searches a Lessons sideboard or discards-then-draws. We don't
+//!   model a sideboard, so Learn is collapsed to `Draw 1` here. See
+//!   `STRIXHAVEN2.md` for the engine TODO.
+//!
+//! Many cards also have static abilities or token-creation clauses that need
+//! engine features the engine doesn't have yet (cost-reduction-aware-of-
+//! target, token-with-self-die-trigger). Each affected card is marked 🟡 in
+//! the tracker; the body / keywords / P/T are still correct so the card is
+//! playable as a 4/3 lifelink flier or whatever.
+
+use super::no_abilities;
+use crate::card::{
+    CardDefinition, CardType, CreatureType, Effect, EventKind, EventScope, EventSpec, Keyword,
+    Selector, SelectionRequirement, Subtypes, Supertype, TriggeredAbility, Value,
+};
+use crate::effect::shortcut::{magecraft, target_filtered};
+use crate::effect::Duration;
+use crate::mana::{cost, generic, w, b, x};
+
+// ── Spirited Companion ──────────────────────────────────────────────────────
+
+/// Spirited Companion — {1}{W}, 1/2 Dog Spirit. ETB: draw a card.
+///
+/// Reprinted across many sets; in Strixhaven it's an uncommon. Functionally
+/// identical to Elvish Visionary in white. The ETB draw goes through the
+/// existing `EntersBattlefield` + `SelfSource` trigger path.
+pub fn spirited_companion() -> CardDefinition {
+    CardDefinition {
+        name: "Spirited Companion",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dog, CreatureType::Spirit],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Eyetwitch ───────────────────────────────────────────────────────────────
+
+/// Eyetwitch — {B}, 1/1 Pest. "When Eyetwitch dies, learn." Set: Strixhaven.
+///
+/// Learn is approximated as `Draw 1`; see `STRIXHAVEN2.md` for the planned
+/// Lesson sideboard model.
+pub fn eyetwitch() -> CardDefinition {
+    CardDefinition {
+        name: "Eyetwitch",
+        cost: cost(&[b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Pest],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+            // "Learn" approximation: draw a card. The Oracle text alternates
+            // between "search Lessons sideboard" and "discard a card, then
+            // draw a card". Since there is no Lessons sideboard model yet,
+            // the cleanest single-effect substitute is a plain draw.
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Closing Statement ───────────────────────────────────────────────────────
+
+/// Closing Statement — {X}{W}{W} Sorcery. "Exile target nonland permanent.
+/// You gain X life."
+///
+/// X is read off the spell's cast-time `x_value`, threaded into the
+/// resolution context as `Value::XFromCost`. The exile half is unconditional
+/// (X doesn't gate the exile in the printed Oracle either — it just sets
+/// the lifegain).
+pub fn closing_statement() -> CardDefinition {
+    CardDefinition {
+        name: "Closing Statement",
+        cost: cost(&[x(), w(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Exile {
+                what: target_filtered(
+                    SelectionRequirement::Permanent.and(SelectionRequirement::Nonland),
+                ),
+            },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::XFromCost,
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Vanishing Verse ─────────────────────────────────────────────────────────
+
+/// Vanishing Verse — {W}{B} Instant. "Exile target nonland, monocolored
+/// permanent."
+///
+/// 🟡 The Oracle restricts targets to monocolored permanents. The engine
+/// has `HasColor(Color)` but no "exactly-one-color" predicate; we approximate
+/// to "any nonland permanent" and rely on the deck-design context (typical
+/// targets are creatures, which are usually monocolored) for fidelity.
+pub fn vanishing_verse() -> CardDefinition {
+    CardDefinition {
+        name: "Vanishing Verse",
+        cost: cost(&[w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Exile {
+            what: target_filtered(
+                SelectionRequirement::Permanent.and(SelectionRequirement::Nonland),
+            ),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Killian, Ink Duelist ────────────────────────────────────────────────────
+
+/// Killian, Ink Duelist — {W}{B}, 2/3 Legendary Human Warlock with Lifelink.
+///
+/// 🟡 The static "spells you cast that target a creature cost {2} less" is
+/// not yet implemented. It needs a target-aware variant of
+/// `StaticEffect::CostReduction`; today's CostReduction filters on the cast
+/// spell only, not on its targets. Tracked in `STRIXHAVEN2.md` and `TODO.md`.
+pub fn killian_ink_duelist() -> CardDefinition {
+    CardDefinition {
+        name: "Killian, Ink Duelist",
+        cost: cost(&[w(), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Lifelink],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Devastating Mastery ─────────────────────────────────────────────────────
+
+/// Devastating Mastery — {4}{W}{W} Sorcery. "Destroy all nonland permanents."
+///
+/// 🟡 The alt cost {7}{W}{W} adds "...if this spell was cast for its
+/// alternative cost, return up to two target nonland permanents from a
+/// graveyard to the battlefield under their owners' control." Wiring the
+/// alt cost requires a "alt-cost-implies-mode" primitive (see TODO.md);
+/// for now we ship the destroy half only.
+pub fn devastating_mastery() -> CardDefinition {
+    CardDefinition {
+        name: "Devastating Mastery",
+        cost: cost(&[generic(4), w(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::ForEach {
+            selector: Selector::EachPermanent(SelectionRequirement::Nonland),
+            body: Box::new(Effect::Destroy {
+                what: Selector::TriggerSource,
+            }),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Felisa, Fang of Silverquill ─────────────────────────────────────────────
+
+/// Felisa, Fang of Silverquill — {2}{W}{B}, 4/3 Legendary Cat Cleric, Flying
+/// + Lifelink.
+///
+/// Now wired (push XVI): the printed "Whenever a creature you control
+/// with a +1/+1 counter on it dies, create a 1/1 white and black
+/// Inkling creature token with flying" trigger uses
+/// `EventKind::CreatureDied / AnotherOfYours` filtered by
+/// `Predicate::EntityMatches { what: TriggerSource, filter:
+/// WithCounter(+1/+1) }`. Counters persist on a card after move-to-
+/// graveyard (only `damage` / `tapped` / `attached_to` get cleared on
+/// zone-out per `move_card_to`), so the post-die graveyard-resident
+/// CardInstance still carries its `+1/+1` counters and `evaluate_
+/// requirement_static`'s `WithCounter` arm sees them. The minted token
+/// shares the SOS catalog's `inkling_token()` definition (1/1 W/B
+/// Inkling with flying) for visual + tribal consistency.
+pub fn felisa_fang_of_silverquill() -> CardDefinition {
+    use crate::card::{CounterType, Predicate};
+    use crate::catalog::sets::sos::inkling_token;
+    use crate::effect::PlayerRef;
+    CardDefinition {
+        name: "Felisa, Fang of Silverquill",
+        cost: cost(&[generic(2), w(), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Cat, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 3,
+        keywords: vec![Keyword::Flying, Keyword::Lifelink],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::WithCounter(CounterType::PlusOnePlusOne),
+                }),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: inkling_token(),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Mavinda, Students' Advocate ─────────────────────────────────────────────
+
+/// Mavinda, Students' Advocate — {1}{W}{W}, 1/3 Legendary Human Cleric,
+/// Flying + Vigilance.
+///
+/// 🟡 The "{3}{W}{W}: Cast target instant/sorcery from your graveyard if it
+/// targets a creature; exile it as it would leave the stack" activated
+/// ability is not wired. Cast-from-graveyard requires a graveyard-cast
+/// primitive (similar to Flashback but more constrained). Body/lifelink/
+/// flying are correct so combat behavior matches the printed card.
+pub fn mavinda_students_advocate() -> CardDefinition {
+    CardDefinition {
+        name: "Mavinda, Students' Advocate",
+        cost: cost(&[generic(1), w(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![Keyword::Flying, Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Eager First-Year ────────────────────────────────────────────────────────
+
+/// Eager First-Year — {W}, 2/1 Human Student. "Magecraft — Whenever you
+/// cast or copy an instant or sorcery spell, target creature gets +1/+1
+/// until end of turn."
+///
+/// The magecraft trigger uses the new `EventSpec.filter` evaluation at the
+/// spell-cast site: `Predicate::EntityMatches { what: TriggerSource, filter:
+/// HasCardType(Instant) ∨ HasCardType(Sorcery) }`. The filter is evaluated
+/// against the just-cast spell — `Selector::TriggerSource` is bound to its
+/// `CardId` for the duration of filter evaluation, then the trigger's own
+/// body runs with the auto-targeted creature.
+pub fn eager_first_year() -> CardDefinition {
+    CardDefinition {
+        name: "Eager First-Year",
+        cost: cost(&[w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::PumpPT {
+            what: target_filtered(SelectionRequirement::Creature),
+            power: Value::Const(1),
+            toughness: Value::Const(1),
+            duration: Duration::EndOfTurn,
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Hunt for Specimens ──────────────────────────────────────────────────────
+
+/// Hunt for Specimens — {3}{B} Sorcery. "Create a 1/1 black Pest creature
+/// token with 'When this creature dies, you gain 1 life.' Then learn."
+///
+/// The spawned Pest token now carries the printed "When this creature
+/// dies, you gain 1 life" trigger via the new `TokenDefinition.
+/// triggered_abilities` field — chip-damage Pest tokens trickle 1 life
+/// each on death, restoring the printed Witherbloom payoff loop. Body
+/// resolves as `CreateToken(1/1 black Pest with death trigger) + Draw 1`
+/// (Learn → Draw, see Eyetwitch).
+pub fn hunt_for_specimens() -> CardDefinition {
+    use crate::effect::PlayerRef as PR;
+    let pest = super::shared::stx_pest_token();
+    CardDefinition {
+        name: "Hunt for Specimens",
+        cost: cost(&[generic(3), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PR::You,
+                count: Value::Const(1),
+                definition: pest,
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}

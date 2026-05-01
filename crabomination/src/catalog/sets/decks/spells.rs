@@ -46,6 +46,7 @@ pub fn pact_of_negation() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand: None,
     }
 }
 
@@ -54,11 +55,15 @@ pub fn pact_of_negation() -> CardDefinition {
 ///   • Pay any amount of life. Look at that many cards from the top of your
 ///     library, then put one into your hand and the rest on the bottom.
 ///
-/// Engine model: `ChooseMode` between two simplified branches:
-/// mode 0 — sacrifice one creature you control + gain 3 life;
-/// mode 1 — Effect::Noop (the look-at-X / library manipulation requires a
-/// custom decision UI we don't have yet).
-/// AutoDecider picks mode 0, which matches the typical play (sac for life).
+/// Engine model: `ChooseMode` between two simplified branches.
+/// * **Mode 0** — sacrifice one creature you control + gain 3 life.
+/// * **Mode 1** — pay 4 life + Search-your-library-into-hand. The full
+///   Oracle is "pay X life, look at the top X, take one, bottom the rest";
+///   we collapse that to "pay 4 (a typical X), tutor any card directly"
+///   reusing the same Search primitive Spoils of the Vault rides on. The
+///   tutored card is chosen via the standard `SearchLibrary` decision.
+///
+/// AutoDecider picks mode 0 (sac for life), which matches the typical play.
 pub fn plunge_into_darkness() -> CardDefinition {
     CardDefinition {
         name: "Plunge into Darkness",
@@ -83,8 +88,20 @@ pub fn plunge_into_darkness() -> CardDefinition {
                     amount: Value::Const(3),
                 },
             ]),
-            // Mode 1: pay-X-life, look-at-X, pick one — unimplemented.
-            Effect::Noop,
+            // Mode 1: pay 4 life, then tutor any card from your library.
+            // Approximation of "pay X life, look at top X, take one,
+            // bottom the rest": picks 4 as a representative X.
+            Effect::Seq(vec![
+                Effect::LoseLife {
+                    who: Selector::You,
+                    amount: Value::Const(4),
+                },
+                Effect::Search {
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::Any,
+                    to: ZoneDest::Hand(PlayerRef::You),
+                },
+            ]),
         ]),
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
@@ -93,16 +110,23 @@ pub fn plunge_into_darkness() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand: None,
     }
 }
 
 /// Serum Powder — {3} Artifact. {T}: Add {1}. "Any time you could mulligan
 /// and Serum Powder is in your hand, you may exile all the cards from your
-/// hand, then draw that many cards." Stub: vanilla 3-cost mana rock for {1}.
-/// TODO: opening-hand exile-and-redraw mulligan helper.
+/// hand, then draw that many cards."
+///
+/// Wired: `opening_hand: Some(MulliganHelper)` flags this card as a
+/// mulligan-time helper. During the mulligan window, the UI/decider can
+/// answer with `DecisionAnswer::SerumPowder(card_id)` to exile the entire
+/// hand and draw a fresh seven without bumping the London-mulligan ladder
+/// (so multiple powders can stack safely). Outside of mulligans the card
+/// is a vanilla {3} mana rock for {1}.
 pub fn serum_powder() -> CardDefinition {
     use crate::card::ActivatedAbility;
-    use crate::effect::ManaPayload;
+    use crate::effect::{ManaPayload, OpeningHandEffect};
     use crate::mana::ManaCost;
     CardDefinition {
         name: "Serum Powder",
@@ -123,6 +147,9 @@ pub fn serum_powder() -> CardDefinition {
             },
             once_per_turn: false,
             sorcery_speed: false,
+            sac_cost: false,
+            condition: None,
+            life_cost: 0,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -130,6 +157,7 @@ pub fn serum_powder() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand: Some(OpeningHandEffect::MulliganHelper),
     }
 }
 
@@ -137,11 +165,14 @@ pub fn serum_powder() -> CardDefinition {
 /// of your library until you reveal the named card or 10 different cards.
 /// Put the named card into your hand. You lose 1 life for each card revealed.
 ///
-/// Approximation: `Search(Any → Hand) + LoseLife(3)`. Skips the name-then-
-/// reveal-until-find machinery (the engine has no naming primitive) — the
-/// caster picks any library card directly. The 3-life cost is the rough
-/// average reveal count for a non-singleton tutor target in a 60-card deck.
-/// TODO: real reveal-until-find with a chosen name + variable life cost.
+/// Wired to `Effect::RevealUntilFind` with `find: Any` (no name primitive
+/// yet — the first card off the top wins), `cap: 10`, and `life_per_revealed:
+/// 1`. The engine mills every miss into the graveyard and deducts 1 life
+/// per card revealed (matching the Oracle's variable life cost). With
+/// `find: Any` only one card is ever revealed in practice, so the life
+/// cost approximates 1 life — much cheaper than a "named tutor". A future
+/// naming primitive can swap `Any` for `HasName(...)` to restore the full
+/// reveal-until-named-card semantics.
 pub fn spoils_of_the_vault() -> CardDefinition {
     CardDefinition {
         name: "Spoils of the Vault",
@@ -152,14 +183,13 @@ pub fn spoils_of_the_vault() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![],
-        effect: Effect::Seq(vec![
-            Effect::Search {
-                who: PlayerRef::You,
-                filter: SelectionRequirement::Any,
-                to: ZoneDest::Hand(PlayerRef::You),
-            },
-            Effect::LoseLife { who: Selector::You, amount: Value::Const(3) },
-        ]),
+        effect: Effect::RevealUntilFind {
+            who: PlayerRef::You,
+            find: SelectionRequirement::Any,
+            to: ZoneDest::Hand(PlayerRef::You),
+            cap: Value::Const(10),
+            life_per_revealed: 1,
+        },
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -167,6 +197,7 @@ pub fn spoils_of_the_vault() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand: None,
     }
 }
 
@@ -206,6 +237,7 @@ pub fn summoners_pact() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand: None,
     }
 }
 
@@ -246,6 +278,7 @@ pub fn thud() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand: None,
     }
 }
 
@@ -279,14 +312,23 @@ pub fn inquisition_of_kozilek() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand: None,
     }
 }
 
 /// Leyline of Sanctity — {2}{W}{W} Enchantment. "If Leyline of Sanctity is in
 /// your opening hand, you may begin the game with it on the battlefield. You
-/// have hexproof." Stub: vanilla 4-cost enchantment with no game effect.
-/// TODO: opening-hand-into-play + you-have-hexproof static.
+/// have hexproof."
+///
+/// Wired with two pieces:
+///   * `opening_hand: Some(StartInPlay)` — `apply_opening_hand_effects` moves
+///     the card from hand to its owner's battlefield post-mulligan.
+///   * `StaticAbility(ControllerHasHexproof)` — `check_target_legality`
+///     refuses any opponent-controlled targeting that resolves to the
+///     leyline's controller as a `Target::Player(_)`.
 pub fn leyline_of_sanctity() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::{OpeningHandEffect, StaticEffect};
     CardDefinition {
         name: "Leyline of Sanctity",
         cost: cost(&[generic(2), w(), w()]),
@@ -299,11 +341,18 @@ pub fn leyline_of_sanctity() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
+        static_abilities: vec![StaticAbility {
+            description: "You have hexproof.",
+            effect: StaticEffect::ControllerHasHexproof,
+        }],
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand: Some(OpeningHandEffect::StartInPlay {
+            tapped: false,
+            extra: Effect::Noop,
+        }),
     }
 }
 
@@ -356,6 +405,7 @@ pub fn ephemerate() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand: None,
     }
 }
 
@@ -381,7 +431,7 @@ pub fn faithful_mending() -> CardDefinition {
         name: "Faithful Mending",
         cost: cost(&[generic(1), w()]),
         supertypes: vec![],
-        card_types: vec![CardType::Sorcery],
+        card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
         toughness: 0,
@@ -410,6 +460,7 @@ pub fn faithful_mending() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand: None,
     }
 }
 
@@ -444,6 +495,7 @@ pub fn force_of_negation() -> CardDefinition {
             target_filter: None,
         }),
         back_face: None,
+        opening_hand: None,
     }
 }
 
@@ -498,6 +550,7 @@ pub fn goryos_vengeance() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand: None,
     }
 }
 
@@ -510,7 +563,6 @@ pub fn goryos_vengeance() -> CardDefinition {
 /// gates the exile. Caster pays {W} for converge=1; convoke + non-white
 /// generic payments raise converge.
 pub fn prismatic_ending() -> CardDefinition {
-    use crate::card::Keyword;
     CardDefinition {
         name: "Prismatic Ending",
         cost: cost(&[w()]),
@@ -519,7 +571,7 @@ pub fn prismatic_ending() -> CardDefinition {
         subtypes: Subtypes::default(),
         power: 0,
         toughness: 0,
-        keywords: vec![Keyword::Convoke],
+        keywords: vec![],
         effect: Effect::If {
             cond: Predicate::ValueAtMost(
                 Value::ManaValueOf(Box::new(Selector::Target(0))),
@@ -539,6 +591,7 @@ pub fn prismatic_ending() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand: None,
     }
 }
 
@@ -572,19 +625,23 @@ pub fn thoughtseize() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand: None,
     }
 }
 
 // ── Goryo's sideboard spells ────────────────────────────────────────────────
 
-/// Consign to Memory — {U} Instant. Counter target activated or triggered
-/// ability. (Real Oracle also has a "OR counter target legendary spell"
-/// branch — we ship just the ability-counter half for now since that's
-/// what comes up against Goryo's ETB-driven matchups.)
+/// Consign to Memory — {U} Instant. "Counter target activated or
+/// triggered ability OR counter target legendary spell." Modal:
 ///
-/// Targets a permanent (the source of the ability); the engine's
-/// `Effect::CounterAbility` handler walks the stack top-down for the most
-/// recent `StackItem::Trigger` with that source and removes it.
+/// - **Mode 0**: target a permanent → counter the topmost trigger
+///   sourced from it (`Effect::CounterAbility`).
+/// - **Mode 1**: target a legendary spell on the stack → counter it
+///   (`Effect::CounterSpell` over `IsSpellOnStack ∧ HasSupertype(Legendary)`).
+///
+/// `AutoDecider` picks mode 0 by default — the Goryo's matchup wants
+/// the ability-counter half (Atraxa ETB, Devourer Scry, etc.). The
+/// mode-1 branch is reachable via UI / scripted decisions.
 pub fn consign_to_memory() -> CardDefinition {
     CardDefinition {
         name: "Consign to Memory",
@@ -595,9 +652,19 @@ pub fn consign_to_memory() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![],
-        effect: Effect::CounterAbility {
-            what: target_filtered(SelectionRequirement::Permanent),
-        },
+        effect: Effect::ChooseMode(vec![
+            // Mode 0: counter target ability (the Goryo's-matchup default).
+            Effect::CounterAbility {
+                what: target_filtered(SelectionRequirement::Permanent),
+            },
+            // Mode 1: counter target legendary spell.
+            Effect::CounterSpell {
+                what: target_filtered(
+                    SelectionRequirement::IsSpellOnStack
+                        .and(SelectionRequirement::HasSupertype(crate::card::Supertype::Legendary)),
+                ),
+            },
+        ]),
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -605,6 +672,7 @@ pub fn consign_to_memory() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand: None,
     }
 }
 
@@ -612,11 +680,14 @@ pub fn consign_to_memory() -> CardDefinition {
 /// turn, each spell that player casts costs {1} more to cast. Lands that tap
 /// to add more than one mana enter producing only {C}."
 ///
-/// Cost-tax half is wired via `StaticEffect::AdditionalCostAfterFirstSpell`:
-/// the cast paths consult the caster's per-player `spells_cast_this_turn`,
-/// and if it's ≥ 1 the spell pays an extra {1}. The "lands that tap for
-/// >1 mana enter producing only {C}" half is still ⏳ (no land-tap-output
-/// replacement primitive yet).
+/// Both halves wired:
+///   * `AdditionalCostAfterFirstSpell` — cast paths consult per-player
+///     `spells_cast_this_turn`; if ≥ 1 the spell pays an extra {1}.
+///   * `LandsTapColorlessOnly` — `play_land` consults
+///     `lands_tap_colorless_only_active()`; multi-mana / dual-color lands
+///     have their mana abilities replaced with a single `{T}: Add {C}` on
+///     ETB. Single-color basics and one-ability single-color non-basics
+///     pass through unchanged.
 pub fn damping_sphere() -> CardDefinition {
     use crate::card::StaticAbility;
     use crate::effect::StaticEffect;
@@ -632,17 +703,24 @@ pub fn damping_sphere() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![StaticAbility {
-            description: "Each spell a player casts after their first this turn costs {1} more.",
-            effect: StaticEffect::AdditionalCostAfterFirstSpell {
-                filter: SelectionRequirement::Any,
-                amount: 1,
+        static_abilities: vec![
+            StaticAbility {
+                description: "Each spell a player casts after their first this turn costs {1} more.",
+                effect: StaticEffect::AdditionalCostAfterFirstSpell {
+                    filter: SelectionRequirement::Any,
+                    amount: 1,
+                },
             },
-        }],
+            StaticAbility {
+                description: "Lands that tap to add more than one mana enter producing only {C}.",
+                effect: StaticEffect::LandsTapColorlessOnly,
+            },
+        ],
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand: None,
     }
 }
 
@@ -683,6 +761,7 @@ pub fn mystical_dispute() -> CardDefinition {
             target_filter: Some(SelectionRequirement::HasColor(Color::Blue)),
         }),
         back_face: None,
+        opening_hand: None,
     }
 }
 
@@ -724,6 +803,7 @@ pub fn pest_control() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand: None,
     }
 }
 
@@ -770,5 +850,6 @@ pub fn wrath_of_the_skies() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand: None,
     }
 }

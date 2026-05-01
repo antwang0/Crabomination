@@ -5,10 +5,23 @@ members = ["crabomination", "crabomination_client", "crabomination_server"]
 # Enable a small amount of optimization in the dev profile.
 [profile.dev]
 opt-level = 1
+# Drop full DWARF/PDB tables — keep just enough for line numbers in
+# panic backtraces. Saves ~30–40 % off Bevy-heavy compile/link time and
+# shrinks `target/debug/` substantially. Switch back to `debug = true`
+# if you need a full debugger session with locals/structs.
+debug = "line-tables-only"
+# Faster linker on Windows MSVC: emit one PDB per object instead of a
+# single monolithic file, so the linker only rewrites what changed on
+# an incremental build. (Linux/macOS already default to "unpacked".)
+split-debuginfo = "unpacked"
 
 # Enable a large amount of optimization in the dev profile for dependencies.
 [profile.dev.package."*"]
 opt-level = 3
+# Dependencies are recompiled rarely, so we can afford to drop their
+# debuginfo entirely — they don't contribute useful frames to dev
+# panics and the saving on Bevy alone is significant.
+debug = false
 
 # Enable more optimization in the release profile at the cost of compile time.
 [profile.release]

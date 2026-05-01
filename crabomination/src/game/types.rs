@@ -60,7 +60,7 @@ impl TurnStep {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Target {
     Player(usize),
     Permanent(CardId),
@@ -91,6 +91,20 @@ pub enum GameAction {
     /// (mana abilities, ETB triggers, land types) come from the back face.
     PlayLandBack(CardId),
     CastSpell { card_id: CardId, target: Option<Target>, mode: Option<usize>, x_value: Option<u32> },
+    /// Cast a modal-double-faced card via its **back face**. Mirrors
+    /// `PlayLandBack` but for non-land back faces (creature/instant/
+    /// sorcery). The card's `definition` is swapped to the back face's
+    /// definition before payment + cast, so cost / type / effect all
+    /// resolve against the back face. Used by SOS MDFCs whose two
+    /// faces are a creature and a spell (Studious First-Year //
+    /// Rampant Growth, Adventurous Eater // Have a Bite, Emeritus of
+    /// Truce // Swords to Plowshares, etc.).
+    CastSpellBack {
+        card_id: CardId,
+        target: Option<Target>,
+        mode: Option<usize>,
+        x_value: Option<u32>,
+    },
     /// Cast a spell with `Keyword::Convoke`, tapping each creature in
     /// `convoke_creatures` to contribute {1} generic mana toward the cost
     /// (real Magic also allows tapping for one colored mana matching the
@@ -132,7 +146,7 @@ pub enum GameAction {
 /// specified future moment ("at the beginning of your next upkeep, ...",
 /// "at the beginning of the next end step, exile this", ...). Stored on
 /// `GameState::delayed_triggers` and consumed by the step-event dispatcher.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DelayedTrigger {
     /// Whose ability this is — used both for `YourNextUpkeep`-style scope
     /// matching and for the resolution ctx when the trigger fires.
@@ -152,19 +166,25 @@ pub struct DelayedTrigger {
 }
 
 /// What kind of future event a delayed trigger waits for.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum DelayedKind {
     /// At the beginning of `controller`'s next upkeep.
     YourNextUpkeep,
     /// At the beginning of the next end step (any player's).
     NextEndStep,
+    /// At the beginning of `controller`'s next pre-combat main phase.
+    /// Used by Chancellor of the Tangle ("at the beginning of your first
+    /// main phase, add {G}"). Fires once on the controller's PreCombatMain
+    /// step so the mana lands in the pool with main-phase windows still
+    /// open (mana pools empty on step transition, MTG rule 500.4).
+    YourNextMainPhase,
 }
 
 // ── Pending decisions (suspendable resolution) ───────────────────────────────
 
 /// A decision the engine is waiting on before it can continue resolving the
 /// current spell or ability.
-#[derive(Debug)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PendingDecision {
     pub decision: Decision,
     pub(crate) resume: ResumeContext,
@@ -185,7 +205,7 @@ impl PendingDecision {
 /// `remaining` is whatever effects in the original tree still need to run
 /// after the answered decision is applied (e.g. the `Draw` half of `Opt`
 /// suspended on its `Scry`).
-#[derive(Debug)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub(crate) enum ResumeContext {
     Spell {
         card: Box<CardInstance>,
@@ -204,6 +224,17 @@ pub(crate) enum ResumeContext {
         mode: usize,
         in_progress: PendingEffectState,
         remaining: Effect,
+        /// X paid into the originating spell's cost. Threaded so a
+        /// suspended ETB trigger that consults `Value::XFromCost` reads
+        /// the right value when it's resumed after a pending decision.
+        /// Defaults to 0 for snapshot backwards-compatibility.
+        #[serde(default)]
+        x_value: u32,
+        /// Converge value (number of distinct colors of mana spent on
+        /// the originating spell's cost). Same role as `x_value` for
+        /// `Value::ConvergedValue`.
+        #[serde(default)]
+        converged_value: u32,
     },
     Ability {
         source: CardId,
@@ -221,7 +252,7 @@ pub(crate) enum ResumeContext {
     },
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum PendingEffectState {
     ScryPeeked { count: usize, player: usize },
     SurveilPeeked { count: usize, player: usize },
@@ -231,9 +262,34 @@ pub enum PendingEffectState {
     /// payload — Black Lotus, Birds of Paradise, Mox Diamond. The UI picks
     /// a color and the engine adds `count` mana of that color.
     AnyOneColorPending { player: usize, count: u32 },
+    /// Suspended on a `DiscardChosen` decision (Inquisition of Kozilek,
+    /// Thoughtseize). The caster picks cards from `target_player`'s hand;
+    /// the apply step removes them and graveyards them.
+    DiscardChosenPending { target_player: usize },
+    /// Suspended on a `ChooseCreatureType` decision for `Effect::NameCreatureType`
+    /// (Cavern of Souls). The chooser picks a creature type and the engine
+    /// stamps it onto `target_id.chosen_creature_type`.
+    ChooseCreatureTypePending { target_id: CardId },
 }
 
 // ── Events ────────────────────────────────────────────────────────────────────
+
+/// Which face / cast path a `SpellCast` event came from. Lets replays /
+/// spectator UIs distinguish a back-face MDFC cast from the printed front
+/// face, and a Flashback graveyard-replay from a normal hand cast.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
+pub enum CastFace {
+    /// Default: cast from hand (or a generic alt-cost path).
+    #[default]
+    Front,
+    /// Cast via `GameAction::CastSpellBack` against a non-land MDFC's
+    /// `back_face`. The card's definition is swapped to the back face's
+    /// for the duration of the cast and resolution.
+    Back,
+    /// Cast via `Keyword::Flashback` from the controller's graveyard.
+    /// The card exiles after resolution rather than going to graveyard.
+    Flashback,
+}
 
 #[derive(Debug, Clone)]
 pub enum GameEvent {
@@ -242,7 +298,11 @@ pub enum GameEvent {
     CardDrawn { player: usize, card_id: CardId },
     CardDiscarded { player: usize, card_id: CardId },
     LandPlayed { player: usize, card_id: CardId },
-    SpellCast { player: usize, card_id: CardId },
+    /// `face` distinguishes front-face / back-face / flashback casts.
+    /// Defaults to `Front` for the typical hand cast; back-face MDFC
+    /// casts and flashback graveyard replays carry the right tag so
+    /// replays can render the correct cost.
+    SpellCast { player: usize, card_id: CardId, face: CastFace },
     AbilityActivated { source: CardId },
     ManaAdded { player: usize, color: Color },
     ColorlessManaAdded { player: usize },
@@ -272,6 +332,10 @@ pub enum GameEvent {
     PlaneswalkerDied { card_id: CardId },
     SpellsCopied { original: CardId, count: u32 },
     SurveilPerformed { player: usize, looked_at: usize, graveyarded: usize },
+    /// A card left `player`'s graveyard (returned to hand, battlefield, or
+    /// exiled from there). Fires per card removed. Used by Strixhaven
+    /// "cards leave your graveyard" payoffs.
+    CardLeftGraveyard { player: usize, card_id: CardId },
     GameOver { winner: Option<usize> },
 }
 
@@ -292,7 +356,7 @@ impl PriorityState {
 // ── Stack ─────────────────────────────────────────────────────────────────────
 
 /// An item on the stack waiting to resolve.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum StackItem {
     /// A non-land spell (instant, sorcery, or permanent) waiting to resolve.
     Spell {
@@ -321,6 +385,22 @@ pub enum StackItem {
         effect: Box<Effect>,
         target: Option<Target>,
         mode: Option<usize>,
+        /// X paid into the originating spell's cost, threaded so
+        /// `Value::XFromCost` reads the right number when the trigger
+        /// resolves. ETB triggers fired off a spell on resolution
+        /// inherit the spell's X; loyalty/state triggers default to 0.
+        /// Defaults to 0 via `#[serde(default)]` for snapshot
+        /// backwards-compatibility.
+        #[serde(default)]
+        x_value: u32,
+        /// Converge value (number of distinct colors of mana spent on
+        /// the originating spell's cost). Threaded the same way as
+        /// `x_value` so ETB triggers consulting `Value::ConvergedValue`
+        /// (Rancorous Archaic, Snarl Song, Together as One) read the
+        /// right number. Defaults to 0 for snapshot
+        /// backwards-compatibility.
+        #[serde(default)]
+        converged_value: u32,
     },
 }
 
@@ -364,6 +444,10 @@ pub enum GameError {
     InvalidTarget,
     #[error("Ability index out of bounds")]
     AbilityIndexOutOfBounds,
+    #[error("Activated ability already used this turn (once-per-turn)")]
+    AbilityAlreadyUsedThisTurn,
+    #[error("Activated ability's `activate only if` condition is not met")]
+    AbilityConditionNotMet,
     #[error("Target does not meet the selection requirement for this effect")]
     SelectionRequirementViolated,
     #[error("The game is already over")]
@@ -392,4 +476,10 @@ pub enum GameError {
     InvalidPlaneswalkerAttackTarget(CardId),
     #[error("Blocker {blocker:?} cannot block an attacker targeting a different player")]
     BlockerWrongDefender { blocker: CardId },
+    #[error("Planeswalker {0:?} has already used a loyalty ability this turn")]
+    LoyaltyAbilityAlreadyUsed(CardId),
+    #[error("Not enough loyalty on {0:?} to pay this ability's cost")]
+    NotEnoughLoyalty(CardId),
+    #[error("Cannot pay this ability's life cost (would lose at or below 0 life)")]
+    InsufficientLife,
 }

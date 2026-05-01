@@ -29,6 +29,7 @@ pub fn savannah_lions() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand: None,
     }
 }
 
@@ -54,6 +55,7 @@ pub fn white_knight() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand: None,
     }
 }
 
@@ -79,14 +81,15 @@ pub fn serra_angel() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand: None,
     }
 }
 
-/// Mahamoti Djinn — {3}{U}{U} 5/6 Flying
+/// Mahamoti Djinn — {4}{U}{U} 5/6 Flying
 pub fn mahamoti_djinn() -> CardDefinition {
     CardDefinition {
         name: "Mahamoti Djinn",
-        cost: cost(&[generic(3), u(), u()]),
+        cost: cost(&[generic(4), u(), u()]),
         supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
@@ -104,6 +107,7 @@ pub fn mahamoti_djinn() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand: None,
     }
 }
 
@@ -128,6 +132,9 @@ pub fn prodigal_sorcerer() -> CardDefinition {
             effect: deal(1, target()),
             once_per_turn: false,
             sorcery_speed: false,
+            sac_cost: false,
+            condition: None,
+            life_cost: 0,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -135,6 +142,7 @@ pub fn prodigal_sorcerer() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand: None,
     }
 }
 
@@ -160,6 +168,7 @@ pub fn black_knight() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand: None,
     }
 }
 
@@ -201,6 +210,7 @@ pub fn hypnotic_specter() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand: None,
     }
 }
 
@@ -226,6 +236,7 @@ pub fn sengir_vampire() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand: None,
     }
 }
 
@@ -251,6 +262,7 @@ pub fn shivan_dragon() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand: None,
     }
 }
 
@@ -276,6 +288,7 @@ pub fn grizzly_bears() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand: None,
     }
 }
 
@@ -303,6 +316,9 @@ pub fn birds_of_paradise() -> CardDefinition {
             },
             once_per_turn: false,
             sorcery_speed: false,
+            sac_cost: false,
+            condition: None,
+            life_cost: 0,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -310,6 +326,7 @@ pub fn birds_of_paradise() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand: None,
     }
 }
 
@@ -335,13 +352,14 @@ pub fn llanowar_elves() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand: None,
     }
 }
 
-/// Elvish Archer — {1}{G} 1/2 First Strike
-pub fn elvish_archer() -> CardDefinition {
+/// Elvish Archers — {1}{G} 2/1 First Strike (LEA).
+pub fn elvish_archers() -> CardDefinition {
     CardDefinition {
-        name: "Elvish Archer",
+        name: "Elvish Archers",
         cost: cost(&[generic(1), g()]),
         supertypes: vec![],
         card_types: vec![CardType::Creature],
@@ -349,8 +367,8 @@ pub fn elvish_archer() -> CardDefinition {
             creature_types: vec![CreatureType::Elf, CreatureType::Archer],
             ..Default::default()
         },
-        power: 1,
-        toughness: 2,
+        power: 2,
+        toughness: 1,
         keywords: vec![Keyword::FirstStrike],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
@@ -360,6 +378,7 @@ pub fn elvish_archer() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand: None,
     }
 }
 
@@ -385,5 +404,6 @@ pub fn craw_wurm() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand: None,
     }
 }

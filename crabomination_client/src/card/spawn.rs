@@ -3,7 +3,8 @@ use std::f32::consts::PI;
 use bevy::prelude::*;
 
 use super::components::{
-    Card, CardFrontTexture, CardHighlightAssets, CardHoverLift, CardMeshAssets, FrontFaceMesh,
+    BackFaceMesh, Card, CardFrontTexture, CardHighlightAssets, CardHoverLift, CardMeshAssets,
+    FrontFaceMesh,
     GraveyardPile, PileHovered, PlayerTargetZone, CARD_THICKNESS,
 };
 use super::layout::{back_face_rotation, graveyard_position, player_target_zone_position};
@@ -145,6 +146,7 @@ pub fn spawn_single_card(
                     MeshMaterial3d(back_material),
                     Transform::from_xyz(0.0, 0.0, -CARD_THICKNESS / 2.0)
                         .with_rotation(Quat::from_rotation_y(PI)),
+                    BackFaceMesh,
                 ))
                 .observe(on_card_over)
                 .observe(on_card_out);
@@ -181,6 +183,24 @@ pub fn card_front_material(
     asset_server: &AssetServer,
 ) -> Handle<StandardMaterial> {
     let asset_path = scryfall::card_asset_path(name);
+    let texture: Handle<Image> = asset_server.load(&asset_path);
+    materials.add(StandardMaterial {
+        base_color_texture: Some(texture),
+        perceptual_roughness: 0.85,
+        metallic: 0.0,
+        ..default()
+    })
+}
+
+/// Build a textured material for an MDFC back-face image. Loads from the
+/// `_back`-suffixed asset path so stale front-face downloads with the
+/// same name don't collide.
+pub fn card_back_face_material(
+    name: &str,
+    materials: &mut Assets<StandardMaterial>,
+    asset_server: &AssetServer,
+) -> Handle<StandardMaterial> {
+    let asset_path = scryfall::card_back_face_asset_path(name);
     let texture: Handle<Image> = asset_server.load(&asset_path);
     materials.add(StandardMaterial {
         base_color_texture: Some(texture),

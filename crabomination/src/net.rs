@@ -61,6 +61,11 @@ pub struct ClientView {
     pub battlefield: Vec<PermanentView>,
     pub stack: Vec<StackItemView>,
     pub pending_decision: Option<PendingDecisionView>,
+    /// Cards currently in the shared exile zone. Always face-up — the
+    /// engine has no face-down exile yet. Defaults to `Vec::new()` for
+    /// snapshot compatibility with older serialized views.
+    #[serde(default)]
+    pub exile: Vec<ExileCardView>,
     /// `None` while the game is ongoing; `Some(None)` = draw; `Some(Some(i))` = seat `i` won.
     pub game_over: Option<Option<usize>>,
 }
@@ -80,6 +85,55 @@ pub struct PlayerView {
     /// (id only). The vec length equals the player's hand size.
     pub hand: Vec<HandCardView>,
     pub lands_played_this_turn: u32,
+    /// Pending Chancellor-of-the-Annex-style tax charges. Each charge taxes
+    /// the player's next spell {1} more (consumed on the next successful
+    /// cast). Surfaced to the client so the cast UI can preview the bumped
+    /// cost before the player commits.
+    #[serde(default)]
+    pub first_spell_tax_charges: u32,
+    /// Life this player has gained on the current turn (sum of every
+    /// `Effect::GainLife`, `Effect::Drain` recipient side, and combat-
+    /// lifelink resolution). Reset on the controller's untap. Surfaced
+    /// so UIs can show "Infusion ready" hints on cards whose riders fire
+    /// once you've gained life this turn (Foolish Fate, Old-Growth
+    /// Educator, Tenured Concocter, etc.).
+    #[serde(default)]
+    pub life_gained_this_turn: u32,
+    /// Cards this player has drawn on the current turn. Reset on the
+    /// controller's untap. Surfaced so UIs can show "X +1/+1 counters"
+    /// previews on Quandrix scaling cards (Fractal Anomaly, etc.).
+    #[serde(default)]
+    pub cards_drawn_this_turn: u32,
+    /// Number of times a card has left this player's graveyard on the
+    /// current turn. Reset on the controller's untap. Surfaced so UIs
+    /// can show "Lorehold ready" hints on cards whose riders fire when
+    /// any card has left your graveyard this turn (Living History,
+    /// Primary Research, Wilt in the Heat).
+    #[serde(default)]
+    pub cards_left_graveyard_this_turn: u32,
+    /// Number of creatures controlled by this player that died on the
+    /// current turn. Reset on the controller's untap. Surfaced so UIs
+    /// can show "Witherbloom end-step ready" hints on cards whose riders
+    /// fire when a creature died under your control (Essenceknit Scholar).
+    #[serde(default)]
+    pub creatures_died_this_turn: u32,
+    /// Number of cards this player has caused to be exiled on the current
+    /// turn. Reset on the controller's untap. Surfaced so UIs can show
+    /// "Ennis end-step counter ready" hints on Strixhaven cards whose
+    /// riders fire when any card was put into exile this turn.
+    #[serde(default)]
+    pub cards_exiled_this_turn: u32,
+    /// Number of instant or sorcery spells this player has cast on the
+    /// current turn. Refines `spells_cast_this_turn` for cards that gate
+    /// activations / triggers on the "instant or sorcery" subset
+    /// specifically (Potioner's Trove, future Magecraft variants).
+    #[serde(default)]
+    pub instants_or_sorceries_cast_this_turn: u32,
+    /// Number of creature spells this player has cast on the current
+    /// turn. Reserved for future "if you've cast a creature spell this
+    /// turn, …" payoffs.
+    #[serde(default)]
+    pub creatures_cast_this_turn: u32,
 }
 
 /// A single hand-slot entry. `Hidden` for cards the viewer isn't entitled to
@@ -129,6 +183,40 @@ pub struct AbilityView {
     pub effect_label: String,
     pub needs_target: bool,
     pub is_mana: bool,
+    /// True if this ability is flagged "Activate only once each turn" and
+    /// has already been used on the current turn — the client can grey
+    /// out the button. Defaults to `false` for older clients.
+    #[serde(default)]
+    pub once_per_turn_used: bool,
+    /// True if this ability carries an `ActivatedAbility.condition` gate
+    /// (printed "Activate only if …" rider). Clients can show a hint
+    /// icon next to the activator. The string is a short human-readable
+    /// description of the gate ("≥7 in hand", "after IS-cast this turn",
+    /// etc.); empty when no gate is set. Defaults to `("", false)` for
+    /// older clients without this field.
+    #[serde(default)]
+    pub gate_label: String,
+    /// True if the ability has a printed gate AND the gate currently
+    /// rejects activation. `false` means either no gate (always
+    /// activatable on cost grounds) or gate currently passes. The
+    /// client can grey out the button when this is `true`. Note: this
+    /// is a snapshot at view-projection time; the gate can flip between
+    /// snapshots (Resonating Lute flips when hand-size crosses 7).
+    #[serde(default)]
+    pub gate_blocked: bool,
+}
+
+/// A planeswalker's loyalty ability as visible to the client. Mirrors
+/// `LoyaltyAbility` but with pre-rendered labels — the client doesn't
+/// need access to the engine's `Effect` enum.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LoyaltyAbilityView {
+    pub index: usize,
+    /// Raw loyalty cost: positive (+1, +2) or negative (-1, -3, …).
+    pub loyalty_cost: i32,
+    /// Pre-rendered effect label ("Draw cards", "Destroy permanent", …).
+    pub effect_label: String,
+    pub needs_target: bool,
 }
 
 /// A library as visible to a specific seat. `size` is always the full count;
@@ -147,6 +235,19 @@ pub struct GraveyardCardView {
     pub name: String,
 }
 
+/// A single card sitting in the shared exile zone. Owners are surfaced so
+/// the client can render "exiled by X" / "exiled from Y's library"
+/// distinctions; the engine keeps `CardInstance.owner` in sync across
+/// zone moves.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ExileCardView {
+    pub id: CardId,
+    pub name: String,
+    /// The card's owner (the player to whom the card returns if it
+    /// later moves to its owner's hand/library/graveyard).
+    pub owner: usize,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PermanentView {
     pub id: CardId,
@@ -161,6 +262,11 @@ pub struct PermanentView {
     pub power: i32,
     /// Computed toughness after layer effects (0 for non-creatures).
     pub toughness: i32,
+    /// Base (printed) power from the card definition. Lets clients
+    /// flag a card whose computed P/T differs from the card text.
+    pub base_power: i32,
+    /// Base (printed) toughness from the card definition.
+    pub base_toughness: i32,
     /// Effective keywords (after layer effects).
     pub keywords: Vec<Keyword>,
     pub counters: Vec<(CounterType, u32)>,
@@ -170,6 +276,9 @@ pub struct PermanentView {
     pub attacking: bool,
     /// Activated abilities visible to the client.
     pub abilities: Vec<AbilityView>,
+    /// Loyalty abilities (only populated for planeswalkers).
+    #[serde(default)]
+    pub loyalty_abilities: Vec<LoyaltyAbilityView>,
 }
 
 impl PermanentView {
@@ -187,12 +296,33 @@ pub enum StackItemView {
     Hidden { source: CardId, controller: usize },
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum StackItemKind {
+    /// A spell cast by `controller`. The viewer typically wants to
+    /// hold priority on these so they can respond with a counter.
+    Spell,
+    /// A triggered or activated ability waiting to resolve. Triggers
+    /// from your own permanents are mostly bookkeeping (Tireless
+    /// Tracker investigate, Goldspan Dragon attack draw, etc.) — UIs
+    /// can auto-pass priority on them to keep the flow snappy.
+    Trigger,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct KnownStackItem {
     pub source: CardId,
     pub controller: usize,
     pub name: String,
     pub target: Option<Target>,
+    /// Whether this stack item is a `Spell` (caster cast a card) or a
+    /// `Trigger` (an ability fired). Defaulted to `Trigger` for
+    /// backwards compat with older serialized views.
+    #[serde(default = "default_stack_item_kind")]
+    pub kind: StackItemKind,
+}
+
+fn default_stack_item_kind() -> StackItemKind {
+    StackItemKind::Trigger
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -248,6 +378,14 @@ pub enum DecisionWire {
         player: usize,
         hand: Vec<(CardId, String)>,
         mulligans_taken: usize,
+        /// IDs of in-hand Serum-Powder-style mulligan helpers. The client
+        /// renders one button per ID alongside the standard Keep/Mulligan
+        /// pair; clicking sends `DecisionAnswer::SerumPowder(id)`.
+        serum_powders: Vec<CardId>,
+    },
+    /// "As [card] enters, choose a creature type." Cavern of Souls.
+    ChooseCreatureType {
+        source: CardId,
     },
 }
 
@@ -291,11 +429,17 @@ impl From<&Decision> for DecisionWire {
                 count: *count,
                 hand: hand.iter().map(|(id, n)| (*id, (*n).to_string())).collect(),
             },
-            Decision::Mulligan { player, hand, mulligans_taken } => DecisionWire::Mulligan {
-                player: *player,
-                hand: hand.iter().map(|(id, n)| (*id, (*n).to_string())).collect(),
-                mulligans_taken: *mulligans_taken,
-            },
+            Decision::Mulligan { player, hand, mulligans_taken, serum_powders } => {
+                DecisionWire::Mulligan {
+                    player: *player,
+                    hand: hand.iter().map(|(id, n)| (*id, (*n).to_string())).collect(),
+                    mulligans_taken: *mulligans_taken,
+                    serum_powders: serum_powders.clone(),
+                }
+            }
+            Decision::ChooseCreatureType { source } => {
+                DecisionWire::ChooseCreatureType { source: *source }
+            }
         }
     }
 }
@@ -309,7 +453,16 @@ pub enum GameEventWire {
     CardDrawn { player: usize, card_id: CardId },
     CardDiscarded { player: usize, card_id: CardId },
     LandPlayed { player: usize, card_id: CardId },
-    SpellCast { player: usize, card_id: CardId },
+    /// `face` lets replays / spectator UIs distinguish a back-face MDFC
+    /// cast (Back) from a normal hand cast (Front) and a flashback
+    /// graveyard replay (Flashback). Defaults to `Front` on snapshots
+    /// predating the field.
+    SpellCast {
+        player: usize,
+        card_id: CardId,
+        #[serde(default)]
+        face: crate::game::CastFace,
+    },
     AbilityActivated { source: CardId },
     ManaAdded { player: usize, color: Color },
     ColorlessManaAdded { player: usize },
@@ -339,6 +492,10 @@ pub enum GameEventWire {
     PlaneswalkerDied { card_id: CardId },
     SpellsCopied { original: CardId, count: u32 },
     SurveilPerformed { player: usize, looked_at: usize, graveyarded: usize },
+    /// Wire mirror of `GameEvent::CardLeftGraveyard`. Surfaced so client UIs
+    /// can animate "card returned from graveyard" or highlight Lorehold
+    /// "cards left graveyard this turn" payoffs.
+    CardLeftGraveyard { player: usize, card_id: CardId },
     GameOver { winner: Option<usize> },
 }
 
@@ -362,9 +519,10 @@ impl From<&GameEvent> for GameEventWire {
                 player: *player,
                 card_id: *card_id,
             },
-            GameEvent::SpellCast { player, card_id } => GameEventWire::SpellCast {
+            GameEvent::SpellCast { player, card_id, face } => GameEventWire::SpellCast {
                 player: *player,
                 card_id: *card_id,
+                face: *face,
             },
             GameEvent::AbilityActivated { source } => {
                 GameEventWire::AbilityActivated { source: *source }
@@ -487,6 +645,12 @@ impl From<&GameEvent> for GameEventWire {
                     graveyarded: *graveyarded,
                 }
             }
+            GameEvent::CardLeftGraveyard { player, card_id } => {
+                GameEventWire::CardLeftGraveyard {
+                    player: *player,
+                    card_id: *card_id,
+                }
+            }
             GameEvent::GameOver { winner } => GameEventWire::GameOver { winner: *winner },
         }
     }
@@ -511,7 +675,7 @@ mod tests {
     fn decision_wire_converts() {
         let d = Decision::Scry {
             player: 0,
-            cards: vec![(CardId(1), "Island"), (CardId(2), "Forest")],
+            cards: vec![(CardId(1), "Island".into()), (CardId(2), "Forest".into())],
         };
         let w: DecisionWire = (&d).into();
         let json = serde_json::to_string(&w).unwrap();

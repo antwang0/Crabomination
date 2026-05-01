@@ -22,6 +22,7 @@ pub fn mox_pearl() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand: None,
     }
 }
 
@@ -44,6 +45,7 @@ pub fn mox_sapphire() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand: None,
     }
 }
 
@@ -66,6 +68,7 @@ pub fn mox_jet() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand: None,
     }
 }
 
@@ -88,6 +91,7 @@ pub fn mox_ruby() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand: None,
     }
 }
 
@@ -110,6 +114,7 @@ pub fn mox_emerald() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand: None,
     }
 }
 
@@ -134,6 +139,9 @@ pub fn black_lotus() -> CardDefinition {
             },
             once_per_turn: false,
             sorcery_speed: false,
+            sac_cost: false,
+            condition: None,
+            life_cost: 0,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -141,6 +149,7 @@ pub fn black_lotus() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand: None,
     }
 }
 
@@ -165,6 +174,9 @@ pub fn sol_ring() -> CardDefinition {
             },
             once_per_turn: false,
             sorcery_speed: false,
+            sac_cost: false,
+            condition: None,
+            life_cost: 0,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -172,6 +184,7 @@ pub fn sol_ring() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand: None,
     }
 }
 
@@ -203,6 +216,9 @@ pub fn nevinyrrals_disk() -> CardDefinition {
             ]),
             once_per_turn: false,
             sorcery_speed: false,
+            sac_cost: false,
+            condition: None,
+            life_cost: 0,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -210,5 +226,6 @@ pub fn nevinyrrals_disk() -> CardDefinition {
         loyalty_abilities: vec![],
         alternative_cost: None,
         back_face: None,
+        opening_hand: None,
     }
 }

@@ -8,10 +8,12 @@
 //! carries a doc-comment marking what's omitted; promote them as engine
 //! features land.
 
-pub mod creatures;
-pub mod lands;
-pub mod spells;
+mod creatures;
+mod lands;
+mod modern;
+mod spells;
 
 pub use creatures::*;
 pub use lands::*;
+pub use modern::*;
 pub use spells::*;

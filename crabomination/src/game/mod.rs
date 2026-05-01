@@ -22,12 +22,21 @@ pub(crate) mod stack;
 #[cfg(test)]
 #[path = "../tests/game.rs"]
 mod tests;
+#[cfg(test)]
+#[path = "../tests/modern.rs"]
+mod tests_modern;
+#[cfg(test)]
+#[path = "../tests/sos.rs"]
+mod tests_sos;
+#[cfg(test)]
+#[path = "../tests/stx.rs"]
+mod tests_stx;
 pub mod types;
 
 pub use types::*;
 
 use crate::card::{CardDefinition, CardId, CardInstance, CardType, Keyword, SelectionRequirement};
-use crate::decision::{AutoDecider, Decider, Decision, DecisionAnswer};
+use crate::decision::{AutoDecider, Decider, DeciderKind, Decision, DecisionAnswer};
 use crate::effect::Effect;
 use crate::game::effects::EffectContext;
 use crate::game::layers::{
@@ -37,8 +46,33 @@ use crate::game::layers::{
 use crate::player::Player;
 use std::collections::HashMap;
 
+// ── Decider serde adapter ────────────────────────────────────────────────────
+//
+// `Box<dyn Decider>` can't directly derive serde, so we project it to
+// `DeciderKind` (which IS serializable) on the wire and reconstitute on
+// load. Custom deciders not modeled by the kind enum collapse to
+// `AutoDecider` after a round-trip.
+
+#[allow(clippy::borrowed_box)] // serde derive needs `&Box<T>` here
+fn serialize_decider<S: serde::Serializer>(
+    decider: &Box<dyn Decider + Send + Sync>,
+    ser: S,
+) -> Result<S::Ok, S::Error> {
+    use serde::Serialize;
+    decider.kind().serialize(ser)
+}
+
+fn deserialize_decider<'de, D: serde::Deserializer<'de>>(
+    de: D,
+) -> Result<Box<dyn Decider + Send + Sync>, D::Error> {
+    use serde::Deserialize;
+    let kind = DeciderKind::deserialize(de)?;
+    Ok(kind.into_boxed())
+}
+
 // ── Game state ────────────────────────────────────────────────────────────────
 
+#[derive(serde::Serialize, serde::Deserialize)]
 pub struct GameState {
     pub players: Vec<Player>,
     /// All permanents currently in play.
@@ -81,10 +115,29 @@ pub struct GameState {
     /// read by `Value::SacrificedPower` (e.g. Thud). Reset between
     /// independent spell/ability resolutions.
     pub(crate) sacrificed_power: Option<i32>,
+    /// Transient: id of the most-recently-created token within the current
+    /// effect resolution. Set by `Effect::CreateToken` and read by
+    /// `Selector::LastCreatedToken` so a follow-up `AddCounter` /
+    /// `PumpPT` / etc. in the same `Effect::Seq` can target the freshly
+    /// minted token (Fractal Anomaly, Applied Geometry). Reset between
+    /// independent resolutions.
+    #[serde(skip)]
+    pub(crate) last_created_token: Option<CardId>,
+    /// Transient: which face / cast path the in-progress cast is using.
+    /// Set by `cast_spell_back_face` (`Back`) and `cast_flashback`
+    /// (`Flashback`); reset to `Front` after each emitted SpellCast
+    /// event. Threaded into `GameEvent::SpellCast.face` so replays can
+    /// distinguish a back-face MDFC cast from a normal hand cast.
+    #[serde(skip, default)]
+    pub(crate) pending_cast_face: CastFace,
     /// Resolves player choices encountered during effect resolution. Used for
     /// *non-suspending* decisions (e.g. `AddManaAnyColor` auto-picks a color).
     /// Suspending decisions (currently Scry) surface through `pending_decision`
     /// instead; the UI/bot replies via `submit_decision`.
+    ///
+    /// Serialized via the `decider_kind` adapter — see `DeciderKind` —
+    /// so the trait object round-trips through JSON.
+    #[serde(serialize_with = "serialize_decider", deserialize_with = "deserialize_decider")]
     pub decider: Box<dyn Decider + Send + Sync>,
     /// Set when effect resolution needs player input. Check each frame in the
     /// client to render the appropriate decision modal; clear via
@@ -96,6 +149,42 @@ pub struct GameState {
     /// `remaining` carries any sibling effects still queued behind the one that
     /// suspended (e.g. `Draw` after `Scry` in a Seq).
     pub(crate) suspend_signal: Option<(Decision, PendingEffectState, Effect)>,
+}
+
+/// Manual `Clone` impl so the bot can dry-run an action against a copy
+/// of the state without committing it. `Box<dyn Decider>` blocks the
+/// derive — we round-trip through `DeciderKind`. Custom deciders not
+/// modeled by the kind enum collapse to `AutoDecider` on clone, which
+/// is fine for the dry-run use case (we discard the clone immediately).
+impl Clone for GameState {
+    fn clone(&self) -> Self {
+        Self {
+            players: self.players.clone(),
+            battlefield: self.battlefield.clone(),
+            exile: self.exile.clone(),
+            stack: self.stack.clone(),
+            step: self.step,
+            active_player_idx: self.active_player_idx,
+            turn_number: self.turn_number,
+            game_over: self.game_over,
+            priority: self.priority.clone(),
+            continuous_effects: self.continuous_effects.clone(),
+            next_effect_timestamp: self.next_effect_timestamp,
+            next_id: self.next_id,
+            attacking: self.attacking.clone(),
+            block_map: self.block_map.clone(),
+            blockers_declared: self.blockers_declared,
+            skip_first_draw: self.skip_first_draw,
+            spells_cast_this_turn: self.spells_cast_this_turn,
+            delayed_triggers: self.delayed_triggers.clone(),
+            sacrificed_power: self.sacrificed_power,
+            last_created_token: self.last_created_token,
+            pending_cast_face: self.pending_cast_face,
+            decider: self.decider.kind().into_boxed(),
+            pending_decision: self.pending_decision.clone(),
+            suspend_signal: self.suspend_signal.clone(),
+        }
+    }
 }
 
 impl GameState {
@@ -127,6 +216,8 @@ impl GameState {
             spells_cast_this_turn: 0,
             delayed_triggers: Vec::new(),
             sacrificed_power: None,
+            last_created_token: None,
+            pending_cast_face: CastFace::Front,
             decider: Box::new(AutoDecider),
             pending_decision: None,
             suspend_signal: None,
@@ -193,7 +284,8 @@ impl GameState {
         // ahead of time. Inject the per-card SetPT effect at compute-time.
         let goyf_n = self.distinct_card_types_in_all_graveyards() as i32;
         for card in &self.battlefield {
-            if card.definition.name == "Cosmogoyf" {
+            let name = card.definition.name;
+            if name == "Cosmogoyf" || name == "Tarmogoyf" {
                 all_effects.push(ContinuousEffect {
                     timestamp: card.id.0 as u64,
                     source: card.id,
@@ -202,6 +294,22 @@ impl GameState {
                     sublayer: Some(PtSublayer::CharDefining),
                     duration: EffectDuration::WhileSourceOnBattlefield,
                     modification: Modification::SetPowerToughness(goyf_n, goyf_n + 1),
+                });
+            }
+            // Cruel Somnophage: P/T equals the number of cards in your graveyard.
+            // Same hardcoded compute-time injection pattern as Tarmogoyf, but
+            // gated on the controller's graveyard size rather than distinct
+            // card types in *all* graveyards.
+            if name == "Cruel Somnophage" {
+                let n = self.players[card.controller].graveyard.len() as i32;
+                all_effects.push(ContinuousEffect {
+                    timestamp: card.id.0 as u64,
+                    source: card.id,
+                    affected: AffectedPermanents::Source,
+                    layer: Layer::L7PowerTough,
+                    sublayer: Some(PtSublayer::CharDefining),
+                    duration: EffectDuration::WhileSourceOnBattlefield,
+                    modification: Modification::SetPowerToughness(n, n),
                 });
             }
         }
@@ -285,10 +393,30 @@ impl GameState {
         id
     }
 
-    /// Add a card to a player's library (top of deck).
+    /// Add a card to the **bottom** of `player_idx`'s library — appends to
+    /// the end of the `library` vec. Note: with an empty library the
+    /// first call pushes to index 0 (the top of the deck), so test
+    /// fixtures that call this once per card end up with the
+    /// **first-pushed** card on top and successive pushes building down.
+    /// For top-of-deck inserts use `Player::add_to_library_top` directly.
     pub fn add_card_to_library(&mut self, player_idx: usize, def: CardDefinition) -> CardId {
         let id = self.next_id();
         self.players[player_idx].add_to_library_bottom(id, def);
+        id
+    }
+
+    /// Put a card directly into `player_idx`'s graveyard. Useful for test
+    /// fixtures that exercise flashback / reanimate / dredge paths without
+    /// the bookkeeping of casting and resolving the spell first.
+    pub fn add_card_to_graveyard(
+        &mut self,
+        player_idx: usize,
+        def: CardDefinition,
+    ) -> CardId {
+        let id = self.next_id();
+        self.players[player_idx]
+            .graveyard
+            .push(CardInstance::new(id, def, player_idx));
         id
     }
 
@@ -306,6 +434,84 @@ impl GameState {
     /// Attackers declared in this combat step (with their chosen target).
     pub fn attacking(&self) -> &[Attack] {
         &self.attacking
+    }
+
+    // ── Snapshot accessors ────────────────────────────────────────────────────
+    //
+    // These are read/write helpers used by `crate::snapshot` to capture and
+    // restore otherwise-private fields. They aren't intended for general
+    // callers; the snapshot module guards round-trip correctness with tests.
+
+    pub fn block_map(&self) -> &HashMap<CardId, CardId> {
+        &self.block_map
+    }
+
+    /// Dry-run an action: clone the state, apply the action on the
+    /// clone, return whether the engine would accept it. The caller's
+    /// state is **not** modified. Used by the random bot to filter
+    /// out actions the engine would reject — it's the most robust
+    /// way to bottom out edge cases (Teferi sorcery-locking instants,
+    /// Damping Sphere mana tax, hexproof targets, stolen permanents,
+    /// summoning sickness, …) without re-implementing every engine
+    /// rule on the bot side.
+    ///
+    /// Cost: one full `GameState::clone` + one `perform_action`. The
+    /// random bot does this only on actions it's about to submit, so
+    /// the overhead is bounded by the number of bot ticks, not by
+    /// the size of the search space.
+    pub fn would_accept(&self, action: GameAction) -> bool {
+        // pending_decision routes through `submit_decision`, which
+        // both reads AND writes `self.pending_decision`. Cloning is
+        // safe but the dry-run can spuriously reject a legal answer
+        // because the cloned decider drops scripted state. For the
+        // bot's purposes — filtering out illegal `CastSpell` / land
+        // taps / attacks — the no-pending-decision path is what
+        // matters; if a decision is pending the bot uses
+        // `SubmitDecision` directly which doesn't go through here.
+        let mut probe = self.clone();
+        probe.perform_action(action).is_ok()
+    }
+
+    /// Extra generic mana the caster owes on top of `card`'s printed
+    /// cost — Damping Sphere's "+1 after the first spell each turn,"
+    /// Chancellor of the Annex's first-spell tax, etc. Public so the
+    /// bot's affordability check can match the engine's payment path:
+    /// `can_afford` ignoring this tax causes the bot to repeatedly
+    /// submit a `CastSpell` that the engine then rejects with a mana
+    /// shortfall, which (in spectate mode) deadlocks the match.
+    pub fn extra_cost_for_card_in_hand(&self, caster: usize, card_id: CardId) -> u32 {
+        let Some(card) = self.players[caster]
+            .hand
+            .iter()
+            .find(|c| c.id == card_id)
+        else {
+            return 0;
+        };
+        crate::game::actions::extra_cost_for_spell(self, caster, card)
+    }
+    pub fn blockers_declared(&self) -> bool {
+        self.blockers_declared
+    }
+    pub fn skip_first_draw(&self) -> bool {
+        self.skip_first_draw
+    }
+    pub fn peek_next_id(&self) -> u32 {
+        self.next_id
+    }
+    pub fn set_next_id(&mut self, value: u32) {
+        self.next_id = value;
+    }
+    pub fn set_attacking(&mut self, attacks: Vec<Attack>) {
+        self.attacking = attacks;
+    }
+    pub fn set_block_map(&mut self, map: HashMap<CardId, CardId>) {
+        self.block_map = map;
+    }
+    pub fn set_blockers_declared(&mut self, value: bool) {
+        self.blockers_declared = value;
+    }
+    pub fn set_skip_first_draw(&mut self, value: bool) {
+        self.skip_first_draw = value;
     }
 
     /// Convenience: just the IDs of all declared attackers.
@@ -341,6 +547,12 @@ impl GameState {
         let Some(blocker_cp) = blocker_computed else {
             return false;
         };
+        // Honor `Keyword::CantBlock` from the computed keyword set —
+        // transient grants from pump spells (Duel Tactics) and static
+        // restrictions (Postmortem Professor) both surface here.
+        if blocker_cp.keywords.contains(&Keyword::CantBlock) {
+            return false;
+        }
         self.attacking.iter().any(|atk| {
             let attacker = self.battlefield.iter().find(|c| c.id == atk.attacker);
             let atk_kws = computed
@@ -367,6 +579,9 @@ impl GameState {
         let Some(blocker_cp) = blocker_cp else {
             return false;
         };
+        if blocker_cp.keywords.contains(&Keyword::CantBlock) {
+            return false;
+        }
         let atk_kws = computed
             .iter()
             .find(|c| c.id == attacker_id)
@@ -418,6 +633,12 @@ impl GameState {
                 mode,
                 x_value,
             } => self.cast_flashback(card_id, target, mode, x_value),
+            GameAction::CastSpellBack {
+                card_id,
+                target,
+                mode,
+                x_value,
+            } => self.cast_spell_back_face(card_id, target, mode, x_value),
             GameAction::ActivateAbility {
                 card_id,
                 ability_index,
@@ -448,21 +669,92 @@ impl GameState {
         if events.is_empty() {
             return;
         }
-        let mut matched: Vec<(CardId, Effect, usize)> = Vec::new();
+        // Phase 1: collect candidate triggers while the borrow on
+        // `self.battlefield` is shared. Phase 2 will mutate `self.stack`
+        // and call `&self.evaluate_predicate` to gate each candidate by
+        // the optional `EventSpec::filter`.
+        struct TriggerCandidate {
+            source: CardId,
+            effect: Effect,
+            controller: usize,
+            filter: Option<crate::effect::Predicate>,
+            subject: Option<crate::game::effects::EntityRef>,
+        }
+        let mut candidates: Vec<TriggerCandidate> = Vec::new();
         for card in &self.battlefield {
             for ta in &card.definition.triggered_abilities {
                 for ev in events {
-                    if is_event_hardcoded(ev) {
+                    if is_event_hardcoded(ev, &ta.event) {
                         continue;
                     }
-                    if crate::game::effects::event_matches_spec(ev, &ta.event, card) {
-                        matched.push((card.id, ta.effect.clone(), card.controller));
+                    if crate::game::effects::event_matches_spec(self, ev, &ta.event, card) {
+                        candidates.push(TriggerCandidate {
+                            source: card.id,
+                            effect: ta.effect.clone(),
+                            controller: card.controller,
+                            filter: ta.event.filter.clone(),
+                            subject: crate::game::effects::event_subject(ev),
+                        });
                         break;
                     }
                 }
             }
         }
-        for (source, effect, controller) in matched {
+        // Also walk every player's graveyard for triggers scoped
+        // `FromYourGraveyard` — recursion creatures (Bloodghast,
+        // Ichorid, Silversmote Ghoul) fire from there. The trigger's
+        // effective controller is the card's owner.
+        for player in &self.players {
+            for card in &player.graveyard {
+                for ta in &card.definition.triggered_abilities {
+                    if !matches!(ta.event.scope, crate::effect::EventScope::FromYourGraveyard) {
+                        continue;
+                    }
+                    for ev in events {
+                        if is_event_hardcoded(ev, &ta.event) {
+                            continue;
+                        }
+                        if crate::game::effects::event_matches_spec(self, ev, &ta.event, card) {
+                            candidates.push(TriggerCandidate {
+                                source: card.id,
+                                effect: ta.effect.clone(),
+                                controller: card.owner,
+                                filter: ta.event.filter.clone(),
+                                subject: crate::game::effects::event_subject(ev),
+                            });
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        // Phase 2: enforce the optional `EventSpec::filter` predicate now
+        // that we're free to call `&self.evaluate_predicate`. The trigger's
+        // source permanent is bound as `ctx.source`, and the event's
+        // subject (cast spell, dying creature, attacker, etc.) is bound as
+        // `Selector::TriggerSource` so filters can reference it.
+        for candidate in candidates {
+            let TriggerCandidate {
+                source,
+                effect,
+                controller,
+                filter,
+                subject,
+            } = candidate;
+            if let Some(filter) = filter {
+                let ctx = crate::game::effects::EffectContext {
+                    controller,
+                    source: Some(source),
+                    targets: vec![],
+                    trigger_source: subject,
+                    mode: 0,
+                    x_value: 0,
+                    converged_value: 0,
+                };
+                if !self.evaluate_predicate(&filter, &ctx) {
+                    continue;
+                }
+            }
             let auto_target = self.auto_target_for_effect(&effect, controller);
             self.stack.push(StackItem::Trigger {
                 source,
@@ -470,6 +762,8 @@ impl GameState {
                 effect: Box::new(effect),
                 target: auto_target,
                 mode: None,
+                x_value: 0,
+                converged_value: 0,
             });
         }
     }
@@ -493,11 +787,11 @@ impl GameState {
         if self.battlefield[pos].controller != p {
             return Err(GameError::NotYourPriority);
         }
-        if self.battlefield[pos].used_loyalty_ability_this_turn {
-            return Err(GameError::CardIsTapped(card_id)); // reuse error for now
-        }
         if !self.battlefield[pos].definition.is_planeswalker() {
             return Err(GameError::InvalidTarget);
+        }
+        if self.battlefield[pos].used_loyalty_ability_this_turn {
+            return Err(GameError::LoyaltyAbilityAlreadyUsed(card_id));
         }
 
         let ability = self.battlefield[pos]
@@ -507,12 +801,28 @@ impl GameState {
             .cloned()
             .ok_or(GameError::AbilityIndexOutOfBounds)?;
 
+        // Validate target — both targeting legality (hexproof / shroud /
+        // protection / Leyline-of-Sanctity) and the loyalty effect's
+        // own selector requirement (Teferi -3's "nonland permanent
+        // an opponent controls" filter, etc.). Spell casts and
+        // activated-ability activations both gate on these; loyalty
+        // abilities went unchecked and would happily aim a Teferi -3
+        // at the controller's own permanent.
+        if let Some(tgt) = &target {
+            self.check_target_legality(tgt, p)?;
+            if let Some(filter) = ability.effect.target_filter_for_slot(0)
+                && !self.evaluate_requirement_static(filter, tgt, p)
+            {
+                return Err(GameError::SelectionRequirementViolated);
+            }
+        }
+
         // Apply loyalty cost.
         let current_loyalty =
             self.battlefield[pos].counter_count(crate::card::CounterType::Loyalty) as i32;
         let new_loyalty = current_loyalty + ability.loyalty_cost;
         if new_loyalty < 0 {
-            return Err(GameError::InvalidTarget); // not enough loyalty
+            return Err(GameError::NotEnoughLoyalty(card_id));
         }
         self.battlefield[pos]
             .counters
@@ -538,6 +848,8 @@ impl GameState {
             effect: Box::new(ability.effect),
             target,
             mode: None,
+            x_value: 0,
+            converged_value: 0,
         });
         self.give_priority_to_active();
 
@@ -558,10 +870,15 @@ impl GameState {
     }
 
     fn deal_to_hand(&mut self, seat: usize, count: usize) {
+        // Top of library is `library[0]` — `pop()` would deal from the
+        // bottom, which produces the wrong opening hand for unshuffled
+        // (test-fixture) decks. Drain the top `count` cards instead.
         for _ in 0..count {
-            if let Some(card) = self.players[seat].library.pop() {
-                self.players[seat].hand.push(card);
+            if self.players[seat].library.is_empty() {
+                break;
             }
+            let card = self.players[seat].library.remove(0);
+            self.players[seat].hand.push(card);
         }
     }
 
@@ -576,12 +893,22 @@ impl GameState {
     }
 
     fn set_mulligan_decision(&mut self, player: usize, mulligans_taken: usize, next_player: Option<usize>) {
-        let hand = self.players[player].hand
+        let hand: Vec<_> = self.players[player].hand
             .iter()
-            .map(|c| (c.id, c.definition.name))
+            .map(|c| (c.id, c.definition.name.to_string()))
+            .collect();
+        // Surface any in-hand Serum Powder–style mulligan helpers so the
+        // decider can pick an alternative answer.
+        let serum_powders: Vec<_> = self.players[player].hand
+            .iter()
+            .filter(|c| matches!(
+                c.definition.opening_hand,
+                Some(crate::effect::OpeningHandEffect::MulliganHelper),
+            ))
+            .map(|c| c.id)
             .collect();
         self.pending_decision = Some(PendingDecision {
-            decision: Decision::Mulligan { player, hand, mulligans_taken },
+            decision: Decision::Mulligan { player, hand, mulligans_taken, serum_powders },
             resume: ResumeContext::Mulligan { player, mulligans_taken, next_player },
         });
     }
@@ -625,10 +952,12 @@ impl GameState {
                 mode,
                 in_progress,
                 remaining,
+                x_value,
+                converged_value,
             } => {
                 let mut evs = self.apply_pending_effect_answer(in_progress, &answer)?;
                 let mut more = self.continue_trigger_resolution(
-                    source, controller, remaining, target, mode,
+                    source, controller, remaining, target, mode, x_value, converged_value,
                 )?;
                 evs.append(&mut more);
                 evs
@@ -659,7 +988,7 @@ impl GameState {
                         if mulligans_taken > 0 {
                             let hand = self.players[player].hand
                                 .iter()
-                                .map(|c| (c.id, c.definition.name))
+                                .map(|c| (c.id, c.definition.name.to_string()))
                                 .collect();
                             self.pending_decision = Some(PendingDecision {
                                 decision: Decision::PutOnLibrary {
@@ -690,6 +1019,34 @@ impl GameState {
                         self.advance_mulligan(next_player);
                         return Ok(vec![]);
                     }
+                    DecisionAnswer::SerumPowder(powder_id) => {
+                        // Serum Powder: exile the entire current hand (the
+                        // powder card itself goes with it), then draw a new
+                        // seven. Doesn't bump `mulligans_taken` — Serum
+                        // Powder is intentionally separate from the London
+                        // mulligan ladder (so multiple powders can stack
+                        // without progressively shrinking the eventual hand).
+                        // Reject if the named Serum Powder isn't actually in
+                        // hand or doesn't carry the `MulliganHelper` flag.
+                        let valid = self.players[player].hand.iter().any(|c| {
+                            c.id == powder_id
+                                && matches!(
+                                    c.definition.opening_hand,
+                                    Some(crate::effect::OpeningHandEffect::MulliganHelper),
+                                )
+                        });
+                        if !valid {
+                            return Err(GameError::DecisionAnswerMismatch);
+                        }
+                        let exiled: Vec<crate::card::CardInstance> =
+                            std::mem::take(&mut self.players[player].hand);
+                        for card in exiled {
+                            self.exile.push(card);
+                        }
+                        self.deal_to_hand(player, 7);
+                        self.set_mulligan_decision(player, mulligans_taken, next_player);
+                        return Ok(vec![]);
+                    }
                     _ => return Err(GameError::DecisionAnswerMismatch),
                 }
             }
@@ -704,9 +1061,87 @@ impl GameState {
         match next_player {
             Some(p) => self.set_mulligan_decision(p, 0, None),
             None => {
-                // All players kept — game begins. Give priority to seat 0.
+                // All players kept — apply opening-hand effects (Leyline of
+                // Sanctity / Gemstone Caverns start in play; Chancellor reveals
+                // schedule delayed triggers) and start the game with priority
+                // on seat 0.
+                self.apply_opening_hand_effects();
                 self.pending_decision = None;
                 self.give_priority_to_active();
+            }
+        }
+    }
+
+    /// Walk every player's opening hand and apply each card's
+    /// `OpeningHandEffect`. The default `Decider` answers "yes" to every
+    /// optional reveal — the `AutoDecider` and the bot benefit from these
+    /// effects in the demo decks, and a future UI can deny the reveal by
+    /// returning `Bool(false)` from an `OptionalTrigger` decision (not yet
+    /// surfaced — opening-hand effects auto-fire today).
+    /// Backwards-compat alias used by some tests — fires every player's
+    /// opening-hand effects immediately. Equivalent to (and delegates to)
+    /// `apply_opening_hand_effects`.
+    pub fn fire_start_of_game_effects(&mut self) {
+        self.apply_opening_hand_effects();
+    }
+
+    pub(crate) fn apply_opening_hand_effects(&mut self) {
+        let n = self.players.len();
+        for p in 0..n {
+            // Snapshot ids first so we can iterate without aliasing the hand.
+            let ids: Vec<crate::card::CardId> =
+                self.players[p].hand.iter().map(|c| c.id).collect();
+            for cid in ids {
+                let oh = self.players[p]
+                    .hand
+                    .iter()
+                    .find(|c| c.id == cid)
+                    .and_then(|c| c.definition.opening_hand.clone());
+                let Some(oh) = oh else { continue };
+                match oh {
+                    crate::effect::OpeningHandEffect::StartInPlay { tapped, extra } => {
+                        // Pull the card out of hand and place it on the
+                        // battlefield under its owner's control.
+                        if let Some(pos) = self.players[p].hand.iter().position(|c| c.id == cid) {
+                            let mut card = self.players[p].hand.remove(pos);
+                            card.controller = p;
+                            card.tapped = tapped;
+                            card.summoning_sick = card.definition.is_creature();
+                            self.battlefield.push(card);
+                            // Run the optional follow-up effect (e.g. Gemstone
+                            // Caverns wants a luck counter on its newly-entered
+                            // self).
+                            if !matches!(extra, crate::effect::Effect::Noop) {
+                                let ctx = crate::game::effects::EffectContext::for_ability(
+                                    cid, p, None,
+                                );
+                                let _ = self.resolve_effect(&extra, &ctx);
+                            }
+                            // Fire any self-source ETB triggers (the same hook
+                            // play_land uses), so static-as-replaced abilities
+                            // and "enters with N counters" still fire if the
+                            // card uses that idiom in addition to `extra`.
+                            self.fire_self_etb_triggers(cid, p);
+                        }
+                    }
+                    crate::effect::OpeningHandEffect::RevealForDelayedTrigger { kind, body } => {
+                        // Card stays in hand; register a delayed trigger that
+                        // fires later (next upkeep / first main / end step).
+                        use crate::game::types::DelayedTrigger;
+                        let dk = crate::game::effects::delayed_kind_from_effect(kind);
+                        self.delayed_triggers.push(DelayedTrigger {
+                            controller: p,
+                            source: cid,
+                            kind: dk,
+                            effect: body,
+                            target: None,
+                            fires_once: true,
+                        });
+                    }
+                    crate::effect::OpeningHandEffect::MulliganHelper => {
+                        // Surfaces during mulligan only; nothing to do here.
+                    }
+                }
             }
         }
     }
@@ -822,6 +1257,37 @@ impl GameState {
                 }
                 Ok(events)
             }
+            PendingEffectState::DiscardChosenPending { target_player } => {
+                let DecisionAnswer::Discard(card_ids) = answer else {
+                    return Err(GameError::DecisionAnswerMismatch);
+                };
+                let mut events = Vec::with_capacity(card_ids.len());
+                for cid in card_ids {
+                    if let Some(pos) = self.players[target_player]
+                        .hand
+                        .iter()
+                        .position(|c| c.id == *cid)
+                    {
+                        let card = self.players[target_player].hand.remove(pos);
+                        let card_id = card.id;
+                        self.players[target_player].graveyard.push(card);
+                        events.push(GameEvent::CardDiscarded {
+                            player: target_player,
+                            card_id,
+                        });
+                    }
+                }
+                Ok(events)
+            }
+            PendingEffectState::ChooseCreatureTypePending { target_id } => {
+                let DecisionAnswer::CreatureType(ct) = answer else {
+                    return Err(GameError::DecisionAnswerMismatch);
+                };
+                if let Some(card) = self.battlefield_find_mut(target_id) {
+                    card.chosen_creature_type = Some(*ct);
+                }
+                Ok(Vec::new())
+            }
         }
     }
 
@@ -830,6 +1296,15 @@ impl GameState {
     /// is used on resume to continue with whatever Seq tail was left after the
     /// suspending effect — pass `None` for the initial resolution and `Some(...)`
     /// when continuing from `submit_decision`.
+    //
+    // The argument list is wide because the spell-state quartet (target, mode,
+    // x_value, converged_value) must be preserved across suspend/resume so the
+    // spell can re-run its effect tree with the original cast-time choices.
+    // The two callers (initial cast in `stack.rs` and resume in
+    // `submit_decision`) both hand off these fields directly from a
+    // `StackItem::Spell` / `ResumeContext::Spell`, so wrapping them in a
+    // struct doesn't reduce coupling at the call sites.
+    #[allow(clippy::too_many_arguments)]
     pub(crate) fn continue_spell_resolution(
         &mut self,
         card: CardInstance,
@@ -882,6 +1357,18 @@ impl GameState {
             self.exile.push(card);
             return Ok(events);
         }
+        // Flashback: a spell cast via its Flashback cost is exiled on
+        // resolution instead of going to the graveyard. `cast_flashback`
+        // marks the card with `kicked = true` to flag the path. (Use of the
+        // `kicked` field as the marker is a small overload — there's no
+        // clash because a card can't be cast normally and via flashback
+        // simultaneously, and flashback cards never have actual kicker.)
+        if card.kicked
+            && card.definition.keywords.iter().any(|k| matches!(k, crate::card::Keyword::Flashback(_)))
+        {
+            self.exile.push(card);
+            return Ok(events);
+        }
         self.players[caster].send_to_graveyard(card);
         Ok(events)
     }
@@ -894,6 +1381,8 @@ impl GameState {
         effect: crate::effect::Effect,
         target: Option<Target>,
         mode: usize,
+        x_value: u32,
+        converged_value: u32,
     ) -> Result<Vec<GameEvent>, GameError> {
         // If the trigger has a stored target that's no longer legal (e.g.
         // an Elesh-Norn-doubled Solitude ETB whose first target was just
@@ -907,7 +1396,10 @@ impl GameState {
             },
             None => None,
         };
-        let ctx = EffectContext::for_trigger(source, controller, resolved_target.clone(), mode);
+        let mut ctx =
+            EffectContext::for_trigger(source, controller, resolved_target.clone(), mode);
+        ctx.x_value = x_value;
+        ctx.converged_value = converged_value;
         let events = self.resolve_effect(&effect, &ctx)?;
         if let Some((decision, in_progress, remaining)) = self.suspend_signal.take() {
             self.pending_decision = Some(PendingDecision {
@@ -919,6 +1411,8 @@ impl GameState {
                     mode,
                     in_progress,
                     remaining,
+                    x_value,
+                    converged_value,
                 },
             });
         }
@@ -971,6 +1465,31 @@ impl GameState {
         self.battlefield.iter_mut().find(|c| c.id == id)
     }
 
+    /// Look up the owner (seat index) of `id` across every public zone:
+    /// battlefield, each player's graveyard, each player's hand, the
+    /// stack, and exile. Returns `None` if no card with that id exists
+    /// in any visible zone. Used by `PlayerRef::OwnerOf(...)` resolution
+    /// to find the original owner of a target whose card has changed
+    /// zones (e.g. destroyed and now in graveyard) by the time the
+    /// owner-targeted effect resolves.
+    pub(crate) fn find_card_owner(&self, id: CardId) -> Option<usize> {
+        if let Some(c) = self.battlefield_find(id) {
+            return Some(c.owner);
+        }
+        for (i, p) in self.players.iter().enumerate() {
+            if p.graveyard.iter().any(|c| c.id == id)
+                || p.hand.iter().any(|c| c.id == id)
+                || p.library.iter().any(|c| c.id == id)
+            {
+                return Some(i);
+            }
+        }
+        if self.exile.iter().any(|c| c.id == id) {
+            return self.exile.iter().find(|c| c.id == id).map(|c| c.owner);
+        }
+        None
+    }
+
     /// Returns true if the permanent `id` has `kw` after all layer effects are applied.
     /// Falls back to `false` if the permanent is not on the battlefield.
     #[allow(dead_code)]
@@ -995,19 +1514,32 @@ impl GameState {
     }
 }
 
-/// Events already fired by hardcoded sites. Skip them in the unified dispatcher
-/// to prevent double-firing. Dies triggers are captured by SBA before the
-/// creature leaves the battlefield, so `SelfSource` Dies triggers wouldn't
-/// match after-the-fact anyway — keep them hardcoded.
-fn is_event_hardcoded(ev: &GameEvent) -> bool {
-    matches!(
-        ev,
-        GameEvent::PermanentEntered { .. }
-            | GameEvent::AttackerDeclared(_)
-            | GameEvent::SpellCast { .. }
-            | GameEvent::CreatureDied { .. }
-            | GameEvent::StepChanged(_)
-    )
+/// Whether `ev` is already handled by a hardcoded trigger site for the
+/// given `spec.scope`. Dispatched triggers should skip events for which
+/// the hardcoded site would already fire — but other scopes still need
+/// the unified dispatcher.
+///
+/// Coverage of hardcoded sites:
+/// - `EnterBattlefield` + `SelfSource` → `fire_self_etb_triggers`
+/// - `Attacks` + `SelfSource` → `declare_attackers`
+/// - `CreatureDied` + `SelfSource` → SBA-time hook in remove-to-graveyard
+/// - `SpellCast` (any scope) → `collect_self_cast_triggers` (SelfSource)
+///   plus `fire_spell_cast_triggers` (YourControl/AnyPlayer)
+/// - `StepBegins` (any scope) → `fire_step_triggers`
+///
+/// Non-SelfSource scopes for ETB / Attacks / CreatureDied are NOT covered
+/// by a hardcoded site and need the unified dispatcher (Temur Ascendancy's
+/// "another creature you control enters" trigger, etc.).
+fn is_event_hardcoded(ev: &GameEvent, spec: &crate::effect::EventSpec) -> bool {
+    use crate::effect::EventScope;
+    match ev {
+        GameEvent::PermanentEntered { .. } => matches!(spec.scope, EventScope::SelfSource),
+        GameEvent::AttackerDeclared(_) => matches!(spec.scope, EventScope::SelfSource),
+        GameEvent::CreatureDied { .. } => matches!(spec.scope, EventScope::SelfSource),
+        GameEvent::SpellCast { .. } => true,
+        GameEvent::StepChanged(_) => true,
+        _ => false,
+    }
 }
 
 // ── Static ability conversion ─────────────────────────────────────────────────
@@ -1053,7 +1585,14 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             StaticEffect::EntersTapped { .. }
             | StaticEffect::ExtraLandPerTurn
             | StaticEffect::CostReduction { .. }
-            | StaticEffect::AdditionalCostAfterFirstSpell { .. } => vec![],
+            | StaticEffect::AdditionalCostAfterFirstSpell { .. }
+            | StaticEffect::ControllerHasHexproof
+            | StaticEffect::LandsTapColorlessOnly
+            // Teferi statics — handled at cast time via dedicated checks
+            // (`player_locked_to_sorcery_timing` etc.); not modeled as
+            // continuous-layer modifications here.
+            | StaticEffect::OpponentsSorceryTimingOnly
+            | StaticEffect::ControllerSorceriesAsFlash => vec![],
         })
         .collect()
 }
@@ -1092,6 +1631,7 @@ fn affected_from_requirement(
     let mut ctrl: Option<Option<usize>> = None; // Outer Some(None) = all players; Some(Some(n)) = specific player
     let mut types: Vec<CardType> = vec![];
     let mut creature_type: Option<crate::card::CreatureType> = None;
+    let mut counter_filter: Option<crate::card::CounterType> = None;
     let mut walk = vec![req];
     while let Some(r) = walk.pop() {
         match r {
@@ -1113,9 +1653,18 @@ fn affected_from_requirement(
             R::Land => types.push(CardType::Land),
             R::HasCardType(t) => types.push(t.clone()),
             R::HasCreatureType(ct) => creature_type = Some(*ct),
+            R::WithCounter(ct) => counter_filter = Some(*ct),
             R::Any | R::Permanent => {}
             _ => return None,
         }
+    }
+    if let Some(counter) = counter_filter {
+        return Some(AffectedPermanents::AllWithCounter {
+            controller: ctrl.flatten(),
+            card_types: types,
+            counter,
+            at_least: 1,
+        });
     }
     if let Some(ct) = creature_type {
         return Some(AffectedPermanents::AllWithCreatureType { controller: ctrl.flatten(), creature_type: ct });

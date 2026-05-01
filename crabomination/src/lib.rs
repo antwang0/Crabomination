@@ -1,5 +1,6 @@
 pub mod card;
 pub mod catalog;
+pub mod cube;
 pub mod decision;
 pub mod demo;
 pub mod effect;
@@ -9,3 +10,6 @@ pub mod mana;
 pub mod net;
 pub mod player;
 pub mod server;
+pub mod snapshot;
+pub mod sos_mode;
+pub mod static_str_serde;

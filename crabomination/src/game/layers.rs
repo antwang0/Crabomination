@@ -21,11 +21,12 @@ use crate::card::{
     CardId, CardType, CounterType, CreatureType, Keyword, LandType, Subtypes, Supertype,
 };
 use crate::mana::Color;
+use serde::{Deserialize, Serialize};
 
 // ── Duration ──────────────────────────────────────────────────────────────────
 
 /// How long a continuous effect persists.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum EffectDuration {
     /// Lasts while the source permanent is on the battlefield (static ability).
     WhileSourceOnBattlefield,
@@ -40,6 +41,7 @@ pub enum EffectDuration {
 // ── Layer classification ───────────────────────────────────────────────────────
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Serialize, Deserialize)]
 pub enum Layer {
     L1Copy        = 1,
     L2Control     = 2,
@@ -52,6 +54,7 @@ pub enum Layer {
 
 /// Sub-layer within Layer 7 for power/toughness.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Serialize, Deserialize)]
 pub enum PtSublayer {
     /// 7a: characteristic-defining abilities (e.g. Tarmogoyf).
     CharDefining,
@@ -66,7 +69,7 @@ pub enum PtSublayer {
 // ── Modification ──────────────────────────────────────────────────────────────
 
 /// The actual change made by a continuous effect within its layer.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Modification {
     // ── Layer 2 ──────────────────────────────────────────────────────────────
     ChangeController(usize),
@@ -100,7 +103,7 @@ pub enum Modification {
 // ── Continuous effect ─────────────────────────────────────────────────────────
 
 /// A single continuous effect active in the game.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ContinuousEffect {
     /// Unique ID (monotonically increasing timestamp for ordering within a layer).
     pub timestamp: u64,
@@ -116,7 +119,7 @@ pub struct ContinuousEffect {
 }
 
 /// Describes which permanents a continuous effect affects.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum AffectedPermanents {
     /// Only the source permanent itself.
     Source,
@@ -130,6 +133,18 @@ pub enum AffectedPermanents {
     /// All creatures with the given creature type (lord effect).
     /// `controller: Some(p)` restricts to that player's creatures; `None` = all.
     AllWithCreatureType { controller: Option<usize>, creature_type: crate::card::CreatureType },
+    /// All permanents bearing at least `at_least` counters of the given
+    /// kind. Used for SOS Emil's "creatures you control with +1/+1
+    /// counters have trample" lord-with-counter pattern, and the
+    /// broader "Monstrous / Levelup-creatures get [keyword]" buff
+    /// shape. `controller: Some(p)` restricts to that player; `None` =
+    /// all. `card_types` empty means any permanent type matches.
+    AllWithCounter {
+        controller: Option<usize>,
+        card_types: Vec<CardType>,
+        counter: crate::card::CounterType,
+        at_least: u32,
+    },
 }
 
 // ── Computed permanent ────────────────────────────────────────────────────────
@@ -322,6 +337,13 @@ fn affects(effect: &ContinuousEffect, card: &crate::card::CardInstance) -> bool 
             let has_type = card.definition.subtypes.creature_types.contains(creature_type)
                 || card.definition.keywords.contains(&Keyword::Changeling);
             ctrl_ok && is_creature && has_type
+        }
+        AffectedPermanents::AllWithCounter { controller, card_types, counter, at_least } => {
+            let ctrl_ok = controller.is_none_or(|c| c == card.controller);
+            let type_ok = card_types.is_empty()
+                || card_types.iter().any(|t| card.definition.card_types.contains(t));
+            let counter_ok = card.counter_count(*counter) >= *at_least;
+            ctrl_ok && type_ok && counter_ok
         }
     }
 }

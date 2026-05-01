@@ -1,0 +1,5212 @@
+[
+  {
+    "name": "Acidic Slime",
+    "mana_cost": "{3}{G}{G}",
+    "cmc": 5,
+    "card_types": [
+      "Creature"
+    ],
+    "supertypes": [],
+    "creature_types": [
+      "Ooze"
+    ],
+    "land_types": [],
+    "power": 2,
+    "toughness": 2,
+    "keywords": [
+      "Deathtouch"
+    ],
+    "base_loyalty": null
+  },
+  {
+    "name": "Aether Spellbomb",
+    "mana_cost": "{1}",
+    "cmc": 1,
+    "card_types": [
+      "Artifact"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Ambition's Cost",
+    "mana_cost": "{3}{B}",
+    "cmc": 4,
+    "card_types": [
+      "Sorcery"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Ancestral Recall",
+    "mana_cost": "{U}",
+    "cmc": 1,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Ancient Grudge",
+    "mana_cost": "{R}",
+    "cmc": 1,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [
+      "Flashback"
+    ],
+    "base_loyalty": null
+  },
+  {
+    "name": "Anger of the Gods",
+    "mana_cost": "{1}{R}{R}",
+    "cmc": 3,
+    "card_types": [
+      "Sorcery"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Animate Dead",
+    "mana_cost": "{1}{B}",
+    "cmc": 2,
+    "card_types": [
+      "Enchantment"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Annul",
+    "mana_cost": "{U}",
+    "cmc": 1,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Anticipate",
+    "mana_cost": "{1}{U}",
+    "cmc": 2,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Assassin's Trophy",
+    "mana_cost": "{B}{G}",
+    "cmc": 2,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Atraxa, Grand Unifier",
+    "mana_cost": "{3}{W}{U}{B}{R}{G}",
+    "cmc": 8,
+    "card_types": [
+      "Creature"
+    ],
+    "supertypes": [
+      "Legendary"
+    ],
+    "creature_types": [
+      "Phyrexian",
+      "Angel"
+    ],
+    "land_types": [],
+    "power": 7,
+    "toughness": 7,
+    "keywords": [
+      "Flying",
+      "Vigilance",
+      "Deathtouch",
+      "Lifelink"
+    ],
+    "base_loyalty": null
+  },
+  {
+    "name": "Balefire Dragon",
+    "mana_cost": "{5}{R}{R}",
+    "cmc": 7,
+    "card_types": [
+      "Creature"
+    ],
+    "supertypes": [],
+    "creature_types": [
+      "Dragon"
+    ],
+    "land_types": [],
+    "power": 6,
+    "toughness": 6,
+    "keywords": [
+      "Flying"
+    ],
+    "base_loyalty": null
+  },
+  {
+    "name": "Banefire",
+    "mana_cost": "{R}",
+    "cmc": 1,
+    "card_types": [
+      "Sorcery"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Beast Within",
+    "mana_cost": "{2}{G}",
+    "cmc": 3,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Big Score",
+    "mana_cost": "{3}{R}",
+    "cmc": 4,
+    "card_types": [
+      "Sorcery"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Biorhythm",
+    "mana_cost": "{4}{G}{G}{G}",
+    "cmc": 7,
+    "card_types": [
+      "Sorcery"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Birds of Paradise",
+    "mana_cost": "{G}",
+    "cmc": 1,
+    "card_types": [
+      "Creature"
+    ],
+    "supertypes": [],
+    "creature_types": [
+      "Bird"
+    ],
+    "land_types": [],
+    "power": 0,
+    "toughness": 1,
+    "keywords": [
+      "Flying"
+    ],
+    "base_loyalty": null
+  },
+  {
+    "name": "Bitterbloom Bearer",
+    "mana_cost": "{1}{B}",
+    "cmc": 2,
+    "card_types": [
+      "Creature"
+    ],
+    "supertypes": [],
+    "creature_types": [
+      "Faerie",
+      "Wizard"
+    ],
+    "land_types": [],
+    "power": 1,
+    "toughness": 2,
+    "keywords": [
+      "Flying"
+    ],
+    "base_loyalty": null
+  },
+  {
+    "name": "Black Knight",
+    "mana_cost": "{B}{B}",
+    "cmc": 2,
+    "card_types": [
+      "Creature"
+    ],
+    "supertypes": [],
+    "creature_types": [
+      "Human",
+      "Knight"
+    ],
+    "land_types": [],
+    "power": 2,
+    "toughness": 2,
+    "keywords": [
+      "First strike"
+    ],
+    "base_loyalty": null
+  },
+  {
+    "name": "Blackcleave Cliffs",
+    "mana_cost": "",
+    "cmc": 0,
+    "card_types": [
+      "Land"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [
+      "Swamp",
+      "Mountain"
+    ],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Blasphemous Act",
+    "mana_cost": "{4}{R}",
+    "cmc": 5,
+    "card_types": [
+      "Sorcery"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Blasphemous Edict",
+    "mana_cost": "{4}{B}",
+    "cmc": 5,
+    "card_types": [
+      "Sorcery"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Blightstep Pathway",
+    "mana_cost": "",
+    "cmc": 0,
+    "card_types": [
+      "Land"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [
+      "Swamp"
+    ],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Bloodchief's Thirst",
+    "mana_cost": "{B}",
+    "cmc": 1,
+    "card_types": [
+      "Sorcery"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Bloodghast",
+    "mana_cost": "{B}{B}",
+    "cmc": 2,
+    "card_types": [
+      "Creature"
+    ],
+    "supertypes": [],
+    "creature_types": [
+      "Vampire",
+      "Spirit"
+    ],
+    "land_types": [],
+    "power": 2,
+    "toughness": 1,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Bloodtithe Harvester",
+    "mana_cost": "{1}{B}{R}",
+    "cmc": 3,
+    "card_types": [
+      "Creature"
+    ],
+    "supertypes": [],
+    "creature_types": [
+      "Vampire",
+      "Rogue"
+    ],
+    "land_types": [],
+    "power": 3,
+    "toughness": 2,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Blooming Marsh",
+    "mana_cost": "",
+    "cmc": 0,
+    "card_types": [
+      "Land"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [
+      "Swamp",
+      "Forest"
+    ],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Blossoming Defense",
+    "mana_cost": "{G}",
+    "cmc": 1,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Bone Shards",
+    "mana_cost": "{B}",
+    "cmc": 1,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Bone Splinters",
+    "mana_cost": "{B}",
+    "cmc": 1,
+    "card_types": [
+      "Sorcery"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Boomerang",
+    "mana_cost": "{U}{U}",
+    "cmc": 2,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Brainstorm",
+    "mana_cost": "{U}",
+    "cmc": 1,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Callous Sell-Sword",
+    "mana_cost": "{1}{R}",
+    "cmc": 2,
+    "card_types": [
+      "Creature"
+    ],
+    "supertypes": [],
+    "creature_types": [
+      "Human",
+      "Mercenary"
+    ],
+    "land_types": [],
+    "power": 2,
+    "toughness": 1,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Cancel",
+    "mana_cost": "{1}{U}{U}",
+    "cmc": 3,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Cankerbloom",
+    "mana_cost": "{1}{G}",
+    "cmc": 2,
+    "card_types": [
+      "Creature"
+    ],
+    "supertypes": [],
+    "creature_types": [
+      "Fungus"
+    ],
+    "land_types": [],
+    "power": 2,
+    "toughness": 2,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Carnage Tyrant",
+    "mana_cost": "{4}{G}{G}",
+    "cmc": 6,
+    "card_types": [
+      "Creature"
+    ],
+    "supertypes": [],
+    "creature_types": [
+      "Dinosaur"
+    ],
+    "land_types": [],
+    "power": 7,
+    "toughness": 6,
+    "keywords": [
+      "Trample",
+      "Hexproof"
+    ],
+    "base_loyalty": null
+  },
+  {
+    "name": "Cast Down",
+    "mana_cost": "{1}{B}",
+    "cmc": 2,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Cathar Commando",
+    "mana_cost": "{2}{W}",
+    "cmc": 3,
+    "card_types": [
+      "Creature"
+    ],
+    "supertypes": [],
+    "creature_types": [
+      "Human",
+      "Soldier"
+    ],
+    "land_types": [],
+    "power": 3,
+    "toughness": 1,
+    "keywords": [
+      "Flash"
+    ],
+    "base_loyalty": null
+  },
+  {
+    "name": "Celestial Purge",
+    "mana_cost": "{1}{W}",
+    "cmc": 2,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Cephalid Coliseum",
+    "mana_cost": "",
+    "cmc": 0,
+    "card_types": [
+      "Land"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Chancellor of the Tangle",
+    "mana_cost": "{5}{G}",
+    "cmc": 6,
+    "card_types": [
+      "Creature"
+    ],
+    "supertypes": [],
+    "creature_types": [
+      "Avatar"
+    ],
+    "land_types": [],
+    "power": 6,
+    "toughness": 7,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Chaos Warp",
+    "mana_cost": "{2}{R}",
+    "cmc": 3,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Chromatic Star",
+    "mana_cost": "{1}",
+    "cmc": 1,
+    "card_types": [
+      "Artifact"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Cling to Dust",
+    "mana_cost": "{B}",
+    "cmc": 1,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Cloudpost",
+    "mana_cost": "",
+    "cmc": 0,
+    "card_types": [
+      "Land"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [
+      "Locus"
+    ],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Coalition Relic",
+    "mana_cost": "{3}",
+    "cmc": 3,
+    "card_types": [
+      "Artifact"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Commercial District",
+    "mana_cost": "",
+    "cmc": 0,
+    "card_types": [
+      "Land"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [
+      "Mountain",
+      "Plains"
+    ],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Concentrate",
+    "mana_cost": "{2}{U}{U}",
+    "cmc": 4,
+    "card_types": [
+      "Sorcery"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Consider",
+    "mana_cost": "{U}",
+    "cmc": 1,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Consign to Memory",
+    "mana_cost": "{U}",
+    "cmc": 1,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Containment Priest",
+    "mana_cost": "{1}{W}",
+    "cmc": 2,
+    "card_types": [
+      "Creature"
+    ],
+    "supertypes": [],
+    "creature_types": [
+      "Human",
+      "Cleric"
+    ],
+    "land_types": [],
+    "power": 2,
+    "toughness": 2,
+    "keywords": [
+      "Flash"
+    ],
+    "base_loyalty": null
+  },
+  {
+    "name": "Copperline Gorge",
+    "mana_cost": "",
+    "cmc": 0,
+    "card_types": [
+      "Land"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [
+      "Mountain",
+      "Forest"
+    ],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Cosmogoyf",
+    "mana_cost": "{2}{G}",
+    "cmc": 3,
+    "card_types": [
+      "Creature"
+    ],
+    "supertypes": [],
+    "creature_types": [
+      "Beast"
+    ],
+    "land_types": [],
+    "power": 0,
+    "toughness": 1,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Counterspell",
+    "mana_cost": "{U}{U}",
+    "cmc": 2,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Crabomination",
+    "mana_cost": "{2}{U}{B}",
+    "cmc": 4,
+    "card_types": [
+      "Creature"
+    ],
+    "supertypes": [
+      "Legendary"
+    ],
+    "creature_types": [
+      "Crab",
+      "Horror"
+    ],
+    "land_types": [],
+    "power": 3,
+    "toughness": 4,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Craw Wurm",
+    "mana_cost": "{4}{G}{G}",
+    "cmc": 6,
+    "card_types": [
+      "Creature"
+    ],
+    "supertypes": [],
+    "creature_types": [
+      "Wurm"
+    ],
+    "land_types": [],
+    "power": 6,
+    "toughness": 4,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Cruel Somnophage",
+    "mana_cost": "{1}{U}{B}",
+    "cmc": 3,
+    "card_types": [
+      "Creature"
+    ],
+    "supertypes": [],
+    "creature_types": [
+      "Phyrexian",
+      "Horror"
+    ],
+    "land_types": [],
+    "power": 0,
+    "toughness": 0,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Cryptic Command",
+    "mana_cost": "{1}{U}{U}{U}",
+    "cmc": 4,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Cultivate",
+    "mana_cost": "{2}{G}",
+    "cmc": 3,
+    "card_types": [
+      "Sorcery"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Cyclonic Rift",
+    "mana_cost": "{1}{U}",
+    "cmc": 2,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Damnation",
+    "mana_cost": "{2}{B}{B}",
+    "cmc": 4,
+    "card_types": [
+      "Sorcery"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Damping Sphere",
+    "mana_cost": "{2}",
+    "cmc": 2,
+    "card_types": [
+      "Artifact"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Dand\u00c3\u00a2n",
+    "mana_cost": "{2}{U}",
+    "cmc": 3,
+    "card_types": [
+      "Creature"
+    ],
+    "supertypes": [],
+    "creature_types": [
+      "Fish"
+    ],
+    "land_types": [],
+    "power": 4,
+    "toughness": 1,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Dark Confidant",
+    "mana_cost": "{1}{B}",
+    "cmc": 2,
+    "card_types": [
+      "Creature"
+    ],
+    "supertypes": [],
+    "creature_types": [
+      "Human",
+      "Wizard"
+    ],
+    "land_types": [],
+    "power": 2,
+    "toughness": 1,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Dark Ritual",
+    "mana_cost": "{B}",
+    "cmc": 1,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Darkbore Pathway",
+    "mana_cost": "",
+    "cmc": 0,
+    "card_types": [
+      "Land"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [
+      "Swamp"
+    ],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Darkmoss Bridge",
+    "mana_cost": "",
+    "cmc": 0,
+    "card_types": [
+      "Land"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [
+      "Swamp",
+      "Forest"
+    ],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Day of Judgment",
+    "mana_cost": "{2}{W}{W}",
+    "cmc": 4,
+    "card_types": [
+      "Sorcery"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Daze",
+    "mana_cost": "{1}{U}",
+    "cmc": 2,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Deadly Dispute",
+    "mana_cost": "{1}{B}",
+    "cmc": 2,
+    "card_types": [
+      "Sorcery"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Demonic Tutor",
+    "mana_cost": "{1}{B}",
+    "cmc": 2,
+    "card_types": [
+      "Sorcery"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Despise",
+    "mana_cost": "{B}",
+    "cmc": 1,
+    "card_types": [
+      "Sorcery"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Devourer of Destiny",
+    "mana_cost": "{5}",
+    "cmc": 5,
+    "card_types": [
+      "Creature"
+    ],
+    "supertypes": [],
+    "creature_types": [
+      "Eldrazi"
+    ],
+    "land_types": [],
+    "power": 7,
+    "toughness": 5,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Diabolic Edict",
+    "mana_cost": "{1}{B}",
+    "cmc": 2,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Diabolic Tutor",
+    "mana_cost": "{2}{B}{B}",
+    "cmc": 4,
+    "card_types": [
+      "Sorcery"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Disenchant",
+    "mana_cost": "{1}{W}",
+    "cmc": 2,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Disentomb",
+    "mana_cost": "{B}",
+    "cmc": 1,
+    "card_types": [
+      "Sorcery"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Disfigure",
+    "mana_cost": "{B}",
+    "cmc": 1,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Dismember",
+    "mana_cost": "{1}{B}{B}",
+    "cmc": 3,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Dispel",
+    "mana_cost": "{U}",
+    "cmc": 1,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Distress",
+    "mana_cost": "{B}{B}",
+    "cmc": 2,
+    "card_types": [
+      "Sorcery"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Divination",
+    "mana_cost": "{2}{U}",
+    "cmc": 3,
+    "card_types": [
+      "Sorcery"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Doom Blade",
+    "mana_cost": "{1}{B}",
+    "cmc": 2,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Dovin's Veto",
+    "mana_cost": "{W}{U}",
+    "cmc": 2,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Dread Return",
+    "mana_cost": "{2}{B}{B}",
+    "cmc": 4,
+    "card_types": [
+      "Sorcery"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Drossforge Bridge",
+    "mana_cost": "",
+    "cmc": 0,
+    "card_types": [
+      "Land"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [
+      "Swamp",
+      "Mountain"
+    ],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Drown in Ichor",
+    "mana_cost": "{1}{B}",
+    "cmc": 2,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Earthquake",
+    "mana_cost": "{R}",
+    "cmc": 1,
+    "card_types": [
+      "Sorcery"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Echoing Truth",
+    "mana_cost": "{1}{U}",
+    "cmc": 2,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Elegant Parlor",
+    "mana_cost": "",
+    "cmc": 0,
+    "card_types": [
+      "Land"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [
+      "Mountain",
+      "Forest"
+    ],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Elvish Archers",
+    "mana_cost": "{1}{G}",
+    "cmc": 2,
+    "card_types": [
+      "Creature"
+    ],
+    "supertypes": [],
+    "creature_types": [
+      "Elf",
+      "Archer"
+    ],
+    "land_types": [],
+    "power": 2,
+    "toughness": 1,
+    "keywords": [
+      "First strike"
+    ],
+    "base_loyalty": null
+  },
+  {
+    "name": "Elvish Mystic",
+    "mana_cost": "{G}",
+    "cmc": 1,
+    "card_types": [
+      "Creature"
+    ],
+    "supertypes": [],
+    "creature_types": [
+      "Elf",
+      "Druid"
+    ],
+    "land_types": [],
+    "power": 1,
+    "toughness": 1,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Elvish Reclaimer",
+    "mana_cost": "{1}{G}",
+    "cmc": 2,
+    "card_types": [
+      "Creature"
+    ],
+    "supertypes": [],
+    "creature_types": [
+      "Human",
+      "Druid"
+    ],
+    "land_types": [],
+    "power": 1,
+    "toughness": 2,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Enlightened Tutor",
+    "mana_cost": "{W}",
+    "cmc": 1,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Ephemerate",
+    "mana_cost": "{W}",
+    "cmc": 1,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [
+      "Rebound"
+    ],
+    "base_loyalty": null
+  },
+  {
+    "name": "Eternal Witness",
+    "mana_cost": "{1}{G}{G}",
+    "cmc": 3,
+    "card_types": [
+      "Creature"
+    ],
+    "supertypes": [],
+    "creature_types": [
+      "Human",
+      "Shaman"
+    ],
+    "land_types": [],
+    "power": 2,
+    "toughness": 1,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Evolving Wilds",
+    "mana_cost": "",
+    "cmc": 0,
+    "card_types": [
+      "Land"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Faithful Mending",
+    "mana_cost": "{1}{W}",
+    "cmc": 2,
+    "card_types": [
+      "Sorcery"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [
+      "Flashback"
+    ],
+    "base_loyalty": null
+  },
+  {
+    "name": "Farseek",
+    "mana_cost": "{1}{G}",
+    "cmc": 2,
+    "card_types": [
+      "Sorcery"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Fatal Push",
+    "mana_cost": "{B}",
+    "cmc": 1,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Fell",
+    "mana_cost": "{2}{B}",
+    "cmc": 3,
+    "card_types": [
+      "Sorcery"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Fellwar Stone",
+    "mana_cost": "{2}",
+    "cmc": 2,
+    "card_types": [
+      "Artifact"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Final Reward",
+    "mana_cost": "{4}{B}",
+    "cmc": 5,
+    "card_types": [
+      "Sorcery"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Flame Slash",
+    "mana_cost": "{R}",
+    "cmc": 1,
+    "card_types": [
+      "Sorcery"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Flickerwisp",
+    "mana_cost": "{1}{W}{W}",
+    "cmc": 3,
+    "card_types": [
+      "Creature"
+    ],
+    "supertypes": [],
+    "creature_types": [
+      "Faerie"
+    ],
+    "land_types": [],
+    "power": 3,
+    "toughness": 1,
+    "keywords": [
+      "Flying"
+    ],
+    "base_loyalty": null
+  },
+  {
+    "name": "Flooded Strand",
+    "mana_cost": "",
+    "cmc": 0,
+    "card_types": [
+      "Land"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Force of Negation",
+    "mana_cost": "{1}{U}{U}",
+    "cmc": 3,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Force of Will",
+    "mana_cost": "{3}{U}{U}",
+    "cmc": 5,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Forest",
+    "mana_cost": "",
+    "cmc": 0,
+    "card_types": [
+      "Land"
+    ],
+    "supertypes": [
+      "Basic"
+    ],
+    "creature_types": [],
+    "land_types": [
+      "Forest"
+    ],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Frantic Search",
+    "mana_cost": "{2}{U}",
+    "cmc": 3,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Gaea's Skyfolk",
+    "mana_cost": "{G}{U}",
+    "cmc": 2,
+    "card_types": [
+      "Creature"
+    ],
+    "supertypes": [],
+    "creature_types": [
+      "Merfolk"
+    ],
+    "land_types": [],
+    "power": 2,
+    "toughness": 2,
+    "keywords": [
+      "Flying"
+    ],
+    "base_loyalty": null
+  },
+  {
+    "name": "Gemstone Caverns",
+    "mana_cost": "",
+    "cmc": 0,
+    "card_types": [
+      "Land"
+    ],
+    "supertypes": [
+      "Legendary"
+    ],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Gemstone Mine",
+    "mana_cost": "",
+    "cmc": 0,
+    "card_types": [
+      "Land"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Geth's Verdict",
+    "mana_cost": "{1}{B}",
+    "cmc": 2,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Ghor-Clan Rampager",
+    "mana_cost": "{2}{R}{G}",
+    "cmc": 4,
+    "card_types": [
+      "Creature"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": 4,
+    "toughness": 4,
+    "keywords": [
+      "Trample"
+    ],
+    "base_loyalty": null
+  },
+  {
+    "name": "Ghost Vacuum",
+    "mana_cost": "{2}",
+    "cmc": 2,
+    "card_types": [
+      "Artifact"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Giant Growth",
+    "mana_cost": "{G}",
+    "cmc": 1,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Glimmerpost",
+    "mana_cost": "",
+    "cmc": 0,
+    "card_types": [
+      "Land"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [
+      "Locus"
+    ],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Glimpse the Unthinkable",
+    "mana_cost": "{U}{B}",
+    "cmc": 2,
+    "card_types": [
+      "Sorcery"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Glorious Anthem",
+    "mana_cost": "{1}{W}{W}",
+    "cmc": 3,
+    "card_types": [
+      "Enchantment"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Go for the Throat",
+    "mana_cost": "{1}{B}",
+    "cmc": 2,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Goblin Bombardment",
+    "mana_cost": "{1}{R}",
+    "cmc": 2,
+    "card_types": [
+      "Enchantment"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Goblin Guide",
+    "mana_cost": "{R}",
+    "cmc": 1,
+    "card_types": [
+      "Creature"
+    ],
+    "supertypes": [],
+    "creature_types": [
+      "Goblin"
+    ],
+    "land_types": [],
+    "power": 2,
+    "toughness": 2,
+    "keywords": [
+      "Haste"
+    ],
+    "base_loyalty": null
+  },
+  {
+    "name": "Godless Shrine",
+    "mana_cost": "",
+    "cmc": 0,
+    "card_types": [
+      "Land"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [
+      "Plains",
+      "Swamp"
+    ],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Goldmire Bridge",
+    "mana_cost": "",
+    "cmc": 0,
+    "card_types": [
+      "Land"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [
+      "Plains",
+      "Swamp"
+    ],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Goldspan Dragon",
+    "mana_cost": "{3}{R}{R}",
+    "cmc": 5,
+    "card_types": [
+      "Creature"
+    ],
+    "supertypes": [],
+    "creature_types": [
+      "Dragon"
+    ],
+    "land_types": [],
+    "power": 4,
+    "toughness": 4,
+    "keywords": [
+      "Flying",
+      "Haste"
+    ],
+    "base_loyalty": null
+  },
+  {
+    "name": "Goryo's Vengeance",
+    "mana_cost": "{1}{B}",
+    "cmc": 2,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Grasp of Darkness",
+    "mana_cost": "{B}{B}",
+    "cmc": 2,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Grim Lavamancer",
+    "mana_cost": "{R}",
+    "cmc": 1,
+    "card_types": [
+      "Creature"
+    ],
+    "supertypes": [],
+    "creature_types": [
+      "Human",
+      "Wizard"
+    ],
+    "land_types": [],
+    "power": 1,
+    "toughness": 1,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Griselbrand",
+    "mana_cost": "{4}{B}{B}{B}{B}",
+    "cmc": 8,
+    "card_types": [
+      "Creature"
+    ],
+    "supertypes": [
+      "Legendary"
+    ],
+    "creature_types": [
+      "Demon"
+    ],
+    "land_types": [],
+    "power": 7,
+    "toughness": 7,
+    "keywords": [
+      "Flying",
+      "Lifelink"
+    ],
+    "base_loyalty": null
+  },
+  {
+    "name": "Grizzly Bears",
+    "mana_cost": "{1}{G}",
+    "cmc": 2,
+    "card_types": [
+      "Creature"
+    ],
+    "supertypes": [],
+    "creature_types": [
+      "Bear"
+    ],
+    "land_types": [],
+    "power": 2,
+    "toughness": 2,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Hallowed Fountain",
+    "mana_cost": "",
+    "cmc": 0,
+    "card_types": [
+      "Land"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [
+      "Plains",
+      "Island"
+    ],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Harmonize",
+    "mana_cost": "{2}{G}{G}",
+    "cmc": 4,
+    "card_types": [
+      "Sorcery"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Haywire Mite",
+    "mana_cost": "{G}",
+    "cmc": 1,
+    "card_types": [
+      "Artifact",
+      "Creature"
+    ],
+    "supertypes": [],
+    "creature_types": [
+      "Insect"
+    ],
+    "land_types": [],
+    "power": 1,
+    "toughness": 1,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Healing Salve",
+    "mana_cost": "{W}",
+    "cmc": 1,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Hedge Maze",
+    "mana_cost": "",
+    "cmc": 0,
+    "card_types": [
+      "Land"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [
+      "Forest",
+      "Island"
+    ],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Heliod, Sun-Crowned",
+    "mana_cost": "{1}{W}{W}",
+    "cmc": 3,
+    "card_types": [
+      "Creature",
+      "Enchantment"
+    ],
+    "supertypes": [
+      "Legendary"
+    ],
+    "creature_types": [],
+    "land_types": [],
+    "power": 3,
+    "toughness": 4,
+    "keywords": [
+      "Indestructible"
+    ],
+    "base_loyalty": null
+  },
+  {
+    "name": "Hero's Downfall",
+    "mana_cost": "{1}{B}{B}",
+    "cmc": 3,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Hieroglyphic Illumination",
+    "mana_cost": "{2}{U}",
+    "cmc": 3,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Holy Light",
+    "mana_cost": "{W}",
+    "cmc": 1,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Hymn to Tourach",
+    "mana_cost": "{B}{B}",
+    "cmc": 2,
+    "card_types": [
+      "Sorcery"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Hypnotic Specter",
+    "mana_cost": "{1}{B}{B}",
+    "cmc": 3,
+    "card_types": [
+      "Creature"
+    ],
+    "supertypes": [],
+    "creature_types": [
+      "Specter"
+    ],
+    "land_types": [],
+    "power": 2,
+    "toughness": 2,
+    "keywords": [
+      "Flying"
+    ],
+    "base_loyalty": null
+  },
+  {
+    "name": "Ichorid",
+    "mana_cost": "{B}",
+    "cmc": 1,
+    "card_types": [
+      "Creature"
+    ],
+    "supertypes": [],
+    "creature_types": [
+      "Horror"
+    ],
+    "land_types": [],
+    "power": 3,
+    "toughness": 1,
+    "keywords": [
+      "Haste"
+    ],
+    "base_loyalty": null
+  },
+  {
+    "name": "Imperial Seal",
+    "mana_cost": "{B}",
+    "cmc": 1,
+    "card_types": [
+      "Sorcery"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Incinerate",
+    "mana_cost": "{1}{R}",
+    "cmc": 2,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Indulgent Tormentor",
+    "mana_cost": "{3}{B}{B}",
+    "cmc": 5,
+    "card_types": [
+      "Creature"
+    ],
+    "supertypes": [],
+    "creature_types": [
+      "Demon"
+    ],
+    "land_types": [],
+    "power": 5,
+    "toughness": 3,
+    "keywords": [
+      "Flying"
+    ],
+    "base_loyalty": null
+  },
+  {
+    "name": "Innocent Blood",
+    "mana_cost": "{B}",
+    "cmc": 1,
+    "card_types": [
+      "Sorcery"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Inquisition of Kozilek",
+    "mana_cost": "{B}",
+    "cmc": 1,
+    "card_types": [
+      "Sorcery"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Island",
+    "mana_cost": "",
+    "cmc": 0,
+    "card_types": [
+      "Land"
+    ],
+    "supertypes": [
+      "Basic"
+    ],
+    "creature_types": [],
+    "land_types": [
+      "Island"
+    ],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Isolate",
+    "mana_cost": "{W}",
+    "cmc": 1,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Jaya's Greeting",
+    "mana_cost": "{1}{R}",
+    "cmc": 2,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Juz\u00c3\u00a1m Djinn",
+    "mana_cost": "{2}{B}{B}",
+    "cmc": 4,
+    "card_types": [
+      "Creature"
+    ],
+    "supertypes": [],
+    "creature_types": [
+      "Djinn"
+    ],
+    "land_types": [],
+    "power": 5,
+    "toughness": 5,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Karn, Scion of Urza",
+    "mana_cost": "{4}",
+    "cmc": 4,
+    "card_types": [
+      "Planeswalker"
+    ],
+    "supertypes": [
+      "Legendary"
+    ],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": 5
+  },
+  {
+    "name": "Krark-Clan Ironworks",
+    "mana_cost": "{4}",
+    "cmc": 4,
+    "card_types": [
+      "Artifact"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Languish",
+    "mana_cost": "{2}{B}{B}",
+    "cmc": 4,
+    "card_types": [
+      "Sorcery"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Last Gasp",
+    "mana_cost": "{1}{B}",
+    "cmc": 2,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Lava Coil",
+    "mana_cost": "{1}{R}",
+    "cmc": 2,
+    "card_types": [
+      "Sorcery"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Lay Down Arms",
+    "mana_cost": "{W}",
+    "cmc": 1,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Lightning Bolt",
+    "mana_cost": "{R}",
+    "cmc": 1,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Lightning Helix",
+    "mana_cost": "{R}{W}",
+    "cmc": 2,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Lightning Strike",
+    "mana_cost": "{1}{R}",
+    "cmc": 2,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Llanowar Elves",
+    "mana_cost": "{G}",
+    "cmc": 1,
+    "card_types": [
+      "Creature"
+    ],
+    "supertypes": [],
+    "creature_types": [
+      "Elf",
+      "Druid"
+    ],
+    "land_types": [],
+    "power": 1,
+    "toughness": 1,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Loran of the Third Path",
+    "mana_cost": "{1}{W}",
+    "cmc": 2,
+    "card_types": [
+      "Creature"
+    ],
+    "supertypes": [
+      "Legendary"
+    ],
+    "creature_types": [
+      "Human",
+      "Artificer"
+    ],
+    "land_types": [],
+    "power": 1,
+    "toughness": 3,
+    "keywords": [
+      "Vigilance"
+    ],
+    "base_loyalty": null
+  },
+  {
+    "name": "Lotus Field",
+    "mana_cost": "",
+    "cmc": 0,
+    "card_types": [
+      "Land"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Lumra, Bellow of the Woods",
+    "mana_cost": "{4}{G}{G}",
+    "cmc": 6,
+    "card_types": [
+      "Creature"
+    ],
+    "supertypes": [
+      "Legendary"
+    ],
+    "creature_types": [
+      "Elemental"
+    ],
+    "land_types": [],
+    "power": 6,
+    "toughness": 6,
+    "keywords": [
+      "Trample"
+    ],
+    "base_loyalty": null
+  },
+  {
+    "name": "Lush Portico",
+    "mana_cost": "",
+    "cmc": 0,
+    "card_types": [
+      "Land"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [
+      "Forest",
+      "Plains"
+    ],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Maelstrom Pulse",
+    "mana_cost": "{1}{B}{G}",
+    "cmc": 3,
+    "card_types": [
+      "Sorcery"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Magma Jet",
+    "mana_cost": "{1}{R}",
+    "cmc": 2,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Mahamoti Djinn",
+    "mana_cost": "{3}{U}{U}",
+    "cmc": 5,
+    "card_types": [
+      "Creature"
+    ],
+    "supertypes": [],
+    "creature_types": [
+      "Djinn"
+    ],
+    "land_types": [],
+    "power": 5,
+    "toughness": 6,
+    "keywords": [
+      "Flying"
+    ],
+    "base_loyalty": null
+  },
+  {
+    "name": "Mana Leak",
+    "mana_cost": "{1}{U}",
+    "cmc": 2,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Mana Tithe",
+    "mana_cost": "{W}",
+    "cmc": 1,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Marauding Mako",
+    "mana_cost": "{U}{B}",
+    "cmc": 2,
+    "card_types": [
+      "Creature"
+    ],
+    "supertypes": [],
+    "creature_types": [
+      "Fish"
+    ],
+    "land_types": [],
+    "power": 2,
+    "toughness": 2,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Marsh Flats",
+    "mana_cost": "",
+    "cmc": 0,
+    "card_types": [
+      "Land"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Meticulous Archive",
+    "mana_cost": "",
+    "cmc": 0,
+    "card_types": [
+      "Land"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [
+      "Plains",
+      "Island"
+    ],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Millstone",
+    "mana_cost": "{2}",
+    "cmc": 2,
+    "card_types": [
+      "Artifact"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Mind Rot",
+    "mana_cost": "{2}{B}",
+    "cmc": 3,
+    "card_types": [
+      "Sorcery"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Mind Stone",
+    "mana_cost": "{2}",
+    "cmc": 2,
+    "card_types": [
+      "Artifact"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Mind Twist",
+    "mana_cost": "{B}",
+    "cmc": 1,
+    "card_types": [
+      "Sorcery"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Mistvault Bridge",
+    "mana_cost": "",
+    "cmc": 0,
+    "card_types": [
+      "Land"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [
+      "Island",
+      "Swamp"
+    ],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Mortify",
+    "mana_cost": "{1}{W}{B}",
+    "cmc": 3,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Mount Tyrhus",
+    "mana_cost": "",
+    "cmc": 0,
+    "card_types": [
+      "Land"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [
+      "Mountain"
+    ],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Mountain",
+    "mana_cost": "",
+    "cmc": 0,
+    "card_types": [
+      "Land"
+    ],
+    "supertypes": [
+      "Basic"
+    ],
+    "creature_types": [],
+    "land_types": [
+      "Mountain"
+    ],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Mourning Thrull",
+    "mana_cost": "{1}{W}{B}",
+    "cmc": 3,
+    "card_types": [
+      "Creature"
+    ],
+    "supertypes": [],
+    "creature_types": [
+      "Thrull"
+    ],
+    "land_types": [],
+    "power": 1,
+    "toughness": 1,
+    "keywords": [
+      "Flying",
+      "Lifelink"
+    ],
+    "base_loyalty": null
+  },
+  {
+    "name": "Murder",
+    "mana_cost": "{1}{B}{B}",
+    "cmc": 3,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Mystical Dispute",
+    "mana_cost": "{2}{U}",
+    "cmc": 3,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Mystical Tutor",
+    "mana_cost": "{U}",
+    "cmc": 1,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Naturalize",
+    "mana_cost": "{1}{G}",
+    "cmc": 2,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Nature's Claim",
+    "mana_cost": "{G}",
+    "cmc": 1,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Nature's Lore",
+    "mana_cost": "{1}{G}",
+    "cmc": 2,
+    "card_types": [
+      "Sorcery"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Negate",
+    "mana_cost": "{1}{U}",
+    "cmc": 2,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Night's Whisper",
+    "mana_cost": "{1}{B}",
+    "cmc": 2,
+    "card_types": [
+      "Sorcery"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Opt",
+    "mana_cost": "{U}",
+    "cmc": 1,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Ornithopter",
+    "mana_cost": "",
+    "cmc": 0,
+    "card_types": [
+      "Artifact",
+      "Creature"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": 0,
+    "toughness": 2,
+    "keywords": [
+      "Flying"
+    ],
+    "base_loyalty": null
+  },
+  {
+    "name": "Ornithopter of Paradise",
+    "mana_cost": "{1}",
+    "cmc": 1,
+    "card_types": [
+      "Artifact",
+      "Creature"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": 0,
+    "toughness": 2,
+    "keywords": [
+      "Flying"
+    ],
+    "base_loyalty": null
+  },
+  {
+    "name": "Overgrown Tomb",
+    "mana_cost": "",
+    "cmc": 0,
+    "card_types": [
+      "Land"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [
+      "Swamp",
+      "Forest"
+    ],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Pact of Negation",
+    "mana_cost": "",
+    "cmc": 0,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Pact of the Titan",
+    "mana_cost": "",
+    "cmc": 0,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Paradoxical Outcome",
+    "mana_cost": "{3}{U}{U}",
+    "cmc": 5,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Path of Peace",
+    "mana_cost": "{2}{W}",
+    "cmc": 3,
+    "card_types": [
+      "Sorcery"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Path to Exile",
+    "mana_cost": "{W}",
+    "cmc": 1,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Pentad Prism",
+    "mana_cost": "{2}",
+    "cmc": 2,
+    "card_types": [
+      "Artifact"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Phyrexian Arena",
+    "mana_cost": "{1}{B}{B}",
+    "cmc": 3,
+    "card_types": [
+      "Enchantment"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Plague Wind",
+    "mana_cost": "{8}{B}{B}",
+    "cmc": 10,
+    "card_types": [
+      "Sorcery"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Plains",
+    "mana_cost": "",
+    "cmc": 0,
+    "card_types": [
+      "Land"
+    ],
+    "supertypes": [
+      "Basic"
+    ],
+    "creature_types": [],
+    "land_types": [
+      "Plains"
+    ],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Plunge into Darkness",
+    "mana_cost": "{1}{B}",
+    "cmc": 2,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Polluted Delta",
+    "mana_cost": "",
+    "cmc": 0,
+    "card_types": [
+      "Land"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Preordain",
+    "mana_cost": "{U}",
+    "cmc": 1,
+    "card_types": [
+      "Sorcery"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Prismatic Ending",
+    "mana_cost": "{W}",
+    "cmc": 1,
+    "card_types": [
+      "Sorcery"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [
+      "Convoke"
+    ],
+    "base_loyalty": null
+  },
+  {
+    "name": "Prodigal Sorcerer",
+    "mana_cost": "{2}{U}",
+    "cmc": 3,
+    "card_types": [
+      "Creature"
+    ],
+    "supertypes": [],
+    "creature_types": [
+      "Human",
+      "Wizard"
+    ],
+    "land_types": [],
+    "power": 1,
+    "toughness": 1,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Psychic Frog",
+    "mana_cost": "{U}{B}",
+    "cmc": 2,
+    "card_types": [
+      "Creature"
+    ],
+    "supertypes": [],
+    "creature_types": [
+      "Frog"
+    ],
+    "land_types": [],
+    "power": 1,
+    "toughness": 3,
+    "keywords": [
+      "Flying"
+    ],
+    "base_loyalty": null
+  },
+  {
+    "name": "Pyroclasm",
+    "mana_cost": "{1}{R}",
+    "cmc": 2,
+    "card_types": [
+      "Sorcery"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Pyrokinesis",
+    "mana_cost": "{4}{R}{R}",
+    "cmc": 6,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Quantum Riddler",
+    "mana_cost": "{1}{U}{B}",
+    "cmc": 3,
+    "card_types": [
+      "Creature"
+    ],
+    "supertypes": [],
+    "creature_types": [
+      "Sphinx"
+    ],
+    "land_types": [],
+    "power": 4,
+    "toughness": 4,
+    "keywords": [
+      "Flying"
+    ],
+    "base_loyalty": null
+  },
+  {
+    "name": "Raise Dead",
+    "mana_cost": "{B}",
+    "cmc": 1,
+    "card_types": [
+      "Sorcery"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Raise the Alarm",
+    "mana_cost": "{1}{W}",
+    "cmc": 2,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Rakshasa's Bargain",
+    "mana_cost": "{4}{B}",
+    "cmc": 5,
+    "card_types": [
+      "Sorcery"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Rampant Growth",
+    "mana_cost": "{1}{G}",
+    "cmc": 2,
+    "card_types": [
+      "Sorcery"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Ranger-Captain of Eos",
+    "mana_cost": "{1}{W}{W}",
+    "cmc": 3,
+    "card_types": [
+      "Creature"
+    ],
+    "supertypes": [],
+    "creature_types": [
+      "Human",
+      "Soldier"
+    ],
+    "land_types": [],
+    "power": 3,
+    "toughness": 3,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Raucous Theater",
+    "mana_cost": "",
+    "cmc": 0,
+    "card_types": [
+      "Land"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [
+      "Swamp",
+      "Mountain"
+    ],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Razortide Bridge",
+    "mana_cost": "",
+    "cmc": 0,
+    "card_types": [
+      "Land"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [
+      "Plains",
+      "Island"
+    ],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Read the Bones",
+    "mana_cost": "{2}{B}",
+    "cmc": 3,
+    "card_types": [
+      "Sorcery"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Read the Tides",
+    "mana_cost": "{3}{U}",
+    "cmc": 4,
+    "card_types": [
+      "Sorcery"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Reanimate",
+    "mana_cost": "{B}",
+    "cmc": 1,
+    "card_types": [
+      "Sorcery"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Reclamation Sage",
+    "mana_cost": "{2}{G}",
+    "cmc": 3,
+    "card_types": [
+      "Creature"
+    ],
+    "supertypes": [],
+    "creature_types": [
+      "Elf",
+      "Shaman"
+    ],
+    "land_types": [],
+    "power": 2,
+    "toughness": 1,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Regrowth",
+    "mana_cost": "{1}{G}",
+    "cmc": 2,
+    "card_types": [
+      "Sorcery"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Remand",
+    "mana_cost": "{1}{U}",
+    "cmc": 2,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Repeal",
+    "mana_cost": "{U}",
+    "cmc": 1,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Restoration Angel",
+    "mana_cost": "{3}{W}",
+    "cmc": 4,
+    "card_types": [
+      "Creature"
+    ],
+    "supertypes": [],
+    "creature_types": [
+      "Angel"
+    ],
+    "land_types": [],
+    "power": 3,
+    "toughness": 4,
+    "keywords": [
+      "Flying",
+      "Flash"
+    ],
+    "base_loyalty": null
+  },
+  {
+    "name": "Roast",
+    "mana_cost": "{1}{R}",
+    "cmc": 2,
+    "card_types": [
+      "Sorcery"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Rofellos, Llanowar Emissary",
+    "mana_cost": "{G}{G}",
+    "cmc": 2,
+    "card_types": [
+      "Creature"
+    ],
+    "supertypes": [
+      "Legendary"
+    ],
+    "creature_types": [
+      "Elf",
+      "Druid"
+    ],
+    "land_types": [],
+    "power": 0,
+    "toughness": 1,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Rout",
+    "mana_cost": "{3}{W}{W}",
+    "cmc": 5,
+    "card_types": [
+      "Sorcery"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Rustvale Bridge",
+    "mana_cost": "",
+    "cmc": 0,
+    "card_types": [
+      "Land"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [
+      "Plains",
+      "Mountain"
+    ],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Sakura-Tribe Elder",
+    "mana_cost": "{1}{G}",
+    "cmc": 2,
+    "card_types": [
+      "Creature"
+    ],
+    "supertypes": [],
+    "creature_types": [
+      "Snake"
+    ],
+    "land_types": [],
+    "power": 1,
+    "toughness": 1,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Savannah Lions",
+    "mana_cost": "{W}",
+    "cmc": 1,
+    "card_types": [
+      "Creature"
+    ],
+    "supertypes": [],
+    "creature_types": [
+      "Cat",
+      "Lion"
+    ],
+    "land_types": [],
+    "power": 2,
+    "toughness": 1,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Searing Spear",
+    "mana_cost": "{1}{R}",
+    "cmc": 2,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Searstep Pathway",
+    "mana_cost": "",
+    "cmc": 0,
+    "card_types": [
+      "Land"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [
+      "Mountain"
+    ],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Sengir Vampire",
+    "mana_cost": "{3}{B}{B}",
+    "cmc": 5,
+    "card_types": [
+      "Creature"
+    ],
+    "supertypes": [],
+    "creature_types": [
+      "Vampire"
+    ],
+    "land_types": [],
+    "power": 4,
+    "toughness": 4,
+    "keywords": [
+      "Flying"
+    ],
+    "base_loyalty": null
+  },
+  {
+    "name": "Sentinel of the Nameless City",
+    "mana_cost": "{2}{G}",
+    "cmc": 3,
+    "card_types": [
+      "Creature"
+    ],
+    "supertypes": [],
+    "creature_types": [
+      "Warrior"
+    ],
+    "land_types": [],
+    "power": 3,
+    "toughness": 4,
+    "keywords": [
+      "Vigilance"
+    ],
+    "base_loyalty": null
+  },
+  {
+    "name": "Serra Angel",
+    "mana_cost": "{3}{W}{W}",
+    "cmc": 5,
+    "card_types": [
+      "Creature"
+    ],
+    "supertypes": [],
+    "creature_types": [
+      "Angel"
+    ],
+    "land_types": [],
+    "power": 4,
+    "toughness": 4,
+    "keywords": [
+      "Flying",
+      "Vigilance"
+    ],
+    "base_loyalty": null
+  },
+  {
+    "name": "Serum Powder",
+    "mana_cost": "{3}",
+    "cmc": 3,
+    "card_types": [
+      "Artifact"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Severed Strands",
+    "mana_cost": "{1}{B}",
+    "cmc": 2,
+    "card_types": [
+      "Sorcery"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Shadowy Backstreet",
+    "mana_cost": "",
+    "cmc": 0,
+    "card_types": [
+      "Land"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [
+      "Plains",
+      "Swamp"
+    ],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Shatter",
+    "mana_cost": "{1}{R}",
+    "cmc": 2,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Shivan Dragon",
+    "mana_cost": "{4}{R}{R}",
+    "cmc": 6,
+    "card_types": [
+      "Creature"
+    ],
+    "supertypes": [],
+    "creature_types": [
+      "Dragon"
+    ],
+    "land_types": [],
+    "power": 5,
+    "toughness": 5,
+    "keywords": [
+      "Flying"
+    ],
+    "base_loyalty": null
+  },
+  {
+    "name": "Shock",
+    "mana_cost": "{R}",
+    "cmc": 1,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Silverbluff Bridge",
+    "mana_cost": "",
+    "cmc": 0,
+    "card_types": [
+      "Land"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [
+      "Island",
+      "Mountain"
+    ],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Silversmote Ghoul",
+    "mana_cost": "{1}{B}",
+    "cmc": 2,
+    "card_types": [
+      "Creature"
+    ],
+    "supertypes": [],
+    "creature_types": [
+      "Zombie"
+    ],
+    "land_types": [],
+    "power": 2,
+    "toughness": 1,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Simian Spirit Guide",
+    "mana_cost": "{2}{R}",
+    "cmc": 3,
+    "card_types": [
+      "Creature"
+    ],
+    "supertypes": [],
+    "creature_types": [
+      "Ape",
+      "Spirit"
+    ],
+    "land_types": [],
+    "power": 2,
+    "toughness": 2,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Slagstorm",
+    "mana_cost": "{2}{R}",
+    "cmc": 3,
+    "card_types": [
+      "Sorcery"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Slagwoods Bridge",
+    "mana_cost": "",
+    "cmc": 0,
+    "card_types": [
+      "Land"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [
+      "Mountain",
+      "Forest"
+    ],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Slaughter Pact",
+    "mana_cost": "",
+    "cmc": 0,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Slitherbore Pathway",
+    "mana_cost": "",
+    "cmc": 0,
+    "card_types": [
+      "Land"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [
+      "Forest"
+    ],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Smelt",
+    "mana_cost": "{R}",
+    "cmc": 1,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Smother",
+    "mana_cost": "{1}{B}",
+    "cmc": 2,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Snuff Out",
+    "mana_cost": "{3}{B}",
+    "cmc": 4,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Sol Ring",
+    "mana_cost": "{1}",
+    "cmc": 1,
+    "card_types": [
+      "Artifact"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Solitude",
+    "mana_cost": "{3}{W}",
+    "cmc": 4,
+    "card_types": [
+      "Creature"
+    ],
+    "supertypes": [],
+    "creature_types": [
+      "Kor",
+      "Cleric"
+    ],
+    "land_types": [],
+    "power": 3,
+    "toughness": 2,
+    "keywords": [
+      "Flash",
+      "Flying",
+      "Lifelink"
+    ],
+    "base_loyalty": null
+  },
+  {
+    "name": "Soul-Guide Lantern",
+    "mana_cost": "{1}",
+    "cmc": 1,
+    "card_types": [
+      "Artifact"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Spectral Procession",
+    "mana_cost": "{2}{W}",
+    "cmc": 3,
+    "card_types": [
+      "Sorcery"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Spell Pierce",
+    "mana_cost": "{U}",
+    "cmc": 1,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Spell Snare",
+    "mana_cost": "{U}",
+    "cmc": 1,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Spoils of the Vault",
+    "mana_cost": "{B}",
+    "cmc": 1,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Static Prison",
+    "mana_cost": "{X}{2}{W}",
+    "cmc": 3,
+    "card_types": [
+      "Enchantment"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Stoke the Flames",
+    "mana_cost": "{4}{R}",
+    "cmc": 5,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [
+      "Convoke"
+    ],
+    "base_loyalty": null
+  },
+  {
+    "name": "Stone Rain",
+    "mana_cost": "{2}{R}",
+    "cmc": 3,
+    "card_types": [
+      "Sorcery"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Storm Crow",
+    "mana_cost": "{1}{U}",
+    "cmc": 2,
+    "card_types": [
+      "Creature"
+    ],
+    "supertypes": [],
+    "creature_types": [
+      "Bird"
+    ],
+    "land_types": [],
+    "power": 1,
+    "toughness": 2,
+    "keywords": [
+      "Flying"
+    ],
+    "base_loyalty": null
+  },
+  {
+    "name": "Stormchaser Mage",
+    "mana_cost": "{1}{U}{R}",
+    "cmc": 3,
+    "card_types": [
+      "Creature"
+    ],
+    "supertypes": [],
+    "creature_types": [
+      "Human",
+      "Wizard"
+    ],
+    "land_types": [],
+    "power": 1,
+    "toughness": 3,
+    "keywords": [
+      "Flying",
+      "Haste"
+    ],
+    "base_loyalty": null
+  },
+  {
+    "name": "Strip Mine",
+    "mana_cost": "",
+    "cmc": 0,
+    "card_types": [
+      "Land"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Summoner's Pact",
+    "mana_cost": "",
+    "cmc": 0,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Sundering Eruption",
+    "mana_cost": "{1}{R}",
+    "cmc": 2,
+    "card_types": [
+      "Sorcery"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Swamp",
+    "mana_cost": "",
+    "cmc": 0,
+    "card_types": [
+      "Land"
+    ],
+    "supertypes": [
+      "Basic"
+    ],
+    "creature_types": [],
+    "land_types": [
+      "Swamp"
+    ],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Swan Song",
+    "mana_cost": "{U}",
+    "cmc": 1,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Swords to Plowshares",
+    "mana_cost": "{W}",
+    "cmc": 1,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Sylvan Caryatid",
+    "mana_cost": "{1}{G}",
+    "cmc": 2,
+    "card_types": [
+      "Creature"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": 0,
+    "toughness": 3,
+    "keywords": [
+      "Hexproof",
+      "Defender"
+    ],
+    "base_loyalty": null
+  },
+  {
+    "name": "Sylvan Safekeeper",
+    "mana_cost": "{G}",
+    "cmc": 1,
+    "card_types": [
+      "Creature"
+    ],
+    "supertypes": [],
+    "creature_types": [
+      "Human",
+      "Wizard"
+    ],
+    "land_types": [],
+    "power": 1,
+    "toughness": 1,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Talisman of Conviction",
+    "mana_cost": "{2}",
+    "cmc": 2,
+    "card_types": [
+      "Artifact"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Talisman of Creativity",
+    "mana_cost": "{2}",
+    "cmc": 2,
+    "card_types": [
+      "Artifact"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Talisman of Curiosity",
+    "mana_cost": "{2}",
+    "cmc": 2,
+    "card_types": [
+      "Artifact"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Tanglepool Bridge",
+    "mana_cost": "",
+    "cmc": 0,
+    "card_types": [
+      "Land"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [
+      "Island",
+      "Forest"
+    ],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Tarfire",
+    "mana_cost": "{R}",
+    "cmc": 1,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Tear Asunder",
+    "mana_cost": "{1}{B}{G}",
+    "cmc": 3,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Teferi, Time Raveler",
+    "mana_cost": "{1}{W}{U}",
+    "cmc": 3,
+    "card_types": [
+      "Planeswalker"
+    ],
+    "supertypes": [
+      "Legendary"
+    ],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": 4
+  },
+  {
+    "name": "Telling Time",
+    "mana_cost": "{1}{U}",
+    "cmc": 2,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Terminate",
+    "mana_cost": "{B}{R}",
+    "cmc": 2,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Terror",
+    "mana_cost": "{1}{B}",
+    "cmc": 2,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Tezzeret, Cruel Captain",
+    "mana_cost": "{3}{B}",
+    "cmc": 4,
+    "card_types": [
+      "Planeswalker"
+    ],
+    "supertypes": [
+      "Legendary"
+    ],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": 4
+  },
+  {
+    "name": "Thalia, Guardian of Thraben",
+    "mana_cost": "{1}{W}",
+    "cmc": 2,
+    "card_types": [
+      "Creature"
+    ],
+    "supertypes": [
+      "Legendary"
+    ],
+    "creature_types": [
+      "Human",
+      "Soldier"
+    ],
+    "land_types": [],
+    "power": 2,
+    "toughness": 1,
+    "keywords": [
+      "First strike"
+    ],
+    "base_loyalty": null
+  },
+  {
+    "name": "Thornglint Bridge",
+    "mana_cost": "",
+    "cmc": 0,
+    "card_types": [
+      "Land"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [
+      "Plains",
+      "Forest"
+    ],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Thought Scour",
+    "mana_cost": "{U}",
+    "cmc": 1,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Thoughtseize",
+    "mana_cost": "{B}",
+    "cmc": 1,
+    "card_types": [
+      "Sorcery"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Thrill of Possibility",
+    "mana_cost": "{1}{R}",
+    "cmc": 2,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Thud",
+    "mana_cost": "{R}",
+    "cmc": 1,
+    "card_types": [
+      "Sorcery"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Thundering Falls",
+    "mana_cost": "",
+    "cmc": 0,
+    "card_types": [
+      "Land"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [
+      "Island",
+      "Mountain"
+    ],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Tidehollow Sculler",
+    "mana_cost": "{W}{B}",
+    "cmc": 2,
+    "card_types": [
+      "Creature"
+    ],
+    "supertypes": [],
+    "creature_types": [
+      "Zombie"
+    ],
+    "land_types": [],
+    "power": 2,
+    "toughness": 2,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Tireless Tracker",
+    "mana_cost": "{1}{G}{G}",
+    "cmc": 3,
+    "card_types": [
+      "Creature"
+    ],
+    "supertypes": [],
+    "creature_types": [
+      "Human",
+      "Scout"
+    ],
+    "land_types": [],
+    "power": 3,
+    "toughness": 2,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Tishana's Tidebinder",
+    "mana_cost": "{1}{U}{U}",
+    "cmc": 3,
+    "card_types": [
+      "Creature"
+    ],
+    "supertypes": [],
+    "creature_types": [
+      "Merfolk",
+      "Wizard"
+    ],
+    "land_types": [],
+    "power": 3,
+    "toughness": 2,
+    "keywords": [
+      "Flash"
+    ],
+    "base_loyalty": null
+  },
+  {
+    "name": "Tormenting Voice",
+    "mana_cost": "{1}{R}",
+    "cmc": 2,
+    "card_types": [
+      "Sorcery"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Tragic Slip",
+    "mana_cost": "{B}",
+    "cmc": 1,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Turnabout",
+    "mana_cost": "{2}{U}{U}",
+    "cmc": 4,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Undercity Sewers",
+    "mana_cost": "",
+    "cmc": 0,
+    "card_types": [
+      "Land"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [
+      "Island",
+      "Swamp"
+    ],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Underground Mortuary",
+    "mana_cost": "",
+    "cmc": 0,
+    "card_types": [
+      "Land"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [
+      "Swamp",
+      "Forest"
+    ],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Unsummon",
+    "mana_cost": "{U}",
+    "cmc": 1,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Up the Beanstalk",
+    "mana_cost": "{1}{G}",
+    "cmc": 2,
+    "card_types": [
+      "Enchantment"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Upheaval",
+    "mana_cost": "{4}{U}{U}",
+    "cmc": 6,
+    "card_types": [
+      "Sorcery"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Vandalblast",
+    "mana_cost": "{R}",
+    "cmc": 1,
+    "card_types": [
+      "Sorcery"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Volcanic Fallout",
+    "mana_cost": "{1}{R}{R}",
+    "cmc": 3,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Volcanic Hammer",
+    "mana_cost": "{1}{R}",
+    "cmc": 2,
+    "card_types": [
+      "Sorcery"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Voldaren Epicure",
+    "mana_cost": "{R}{B}",
+    "cmc": 2,
+    "card_types": [
+      "Creature"
+    ],
+    "supertypes": [],
+    "creature_types": [
+      "Vampire"
+    ],
+    "land_types": [],
+    "power": 1,
+    "toughness": 1,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Vryn Wingmare",
+    "mana_cost": "{2}{W}",
+    "cmc": 3,
+    "card_types": [
+      "Creature"
+    ],
+    "supertypes": [],
+    "creature_types": [
+      "Bird",
+      "Soldier"
+    ],
+    "land_types": [],
+    "power": 2,
+    "toughness": 1,
+    "keywords": [
+      "Flying"
+    ],
+    "base_loyalty": null
+  },
+  {
+    "name": "Wasteland",
+    "mana_cost": "",
+    "cmc": 0,
+    "card_types": [
+      "Land"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Watchwolf",
+    "mana_cost": "{G}{W}",
+    "cmc": 2,
+    "card_types": [
+      "Creature"
+    ],
+    "supertypes": [],
+    "creature_types": [
+      "Wolf"
+    ],
+    "land_types": [],
+    "power": 3,
+    "toughness": 3,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Watery Grave",
+    "mana_cost": "",
+    "cmc": 0,
+    "card_types": [
+      "Land"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [
+      "Island",
+      "Swamp"
+    ],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "White Knight",
+    "mana_cost": "{W}{W}",
+    "cmc": 2,
+    "card_types": [
+      "Creature"
+    ],
+    "supertypes": [],
+    "creature_types": [
+      "Human",
+      "Knight"
+    ],
+    "land_types": [],
+    "power": 2,
+    "toughness": 2,
+    "keywords": [
+      "First strike"
+    ],
+    "base_loyalty": null
+  },
+  {
+    "name": "Wild Guess",
+    "mana_cost": "{2}{R}",
+    "cmc": 3,
+    "card_types": [
+      "Sorcery"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Wild Mongrel",
+    "mana_cost": "{1}{G}",
+    "cmc": 2,
+    "card_types": [
+      "Creature"
+    ],
+    "supertypes": [],
+    "creature_types": [
+      "Hound"
+    ],
+    "land_types": [],
+    "power": 2,
+    "toughness": 2,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Wood Elves",
+    "mana_cost": "{2}{G}",
+    "cmc": 3,
+    "card_types": [
+      "Creature"
+    ],
+    "supertypes": [],
+    "creature_types": [
+      "Elf",
+      "Scout"
+    ],
+    "land_types": [],
+    "power": 1,
+    "toughness": 1,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Worldly Tutor",
+    "mana_cost": "{G}",
+    "cmc": 1,
+    "card_types": [
+      "Instant"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Wrath of God",
+    "mana_cost": "{2}{W}{W}",
+    "cmc": 4,
+    "card_types": [
+      "Sorcery"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  },
+  {
+    "name": "Zuran Orb",
+    "mana_cost": "",
+    "cmc": 0,
+    "card_types": [
+      "Artifact"
+    ],
+    "supertypes": [],
+    "creature_types": [],
+    "land_types": [],
+    "power": null,
+    "toughness": null,
+    "keywords": [],
+    "base_loyalty": null
+  }
+]

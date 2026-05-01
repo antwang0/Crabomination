@@ -334,6 +334,94 @@ fn setup_attacker(g: &mut GameState, player: usize, def: impl Fn() -> crate::car
     id
 }
 
+/// Regression for `debug/deadlock-t9-1777413906-987970800.json`.
+/// A creature whose `controller` flipped (Threaten / Mind Control)
+/// must be a legal attacker for its CURRENT controller, even though
+/// its `owner` field still points at the original player. Pre-fix
+/// `declare_attackers` filtered with `c.owner == p` and rejected the
+/// attack with `CardNotOnBattlefield`, the bot kept resubmitting,
+/// and the watchdog tripped at 15s.
+#[test]
+fn declare_attackers_respects_controller_after_steal() {
+    use crate::game::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    // Owned by P1, but controller flipped to P0 (Threaten effect).
+    let stolen = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    if let Some(c) = g.battlefield_find_mut(stolen) {
+        c.controller = 0;
+        c.summoning_sick = false;
+    }
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: stolen,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("stolen creature must be a legal attacker for its new controller");
+    assert!(g.attacking().iter().any(|a| a.attacker == stolen));
+    assert!(g.battlefield_find(stolen).unwrap().tapped,
+        "attackers tap on declare (no Vigilance)");
+}
+
+/// `would_accept` dry-runs an action against a clone of the state
+/// without committing it. Sanity-check both branches: a legal action
+/// returns true and the original state is unchanged; an illegal one
+/// returns false and the original state is unchanged.
+#[test]
+fn would_accept_dry_runs_without_mutating_caller_state() {
+    let mut g = two_player_game();
+    let forest = g.add_card_to_hand(0, catalog::forest());
+    g.priority.player_with_priority = 0;
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+
+    let battlefield_before = g.battlefield.len();
+    let hand_before = g.players[0].hand.len();
+
+    // Legal: PlayLand on a real land in hand at sorcery speed.
+    assert!(g.would_accept(GameAction::PlayLand(forest)));
+    assert_eq!(g.battlefield.len(), battlefield_before,
+        "would_accept must not mutate the caller's state");
+    assert_eq!(g.players[0].hand.len(), hand_before);
+
+    // Illegal: PlayLand on a non-existent CardId.
+    assert!(!g.would_accept(GameAction::PlayLand(crate::card::CardId(999))));
+    assert_eq!(g.battlefield.len(), battlefield_before);
+
+    // After the dry-run, the actual perform_action still works
+    // (clone didn't trip up shared state).
+    g.perform_action(GameAction::PlayLand(forest)).expect("real cast works after probes");
+    assert_eq!(g.battlefield.len(), battlefield_before + 1);
+}
+
+/// Symmetric: untap step should untap creatures the active player
+/// CONTROLS, not just those they originally owned. A stolen creature
+/// untaps on the new controller's turn, never the original owner's.
+#[test]
+fn untap_step_uses_controller_not_owner() {
+    let mut g = two_player_game();
+    let stolen = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    if let Some(c) = g.battlefield_find_mut(stolen) {
+        c.controller = 0;
+        c.tapped = true;
+        c.summoning_sick = false;
+    }
+    // Original-owner card on P1's side, also tapped.
+    let owned_by_p1 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    if let Some(c) = g.battlefield_find_mut(owned_by_p1) {
+        c.tapped = true;
+        c.summoning_sick = false;
+    }
+    g.active_player_idx = 0;
+    g.do_untap();
+    assert!(!g.battlefield_find(stolen).unwrap().tapped,
+        "stolen creature must untap on its CONTROLLER's turn");
+    assert!(g.battlefield_find(owned_by_p1).unwrap().tapped,
+        "P1's own creature must NOT untap during P0's turn");
+}
+
 #[test]
 fn unblocked_attacker_deals_damage_to_player() {
     let mut g = two_player_game();
@@ -1468,10 +1556,10 @@ fn quantum_riddler_on_cast_draws_a_card() {
     // cantrip.
     let top = g.add_card_to_library(0, catalog::island());
     let qr_id = g.add_card_to_hand(0, catalog::quantum_riddler());
-    // Pay {1}{U}{B}.
+    // Pay {3}{U}{B}.
     g.players[0].mana_pool.add(Color::Blue, 1);
     g.players[0].mana_pool.add(Color::Black, 1);
-    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add_colorless(3);
 
     g.perform_action(GameAction::CastSpell {
         card_id: qr_id,
@@ -1769,11 +1857,11 @@ fn devourer_of_destiny_etb_scries_two() {
     }]));
 
     let dev = g.add_card_to_hand(0, catalog::devourer_of_destiny());
-    g.players[0].mana_pool.add_colorless(5);
+    g.players[0].mana_pool.add_colorless(7);
     g.perform_action(GameAction::CastSpell {
         card_id: dev, target: None, mode: None, x_value: None,
     })
-    .expect("Devourer of Destiny is castable for {5}");
+    .expect("Devourer of Destiny is castable for {7}");
     drain_stack(&mut g);
 
     assert!(g.battlefield.iter().any(|c| c.id == dev));
@@ -1816,13 +1904,13 @@ fn wrath_of_the_skies_destroys_permanents_with_mana_value_x() {
 
 #[test]
 fn spoils_of_the_vault_tutors_and_loses_three_life() {
-    // Approximates "name + reveal until find" as Search(any → hand) plus
-    // a flat 3-life cost.
+    // Now wired to `Effect::RevealUntilFind` with `find: Any`: the first
+    // card off the top is taken into hand and 1 life is paid per revealed
+    // card. With `Any`, exactly one card is ever revealed, so the life
+    // total drops by exactly 1.
     let mut g = two_player_game();
     let wanted = g.add_card_to_library(0, catalog::lightning_bolt());
     g.add_card_to_library(0, catalog::swamp());
-
-    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(wanted))]));
 
     let spoils = g.add_card_to_hand(0, catalog::spoils_of_the_vault());
     g.players[0].mana_pool.add(Color::Black, 1);
@@ -1837,15 +1925,15 @@ fn spoils_of_the_vault_tutors_and_loses_three_life() {
     drain_stack(&mut g);
 
     assert!(g.players[0].hand.iter().any(|c| c.id == wanted),
-        "Tutored card should be in hand");
-    assert_eq!(g.players[0].life, life_before - 3,
-        "Spoils approximates the variable life cost as a flat 3");
+        "First-card-off-the-top should land in hand");
+    assert_eq!(g.players[0].life, life_before - 1,
+        "RevealUntilFind with `Any` reveals exactly one card → 1 life lost");
 }
 
 #[test]
-fn atraxa_grand_unifier_etb_draws_four() {
-    // Approximation of "reveal top 10, take one of each card type" as
-    // ETB Draw 4.
+fn atraxa_grand_unifier_etb_draws_per_distinct_type() {
+    // ETB now draws `DistinctTypesInTopOfLibrary(top 10)` cards. Library
+    // here is 6 forests (Land), so distinct = 1 → draw 1.
     let mut g = two_player_game();
     for _ in 0..6 {
         g.add_card_to_library(0, catalog::forest());
@@ -1866,12 +1954,36 @@ fn atraxa_grand_unifier_etb_draws_four() {
     drain_stack(&mut g);
 
     assert!(g.battlefield.iter().any(|c| c.id == atraxa));
-    // Hand started with Atraxa + drew 4 - cast Atraxa = +3 net change from
-    // start, but only +4 from the ETB trigger itself.
-    assert_eq!(g.players[0].hand.len(), hand_before_cast + 4,
-        "Atraxa's ETB should draw 4 cards (approximation of the reveal-and-sort)");
-    assert_eq!(g.players[0].library.len(), lib_before - 4,
-        "Library should lose 4 cards");
+    assert_eq!(g.players[0].hand.len(), hand_before_cast + 1,
+        "Library is all Forests (one type) → ETB draws 1");
+    assert_eq!(g.players[0].library.len(), lib_before - 1,
+        "Library should lose exactly one card");
+}
+
+#[test]
+fn atraxa_grand_unifier_draws_per_card_type_diverse_library() {
+    // Top of library has a Forest, a Lightning Bolt (Instant), Grizzly
+    // Bears (Creature) → 3 distinct types → draw 3.
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::forest());
+    g.add_card_to_library(0, catalog::lightning_bolt());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let hand_before_cast = g.players[0].hand.len();
+    let atraxa = g.add_card_to_hand(0, catalog::atraxa_grand_unifier());
+    g.players[0].mana_pool.add_colorless(3);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: atraxa, target: None, mode: None, x_value: None,
+    })
+    .expect("Atraxa is castable for {3}{W}{U}{B}{R}{G}");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[0].hand.len(), hand_before_cast + 3,
+        "3 distinct card types in library → draw 3");
 }
 
 #[test]
@@ -2006,7 +2118,8 @@ fn teferi_minus_three_returns_target_and_draws() {
 
     g.perform_action(GameAction::ActivateLoyaltyAbility {
         card_id: teferi,
-        ability_index: 0, // -3
+        // Index 1 is the -3 (the new +1 sorcery-as-flash ability sits at 0).
+        ability_index: 1,
         target: Some(Target::Permanent(opp_creature)),
     })
     .expect("Teferi's -3 should accept an opponent's nonland permanent");
@@ -2057,13 +2170,13 @@ fn mystical_dispute_alt_cost_requires_blue_target() {
     assert_eq!(err, GameError::SelectionRequirementViolated,
         "Alt cost should reject a non-blue target");
 
-    // Replace with a blue spell on the stack.
-    g.stack.clear();
+    // Add a blue spell on the stack (Counterspell needs an actual on-stack
+    // target now that its filter requires IsSpellOnStack). The original
+    // bolt is still on the stack from above; have the opponent counter it.
     g.players[0].mana_pool.add(Color::Blue, 1);
-    let counterspell = g.add_card_to_hand(1, catalog::counterspell());
-    g.players[1].mana_pool.add(Color::Blue, 2);
-    g.active_player_idx = 1;
-    g.priority.player_with_priority = 1;
+    let counterspell = g.add_card_to_hand(0, catalog::counterspell());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.priority.player_with_priority = 0;
     g.perform_action(GameAction::CastSpell {
         card_id: counterspell,
         target: Some(Target::Permanent(bolt)),
@@ -2166,14 +2279,14 @@ fn quantum_riddler_on_cast_draws_even_if_countered() {
     let drawn = g.add_card_to_library(0, catalog::forest());
 
     let qr = g.add_card_to_hand(0, catalog::quantum_riddler());
-    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add_colorless(3);
     g.players[0].mana_pool.add(Color::Blue, 1);
     g.players[0].mana_pool.add(Color::Black, 1);
 
     g.perform_action(GameAction::CastSpell {
         card_id: qr, target: None, mode: None, x_value: None,
     })
-    .expect("Quantum Riddler is castable for {1}{U}{B}");
+    .expect("Quantum Riddler is castable for {3}{U}{B}");
 
     // P1 counters Quantum Riddler with a Counterspell while the on-cast
     // cantrip is still on the stack above it.
@@ -2291,6 +2404,174 @@ fn convoke_rejects_tapped_creature() {
     assert!(err.is_err(), "Convoking a tapped creature should reject");
     // Card should be back in hand.
     assert!(g.players[0].hand.iter().any(|c| c.id == pe));
+}
+
+#[test]
+fn leyline_of_sanctity_starts_in_play_and_grants_player_hexproof() {
+    // Stock Leyline in P0's opening hand, fire start-of-game effects:
+    // Leyline should hit the battlefield and P0 should be untargetable
+    // by P1.
+    let mut g = two_player_game();
+    let leyline = g.add_card_to_hand(0, catalog::leyline_of_sanctity());
+    g.fire_start_of_game_effects();
+
+    assert!(g.battlefield.iter().any(|c| c.id == leyline),
+        "Leyline of Sanctity should begin the game on the battlefield");
+    assert!(!g.players[0].hand.iter().any(|c| c.id == leyline));
+
+    // P1 tries to target P0 with Lightning Bolt — rejected by hexproof.
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    let err = g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(0)),
+        mode: None,
+        x_value: None,
+    })
+    .unwrap_err();
+    assert!(matches!(err, GameError::TargetHasHexproof(_)),
+        "P0 should be untargetable while controlling Leyline of Sanctity");
+}
+
+#[test]
+fn leyline_of_sanctity_hexproof_does_not_apply_to_self() {
+    // Casting your own spell on yourself is fine — hexproof from Leyline
+    // only blocks opponents.
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::leyline_of_sanctity());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(0)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Self-targeting bypasses Leyline's hexproof");
+}
+
+#[test]
+fn chancellor_of_the_tangle_grants_one_green_at_start_of_game() {
+    // Reveal queues a YourNextMainPhase delayed trigger; the {G} hits the
+    // pool when P0's first main step fires.
+    let mut g = two_player_game();
+    g.step = TurnStep::Untap; // reset so we can step into PreCombatMain
+    g.add_card_to_hand(0, catalog::chancellor_of_the_tangle());
+    g.fire_start_of_game_effects();
+    assert_eq!(g.delayed_triggers.len(), 1,
+        "Tangle should queue one YourNextMainPhase trigger");
+    // Walk priority through the early steps until PreCombatMain fires
+    // the delayed trigger.
+    for _ in 0..30 {
+        if g.players[0].mana_pool.amount(Color::Green) > 0 { break; }
+        let _ = g.perform_action(GameAction::PassPriority);
+    }
+    assert_eq!(g.players[0].mana_pool.amount(Color::Green), 1,
+        "Chancellor of the Tangle should add {{G}} to its owner's pool by PreCombatMain");
+}
+
+#[test]
+fn gemstone_caverns_starts_in_play() {
+    let mut g = two_player_game();
+    let cave = g.add_card_to_hand(0, catalog::gemstone_caverns());
+    g.fire_start_of_game_effects();
+    assert!(g.battlefield.iter().any(|c| c.id == cave),
+        "Gemstone Caverns should begin the game on the battlefield");
+}
+
+#[test]
+fn inquisition_suspends_for_caster_ui_and_applies_chosen_discard() {
+    // P0 wants UI → Inquisition should suspend with a Decision::Discard
+    // pointing at P0 (the picker), showing P1's filtered hand. Submitting
+    // the chosen card discards it to P1's graveyard.
+    let mut g = two_player_game();
+    g.players[0].wants_ui = true;
+    let pricey = g.add_card_to_hand(1, catalog::shivan_dragon());   // CMC 6 — filtered out
+    let target = g.add_card_to_hand(1, catalog::lightning_bolt()); // CMC 1
+    let other = g.add_card_to_hand(1, catalog::counterspell());    // CMC 2
+    g.add_card_to_hand(1, catalog::forest());                      // land — filtered out
+
+    let inq = g.add_card_to_hand(0, catalog::inquisition_of_kozilek());
+    g.players[0].mana_pool.add(Color::Black, 1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: inq, target: None, mode: None, x_value: None,
+    })
+    .expect("Inquisition castable for {B}");
+    // First PassPriority lets P1 respond; second resolves the spell.
+    g.perform_action(GameAction::PassPriority).unwrap();
+    g.perform_action(GameAction::PassPriority).unwrap();
+
+    // Now Inquisition is resolving — it should suspend on a Discard
+    // decision. P0 is the acting player; the candidate list is P1's
+    // filtered hand (Bolt + Counterspell, but not Forest or Shivan).
+    let pd = g.pending_decision.as_ref().expect("Inquisition should suspend");
+    let crate::decision::Decision::Discard { player, count, hand } = &pd.decision else {
+        panic!("expected Decision::Discard, got {:?}", pd.decision);
+    };
+    assert_eq!(*player, 0, "picker is the caster (P0)");
+    assert_eq!(*count, 1);
+    let hand_ids: Vec<CardId> = hand.iter().map(|(id, _)| *id).collect();
+    assert!(hand_ids.contains(&target));
+    assert!(hand_ids.contains(&other));
+    assert!(!hand_ids.contains(&pricey),
+        "CMC ≥ 4 should be filtered out — Inquisition only sees ≤ 3");
+
+    // Submit the choice — discard the Bolt.
+    g.submit_decision(DecisionAnswer::Discard(vec![target]))
+        .expect("decision submitted");
+    drain_stack(&mut g);
+
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == target),
+        "Targeted Bolt should hit P1's graveyard");
+    assert!(g.players[1].hand.iter().any(|c| c.id == other),
+        "Other matching card stays in hand — Inquisition only takes one");
+}
+
+#[test]
+fn chancellor_of_the_annex_taxes_opponents_first_spell() {
+    // Stock Chancellor in P0's opening hand. Start-of-game pass queues a
+    // YourNextUpkeep delayed trigger; the trigger resolution stamps a {1}
+    // tax on P1's first spell.
+    let mut g = two_player_game();
+    g.step = TurnStep::Untap;
+    g.add_card_to_hand(0, catalog::chancellor_of_the_annex());
+    g.fire_start_of_game_effects();
+    // Step into Upkeep so the delayed trigger fires + resolves.
+    for _ in 0..30 {
+        if g.players[1].first_spell_tax_charges > 0 { break; }
+        let _ = g.perform_action(GameAction::PassPriority);
+    }
+    assert_eq!(g.players[1].first_spell_tax_charges, 1);
+
+    let bolt1 = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    let err = g.perform_action(GameAction::CastSpell {
+        card_id: bolt1, target: Some(Target::Player(0)), mode: None, x_value: None,
+    });
+    assert!(err.is_err(),
+        "First Bolt should require an extra {{1}} due to the Annex tax");
+
+    g.players[1].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt1, target: Some(Target::Player(0)), mode: None, x_value: None,
+    })
+    .expect("First Bolt castable for {1}{R} under the tax");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].first_spell_tax_charges, 0,
+        "Tax should clear after the first cast");
+
+    // Second spell pays the regular {R} again.
+    let bolt2 = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt2, target: Some(Target::Player(0)), mode: None, x_value: None,
+    })
+    .expect("Second Bolt should cast for {R} (no further tax)");
 }
 
 #[test]
@@ -2470,6 +2751,61 @@ fn cavern_of_souls_does_not_protect_noncreature_spells() {
 }
 
 #[test]
+fn cavern_of_souls_only_protects_named_creature_type() {
+    // When the chosen_creature_type is set on a Cavern, only spells with
+    // that creature type are uncounterable; others remain counterable.
+    let mut g = two_player_game();
+    let cavern = g.add_card_to_battlefield(0, catalog::cavern_of_souls());
+    g.battlefield_find_mut(cavern).unwrap().chosen_creature_type =
+        Some(crate::card::CreatureType::Bear);
+
+    // Llanowar Elves (Elf type, not Bear) should be counterable.
+    let elf = g.add_card_to_hand(0, catalog::llanowar_elves());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: elf, target: None, mode: None, x_value: None,
+    })
+    .expect("Llanowar Elves castable");
+
+    let counter = g.add_card_to_hand(1, catalog::counterspell());
+    g.players[1].mana_pool.add(Color::Blue, 2);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: counter, target: Some(Target::Permanent(elf)), mode: None, x_value: None,
+    })
+    .expect("Counterspell castable");
+    drain_stack(&mut g);
+
+    assert!(!g.battlefield.iter().any(|c| c.id == elf),
+        "Elf should be countered — Cavern named Bear, Elves are not Bears");
+}
+
+#[test]
+fn cavern_of_souls_etb_picks_creature_type_via_decider() {
+    // ETB trigger asks the decider; ScriptedDecider picks Phyrexian and
+    // verify the chosen type is recorded.
+    let mut g = two_player_game();
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::CreatureType(crate::card::CreatureType::Phyrexian),
+    ]));
+
+    g.add_card_to_library(0, catalog::cavern_of_souls());
+    let cavern_id = g.players[0].library[0].id;
+    let card = g.players[0].library.remove(0);
+    g.players[0].hand.push(card);
+    g.perform_action(GameAction::PlayLand(cavern_id))
+        .expect("Cavern should be playable");
+    drain_stack(&mut g);
+
+    let cavern = g.battlefield_find(cavern_id).expect("Cavern on battlefield");
+    assert_eq!(
+        cavern.chosen_creature_type,
+        Some(crate::card::CreatureType::Phyrexian),
+        "ETB should record the chosen type"
+    );
+}
+
+#[test]
 fn damping_sphere_taxes_each_spell_after_the_first() {
     // First Lightning Bolt costs {R}; second one costs {1}{R} while
     // Damping Sphere is in play.
@@ -2549,13 +2885,13 @@ fn consign_to_memory_counters_targeted_trigger() {
     g.add_card_to_library(1, catalog::island());
 
     let dev = g.add_card_to_hand(1, catalog::devourer_of_destiny());
-    g.players[1].mana_pool.add_colorless(5);
+    g.players[1].mana_pool.add_colorless(7);
     g.active_player_idx = 1;
     g.priority.player_with_priority = 1;
     g.perform_action(GameAction::CastSpell {
         card_id: dev, target: None, mode: None, x_value: None,
     })
-    .expect("Devourer of Destiny castable for {5}");
+    .expect("Devourer of Destiny castable for {7}");
 
     // Confirm the scry trigger landed on the stack alongside the spell.
     let trigger_count = g.stack.iter()
@@ -2586,4 +2922,1150 @@ fn consign_to_memory_counters_targeted_trigger() {
     assert!(!g.stack.iter().any(|si| matches!(
         si, crate::game::StackItem::Trigger { source, .. } if *source == dev
     )), "Scry-on-cast trigger should have been countered");
+}
+
+#[test]
+fn consign_to_memory_mode_one_counters_legendary_spell() {
+    // Mode 1: counter target legendary spell. P1 puts Thalia, Guardian of
+    // Thraben on the stack; P0 responds with Consign to Memory mode-1 →
+    // Thalia is countered.
+    let mut g = two_player_game();
+    let thalia = g.add_card_to_hand(1, catalog::thalia_guardian_of_thraben());
+    g.players[1].mana_pool.add(Color::White, 1);
+    g.players[1].mana_pool.add_colorless(1);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: thalia, target: None, mode: None, x_value: None,
+    })
+    .expect("Thalia castable for {1}{W}");
+
+    // Confirm Thalia is on the stack.
+    assert!(g.stack.iter().any(|si| matches!(
+        si, crate::game::StackItem::Spell { card, .. } if card.id == thalia
+    )), "Thalia should be on the stack");
+
+    // P0 casts Consign to Memory mode 1 targeting Thalia.
+    let consign = g.add_card_to_hand(0, catalog::consign_to_memory());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: consign,
+        target: Some(Target::Permanent(thalia)),
+        mode: Some(1),
+        x_value: None,
+    })
+    .expect("Consign to Memory mode 1 castable for {U} targeting a legendary spell");
+    drain_stack(&mut g);
+
+    assert!(!g.battlefield.iter().any(|c| c.id == thalia),
+        "Thalia should have been countered (not resolved)");
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == thalia),
+        "Countered Thalia should be in P1's graveyard");
+}
+
+// ── Opening-hand effects ─────────────────────────────────────────────────────
+
+#[test]
+fn leyline_of_sanctity_starts_in_play_after_mulligan() {
+    // After a kept opening hand that contains Leyline of Sanctity, the
+    // engine moves the leyline from hand to its owner's battlefield.
+    let mut g = two_player_game();
+    // Seed each player's library so the mulligan can deal 7 cards. Leyline
+    // is the FIRST factory pushed → it'll end up on top of the library →
+    // dealt as part of the opening 7.
+    g.add_card_to_library(0, catalog::leyline_of_sanctity());
+    for _ in 0..7 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    for _ in 0..7 {
+        g.add_card_to_library(1, catalog::forest());
+    }
+    g.start_mulligan_phase();
+
+    // Both players keep, no London-mulligan dance.
+    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Keep)).unwrap();
+    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Keep)).unwrap();
+
+    assert!(
+        g.battlefield.iter().any(|c| c.definition.name == "Leyline of Sanctity"),
+        "Leyline should start in play"
+    );
+    assert!(
+        !g.players[0].hand.iter().any(|c| c.definition.name == "Leyline of Sanctity"),
+        "Leyline should leave hand"
+    );
+}
+
+#[test]
+fn leyline_of_sanctity_grants_player_hexproof() {
+    // Bolt aimed at the Leyline's controller is rejected as InvalidTarget.
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::leyline_of_sanctity());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    let err = g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(0)),
+        mode: None,
+        x_value: None,
+    }).unwrap_err();
+    assert!(matches!(err, GameError::TargetHasHexproof(_)),
+        "Leyline rejects opponent player-target spells");
+    // Self-targeting still works: Leyline doesn't block your own spells.
+    let bolt2 = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt2,
+        target: Some(Target::Player(0)),
+        mode: None,
+        x_value: None,
+    }).expect("you can target yourself even with Leyline up");
+}
+
+#[test]
+fn gemstone_caverns_starts_in_play_with_luck_counter() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::gemstone_caverns());
+    for _ in 0..7 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    for _ in 0..7 {
+        g.add_card_to_library(1, catalog::forest());
+    }
+    g.start_mulligan_phase();
+    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Keep)).unwrap();
+    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Keep)).unwrap();
+
+    let caverns = g.battlefield.iter()
+        .find(|c| c.definition.name == "Gemstone Caverns")
+        .expect("Gemstone Caverns should start in play");
+    assert!(
+        !caverns.tapped,
+        "Gemstone Caverns starts untapped"
+    );
+    assert_eq!(
+        caverns.counter_count(crate::card::CounterType::Charge),
+        1,
+        "Gemstone Caverns should ETB with one luck counter (modeled as Charge)"
+    );
+}
+
+#[test]
+fn chancellor_of_the_tangle_adds_green_on_first_main() {
+    // P0 starts the game with Chancellor of the Tangle in opening hand.
+    // The reveal registers a `YourNextMainPhase` delayed trigger; when P0
+    // enters PreCombatMain on turn 1, the trigger pushes onto the stack
+    // and resolves to add {G}.
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::chancellor_of_the_tangle());
+    for _ in 0..7 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    for _ in 0..7 {
+        g.add_card_to_library(1, catalog::forest());
+    }
+    // Start the mulligan window from the natural pre-game step (Untap).
+    // `two_player_game()` defaults to PreCombatMain — wind it back so the
+    // turn 1 PreCombatMain transition actually happens during the test.
+    g.step = TurnStep::Untap;
+    g.start_mulligan_phase();
+    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Keep)).unwrap();
+    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Keep)).unwrap();
+
+    assert_eq!(g.players[0].mana_pool.amount(Color::Green), 0,
+        "no mana yet — the trigger fires on the main step");
+
+    // Walk turn 1 until PreCombatMain. The trigger is queued when the
+    // engine enters PreCombatMain; drain the stack once more after the
+    // loop to actually resolve it.
+    while !matches!(g.step, TurnStep::PreCombatMain) && !g.is_game_over() {
+        g.perform_action(GameAction::PassPriority).unwrap();
+    }
+    drain_stack(&mut g);
+    assert_eq!(
+        g.players[0].mana_pool.amount(Color::Green), 1,
+        "Chancellor of the Tangle should grant {{G}} during turn 1's first main"
+    );
+}
+
+#[test]
+fn chancellor_of_the_annex_taxes_first_opponent_spell() {
+    // P1 has Chancellor of the Annex in opening hand → P0's first spell
+    // next turn costs {1} more. Cast Lightning Bolt with only {R}: it fails
+    // because the tax pushes it to {1}{R}.
+    let mut g = two_player_game();
+    g.add_card_to_library(1, catalog::chancellor_of_the_annex());
+    for _ in 0..7 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    for _ in 0..7 {
+        g.add_card_to_library(1, catalog::forest());
+    }
+    g.start_mulligan_phase();
+    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Keep)).unwrap();
+    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Keep)).unwrap();
+
+    // Walk to P0's first upkeep so the delayed reveal trigger fires and
+    // stamps the tax charge on P0.
+    while !matches!(g.step, TurnStep::Upkeep) && !g.is_game_over() {
+        g.perform_action(GameAction::PassPriority).unwrap();
+    }
+    drain_stack(&mut g);
+    assert_eq!(
+        g.players[0].first_spell_tax_charges, 1,
+        "Annex should stamp one tax charge on P0"
+    );
+
+    // P0 tries to cast Bolt on their own turn with exactly {R}. The {1}
+    // tax pushes the cost to {1}{R} — they can't afford it.
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.active_player_idx = 0;
+    let err = g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)), mode: None, x_value: None,
+    });
+    assert!(err.is_err(), "Tax should make Bolt unaffordable with only {{R}}");
+
+    // Pay the extra and the cast succeeds; tax is consumed.
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)), mode: None, x_value: None,
+    }).expect("Bolt castable with the {1} extra");
+    assert_eq!(
+        g.players[0].first_spell_tax_charges, 0,
+        "Tax should be consumed by the cast"
+    );
+}
+
+#[test]
+fn serum_powder_exiles_hand_and_redraws() {
+    // Mulligan with a Serum Powder in hand. Submitting `SerumPowder(id)`
+    // exiles the hand and deals a fresh 7. The London-mulligan ladder
+    // doesn't advance.
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::serum_powder());
+    for _ in 0..6 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    for _ in 0..7 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    for _ in 0..7 {
+        g.add_card_to_library(1, catalog::forest());
+    }
+    g.start_mulligan_phase();
+
+    let powder_id = g.players[0].hand.iter()
+        .find(|c| c.definition.name == "Serum Powder")
+        .map(|c| c.id)
+        .expect("Serum Powder should be in opening hand (top of library)");
+
+    // Submit the powder.
+    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::SerumPowder(powder_id))).unwrap();
+
+    // The fresh seven shouldn't include the original powder — it was exiled.
+    assert_eq!(g.players[0].hand.len(), 7, "fresh hand of 7 after powder");
+    assert!(
+        g.exile.iter().any(|c| c.id == powder_id),
+        "the consumed Serum Powder should be in exile"
+    );
+    // We're still on player 0's mulligan window (no advance).
+    assert!(matches!(
+        g.pending_decision.as_ref().map(|pd| &pd.decision),
+        Some(crate::decision::Decision::Mulligan { player: 0, .. }),
+    ));
+}
+
+// ── Card behavior tests ──────────────────────────────────────────────────────
+
+#[test]
+fn callous_sell_sword_etb_sacrifices_and_pumps() {
+    // ETB Callous Sell-Sword (2/1, cost {1}{R}). The ETB sacrifices the
+    // first controller-controlled creature (the bear), and the sell-sword
+    // gains +(bear's power)/+0 until end of turn.
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    g.clear_sickness(bear);
+    let css = g.add_card_to_hand(0, catalog::callous_sell_sword());
+    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: css, target: None, mode: None, x_value: None,
+    }).expect("Callous Sell-Sword castable for {1}{R}");
+    drain_stack(&mut g);
+
+    assert!(
+        !g.battlefield.iter().any(|c| c.id == bear),
+        "Sell-Sword's ETB should have sacrificed the bear"
+    );
+    let sell = g.battlefield.iter()
+        .find(|c| c.id == css)
+        .expect("Sell-Sword should be on the battlefield");
+    // Base 2 (Sell-Sword) + sacrificed bear's power 2 = 4.
+    assert_eq!(sell.power(), 4,
+        "Base 2 + sacrificed bear's power 2 = 4");
+}
+
+#[test]
+fn plunge_into_darkness_mode_one_pays_four_life_and_tutors() {
+    // Mode 1 (`ChooseMode` index 1): pay 4 life and search any card
+    // from the library into hand.
+    let mut g = two_player_game();
+    let target = g.add_card_to_library(0, catalog::lightning_bolt());
+    g.add_card_to_library(0, catalog::swamp());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(target))]));
+
+    let plunge = g.add_card_to_hand(0, catalog::plunge_into_darkness());
+    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    let life_before = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: plunge, target: None, mode: Some(1), x_value: None,
+    }).expect("Plunge castable for {1}{B}");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[0].life, life_before - 4,
+        "Mode 1 deducts 4 life as the X cost");
+    assert!(g.players[0].hand.iter().any(|c| c.id == target),
+        "tutored card should land in hand");
+}
+
+#[test]
+fn spoils_of_the_vault_reveals_until_find() {
+    // With `find: Any`, the very first card is taken into hand and
+    // exactly 1 life is paid.
+    let mut g = two_player_game();
+    let top = g.add_card_to_library(0, catalog::lightning_bolt());
+    g.add_card_to_library(0, catalog::swamp());
+    let spoils = g.add_card_to_hand(0, catalog::spoils_of_the_vault());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    let life_before = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spoils, target: None, mode: None, x_value: None,
+    }).expect("Spoils castable for {B}");
+    drain_stack(&mut g);
+
+    assert!(g.players[0].hand.iter().any(|c| c.id == top),
+        "first-card-off-the-top lands in hand");
+    assert_eq!(g.players[0].life, life_before - 1,
+        "exactly one card revealed → 1 life paid");
+}
+
+#[test]
+fn mulligan_decision_lists_serum_powders() {
+    // A mulligan-phase decision should expose every Serum-Powder-style
+    // helper currently in hand so the UI can render a "use powder" button.
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::serum_powder());
+    g.add_card_to_library(0, catalog::serum_powder());
+    for _ in 0..5 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    for _ in 0..7 {
+        g.add_card_to_library(1, catalog::forest());
+    }
+    g.start_mulligan_phase();
+
+    let pd = g.pending_decision.as_ref().expect("mulligan decision pending");
+    let crate::decision::Decision::Mulligan { serum_powders, .. } = &pd.decision else {
+        panic!("expected Mulligan decision");
+    };
+    assert_eq!(serum_powders.len(), 2,
+        "both powders in P0's opening hand should be listed");
+}
+
+#[test]
+fn first_spell_tax_charges_default_zero() {
+    // Sanity check: a fresh player has no Annex tax pending.
+    let g = two_player_game();
+    assert_eq!(g.players[0].first_spell_tax_charges, 0);
+    assert_eq!(g.players[1].first_spell_tax_charges, 0);
+}
+
+#[test]
+fn reveal_until_find_caps_at_n_when_no_match() {
+    // No matching card on top → mill `cap` cards, lose `cap * life` life.
+    use crate::effect::{Effect, ZoneDest};
+    use crate::card::SelectionRequirement;
+    let mut g = two_player_game();
+    // Library: 5 lands. With `find: Creature`, none match → mill all 5.
+    for _ in 0..5 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    let lib_before = g.players[0].library.len();
+    let life_before = g.players[0].life;
+    let ctx = EffectContext::for_spell(0, None, 0, 0);
+    g.resolve_effect(
+        &Effect::RevealUntilFind {
+            who: PlayerRef::You,
+            find: SelectionRequirement::Creature,
+            to: ZoneDest::Hand(PlayerRef::You),
+            cap: Value::Const(10),
+            life_per_revealed: 1,
+        },
+        &ctx,
+    ).unwrap();
+
+    assert_eq!(g.players[0].library.len(), 0,
+        "all 5 lands should mill (no creature found)");
+    assert_eq!(g.players[0].graveyard.len(), lib_before,
+        "milled cards land in graveyard");
+    assert_eq!(g.players[0].life, life_before - 5,
+        "5 cards revealed → 5 life lost");
+}
+
+#[test]
+fn add_first_spell_tax_increments_per_opponent() {
+    // `Effect::AddFirstSpellTax` against `EachOpponent` adds one charge to
+    // each opponent (not the controller).
+    let mut g = two_player_game();
+    let ctx = EffectContext::for_ability(crate::card::CardId(0), 0, None);
+    g.resolve_effect(
+        &Effect::AddFirstSpellTax {
+            who: PlayerRef::EachOpponent,
+            count: Value::Const(2),
+        },
+        &ctx,
+    ).unwrap();
+    assert_eq!(g.players[0].first_spell_tax_charges, 0,
+        "controller is not an opponent of themselves");
+    assert_eq!(g.players[1].first_spell_tax_charges, 2,
+        "opponent should receive 2 charges");
+}
+
+#[test]
+fn deal_to_hand_draws_from_top_of_library() {
+    // Regression: deal_to_hand used to call library.pop() (bottom of library)
+    // — for an unshuffled fixture that produced wrong opening hands.
+    let mut g = two_player_game();
+    // Push lightning bolt (top), then 6 forests below.
+    g.add_card_to_library(0, catalog::lightning_bolt());
+    for _ in 0..6 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    for _ in 0..7 {
+        g.add_card_to_library(1, catalog::forest());
+    }
+    g.start_mulligan_phase();
+    // Opening hand should include the bolt (top of library).
+    assert!(
+        g.players[0].hand.iter().any(|c| c.definition.name == "Lightning Bolt"),
+        "deal_to_hand should draw from the top — the bolt was at index 0"
+    );
+}
+
+#[test]
+fn teferi_static_locks_opponent_to_sorcery_timing() {
+    // P0's Teferi locks every opponent into sorcery timing — even an
+    // instant in the opponent's hand can't be cast outside their own
+    // main phase.
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::teferi_time_raveler());
+    // Bob is the off-turn caster trying to cast Bolt during Alice's main.
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    let result = g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(0)),
+        mode: None,
+        x_value: None,
+    });
+    assert!(matches!(result, Err(GameError::SorcerySpeedOnly)),
+        "Teferi's static should lock opp Bolt to sorcery timing, got {:?}",
+        result);
+}
+
+#[test]
+fn teferi_static_does_not_restrict_controllers_own_casts() {
+    // Teferi only locks opponents — its controller can still cast
+    // instants on their opponent's turn.
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::teferi_time_raveler());
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 0;
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(1)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Teferi's controller can still cast instants on opp's turn");
+}
+
+#[test]
+fn teferi_plus_one_grants_sorceries_as_flash_until_next_turn() {
+    // P0's Teferi +1 lets P0 cast sorceries at instant speed even when it
+    // isn't their turn. Once P0's next turn rolls around (do_untap), the
+    // flag clears and the timing gate snaps back.
+    let mut g = two_player_game();
+    let teferi = g.add_card_to_battlefield(0, catalog::teferi_time_raveler());
+    g.clear_sickness(teferi);
+
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: teferi, ability_index: 0, target: None,  // +1
+    }).expect("Teferi's +1 should be sorcery-speed-castable");
+    drain_stack(&mut g);
+
+    assert!(g.players[0].sorceries_as_flash,
+        "P0 should be flagged for sorcery-as-flash");
+
+    // Hand P0 a sorcery and roll the turn over to P1's combat step. From
+    // P1's combat — normally a sorcery-illegal window — P0 still casts it.
+    let bolt_alike = g.add_card_to_hand(0, catalog::lightning_bolt());
+    let _ = bolt_alike; // (bolt is an instant; for the gate test we use
+                        // the engine path that triggers SorcerySpeedOnly:
+                        // play_land out-of-turn would error, but spells
+                        // on the cast path with `is_instant_speed` already
+                        // bypass the gate. Use a sorcery to verify.)
+
+    let sorcery = g.add_card_to_hand(0, catalog::wrath_of_god());
+    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.step = TurnStep::DeclareAttackers;
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 0;
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: sorcery, target: None, mode: None, x_value: None,
+    }).expect("Teferi +1 should let P0 cast Wrath of God outside their main phase");
+
+    // Now simulate untap on P0's turn — flag should clear.
+    g.active_player_idx = 0;
+    g.do_untap();
+    assert!(!g.players[0].sorceries_as_flash,
+        "do_untap should clear the flag at the start of P0's next turn");
+}
+
+#[test]
+fn damping_sphere_downgrades_dual_lands_to_colorless() {
+    // With Damping Sphere on the battlefield, a Watery Grave (dual UB)
+    // should ETB with only a single "{T}: Add {C}" ability. A subsequent
+    // tap activates the new colorless ability, producing 1 colorless mana.
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::damping_sphere());
+
+    // Watery Grave originally has two activated abilities (tap for {U},
+    // tap for {B}) plus the ETB shock-trigger. When entering under
+    // Damping Sphere it should be reduced to a single {T}: Add {C}.
+    let lands = g.add_card_to_hand(0, catalog::watery_grave());
+    g.perform_action(GameAction::PlayLand(lands)).expect("play Watery Grave");
+    drain_stack(&mut g);
+
+    let land = g.battlefield_find(lands).expect("Watery Grave on battlefield");
+    assert_eq!(
+        land.definition.activated_abilities.len(),
+        1,
+        "Damping Sphere should leave only one mana ability on dual lands"
+    );
+
+    // Activate it — it should produce {C}, not {U} or {B}.
+    g.clear_sickness(lands);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: lands, ability_index: 0, target: None,
+    }).expect("the downgraded ability should activate");
+    assert_eq!(g.players[0].mana_pool.colorless_amount(), 1);
+    assert_eq!(g.players[0].mana_pool.amount(Color::Blue), 0);
+    assert_eq!(g.players[0].mana_pool.amount(Color::Black), 0);
+}
+
+#[test]
+fn damping_sphere_leaves_basic_lands_alone() {
+    // A single-color basic (Forest) should pass through unchanged: still
+    // exactly one ability, still produces {G}.
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::damping_sphere());
+    let f = g.add_card_to_hand(0, catalog::forest());
+    g.perform_action(GameAction::PlayLand(f)).expect("play Forest");
+    let forest = g.battlefield_find(f).expect("Forest on battlefield");
+    assert_eq!(
+        forest.definition.activated_abilities.len(),
+        1,
+        "single-color basic should keep its sole mana ability"
+    );
+    g.clear_sickness(f);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: f, ability_index: 0, target: None,
+    }).expect("Forest should still tap for {G}");
+    assert_eq!(g.players[0].mana_pool.amount(Color::Green), 1);
+}
+
+/// `auto_target_for_effect` should prefer an opponent-controlled permanent
+/// over the controller's own when both satisfy the filter. This guards the
+/// bot from auto-destroying its own creatures with hostile spells like
+/// Doom Blade, Abrupt Decay, etc.
+#[test]
+fn auto_target_prefers_opponent_permanent_for_hostile_effect() {
+    let mut g = two_player_game();
+    // Bot controls a creature; opponent also controls one.
+    let _own_bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+
+    // Doom Blade ({1}{B}: Destroy target nonblack creature) — both bears
+    // satisfy the filter. Without the opp-preference, the auto-target would
+    // pick whichever bear was added to the battlefield first, which is
+    // the bot's own.
+    let doom = catalog::doom_blade();
+    let target = g.auto_target_for_effect(&doom.effect, 0)
+        .expect("Doom Blade should have a legal target");
+    assert_eq!(target, crate::game::Target::Permanent(opp_bear),
+        "Doom Blade should auto-target the opp's bear, not the bot's own");
+}
+
+/// Mirror of the hostile-effect auto-target test: friendly buffs should
+/// pick the *caster's* permanent, not the opponent's. Without this, the
+/// random bot would happily pump the opp's bear with Vines of Vastwood.
+#[test]
+fn auto_target_prefers_friendly_permanent_for_buff_effect() {
+    let mut g = two_player_game();
+    let own_bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let _opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+
+    // Vines of Vastwood pumps a target creature +4/+4. Both bears satisfy
+    // the filter; the friendly-preference heuristic should pick our own.
+    let vines = catalog::vines_of_vastwood();
+    let target = g.auto_target_for_effect(&vines.effect, 0)
+        .expect("Vines of Vastwood should have a legal target");
+    assert_eq!(target, crate::game::Target::Permanent(own_bear),
+        "Vines of Vastwood should auto-target the caster's bear");
+}
+
+/// Tragic Slip pumps -13/-13: that's a debuff, so the friendly heuristic
+/// should *not* fire and the auto-target should land on the opp's
+/// creature even though the spell is `PumpPT`.
+#[test]
+fn auto_target_pumppt_debuff_falls_back_to_hostile() {
+    let mut g = two_player_game();
+    let _own_bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let slip = catalog::tragic_slip();
+    let target = g.auto_target_for_effect(&slip.effect, 0)
+        .expect("Tragic Slip should have a legal target");
+    assert_eq!(target, crate::game::Target::Permanent(opp_bear),
+        "Negative pump should auto-target the opponent");
+}
+
+/// Reanimate-style "Move(target → Hand(You))" should prefer a card in the
+/// caster's graveyard over a battlefield permanent. Pre-fix the bot would
+/// happily Disentomb its opponent's living bear into its own hand —
+/// effectively bouncing-stealing the creature.
+#[test]
+fn auto_target_disentomb_prefers_creature_in_your_graveyard() {
+    let mut g = two_player_game();
+    // P0 has a creature in graveyard, P1 has a living one on the battlefield.
+    let dead_bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let _live_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+
+    let disentomb = catalog::disentomb();
+    let target = g.auto_target_for_effect(&disentomb.effect, 0)
+        .expect("Disentomb should have a legal target");
+    assert_eq!(target, crate::game::Target::Permanent(dead_bear),
+        "Disentomb should pick the dead bear from our graveyard, \
+         not the opp's living one");
+}
+
+/// Same idea for Raise Dead. The friendly-target preference handles the
+/// "ours vs theirs" axis; the graveyard-source preference handles
+/// "battlefield vs graveyard". Both apply to Move-into-hand.
+#[test]
+fn auto_target_raise_dead_prefers_creature_in_your_graveyard() {
+    let mut g = two_player_game();
+    let dead_bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let _own_live = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+
+    let rd = catalog::raise_dead();
+    let target = g.auto_target_for_effect(&rd.effect, 0)
+        .expect("Raise Dead should have a legal target");
+    assert_eq!(target, crate::game::Target::Permanent(dead_bear),
+        "Raise Dead should pick the dead bear, not pull a live one off \
+         the battlefield into the hand");
+}
+
+/// Regression for the Spectate Bot vs Bot deadlock at
+/// `debug/deadlock-t10-1777412787-934831200.json`. P1 wanted to cast
+/// Bone Shards (Destroy target creature) and the only opponent
+/// creature was Sylvan Caryatid — which has Hexproof. Pre-fix
+/// `auto_target_for_effect` ignored targeting legality, returned
+/// the Caryatid, the engine rejected the cast with `TargetHasHexproof`,
+/// and the bot kept submitting the same illegal action until the
+/// watchdog tripped. Post-fix the helper checks `check_target_legality`
+/// and falls through to a legal target (or `None`).
+#[test]
+fn auto_target_skips_hexproof_opponent_creature() {
+    let mut g = two_player_game();
+    // Opponent's only creature has Hexproof.
+    let caryatid = g.add_card_to_battlefield(1, catalog::sylvan_caryatid());
+    // Caster has a creature too so the unfiltered fallback can pick it.
+    let own_bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+
+    let bone_shards = catalog::bone_shards();
+    let target = g.auto_target_for_effect(&bone_shards.effect, 0);
+
+    // Whatever the helper returns, it MUST NOT be the hexproof Caryatid.
+    assert_ne!(
+        target,
+        Some(crate::game::Target::Permanent(caryatid)),
+        "auto_target must respect Hexproof",
+    );
+    // The fallback should land on the only other creature on the
+    // battlefield — the caster's own bear. Self-targeting Destroy is
+    // legal in MTG; bots being silly with their own removal is fine,
+    // matches deadlocking is not.
+    assert_eq!(target, Some(crate::game::Target::Permanent(own_bear)));
+}
+
+/// Regression: an `Any`-filtered Move (Regrowth) should NOT auto-target a
+/// player. Move only consumes Permanent / Card refs, so a Player target
+/// silently fizzles. The new `Effect::accepts_player_target` skip prevents
+/// the heuristic from picking Player(0) for permanent-only effects even
+/// when the filter is broad enough to legally accept it.
+#[test]
+fn auto_target_regrowth_skips_player_in_favor_of_graveyard_card() {
+    let mut g = two_player_game();
+    let dead_card = g.add_card_to_graveyard(0, catalog::mountain());
+
+    let regrowth = catalog::regrowth();
+    let target = g.auto_target_for_effect(&regrowth.effect, 0)
+        .expect("Regrowth should have a legal target");
+    assert_eq!(
+        target,
+        crate::game::Target::Permanent(dead_card),
+        "Regrowth should pick the graveyard card, not a Player target — \
+         Move only consumes card/permanent refs, so a player target \
+         silently fizzles",
+    );
+}
+
+/// Regression: Boomerang's `Permanent` filter rejects a Player target via
+/// the requirement, but the previous heuristic short-circuited at the
+/// Player check anyway since it was untested there. With
+/// `accepts_player_target=false`, we skip the Player rung entirely and
+/// land on a permanent immediately.
+#[test]
+fn auto_target_boomerang_picks_a_permanent_not_a_player() {
+    let mut g = two_player_game();
+    let opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+
+    let boomerang = catalog::boomerang();
+    let target = g.auto_target_for_effect(&boomerang.effect, 0)
+        .expect("Boomerang should find a legal permanent target");
+    assert_eq!(target, crate::game::Target::Permanent(opp_bear));
+}
+
+/// Regression: Mind Rot's auto-target picks the opponent. Pre-fix the
+/// effect used a bare `Selector::Target(0)` which `primary_target_filter`
+/// didn't recognize, so the bot's `auto_target_for_effect` returned
+/// `None` and the spell was unplayable by the random bot.
+#[test]
+fn auto_target_mind_rot_picks_opponent_player() {
+    let g = two_player_game();
+    let mind_rot = catalog::mind_rot();
+    let target = g.auto_target_for_effect(&mind_rot.effect, 0)
+        .expect("Mind Rot should auto-target the opponent");
+    assert_eq!(target, crate::game::Target::Player(1),
+        "Mind Rot should hit the opponent");
+}
+
+/// Discard / Mill effects with `target_filtered(Player)` are findable by
+/// `primary_target_filter` so the bot's `auto_target_for_effect` can
+/// resolve a target. Pre-fix only effects whose `what`/`who` slot was
+/// matched in `primary_target_filter` (Destroy, PumpPT, etc.)
+/// auto-targeted — player-side effects fell through and the bot
+/// returned `None`, leaving the spell unplayable.
+#[test]
+fn auto_target_player_side_effects_resolve_via_filter() {
+    use crate::card::SelectionRequirement;
+    use crate::effect::Effect;
+    use crate::card::Value;
+    let g = two_player_game();
+
+    let discard = Effect::Discard {
+        who: crate::effect::shortcut::target_filtered(SelectionRequirement::Player),
+        amount: Value::Const(1),
+        random: true,
+    };
+    let mill = Effect::Mill {
+        who: crate::effect::shortcut::target_filtered(SelectionRequirement::Player),
+        amount: Value::Const(1),
+    };
+
+    // Both are hostile → opp.
+    assert_eq!(g.auto_target_for_effect(&discard, 0),
+        Some(crate::game::Target::Player(1)),
+        "Discard should auto-target the opp");
+    assert_eq!(g.auto_target_for_effect(&mill, 0),
+        Some(crate::game::Target::Player(1)),
+        "Mill should auto-target the opp");
+}
+
+/// Regression: Cling to Dust's effect tree is
+///   `Seq([Move(target → Exile), If(Creature, GainLife, Noop)])`.
+/// The trailing `If(... GainLife)` accepts a Player target, but the
+/// PRIMARY target slot is the Move's `Any` filter — and Move only
+/// consumes Permanent/Card refs, so a Player target silently fizzles.
+/// Pre-fix `accepts_player_target` for `Seq` was an unconditional
+/// `any`, so the heuristic returned Player(opp). Post-fix it defers to
+/// the first child whose `primary_target_filter` is set (the Move),
+/// which rejects Player.
+#[test]
+fn auto_target_cling_to_dust_picks_graveyard_card_not_player() {
+    let mut g = two_player_game();
+    let dead = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+
+    let cling = catalog::cling_to_dust();
+    let target = g.auto_target_for_effect(&cling.effect, 0)
+        .expect("Cling to Dust should find a graveyard target");
+    assert_eq!(target, crate::game::Target::Permanent(dead),
+        "Cling to Dust auto-targets a graveyard card; Player target \
+         would silently fizzle on the leading Move");
+}
+
+// ── Loyalty ability error variants ───────────────────────────────────────────
+
+#[test]
+fn loyalty_ability_already_used_returns_typed_error() {
+    // Activate Teferi's -3 once, then try again the same turn — expect the
+    // typed `LoyaltyAbilityAlreadyUsed` error rather than the placeholder
+    // CardIsTapped the engine used to reuse.
+    let mut g = two_player_game();
+    let teferi = g.add_card_to_battlefield(0, catalog::teferi_time_raveler());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    // Seed P0's library so the trailing draw doesn't deck out the caster
+    // and end the game (which would mask the second-activation rejection).
+    g.add_card_to_library(0, catalog::forest());
+
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: teferi,
+        ability_index: 1, // -3 (index 0 is +1 sorceries-as-flash)
+        target: Some(Target::Permanent(bear)),
+    })
+    .expect("First -3 activation should succeed");
+    drain_stack(&mut g);
+
+    // Need a second targetable opponent permanent for the retry — otherwise
+    // we'd fall through to the AutoDecider's "no legal target" path before
+    // the used-ability check fires.
+    let bear2 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(bear2);
+
+    let err = g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: teferi,
+        ability_index: 1,
+        target: Some(Target::Permanent(bear2)),
+    })
+    .unwrap_err();
+    assert!(
+        matches!(err, GameError::LoyaltyAbilityAlreadyUsed(id) if id == teferi),
+        "Expected LoyaltyAbilityAlreadyUsed; got {:?}",
+        err,
+    );
+}
+
+#[test]
+fn loyalty_negative_cost_returns_not_enough_loyalty() {
+    // Manually drop Teferi's loyalty to 2, then try to activate -3.
+    let mut g = two_player_game();
+    let teferi = g.add_card_to_battlefield(0, catalog::teferi_time_raveler());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    g.add_card_to_library(0, catalog::forest());
+
+    if let Some(c) = g.battlefield_find_mut(teferi) {
+        c.counters
+            .insert(crate::card::CounterType::Loyalty, 2);
+    }
+    let err = g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: teferi,
+        ability_index: 1, // -3 (insufficient against 2 loyalty)
+        target: Some(Target::Permanent(bear)),
+    })
+    .unwrap_err();
+    assert!(
+        matches!(err, GameError::NotEnoughLoyalty(id) if id == teferi),
+        "Expected NotEnoughLoyalty; got {:?}",
+        err,
+    );
+}
+
+// ── Strixhaven (STX) ──────────────────────────────────────────────────────
+
+#[test]
+fn spirited_companion_etb_draws_a_card() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::forest());
+    g.add_card_to_library(0, catalog::forest());
+    let id = g.add_card_to_hand(0, catalog::spirited_companion());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Spirited Companion castable for {1}{W}");
+    let hand_before = g.players[0].hand.len();
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == id), "Companion enters battlefield");
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "ETB should have drawn a card");
+}
+
+#[test]
+fn eyetwitch_dies_triggers_learn_draw() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let twitch = g.add_card_to_battlefield(0, catalog::eyetwitch());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Permanent(twitch)),
+        mode: None, x_value: None,
+    })
+    .expect("Lightning Bolt targets Eyetwitch");
+    let hand_before = g.players[0].hand.len();
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == twitch), "Eyetwitch dies");
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "Learn → drew a card");
+}
+
+#[test]
+fn closing_statement_exiles_target_and_gains_x_life() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::closing_statement());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(bear)),
+        mode: None,
+        x_value: Some(3),
+    })
+    .expect("Closing Statement castable for {3}{W}{W}");
+    let life_before = g.players[0].life;
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == bear), "Bear exiled");
+    assert!(g.exile.iter().any(|c| c.id == bear), "Bear is in exile zone");
+    assert_eq!(g.players[0].life, life_before + 3, "Gained X = 3 life");
+}
+
+#[test]
+fn vanishing_verse_exiles_target_nonland_permanent() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::vanishing_verse());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(bear)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Vanishing Verse castable for {W}{B}");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == bear),
+        "Vanishing Verse should exile its target");
+}
+
+#[test]
+fn killian_ink_duelist_has_lifelink() {
+    let def = catalog::killian_ink_duelist();
+    assert!(def.keywords.contains(&crate::card::Keyword::Lifelink));
+    assert_eq!(def.power, 2);
+    assert_eq!(def.toughness, 3);
+    assert!(def.is_legendary());
+}
+
+#[test]
+fn devastating_mastery_destroys_each_nonland_permanent() {
+    let mut g = two_player_game();
+    let _land = g.add_card_to_battlefield(0, catalog::forest());
+    let _land2 = g.add_card_to_battlefield(1, catalog::forest());
+    let bear0 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let bear1 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::devastating_mastery());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Devastating Mastery castable for {4}{W}{W}");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == bear0));
+    assert!(!g.battlefield.iter().any(|c| c.id == bear1));
+    assert!(g.battlefield.iter().any(|c| c.definition.is_land()),
+        "Lands survive — `Selector::EachPermanent(Nonland)` skips them");
+}
+
+#[test]
+fn felisa_fang_smoke_test() {
+    let def = catalog::felisa_fang_of_silverquill();
+    assert_eq!(def.power, 4);
+    assert_eq!(def.toughness, 3);
+    assert!(def.keywords.contains(&crate::card::Keyword::Flying));
+    assert!(def.keywords.contains(&crate::card::Keyword::Lifelink));
+    assert!(def.is_legendary());
+}
+
+#[test]
+fn mavinda_students_advocate_smoke_test() {
+    let def = catalog::mavinda_students_advocate();
+    assert_eq!(def.power, 1);
+    assert_eq!(def.toughness, 3);
+    assert!(def.keywords.contains(&crate::card::Keyword::Flying));
+    assert!(def.keywords.contains(&crate::card::Keyword::Vigilance));
+    assert!(def.is_legendary());
+}
+
+#[test]
+fn eager_first_year_magecraft_pumps_a_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let _eager = g.add_card_to_battlefield(0, catalog::eager_first_year());
+    g.clear_sickness(bear);
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(1)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Lightning Bolt castable for {R}");
+    drain_stack(&mut g);
+    let pumped = g.battlefield.iter().any(|c| {
+        c.controller == 0 && c.definition.is_creature() && c.power_bonus >= 1
+    });
+    assert!(pumped, "Magecraft should have pumped a creature");
+}
+
+#[test]
+fn eager_first_year_magecraft_does_not_fire_on_creature_spell() {
+    let mut g = two_player_game();
+    let _eager = g.add_card_to_battlefield(0, catalog::eager_first_year());
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear, target: None, mode: None, x_value: None,
+    })
+    .expect("Grizzly Bears castable");
+    drain_stack(&mut g);
+    let any_pumped = g.battlefield.iter().any(|c| {
+        c.controller == 0 && c.definition.is_creature() && c.power_bonus >= 1
+    });
+    assert!(!any_pumped,
+        "Casting a creature spell should NOT trigger magecraft");
+}
+
+#[test]
+fn hunt_for_specimens_creates_pest_token_and_draws() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let id = g.add_card_to_hand(0, catalog::hunt_for_specimens());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Hunt for Specimens castable for {3}{B}");
+    let hand_before = g.players[0].hand.len();
+    drain_stack(&mut g);
+    let pest_count = g.battlefield.iter().filter(|c|
+        c.controller == 0 && c.is_token && c.definition.name == "Pest"
+    ).count();
+    assert_eq!(pest_count, 1, "Should create exactly one Pest token");
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "Learn → draw 1");
+}
+
+#[test]
+fn witherbloom_apprentice_magecraft_drains_one() {
+    let mut g = two_player_game();
+    let _appr = g.add_card_to_battlefield(0, catalog::witherbloom_apprentice());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let p0_before = g.players[0].life;
+    let p1_before = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(1)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Lightning Bolt castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, p1_before - 3 - 1, "Bolt + drain");
+    assert_eq!(g.players[0].life, p0_before + 1, "Drain gives 1 life");
+}
+
+#[test]
+fn pest_summoning_creates_two_pest_tokens() {
+    // Updated: matches the printed Oracle ("create two 1/1 black-and-green
+    // Pest tokens"). The token's death-trigger lifegain rider is still ⏳.
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::pest_summoning());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Pest Summoning castable for {B}{G}");
+    drain_stack(&mut g);
+    let pest_count = g.battlefield.iter().filter(|c|
+        c.controller == 0 && c.is_token && c.definition.name == "Pest"
+    ).count();
+    assert_eq!(pest_count, 2, "Pest Summoning creates two Pests (printed Oracle)");
+}
+
+#[test]
+fn inkling_summoning_creates_a_2_1_flying_inkling_token() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::inkling_summoning());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Inkling Summoning castable for {3}{W}{B}");
+    drain_stack(&mut g);
+    let inklings: Vec<_> = g.battlefield.iter().filter(|c|
+        c.controller == 0 && c.is_token && c.definition.name == "Inkling"
+    ).collect();
+    assert_eq!(inklings.len(), 1);
+    let i = &inklings[0];
+    assert_eq!(i.power(), 2);
+    assert_eq!(i.toughness(), 1);
+    assert!(i.has_keyword(&crate::card::Keyword::Flying));
+}
+
+#[test]
+fn tend_the_pests_sacrifices_creature_and_creates_x_pests() {
+    let mut g = two_player_game();
+    let big = g.add_card_to_battlefield(0, catalog::serra_angel()); // 4/4
+    g.clear_sickness(big);
+    let id = g.add_card_to_hand(0, catalog::tend_the_pests());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Tend the Pests castable for {1}{B}{G}");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == big),
+        "Sacrificed creature should have left the battlefield");
+    let pests = g.battlefield.iter().filter(|c|
+        c.controller == 0 && c.is_token && c.definition.name == "Pest"
+    ).count();
+    assert_eq!(pests, 4, "Should create X = 4 Pest tokens (one per sacrificed power)");
 }

@@ -6,12 +6,13 @@
 //! gains reveal-to-seat metadata, this file is where it plugs in.
 
 use crate::card::{CardId, CardInstance};
-use crate::effect::{Effect, Selector};
+use crate::effect::Effect;
 use crate::game::{GameState, StackItem};
 use crate::mana::ManaSymbol;
 use crate::net::{
-    AbilityView, ClientView, GraveyardCardView, HandCardView, KnownCard, KnownStackItem,
-    LibraryView, PendingDecisionView, PermanentView, PlayerView, StackItemView,
+    AbilityView, ClientView, ExileCardView, GraveyardCardView, HandCardView, KnownCard,
+    KnownStackItem, LibraryView, PendingDecisionView, PermanentView, PlayerView, StackItemKind,
+    StackItemView,
 };
 use crate::player::Player;
 
@@ -53,7 +54,16 @@ pub fn project(state: &GameState, seat: usize) -> ClientView {
                 decision: (acting == seat).then(|| (&pd.decision).into()),
             }
         }),
+        exile: state.exile.iter().map(exile_entry).collect(),
         game_over: state.game_over,
+    }
+}
+
+fn exile_entry(card: &CardInstance) -> ExileCardView {
+    ExileCardView {
+        id: card.id,
+        name: card.definition.name.to_string(),
+        owner: card.owner,
     }
 }
 
@@ -75,6 +85,14 @@ fn project_player(player: &Player, player_seat: usize, viewer_seat: usize) -> Pl
             .map(|c| project_hand_card(c, player_seat, viewer_seat))
             .collect(),
         lands_played_this_turn: player.lands_played_this_turn,
+        first_spell_tax_charges: player.first_spell_tax_charges,
+        life_gained_this_turn: player.life_gained_this_turn,
+        cards_drawn_this_turn: player.cards_drawn_this_turn,
+        cards_left_graveyard_this_turn: player.cards_left_graveyard_this_turn,
+        creatures_died_this_turn: player.creatures_died_this_turn,
+        cards_exiled_this_turn: player.cards_exiled_this_turn,
+        instants_or_sorceries_cast_this_turn: player.instants_or_sorceries_cast_this_turn,
+        creatures_cast_this_turn: player.creatures_cast_this_turn,
     }
 }
 
@@ -92,7 +110,7 @@ fn known_card(card: &CardInstance) -> KnownCard {
         name: card.definition.name.to_string(),
         cost: card.definition.cost.clone(),
         card_types: card.definition.card_types.clone(),
-        needs_target: spell_needs_target(&card.definition.effect),
+        needs_target: card.definition.effect.requires_target(),
         has_alternative_cost: card.definition.alternative_cost.is_some(),
         back_face_name: card
             .definition
@@ -128,6 +146,8 @@ fn project_permanent(
         summoning_sick: card.summoning_sick,
         power: cp.map(|c| c.power).unwrap_or_else(|| card.power()),
         toughness: cp.map(|c| c.toughness).unwrap_or_else(|| card.toughness()),
+        base_power: card.definition.base_power(),
+        base_toughness: card.definition.base_toughness(),
         keywords: cp
             .map(|c| c.keywords.clone())
             .unwrap_or_else(|| card.definition.keywords.clone()),
@@ -136,7 +156,22 @@ fn project_permanent(
         is_token: card.is_token,
         attacking: attacking.contains(&card.id),
         abilities: project_abilities(card),
+        loyalty_abilities: project_loyalty_abilities(card),
     }
+}
+
+fn project_loyalty_abilities(card: &CardInstance) -> Vec<crate::net::LoyaltyAbilityView> {
+    card.definition
+        .loyalty_abilities
+        .iter()
+        .enumerate()
+        .map(|(i, a)| crate::net::LoyaltyAbilityView {
+            index: i,
+            loyalty_cost: a.loyalty_cost,
+            effect_label: ability_effect_label(&a.effect).to_string(),
+            needs_target: a.effect.requires_target(),
+        })
+        .collect()
 }
 
 fn project_abilities(card: &CardInstance) -> Vec<AbilityView> {
@@ -144,32 +179,122 @@ fn project_abilities(card: &CardInstance) -> Vec<AbilityView> {
         .activated_abilities
         .iter()
         .enumerate()
-        .map(|(i, a)| AbilityView {
-            index: i,
-            cost_label: ability_cost_label(a),
-            effect_label: ability_effect_label(&a.effect).to_string(),
-            needs_target: spell_needs_target(&a.effect),
-            is_mana: is_mana_ability(&a.effect),
+        .map(|(i, a)| {
+            let (gate_label, gate_blocked) = match &a.condition {
+                Some(p) => (predicate_short_label(p), false),
+                None => (String::new(), false),
+            };
+            // `gate_blocked` requires evaluating the predicate against
+            // the current GameState — `project_permanent` doesn't carry
+            // a state reference. The view layer's caller fills this in
+            // separately (see `project_permanent_with_state`); the
+            // snapshot here is the static description only.
+            let _ = gate_blocked;
+            AbilityView {
+                index: i,
+                cost_label: ability_cost_label(a),
+                effect_label: ability_effect_label(&a.effect).to_string(),
+                needs_target: a.effect.requires_target(),
+                is_mana: is_mana_ability(&a.effect),
+                once_per_turn_used: a.once_per_turn && card.once_per_turn_used.contains(&i),
+                gate_label,
+                gate_blocked: false,
+            }
         })
         .collect()
 }
 
+/// Render an `ActivatedAbility.condition` predicate as a short
+/// user-facing hint string. Used to populate `AbilityView.gate_label`.
+/// The format mirrors the printed Oracle text — "≥7 in hand" for hand
+/// size, "spell cast this turn" for spells_cast tally, etc.
+fn predicate_short_label(p: &crate::card::Predicate) -> String {
+    use crate::card::Predicate;
+    use crate::effect::Value;
+    match p {
+        Predicate::ValueAtLeast(Value::HandSizeOf(_), Value::Const(n)) => {
+            format!("≥{n} in hand")
+        }
+        Predicate::ValueAtMost(Value::HandSizeOf(_), Value::Const(n)) => {
+            format!("≤{n} in hand")
+        }
+        Predicate::ValueAtLeast(Value::LifeOf(_), Value::Const(n)) => {
+            format!("≥{n} life")
+        }
+        Predicate::ValueAtMost(Value::LifeOf(_), Value::Const(n)) => {
+            format!("≤{n} life")
+        }
+        Predicate::SpellsCastThisTurnAtLeast { at_least: Value::Const(1), .. } => {
+            "after spell cast".into()
+        }
+        Predicate::SpellsCastThisTurnAtLeast { at_least: Value::Const(n), .. } => {
+            format!("after {n} spell casts")
+        }
+        Predicate::InstantsOrSorceriesCastThisTurnAtLeast {
+            at_least: Value::Const(1), ..
+        } => "after instant/sorcery cast".into(),
+        Predicate::InstantsOrSorceriesCastThisTurnAtLeast {
+            at_least: Value::Const(n), ..
+        } => format!("after {n} instant/sorcery casts"),
+        Predicate::CreaturesCastThisTurnAtLeast {
+            at_least: Value::Const(1), ..
+        } => "after creature cast".into(),
+        Predicate::CreaturesCastThisTurnAtLeast {
+            at_least: Value::Const(n), ..
+        } => format!("after {n} creature casts"),
+        Predicate::CardsLeftGraveyardThisTurnAtLeast {
+            at_least: Value::Const(1), ..
+        } => "after gy-leave".into(),
+        Predicate::LifeGainedThisTurnAtLeast { at_least: Value::Const(1), .. } => {
+            "after lifegain".into()
+        }
+        Predicate::CardsExiledThisTurnAtLeast {
+            at_least: Value::Const(1), ..
+        } => "after exile".into(),
+        Predicate::CreaturesDiedThisTurnAtLeast {
+            at_least: Value::Const(1), ..
+        } => "after creature death".into(),
+        // Push XVI: cast-time spell-shape introspection labels.
+        Predicate::CastSpellHasX => "cast spell w/ {X}".into(),
+        Predicate::CastSpellTargetsMatch(_) => "cast spell targets match".into(),
+        // Catch-all: no human-readable form yet.
+        _ => "conditional".into(),
+    }
+}
+
 fn ability_cost_label(ability: &crate::effect::ActivatedAbility) -> String {
     let mut parts: Vec<String> = Vec::new();
-    if ability.tap_cost {
-        parts.push("{T}".into());
-    }
     for sym in &ability.mana_cost.symbols {
+        // Use the Color::short_name() abbreviations so `{R}` renders
+        // as `{R}` (not `{Red}`) — matches the MTG card-text format
+        // the UI displays elsewhere.
         let tok = match sym {
-            ManaSymbol::Colored(c) => format!("{{{c:?}}}"),
+            ManaSymbol::Colored(c) => format!("{{{c}}}"),
             ManaSymbol::Generic(n) => format!("{{{n}}}"),
             ManaSymbol::Colorless(n) => format!("{{{n}}}"),
-            ManaSymbol::Hybrid(a, b) => format!("{{{a:?}/{b:?}}}"),
-            ManaSymbol::Phyrexian(c) => format!("{{{c:?}/P}}"),
+            ManaSymbol::Hybrid(a, b) => format!("{{{a}/{b}}}"),
+            ManaSymbol::Phyrexian(c) => format!("{{{c}/P}}"),
             ManaSymbol::Snow => "{S}".into(),
             ManaSymbol::X => "{X}".into(),
         };
         parts.push(tok);
+    }
+    if ability.tap_cost {
+        parts.push("{T}".into());
+    }
+    // Sacrifice-cost activations (Lotus Petal, Wasteland, Mind Stone's draw
+    // ability, Tormod's Crypt, …) carry a `sac_cost: true` flag — render it
+    // explicitly so the UI shows the sacrifice rider rather than a label
+    // that looks like the ability is free for tap+mana alone.
+    if ability.sac_cost {
+        parts.push("Sac".into());
+    }
+    // Life-cost activations (Great Hall of the Biblioplex, future
+    // Phyrexian-mana flavoured activations, City of Brass-style
+    // tap-for-damage hybrids). `life_cost` is the new field added
+    // alongside `Effect::MayDo` in push XV.
+    if ability.life_cost > 0 {
+        parts.push(format!("Pay {} life", ability.life_cost));
     }
     if parts.is_empty() { "0".into() } else { parts.join(", ") }
 }
@@ -177,17 +302,89 @@ fn ability_cost_label(ability: &crate::effect::ActivatedAbility) -> String {
 fn ability_effect_label(effect: &Effect) -> &'static str {
     match effect {
         Effect::AddMana { .. } => "Add mana",
-        Effect::Seq(steps) => steps.first().map(ability_effect_label).unwrap_or("Activate"),
+        // Walk into structural combinators: pick the most representative
+        // child for the label rather than degenerating to "Activate".
+        Effect::Seq(steps) => {
+            // Pick the most representative child: skip the catch-all
+            // "Activate" placeholder, and skip a leading "Sacrifice"
+            // when there's a meaningful follow-up (Goblin Bombardment,
+            // Thud, Greater Good — sac is the cost; the payoff is the
+            // user-facing action). If the only non-trivial step is
+            // Sacrifice, fall through to that.
+            let labels: Vec<&'static str> =
+                steps.iter().map(ability_effect_label).collect();
+            labels
+                .iter()
+                .copied()
+                .find(|l| *l != "Activate" && *l != "Sacrifice")
+                .or_else(|| labels.iter().copied().find(|l| *l != "Activate"))
+                .unwrap_or("Activate")
+        }
+        Effect::If { then, else_, .. } => {
+            // Prefer the `then` branch's label — that's the active outcome
+            // when the gate passes (Gemstone Caverns luck-removal etc.).
+            let lt = ability_effect_label(then);
+            if lt != "Activate" { lt } else { ability_effect_label(else_) }
+        }
+        Effect::ChooseMode(modes) => modes
+            .iter()
+            .map(ability_effect_label)
+            .find(|l| *l != "Activate")
+            .unwrap_or("Activate"),
+        Effect::ForEach { body, .. } | Effect::Repeat { body, .. } => ability_effect_label(body),
+        // MayDo / MayPay wrap an inner effect — surface the inner label
+        // so the UI shows what the player gets to do (the "may"
+        // prompting goes through the decision panel separately).
+        Effect::MayDo { body, .. } | Effect::MayPay { body, .. } => ability_effect_label(body),
         Effect::LoseLife { .. } => "Pay life / fetch land",
         Effect::Search { .. } => "Search library",
         Effect::Move { .. } => "Move permanent",
         Effect::DealDamage { .. } => "Deal damage",
+        Effect::Fight { .. } => "Fight",
         Effect::Draw { .. } => "Draw cards",
+        Effect::Discard { .. } => "Discard",
         Effect::Destroy { .. } => "Destroy permanent",
         Effect::Exile { .. } => "Exile permanent",
         Effect::GainLife { .. } => "Gain life",
+        Effect::Mill { .. } => "Mill",
+        Effect::Scry { .. } => "Scry",
+        Effect::Surveil { .. } => "Surveil",
         Effect::AddCounter { .. } => "Add counter",
+        Effect::RemoveCounter { .. } => "Remove counter",
         Effect::CreateToken { .. } => "Create token",
+        Effect::CounterSpell { .. } => "Counter spell",
+        Effect::CounterAbility { .. } => "Counter ability",
+        Effect::CounterUnlessPaid { .. } => "Counter unless paid",
+        Effect::Sacrifice { .. } | Effect::SacrificeAndRemember { .. } => "Sacrifice",
+        Effect::DiscardChosen { .. } => "Discard chosen",
+        Effect::PayOrLoseGame { .. } => "Pay or lose",
+        Effect::DelayUntil { .. } => "Delayed trigger",
+        Effect::Tap { .. } => "Tap",
+        Effect::Untap { .. } => "Untap",
+        Effect::PumpPT { .. } => "Pump",
+        Effect::GrantKeyword { .. } => "Grant keyword",
+        Effect::AddPoison { .. } => "Add poison",
+        Effect::RevealUntilFind { .. } => "Reveal until find",
+        Effect::AddFirstSpellTax { .. } => "Cost tax",
+        Effect::Drain { .. } => "Drain",
+        Effect::Proliferate => "Proliferate",
+        Effect::LookAtTop { .. } => "Look at top",
+        Effect::ShuffleGraveyardIntoLibrary { .. } => "Shuffle into library",
+        Effect::PutOnLibraryFromHand { .. } => "Put on library",
+        Effect::RevealTopAndDrawIf { .. } => "Reveal top",
+        Effect::CopySpell { .. } => "Copy spell",
+        Effect::GainControl { .. } => "Gain control",
+        Effect::ResetCreature { .. } => "Reset creature",
+        Effect::BecomeBasicLand { .. } => "Become basic land",
+        Effect::Attach { .. } => "Attach",
+        Effect::GrantSorceriesAsFlash { .. } => "Sorceries as flash",
+        Effect::NameCreatureType { .. } => "Name creature type",
+        // `Effect::Noop` is the only Effect variant reachable here today
+        // (every other variant has a dedicated arm above). The match is
+        // intentionally wildcarded rather than exhaustive so adding a
+        // new `Effect` variant doesn't break the build — but if a new
+        // card surfaces with the generic "Activate" label, add a
+        // dedicated arm above.
         _ => "Activate",
     }
 }
@@ -202,30 +399,14 @@ fn is_mana_ability(effect: &Effect) -> bool {
     match effect {
         Effect::AddMana { pool, .. } => matches!(
             pool,
+            // No-choice payloads — auto-tap activates them on the user's
+            // behalf without surfacing a menu entry.
             ManaPayload::Colors(_) | ManaPayload::Colorless(_)
+                | ManaPayload::OfColor(_, _)
         ),
         Effect::Seq(steps) => !steps.is_empty() && steps.iter().all(is_mana_ability),
         _ => false,
     }
-}
-
-fn spell_needs_target(effect: &Effect) -> bool {
-    fn has_target_selector(e: &Effect) -> bool {
-        match e {
-            Effect::DealDamage { to, .. } => matches!(to, Selector::Target(_)),
-            Effect::Destroy { what }
-            | Effect::Exile { what }
-            | Effect::CounterSpell { what }
-            | Effect::Move { what, .. } => matches!(what, Selector::Target(_)),
-            Effect::PumpPT { what, .. } => matches!(what, Selector::Target(_)),
-            Effect::Seq(steps) => steps.iter().any(has_target_selector),
-            Effect::If { then, else_, .. } => {
-                has_target_selector(then) || has_target_selector(else_)
-            }
-            _ => false,
-        }
-    }
-    has_target_selector(effect)
 }
 
 fn project_stack(item: &StackItem, state: &GameState, _viewer_seat: usize) -> StackItemView {
@@ -235,6 +416,7 @@ fn project_stack(item: &StackItem, state: &GameState, _viewer_seat: usize) -> St
             controller: *caster,
             name: card.definition.name.to_string(),
             target: target.clone(),
+            kind: StackItemKind::Spell,
         }),
         StackItem::Trigger { source, controller, target, .. } => {
             let name = state
@@ -248,6 +430,7 @@ fn project_stack(item: &StackItem, state: &GameState, _viewer_seat: usize) -> St
                 controller: *controller,
                 name,
                 target: target.clone(),
+                kind: StackItemKind::Trigger,
             })
         }
     }
@@ -295,6 +478,64 @@ mod tests {
     }
 
     #[test]
+    fn stack_item_kind_distinguishes_spell_from_trigger() {
+        use crate::effect::Effect;
+        use crate::game::StackItem;
+        let mut g = two_player_game();
+        let bolt_id = g.add_card_to_battlefield(0, catalog::lightning_bolt());
+        let bolt = g.battlefield_find(bolt_id).cloned().unwrap();
+        g.battlefield.retain(|c| c.id != bolt_id);
+        // Push one Spell and one Trigger sourced from the same card.
+        g.stack.push(StackItem::Spell {
+            card: Box::new(bolt),
+            caster: 0,
+            target: None,
+            mode: None,
+            x_value: 0,
+            converged_value: 0,
+            uncounterable: false,
+        });
+        g.stack.push(StackItem::Trigger {
+            source: bolt_id,
+            controller: 0,
+            effect: Box::new(Effect::Noop),
+            target: None,
+            mode: None,
+            x_value: 0,
+            converged_value: 0,
+        });
+        let v = project(&g, 0);
+        assert_eq!(v.stack.len(), 2);
+        match &v.stack[0] {
+            StackItemView::Known(k) => assert_eq!(k.kind, StackItemKind::Spell),
+            _ => panic!("expected Known"),
+        }
+        match &v.stack[1] {
+            StackItemView::Known(k) => assert_eq!(k.kind, StackItemKind::Trigger),
+            _ => panic!("expected Known"),
+        }
+    }
+
+    #[test]
+    fn exile_zone_is_public_and_includes_owner() {
+        let mut state = two_player_game();
+        let id = state.add_card_to_battlefield(0, catalog::grizzly_bears());
+        // Move it to exile directly.
+        let idx = state.battlefield.iter().position(|c| c.id == id).unwrap();
+        let card = state.battlefield.remove(idx);
+        state.exile.push(card);
+
+        // Both seats see the exile zone identically.
+        let view0 = project(&state, 0);
+        let view1 = project(&state, 1);
+        assert_eq!(view0.exile.len(), 1);
+        assert_eq!(view0.exile[0].name, "Grizzly Bears");
+        assert_eq!(view0.exile[0].owner, 0);
+        assert_eq!(view1.exile.len(), 1);
+        assert_eq!(view1.exile[0].name, view0.exile[0].name);
+    }
+
+    #[test]
     fn graveyard_is_public() {
         let mut state = two_player_game();
         let id = state.add_card_to_battlefield(0, catalog::grizzly_bears());
@@ -316,5 +557,204 @@ mod tests {
         let perm = view.battlefield.iter().find(|p| p.id == id).unwrap();
         assert_eq!(perm.power, 2);
         assert_eq!(perm.toughness, 2);
+    }
+
+    /// Sac+payoff abilities (Goblin Bombardment, Greater Good, Thud)
+    /// are `Seq([Sacrifice…, Payoff…])`. The view label should surface
+    /// the **payoff** so the player sees "Deal damage" / "Draw cards"
+    /// rather than the cost-step "Sacrifice".
+    #[test]
+    fn ability_label_skips_sacrifice_cost_for_payoff() {
+        let bomb = catalog::goblin_bombardment();
+        let label = ability_effect_label(&bomb.activated_abilities[0].effect);
+        assert_eq!(label, "Deal damage",
+            "Goblin Bombardment's payoff is the user-facing action, not the sac cost");
+
+        let good = catalog::greater_good();
+        let label = ability_effect_label(&good.activated_abilities[0].effect);
+        assert_eq!(label, "Draw cards",
+            "Greater Good's payoff label should be Draw cards");
+    }
+
+    /// Pure-sacrifice abilities (Cankerbloom-style sac to do X) still
+    /// surface "Sacrifice" — the fallback path kicks in when no
+    /// non-Sacrifice non-Activate label exists.
+    #[test]
+    fn ability_label_falls_back_to_sacrifice_when_only_label() {
+        // Build a synthetic Seq([Sacrifice]) effect — same shape as a
+        // creature whose only non-mana action is to sacrifice itself.
+        use crate::card::SelectionRequirement;
+        use crate::effect::{Selector, Value};
+        let eff = Effect::Seq(vec![Effect::Sacrifice {
+            who: Selector::You,
+            count: Value::Const(1),
+            filter: SelectionRequirement::Creature,
+        }]);
+        assert_eq!(ability_effect_label(&eff), "Sacrifice");
+    }
+
+    #[test]
+    fn ability_cost_label_uses_mtg_color_abbreviations() {
+        use crate::effect::{ActivatedAbility, Effect};
+        use crate::mana::{cost, b, generic, r, w, u, x};
+        let ab = ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[generic(2), w(), u(), b(), r()]),
+            effect: Effect::Noop,
+            once_per_turn: false,
+            sorcery_speed: false,
+            sac_cost: false,
+            condition: None,
+            life_cost: 0,
+        };
+        let label = ability_cost_label(&ab);
+        assert!(label.contains("{W}"), "{label} should contain {{W}}");
+        assert!(label.contains("{U}"), "{label} should contain {{U}}");
+        assert!(label.contains("{B}"), "{label} should contain {{B}}");
+        assert!(label.contains("{R}"), "{label} should contain {{R}}");
+        assert!(label.contains("{T}"), "{label} should contain the tap symbol");
+        assert!(!label.contains("White") && !label.contains("Blue"),
+            "label uses single-letter MTG abbreviations, not Debug names: {label}");
+
+        let ab_x = ActivatedAbility {
+            tap_cost: false,
+            mana_cost: cost(&[x()]),
+            effect: Effect::Noop,
+            once_per_turn: false,
+            sorcery_speed: false,
+            sac_cost: false,
+            condition: None,
+            life_cost: 0,
+        };
+        assert_eq!(ability_cost_label(&ab_x), "{X}",
+            "X-cost ability renders as {{X}}");
+    }
+
+    /// Sacrifice-cost activated abilities (Lotus Petal, Wasteland,
+    /// Tormod's Crypt, Mind Stone's draw ability) should render the
+    /// "Sac" cost rider explicitly so the UI tooltip doesn't make the
+    /// ability look free.
+    #[test]
+    fn ability_cost_label_includes_sacrifice_marker() {
+        use crate::effect::{ActivatedAbility, Effect};
+        use crate::mana::{cost, generic};
+        // Mind Stone's draw ability: {1}, {T}, sac → Draw 1.
+        let ab = ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[generic(1)]),
+            effect: Effect::Noop,
+            once_per_turn: false,
+            sorcery_speed: false,
+            sac_cost: true,
+            condition: None,
+            life_cost: 0,
+        };
+        let label = ability_cost_label(&ab);
+        assert!(label.contains("{1}"), "{label} must include the {{1}} cost");
+        assert!(label.contains("{T}"), "{label} must include the tap cost");
+        assert!(label.contains("Sac"),
+            "{label} should advertise the sacrifice cost");
+
+        // Lotus Petal: {T}, sac → add any one color. No mana cost.
+        let petal = ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[]),
+            effect: Effect::Noop,
+            once_per_turn: false,
+            sorcery_speed: false,
+            sac_cost: true,
+            condition: None,
+            life_cost: 0,
+        };
+        let label = ability_cost_label(&petal);
+        assert!(label.contains("{T}") && label.contains("Sac"),
+            "{label} = `{{T}}, Sac`-style for Lotus Petal");
+    }
+
+    /// `AbilityView.once_per_turn_used` must reflect the engine's
+    /// per-turn budget so the client can grey out the button. We set up
+    /// the flag manually on the battlefield instance (rather than
+    /// driving a full activation) to keep the test focused on the
+    /// projection step.
+    #[test]
+    fn ability_view_surfaces_once_per_turn_used_state() {
+        let mut state = two_player_game();
+        let bio = state.add_card_to_battlefield(0, catalog::mindful_biomancer());
+        // Prime the engine to "ability 0 has been used".
+        state
+            .battlefield
+            .iter_mut()
+            .find(|c| c.id == bio)
+            .unwrap()
+            .once_per_turn_used
+            .push(0);
+
+        let view = project(&state, 0);
+        let perm = view.battlefield.iter().find(|p| p.id == bio).unwrap();
+        let pump = perm
+            .abilities
+            .iter()
+            .find(|a| !a.is_mana)
+            .expect("Mindful Biomancer projects a non-mana pump ability");
+        assert!(pump.once_per_turn_used,
+            "the pump ability is once-per-turn and the engine flagged it as used");
+    }
+
+    /// Resonating Lute's gated draw ability should surface its
+    /// printed `Activate only if you have seven or more cards in your
+    /// hand` clause through `AbilityView.gate_label` — push VIII
+    /// added the field. The client can show "≥7 in hand" next to the
+    /// activator button.
+    #[test]
+    fn resonating_lute_gate_label_in_view() {
+        let mut state = two_player_game();
+        let lute = state.add_card_to_battlefield(0, catalog::resonating_lute());
+        let view = project(&state, 0);
+        let perm = view.battlefield.iter().find(|p| p.id == lute).unwrap();
+        let draw_ability = perm.abilities.iter().find(|a| !a.is_mana)
+            .expect("Resonating Lute should have a non-mana draw ability");
+        assert!(!draw_ability.gate_label.is_empty(),
+            "gate_label should describe the printed condition");
+        assert!(draw_ability.gate_label.contains("hand"),
+            "gate_label should mention 'hand' (got {:?})", draw_ability.gate_label);
+    }
+
+    /// Potioner's Trove's lifegain ability picked up a printed gate
+    /// in push VIII (`SpellsCastThisTurnAtLeast(You, 1)`); the
+    /// projection should expose it through `AbilityView.gate_label`.
+    #[test]
+    fn potioners_trove_gate_label_in_view() {
+        let mut state = two_player_game();
+        let trove = state.add_card_to_battlefield(0, catalog::potioners_trove());
+        let view = project(&state, 0);
+        let perm = view.battlefield.iter().find(|p| p.id == trove).unwrap();
+        // Index 0 is mana ability; index 1 is the gated lifegain.
+        let lifegain = &perm.abilities[1];
+        assert_eq!(lifegain.effect_label, "Gain life");
+        assert!(!lifegain.gate_label.is_empty(),
+            "gate_label should describe the printed condition");
+        // Push XIII: gate now uses `InstantsOrSorceriesCastThisTurnAtLeast`,
+        // labeled "after instant/sorcery cast" — the test accepts either
+        // wording so the label can evolve without breaking.
+        let lab = &lifegain.gate_label;
+        assert!(lab.contains("instant/sorcery") || lab.contains("spell"),
+            "gate_label should describe the predicate (got {:?})", lab);
+    }
+
+    /// Planeswalkers' loyalty abilities should surface in the wire view so
+    /// the client can render the "+1 / -3 / -8" buttons. Pre-fix the
+    /// PermanentView only carried activated abilities, leaving the UI
+    /// blind to walker abilities.
+    #[test]
+    fn planeswalker_loyalty_abilities_appear_in_view() {
+        let mut state = two_player_game();
+        let karn = state.add_card_to_battlefield(0, catalog::karn_scion_of_urza());
+        let view = project(&state, 0);
+        let perm = view.battlefield.iter().find(|p| p.id == karn).unwrap();
+        assert_eq!(perm.loyalty_abilities.len(), 3, "Karn has +1, -1, -2");
+        let costs: Vec<i32> = perm.loyalty_abilities.iter().map(|l| l.loyalty_cost).collect();
+        assert_eq!(costs, vec![1, -1, -2]);
+        // The -2 ability creates a token; pre-rendered label should reflect that.
+        assert_eq!(perm.loyalty_abilities[2].effect_label, "Create token");
     }
 }

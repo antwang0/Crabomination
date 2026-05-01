@@ -3,10 +3,10 @@ use std::f32::consts::PI;
 use bevy::prelude::*;
 
 use crate::card::{
-    hand_card_transform, Animating, CardFlipAnimation, CardHoverLift, DeckCard, DeckShuffleAnimation,
-    DrawCardAnimation, HandCard, HandSlideAnimation, PlayCardAnimation, ReturnToDeckAnimation,
-    RevealPeekAnimation, SendToGraveyardAnimation, ShufflePhase, TapAnimation,
-    CARD_WIDTH, HOVER_LIFT_SPEED,
+    hand_card_transform, Animating, CardFlipAnimation, CardHoverLift, DeckCard,
+    DeckShuffleAnimation, DrawCardAnimation, HandCard, HandSlideAnimation, MdfcFlipAnimation,
+    PlayCardAnimation, ReturnToDeckAnimation, ReturnToHandAnimation, RevealPeekAnimation,
+    SendToGraveyardAnimation, ShufflePhase, TapAnimation, CARD_WIDTH, HOVER_LIFT_SPEED,
 };
 use crate::net_plugin::CurrentView;
 
@@ -43,6 +43,7 @@ pub fn animate_hover_lift(
             Without<TapAnimation>,
             Without<SendToGraveyardAnimation>,
             Without<ReturnToDeckAnimation>,
+            Without<ReturnToHandAnimation>,
             Without<RevealPeekAnimation>,
         ),
     >,
@@ -75,6 +76,33 @@ pub fn animate_flip(
             let flip_angle = t * PI;
             let y_offset = (CARD_WIDTH / 2.0) * flip_angle.sin().abs();
             transform.translation.y = anim.start_y + y_offset;
+        }
+    }
+}
+
+/// Drive the MDFC 180° flip: rotate the parent around its local Y axis
+/// from `start_rotation` to `start_rotation * Quat::from_rotation_y(PI)`
+/// over `progress: 0.0..1.0`. Both faces are pre-painted with their
+/// proper Scryfall images, so this rotation alone reveals the alternate
+/// face. After two flips (each +180°) the parent has rotated 360° and
+/// is back at its original orientation.
+#[allow(clippy::type_complexity)]
+pub fn animate_mdfc_flip(
+    mut commands: Commands,
+    time: Res<Time>,
+    speed: Res<AnimationSpeed>,
+    mut cards: Query<(Entity, &mut Transform, &mut MdfcFlipAnimation)>,
+) {
+    for (entity, mut transform, mut anim) in &mut cards {
+        anim.progress += time.delta_secs() * speed.0 * anim.speed;
+        let t = anim.progress.min(1.0);
+        let eased = ease_in_out(t);
+        let angle = eased * PI;
+        transform.rotation = anim.start_rotation * Quat::from_rotation_y(angle);
+
+        if anim.progress >= 1.0 {
+            transform.rotation = anim.start_rotation * Quat::from_rotation_y(PI);
+            commands.entity(entity).remove::<MdfcFlipAnimation>();
         }
     }
 }
@@ -302,6 +330,46 @@ pub fn animate_return_to_deck(
     }
 }
 
+/// Animate a permanent flying back to its owner's hand. On completion
+/// the entity either becomes a `HandCard` (viewer's bounce target —
+/// keep it on screen face-up) or despawns (opponent's bounce target —
+/// the next sync frame re-spawns it as a face-down `OpponentHandCard`).
+pub fn animate_return_to_hand(
+    mut commands: Commands,
+    time: Res<Time>,
+    speed: Res<AnimationSpeed>,
+    mut cards: Query<(Entity, &mut Transform, &mut ReturnToHandAnimation, Option<&mut CardHoverLift>)>,
+) {
+    for (entity, mut transform, mut anim, mut lift) in &mut cards {
+        anim.progress += time.delta_secs() * speed.0 * anim.speed;
+        let t = ease_in_out(anim.progress.clamp(0.0, 1.0));
+        let arc_y = (anim.progress.clamp(0.0, 1.0) * PI).sin() * 2.5;
+        let mut pos = anim.start_translation.lerp(anim.target_translation, t);
+        pos.y += arc_y;
+        transform.translation = pos;
+        transform.rotation = anim.start_rotation.slerp(anim.target_rotation, t);
+
+        if anim.progress >= 1.0 {
+            transform.translation = anim.target_translation;
+            transform.rotation = anim.target_rotation;
+            if anim.to_viewer {
+                if let Some(ref mut l) = lift {
+                    l.base_translation = anim.target_translation;
+                    l.current_lift = 0.0;
+                    l.target_lift = 0.0;
+                }
+                commands
+                    .entity(entity)
+                    .insert(HandCard { slot: anim.target_slot })
+                    .remove::<ReturnToHandAnimation>()
+                    .remove::<Animating>();
+            } else {
+                commands.entity(entity).despawn();
+            }
+        }
+    }
+}
+
 /// Animate a card tapping (90°) or untapping.
 pub fn animate_tap(
     mut commands: Commands,
@@ -364,12 +432,124 @@ pub fn adjust_animation_speed(
     mut speed: ResMut<AnimationSpeed>,
 ) {
     if keyboard.just_pressed(KeyCode::BracketLeft) {
-        speed.0 = (speed.0 * 0.5).max(0.25);
+        speed.0 = (speed.0 * 0.5).max(ANIM_SPEED_MIN);
     }
     if keyboard.just_pressed(KeyCode::BracketRight) {
-        speed.0 = (speed.0 * 2.0).min(8.0);
+        speed.0 = (speed.0 * 2.0).min(ANIM_SPEED_MAX);
     }
     if keyboard.just_pressed(KeyCode::Backslash) {
         speed.0 = 1.0;
+    }
+}
+
+/// User-facing range for the animation-speed slider in the HUD. The
+/// keyboard shortcuts ([, ], \\) clamp to the same bounds.
+pub const ANIM_SPEED_MIN: f32 = 0.1;
+pub const ANIM_SPEED_MAX: f32 = 10.0;
+
+// ── Animation queueing ───────────────────────────────────────────────────────
+
+/// Queued follow-up animation for an entity that's currently animating.
+/// `dispatch_animation_queue` peels the next item off the queue once the
+/// `Animating` marker is removed, so animations chain end-to-end instead
+/// of overlapping on the same card.
+///
+/// Only a small subset of animation types are queueable today (the ones
+/// that actually conflict on the same entity in practice — chiefly tap,
+/// play, hand-slide, and graveyard-flight). Adding a new variant is a
+/// one-line append to this enum plus a one-line arm in the dispatcher.
+pub enum QueuedAnim {
+    /// Run a tap/untap rotation animation. The bool is the `TapState`
+    /// the card should land in once the animation finishes.
+    Tap {
+        anim: TapAnimation,
+        target_tapped: bool,
+    },
+    /// Run a card-flight (hand → battlefield, deck → exile, etc.).
+    Play(PlayCardAnimation),
+    /// Slide a hand card to a new fan slot.
+    HandSlide(HandSlideAnimation),
+    /// Fly the card to the graveyard (it self-despawns on completion).
+    SendToGraveyard(SendToGraveyardAnimation),
+}
+
+#[derive(Component, Default)]
+pub struct AnimQueue {
+    pub queue: std::collections::VecDeque<QueuedAnim>,
+    /// Seconds of forced idle time before popping the next animation.
+    /// Set when the previous animation finishes; counts down (scaled by
+    /// `AnimationSpeed`) inside `dispatch_animation_queue`. Zero on a
+    /// freshly-built queue so the first animation starts immediately.
+    pub delay_remaining: f32,
+}
+
+impl AnimQueue {
+    pub fn from_one(anim: QueuedAnim) -> Self {
+        let mut q = AnimQueue::default();
+        q.queue.push_back(anim);
+        q
+    }
+}
+
+/// Inter-animation breather. Short enough to feel snappy at 1× and naturally
+/// shrinks at higher speeds (the same `AnimationSpeed` multiplier scales the
+/// countdown).
+pub const INTER_ANIM_DELAY: f32 = 0.18;
+
+/// Pop the next queued animation onto an entity once it stops animating.
+/// Runs every frame; entities without an `AnimQueue` are simply skipped.
+/// Filtering with `Without<Animating>` ensures the previous animation has
+/// finished (since each `animate_*` system removes `Animating` on
+/// completion). When an animation just ended (detected via
+/// `RemovedComponents<Animating>`), arms a brief delay so consecutive
+/// queued animations don't visually merge.
+pub fn dispatch_animation_queue(
+    mut commands: Commands,
+    time: Res<Time>,
+    speed: Res<AnimationSpeed>,
+    mut removed: RemovedComponents<Animating>,
+    mut queues: ParamSet<(
+        Query<&mut AnimQueue>,
+        Query<(Entity, &mut AnimQueue), Without<Animating>>,
+    )>,
+) {
+    // Arm the inter-anim delay on entities that just had `Animating`
+    // removed (i.e. their previous animation finished this frame). Drain
+    // before the dispatch loop so the same frame's pop sees the delay.
+    {
+        let mut all_queues = queues.p0();
+        for entity in removed.read() {
+            if let Ok(mut queue) = all_queues.get_mut(entity)
+                && !queue.queue.is_empty()
+            {
+                queue.delay_remaining = INTER_ANIM_DELAY;
+            }
+        }
+    }
+
+    let dt = time.delta_secs() * speed.0;
+    let mut q = queues.p1();
+    for (entity, mut queue) in &mut q {
+        if queue.delay_remaining > 0.0 {
+            queue.delay_remaining = (queue.delay_remaining - dt).max(0.0);
+            continue;
+        }
+        let Some(next) = queue.queue.pop_front() else {
+            // Empty queue and not animating — drop the queue component
+            // entirely so the entity stops matching this query.
+            commands.entity(entity).remove::<AnimQueue>();
+            continue;
+        };
+        let mut e = commands.entity(entity);
+        e.insert(Animating);
+        match next {
+            QueuedAnim::Tap { anim, target_tapped } => {
+                e.insert(anim);
+                e.insert(crate::card::TapState { tapped: target_tapped });
+            }
+            QueuedAnim::Play(anim) => { e.insert(anim); }
+            QueuedAnim::HandSlide(anim) => { e.insert(anim); }
+            QueuedAnim::SendToGraveyard(anim) => { e.insert(anim); }
+        }
     }
 }

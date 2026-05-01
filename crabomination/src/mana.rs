@@ -11,6 +11,27 @@ pub enum Color {
     Green,
 }
 
+impl Color {
+    /// Single-letter MTG abbreviation (W/U/B/R/G). Used by the cost
+    /// label formatter so `{R}` renders as `{R}` rather than `{Red}`,
+    /// and by the cube format's color-pair helper.
+    pub const fn short_name(self) -> char {
+        match self {
+            Color::White => 'W',
+            Color::Blue => 'U',
+            Color::Black => 'B',
+            Color::Red => 'R',
+            Color::Green => 'G',
+        }
+    }
+}
+
+impl fmt::Display for Color {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.short_name())
+    }
+}
+
 /// A single symbol in a mana cost.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum ManaSymbol {
@@ -60,6 +81,35 @@ impl ManaCost {
     /// True if this cost contains any X symbols.
     pub fn has_x(&self) -> bool {
         self.symbols.iter().any(|s| matches!(s, ManaSymbol::X))
+    }
+
+    /// Number of *distinct* colors referenced by this cost. Hybrid pips
+    /// (`{W/B}`) contribute both halves; Phyrexian pips (`{B/P}`) contribute
+    /// their colored half. Generic / Colorless / Snow / X return 0.
+    /// Used by `SelectionRequirement::Multicolored` / `Colorless` and any
+    /// Converge-style payoff that wants to peek at the printed pip set.
+    pub fn distinct_colors(&self) -> u32 {
+        let mut seen = [false; 5];
+        let idx = |c: Color| match c {
+            Color::White => 0,
+            Color::Blue => 1,
+            Color::Black => 2,
+            Color::Red => 3,
+            Color::Green => 4,
+        };
+        for s in &self.symbols {
+            match s {
+                ManaSymbol::Colored(c) | ManaSymbol::Phyrexian(c) => {
+                    seen[idx(*c)] = true;
+                }
+                ManaSymbol::Hybrid(a, b) => {
+                    seen[idx(*a)] = true;
+                    seen[idx(*b)] = true;
+                }
+                _ => {}
+            }
+        }
+        seen.iter().filter(|b| **b).count() as u32
     }
 
     /// Return a copy of this cost with X symbols replaced by Generic(x_value).
