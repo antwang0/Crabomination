@@ -1919,6 +1919,7 @@ impl GameState {
                     R::ManaValueAtLeast(n) => card.definition.cost.cmc() >= *n,
                     R::HasCardType(ct) => card.definition.card_types.contains(ct),
                     R::Multicolored => card.definition.cost.distinct_colors() >= 2,
+                    R::Monocolored => card.definition.cost.distinct_colors() == 1,
                     R::Colorless => card.definition.cost.distinct_colors() == 0,
                     R::HasXInCost => card.definition.cost.has_x(),
                     _ => unreachable!("handled above"),
@@ -1979,6 +1980,7 @@ impl GameState {
             R::ManaValueAtLeast(n) => card.definition.cost.cmc() >= *n,
             R::HasCardType(ct) => card.definition.card_types.contains(ct),
             R::Multicolored => card.definition.cost.distinct_colors() >= 2,
+            R::Monocolored => card.definition.cost.distinct_colors() == 1,
             R::Colorless => card.definition.cost.distinct_colors() == 0,
             R::HasXInCost => card.definition.cost.has_x(),
             // Battlefield-state predicates can't be evaluated for library cards.

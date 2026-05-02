@@ -285,6 +285,14 @@ pub enum SelectionRequirement {
     /// payoffs and the "colorless permanent" variant of various
     /// Eldrazi/devoid hooks.
     Colorless,
+    /// True when the card's mana cost contains exactly *one* distinct
+    /// colored pip (hybrid pips count both halves toward the count;
+    /// Phyrexian counts the colored side; generic/colorless/Snow/X
+    /// pips don't count). Used by STX Vanishing Verse ("exile target
+    /// nonland, monocolored permanent") and similar mono-color-matters
+    /// hooks. Strictly stronger than `!Colorless && !Multicolored`
+    /// when both halves are evaluated together.
+    Monocolored,
     And(Box<SelectionRequirement>, Box<SelectionRequirement>),
     Or(Box<SelectionRequirement>, Box<SelectionRequirement>),
     Not(Box<SelectionRequirement>),
