@@ -8027,18 +8027,16 @@ pub fn sheoldred_the_apocalypse() -> CardDefinition {
                     amount: Value::Const(2),
                 },
             },
-            // Opp draws → opp loses 2 life. 🟡 Target collapses to
-            // `EachOpponent` (correct for 2-player). For 3+ player,
-            // every opponent loses 2 instead of just the one who drew —
-            // the trigger source's `Triggerer` reference is currently
-            // discarded when the trigger lands on the stack
-            // (`for_trigger` rebuilds context with `trigger_source =
-            // Permanent(self)`, losing the event subject). Tracked in
-            // TODO.md as "thread `subject` through `StackItem::Trigger`".
+            // Opp draws → that specific opp loses 2 life. Push XXVIII
+            // threads the trigger subject (the player who drew) through
+            // `StackItem::Trigger.subject` into `EffectContext.
+            // trigger_source`, so `PlayerRef::Triggerer` correctly
+            // resolves to the drawing opponent — no longer the
+            // EachOpponent collapse from push XXVII.
             TriggeredAbility {
                 event: EventSpec::new(EventKind::CardDrawn, EventScope::OpponentControl),
                 effect: Effect::LoseLife {
-                    who: Selector::Player(PlayerRef::EachOpponent),
+                    who: Selector::Player(PlayerRef::Triggerer),
                     amount: Value::Const(2),
                 },
             },

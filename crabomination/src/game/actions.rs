@@ -344,6 +344,8 @@ impl GameState {
                     mode: None,
                     x_value: 0,
                     converged_value: 0,
+                    // ETB trigger — subject is the entering permanent.
+                    subject: Some(crate::game::effects::EntityRef::Permanent(card_id)),
                 });
             }
         }
@@ -662,6 +664,9 @@ impl GameState {
                 mode: None,
                 x_value: 0,
                 converged_value: 0,
+                // Self-cast trigger (Magecraft on the source itself);
+                // subject is the cast card (== source).
+                subject: Some(crate::game::effects::EntityRef::Card(source)),
             });
         }
     }
@@ -1023,6 +1028,10 @@ impl GameState {
                 mode: None,
                 x_value: 0,
                 converged_value: 0,
+                // The cast card is the trigger subject — Magecraft /
+                // Repartee / Esper Sentinel / Mindbreak Trap all read
+                // `Selector::TriggerSource` for the just-cast spell.
+                subject: Some(crate::game::effects::EntityRef::Card(cast_card)),
             });
         }
     }
@@ -1404,6 +1413,8 @@ impl GameState {
                 mode: None,
                 x_value: 0,
                 converged_value: 0,
+                // Activated ability — subject is the source permanent.
+                subject: Some(crate::game::effects::EntityRef::Permanent(card_id)),
             });
             self.give_priority_to_active();
         }

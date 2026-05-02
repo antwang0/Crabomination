@@ -220,6 +220,10 @@ impl GameState {
                 mode: None,
                 x_value: 0,
                 converged_value: 0,
+                // Delayed trigger — subject defaults to source permanent
+                // (the original trigger's stored subject is not currently
+                // threaded through `delayed_triggers`).
+                subject: Some(crate::game::effects::EntityRef::Permanent(source)),
             });
         }
 
@@ -237,6 +241,8 @@ impl GameState {
                 mode: None,
                 x_value: 0,
                 converged_value: 0,
+                // Step trigger — subject defaults to source permanent.
+                subject: Some(crate::game::effects::EntityRef::Permanent(source)),
             });
         }
     }
@@ -294,6 +300,7 @@ impl GameState {
                             mode: None,
                             x_value: 0,
                             converged_value: 0,
+                            subject: Some(crate::game::effects::EntityRef::Permanent(card_id)),
                         });
                     }
 
@@ -321,6 +328,9 @@ impl GameState {
                                 mode: None,
                                 x_value,
                                 converged_value,
+                                // ETB SelfSource — subject is the
+                                // entering permanent.
+                                subject: Some(crate::game::effects::EntityRef::Permanent(card_id)),
                             });
                         }
                     }
@@ -363,6 +373,9 @@ impl GameState {
                                     mode: None,
                                     x_value: 0,
                                     converged_value: 0,
+                                    // AnotherOfYours ETB — subject is
+                                    // the entering creature.
+                                    subject: Some(crate::game::effects::EntityRef::Permanent(card_id)),
                                 });
                             }
                         }
@@ -411,6 +424,7 @@ impl GameState {
                 mode,
                 x_value,
                 converged_value,
+                subject,
             } => {
                 let chosen_mode = mode.unwrap_or(0);
                 let mut trig_events = self.continue_trigger_resolution(
@@ -421,6 +435,7 @@ impl GameState {
                     chosen_mode,
                     x_value,
                     converged_value,
+                    subject,
                 )?;
                 events.append(&mut trig_events);
                 if self.pending_decision.is_some() {
@@ -650,6 +665,11 @@ impl GameState {
                     mode: None,
                     x_value: 0,
                     converged_value: 0,
+                    // Death trigger — subject is the dying creature
+                    // (== source for SelfSource Dies; for AnotherOfYours
+                    // we'd want the actual dying card, but this path
+                    // currently only fires SelfSource).
+                    subject: Some(crate::game::effects::EntityRef::Card(id)),
                 });
             }
             // Persist: return to battlefield with -1/-1 counter if it had no -1/-1 counter.
@@ -842,6 +862,9 @@ impl GameState {
                 mode: None,
                 x_value: 0,
                 converged_value: 0,
+                // Leaves-battlefield trigger — subject is the leaving
+                // permanent itself.
+                subject: Some(crate::game::effects::EntityRef::Card(id)),
             });
         }
         vec![] // Trigger events are on the stack; callers resolve them via pass_priority.

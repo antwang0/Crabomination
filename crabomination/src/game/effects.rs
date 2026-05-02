@@ -110,7 +110,7 @@ impl EffectContext {
 
 /// A resolved reference to something in the game (used internally for selector
 /// resolution and `ForEach` iteration).
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum EntityRef {
     Player(usize),
     Permanent(CardId),

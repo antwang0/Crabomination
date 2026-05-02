@@ -645,6 +645,7 @@ mod tests {
             mode: None,
             x_value: 0,
             converged_value: 0,
+            subject: None,
         });
         let v = project(&g, 0);
         assert_eq!(v.stack.len(), 2);

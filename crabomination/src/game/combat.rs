@@ -131,6 +131,10 @@ impl GameState {
                     mode: None,
                     x_value: 0,
                     converged_value: 0,
+                    // Sparring Regimen-style "whenever you attack, +1/+1
+                    // on each attacking creature" — subject is the
+                    // attacker the trigger fires off.
+                    subject: Some(crate::game::effects::EntityRef::Permanent(id)),
                 });
             }
             // Annihilator: TODO — translate to Effect tree (no-op for now).
@@ -153,6 +157,9 @@ impl GameState {
                 mode: None,
                 x_value: 0,
                 converged_value: 0,
+                // SelfSource Attacks trigger — subject is the
+                // attacking creature itself.
+                subject: Some(crate::game::effects::EntityRef::Permanent(source)),
             });
         }
         self.give_priority_to_active();
@@ -645,6 +652,9 @@ impl GameState {
                 mode: None,
                 x_value: 0,
                 converged_value: 0,
+                // Combat-damage-to-player trigger — subject is the
+                // attacker that dealt the damage.
+                subject: Some(crate::game::effects::EntityRef::Permanent(src_id)),
             });
         }
     }

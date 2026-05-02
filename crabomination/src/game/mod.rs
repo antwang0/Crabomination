@@ -786,6 +786,7 @@ impl GameState {
                 mode: None,
                 x_value: 0,
                 converged_value: 0,
+                subject,
             });
         }
     }
@@ -872,6 +873,8 @@ impl GameState {
             mode: None,
             x_value: 0,
             converged_value: 0,
+            // Loyalty ability — subject is the planeswalker itself.
+            subject: Some(crate::game::effects::EntityRef::Permanent(card_id)),
         });
         self.give_priority_to_active();
 
@@ -976,10 +979,12 @@ impl GameState {
                 remaining,
                 x_value,
                 converged_value,
+                subject,
             } => {
                 let mut evs = self.apply_pending_effect_answer(in_progress, &answer)?;
                 let mut more = self.continue_trigger_resolution(
                     source, controller, remaining, target, mode, x_value, converged_value,
+                    subject,
                 )?;
                 evs.append(&mut more);
                 evs
@@ -1481,6 +1486,7 @@ impl GameState {
         mode: usize,
         x_value: u32,
         converged_value: u32,
+        subject: Option<crate::game::effects::EntityRef>,
     ) -> Result<Vec<GameEvent>, GameError> {
         // If the trigger has a stored target that's no longer legal (e.g.
         // an Elesh-Norn-doubled Solitude ETB whose first target was just
@@ -1496,6 +1502,15 @@ impl GameState {
         };
         let mut ctx =
             EffectContext::for_trigger(source, controller, resolved_target.clone(), mode);
+        // Override the default `trigger_source = Permanent(source)` with
+        // the dispatch's captured event subject when present (e.g. the
+        // just-cast spell, the player who drew). Pre-XXVIII this slot
+        // was discarded between the dispatch filter check and the
+        // resolution context, so `PlayerRef::Triggerer` couldn't see the
+        // event actor at resolution time.
+        if let Some(subj) = subject {
+            ctx.trigger_source = Some(subj);
+        }
         ctx.x_value = x_value;
         ctx.converged_value = converged_value;
         let events = self.resolve_effect(&effect, &ctx)?;
@@ -1511,6 +1526,7 @@ impl GameState {
                     remaining,
                     x_value,
                     converged_value,
+                    subject,
                 },
             });
         }

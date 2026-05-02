@@ -235,6 +235,12 @@ pub(crate) enum ResumeContext {
         /// `Value::ConvergedValue`.
         #[serde(default)]
         converged_value: u32,
+        /// Triggering subject (the entering permanent / cast spell /
+        /// player who drew). Threaded into the resumed trigger context
+        /// so `PlayerRef::Triggerer` resolves to the actor instead of
+        /// defaulting to the source permanent. Push XXVIII added.
+        #[serde(default)]
+        subject: Option<crate::game::effects::EntityRef>,
     },
     Ability {
         source: CardId,
@@ -418,6 +424,19 @@ pub enum StackItem {
         /// backwards-compatibility.
         #[serde(default)]
         converged_value: u32,
+        /// The event-subject that fired this trigger — typically the
+        /// just-cast spell (Magecraft), the just-died creature
+        /// (Felisa), or the player who drew (Sheoldred). Threaded into
+        /// `EffectContext.trigger_source` at resolution time so
+        /// `PlayerRef::Triggerer` resolves to the actor instead of
+        /// defaulting to the source permanent. Push XXVIII added; was
+        /// previously discarded between the dispatch filter check and
+        /// the resolution path. Defaults to `None` via
+        /// `#[serde(default)]` for snapshot backwards-compatibility —
+        /// snapshots restored without this field fall back to the
+        /// pre-XXVIII behaviour (Triggerer = source permanent).
+        #[serde(default)]
+        subject: Option<crate::game::effects::EntityRef>,
     },
 }
 
