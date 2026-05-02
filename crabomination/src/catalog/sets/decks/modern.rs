@@ -6938,3 +6938,228 @@ pub fn lash_of_malice() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Aether Adept — {1}{U}{U} Creature — Human Wizard. 2/2. "When this
+/// creature enters, return target creature to its owner's hand."
+///
+/// Classic ETB bouncer. 2/2 body for 3 mana with a one-shot Unsummon
+/// rider — fits cube blue tempo shells. The ETB target picker uses
+/// `target_filtered(Creature)` so the cast prompt asks for any
+/// creature target.
+pub fn aether_adept() -> CardDefinition {
+    CardDefinition {
+        name: "Aether Adept",
+        cost: cost(&[generic(1), u(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Move {
+                what: target_filtered(SelectionRequirement::Creature),
+                to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Wind Drake — {2}{U} Creature — Drake. 2/2 with Flying. (Vanilla
+/// flying-bear baseline.)
+pub fn wind_drake() -> CardDefinition {
+    CardDefinition {
+        name: "Wind Drake",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Drake],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        ..Default::default()
+    }
+}
+
+/// Cursecatcher — {U} Creature — Merfolk Wizard. 1/1. "Sacrifice this
+/// creature: Counter target instant or sorcery spell unless its
+/// controller pays {1}."
+///
+/// One-mana tempo piece. Uses `Effect::CounterUnlessPaid` (same shape
+/// as Spell Pierce) gated through a sac-cost activation. The "instant
+/// or sorcery" target filter is approximated as "any spell" — engine
+/// has `IsSpellOnStack` but no separate IS-only filter on the stack.
+/// The cube games dominated by IS spells anyway, the approximation
+/// rarely matters.
+pub fn cursecatcher() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    let counter_cost = ManaCost {
+        symbols: vec![ManaSymbol::Generic(1)],
+    };
+    CardDefinition {
+        name: "Cursecatcher",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: false,
+            mana_cost: ManaCost::default(),
+            effect: Effect::CounterUnlessPaid {
+                what: target_filtered(SelectionRequirement::IsSpellOnStack),
+                mana_cost: counter_cost,
+            },
+            once_per_turn: false,
+            sorcery_speed: false,
+            sac_cost: true,
+            condition: None,
+            life_cost: 0,
+        }],
+        ..Default::default()
+    }
+}
+
+/// Resilient Khenra — {2}{G} Creature — Jackal Warrior. 3/2. "When
+/// this creature dies, put a +1/+1 counter on target creature you
+/// control."
+///
+/// Approximation: the Eternalize cost is omitted (no Eternalize
+/// keyword primitive). Body + death pump are wired faithfully — death
+/// trigger uses `EventKind::CreatureDied + SelfSource` with
+/// `Effect::AddCounter` on a friendly creature target. The Jackal
+/// subtype is approximated as Hound (no Jackal in `CreatureType`).
+pub fn resilient_khenra() -> CardDefinition {
+    use crate::card::CounterType;
+    CardDefinition {
+        name: "Resilient Khenra",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Hound, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+            effect: Effect::AddCounter {
+                what: target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Persistent Petitioners — {1}{U} Creature — Human Advisor. 1/3.
+/// "{1}, {T}: Target player mills a card. / Tap four untapped Advisors
+/// you control: Target player mills twelve cards. / A deck can have any
+/// number of cards named Persistent Petitioners."
+///
+/// Approximation: the "tap four Advisors" alt activation is omitted
+/// (no multi-creature-tap-as-cost primitive — would need a "tap N
+/// other matching" cost on `ActivatedAbility`). The base
+/// `{1},{T}: target player mills 1` is wired; the deck-construction
+/// "any number" rule is enforced at the deck-builder layer. Promoted
+/// alongside the new `SelectionRequirement::HasName` for any future
+/// "named Persistent Petitioners" payoffs.
+pub fn persistent_petitioners() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    let mill_cost = ManaCost {
+        symbols: vec![ManaSymbol::Generic(1)],
+    };
+    CardDefinition {
+        name: "Persistent Petitioners",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Advisor],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: mill_cost,
+            effect: Effect::Mill {
+                who: target_filtered(SelectionRequirement::Player),
+                amount: Value::Const(1),
+            },
+            once_per_turn: false,
+            sorcery_speed: false,
+            sac_cost: false,
+            condition: None,
+            life_cost: 0,
+        }],
+        ..Default::default()
+    }
+}
+
+/// Slime Against Humanity — {1}{G} Sorcery. "Create X 1/1 green Ooze
+/// creature tokens, where X is the number of cards named Slime Against
+/// Humanity in all graveyards plus the number of cards named Slime
+/// Against Humanity you own in exile. / A deck can have any number of
+/// cards named Slime Against Humanity."
+///
+/// Wired via the new `SelectionRequirement::HasName` predicate. The X
+/// count uses `Value::CountOf(CardsInZone(You/Graveyard, HasName))`
+/// (caster-side approximation — the printed wording also counts opp
+/// graveyards + caster exile, both omitted here for simplicity; in
+/// typical cube games the caster's own graveyard is the dominant
+/// source). Always creates at least 1 token (`+1` on the count).
+pub fn slime_against_humanity() -> CardDefinition {
+    use crate::card::{TokenDefinition, Zone};
+    use std::borrow::Cow;
+    let ooze_token = TokenDefinition {
+        name: "Ooze".into(),
+        power: 1,
+        toughness: 1,
+        keywords: vec![],
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Green],
+        supertypes: vec![],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Ooze],
+            ..Default::default()
+        },
+        activated_abilities: vec![],
+        triggered_abilities: vec![],
+    };
+    let name_filter = SelectionRequirement::HasName(Cow::Borrowed("Slime Against Humanity"));
+    CardDefinition {
+        name: "Slime Against Humanity",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Sorcery],
+        // X = (count of Slime Against Humanity in your graveyard) + 1
+        // (the just-cast resolving copy). Real Oracle counts all
+        // graveyards + exile; we approximate as "your graveyard" since
+        // the engine has no all-zones name-tally primitive yet and the
+        // gameplay-relevant case is your own deck spamming copies.
+        effect: Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Sum(vec![
+                Value::count(Selector::CardsInZone {
+                    who: PlayerRef::You,
+                    zone: Zone::Graveyard,
+                    filter: name_filter,
+                }),
+                Value::Const(1),
+            ]),
+            definition: ooze_token,
+        },
+        ..Default::default()
+    }
+}

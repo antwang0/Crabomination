@@ -1686,11 +1686,21 @@ pub fn quintorius_field_historian() -> CardDefinition {
 /// may search your library for a Dragon creature card, put it onto the
 /// battlefield, then shuffle."
 ///
-/// 🟡 Only the 3-damage half is wired. The "if 4+ Dragon's Approach in
-/// graveyard, may tutor a Dragon" rider needs a card-name-match
-/// predicate that we don't have today. As a flat 3-to-any-target burn
-/// at {1}{R} it still ships as a clean Lava Spike-on-curve.
+/// ✅ Push XXII: now fully wired via the new `SelectionRequirement::
+/// HasName` predicate. The graveyard count is read via
+/// `Value::CountOf(Selector::CardsInZone { Graveyard, HasName("Dragon's
+/// Approach") })`; the gate uses `Predicate::ValueAtLeast(_, Const(4))`
+/// to fork the resolution into a `Search { filter: Creature ∧
+/// HasCreatureType(Dragon), to: Battlefield }` tutor (untapped, per
+/// printed Oracle). The "may" optionality collapses to always-do
+/// (auto-decider takes the value). The 4-copy-deckbuilding constraint
+/// is enforced naturally by the deck construction layer; the engine
+/// just counts whatever named copies exist.
 pub fn dragons_approach() -> CardDefinition {
+    use crate::card::Zone;
+    use crate::effect::{Predicate, ZoneDest};
+    use std::borrow::Cow;
+    let name_filter = SelectionRequirement::HasName(Cow::Borrowed("Dragon's Approach"));
     CardDefinition {
         name: "Dragon's Approach",
         cost: cost(&[generic(1), r()]),
@@ -1700,10 +1710,34 @@ pub fn dragons_approach() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![],
-        effect: Effect::DealDamage {
-            to: target_filtered(SelectionRequirement::Any),
-            amount: Value::Const(3),
-        },
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Any),
+                amount: Value::Const(3),
+            },
+            Effect::If {
+                cond: Predicate::ValueAtLeast(
+                    Value::count(Selector::CardsInZone {
+                        who: PlayerRef::You,
+                        zone: Zone::Graveyard,
+                        filter: name_filter,
+                    }),
+                    Value::Const(4),
+                ),
+                then: Box::new(Effect::Search {
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::HasCreatureType(
+                            crate::card::CreatureType::Dragon,
+                        )),
+                    to: ZoneDest::Battlefield {
+                        controller: PlayerRef::You,
+                        tapped: false,
+                    },
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],

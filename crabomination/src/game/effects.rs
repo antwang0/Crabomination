@@ -2043,6 +2043,7 @@ impl GameState {
                     R::Monocolored => card.definition.cost.distinct_colors() == 1,
                     R::Colorless => card.definition.cost.distinct_colors() == 0,
                     R::HasXInCost => card.definition.cost.has_x(),
+                    R::HasName(n) => card.definition.name == n.as_ref(),
                     _ => unreachable!("handled above"),
                 }
             }
@@ -2104,6 +2105,7 @@ impl GameState {
             R::Monocolored => card.definition.cost.distinct_colors() == 1,
             R::Colorless => card.definition.cost.distinct_colors() == 0,
             R::HasXInCost => card.definition.cost.has_x(),
+            R::HasName(n) => card.definition.name == n.as_ref(),
             // Battlefield-state predicates can't be evaluated for library cards.
             R::Tapped | R::Untapped | R::WithCounter(_)
             | R::IsAttacking | R::IsBlocking | R::IsSpellOnStack => false,

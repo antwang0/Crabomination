@@ -293,6 +293,15 @@ pub enum SelectionRequirement {
     /// hooks. Strictly stronger than `!Colorless && !Multicolored`
     /// when both halves are evaluated together.
     Monocolored,
+    /// True when the card's printed name matches this exact string.
+    /// Used by name-matters payoffs that look at a specific card name —
+    /// Dragon's Approach ("if you have four or more cards named
+    /// Dragon's Approach in your graveyard"), Persistent Petitioners,
+    /// Rat Colony, Slime Against Humanity, etc. Stored as
+    /// `Cow<'static, str>` so card-side construction (`HasName(name)`
+    /// on a `&'static str`) works without allocating, and snapshot
+    /// restore (which builds owned strings from JSON) avoids leaking.
+    HasName(std::borrow::Cow<'static, str>),
     And(Box<SelectionRequirement>, Box<SelectionRequirement>),
     Or(Box<SelectionRequirement>, Box<SelectionRequirement>),
     Not(Box<SelectionRequirement>),

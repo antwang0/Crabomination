@@ -9014,3 +9014,132 @@ fn lash_of_malice_shrinks_target_creature() {
     assert!(!g.battlefield.iter().any(|c| c.id == bear),
         "Bear takes -2/-2 → 0/0 → dies to SBA");
 }
+
+/// Aether Adept's ETB returns target creature to its owner's hand.
+#[test]
+fn aether_adept_etb_bounces_target_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::aether_adept());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(bear)),
+        mode: None, x_value: None,
+    }).expect("Aether Adept castable for {1}{U}{U}");
+    drain_stack(&mut g);
+
+    assert!(!g.battlefield.iter().any(|c| c.id == bear),
+        "Bear bounced to hand");
+    assert!(g.players[1].hand.iter().any(|c| c.id == bear),
+        "Bear in opp hand");
+}
+
+/// Wind Drake is a 2/2 Flying Drake at 3 mana.
+#[test]
+fn wind_drake_is_two_two_flying() {
+    use crate::card::Keyword;
+    let card = catalog::wind_drake();
+    assert_eq!(card.power, 2);
+    assert_eq!(card.toughness, 2);
+    assert!(card.keywords.contains(&Keyword::Flying));
+    assert!(card.has_creature_type(crate::card::CreatureType::Drake));
+}
+
+/// Cursecatcher counters a spell unless its controller pays {1} (sac).
+#[test]
+fn cursecatcher_counters_target_spell_when_opp_cannot_pay_one() {
+    let mut g = two_player_game();
+    let cat = g.add_card_to_battlefield(0, catalog::cursecatcher());
+    g.clear_sickness(cat);
+    // Opp has just enough mana to cast Bolt but not the {1} ransom.
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)), mode: None, x_value: None,
+    }).expect("Bolt cast by opp");
+
+    // Cursecatcher activates (sac counter).
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: cat, ability_index: 0,
+        target: Some(Target::Permanent(bolt)),
+    }).expect("Cursecatcher sac-counters Bolt");
+    drain_stack(&mut g);
+
+    // Cursecatcher sacrificed; Bolt countered (no damage to P0).
+    assert!(!g.battlefield.iter().any(|c| c.id == cat),
+        "Cursecatcher sacrificed off the battlefield");
+    assert_eq!(g.players[0].life, 20,
+        "Bolt should be countered — P0 never takes 3");
+}
+
+/// Resilient Khenra grants a +1/+1 counter on a friendly creature when
+/// the Khenra dies.
+#[test]
+fn resilient_khenra_death_pumps_friendly_creature() {
+    let mut g = two_player_game();
+    let khenra = g.add_card_to_battlefield(0, catalog::resilient_khenra());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let bear_p_before = g.battlefield.iter()
+        .find(|c| c.id == bear).unwrap().power();
+
+    // Kill the khenra via lethal damage → SBA → death trigger.
+    g.battlefield.iter_mut().find(|c| c.id == khenra).unwrap().damage = 99;
+    g.check_state_based_actions();
+    drain_stack(&mut g);
+
+    let bear_p_after = g.battlefield.iter()
+        .find(|c| c.id == bear).unwrap().power();
+    assert_eq!(bear_p_after, bear_p_before + 1,
+        "Bear should gain a +1/+1 counter");
+}
+
+/// Persistent Petitioners has the {1},{T}: mill 1 activation.
+#[test]
+fn persistent_petitioners_activated_mills_one() {
+    let mut g = two_player_game();
+    let p = g.add_card_to_battlefield(0, catalog::persistent_petitioners());
+    g.clear_sickness(p);
+    g.add_card_to_library(1, catalog::island());
+    let opp_lib_before = g.players[1].library.len();
+    let opp_gy_before = g.players[1].graveyard.len();
+    g.players[0].mana_pool.add_colorless(1);
+
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: p, ability_index: 0, target: Some(Target::Player(1)),
+    }).expect("Petitioners activated for {1},{T}");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[1].library.len(), opp_lib_before - 1);
+    assert_eq!(g.players[1].graveyard.len(), opp_gy_before + 1,
+        "Opponent's graveyard grew by 1 (mill 1)");
+}
+
+/// Slime Against Humanity creates X+1 Ooze tokens, where X = SAH in
+/// graveyard.
+#[test]
+fn slime_against_humanity_scales_with_graveyard_copies() {
+    let mut g = two_player_game();
+    // Seed graveyard with 3 copies → cast should mint 1 + 3 = 4 oozes.
+    for _ in 0..3 {
+        g.add_card_to_graveyard(0, catalog::slime_against_humanity());
+    }
+    let id = g.add_card_to_hand(0, catalog::slime_against_humanity());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    }).expect("Slime Against Humanity castable for {1}{G}");
+    drain_stack(&mut g);
+
+    let oozes = g.battlefield.iter()
+        .filter(|c| c.definition.name == "Ooze").count();
+    assert_eq!(oozes, 4,
+        "3 SAH in gy → cast mints (3 + 1) = 4 Ooze tokens, got {}", oozes);
+}

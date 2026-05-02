@@ -1562,3 +1562,67 @@ fn vanishing_verse_exiles_monocolored_creature() {
 
     assert!(g.battlefield_find(target).is_none(), "mono-color target exiled");
 }
+
+// ── Dragon's Approach push XXII promotion: HasName + tutor rider ──────────
+
+/// With fewer than 4 copies in graveyard, Dragon's Approach skips the
+/// tutor half — only the 3-damage burn fires.
+#[test]
+fn dragons_approach_skips_tutor_with_few_copies_in_graveyard() {
+    let mut g = two_player_game();
+    // Stock graveyard with 3 copies (one short of the gate).
+    for _ in 0..3 {
+        g.add_card_to_graveyard(0, catalog::dragons_approach());
+    }
+    // Dragon in library — tutor target if the gate fired.
+    let dragon = g.add_card_to_library(0, catalog::shivan_dragon());
+    g.add_card_to_library(0, catalog::island()); // padding
+
+    let id = g.add_card_to_hand(0, catalog::dragons_approach());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Player(1)), mode: None, x_value: None,
+    })
+    .expect("Dragon's Approach castable for {1}{R}");
+    drain_stack(&mut g);
+
+    // Tutor gate failed — Shivan must still be in library.
+    assert!(g.players[0].library.iter().any(|c| c.id == dragon),
+        "Shivan stays in library when fewer than 4 DA in graveyard");
+}
+
+/// With 4+ copies in graveyard, Dragon's Approach fires the tutor —
+/// caller's library is searched for a Dragon and it enters untapped.
+#[test]
+fn dragons_approach_tutors_dragon_with_four_copies_in_graveyard() {
+    let mut g = two_player_game();
+    // Stock graveyard with 4 copies (the printed gate).
+    for _ in 0..4 {
+        g.add_card_to_graveyard(0, catalog::dragons_approach());
+    }
+    let dragon = g.add_card_to_library(0, catalog::shivan_dragon());
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Search(Some(dragon)),
+    ]));
+
+    let id = g.add_card_to_hand(0, catalog::dragons_approach());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Player(1)), mode: None, x_value: None,
+    })
+    .expect("Dragon's Approach castable for {1}{R}");
+    drain_stack(&mut g);
+
+    // Tutor fired — Shivan now on the battlefield, untapped.
+    let view = g.battlefield.iter().find(|c| c.id == dragon)
+        .expect("Shivan tutored to battlefield by 5th Dragon's Approach");
+    assert!(!view.tapped, "Tutored Dragon enters untapped per printed Oracle");
+    // Cast copy is also in graveyard now, plus the original 4.
+    let names_in_gy = g.players[0].graveyard.iter()
+        .filter(|c| c.definition.name == "Dragon's Approach").count();
+    assert_eq!(names_in_gy, 5, "5 DA in gy after cast (4 seed + 1 cast)");
+}
