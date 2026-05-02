@@ -420,7 +420,18 @@ fn find_free_mana_rock(state: &GameState, seat: usize) -> Option<(CardId, usize)
 }
 
 fn is_free_mana_ability(a: &ActivatedAbility) -> bool {
-    if !a.tap_cost || a.sac_cost || !a.mana_cost.symbols.is_empty() {
+    // A "free" mana ability is one the bot can fire without losing
+    // anything: tap-only, no sacrifice, no extra mana cost, no life
+    // cost (so Witherbloom Pledgemage's `{T}, Pay 1 life: Add {B}` is
+    // *not* free), and a deterministic payload (Colors / Colorless).
+    // The condition gate is also a non-trivial cost (Resonating Lute's
+    // 7-cards-in-hand check) so we skip those too.
+    if !a.tap_cost
+        || a.sac_cost
+        || !a.mana_cost.symbols.is_empty()
+        || a.life_cost > 0
+        || a.condition.is_some()
+    {
         return false;
     }
     matches!(
@@ -633,6 +644,24 @@ mod tests {
                 assert_eq!(ability_index, 0);
             }
             _ => panic!("bot should activate Sol Ring's mana ability"),
+        }
+    }
+
+    /// Life-cost mana abilities (Witherbloom Pledgemage's `{T}, Pay 1 life`)
+    /// are NOT auto-activated as "free" — paying life is a non-trivial cost
+    /// the bot can't reason about. Push XXIV: tightened `is_free_mana_ability`
+    /// to skip life_cost > 0 (alongside the existing sac_cost / mana_cost /
+    /// condition guards).
+    #[test]
+    fn bot_does_not_tap_life_cost_mana_source() {
+        let mut g = two_player_game();
+        let pledgemage = g.add_card_to_battlefield(0, catalog::witherbloom_pledgemage());
+        g.clear_sickness(pledgemage);
+        let mut bot = RandomBot::new();
+        let action = bot.next_action(&g, 0).expect("bot should produce an action");
+        if let GameAction::ActivateAbility { card_id, .. } = action {
+            assert_ne!(card_id, pledgemage,
+                "bot must NOT auto-tap a life-cost mana source like Witherbloom Pledgemage");
         }
     }
 

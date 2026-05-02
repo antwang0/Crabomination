@@ -399,3 +399,94 @@ pub fn storm_kiln_artist() -> CardDefinition {
     }
 }
 
+// ── Lorehold Command ────────────────────────────────────────────────────────
+
+/// Lorehold Command — {R}{W} Instant.
+/// "Choose two —
+/// • Target opponent loses 4 life.
+/// • Target player creates two 1/1 white Spirit creature tokens with flying.
+/// • Return target permanent card with mana value 2 or less from your
+///   graveyard to your hand.
+/// • Exile target card from a graveyard."
+///
+/// Push XXIV: 🟡 — printed "choose two" collapses to "choose one" via
+/// `Effect::ChooseMode` (same approximation as Moment of Reckoning,
+/// Witherbloom Command). Each individual mode is wired faithfully.
+/// The flying-Spirit-token mode mints a single 1/1 white Spirit with
+/// flying via a fresh `TokenDefinition` (separate from the 2/2 R/W
+/// `lorehold_spirit_token()` used by Sparring Regimen — different P/T
+/// and color identity).
+pub fn lorehold_command() -> CardDefinition {
+    use crate::card::{TokenDefinition, Zone};
+    use crate::effect::shortcut::target_filtered;
+    use crate::effect::ZoneDest;
+    let flying_spirit = TokenDefinition {
+        name: "Spirit".into(),
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::White],
+        supertypes: vec![],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
+        activated_abilities: vec![],
+        triggered_abilities: vec![],
+    };
+    let mv_at_most_2 = SelectionRequirement::Permanent
+        .and(SelectionRequirement::ManaValueAtMost(2));
+    CardDefinition {
+        name: "Lorehold Command",
+        cost: cost(&[r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::ChooseMode(vec![
+            // Mode 0: target opponent loses 4 life (collapse to each opp).
+            Effect::LoseLife {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(4),
+            },
+            // Mode 1: create two 1/1 white Spirit tokens with flying.
+            // Printed: "Target player creates …"; we collapse to You,
+            // matching the auto-target framework's typical own-side bias
+            // (the printed mode is hardly ever used to give an opponent
+            // tokens — same approximation as similar "target player"
+            // modes elsewhere).
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                definition: flying_spirit,
+            },
+            // Mode 2: gy → hand on permanent card with MV ≤ 2.
+            Effect::Move {
+                what: Selector::take(
+                    Selector::CardsInZone {
+                        who: PlayerRef::You,
+                        zone: Zone::Graveyard,
+                        filter: mv_at_most_2,
+                    },
+                    Value::Const(1),
+                ),
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+            // Mode 3: exile target card from a graveyard.
+            Effect::Exile {
+                what: target_filtered(SelectionRequirement::Any),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}

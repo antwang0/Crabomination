@@ -264,3 +264,72 @@ pub fn mentors_guidance() -> CardDefinition {
     }
 }
 
+// ── Quandrix Command ────────────────────────────────────────────────────────
+
+/// Quandrix Command — {1}{G}{U} Instant.
+/// "Choose two —
+/// • Counter target activated ability.
+/// • Put two +1/+1 counters on target creature.
+/// • Put target card from a graveyard on the bottom of its owner's library.
+/// • Draw a card."
+///
+/// Push XXIV: 🟡 — printed "choose two" collapses to "choose one" via
+/// `Effect::ChooseMode` (same approximation as Moment of Reckoning,
+/// Witherbloom / Lorehold / Prismari Commands). Each mode wired
+/// faithfully against existing primitives.
+pub fn quandrix_command() -> CardDefinition {
+    use crate::card::Zone;
+    use crate::effect::ZoneDest;
+    CardDefinition {
+        name: "Quandrix Command",
+        cost: cost(&[generic(1), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::ChooseMode(vec![
+            // Mode 0: counter target activated ability.
+            Effect::CounterAbility {
+                what: target_filtered(SelectionRequirement::Permanent),
+            },
+            // Mode 1: put two +1/+1 counters on target creature.
+            Effect::AddCounter {
+                what: target_filtered(SelectionRequirement::Creature),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(2),
+            },
+            // Mode 2: gy → bottom of owner's library on a target card.
+            // Picked from an opponent's graveyard for the auto-target
+            // framework (the printed mode targets any graveyard).
+            Effect::Move {
+                what: Selector::take(
+                    Selector::CardsInZone {
+                        who: PlayerRef::EachOpponent,
+                        zone: Zone::Graveyard,
+                        filter: SelectionRequirement::Any,
+                    },
+                    Value::Const(1),
+                ),
+                to: ZoneDest::Library {
+                    who: PlayerRef::OwnerOf(Box::new(Selector::Target(0))),
+                    pos: crate::effect::LibraryPosition::Bottom,
+                },
+            },
+            // Mode 3: draw a card.
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}

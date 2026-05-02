@@ -391,12 +391,13 @@ pub fn eager_first_year() -> CardDefinition {
 /// Hunt for Specimens — {3}{B} Sorcery. "Create a 1/1 black Pest creature
 /// token with 'When this creature dies, you gain 1 life.' Then learn."
 ///
-/// The spawned Pest token now carries the printed "When this creature
-/// dies, you gain 1 life" trigger via the new `TokenDefinition.
-/// triggered_abilities` field — chip-damage Pest tokens trickle 1 life
-/// each on death, restoring the printed Witherbloom payoff loop. Body
-/// resolves as `CreateToken(1/1 black Pest with death trigger) + Draw 1`
-/// (Learn → Draw, see Eyetwitch).
+/// Push XXIV: promoted ✅. The spawned Pest token carries the printed
+/// "When this creature dies, you gain 1 life" trigger via
+/// `TokenDefinition.triggered_abilities` (SOS push VI). Learn collapses
+/// to `Draw 1` — same approximation as Eyetwitch / Igneous Inspiration
+/// / Enthusiastic Study; the Lesson sideboard model is tracked as a
+/// future engine feature in TODO.md but doesn't gate the card's primary
+/// play pattern (Pest body + cantrip).
 pub fn hunt_for_specimens() -> CardDefinition {
     use crate::effect::PlayerRef as PR;
     let pest = super::shared::stx_pest_token();
@@ -415,6 +416,67 @@ pub fn hunt_for_specimens() -> CardDefinition {
                 count: Value::Const(1),
                 definition: pest,
             },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Silverquill Command ─────────────────────────────────────────────────────
+
+/// Silverquill Command — {2}{W}{B} Instant.
+/// "Choose two —
+/// • Counter target activated or triggered ability.
+/// • Target creature gets -3/-3 until end of turn.
+/// • Target player loses 3 life and you gain 3 life.
+/// • Draw a card."
+///
+/// Push XXIV: 🟡 — printed "choose two" collapses to "choose one" via
+/// `Effect::ChooseMode` (same approximation as Moment of Reckoning,
+/// Witherbloom / Lorehold / Prismari / Quandrix Commands). Each mode
+/// wired faithfully against existing primitives.
+pub fn silverquill_command() -> CardDefinition {
+    use crate::effect::{Duration, PlayerRef};
+    CardDefinition {
+        name: "Silverquill Command",
+        cost: cost(&[generic(2), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::ChooseMode(vec![
+            // Mode 0: counter target activated/triggered ability (same
+            // primitive as Stifle / Quandrix Command mode 0).
+            Effect::CounterAbility {
+                what: target_filtered(SelectionRequirement::Permanent),
+            },
+            // Mode 1: -3/-3 EOT.
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(-3),
+                toughness: Value::Const(-3),
+                duration: Duration::EndOfTurn,
+            },
+            // Mode 2: drain 3 (each-opp collapse, same as Witherbloom
+            // Command mode 0).
+            Effect::Drain {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                to: Selector::You,
+                amount: Value::Const(3),
+            },
+            // Mode 3: draw a card.
             Effect::Draw {
                 who: Selector::You,
                 amount: Value::Const(1),

@@ -1943,6 +1943,372 @@ fn enthusiastic_study_pumps_and_grants_trample_then_draws() {
         "should draw 1 from Learn");
 }
 
+// ── Push XXIV: Witherbloom completion + cross-school Commands ───────────────
+
+#[test]
+fn witherbloom_pledgemage_pays_one_life_for_mana() {
+    // Push XXIV: cost is now `tap_cost: true, life_cost: 1`. The activation
+    // is rejected pre-pay when life < 1 (mirrors mana-cost pre-pay).
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::witherbloom_pledgemage());
+    g.clear_sickness(id);
+    let life_before = g.players[0].life;
+
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None,
+    })
+    .expect("Pledgemage activatable: {T}, Pay 1 life: Add {B}");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[0].life, life_before - 1,
+        "should pay 1 life via life_cost field");
+    assert!(g.battlefield.iter().find(|c| c.id == id).unwrap().tapped,
+        "should be tapped");
+    // Black mana floats in the pool (mana ability resolves immediately).
+    assert!(g.players[0].mana_pool.amount(Color::Black) >= 1,
+        "should add {{B}} to the pool");
+}
+
+#[test]
+fn witherbloom_pledgemage_rejects_when_life_too_low() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::witherbloom_pledgemage());
+    g.clear_sickness(id);
+    g.players[0].life = 0;
+    let res = g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None,
+    });
+    assert!(res.is_err(), "activation should be rejected pre-pay when life=0");
+}
+
+#[test]
+fn daemogoth_titan_attack_trigger_sacrifices_another_creature() {
+    let mut g = two_player_game();
+    // Sac fodder.
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    // Titan on the battlefield.
+    let titan = g.add_card_to_battlefield(0, catalog::daemogoth_titan());
+    g.clear_sickness(titan);
+    // Move into combat and declare the titan as the attacker.
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: titan,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("titan can attack");
+    drain_stack(&mut g);
+    // Bear is sacrificed by the attack trigger; titan stays.
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == bear),
+        "bear should be sacrificed");
+    assert!(g.battlefield.iter().any(|c| c.id == titan),
+        "titan should remain on the battlefield");
+}
+
+#[test]
+fn daemogoth_titan_is_an_eleven_eleven_demon_horror() {
+    let t = catalog::daemogoth_titan();
+    assert_eq!(t.power, 11);
+    assert_eq!(t.toughness, 11);
+    assert!(t.subtypes.creature_types.contains(&crate::card::CreatureType::Demon));
+    assert!(t.subtypes.creature_types.contains(&crate::card::CreatureType::Horror));
+}
+
+#[test]
+fn pest_infestation_at_x_three_creates_three_pest_tokens() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::pest_infestation());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: Some(3),
+    })
+    .expect("Pest Infestation castable for {3}{B}{G}");
+    drain_stack(&mut g);
+
+    let pests: Vec<_> = g.battlefield.iter().filter(|c| {
+        c.is_token && c.controller == 0
+            && c.definition.subtypes.creature_types.contains(&crate::card::CreatureType::Pest)
+    }).collect();
+    assert_eq!(pests.len(), 3, "should mint X=3 Pest tokens");
+    assert!(pests.iter().all(|p| p.power() == 1 && p.toughness() == 1),
+        "each Pest should be 1/1");
+}
+
+#[test]
+fn pest_infestation_pest_die_triggers_lifegain() {
+    // Each Pest carries a "When this dies, gain 1 life" trigger.
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::pest_infestation());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: Some(2),
+    })
+    .expect("Pest Infestation castable for {2}{B}{G}");
+    drain_stack(&mut g);
+
+    // Find a Pest and destroy it manually via `destroy_card`.
+    let pest = g.battlefield.iter().find(|c| c.is_token && c.controller == 0
+        && c.definition.subtypes.creature_types.contains(&crate::card::CreatureType::Pest))
+        .map(|c| c.id).expect("pest spawned");
+    let life_before = g.players[0].life;
+    let _ = g.remove_to_graveyard_with_triggers(pest);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life_before + 1,
+        "Pest die should fire +1 life trigger");
+}
+
+#[test]
+fn witherbloom_command_mode_zero_drains_three() {
+    // Default mode 0 = drain 3.
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::witherbloom_command());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    let p0_life_before = g.players[0].life;
+    let p1_life_before = g.players[1].life;
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: Some(0), x_value: None,
+    })
+    .expect("Witherbloom Command castable for {B}{G}");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, p1_life_before - 3,
+        "opponent loses 3");
+    assert_eq!(g.players[0].life, p0_life_before + 3,
+        "you gain 3");
+}
+
+#[test]
+fn witherbloom_command_mode_two_destroys_enchantment() {
+    let mut g = two_player_game();
+    // Seed an enchantment to destroy.
+    let ench = g.add_card_to_battlefield(1, catalog::glorious_anthem());
+    let id = g.add_card_to_hand(0, catalog::witherbloom_command());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(ench)), mode: Some(2), x_value: None,
+    })
+    .expect("Witherbloom Command castable for {B}{G}");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == ench),
+        "enchantment should be destroyed");
+}
+
+#[test]
+fn lorehold_command_mode_zero_drains_four_life() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::lorehold_command());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    let p1_life_before = g.players[1].life;
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: Some(0), x_value: None,
+    })
+    .expect("Lorehold Command castable for {R}{W}");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, p1_life_before - 4, "opponent loses 4");
+}
+
+#[test]
+fn lorehold_command_mode_one_creates_two_flying_spirits() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::lorehold_command());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: Some(1), x_value: None,
+    })
+    .expect("Lorehold Command castable for {R}{W}");
+    drain_stack(&mut g);
+    let spirits: Vec<_> = g.battlefield.iter().filter(|c| {
+        c.is_token && c.controller == 0
+            && c.definition.subtypes.creature_types.contains(&crate::card::CreatureType::Spirit)
+    }).collect();
+    assert_eq!(spirits.len(), 2, "two Spirit tokens minted");
+    assert!(spirits.iter().all(|s| s.has_keyword(&Keyword::Flying)),
+        "each Spirit should be flying");
+    assert!(spirits.iter().all(|s| s.power() == 1 && s.toughness() == 1),
+        "each Spirit should be 1/1");
+}
+
+#[test]
+fn prismari_command_mode_zero_deals_two_damage() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    let id = g.add_card_to_hand(0, catalog::prismari_command());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)), mode: Some(0), x_value: None,
+    })
+    .expect("Prismari Command castable for {1}{U}{R}");
+    drain_stack(&mut g);
+    // Bear (2 toughness) takes 2 → dies.
+    assert!(!g.battlefield.iter().any(|c| c.id == bear),
+        "bear should be destroyed by 2 damage");
+}
+
+#[test]
+fn prismari_command_mode_two_creates_treasure() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::prismari_command());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: Some(2), x_value: None,
+    })
+    .expect("Prismari Command castable");
+    drain_stack(&mut g);
+    let treasures: Vec<_> = g.battlefield.iter().filter(|c| {
+        c.is_token && c.controller == 0 && c.definition.name == "Treasure"
+    }).collect();
+    assert_eq!(treasures.len(), 1, "one Treasure should be minted");
+}
+
+#[test]
+fn quandrix_command_mode_three_draws_a_card() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let lib_before = g.players[0].library.len();
+    let id = g.add_card_to_hand(0, catalog::quandrix_command());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: Some(3), x_value: None,
+    })
+    .expect("Quandrix Command castable for {1}{G}{U}");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].library.len(), lib_before - 1,
+        "should draw 1");
+}
+
+#[test]
+fn quandrix_command_mode_one_adds_two_counters() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    let id = g.add_card_to_hand(0, catalog::quandrix_command());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)), mode: Some(1), x_value: None,
+    })
+    .expect("Quandrix Command castable");
+    drain_stack(&mut g);
+    let bear_card = g.battlefield.iter().find(|c| c.id == bear).unwrap();
+    assert_eq!(bear_card.counter_count(CounterType::PlusOnePlusOne), 2,
+        "bear should have +1/+1 counters x 2");
+}
+
+#[test]
+fn silverquill_command_mode_one_pumps_minus_three() {
+    let mut g = two_player_game();
+    // Bear (2/2) on opponent's battlefield. -3/-3 → dies.
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    let id = g.add_card_to_hand(0, catalog::silverquill_command());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)), mode: Some(1), x_value: None,
+    })
+    .expect("Silverquill Command castable for {2}{W}{B}");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == bear),
+        "bear should be dead from -3/-3");
+}
+
+#[test]
+fn silverquill_command_mode_three_draws_a_card() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let lib_before = g.players[0].library.len();
+    let id = g.add_card_to_hand(0, catalog::silverquill_command());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: Some(3), x_value: None,
+    })
+    .expect("Silverquill Command castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].library.len(), lib_before - 1,
+        "should draw 1");
+}
+
+#[test]
+fn saw_it_coming_counters_target_spell() {
+    let mut g = two_player_game();
+    // P0 casts a Lightning Bolt at P1; P1 then counters it.
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)), mode: None, x_value: None,
+    })
+    .expect("Bolt is castable for {R}");
+
+    let life_before = g.players[1].life;
+    let saw = g.add_card_to_hand(1, catalog::saw_it_coming());
+    g.players[1].mana_pool.add(Color::Blue, 2);
+    g.players[1].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: saw,
+        target: Some(Target::Permanent(bolt)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Saw It Coming castable for {1}{U}{U}");
+    drain_stack(&mut g);
+    // Bolt countered → no life loss to player 1.
+    assert_eq!(g.players[1].life, life_before,
+        "Bolt should be countered (no life loss)");
+}
+
+#[test]
+fn hunt_for_specimens_promoted_pest_dies_trigger() {
+    // Push XXIV: Hunt for Specimens 🟡 → ✅ (parity with Eyetwitch). Verify
+    // the spawned Pest carries the on-die +1-life trigger.
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let id = g.add_card_to_hand(0, catalog::hunt_for_specimens());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Hunt for Specimens castable for {3}{B}");
+    drain_stack(&mut g);
+    let pest = g.battlefield.iter().find(|c| c.is_token && c.controller == 0
+        && c.definition.subtypes.creature_types.contains(&crate::card::CreatureType::Pest))
+        .map(|c| c.id).expect("pest spawned");
+    let life_before = g.players[0].life;
+    let _ = g.remove_to_graveyard_with_triggers(pest);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life_before + 1,
+        "Pest die → +1 life trigger");
+}
+
 #[test]
 fn tempted_by_the_oriq_destroys_low_mv_creature_and_makes_inkling() {
     let mut g = two_player_game();

@@ -245,15 +245,27 @@ fn predicate_short_label(p: &crate::card::Predicate) -> String {
         Predicate::CardsLeftGraveyardThisTurnAtLeast {
             at_least: Value::Const(1), ..
         } => "after gy-leave".into(),
+        Predicate::CardsLeftGraveyardThisTurnAtLeast {
+            at_least: Value::Const(n), ..
+        } => format!("after {n} gy-leaves"),
         Predicate::LifeGainedThisTurnAtLeast { at_least: Value::Const(1), .. } => {
             "after lifegain".into()
+        }
+        Predicate::LifeGainedThisTurnAtLeast { at_least: Value::Const(n), .. } => {
+            format!("after {n} life gained")
         }
         Predicate::CardsExiledThisTurnAtLeast {
             at_least: Value::Const(1), ..
         } => "after exile".into(),
+        Predicate::CardsExiledThisTurnAtLeast {
+            at_least: Value::Const(n), ..
+        } => format!("after {n} exiled"),
         Predicate::CreaturesDiedThisTurnAtLeast {
             at_least: Value::Const(1), ..
         } => "after creature death".into(),
+        Predicate::CreaturesDiedThisTurnAtLeast {
+            at_least: Value::Const(n), ..
+        } => format!("after {n} creature deaths"),
         // Push XVI: cast-time spell-shape introspection labels.
         // Push XIX: more human-readable form for the Geometer's
         // Arthropod-style "{X} cost" trigger gate (was the more
@@ -829,6 +841,40 @@ mod tests {
         // Trivial constants.
         assert_eq!(predicate_short_label(&Predicate::True), "always");
         assert_eq!(predicate_short_label(&Predicate::False), "never");
+    }
+
+    /// Push XXIV: predicate_short_label now formats plural N≥2 thresholds
+    /// for the per-turn tally predicates (cards-left-gy, life-gained,
+    /// cards-exiled, creatures-died), where previously only n=1 had a
+    /// short label and n>1 fell through to "conditional".
+    #[test]
+    fn predicate_short_label_covers_plural_tally_thresholds() {
+        use crate::card::Predicate;
+        use crate::effect::{PlayerRef, Value};
+
+        let p = Predicate::CardsLeftGraveyardThisTurnAtLeast {
+            who: PlayerRef::You,
+            at_least: Value::Const(3),
+        };
+        assert_eq!(predicate_short_label(&p), "after 3 gy-leaves");
+
+        let p = Predicate::LifeGainedThisTurnAtLeast {
+            who: PlayerRef::You,
+            at_least: Value::Const(5),
+        };
+        assert_eq!(predicate_short_label(&p), "after 5 life gained");
+
+        let p = Predicate::CardsExiledThisTurnAtLeast {
+            who: PlayerRef::You,
+            at_least: Value::Const(2),
+        };
+        assert_eq!(predicate_short_label(&p), "after 2 exiled");
+
+        let p = Predicate::CreaturesDiedThisTurnAtLeast {
+            who: PlayerRef::You,
+            at_least: Value::Const(2),
+        };
+        assert_eq!(predicate_short_label(&p), "after 2 creature deaths");
     }
 
     /// Planeswalkers' loyalty abilities should surface in the wire view so

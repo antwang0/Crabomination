@@ -154,14 +154,16 @@ pub fn bayou_groff() -> CardDefinition {
 /// Witherbloom Pledgemage — {1}{B}{G}, 3/3 Plant Warlock. "{T}, Pay 1
 /// life: Add {B} or {G}."
 ///
-/// 🟡 The "pay 1 life as part of the activation cost" half is folded
-/// into resolution: the engine has no `life_cost` flag on
-/// `ActivatedAbility`, so the activation drops a `LoseLife 1` into the
-/// effect's resolution sequence. Net effect is correct (the player
-/// loses 1 life and then gets the mana) — the *timing* difference
-/// (whether life loss is paid before or after the ability resolves) is
-/// invisible to the bot harness today. Tracked under TODO.md "Cost
-/// Stacking" and "Generic activated-ability life-cost primitive".
+/// Push XXIV: promoted ✅. The "Pay 1 life" half of the cost is now
+/// modeled with `ActivatedAbility.life_cost: 1` (push XV primitive),
+/// matching the printed "as part of the activation cost" timing —
+/// activation is rejected pre-pay with `GameError::InsufficientLife`
+/// when life < 1, mirroring the mana-cost pre-pay check.
+///
+/// The "{B} or {G}" mode pick collapses to {B} for the auto-targeted
+/// path; future modal-mana primitive can split the activation in two
+/// (or thread a controller-decision into resolution). Net mana
+/// generated is correct in either case.
 pub fn witherbloom_pledgemage() -> CardDefinition {
     CardDefinition {
         name: "Witherbloom Pledgemage",
@@ -179,21 +181,15 @@ pub fn witherbloom_pledgemage() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             mana_cost: cost(&[]),
-            effect: Effect::Seq(vec![
-                Effect::LoseLife {
-                    who: Selector::You,
-                    amount: Value::Const(1),
-                },
-                Effect::AddMana {
-                    who: PlayerRef::You,
-                    pool: ManaPayload::Colors(vec![Color::Black]),
-                },
-            ]),
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::Colors(vec![Color::Black]),
+            },
             once_per_turn: false,
             sorcery_speed: false,
             sac_cost: false,
             condition: None,
-            life_cost: 0,
+            life_cost: 1,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -364,6 +360,167 @@ pub fn dina_soul_steeper() -> CardDefinition {
                 amount: Value::Const(1),
             },
         }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Daemogoth Titan ─────────────────────────────────────────────────────────
+
+/// Daemogoth Titan — {3}{B}{G}, 11/11 Demon Horror.
+/// "Whenever this creature attacks or blocks, sacrifice another creature."
+///
+/// Push XXIV: 11/11 mythic finisher. Attack-side trigger wired faithfully
+/// (`EventKind::Attacks`/`SelfSource` → `Effect::Sacrifice` filtered to
+/// creatures-you-control, count 1; the auto-target/sac picker rejects the
+/// titan itself courtesy of the standard "another" filter on the controller's
+/// own creatures). 🟡 The "or blocks" rider is omitted — engine has no
+/// `EventKind::Blocks` (we have `BecomesBlocked` for the opposite role)
+/// so blocking is a defender-side no-op for the moment. Net combat math
+/// is correct any time the titan swings (matches the printed-attack pattern,
+/// which is the dominant mode in real play).
+pub fn daemogoth_titan() -> CardDefinition {
+    CardDefinition {
+        name: "Daemogoth Titan",
+        cost: cost(&[generic(3), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Demon, CreatureType::Horror],
+            ..Default::default()
+        },
+        power: 11,
+        toughness: 11,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::Sacrifice {
+                who: Selector::You,
+                count: Value::Const(1),
+                filter: SelectionRequirement::Creature
+                    .and(SelectionRequirement::ControlledByYou),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Pest Infestation ────────────────────────────────────────────────────────
+
+/// Pest Infestation — {X}{B}{G} Sorcery.
+/// "Create X 1/1 black and green Pest creature tokens with 'When this
+/// creature dies, you gain 1 life.'"
+///
+/// Push XXIV: ✅. Token count comes off the cast's X via `Value::XFromCost`
+/// — same plumbing as Plumb the Forbidden / Pterafractyl. The minted Pest
+/// token shares the `stx_pest_token()` definition, so its on-die lifegain
+/// trigger rides on each token via `TokenDefinition.triggered_abilities`
+/// (SOS push VI). At X=4 you mint four Pests for {4}{B}{G}; if any die
+/// later, each fires its own +1-life trigger.
+pub fn pest_infestation() -> CardDefinition {
+    let pest = stx_pest_token();
+    CardDefinition {
+        name: "Pest Infestation",
+        cost: cost(&[crate::mana::x(), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::XFromCost,
+            definition: pest,
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Witherbloom Command ─────────────────────────────────────────────────────
+
+/// Witherbloom Command — {B}{G} Instant.
+/// "Choose two —
+/// • Target player loses 3 life and you gain 3 life.
+/// • Return target permanent card with mana value 3 or less from your
+///   graveyard to your hand.
+/// • Destroy target enchantment.
+/// • Target creature gets -3/-3 until end of turn."
+///
+/// Push XXIV: 🟡 — the printed "choose two" mode is collapsed to "choose
+/// one" via `Effect::ChooseMode`, identical to Moment of Reckoning's same-
+/// resolution-multi-mode-replay gap. Each individual mode is wired
+/// faithfully against existing primitives:
+/// - Mode 0: `Effect::Drain` for the 3 life swap (each-opponent-collapse).
+/// - Mode 1: graveyard → hand on a permanent card with `ManaValueAtMost(3)`.
+/// - Mode 2: destroy target enchantment.
+/// - Mode 3: -3/-3 EOT pump.
+pub fn witherbloom_command() -> CardDefinition {
+    use crate::card::Zone;
+    use crate::effect::shortcut::target_filtered;
+    use crate::effect::{Duration, ZoneDest};
+    let mv_at_most_3 = SelectionRequirement::Permanent
+        .and(SelectionRequirement::ManaValueAtMost(3));
+    CardDefinition {
+        name: "Witherbloom Command",
+        cost: cost(&[b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::ChooseMode(vec![
+            // Mode 0: drain 3.
+            Effect::Drain {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                to: Selector::You,
+                amount: Value::Const(3),
+            },
+            // Mode 1: gy → hand on permanent card MV ≤ 3.
+            Effect::Move {
+                what: Selector::take(
+                    Selector::CardsInZone {
+                        who: PlayerRef::You,
+                        zone: Zone::Graveyard,
+                        filter: mv_at_most_3,
+                    },
+                    Value::Const(1),
+                ),
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+            // Mode 2: destroy enchantment.
+            Effect::Destroy {
+                what: target_filtered(SelectionRequirement::HasCardType(CardType::Enchantment)),
+            },
+            // Mode 3: -3/-3 EOT.
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(-3),
+                toughness: Value::Const(-3),
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],

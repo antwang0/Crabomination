@@ -46,6 +46,100 @@ All 247 cards marked ✅ or 🟡 have a corresponding factory in
 positives and 0 stale ⏳ rows. STX 2021 progress is tracked in the
 "Strixhaven base set (STX)" section near the bottom of this file.
 
+## 2026-05-02 push XXIV: Witherbloom completion + cross-school Commands
+
+Pure-card-additions + UI/bot polish. Extends the STX 2021 catalog with
+the four "choose two" Commands (Lorehold / Prismari / Quandrix /
+Silverquill) plus a Witherbloom completion pass (Daemogoth Titan, Pest
+Infestation, Witherbloom Command), Saw It Coming, and two promotions
+(Witherbloom Pledgemage 🟡 → ✅ via `life_cost: 1`, Hunt for Specimens
+🟡 → ✅ for Lesson-approximation parity with Eyetwitch). Tests pass at
+1179 (was 1159, +20 net): 18 new STX tests + 1 bot life-cost guard +
+1 predicate-label plural.
+
+### Card additions
+
+- **Witherbloom completion** (3 cards new + 2 promotions):
+  - **Daemogoth Titan** ({3}{B}{G}, 11/11 Demon Horror) — attack
+    trigger sacrifices another creature via
+    `EventKind::Attacks/SelfSource → Effect::Sacrifice` filtered to
+    creatures-you-control. The "or blocks" rider is omitted (no
+    `EventKind::Blocks` event yet).
+  - **Pest Infestation** ({X}{B}{G} sorcery) — `Effect::CreateToken`
+    with `count: Value::XFromCost` over the shared `stx_pest_token()`.
+    Each minted Pest carries the on-die +1-life trigger via
+    `TokenDefinition.triggered_abilities` (SOS push VI).
+  - **Witherbloom Command** ({B}{G} instant) — 4-mode `ChooseMode`
+    (drain 3 / gy → hand on permanent MV ≤ 3 / destroy enchantment /
+    -3/-3 EOT). Printed "choose two" collapses to "choose one" — same
+    approximation as Moment of Reckoning.
+  - **Witherbloom Pledgemage** 🟡 → ✅ — `{T}, Pay 1 life: Add {B}` now
+    uses `ActivatedAbility.life_cost: 1` (push XV primitive). Activation
+    rejects pre-pay with `InsufficientLife` when life < 1, mirroring the
+    mana-cost pre-pay check.
+  - **Hunt for Specimens** 🟡 → ✅ (parity with Eyetwitch / Igneous
+    Inspiration's Learn approximation). Token + Learn → Draw 1.
+
+- **Cross-school Commands** (4 cards):
+  - **Lorehold Command** ({R}{W}) — drain 4 / two 1/1 white Spirit
+    tokens with flying / gy → hand on permanent MV ≤ 2 / exile target
+    gy card.
+  - **Prismari Command** ({1}{U}{R}) — 2 dmg / discard 2 + draw 2 /
+    Treasure / destroy artifact.
+  - **Quandrix Command** ({1}{G}{U}) — counter target activated
+    ability / +1/+1 ×2 on creature / gy → bottom of owner's library /
+    draw a card.
+  - **Silverquill Command** ({2}{W}{B}) — counter activated/triggered
+    ability / -3/-3 EOT / drain 3 / draw a card.
+  - All four use `ChooseMode` for "choose one of N modes". Printed
+    "choose two" collapses to "choose one" (same gap as Moment of
+    Reckoning, Witherbloom Command).
+
+- **Mono-color additions** (1 card):
+  - **Saw It Coming** ({1}{U}{U}) — `counter_target_spell()` shortcut.
+    Foretell {1}{U} alt-cost omitted (Foretell needs alt-cost-on-exile
+    + cast-from-exile-with-time-limit primitives).
+
+### Server / bot improvements
+
+- **`is_free_mana_ability` tightened** — `server/bot.rs`. Push XXIV
+  added `life_cost > 0` and `condition.is_some()` to the skip list (was
+  only `tap_cost / sac_cost / mana_cost`). The bot now correctly
+  refuses to fire Witherbloom Pledgemage's `{T}, Pay 1 life: Add {B}`
+  as a "free" mana rock — paying life is a non-trivial cost the random
+  bot can't reason about. Existing `condition` check covers Resonating
+  Lute's 7-cards-in-hand gate, Potioner's Trove's instant/sorcery gate,
+  etc.
+
+- **`predicate_short_label` plural tally arms** — `server/view.rs`.
+  Push XXIV added explicit `Value::Const(n)` formatters for n ≥ 2 on
+  `CardsLeftGraveyardThisTurnAtLeast`, `LifeGainedThisTurnAtLeast`,
+  `CardsExiledThisTurnAtLeast`, `CreaturesDiedThisTurnAtLeast` — was
+  only n=1 covered, n>1 fell through to "conditional".
+
+### Tests (+20 net, 1159 → 1179)
+
+- `tests::stx::witherbloom_pledgemage_pays_one_life_for_mana`
+- `tests::stx::witherbloom_pledgemage_rejects_when_life_too_low`
+- `tests::stx::daemogoth_titan_is_an_eleven_eleven_demon_horror`
+- `tests::stx::daemogoth_titan_attack_trigger_sacrifices_another_creature`
+- `tests::stx::pest_infestation_at_x_three_creates_three_pest_tokens`
+- `tests::stx::pest_infestation_pest_die_triggers_lifegain`
+- `tests::stx::witherbloom_command_mode_zero_drains_three`
+- `tests::stx::witherbloom_command_mode_two_destroys_enchantment`
+- `tests::stx::lorehold_command_mode_zero_drains_four_life`
+- `tests::stx::lorehold_command_mode_one_creates_two_flying_spirits`
+- `tests::stx::prismari_command_mode_zero_deals_two_damage`
+- `tests::stx::prismari_command_mode_two_creates_treasure`
+- `tests::stx::quandrix_command_mode_one_adds_two_counters`
+- `tests::stx::quandrix_command_mode_three_draws_a_card`
+- `tests::stx::silverquill_command_mode_one_pumps_minus_three`
+- `tests::stx::silverquill_command_mode_three_draws_a_card`
+- `tests::stx::saw_it_coming_counters_target_spell`
+- `tests::stx::hunt_for_specimens_promoted_pest_dies_trigger`
+- `server::bot::tests::bot_does_not_tap_life_cost_mana_source`
+- `server::view::tests::predicate_short_label_covers_plural_tally_thresholds`
+
 ## 2026-05-02 push XXIII: 18 new STX 2021 + cube cards + bot/UI improvements
 
 Pure-card-additions push (no new engine primitives) — extends the STX
@@ -1548,7 +1642,8 @@ parity is a matter of porting card factories one at a time.
 | Felisa, Fang of Silverquill | {2}{W}{B} | ✅ | 4/3 Legendary Cat Cleric, Flying + Lifelink. Push XVI: counter-bearing-creature-dies → Inkling trigger now wired via `EventKind::CreatureDied/AnotherOfYours` filtered by `EntityMatches { what: TriggerSource, filter: WithCounter(+1/+1) }`. Counters persist on a card after move-to-graveyard (only `damage`/`tapped`/`attached_to` are cleared on zone-out), so the post-die graveyard-resident card still reports its `+1/+1` counters via `evaluate_requirement_static`. |
 | Mavinda, Students' Advocate | {1}{W}{W} | 🟡 | 1/3 Legendary Human Cleric, Flying + Vigilance. Cast-from-graveyard activated ability is ⏳. |
 | Eager First-Year | {W} | ✅ | 2/1 Human Student. Magecraft: target creature gets +1/+1 EOT. Uses the new `effect::shortcut::magecraft()` helper. |
-| Hunt for Specimens | {3}{B} | 🟡 | Sorcery. Creates a 1/1 black Pest token (death-trigger lifegain now rides on the token via SOS-VI's `TokenDefinition.triggered_abilities`) + draws a card (Learn approx — no Lesson sideboard yet). |
+| Hunt for Specimens | {3}{B} | ✅ | Push XXIV: promoted from 🟡 to ✅. Creates a 1/1 black Pest token whose on-die +1-life trigger rides on `TokenDefinition.triggered_abilities` (SOS push VI), then Learn → Draw 1 (same Lesson approximation as Eyetwitch / Igneous Inspiration). |
+| Silverquill Command | {2}{W}{B} | 🟡 | Push XXIV: 4-mode `ChooseMode` (counter activated/triggered ability / -3/-3 EOT / drain 3 / draw a card). Printed "choose two" collapses to "choose one" — same approximation as Moment of Reckoning, Witherbloom / Lorehold / Prismari / Quandrix Commands. |
 
 ### Witherbloom (B/G)
 
@@ -1556,7 +1651,10 @@ parity is a matter of porting card factories one at a time.
 |---|---|---|---|
 | Witherbloom Apprentice | {B}{G} | ✅ | 2/2 Human Warlock. Magecraft: drain 1 (each opponent loses 1; you gain 1). |
 | Pest Summoning | {B}{G} | ✅ | Sorcery (Lesson). Creates two 1/1 Pest tokens; the death-trigger lifegain rider rides on the token via SOS-VI's `TokenDefinition.triggered_abilities`. |
-| Witherbloom Pledgemage | {1}{B}{G} | 🟡 | 3/3 Plant Warrior. `{T}, Pay 1 life: Add {B} or {G}.` Wired with `LoseLife 1 → AddMana(B)` in resolution; the timing nuance (cost-paid-first) doesn't matter for the bot harness. |
+| Witherbloom Pledgemage | {1}{B}{G} | ✅ | Push XXIV: promoted from 🟡 to ✅. `{T}, Pay 1 life: Add {B}` now uses `ActivatedAbility.life_cost: 1` (push XV primitive) — the activation rejects pre-pay with `InsufficientLife` when life < 1, mirroring the mana-cost pre-pay check. The "{B} or {G}" mode pick collapses to {B} (modal-mana primitive ⏳). |
+| Daemogoth Titan | {3}{B}{G} | ✅ | Push XXIV: 11/11 Demon Horror. Whenever this creature attacks, sacrifice another creature — wired via `EventKind::Attacks/SelfSource` → `Effect::Sacrifice` filtered to creatures-you-control. The "or blocks" rider is omitted (no `EventKind::Blocks` yet). |
+| Pest Infestation | {X}{B}{G} | ✅ | Push XXIV: Sorcery. Create X 1/1 black-green Pest tokens with on-die +1-life trigger (X = `Value::XFromCost`). Each Pest carries its death trigger via `TokenDefinition.triggered_abilities`. |
+| Witherbloom Command | {B}{G} | 🟡 | Push XXIV: 4-mode `ChooseMode` instant (drain 3 / gy → hand on permanent MV ≤ 3 / destroy enchantment / -3/-3 EOT). Printed "choose two" collapses to "choose one" — same approximation as Moment of Reckoning. |
 | Bayou Groff | {2}{B}{G} | ✅ | 5/4 Beast. Push XVI: "may pay {1} on death to return to hand" rider now wired via the new `Effect::MayPay` primitive (sibling to push XV's `Effect::MayDo`). On the death trigger, the controller is asked yes/no; on yes + sufficient mana, the engine pays {1} and `Move(SelfSource → Hand(OwnerOf(Self)))`. |
 | Daemogoth Woe-Eater | {2}{B}{G} | 🟡 | Push XXIII: 9/9 Demon body + `{T}: gain 4 life` activated ability + ETB sacrifice (approximation of "as additional cost: sacrifice a creature" — sac fires at ETB rather than at cast time). Sad-sack mythic finisher. |
 | Eyeblight Cullers | {1}{B}{B} | 🟡 | Push XXIII: 4/4 Elf Warrior with ETB sac (additional-cost approximation) + drain 2. Tempo creature with built-in burn. |
@@ -1574,6 +1672,7 @@ parity is a matter of porting card factories one at a time.
 | Sparring Regimen | {2}{R}{W} | ✅ | Push XVII: both abilities wired. ETB creates a 2/2 R/W Spirit token; "whenever you attack, +1/+1 on each attacker" now fires per-attacker via the new combat-side broadcast in `declare_attackers` — the trigger source is Sparring Regimen, the target is pre-bound to the just-declared attacker as `Target(0)`. Net result: each declared attacker ends up with one new counter, matching the printed mass pump. |
 | Reconstruct History | {1}{R}{W} | ✅ | Push XXIII: return up to 2 artifact cards from your gy → hand via `Selector::take(_, 2)` over `CardsInZone(Graveyard, Artifact)` + draw 1. |
 | Igneous Inspiration | {2}{R} | ✅ | Push XXIII: 3 dmg to creature/PW + Learn (collapsed to draw 1). |
+| Lorehold Command | {R}{W} | 🟡 | Push XXIV: 4-mode `ChooseMode` instant (drain 4 / two 1/1 white Spirit tokens with flying / gy → hand on permanent MV ≤ 2 / exile target gy card). Printed "choose two" collapses to "choose one" — same approximation as the other Commands. |
 
 ### Quandrix (G/U)
 
@@ -1584,6 +1683,7 @@ parity is a matter of porting card factories one at a time.
 | Decisive Denial | {G}{U} | 🟡 | Instant. Mode 0 (counter target noncreature spell unless its controller pays {2}) wired; mode 1 (fight at variable power) ⏳ pending multi-target prompt. |
 | Snow Day | {1}{G}{U} | ✅ | Push XXIII: Instant. Create a 0/0 Fractal token + put X +1/+1 counters on it where X = `Value::HandSizeOf(You)`. With a 7-card hand the Fractal lands as a 7/7. |
 | Mentor's Guidance | {2}{G}{U} | 🟡 | Push XXIII: Sorcery. Draw 2 + put hand-size +1/+1 counters on a target creature you control. Multi-target "for each" iteration collapsed to single target. |
+| Quandrix Command | {1}{G}{U} | 🟡 | Push XXIV: 4-mode `ChooseMode` instant (counter target activated ability / +1/+1 ×2 on creature / gy → bottom of owner's library / draw a card). Printed "choose two" collapses to "choose one" — same approximation as the other Commands. |
 
 ### Prismari (U/R)
 
@@ -1593,6 +1693,7 @@ parity is a matter of porting card factories one at a time.
 | Prismari Apprentice | {U}{R} | 🟡 | 2/2 Human Wizard. Magecraft: Scry 1. The "+1/+0 EOT" alt-mode is ⏳ pending a let-the-controller-pick hook on triggered ChooseMode. |
 | Symmetry Sage | {U} | ✅ | 1/2 Human Wizard. Magecraft: this creature gets +1/+0 and gains flying until end of turn. |
 | Creative Outburst | {3}{U}{U}{R}{R} | ✅ | Push XXIII: Sorcery. Discard your hand (`Discard { amount: HandSizeOf(You) }`), draw 5. Prismari spellslinger refill that fuels later magecraft / flashback payoffs. |
+| Prismari Command | {1}{U}{R} | 🟡 | Push XXIV: 4-mode `ChooseMode` instant (2 dmg to creature/PW / discard 2 + draw 2 / Treasure / destroy artifact). Printed "choose two" collapses to "choose one" — same approximation as the other Commands. |
 
 ### Mono-color staples (`stx::mono`)
 
@@ -1611,6 +1712,7 @@ parity is a matter of porting card factories one at a time.
 | Solve the Equation | {2}{U} | ✅ | Push XXIII: Sorcery. Search library for an instant or sorcery, put it into your hand, then scry 1. |
 | Enthusiastic Study | {1}{G} | ✅ | Push XXIII: Instant. Target creature gets +2/+2 and gains trample EOT, then learn (collapses to draw 1). |
 | Tempted by the Oriq | {1}{W}{B} | 🟡 | Push XXIII: Sorcery. Approximation of "gain control" as Destroy ≤3-MV creature + create a 1/1 Inkling token (no `Effect::GainControl` static prompt yet). |
+| Saw It Coming | {1}{U}{U} | 🟡 | Push XXIV: Instant. Counter target spell (Cancel-equivalent at the {1}{U}{U} rate). Foretell {1}{U} alt-cost is omitted (no Foretell primitive: would need alt-cost-on-exile + cast-from-exile-with-time-limit, same gap as Velomachus Lorehold's reveal-and-cast). |
 
 ### Shared / multi-college
 

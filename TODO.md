@@ -7,6 +7,41 @@ See `CUBE_FEATURES.md` (cube-card implementation status) and
 
 ## Recent additions
 
+- ✅ **Push XXIV (2026-05-02)**: STX 2021 push — Witherbloom completion
+  + 4 cross-school Commands + Saw It Coming + 2 promotions + bot
+  life-cost guard + UI plural-tally predicate labels. Tests at 1179
+  (was 1159, +20 net). No new engine primitives — pure card additions
+  + UX/AI polish.
+  - **3 new Witherbloom cards** + **2 promotions** completing the B/G
+    school: Daemogoth Titan ({3}{B}{G}, 11/11 Demon Horror with attack
+    sac trigger), Pest Infestation ({X}{B}{G}, X Pest tokens with on-die
+    +1-life trigger), Witherbloom Command ({B}{G}, 4-mode `ChooseMode`
+    instant). Witherbloom Pledgemage promoted via
+    `ActivatedAbility.life_cost: 1`. Hunt for Specimens promoted to
+    parity with Eyetwitch's Lesson approximation.
+  - **4 cross-school Commands** (all 🟡 — printed "choose two" collapses
+    to "choose one" via `Effect::ChooseMode`): Lorehold Command (drain 4
+    / two flying Spirits / gy → hand MV ≤ 2 / exile gy), Prismari
+    Command (2 dmg / discard 2 + draw 2 / Treasure / destroy artifact),
+    Quandrix Command (counter ability / +1/+1 ×2 / gy → bottom / draw),
+    Silverquill Command (counter ability / -3/-3 / drain 3 / draw).
+  - **1 mono-color**: Saw It Coming ({1}{U}{U}) — Cancel-equivalent at
+    {1}{U}{U}; Foretell omitted (no Foretell primitive).
+  - **Bot improvement**: `is_free_mana_ability` now skips activations
+    with `life_cost > 0` or `condition.is_some()`. Witherbloom
+    Pledgemage's `{T}, Pay 1 life: Add {B}` no longer auto-fires as a
+    "free" mana rock — paying life is a non-trivial cost the random
+    bot can't reason about.
+  - **UI improvement**: `predicate_short_label` (server/view.rs) now
+    formats plural N≥2 thresholds for the per-turn tally predicates
+    (`CardsLeftGraveyardThisTurnAtLeast`, `LifeGainedThisTurnAtLeast`,
+    `CardsExiledThisTurnAtLeast`, `CreaturesDiedThisTurnAtLeast`). Was
+    only n=1 covered; n>1 fell through to "conditional".
+  - **20 new tests**: 18 STX (`tests::stx::*`), 1 server-side bot
+    (`server::bot::tests::bot_does_not_tap_life_cost_mana_source`),
+    1 server-side view (`server::view::tests::
+    predicate_short_label_covers_plural_tally_thresholds`).
+
 - ✅ **Push XXIII (2026-05-02)**: 18 new STX 2021 + cube cards + bot
   walker-attack routing + UI predicate label coverage. Tests at 1159
   (was 1132, +27 net). No new engine primitives — pure card
@@ -2304,3 +2339,76 @@ These items came up while implementing the STX 2021 + cube card batch
   block when no chump-block is favorable. This complements the
   walker-attack routing — the same "what damage are we accepting"
   bookkeeping.
+
+## New suggestions (added 2026-05-02 push XXIV)
+
+These came up while implementing the Witherbloom completion + the
+four cross-school Commands.
+
+### Engine
+
+- **`Effect::ChooseModes(n)` for "choose two/three"**. The five STX
+  Commands (Witherbloom / Lorehold / Prismari / Quandrix /
+  Silverquill) and Moment of Reckoning all print "choose two — same
+  mode may be chosen more than once" or "choose two — modes are
+  distinct". Today they collapse to `ChooseMode` (choose one). A
+  `ChooseModes { modes: Vec<Effect>, count: u8, distinct: bool }`
+  primitive would fix the printed semantics. Resolution would push N
+  copies onto the stack (or run them as a `Seq`), with the
+  controller picking N indices via a new `Decision::ChooseModes`
+  payload. Same plumbing unblocks 6+ ⏳ rows.
+
+- **`EventKind::Blocks` event**. Daemogoth Titan's "or blocks" rider
+  is omitted because the engine has `Attacks` and `BecomesBlocked`
+  but no symmetric blocker-side event. A `Blocks/SelfSource` event
+  would let the trigger fire when the titan is declared as a
+  blocker. Same primitive helps Daemogoth Inquisitor (also "attacks
+  or blocks") and any "whenever ~ deals combat damage as a blocker"
+  rider. Plumbing: emit the event from `declare_blockers` once
+  validation passes, then re-use the existing `fire_attack_triggers`
+  shape.
+
+- **Modal mana abilities**. Witherbloom Pledgemage's `{T}, Pay 1
+  life: Add {B} or {G}` is collapsed to "Add {B}" because the
+  effect path picks one `ManaPayload::Colors` at construction time.
+  A `Decision::PickColor` step (mid-resolution, after the cost is
+  paid) would let the controller pick {B} or {G} per activation.
+  Same path unblocks the SOS school-land "{T}: Add {C} or {color}"
+  modes (currently always {C}) and any future "Add one mana of any
+  color" choice (Birds of Paradise, City of Brass).
+
+- **Foretell alt-cost primitive**. Saw It Coming's Foretell {1}{U}
+  (and Behold the Multiverse, Behold the Beyond, etc.) all share
+  the shape "{2} face-down: exile this from your hand. You may cast
+  it for its foretell cost on a later turn". This is structurally a
+  new `AlternativeCost { foretell: bool }` plus a delayed-cast-from-
+  exile zone-tag. Same pipeline (cast-from-exile-with-time-limit)
+  also unblocks Velomachus Lorehold's reveal-and-cast and Practiced
+  Scrollsmith's "may cast that card until next turn".
+
+### UI
+
+- **Mode-pick prompt for `ChooseMode` spells**. The auto-decider
+  picks mode 0 by default for tests; the human-driven path needs a
+  modal-prompt UI (radio buttons or a button row) wired to
+  `Decision::PickMode`. Currently the client renders the spell
+  effect label but no mode-picker, so casting a Command always
+  collapses to mode 0.
+
+- **Life-cost ability indicator**. Witherbloom Pledgemage's `Pay 1
+  life` activation cost now ships in `ability_cost_label` ("Pay 1
+  life"), but there's no visual cue when the activation is *not*
+  affordable due to insufficient life. A red-greying of the button
+  (similar to the existing mana-affordability greying) would
+  surface the rejection reason before the player clicks.
+
+### Bot / AI
+
+- **Modal-spell mode picker tied to board state**. The bot today
+  picks mode 0 for `ChooseMode` spells via the auto-decider. A
+  smarter rule: walk each mode's effect, score it against the
+  current board, pick the highest-scoring legal mode. Concrete:
+  Lorehold Command should pick mode 0 (drain 4) when opp life is
+  low, mode 1 (Spirit tokens) when board is empty, mode 3 (exile
+  gy) when opp has a graveyard recursion threat. Reuses the
+  existing `auto_target_for_effect` heuristic.

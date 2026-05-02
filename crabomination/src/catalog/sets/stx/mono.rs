@@ -1937,3 +1937,36 @@ pub fn tempted_by_the_oriq() -> CardDefinition {
         opening_hand: None,
     }
 }
+
+// ── Saw It Coming ───────────────────────────────────────────────────────────
+
+/// Saw It Coming — {1}{U}{U} Instant. "Counter target spell. / Foretell {1}{U}."
+///
+/// Push XXIV: 🟡 — basic counter-target-spell at the {1}{U}{U} rate
+/// (Cancel-equivalent). The Foretell alt-cost ({2} face-down to exile +
+/// next-turn cast for {1}{U}) is omitted — Foretell needs an alt-cost-on-
+/// exile primitive plus a "cast from exile until …" capture, neither of
+/// which exists today (same gap as Velomachus Lorehold's reveal-and-cast,
+/// Practiced Scrollsmith's "may cast that card", etc.).
+pub fn saw_it_coming() -> CardDefinition {
+    CardDefinition {
+        name: "Saw It Coming",
+        cost: cost(&[generic(1), u(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: crate::effect::shortcut::counter_target_spell(),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
