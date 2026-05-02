@@ -36,22 +36,97 @@ This file tracks two adjacent Strixhaven catalogs:
 Counts reflect the regenerated tables below (audited via
 `scripts/audit_strixhaven2.py` against `catalog::sets::sos`).
 
-- ✅ done: **93** (+5 in push XVI: Geometer's Arthropod, Matterbending
-  Mage, Paradox Surveyor, Embrace the Paradox, Sundering Archaic; STX
-  cards Bayou Groff, Felisa Fang, Body of Research not counted in SOS
-  totals).
-- 🟡 partial: **138** (+5 net in push XVI: Aziza Mage Tower Captain
-  and Zaffai and the Tempests added as body-only stubs; Sundering
-  Archaic kept 🟡 since the Converge ETB exile cap is still
-  approximated; Geometer/Matterbending/Paradox/Embrace promoted out of
-  🟡 to ✅; net = +5 - 4 + 2 + 1 - 1 = depends on accounting; audit
-  reports 138).
-- ⏳ todo: **24** (-2 in push XVI: Aziza, Zaffai promoted to body-only
-  🟡; +0 new ⏳).
+- ✅ done: **100** (+7 in push XVIII: Antiquities on the Loose,
+  Killian's Confidence, Colossus of the Blood Age all promoted via
+  the new `Predicate::CastFromGraveyard` + combat-damage gy-broadcast
+  + already-wired death rider; plus 4 doc-flips waiting from XVII).
+- 🟡 partial: **135** (+1 net in push XVIII: Mica Reader of Ruins +
+  Colorstorm Stallion + Grave Researcher MDFC + Emeritus of Ideation
+  MDFC added as new 🟡; offsets the 7 promotions to ✅).
+- ⏳ todo: **20** (-4 in push XVIII: Mica, Colorstorm, Grave
+  Researcher, Emeritus of Ideation promoted to body-only 🟡; +0
+  new ⏳).
 
-All 229 cards marked ✅ or 🟡 have a corresponding factory in
+All 235 cards marked ✅ or 🟡 have a corresponding factory in
 `crabomination/src/catalog/sets/sos/`; the audit script reports 0 false
 positives and 0 stale ⏳ rows.
+
+## 2026-05-02 push XVIII: combat-damage gy-broadcast + Predicate::CastFromGraveyard + body-with-Ward batch
+
+Three engine wins + 5 new SOS cards + 4 promotions to ✅. Tests pass at
+1063 (was 1050).
+
+- **Combat-damage graveyard broadcast** — `fire_combat_damage_to_player_
+  triggers` was extended to walk the attacker's controller's graveyard
+  for `EventScope::FromYourGraveyard` triggers, in addition to the
+  attacker's own SelfSource/AnyPlayer triggers. Two trigger families
+  resolve here. Unblocks Killian's Confidence's "may pay {W/B} to
+  return from graveyard to hand" gy-recursion clause.
+
+- **`StackItem::Spell.face: CastFace`** + **`EffectContext.cast_face`**
+  — push XIV's `CastFace` enum is now stamped onto the
+  `StackItem::Spell` itself (with `#[serde(default)]` on the
+  StackItemSnapshot field for snapshot back-compat) and threaded into
+  `EffectContext.cast_face` at resolution time via the new
+  `continue_spell_resolution_with_face` entry point. `cast_flashback`
+  sets `pending_cast_face = Flashback` before delegating to
+  `finalize_cast` (and restores after). All other paths default to
+  `Front`.
+
+- **`Predicate::CastFromGraveyard`** — reads `EffectContext.cast_face`
+  and matches `CastFace::Flashback`. Powers Antiquities on the Loose's
+  "Then if this spell was cast from anywhere other than your hand, put
+  a +1/+1 counter on each Spirit you control" rider — the cast-from-gy
+  branch now adds counters faithfully (verified by the new flashback
+  cast test). Returns `false` in trigger / activated-ability contexts
+  (those reset `cast_face` to `Front`).
+
+- **5 new SOS cards** (3 fully wired, 2 body-only):
+  - **Grave Researcher // Reanimate** ({2}{B} // {B}, MDFC). 3/3 Troll
+    Warlock front with ETB Surveil 2; back-face Reanimate (target gy
+    creature → BF + lose life equal to MV via `Value::ManaValueOf`).
+  - **Emeritus of Ideation // Ancestral Recall** ({3}{U}{U} // {U},
+    MDFC). 5/5 Human Wizard with `Keyword::Ward(2)` front; back-face
+    Ancestral Recall (target player draws 3).
+  - **Mica, Reader of Ruins** ({3}{R}, body-only 4/4 Legendary Human
+    Artificer with `Keyword::Ward(3)`). IS-cast → may-sac → copy-spell
+    rider omitted (no copy-spell primitive).
+  - **Colorstorm Stallion** ({1}{U}{R}, 3/3 Elemental Horse with
+    `Keyword::Ward(1)` + `Haste`). Magecraft +1/+1 EOT pump on every
+    IS cast wired faithfully via `effect::shortcut::cast_is_instant_
+    or_sorcery()`. Token-copy upper half omitted (no copy-permanent
+    primitive).
+  - **Killian's Confidence's gy-trigger** wired (the body's pump+draw
+    was already there).
+
+- **4 promotions to ✅**:
+  - **Antiquities on the Loose** 🟡 → ✅: cast-from-gy +1/+1 rider
+    wired via the new `Predicate::CastFromGraveyard`.
+  - **Killian's Confidence** 🟡 → ✅: gy-recursion trigger wired via
+    the combat-damage gy-broadcast + `Effect::MayPay({W/B})`.
+  - **Colossus of the Blood Age** 🟡 → ✅: death rider was already
+    correctly wired in push XVII; doc flip + source comment refresh.
+  - Plus 4 doc-flips deferred from push XVII (Pursue the Past,
+    Witherbloom Charm, Stadium Tidalmage, Heated Argument) — all
+    correctly wired with `Effect::MayDo` from XV but still showing
+    🟡. Now visible as ✅ in tables.
+
+- **Server**: snapshot round-trip test added for the new
+  `StackItem::Spell.face` field — verifies a `CastFace::Flashback`
+  spell on the stack survives a serde_json round trip via
+  `GameSnapshot`. View label "if cast from gy" added for
+  `Predicate::CastFromGraveyard` so ability gates render the new
+  condition in mouseover/tooltip text.
+
+- 9 new tests: 3 Grave Researcher (front body / back reanimate /
+  static fields), 2 Emeritus of Ideation (body / back Ancestral
+  Recall), 1 Mica (Ward 3 body), 2 Colorstorm Stallion (body / magecraft
+  pump), 1 Antiquities cast-from-hand vs cast-from-gy +1/+1 path, 1
+  Killian's Confidence gy-trigger paid path, 1 Killian's Confidence
+  declined path, 1 snapshot face round-trip. All 1063 lib tests pass
+  (was 1050).
+
+- Audit: 100/135/20 (✅/🟡/⏳) vs prior 97/134/24.
 
 ## 2026-05-01 push XVII: CardsDiscardedThisResolution + multi-card-promotions + STX 2021 expansion
 

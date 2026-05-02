@@ -7,6 +7,42 @@ See `CUBE_FEATURES.md` (cube-card implementation status) and
 
 ## Recent additions
 
+- ✅ **SOS push XVIII (2026-05-02)**: 3 engine primitives + 5 new SOS
+  cards + 4 promotions. Tests at 1063 (was 1050):
+  - **Combat-damage gy-broadcast** — `fire_combat_damage_to_player_
+    triggers` now walks the attacker's controller's graveyard for
+    `EventScope::FromYourGraveyard` triggers, in addition to the
+    attacker's own SelfSource/AnyPlayer triggers. Two trigger families
+    resolve here. Unblocks Killian's Confidence's "may pay {W/B} to
+    return from gy" recursion.
+  - **`StackItem::Spell.face: CastFace`** — push XIV's `CastFace` enum
+    is now stamped onto the `StackItem::Spell` itself (with serde-
+    default for snapshot back-compat) and threaded into
+    `EffectContext.cast_face` at resolution time via the new
+    `continue_spell_resolution_with_face` entry point. `cast_flashback`
+    sets `pending_cast_face = Flashback` before delegating.
+  - **`Predicate::CastFromGraveyard`** — reads `EffectContext.
+    cast_face` and matches `CastFace::Flashback`. Powers Antiquities
+    on the Loose's "Then if this spell was cast from anywhere other
+    than your hand, put a +1/+1 counter on each Spirit you control"
+    rider — the cast-from-gy branch now adds counters faithfully.
+  - **5 new SOS cards**: Grave Researcher // Reanimate (MDFC, ETB
+    Surveil 2 + back-face Reanimate), Emeritus of Ideation //
+    Ancestral Recall (MDFC, 5/5 Ward 2 + back-face draw 3), Mica
+    Reader of Ruins (body-only 4/4 Ward 3), Colorstorm Stallion (3/3
+    Ward 1 Haste + magecraft pump), Killian's Confidence's gy-trigger
+    fully wired.
+  - **4 promotions to ✅**: Antiquities on the Loose (cast-from-gy
+    counter rider), Killian's Confidence (gy-trigger), Colossus of
+    the Blood Age (death rider was already wired — doc flip),
+    plus the 4 doc-flips waiting from XVII (Pursue the Past,
+    Witherbloom Charm, Stadium Tidalmage, Heated Argument).
+  - **Server**: Snapshot round-trip test for `face` on `StackItem::
+    Spell` (closes part of XV server suggestion). View label "if cast
+    from gy" added for `Predicate::CastFromGraveyard`.
+  - **Doc updates**: STRIXHAVEN2.md tables progress 97/134/24 →
+    100/135/20 (✅/🟡/⏳).
+
 - ✅ **SOS push XVII (2026-05-01)**: 4 engine primitives + 5 SOS card
   promotions + 8 new STX 2021 card factories. Tests at 1050 (+13
   net):
@@ -1762,3 +1798,93 @@ listed here so the next pass can pick them up without re-deriving.
   selector variant — falls through to the generic catch-all. A
   short-form label ("cards discarded this way") would surface it
   properly in mouse-over tooltips and replay logs.
+
+## New suggestions (added 2026-05-02 push XVIII)
+
+These items came up while implementing the combat-damage gy-broadcast
++ `Predicate::CastFromGraveyard` + the body-with-Ward batch.
+
+### Engine
+
+- **Copy-spell / copy-permanent primitive**. `Effect::CopySpell` exists
+  but only for "copy target spell on the stack" — it doesn't yet
+  handle "create a token that's a copy of [permanent]" (Applied
+  Geometry, Colorstorm Stallion's Opus rider, Echocasting Symposium).
+  A sibling `Effect::CopyPermanent { source: Selector, with: Vec<...> }`
+  primitive would unblock the entire copy-permanent payoff family. The
+  back-pattern: pick a permanent, deep-clone the `CardInstance`
+  (resetting `id`, `damage`, `tapped`), apply per-card overrides
+  (Applied Geometry forces 0/0 Fractal type), then place onto bf
+  under the controller. Unblocks: Aziza, Mica, Silverquill the
+  Disputant, Choreographed Sparks, Applied Geometry, Echocasting
+  Symposium, Colorstorm Stallion (token-copy rider), Prismari the
+  Inspiration (storm via copy).
+
+- **Cast-from-exile-with-time-limit primitive**. Practiced
+  Scrollsmith's "may cast that card until end of next turn",
+  Conspiracy Theorist's discard-recursion, The Dawning Archaic's
+  attack-trigger gy-cast, Nita's exile-from-opp-gy-then-cast — all
+  share the shape "exile a card; the controller may cast it for free
+  until time T". A new `Effect::ExileAndMayCast { what: Selector, who:
+  PlayerRef, until: Duration, free: bool }` would unblock 6+ cards.
+
+- **Cascade keyword primitive**. Quandrix, the Proof has Cascade
+  baked in. Cascade is "exile until you exile a nonland card with
+  lower MV; you may cast it for free". Sibling to ExileAndMayCast
+  but with the reveal-until loop and the MV constraint. Add
+  `Keyword::Cascade` (already a tagged enum?) + an `Effect::
+  CascadeFor { caster_mv: u32 }` primitive.
+
+- **Hybrid Ward (mana-or-life)**. Today `Keyword::Ward(u32)` is a
+  single mana-cost integer. Mica's Ward—Pay 3 life is a different
+  cost shape (alt-payment). Would benefit from a `Keyword::WardCost
+  { mana: ManaCost, life: u32 }` or a more general
+  `Keyword::WardEffect(Effect)` (for "Ward—Sac a creature", "Ward—
+  Discard a card") that runs a generic effect on Ward triggers.
+
+- **Token-copy of a permanent**. SOS Lluwen, Pest Friend back-face
+  + Felisa Inkling triggers all create token copies of the trigger
+  source. Today they all hard-code a fresh `TokenDefinition`. A
+  generic `Effect::CreateTokenCopy { source: Selector, count: Value }`
+  would let cards reference a self-source token shape without
+  hard-coding the body each time.
+
+### UI
+
+- **Cast-face badge in replay log**. Push XVIII threads
+  `CastFace` into both events and `StackItem`. The replay log /
+  spectator UI could surface a per-spell badge ("F" for Front, "B"
+  for Back-face, "FB" for Flashback) so viewers see at a glance
+  which face was cast. Useful for MDFC tracking + flashback replay
+  audits.
+
+- **Ward-tag tooltip**. Cards carrying `Keyword::Ward(N)` have no
+  enforcement yet, but the static keyword shows in the keyword bar.
+  Adding a hover tooltip ("Ward N: targeting costs N more mana")
+  would set player expectations correctly even before the engine
+  enforces it.
+
+### Server
+
+- **Selector view for `CardsInZone(Hand, filter)`**. Push XVI fixed
+  the runtime evaluation, but the `SelectorView` rendering still
+  falls through to the generic "cards in hand" label. A filter-
+  aware label ("lands in hand", "instants/sorceries in hand") would
+  improve the UI hover.
+
+- **Predicate label for `Predicate::CastSpellHasX`**. Today shows
+  "cast spell w/ {X}" — accurate but jargon-heavy. A clearer
+  human-readable form ("when you cast an X spell") would read
+  better in tooltips.
+
+### Card promotions ready (no new primitive)
+
+- **Strife Scholar // Awaken the Ages** — front face is a 3/2
+  Orc Sorcerer with Ward. Body wire is straightforward (same
+  pattern as Mica / Colorstorm Stallion). Back-face Awaken the
+  Ages oracle still needs verifying — Scryfall lookup pending.
+
+- **Inkling Mascot promotion**: existing 🟡 cards labeled "Ward
+  keyword primitive" pending — most are body-wired with the Ward
+  tag already; the doc could be flipped from 🟡 to ✅ once Ward
+  enforcement lands (or stay 🟡 with a clearer note).
