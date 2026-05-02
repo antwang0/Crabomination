@@ -588,6 +588,7 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         adventurous_eater,
         cheerful_osteomancer,
         emeritus_of_woe,
+        grave_researcher,
         leech_collector,
         scathing_shadelock,
         scheming_silvertongue,

@@ -393,6 +393,7 @@ fn mono_color_pool(c: Color) -> Vec<CardFactory> {
             decorum_dissertation,
             foolish_fate,
             forum_necroscribe,
+            grave_researcher,
             lecturing_scornmage,
             masterful_flourish,
             melancholic_poet,

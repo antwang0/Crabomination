@@ -437,6 +437,56 @@ pub fn scheming_silvertongue() -> CardDefinition {
     )
 }
 
+/// Grave Researcher // Reanimate — {2}{B} // {B}.
+///
+/// Front: 3/3 Troll Warlock vanilla. ETB Surveil 2 (Surveil is a
+/// first-class engine primitive). Back: sorcery — Reanimate
+/// (return target creature card from a graveyard to the battlefield
+/// under your control). The full printed Reanimate also has "you lose
+/// life equal to that creature's mana value", which we approximate via
+/// `Effect::LoseLife { who: You, amount: ManaValueOf(Target(0)) }`
+/// using the engine's `ManaValueOf` value primitive that walks
+/// graveyards as well as the battlefield.
+pub fn grave_researcher() -> CardDefinition {
+    use crate::card::{EventKind, EventScope, EventSpec, TriggeredAbility};
+    let back = spell_back(
+        "Reanimate",
+        cost(&[b()]),
+        CardType::Sorcery,
+        Effect::Seq(vec![
+            Effect::Move {
+                what: target_filtered(SelectionRequirement::Creature),
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: false,
+                },
+            },
+            Effect::LoseLife {
+                who: Selector::You,
+                amount: Value::ManaValueOf(Box::new(Selector::Target(0))),
+            },
+        ]),
+    );
+    let mut front = vanilla_front(
+        "Grave Researcher",
+        cost(&[generic(2), b()]),
+        vec![CreatureType::Troll, CreatureType::Warlock],
+        3,
+        3,
+        vec![],
+        back,
+    );
+    // Front-face ETB: Surveil 2.
+    front.triggered_abilities = vec![TriggeredAbility {
+        event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+        effect: Effect::Surveil {
+            who: PlayerRef::You,
+            amount: Value::Const(2),
+        },
+    }];
+    front
+}
+
 // ── Red MDFCs ───────────────────────────────────────────────────────────────
 
 /// Emeritus of Conflict // Lightning Bolt — {1}{R} // {R}.

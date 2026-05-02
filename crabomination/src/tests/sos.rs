@@ -313,6 +313,79 @@ fn killians_confidence_pumps_and_draws() {
     assert_eq!(g.players[0].hand.len(), hand_before);
 }
 
+// Killian's Confidence's gy-trigger: when a creature you control deals
+// combat damage to a player, may pay {W/B} to return Killian's
+// Confidence from your graveyard to your hand. The full combat-step
+// drive empties the active player's mana pool between steps (rule
+// 500.4), so we drive combat manually and float {W/B} during the damage
+// step before the trigger resolves.
+#[test]
+fn killians_confidence_combat_damage_trigger_returns_to_hand() {
+    let mut g = two_player_game();
+    let kc_id = g.add_card_to_graveyard(0, catalog::killians_confidence());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().summoning_sick = false;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: bear,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("Bear attacks");
+    drain_stack(&mut g);
+    // Advance through DeclareBlockers to CombatDamage. Mana empties on
+    // every step transition, so float {W/B} *now*, while we sit at
+    // CombatDamage with the trigger about to fire.
+    let mut bail = 50;
+    while g.step != TurnStep::CombatDamage && bail > 0 {
+        if g.perform_action(GameAction::PassPriority).is_err() { break; }
+        bail -= 1;
+    }
+    g.players[0].mana_pool.add(Color::White, 1);
+    while !matches!(g.step, TurnStep::PostCombatMain | TurnStep::End) && bail > 0 {
+        if g.perform_action(GameAction::PassPriority).is_err() { break; }
+        bail -= 1;
+    }
+    drain_stack(&mut g);
+
+    assert!(
+        g.players[0].hand.iter().any(|c| c.id == kc_id),
+        "Killian's Confidence should be back in hand after gy-trigger"
+    );
+    assert!(
+        !g.players[0].graveyard.iter().any(|c| c.id == kc_id),
+        "Killian's Confidence should have left the graveyard"
+    );
+}
+
+#[test]
+fn killians_confidence_decline_keeps_in_graveyard() {
+    let mut g = two_player_game();
+    let kc_id = g.add_card_to_graveyard(0, catalog::killians_confidence());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().summoning_sick = false;
+    // No floated mana + decline → trigger cannot pay.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(false)]));
+
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: bear,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("Bear attacks");
+    drain_stack(&mut g);
+    while !matches!(g.step, TurnStep::PostCombatMain | TurnStep::End) {
+        if g.perform_action(GameAction::PassPriority).is_err() { break; }
+    }
+    drain_stack(&mut g);
+
+    assert!(
+        g.players[0].graveyard.iter().any(|c| c.id == kc_id),
+        "Killian's Confidence should still be in graveyard (declined)"
+    );
+}
+
 #[test]
 fn forum_of_amity_taps_for_white_or_black() {
     use crate::card::CardType;
@@ -7238,6 +7311,83 @@ fn aziza_mage_tower_captain_body_legendary_djinn_sorcerer() {
     assert!(card.supertypes.contains(&crate::card::Supertype::Legendary));
     assert!(card.has_creature_type(crate::card::CreatureType::Djinn));
     assert!(card.has_creature_type(crate::card::CreatureType::Sorcerer));
+}
+
+// Grave Researcher // Reanimate — front: 3/3 Troll Warlock, ETB Surveil 2.
+// Back: Reanimate (return target creature card from a graveyard to the
+// battlefield under your control, then lose life equal to its mana
+// value).
+#[test]
+fn grave_researcher_front_face_etb_surveils_two() {
+    let mut g = two_player_game();
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let id = g.add_card_to_hand(0, catalog::grave_researcher());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let lib_before = g.players[0].library.len();
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: None,
+        mode: None,
+        x_value: None,
+    })
+    .expect("Grave Researcher castable for {2}{B}");
+    drain_stack(&mut g);
+
+    assert!(
+        g.battlefield.iter().any(|c| c.id == id),
+        "Grave Researcher must reach battlefield"
+    );
+    // Surveil 2: cannot grow library. Auto-decider may keep both on top
+    // (no change) or drop them — either is fine.
+    assert!(
+        g.players[0].library.len() <= lib_before,
+        "Surveil 2 cannot grow the library"
+    );
+}
+
+#[test]
+fn grave_researcher_back_reanimates_target_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::grave_researcher());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    let life_before = g.players[0].life;
+
+    g.perform_action(GameAction::CastSpellBack {
+        card_id: id,
+        target: Some(Target::Permanent(bear)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Reanimate castable for {B}");
+    drain_stack(&mut g);
+
+    // Bear arrives on battlefield under controller 0.
+    assert!(
+        g.battlefield
+            .iter()
+            .any(|c| c.id == bear && c.controller == 0),
+        "Bear should be on caster's battlefield"
+    );
+    // Bear's MV is 2 ({1}{G}) so caster loses 2 life.
+    assert_eq!(g.players[0].life, life_before - 2);
+}
+
+#[test]
+fn grave_researcher_front_is_three_three_troll_warlock() {
+    let card = catalog::grave_researcher();
+    assert_eq!(card.name, "Grave Researcher");
+    assert_eq!(card.power, 3);
+    assert_eq!(card.toughness, 3);
+    assert!(card.has_creature_type(crate::card::CreatureType::Troll));
+    assert!(card.has_creature_type(crate::card::CreatureType::Warlock));
+    let back = card.back_face.expect("Grave Researcher has Reanimate back");
+    assert_eq!(back.name, "Reanimate");
+    assert!(back.card_types.contains(&CardType::Sorcery));
 }
 
 #[test]

@@ -1432,13 +1432,31 @@ pub fn growth_curve() -> CardDefinition {
 
 /// Killian's Confidence — {W}{B} Sorcery.
 /// "Target creature gets +1/+1 until end of turn. Draw a card."
+/// "Whenever one or more creatures you control deal combat damage to a
+/// player, you may pay {W/B}. If you do, return this card from your
+/// graveyard to your hand."
 ///
-/// Approximation: the recursion clause ("Whenever one or more creatures
-/// you control deal combat damage to a player, you may pay {W/B}: return
-/// this card from your graveyard to your hand") is omitted. The body
-/// (pump + draw) is wired faithfully so the card carries its full mainline
-/// effect.
+/// Mainline pump+draw + the gy-recursion trigger are now both wired:
+/// - Pump+draw via `Effect::PumpPT` + `Effect::Draw`.
+/// - The "creatures you control deal combat damage to a player" trigger
+///   uses `EventScope::FromYourGraveyard` (so it only fires while
+///   Killian's Confidence sits in its owner's graveyard) +
+///   `EventKind::DealsCombatDamageToPlayer`. The combat-damage event
+///   broadcaster (`fire_combat_damage_to_player_triggers`) walks the
+///   attacker's controller's graveyard for `FromYourGraveyard`-scoped
+///   triggers, so the card's owner's own attacking creature dealing
+///   combat damage fires this trigger. The pay-{W/B}-to-return body is
+///   wired via `Effect::MayPay` with a hybrid `{W/B}` cost; declining
+///   skips silently. Per-card emission means the trigger fires once per
+///   attacker that connects (printed: "one or more creatures" — close
+///   enough; the controller can decline the second+ trigger).
 pub fn killians_confidence() -> CardDefinition {
+    use crate::card::{EventKind, EventScope, EventSpec, TriggeredAbility};
+    use crate::effect::ZoneDest;
+    use crate::mana::{ManaCost, ManaSymbol};
+    let recursion_cost = ManaCost {
+        symbols: vec![ManaSymbol::Hybrid(Color::White, Color::Black)],
+    };
     CardDefinition {
         name: "Killian's Confidence",
         cost: cost(&[w(), b()]),
@@ -1461,7 +1479,21 @@ pub fn killians_confidence() -> CardDefinition {
             },
         ]),
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::DealsCombatDamageToPlayer,
+                EventScope::FromYourGraveyard,
+            ),
+            effect: Effect::MayPay {
+                description:
+                    "Killian's Confidence: pay {W/B} to return from graveyard to hand?".into(),
+                mana_cost: recursion_cost,
+                body: Box::new(Effect::Move {
+                    what: Selector::This,
+                    to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::This))),
+                }),
+            },
+        }],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
