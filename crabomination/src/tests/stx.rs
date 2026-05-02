@@ -4,6 +4,7 @@
 
 use crate::card::{CounterType, Keyword};
 use crate::catalog;
+use crate::decision::{DecisionAnswer, ScriptedDecider};
 use crate::game::*;
 use crate::mana::Color;
 use crate::player::Player;
@@ -1056,4 +1057,488 @@ fn reduce_to_memory_exiles_creature_and_owner_gets_inkling() {
         c.controller == 1 && c.is_token && c.definition.name == "Inkling"
     });
     assert!(inkling.is_some(), "opponent should have an Inkling token");
+}
+
+// ── Push XX additions: STX 2021 expansion ──────────────────────────────────
+
+#[test]
+fn pillardrop_warden_is_two_three_etb_scry() {
+    let p = catalog::pillardrop_warden();
+    assert_eq!(p.power, 2);
+    assert_eq!(p.toughness, 3);
+    assert!(p.subtypes.creature_types.contains(&crate::card::CreatureType::Spirit));
+    assert!(p.subtypes.creature_types.contains(&crate::card::CreatureType::Cleric));
+    // Has an ETB triggered ability (the Scry 1).
+    assert_eq!(p.triggered_abilities.len(), 1);
+}
+
+#[test]
+fn beaming_defiance_pumps_and_grants_hexproof() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    let id = g.add_card_to_hand(0, catalog::beaming_defiance());
+
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)), mode: None, x_value: None,
+    })
+    .expect("Beaming Defiance castable for {1}{W}");
+    drain_stack(&mut g);
+
+    let b = g.battlefield_find(bear).unwrap();
+    assert_eq!(b.power(), 3);
+    assert_eq!(b.toughness(), 3);
+    assert!(b.has_keyword(&Keyword::Hexproof));
+}
+
+#[test]
+fn ageless_guardian_is_zero_four_defender_vigilance_spirit_wall() {
+    let a = catalog::ageless_guardian();
+    assert_eq!(a.power, 0);
+    assert_eq!(a.toughness, 4);
+    assert!(a.keywords.contains(&Keyword::Defender));
+    assert!(a.keywords.contains(&Keyword::Vigilance));
+    assert!(a.subtypes.creature_types.contains(&crate::card::CreatureType::Wall));
+}
+
+#[test]
+fn expel_only_targets_attacker_or_blocker() {
+    use crate::card::SelectionRequirement as R;
+    use crate::effect::Selector;
+    let e = catalog::expel();
+    // Filter must require IsAttacking or IsBlocking.
+    if let Effect::Exile { what: Selector::TargetFiltered { filter, .. } } = &e.effect {
+        // Walk the filter tree: must contain Creature AND (IsAttacking OR IsBlocking).
+        fn has_combat_filter(req: &R) -> bool {
+            match req {
+                R::And(a, b) | R::Or(a, b) => has_combat_filter(a) || has_combat_filter(b),
+                R::IsAttacking | R::IsBlocking => true,
+                _ => false,
+            }
+        }
+        assert!(has_combat_filter(filter), "expel must restrict to combat creatures");
+    } else {
+        panic!("Expel effect is not a TargetFiltered Exile: {:?}", e.effect);
+    }
+}
+
+#[test]
+fn eureka_moment_untaps_land_and_draws_two() {
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(0, catalog::island());
+    // Tap the land first.
+    g.battlefield_find_mut(land).unwrap().tapped = true;
+    // Seed library so draw 2 has cards.
+    for _ in 0..2 { g.add_card_to_library(0, catalog::island()); }
+    let id = g.add_card_to_hand(0, catalog::eureka_moment());
+    let hand_before = g.players[0].hand.len();
+
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(land)), mode: None, x_value: None,
+    })
+    .expect("Eureka Moment castable for {2}{U}");
+    drain_stack(&mut g);
+
+    assert!(!g.battlefield_find(land).unwrap().tapped, "target land should be untapped");
+    // Hand: -1 (cast) +2 (draw) = +1 net.
+    assert_eq!(g.players[0].hand.len(), hand_before - 1 + 2);
+}
+
+#[test]
+fn curate_surveils_two_then_draws_one() {
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
+    let id = g.add_card_to_hand(0, catalog::curate());
+    let hand_before = g.players[0].hand.len();
+    let lib_before = g.players[0].library.len();
+
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Curate castable for {1}{U}");
+    drain_stack(&mut g);
+
+    // Hand: -1 (cast) +1 (draw). Surveil keeps cards on top by default
+    // (AutoDecider answers "no" to put-on-graveyard).
+    assert_eq!(g.players[0].hand.len(), hand_before);
+    // Library: at most -1 (the draw).
+    assert!(g.players[0].library.len() >= lib_before - 1);
+    // Library should have shrunk by 1 in the keep-all-on-top branch.
+    assert_eq!(g.players[0].library.len(), lib_before - 1);
+}
+
+#[test]
+fn necrotic_fumes_sacrifices_and_exiles() {
+    let mut g = two_player_game();
+    let my_bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(my_bear);
+    let opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(opp_bear);
+    let id = g.add_card_to_hand(0, catalog::necrotic_fumes());
+
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(opp_bear)), mode: None, x_value: None,
+    })
+    .expect("Necrotic Fumes castable for {1}{B}{B}");
+    drain_stack(&mut g);
+
+    // My bear was sacrificed (graveyard), opp bear was exiled.
+    assert!(g.battlefield_find(my_bear).is_none(), "my creature sacrificed");
+    assert!(g.battlefield_find(opp_bear).is_none(), "target exiled");
+}
+
+#[test]
+fn bookwurm_etb_gains_four_life_and_draws() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let id = g.add_card_to_hand(0, catalog::bookwurm());
+    let life_before = g.players[0].life;
+    let hand_before = g.players[0].hand.len();
+
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Bookwurm castable for {3}{G}{G}");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[0].life, life_before + 4);
+    // Hand: -1 (cast) +1 (draw) = 0 net.
+    assert_eq!(g.players[0].hand.len(), hand_before);
+    // Bookwurm hits the battlefield.
+    let wurm = g.battlefield.iter()
+        .find(|c| c.controller == 0 && c.definition.name == "Bookwurm")
+        .expect("Bookwurm in play");
+    assert_eq!(wurm.power(), 4);
+    assert_eq!(wurm.toughness(), 5);
+}
+
+#[test]
+fn spined_karok_is_four_five_vanilla_beast() {
+    let s = catalog::spined_karok();
+    assert_eq!(s.power, 4);
+    assert_eq!(s.toughness, 5);
+    assert!(s.keywords.is_empty());
+    assert_eq!(s.triggered_abilities.len(), 0);
+    assert!(s.subtypes.creature_types.contains(&crate::card::CreatureType::Beast));
+}
+
+#[test]
+fn quandrix_cultivator_etb_searches_two_basic_lands() {
+    let mut g = two_player_game();
+    // Seed library with two basics; the AutoDecider on SearchLibrary
+    // returns `Search(None)`, so we script two `Search(Some(land))` answers.
+    let isle = g.add_card_to_library(0, catalog::island());
+    let forest = g.add_card_to_library(0, catalog::forest());
+    g.add_card_to_library(0, catalog::lightning_bolt());
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Search(Some(isle)),
+        DecisionAnswer::Search(Some(forest)),
+    ]));
+    let id = g.add_card_to_hand(0, catalog::quandrix_cultivator());
+    let bf_lands_before = g.battlefield.iter()
+        .filter(|c| c.controller == 0 && c.definition.is_land())
+        .count();
+
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Quandrix Cultivator castable for {3}{G}{U}");
+    drain_stack(&mut g);
+
+    let bf_lands_after = g.battlefield.iter()
+        .filter(|c| c.controller == 0 && c.definition.is_land())
+        .count();
+    assert_eq!(bf_lands_after, bf_lands_before + 2,
+        "two basic lands should enter the battlefield tapped");
+}
+
+#[test]
+fn thrilling_discovery_discards_gains_life_and_draws_two() {
+    let mut g = two_player_game();
+    let _filler = g.add_card_to_hand(0, catalog::island()); // discardable
+    for _ in 0..2 { g.add_card_to_library(0, catalog::island()); }
+    let id = g.add_card_to_hand(0, catalog::thrilling_discovery());
+    let life_before = g.players[0].life;
+    let hand_before = g.players[0].hand.len();
+
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Thrilling Discovery castable for {1}{U}{R}");
+    drain_stack(&mut g);
+
+    // Hand: -1 (cast) -1 (discard) +2 (draw) = 0 net.
+    assert_eq!(g.players[0].hand.len(), hand_before);
+    assert_eq!(g.players[0].life, life_before + 2);
+}
+
+#[test]
+fn reckless_amplimancer_etb_adds_counters_per_permanent() {
+    let mut g = two_player_game();
+    let _l1 = g.add_card_to_battlefield(0, catalog::forest());
+    let _l2 = g.add_card_to_battlefield(0, catalog::forest());
+    let _l3 = g.add_card_to_battlefield(0, catalog::forest());
+    let id = g.add_card_to_hand(0, catalog::reckless_amplimancer());
+
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Reckless Amplimancer castable for {2}{G}");
+    drain_stack(&mut g);
+
+    // The Amplimancer enters with N +1/+1 counters, where N = permanents
+    // controlled (lands are permanents). Each Forest counts; the
+    // Amplimancer itself is also a permanent. Should have ≥ 3 counters.
+    let amp = g.battlefield.iter()
+        .find(|c| c.controller == 0 && c.definition.name == "Reckless Amplimancer")
+        .expect("Amplimancer in play");
+    let counters = amp.counter_count(CounterType::PlusOnePlusOne);
+    assert!(counters >= 3, "Amplimancer should have ≥3 +1/+1 counters, got {}", counters);
+}
+
+#[test]
+fn specter_of_the_fens_is_three_three_flying_with_pest_etb() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::specter_of_the_fens());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(2);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Specter of the Fens castable for {2}{B}{B}");
+    drain_stack(&mut g);
+
+    let pest = g.battlefield.iter().find(|c| c.is_token && c.definition.name == "Pest");
+    assert!(pest.is_some(), "ETB should mint a Pest token");
+    let s = g.battlefield.iter()
+        .find(|c| c.controller == 0 && c.definition.name == "Specter of the Fens")
+        .expect("Specter in play");
+    assert!(s.has_keyword(&Keyword::Flying));
+    assert_eq!(s.power(), 3);
+    assert_eq!(s.toughness(), 3);
+}
+
+#[test]
+fn ardent_dustspeaker_exiles_grave_card_at_begin_combat() {
+    let mut g = two_player_game();
+    let speaker = g.add_card_to_battlefield(0, catalog::ardent_dustspeaker());
+    g.clear_sickness(speaker);
+    g.add_card_to_graveyard(1, catalog::lightning_bolt());
+    let gy_target_id = g.players[1].graveyard.first().unwrap().id;
+
+    // Same approach as Startled Relic Sloth's combat-begin trigger test:
+    // set the step explicitly, then fire the begin-combat triggers.
+    g.step = TurnStep::BeginCombat;
+    g.fire_step_triggers(TurnStep::BeginCombat);
+    drain_stack(&mut g);
+
+    let in_gy_after = g.players[1].graveyard.iter().any(|c| c.id == gy_target_id);
+    let in_exile_after = g.exile.iter().any(|c| c.id == gy_target_id);
+    assert!(in_exile_after || !in_gy_after,
+        "Ardent Dustspeaker should exile the graveyard card at begin combat");
+}
+
+#[test]
+fn skyswimmer_koi_activated_pump_grows_body() {
+    let mut g = two_player_game();
+    let koi = g.add_card_to_battlefield(0, catalog::skyswimmer_koi());
+    g.clear_sickness(koi);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(4);
+
+    let p_before = g.battlefield_find(koi).unwrap().power();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: koi, ability_index: 0, target: None,
+    })
+    .expect("Skyswimmer Koi {4}{U} pump activatable");
+    drain_stack(&mut g);
+
+    let p_after = g.battlefield_find(koi).unwrap().power();
+    assert_eq!(p_after, p_before + 1);
+}
+
+#[test]
+fn field_trip_searches_forest_and_scrys() {
+    let mut g = two_player_game();
+    let forest = g.add_card_to_library(0, catalog::forest());
+    g.add_card_to_library(0, catalog::island());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(forest))]));
+    let id = g.add_card_to_hand(0, catalog::field_trip());
+    let bf_lands_before = g.battlefield.iter()
+        .filter(|c| c.controller == 0 && c.definition.is_land())
+        .count();
+
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Field Trip castable for {2}{G}");
+    drain_stack(&mut g);
+
+    let bf_lands_after = g.battlefield.iter()
+        .filter(|c| c.controller == 0 && c.definition.is_land())
+        .count();
+    assert_eq!(bf_lands_after, bf_lands_before + 1, "Forest enters tapped");
+}
+
+// ── Beledros Witherbloom (push XX promotion) ───────────────────────────────
+
+#[test]
+fn beledros_witherbloom_pay_10_life_untaps_each_land() {
+    let mut g = two_player_game();
+    let bele = g.add_card_to_battlefield(0, catalog::beledros_witherbloom());
+    g.clear_sickness(bele);
+    // Put three lands in play and tap them.
+    let l1 = g.add_card_to_battlefield(0, catalog::forest());
+    let l2 = g.add_card_to_battlefield(0, catalog::forest());
+    let l3 = g.add_card_to_battlefield(0, catalog::island());
+    for &l in &[l1, l2, l3] {
+        g.battlefield_find_mut(l).unwrap().tapped = true;
+    }
+    let life_before = g.players[0].life;
+
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: bele, ability_index: 0, target: None,
+    })
+    .expect("Beledros's Pay-10-life mass-untap activatable at sorcery speed");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[0].life, life_before - 10, "10 life paid");
+    for &l in &[l1, l2, l3] {
+        assert!(!g.battlefield_find(l).unwrap().tapped, "land {:?} should be untapped", l);
+    }
+}
+
+#[test]
+fn beledros_withers_when_life_below_ten() {
+    let mut g = two_player_game();
+    let bele = g.add_card_to_battlefield(0, catalog::beledros_witherbloom());
+    g.clear_sickness(bele);
+    g.players[0].life = 9;
+
+    let result = g.perform_action(GameAction::ActivateAbility {
+        card_id: bele, ability_index: 0, target: None,
+    });
+    assert!(result.is_err(), "activation should be rejected at 9 life");
+    assert_eq!(g.players[0].life, 9, "no life paid on rejection");
+}
+
+// ── Vanishing Verse promotion via Monocolored predicate ───────────────────
+
+#[test]
+fn vanishing_verse_targets_monocolored_only() {
+    use crate::card::SelectionRequirement as R;
+    use crate::effect::Selector;
+    let v = catalog::vanishing_verse();
+    if let Effect::Exile { what: Selector::TargetFiltered { filter, .. } } = &v.effect {
+        fn has_monocolored(req: &R) -> bool {
+            match req {
+                R::And(a, b) | R::Or(a, b) => has_monocolored(a) || has_monocolored(b),
+                R::Monocolored => true,
+                _ => false,
+            }
+        }
+        assert!(has_monocolored(filter), "Vanishing Verse must filter on Monocolored");
+    } else {
+        panic!("Vanishing Verse effect is not a TargetFiltered Exile: {:?}", v.effect);
+    }
+}
+
+#[test]
+fn stonebinders_familiar_grows_on_creature_death() {
+    let mut g = two_player_game();
+    let fam = g.add_card_to_battlefield(0, catalog::stonebinders_familiar());
+    g.clear_sickness(fam);
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    // Kill the bear by destroy effect.
+    let bolt_id = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt_id, target: Some(Target::Permanent(bear)), mode: None, x_value: None,
+    })
+    .expect("Bolt castable for {R}");
+    drain_stack(&mut g);
+
+    let counters = g.battlefield_find(fam).unwrap()
+        .counter_count(CounterType::PlusOnePlusOne);
+    assert!(counters >= 1, "Familiar gains a counter when a creature dies");
+}
+
+#[test]
+fn quintorius_etb_exiles_grave_card_and_creates_spirit() {
+    let mut g = two_player_game();
+    g.add_card_to_graveyard(1, catalog::lightning_bolt());
+    let id = g.add_card_to_hand(0, catalog::quintorius_field_historian());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let bolt_id = g.players[1].graveyard[0].id;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bolt_id)), mode: None, x_value: None,
+    })
+    .expect("Quintorius castable for {2}{R}{W}");
+    drain_stack(&mut g);
+    // Spirit token should be present.
+    let spirit = g.battlefield.iter()
+        .find(|c| c.is_token && c.definition.name == "Spirit" && c.controller == 0);
+    assert!(spirit.is_some(), "ETB should create a 3/2 Spirit token");
+    let s = spirit.unwrap();
+    assert_eq!(s.power(), 3);
+    assert_eq!(s.toughness(), 2);
+}
+
+#[test]
+fn dragons_approach_deals_three_damage_to_any_target() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::dragons_approach());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    let life_before = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Player(1)), mode: None, x_value: None,
+    })
+    .expect("Dragon's Approach castable for {1}{R}");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[1].life, life_before - 3);
+}
+
+#[test]
+fn vanishing_verse_exiles_monocolored_creature() {
+    let mut g = two_player_game();
+    // Grizzly Bears = mono-green (cost {1}{G}). Should be a valid target.
+    let target = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::vanishing_verse());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(target)), mode: None, x_value: None,
+    })
+    .expect("Vanishing Verse castable for {W}{B} on a mono-G Bear");
+    drain_stack(&mut g);
+
+    assert!(g.battlefield_find(target).is_none(), "mono-color target exiled");
 }

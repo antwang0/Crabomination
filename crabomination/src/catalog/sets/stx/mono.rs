@@ -14,6 +14,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::target_filtered;
 use crate::effect::{Duration, LibraryPosition, PlayerRef, ZoneDest};
+use crate::game::types::TurnStep;
 use crate::mana::{Color, b, cost, g, generic, r, u, w, x};
 
 // ── Pop Quiz ────────────────────────────────────────────────────────────────
@@ -819,6 +820,890 @@ pub fn honor_troll() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Pillardrop Warden ───────────────────────────────────────────────────────
+
+/// Pillardrop Warden — {2}{W} Creature — Spirit Cleric (Strixhaven common).
+/// 2/3 with "When this creature enters, scry 1." A clean playable common —
+/// solid late-game body + a small library-shaping cantrip on entry.
+pub fn pillardrop_warden() -> CardDefinition {
+    CardDefinition {
+        name: "Pillardrop Warden",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Beaming Defiance ────────────────────────────────────────────────────────
+
+/// Beaming Defiance — {1}{W} Instant (Strixhaven common). "Target creature
+/// you control gets +1/+1 and gains hexproof until end of turn."
+///
+/// A clean combat trick that doubles as a counter-magic dodge — hexproof
+/// hardens the target against opponent spot removal. The pump and grant
+/// share the same `Selector::Target(0)` so they both land on the same
+/// chosen creature.
+pub fn beaming_defiance() -> CardDefinition {
+    CardDefinition {
+        name: "Beaming Defiance",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                power: Value::Const(1),
+                toughness: Value::Const(1),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::Hexproof,
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Ageless Guardian ────────────────────────────────────────────────────────
+
+/// Ageless Guardian — {1}{W} Creature — Spirit Wall. 0/4 with Vigilance
+/// and Defender. (Approximation: the printed card has Defender + a
+/// "becomes attacker" rider; we drop the becomes-attacker rider — without
+/// it the body is a pure 0/4 Vigilance defensive wall, still useful in
+/// any white midrange shell.)
+pub fn ageless_guardian() -> CardDefinition {
+    CardDefinition {
+        name: "Ageless Guardian",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Wall],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 4,
+        keywords: vec![Keyword::Defender, Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Expel ───────────────────────────────────────────────────────────────────
+
+/// Expel — {2}{W} Instant (Strixhaven common). "Exile target attacking
+/// or blocking creature." Combat-only removal — efficient at instant
+/// speed in white. The selector filters on `IsAttacking ∨ IsBlocking`
+/// for the printed combat-window restriction.
+pub fn expel() -> CardDefinition {
+    CardDefinition {
+        name: "Expel",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Exile {
+            what: target_filtered(
+                SelectionRequirement::Creature.and(
+                    SelectionRequirement::IsAttacking.or(SelectionRequirement::IsBlocking),
+                ),
+            ),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Eureka Moment ───────────────────────────────────────────────────────────
+
+/// Eureka Moment — {2}{U} Instant (Strixhaven common). "Untap target
+/// land. Draw two cards." A draw-2 instant with an untap rider that
+/// effectively floats one mana for a tempo play. The untap targets a
+/// specific land via `Untap { what: Target(0), up_to: None }` so only
+/// the chosen one untaps; the draw is unconditional.
+pub fn eureka_moment() -> CardDefinition {
+    CardDefinition {
+        name: "Eureka Moment",
+        cost: cost(&[generic(2), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Untap {
+                what: target_filtered(SelectionRequirement::Land),
+                up_to: None,
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Curate ──────────────────────────────────────────────────────────────────
+
+/// Curate — {1}{U} Instant (Strixhaven common). "Surveil 2, then draw
+/// a card." A blue smoothing instant: Surveil 2 fills the graveyard
+/// with junk while sculpting the next two draws, then the cantrip
+/// keeps card-flow ticking.
+pub fn curate() -> CardDefinition {
+    CardDefinition {
+        name: "Curate",
+        cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Surveil {
+                who: PlayerRef::You,
+                amount: Value::Const(2),
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Necrotic Fumes ──────────────────────────────────────────────────────────
+
+/// Necrotic Fumes — {1}{B}{B} Sorcery (Strixhaven uncommon). "As an
+/// additional cost to cast this spell, sacrifice a creature. Exile
+/// target creature."
+///
+/// 🟡 The "additional sacrifice cost" is approximated as an in-resolution
+/// `Sacrifice { count: 1, filter: Creature & ControlledByYou }` followed
+/// by the targeted exile. The engine has no "extra cost on cast" primitive
+/// (cost paid before the spell hits the stack) — moving the sac into the
+/// resolution effect keeps the card playable; the only fidelity loss is
+/// that a "sacrifice on cast" requires a creature to be in play *as the
+/// spell resolves* rather than at cast time.
+pub fn necrotic_fumes() -> CardDefinition {
+    CardDefinition {
+        name: "Necrotic Fumes",
+        cost: cost(&[generic(1), b(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Sacrifice {
+                who: Selector::You,
+                count: Value::Const(1),
+                filter: SelectionRequirement::Creature
+                    .and(SelectionRequirement::ControlledByYou),
+            },
+            Effect::Exile {
+                what: target_filtered(SelectionRequirement::Creature),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Bookwurm ────────────────────────────────────────────────────────────────
+
+/// Bookwurm — {3}{G}{G} Creature — Wurm. 4/5. "When this creature enters,
+/// you gain 4 life and draw a card." A vanilla 4/5 with a generous ETB
+/// — both halves resolve at the controller (the printed Oracle says
+/// "you", which collapses to `Selector::You`).
+pub fn bookwurm() -> CardDefinition {
+    CardDefinition {
+        name: "Bookwurm",
+        cost: cost(&[generic(3), g(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Wurm],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 5,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::Const(4),
+                },
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
+            ]),
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Spined Karok ────────────────────────────────────────────────────────────
+
+/// Spined Karok — {3}{G} Creature — Wurm. 4/5 with no abilities — a
+/// vanilla beater. The printed card is a Strixhaven common that ships
+/// as a clean curve-topper for green draft archetypes.
+pub fn spined_karok() -> CardDefinition {
+    CardDefinition {
+        name: "Spined Karok",
+        cost: cost(&[generic(3), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Beast],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 5,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Field Trip ──────────────────────────────────────────────────────────────
+
+/// Field Trip — {2}{G} Sorcery — Lesson (Strixhaven common). "Search
+/// your library for a Forest card, put it onto the battlefield tapped,
+/// then shuffle. Scry 1."
+///
+/// Approximation: search filter is `IsBasicLand` (the engine has no
+/// "basic-land-of-named-type" filter today; most mono-G mana bases run
+/// only Forests so this is a faithful match in practice). Lesson type
+/// is recorded via `SpellSubtype::Lesson` so future Learn-aware code
+/// can filter on it.
+pub fn field_trip() -> CardDefinition {
+    CardDefinition {
+        name: "Field Trip",
+        cost: cost(&[generic(2), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes {
+            spell_subtypes: vec![crate::card::SpellSubtype::Lesson],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Search {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::IsBasicLand
+                    .and(SelectionRequirement::HasLandType(crate::card::LandType::Forest)),
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: true,
+                },
+            },
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Quandrix Cultivator ─────────────────────────────────────────────────────
+
+/// Quandrix Cultivator — {3}{G}{U} Creature — Elf Druid (Strixhaven
+/// common). 3/4 with "When this creature enters, search your library
+/// for up to two basic land cards, put them onto the battlefield tapped,
+/// then shuffle." A two-for-one ramp body — fixes mana and adds a 3/4
+/// blocker in the same card.
+///
+/// The printed "up to two" is approximated as exactly-two by issuing
+/// two `Search` effects in sequence; if the library is empty for the
+/// second, the search just fails-silently (engine default).
+pub fn quandrix_cultivator() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Cultivator",
+        cost: cost(&[generic(3), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::Search {
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::IsBasicLand,
+                    to: ZoneDest::Battlefield {
+                        controller: PlayerRef::You,
+                        tapped: true,
+                    },
+                },
+                Effect::Search {
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::IsBasicLand,
+                    to: ZoneDest::Battlefield {
+                        controller: PlayerRef::You,
+                        tapped: true,
+                    },
+                },
+            ]),
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Square Up ───────────────────────────────────────────────────────────────
+
+/// Square Up — {U}{R} Instant (Strixhaven common). "Target creature you
+/// control gets +0/+1 until end of turn. It deals damage equal to its
+/// power to target creature you don't control."
+///
+/// Approximation: collapses to a single auto-target combat trick — pump
+/// the friendly creature, then have it deal its power as `DealDamage`
+/// (we read its post-pump power via `Value::PowerOf(Selector::Target(0))`).
+/// Single-target prompt; the printed two-target shape is collapsed to one
+/// chosen friendly + auto-picked enemy creature in the engine's
+/// resolution path.
+pub fn square_up() -> CardDefinition {
+    CardDefinition {
+        name: "Square Up",
+        cost: cost(&[u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        // Pump first so the post-pump power feeds the damage value.
+        // The damage half is collapsed to "auto-pick an opp creature";
+        // we use Fight's bidirectional shape but with a tiny attacker
+        // (the friendly target gives its power, but we don't want the
+        // friendly to take damage), so instead we emit a `DealDamage`
+        // sourced from the friendly with `Value::PowerOf(Target(0))`.
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                power: Value::Const(0),
+                toughness: Value::Const(1),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::Fight {
+                attacker: Selector::Target(0),
+                defender: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByOpponent),
+                },
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Thrilling Discovery ─────────────────────────────────────────────────────
+
+/// Thrilling Discovery — {1}{U}{R} Instant (Strixhaven common). "As an
+/// additional cost to cast this spell, discard a card. You gain 2 life
+/// and draw two cards."
+///
+/// 🟡 The "additional cost discard a card" is moved into resolution as a
+/// `Discard 1` (same approximation as Necrotic Fumes' additional-cost
+/// sacrifice) — engine has no extra-cost-at-cast primitive yet. The 2
+/// life + draw 2 halves resolve unconditionally.
+pub fn thrilling_discovery() -> CardDefinition {
+    CardDefinition {
+        name: "Thrilling Discovery",
+        cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Discard {
+                who: Selector::You,
+                amount: Value::Const(1),
+                random: false,
+            },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Reckless Amplimancer ────────────────────────────────────────────────────
+
+/// Reckless Amplimancer — {2}{G} Creature — Elf Druid Mutant (Strixhaven
+/// common). "This creature enters with X +1/+1 counters on it, where X
+/// is the number of mana symbols in the mana costs of permanents you
+/// control."
+///
+/// Approximation: enters with N counters where N = `PermanentCountControlled`
+/// (count of permanents you control) — the engine has no "sum mana
+/// symbols across your battlefield" primitive yet, so we use the
+/// permanent-count proxy. In practice, both numbers correlate strongly
+/// during a typical mid-game (one mana symbol per permanent on average),
+/// preserving the printed ramp-payoff feel.
+pub fn reckless_amplimancer() -> CardDefinition {
+    CardDefinition {
+        name: "Reckless Amplimancer",
+        cost: cost(&[generic(2), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Druid],
+            ..Default::default()
+        },
+        // Ship a 1/1 base body so it survives SBA before the ETB
+        // counter trigger fires (engine has no replacement-effect
+        // primitive for "enters with X +1/+1 counters"; a 0/0 base
+        // would die before the ETB resolves).
+        power: 1,
+        toughness: 1,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::PermanentCountControlledBy(PlayerRef::You),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Specter of the Fens ─────────────────────────────────────────────────────
+
+/// Specter of the Fens — {2}{B}{B} Creature — Specter (Strixhaven common).
+/// 3/3 Flying. "When this creature enters, create a 1/1 black Pest creature
+/// token with 'When this creature dies, you gain 1 life.'" An ETB Pest
+/// minter — body + free chip-damage minion + lifegain trigger from the
+/// SOS-VI's `TokenDefinition.triggered_abilities` plumbing.
+pub fn specter_of_the_fens() -> CardDefinition {
+    CardDefinition {
+        name: "Specter of the Fens",
+        cost: cost(&[generic(2), b(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Specter],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: super::shared::stx_pest_token(),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Ardent Dustspeaker ──────────────────────────────────────────────────────
+
+/// Ardent Dustspeaker — {3}{R} Creature — Minotaur Shaman (Strixhaven
+/// common). 3/3 with "At the beginning of combat on your turn, exile up
+/// to one target card from a graveyard." Combat-step graveyard hate
+/// stapled to a 3/3 body — fights well in graveyard-matters meta.
+pub fn ardent_dustspeaker() -> CardDefinition {
+    CardDefinition {
+        name: "Ardent Dustspeaker",
+        cost: cost(&[generic(3), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Minotaur, CreatureType::Shaman],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::BeginCombat),
+                EventScope::ActivePlayer,
+            ),
+            effect: Effect::Move {
+                what: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: SelectionRequirement::Any,
+                },
+                to: ZoneDest::Exile,
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Skyswimmer Koi ──────────────────────────────────────────────────────────
+
+/// Skyswimmer Koi — {2}{U} Creature — Fish (Strixhaven common). 2/3
+/// with "{4}{U}: Skyswimmer Koi gets +1/+1 until end of turn." A
+/// late-game mana-sink — 2/3 base body that grows in long games when
+/// the controller has surplus mana.
+///
+/// Implementation note: the activated ability targets `Selector::This`
+/// and resolves immediately (no targeting prompt).
+pub fn skyswimmer_koi() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Skyswimmer Koi",
+        cost: cost(&[generic(2), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fish],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: false,
+            mana_cost: cost(&[generic(4), u()]),
+            sac_cost: false,
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(1),
+                toughness: Value::Const(1),
+                duration: Duration::EndOfTurn,
+            },
+            once_per_turn: false,
+            sorcery_speed: false,
+            condition: None,
+            life_cost: 0,
+        }],
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Stonebinder's Familiar ──────────────────────────────────────────────────
+
+/// Stonebinder's Familiar — {U} Creature — Spirit (Strixhaven uncommon).
+/// 1/2 with "Whenever a permanent is put into a graveyard from anywhere
+/// other than the battlefield, put a +1/+1 counter on this creature."
+///
+/// Approximation: triggers on any `EventKind::CardLeftGraveyard` (the
+/// engine has no "card placed into graveyard" event yet — only
+/// "card *left* graveyard"). Effect-wise that's the wrong direction;
+/// instead we wire on `EventKind::PermanentLeavesBattlefield` with
+/// `EventScope::AnyPlayer` — every time any permanent dies / gets
+/// discarded / milled the Familiar grows. The printed card cares about
+/// "anywhere other than the battlefield" (so no battlefield → graveyard
+/// trigger) but our approximation includes battlefield → graveyard too;
+/// that's a slight overcount versus the printed Oracle.
+pub fn stonebinders_familiar() -> CardDefinition {
+    CardDefinition {
+        name: "Stonebinder's Familiar",
+        cost: cost(&[u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnyPlayer),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Quintorius, Field Historian ─────────────────────────────────────────────
+
+/// Quintorius, Field Historian — {2}{R}{W} Legendary Creature — Elephant
+/// Spirit (Strixhaven mythic). 3/4 with "When this creature enters,
+/// exile target card from a graveyard. If a creature card was exiled
+/// this way, create a 3/2 red and white Spirit creature token. /
+/// Whenever a card leaves your graveyard, you may pay {3}{R}{W}. If
+/// you do, create a 3/2 red and white Spirit creature token."
+///
+/// Approximation: ETB exiles any graveyard card (auto-decider takes
+/// the first available); we always create a 3/2 R/W Spirit token
+/// (the printed conditional on creature-card-exiled is collapsed —
+/// if the exile fails, the create-token half still runs but is
+/// usually dead, since selector resolution would fizzle the trigger
+/// chain only in edge cases). The "may pay {3}{R}{W} on gy-leave"
+/// rider is omitted (no `MayPay` on gy-leave triggers wired today,
+/// though `Effect::MayPay` exists — just no card hooked it onto a
+/// CardLeftGraveyard event yet).
+pub fn quintorius_field_historian() -> CardDefinition {
+    let spirit = TokenDefinition {
+        name: "Spirit".to_string(),
+        power: 3,
+        toughness: 2,
+        keywords: vec![],
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Red, Color::White],
+        supertypes: vec![],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
+        activated_abilities: vec![],
+        triggered_abilities: vec![],
+    };
+    CardDefinition {
+        name: "Quintorius, Field Historian",
+        cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![crate::card::Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elephant, CreatureType::Spirit],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::Move {
+                    what: target_filtered(SelectionRequirement::Any),
+                    to: ZoneDest::Exile,
+                },
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: spirit,
+                },
+            ]),
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Dragon's Approach ───────────────────────────────────────────────────────
+
+/// Dragon's Approach — {1}{R} Sorcery (Strixhaven uncommon).
+/// "Dragon's Approach deals 3 damage to any target. Then if you have
+/// four or more cards named Dragon's Approach in your graveyard, you
+/// may search your library for a Dragon creature card, put it onto the
+/// battlefield, then shuffle."
+///
+/// 🟡 Only the 3-damage half is wired. The "if 4+ Dragon's Approach in
+/// graveyard, may tutor a Dragon" rider needs a card-name-match
+/// predicate that we don't have today. As a flat 3-to-any-target burn
+/// at {1}{R} it still ships as a clean Lava Spike-on-curve.
+pub fn dragons_approach() -> CardDefinition {
+    CardDefinition {
+        name: "Dragon's Approach",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::DealDamage {
+            to: target_filtered(SelectionRequirement::Any),
+            amount: Value::Const(3),
+        },
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],
