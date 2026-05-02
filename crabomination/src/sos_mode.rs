@@ -371,6 +371,7 @@ fn mono_color_pool(c: Color) -> Vec<CardFactory> {
             banishing_betrayal,
             chase_inspiration,
             divergent_equation,
+            emeritus_of_ideation,
             fractal_anomaly,
             fractalize,
             homesickness,

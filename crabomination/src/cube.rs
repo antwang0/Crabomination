@@ -429,6 +429,7 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         orysa_tide_choreographer,
         exhibition_tidecaller,
         // ── SOS push XI: Blue MDFCs ──
+        emeritus_of_ideation,
         encouraging_aviator,
         harmonized_trio,
         jadzi_steward_of_fate,

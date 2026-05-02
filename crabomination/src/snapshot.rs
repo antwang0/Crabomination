@@ -122,6 +122,14 @@ pub struct StackItemSnapshot {
     pub x_value: u32,
     pub converged_value: u32,
     pub uncounterable: bool,
+    /// Cast-face / cast-path the spell came from. Defaults to `Front`
+    /// for snapshot back-compat — older snapshots don't carry this
+    /// field and pre-existing flashback spells lose their face tag on
+    /// reload (which is fine — Antiquities-style "if cast from gy"
+    /// riders are rare and the game rebuilds the trigger queue
+    /// fresh).
+    #[serde(default)]
+    pub face: crate::game::types::CastFace,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -155,6 +163,7 @@ impl GameSnapshot {
                     x_value,
                     converged_value,
                     uncounterable,
+                    face,
                 } => Some(StackItemSnapshot {
                     card: card_snap(card),
                     caster: *caster,
@@ -163,6 +172,7 @@ impl GameSnapshot {
                     x_value: *x_value,
                     converged_value: *converged_value,
                     uncounterable: *uncounterable,
+                    face: *face,
                 }),
                 StackItem::Trigger { .. } => {
                     dropped_triggers += 1;
@@ -299,6 +309,7 @@ impl GameSnapshot {
                 x_value: s.x_value,
                 converged_value: s.converged_value,
                 uncounterable: s.uncounterable,
+                face: s.face,
             });
         }
         state.stack = restored_stack;
@@ -580,6 +591,7 @@ mod tests {
             x_value: 0,
             converged_value: 0,
             uncounterable: false,
+            face: crate::game::types::CastFace::Front,
         });
         g.stack.push(StackItem::Trigger {
             source: bolt_id,

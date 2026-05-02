@@ -294,7 +294,7 @@ pub fn practiced_offense() -> CardDefinition {
 /// snapshot on `StackItem` yet) — the flashback cast still mints the
 /// two Spirits but skips the bonus counter shower.
 pub fn antiquities_on_the_loose() -> CardDefinition {
-    use crate::card::Keyword;
+    use crate::card::{CounterType, Keyword, Predicate};
     use crate::mana::{ManaCost, ManaSymbol};
     let flashback_cost = ManaCost {
         symbols: vec![
@@ -312,11 +312,38 @@ pub fn antiquities_on_the_loose() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![Keyword::Flashback(flashback_cost)],
-        effect: Effect::CreateToken {
-            who: PlayerRef::You,
-            count: Value::Const(2),
-            definition: spirit_token(),
-        },
+        // Mainline: create two 2/2 R/W Spirit tokens. Then if the spell
+        // was cast from anywhere other than your hand (i.e. from the
+        // graveyard via flashback), put a +1/+1 counter on each Spirit
+        // you control. The cast-from-graveyard rider uses the new
+        // `Predicate::CastFromGraveyard` (push reading
+        // `EffectContext.cast_face`) — true iff the StackItem::Spell's
+        // face was `Flashback`.
+        effect: Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                definition: spirit_token(),
+            },
+            Effect::If {
+                cond: Predicate::CastFromGraveyard,
+                then: Box::new(Effect::ForEach {
+                    selector: Selector::EachPermanent(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::ControlledByYou)
+                            .and(SelectionRequirement::HasCreatureType(
+                                crate::card::CreatureType::Spirit,
+                            )),
+                    ),
+                    body: Box::new(Effect::AddCounter {
+                        what: Selector::TriggerSource,
+                        kind: CounterType::PlusOnePlusOne,
+                        amount: Value::Const(1),
+                    }),
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],

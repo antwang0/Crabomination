@@ -494,6 +494,7 @@ mod tests {
             x_value: 0,
             converged_value: 0,
             uncounterable: false,
+            face: crate::game::types::CastFace::Front,
         });
         g.stack.push(StackItem::Trigger {
             source: bolt_id,

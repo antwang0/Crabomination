@@ -594,6 +594,7 @@ impl GameState {
         let uncounterable = self.caster_grants_uncounterable(p, &card);
 
         let was_creature_spell = card.definition.is_creature();
+        let face = self.pending_cast_face;
         self.stack.push(StackItem::Spell {
             card: Box::new(card),
             caster: p,
@@ -602,6 +603,7 @@ impl GameState {
             x_value,
             converged_value,
             uncounterable,
+            face,
         });
         self.push_on_cast_triggers(card_id, p, on_cast_triggers);
         // SpellCast / YourControl triggers (Prowess, Magecraft, Repartee, …)
@@ -704,7 +706,13 @@ impl GameState {
                 face: CastFace::Flashback,
             },
         ];
+        // Stash the flashback face so `finalize_cast` can stamp it on
+        // the StackItem::Spell. Reset to Front afterwards so subsequent
+        // hand casts read correctly.
+        let prior_face = self.pending_cast_face;
+        self.pending_cast_face = CastFace::Flashback;
         self.finalize_cast(p, card, target, mode, x_value.unwrap_or(0), 0);
+        self.pending_cast_face = prior_face;
         Ok(events)
     }
 
@@ -964,6 +972,7 @@ impl GameState {
                     mode: 0,
                     x_value: 0,
                     converged_value: 0,
+                    cast_face: crate::game::types::CastFace::Front,
                 };
                 if !self.evaluate_predicate(&filter, &ctx) {
                     continue;
@@ -1240,6 +1249,7 @@ impl GameState {
                 mode: 0,
                 x_value: 0,
                 converged_value: 0,
+                cast_face: crate::game::types::CastFace::Front,
             };
             if !self.evaluate_predicate(cond, &ctx) {
                 return Err(GameError::AbilityConditionNotMet);

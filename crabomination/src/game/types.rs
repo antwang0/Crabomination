@@ -377,6 +377,14 @@ pub enum StackItem {
         /// (Cavern of Souls–style protection). `Effect::CounterSpell` skips
         /// these stack items.
         uncounterable: bool,
+        /// Cast-face / cast-path the spell came from (Front from hand,
+        /// Back-face MDFC, or Flashback from graveyard). Threaded into
+        /// `EffectContext.cast_face` at resolution time so
+        /// `Predicate::CastFromGraveyard` can gate Antiquities-style
+        /// "if cast from graveyard" riders. Defaults to `Front` for
+        /// snapshot back-compat via `#[serde(default)]`.
+        #[serde(default)]
+        face: crate::game::types::CastFace,
     },
     /// A triggered/loyalty ability waiting to resolve.
     Trigger {

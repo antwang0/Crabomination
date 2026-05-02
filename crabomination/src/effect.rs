@@ -331,6 +331,15 @@ pub enum Predicate {
     /// against the topmost matching `StackItem::Spell`'s `card.definition.
     /// mana_cost` via `ManaCost::has_x()`.
     CastSpellHasX,
+    /// True iff the resolving spell was cast from its controller's
+    /// graveyard (via Flashback). Reads from `EffectContext.cast_face`
+    /// — set to `CastFace::Flashback` when the stack resolver pulls a
+    /// flashback `StackItem::Spell`. Used by Antiquities on the Loose's
+    /// "Then if this spell was cast from anywhere other than your hand,
+    /// put a +1/+1 counter on each Spirit you control" rider. Returns
+    /// false in trigger / activated-ability contexts (those reset
+    /// `cast_face` to `Front`).
+    CastFromGraveyard,
 }
 
 // ── Duration ─────────────────────────────────────────────────────────────────

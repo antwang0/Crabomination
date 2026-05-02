@@ -33,6 +33,13 @@ pub struct EffectContext {
     /// (Pest Control, Prismatic Ending). Computed at cast time and
     /// threaded through `StackItem::Spell`.
     pub converged_value: u32,
+    /// For a resolving spell, the cast-face / cast-path that produced it
+    /// (Front from hand, Back-face MDFC, or Flashback from graveyard).
+    /// `Predicate::CastFromGraveyard` reads this to gate "if this spell
+    /// was cast from your graveyard / not from hand" riders (Antiquities
+    /// on the Loose, Plumb the Forbidden's flashback variants). Defaults
+    /// to `CastFace::Front` for non-spell contexts (triggers, abilities).
+    pub cast_face: crate::game::types::CastFace,
 }
 
 impl EffectContext {
@@ -45,6 +52,7 @@ impl EffectContext {
             mode,
             x_value,
             converged_value: 0,
+            cast_face: crate::game::types::CastFace::Front,
         }
     }
     pub fn for_spell_full(
@@ -62,6 +70,7 @@ impl EffectContext {
             mode,
             x_value,
             converged_value,
+            cast_face: crate::game::types::CastFace::Front,
         }
     }
     pub fn for_trigger(
@@ -78,6 +87,7 @@ impl EffectContext {
             mode,
             x_value: 0,
             converged_value: 0,
+            cast_face: crate::game::types::CastFace::Front,
         }
     }
     pub fn for_ability(
@@ -93,6 +103,7 @@ impl EffectContext {
             mode: 0,
             x_value: 0,
             converged_value: 0,
+            cast_face: crate::game::types::CastFace::Front,
         }
     }
 }
@@ -1820,6 +1831,9 @@ impl GameState {
                     }
                     _ => false,
                 })
+            }
+            Predicate::CastFromGraveyard => {
+                matches!(ctx.cast_face, crate::game::types::CastFace::Flashback)
             }
         }
     }

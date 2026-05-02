@@ -861,6 +861,7 @@ mod tests {
             x_value: 0,
             converged_value: 0,
             uncounterable: false,
+            face: crate::game::types::CastFace::Front,
         });
         // Bot 0 has Lightning Bolt (instant) in hand and a Mountain.
         let _bolt = g.add_card_to_hand(0, catalog::lightning_bolt());

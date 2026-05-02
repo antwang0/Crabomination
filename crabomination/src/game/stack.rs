@@ -258,6 +258,7 @@ impl GameState {
                 x_value,
                 converged_value,
                 uncounterable: _,
+                face,
             } => {
                 let card = *card;
                 let card_id = card.id;
@@ -367,7 +368,13 @@ impl GameState {
                     }
                 } else {
                     let chosen_mode = mode.unwrap_or(0);
-                    let mut spell_events = self.continue_spell_resolution(
+                    // Stamp the cast face from the StackItem onto the
+                    // resolving card via the kicked-flashback marker if
+                    // applicable. The Flashback face is the only one
+                    // that needs special routing on resolve (exile, not
+                    // graveyard); Back-face MDFCs always exile-or-not
+                    // based on their own keywords.
+                    let mut spell_events = self.continue_spell_resolution_with_face(
                         card,
                         caster,
                         target,
@@ -375,6 +382,7 @@ impl GameState {
                         x_value,
                         converged_value,
                         None,
+                        face,
                     )?;
                     events.append(&mut spell_events);
                     if self.pending_decision.is_some() {

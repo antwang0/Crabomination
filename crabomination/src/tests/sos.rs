@@ -5859,6 +5859,71 @@ fn antiquities_on_the_loose_has_flashback_keyword() {
     );
 }
 
+// Cast-from-hand: just two 2/2 Spirit tokens, no extra counters.
+#[test]
+fn antiquities_on_the_loose_hand_cast_no_counters() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::antiquities_on_the_loose());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    let bf_before = g.battlefield.len();
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Antiquities castable for {1}{W}{W}");
+    drain_stack(&mut g);
+
+    // Net: 2 new Spirit tokens.
+    assert_eq!(g.battlefield.len(), bf_before + 2);
+    let spirit_count = g
+        .battlefield
+        .iter()
+        .filter(|c| c.definition.name == "Spirit")
+        .count();
+    assert_eq!(spirit_count, 2);
+    // No +1/+1 counters on the Spirits (cast from hand → rider skipped).
+    for c in g.battlefield.iter().filter(|c| c.definition.name == "Spirit") {
+        assert_eq!(
+            c.counter_count(crate::card::CounterType::PlusOnePlusOne),
+            0,
+            "hand-cast should not add +1/+1 counters"
+        );
+    }
+}
+
+// Flashback cast: spell goes onto the stack with face = Flashback. The
+// `Predicate::CastFromGraveyard` rider fires and bumps each Spirit
+// you control with a +1/+1 counter.
+#[test]
+fn antiquities_on_the_loose_flashback_grants_counters_to_spirits() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_graveyard(0, catalog::antiquities_on_the_loose());
+    // Flashback cost {4}{W}{W}.
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(4);
+
+    g.perform_action(GameAction::CastFlashback {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Antiquities flashback castable for {4}{W}{W}");
+    drain_stack(&mut g);
+
+    // Two Spirit tokens minted; both should now carry a +1/+1 counter.
+    let spirits: Vec<_> = g
+        .battlefield
+        .iter()
+        .filter(|c| c.definition.name == "Spirit")
+        .collect();
+    assert_eq!(spirits.len(), 2);
+    for c in spirits {
+        assert!(
+            c.counter_count(crate::card::CounterType::PlusOnePlusOne) >= 1,
+            "flashback cast should bump each Spirit with +1/+1"
+        );
+    }
+}
+
 #[test]
 fn pursue_the_past_flashback_replays_loot() {
     let mut g = two_player_game();
@@ -7311,6 +7376,47 @@ fn aziza_mage_tower_captain_body_legendary_djinn_sorcerer() {
     assert!(card.supertypes.contains(&crate::card::Supertype::Legendary));
     assert!(card.has_creature_type(crate::card::CreatureType::Djinn));
     assert!(card.has_creature_type(crate::card::CreatureType::Sorcerer));
+}
+
+// Emeritus of Ideation // Ancestral Recall — front: 5/5 Human Wizard
+// with Ward(2). Back: instant — target player draws three.
+#[test]
+fn emeritus_of_ideation_front_is_five_five_with_ward() {
+    let card = catalog::emeritus_of_ideation();
+    assert_eq!(card.name, "Emeritus of Ideation");
+    assert_eq!(card.power, 5);
+    assert_eq!(card.toughness, 5);
+    assert!(card.has_creature_type(crate::card::CreatureType::Human));
+    assert!(card.has_creature_type(crate::card::CreatureType::Wizard));
+    assert!(
+        card.keywords.iter().any(|k| matches!(k, Keyword::Ward(2))),
+        "Front should carry Ward(2)"
+    );
+    let back = card.back_face.expect("Has Ancestral Recall back");
+    assert_eq!(back.name, "Ancestral Recall");
+}
+
+#[test]
+fn emeritus_of_ideation_back_draws_three_for_target() {
+    let mut g = two_player_game();
+    for _ in 0..5 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let id = g.add_card_to_hand(0, catalog::emeritus_of_ideation());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    let hand_before = g.players[0].hand.len();
+
+    g.perform_action(GameAction::CastSpellBack {
+        card_id: id,
+        target: Some(Target::Player(0)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Ancestral Recall castable for {U}");
+    drain_stack(&mut g);
+
+    // -1 cast (exiled) + 3 draw = +2 hand.
+    assert_eq!(g.players[0].hand.len(), hand_before - 1 + 3);
 }
 
 // Grave Researcher // Reanimate — front: 3/3 Troll Warlock, ETB Surveil 2.

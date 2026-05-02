@@ -771,6 +771,7 @@ impl GameState {
                     mode: 0,
                     x_value: 0,
                     converged_value: 0,
+                    cast_face: crate::game::types::CastFace::Front,
                 };
                 if !self.evaluate_predicate(&filter, &ctx) {
                     continue;
@@ -1339,10 +1340,45 @@ impl GameState {
         converged_value: u32,
         override_effect: Option<Effect>,
     ) -> Result<Vec<GameEvent>, GameError> {
+        // Default face = Front for the legacy single-face callers
+        // (flashback path infers from `card.kicked` for back-compat).
+        let inferred_face = if card.kicked
+            && card
+                .definition
+                .keywords
+                .iter()
+                .any(|k| matches!(k, crate::card::Keyword::Flashback(_)))
+        {
+            crate::game::types::CastFace::Flashback
+        } else {
+            crate::game::types::CastFace::Front
+        };
+        self.continue_spell_resolution_with_face(
+            card, caster, target, mode, x_value, converged_value, override_effect, inferred_face,
+        )
+    }
+
+    /// Same as `continue_spell_resolution` but with the cast face
+    /// explicitly threaded from the originating `StackItem::Spell`.
+    /// Used by the stack resolver so `EffectContext.cast_face` reflects
+    /// the actual cast path (Front / Back / Flashback) instead of
+    /// being re-derived heuristically.
+    pub(crate) fn continue_spell_resolution_with_face(
+        &mut self,
+        card: CardInstance,
+        caster: usize,
+        target: Option<Target>,
+        mode: usize,
+        x_value: u32,
+        converged_value: u32,
+        override_effect: Option<Effect>,
+        face: crate::game::types::CastFace,
+    ) -> Result<Vec<GameEvent>, GameError> {
         let effect = override_effect.unwrap_or_else(|| card.definition.effect.clone());
-        let ctx = EffectContext::for_spell_full(
+        let mut ctx = EffectContext::for_spell_full(
             caster, target.clone(), mode, x_value, converged_value,
         );
+        ctx.cast_face = face;
         let events = self.resolve_effect(&effect, &ctx)?;
         if let Some((decision, in_progress, remaining)) = self.suspend_signal.take() {
             self.pending_decision = Some(PendingDecision {

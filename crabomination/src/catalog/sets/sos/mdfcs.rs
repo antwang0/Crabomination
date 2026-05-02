@@ -353,6 +353,34 @@ pub fn harmonized_trio() -> CardDefinition {
     )
 }
 
+/// Emeritus of Ideation // Ancestral Recall — {3}{U}{U} // {U}.
+///
+/// Front: 5/5 Human Wizard with `Keyword::Ward(2)` (tagged for future
+/// enforcement, same as Inkshape Demonstrator). Back: instant —
+/// Ancestral Recall (target player draws three cards). Power Nine
+/// reprint as the back face; the engine has a faithful 3-card
+/// `Effect::Draw` already.
+pub fn emeritus_of_ideation() -> CardDefinition {
+    let back = spell_back(
+        "Ancestral Recall",
+        cost(&[u()]),
+        CardType::Instant,
+        Effect::Draw {
+            who: target_filtered(SelectionRequirement::Player),
+            amount: Value::Const(3),
+        },
+    );
+    vanilla_front(
+        "Emeritus of Ideation",
+        cost(&[generic(3), u(), u()]),
+        vec![CreatureType::Human, CreatureType::Wizard],
+        5,
+        5,
+        vec![Keyword::Ward(2)],
+        back,
+    )
+}
+
 // ── Black MDFCs ─────────────────────────────────────────────────────────────
 
 /// Cheerful Osteomancer // Raise Dead — {3}{B} // {B}.

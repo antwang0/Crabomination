@@ -3329,12 +3329,14 @@ pub fn practiced_scrollsmith() -> CardDefinition {
 /// opponent and you gain 3 life. / When this creature dies, discard
 /// any number of cards, then draw that many cards plus one."
 ///
-/// Approximation: ETB drain (3-to-each-opponent + gain 3) wired
-/// faithfully. The death trigger's "discard any number, draw that
-/// many plus one" is collapsed to a fixed **discard 1 + draw 2** —
-/// the engine has no "discard any number, track count, scale draw"
-/// primitive yet. Net play matches the most common usage (one card
-/// rotated for two fresh cards) within the printed power band.
+/// Both abilities wired faithfully. The death trigger's "discard any
+/// number, then draw that many plus one" uses
+/// `Value::CardsDiscardedThisResolution` (the per-resolution discard
+/// tally bumped by every `Effect::Discard` in the same `Seq`). Since
+/// the engine has no "choose any number" player prompt, "any number"
+/// is treated as the optimal greedy answer (discard the entire hand);
+/// the `+1` floor on the draw matches the printed wording even from an
+/// empty hand.
 pub fn colossus_of_the_blood_age() -> CardDefinition {
     use crate::mana::{r, w as wm};
     CardDefinition {
