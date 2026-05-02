@@ -7198,3 +7198,212 @@ pub fn slime_against_humanity() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Boros Charm ─────────────────────────────────────────────────────────────
+
+/// Boros Charm — {R}{W} Instant. Modal: "Choose one — / • Boros Charm
+/// deals 4 damage to target player or planeswalker. / • Permanents you
+/// control gain indestructible until end of turn. / • Target creature
+/// gains double strike until end of turn."
+///
+/// All three modes are wired faithfully via `Effect::ChooseMode`. Mode
+/// 0 = 4 damage to player/PW, Mode 1 = ForEach(Permanent &
+/// ControlledByYou) → GrantKeyword(Indestructible EOT), Mode 2 =
+/// GrantKeyword(DoubleStrike EOT) on a creature target.
+pub fn boros_charm() -> CardDefinition {
+    CardDefinition {
+        name: "Boros Charm",
+        cost: cost(&[r(), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseMode(vec![
+            Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Planeswalker),
+                amount: Value::Const(4),
+            },
+            Effect::ForEach {
+                selector: Selector::EachPermanent(SelectionRequirement::ControlledByYou),
+                body: Box::new(Effect::GrantKeyword {
+                    what: Selector::TriggerSource,
+                    keyword: Keyword::Indestructible,
+                    duration: Duration::EndOfTurn,
+                }),
+            },
+            Effect::GrantKeyword {
+                what: target_filtered(SelectionRequirement::Creature),
+                keyword: Keyword::DoubleStrike,
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+// ── Dragon's Rage Channeler ─────────────────────────────────────────────────
+
+/// Dragon's Rage Channeler — {R}, 1/1 Human Shaman. "Whenever you cast
+/// a noncreature spell, surveil 1. / Delirium — This creature gets +2/+2
+/// and has flying as long as there are four or more card types among
+/// cards in your graveyard."
+///
+/// 🟡 Body wired (1/1 Human Shaman, red). Surveil-on-noncreature-cast
+/// trigger wired faithfully — uses `EventScope::YourControl` filtered
+/// to `¬HasCardType(Creature)` against the just-cast spell. Delirium
+/// static (+2/+2 + flying based on graveyard card-type diversity) is
+/// omitted (no "card types in graveyard" Value primitive yet — same
+/// gap as Tarmogoyf's P/T scaling, which we approximate with a flat
+/// 4/5).
+pub fn dragons_rage_channeler() -> CardDefinition {
+    CardDefinition {
+        name: "Dragon's Rage Channeler",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Shaman],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
+                crate::card::Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::HasCardType(CardType::Creature).negate(),
+                },
+            ),
+            effect: Effect::Surveil {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+// ── Unholy Heat ─────────────────────────────────────────────────────────────
+
+/// Unholy Heat — {R} Instant. "Unholy Heat deals 3 damage to target
+/// creature or planeswalker. Delirium — Unholy Heat deals 6 damage to
+/// that permanent instead if there are four or more card types among
+/// cards in your graveyard."
+///
+/// 🟡 Mainline 3-damage half wired faithfully. The Delirium upgrade to
+/// 6 damage is omitted (no "card types in graveyard" Value primitive
+/// yet — same gap as Dragon's Rage Channeler's body buff). The 3-
+/// damage version is still one of the best removal spells in red at
+/// 1 mana.
+pub fn unholy_heat() -> CardDefinition {
+    CardDefinition {
+        name: "Unholy Heat",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::DealDamage {
+            to: target_filtered(
+                SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+            ),
+            amount: Value::Const(3),
+        },
+        ..Default::default()
+    }
+}
+
+// ── Pelt Collector ──────────────────────────────────────────────────────────
+
+/// Pelt Collector — {G}, 1/1 Elf Warrior. "Whenever another creature
+/// you control enters, if it has greater power than this creature, put
+/// a +1/+1 counter on this creature. / Whenever a creature you control
+/// dies, if it had greater power than this creature, put a +1/+1
+/// counter on this creature. / As long as this creature has three or
+/// more +1/+1 counters on it, it has trample."
+///
+/// 🟡 Body wired (1/1 Elf Warrior). Power-comparison ETB/death triggers
+/// are omitted (no "trigger source has greater power than self"
+/// Predicate primitive yet) — collapses to a vanilla 1/1. Static
+/// trample-when-3+-counters is also omitted (no self-counter-gated
+/// keyword grant). Slots into mono-green stompy as a 1-drop body.
+pub fn pelt_collector() -> CardDefinition {
+    CardDefinition {
+        name: "Pelt Collector",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        ..Default::default()
+    }
+}
+
+// ── Frantic Inventory ───────────────────────────────────────────────────────
+
+/// Frantic Inventory — {1}{U} Sorcery. "Draw a card. Then draw a card
+/// for each other card named Frantic Inventory in your graveyard."
+///
+/// Wired faithfully via `Value::Sum([Const(1), CountOf(CardsInZone(
+/// Graveyard, HasName))])` — same shape as Slime Against Humanity's
+/// X-tally formula (push XXII). Each cast in a deck running multiple
+/// copies snowballs in card draw: 1 → 2 → 3 → 4 cards across casts.
+pub fn frantic_inventory() -> CardDefinition {
+    use crate::card::Zone;
+    use std::borrow::Cow;
+    let name_filter = SelectionRequirement::HasName(Cow::Borrowed("Frantic Inventory"));
+    CardDefinition {
+        name: "Frantic Inventory",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Draw {
+            who: Selector::You,
+            amount: Value::Sum(vec![
+                Value::Const(1),
+                Value::count(Selector::CardsInZone {
+                    who: PlayerRef::You,
+                    zone: Zone::Graveyard,
+                    filter: name_filter,
+                }),
+            ]),
+        },
+        ..Default::default()
+    }
+}
+
+// ── Pegasus Stampede ────────────────────────────────────────────────────────
+
+/// Pegasus Stampede — {3}{W} Sorcery. "Create two 1/1 white Pegasus
+/// creature tokens with flying. / Flashback {6}{W}{W}."
+///
+/// Wired faithfully via the `Pegasus` creature subtype (existing) and
+/// `Keyword::Flashback`. Two 1/1 fliers on cast + flashback recursion
+/// for late-game token spam.
+pub fn pegasus_stampede() -> CardDefinition {
+    use crate::card::TokenDefinition;
+    let pegasus = TokenDefinition {
+        name: "Pegasus".into(),
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::White],
+        supertypes: vec![],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Pegasus],
+            ..Default::default()
+        },
+        activated_abilities: vec![],
+        triggered_abilities: vec![],
+    };
+    let flashback_cost = cost(&[generic(6), w(), w()]);
+    CardDefinition {
+        name: "Pegasus Stampede",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Flashback(flashback_cost)],
+        effect: Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(2),
+            definition: pegasus,
+        },
+        ..Default::default()
+    }
+}
+

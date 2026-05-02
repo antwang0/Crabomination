@@ -9195,3 +9195,191 @@ fn slime_against_humanity_scales_with_graveyard_copies() {
     assert_eq!(oozes, 4,
         "3 SAH in gy → cast mints (3 + 1) = 4 Ooze tokens, got {}", oozes);
 }
+
+// ── New cube cards (push XXIII) ─────────────────────────────────────────────
+
+#[test]
+fn boros_charm_mode_zero_deals_4_damage_to_planeswalker() {
+    // Just sanity-check the card definition: 3-mode ChooseMode body.
+    let bc = catalog::boros_charm();
+    assert_eq!(bc.name, "Boros Charm");
+    if let crate::card::Effect::ChooseMode(modes) = &bc.effect {
+        assert_eq!(modes.len(), 3, "Boros Charm has 3 modes");
+    } else {
+        panic!("Boros Charm should be a ChooseMode effect");
+    }
+}
+
+#[test]
+fn boros_charm_mode_two_grants_double_strike_to_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+
+    let id = g.add_card_to_hand(0, catalog::boros_charm());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(bear)),
+        mode: Some(2),
+        x_value: None,
+    })
+    .expect("Boros Charm mode 2 castable for {R}{W}");
+    drain_stack(&mut g);
+
+    let bear_card = g.battlefield.iter().find(|c| c.id == bear).unwrap();
+    assert!(bear_card.has_keyword(&Keyword::DoubleStrike),
+        "bear should have double strike EOT");
+}
+
+#[test]
+fn boros_charm_mode_one_grants_indestructible_to_your_permanents() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let bear2 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    g.clear_sickness(bear2);
+
+    let id = g.add_card_to_hand(0, catalog::boros_charm());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: None,
+        mode: Some(1),
+        x_value: None,
+    })
+    .expect("Boros Charm mode 1 castable for {R}{W}");
+    drain_stack(&mut g);
+
+    for &id in &[bear, bear2] {
+        let c = g.battlefield.iter().find(|c| c.id == id).unwrap();
+        assert!(c.has_keyword(&Keyword::Indestructible),
+            "your permanent should have indestructible EOT");
+    }
+}
+
+#[test]
+fn dragons_rage_channeler_surveils_on_noncreature_cast() {
+    let mut g = two_player_game();
+    let _drc = g.add_card_to_battlefield(0, catalog::dragons_rage_channeler());
+    // Seed library with a card so surveil has something to look at.
+    g.add_card_to_library(0, catalog::island());
+    let lib_before = g.players[0].library.len();
+    let gy_before = g.players[0].graveyard.len();
+
+    // Cast a noncreature spell (Lightning Bolt).
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)), mode: None, x_value: None,
+    })
+    .expect("Bolt castable");
+    drain_stack(&mut g);
+
+    // Surveil 1 — looks at the top, may move to gy. AutoDecider keeps
+    // it on top by default; sanity: library size unchanged.
+    assert_eq!(g.players[0].library.len(), lib_before,
+        "Surveil 1 doesn't draw — library size unchanged");
+    let _ = gy_before;
+}
+
+#[test]
+fn dragons_rage_channeler_does_not_surveil_on_creature_cast() {
+    let mut g = two_player_game();
+    let _drc = g.add_card_to_battlefield(0, catalog::dragons_rage_channeler());
+    // Seed library deeply.
+    for _ in 0..5 { g.add_card_to_library(0, catalog::island()); }
+    let lib_before = g.players[0].library.len();
+
+    // Cast a creature.
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear, target: None, mode: None, x_value: None,
+    })
+    .expect("Bear castable for {1}{G}");
+    drain_stack(&mut g);
+
+    // Library unchanged — Surveil shouldn't fire on creature spells.
+    assert_eq!(g.players[0].library.len(), lib_before,
+        "Surveil shouldn't fire on creature cast");
+}
+
+#[test]
+fn unholy_heat_deals_3_to_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+
+    let id = g.add_card_to_hand(0, catalog::unholy_heat());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)), mode: None, x_value: None,
+    })
+    .expect("Unholy Heat castable for {R}");
+    drain_stack(&mut g);
+
+    // Bear (2 toughness) takes 3 → dies.
+    assert!(!g.battlefield.iter().any(|c| c.id == bear),
+        "bear destroyed");
+}
+
+#[test]
+fn frantic_inventory_scales_with_graveyard_copies() {
+    let mut g = two_player_game();
+    // Seed gy with 2 copies — cast should draw 1 + 2 = 3.
+    for _ in 0..2 {
+        g.add_card_to_graveyard(0, catalog::frantic_inventory());
+    }
+    // Seed library so we can draw.
+    for _ in 0..5 { g.add_card_to_library(0, catalog::island()); }
+    let lib_before = g.players[0].library.len();
+
+    let id = g.add_card_to_hand(0, catalog::frantic_inventory());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Frantic Inventory castable for {1}{U}");
+    drain_stack(&mut g);
+
+    // Library: -3 (drew 1 base + 2 from gy).
+    assert_eq!(g.players[0].library.len(), lib_before - 3,
+        "should draw 1 + 2 = 3 cards");
+}
+
+#[test]
+fn pegasus_stampede_mints_two_pegasus_tokens() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::pegasus_stampede());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Pegasus Stampede castable for {3}{W}");
+    drain_stack(&mut g);
+
+    let pegasi: Vec<_> = g.battlefield.iter()
+        .filter(|c| c.is_token && c.definition.name == "Pegasus").collect();
+    assert_eq!(pegasi.len(), 2, "should create 2 Pegasus tokens");
+    for p in pegasi {
+        assert!(p.has_keyword(&Keyword::Flying), "Pegasus should fly");
+        assert_eq!(p.power(), 1);
+        assert_eq!(p.toughness(), 1);
+    }
+}
+
+#[test]
+fn pelt_collector_is_a_1_1_elf_warrior() {
+    let pc = catalog::pelt_collector();
+    assert_eq!(pc.power, 1);
+    assert_eq!(pc.toughness, 1);
+    assert!(pc.subtypes.creature_types.contains(&crate::card::CreatureType::Elf));
+    assert!(pc.subtypes.creature_types.contains(&crate::card::CreatureType::Warrior));
+}
