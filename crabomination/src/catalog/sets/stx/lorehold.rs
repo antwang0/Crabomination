@@ -47,14 +47,14 @@ pub fn lorehold_spirit_token() -> TokenDefinition {
 /// "Magecraft — Whenever you cast or copy an instant or sorcery spell,
 /// you gain 1 life and Lorehold Apprentice deals 1 damage to any target."
 ///
-/// 🟡 The dual-effect rider is split: the lifegain half is wired
-/// unconditionally, but the "1 damage to any target" half is collapsed
-/// into the lifegain only — Magecraft fires off the cast event, which
-/// pre-dates target selection on a triggered ability with its own
-/// target. Wiring the damage half needs the same "auto-target on
-/// trigger" plumbing as Repartee: a `target_filtered(Any)` body that
-/// the Magecraft helper resolves at trigger time. Tracked in
-/// STRIXHAVEN2.md.
+/// 🟡 Push XX: lifegain + 1-damage-to-each-opponent now both wired
+/// (was lifegain only). Same approximation as Storm-Kiln Artist: the
+/// "any target" damage collapses to `Selector::Player(EachOpponent)`
+/// because the Magecraft trigger fires off the cast event and binds
+/// targets at trigger-resolution time. Mono-target picking on
+/// triggered-ability bodies is still tracked as an engine TODO; the
+/// each-opponent collapse keeps the spell on its printed cast/curve
+/// without losing the chip-damage payoff.
 pub fn lorehold_apprentice() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Apprentice",
@@ -70,10 +70,16 @@ pub fn lorehold_apprentice() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![magecraft(Effect::GainLife {
-            who: Selector::You,
-            amount: Value::Const(1),
-        })],
+        triggered_abilities: vec![magecraft(Effect::Seq(vec![
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+            Effect::DealDamage {
+                to: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(1),
+            },
+        ]))],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],

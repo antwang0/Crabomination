@@ -383,6 +383,26 @@ fn lorehold_apprentice_gains_life_on_instant_cast() {
 }
 
 #[test]
+fn lorehold_apprentice_pings_opponent_on_instant_cast() {
+    // Push XX: damage half wired (1 to each opp). Casting an instant
+    // should now pump life (+1) and ping each opp (-1 life).
+    let mut g = two_player_game();
+    let _app = g.add_card_to_battlefield(0, catalog::lorehold_apprentice());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let opp_life_before = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)), mode: None, x_value: None,
+    })
+    .expect("Bolt castable for {R}");
+    drain_stack(&mut g);
+    // Bolt → P0 (3 damage), so opponent's life should drop only from
+    // the Apprentice's 1-damage-to-each-opp magecraft rider.
+    assert_eq!(g.players[1].life, opp_life_before - 1,
+        "Magecraft should ping each opponent for 1");
+}
+
+#[test]
 fn lorehold_apprentice_does_not_gain_on_creature_spell() {
     // Magecraft only triggers on instant/sorcery, not creature spells.
     let mut g = two_player_game();
