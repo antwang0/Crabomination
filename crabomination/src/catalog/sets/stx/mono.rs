@@ -1970,3 +1970,244 @@ pub fn saw_it_coming() -> CardDefinition {
     }
 }
 
+// ── Environmental Sciences ──────────────────────────────────────────────────
+
+/// Environmental Sciences — {2} Sorcery — Lesson. "You may search your
+/// library for a basic land card, reveal it, put it into your hand, then
+/// shuffle. You gain 2 life."
+///
+/// Push XXIX: colorless Lesson — generic {2} (no color requirement) means
+/// every Strixhaven Mystical Archive deck plays this regardless of pips.
+/// `Effect::Search` on `IsBasicLand → Hand` + `Effect::GainLife 2`. The
+/// "may" rider is implicit in `do_search`'s `None` answer, so a
+/// scripted decider can opt out of the search.
+pub fn environmental_sciences() -> CardDefinition {
+    CardDefinition {
+        name: "Environmental Sciences",
+        cost: cost(&[generic(2)]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes {
+            spell_subtypes: vec![crate::card::SpellSubtype::Lesson],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Search {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::IsBasicLand,
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Expanded Anatomy ────────────────────────────────────────────────────────
+
+/// Expanded Anatomy — {3}{G} Sorcery — Lesson. "Put three +1/+1 counters
+/// on target creature."
+///
+/// Push XXIX: clean Lesson card — three +1/+1 counters onto a creature,
+/// no riders. Wired with `Effect::AddCounter` on `target_filtered(Creature)`
+/// at amount 3. Lesson sub-type is recorded so the future Lessons-side-
+/// board model picks it up.
+pub fn expanded_anatomy() -> CardDefinition {
+    CardDefinition {
+        name: "Expanded Anatomy",
+        cost: cost(&[generic(3), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes {
+            spell_subtypes: vec![crate::card::SpellSubtype::Lesson],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::AddCounter {
+            what: target_filtered(SelectionRequirement::Creature),
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(3),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Big Play ────────────────────────────────────────────────────────────────
+
+/// Big Play — {3}{G}{U} Instant — Lesson. "Untap up to two target
+/// creatures. Each of those creatures gets +1/+1 and gains hexproof and
+/// trample until end of turn."
+///
+/// Push XXIX: 🟡 — collapsed to single-target. Engine has no
+/// "up-to-two-target" prompt; a single-creature pick still nets the
+/// dominant gameplay (untap + +1/+1 + hexproof + trample for one
+/// attacker). The "up to two" half is omitted — same gap as Mentor's
+/// Guidance's "for each card in hand on multiple targets" approximation.
+/// The Lesson sub-type is recorded for future Lesson-aware effects.
+pub fn big_play() -> CardDefinition {
+    CardDefinition {
+        name: "Big Play",
+        cost: cost(&[generic(3), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes {
+            spell_subtypes: vec![crate::card::SpellSubtype::Lesson],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Untap {
+                what: target_filtered(SelectionRequirement::Creature),
+                up_to: None,
+            },
+            Effect::PumpPT {
+                what: Selector::Target(0),
+                power: Value::Const(1),
+                toughness: Value::Const(1),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::Hexproof,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::Trample,
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Confront the Past ───────────────────────────────────────────────────────
+
+/// Confront the Past — {4}{R} Sorcery — Lesson. "Choose one — / • Exile
+/// target activated or triggered ability you don't control. / • Choose a
+/// loyalty ability of target planeswalker controlled by an opponent.
+/// Confront the Past has that ability."
+///
+/// Push XXIX: 🟡 — collapsed to mode 0 only (counter target ability).
+/// The "steal opponent's planeswalker loyalty ability" mode requires a
+/// dynamic mode-pick from a target's `loyalty_abilities` list, which is
+/// a brand-new primitive (same gap as Sarkhan, the Masterless's static
+/// loyalty stamp on dragons). Mode 0 collapse maps to
+/// `Effect::CounterAbility` against an opponent's permanent's stack-
+/// resident ability, matching the printed ability-counter half.
+pub fn confront_the_past() -> CardDefinition {
+    CardDefinition {
+        name: "Confront the Past",
+        cost: cost(&[generic(4), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes {
+            spell_subtypes: vec![crate::card::SpellSubtype::Lesson],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::CounterAbility {
+            what: target_filtered(SelectionRequirement::Permanent),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Pilgrim of the Ages ─────────────────────────────────────────────────────
+
+/// Pilgrim of the Ages — {3}{W} 2/3 Spirit Wizard Cleric. "When this
+/// creature dies, return target Plains card from your graveyard to your
+/// hand."
+///
+/// Push XXIX: small Lorehold-themed body that recycles a basic land on
+/// death. Mirrors Pillardrop Rescuer ({3}{R}{W} 3/3 flying — IS gy →
+/// hand) at the mono-white color slot with a Plains target rather
+/// than IS. The "return target Plains" filter matches `IsBasicLand`
+/// + a name-equals-Plains follow-up — but we use the simpler
+/// `IsBasicLand` filter for the auto-target framework's first-pick
+/// (printed Oracle would land here only on a Plains-card decision,
+/// since no other basic-land filter exists in the engine yet). Net:
+/// graveyard → hand on a basic land card.
+pub fn pilgrim_of_the_ages() -> CardDefinition {
+    use crate::card::Zone;
+    CardDefinition {
+        name: "Pilgrim of the Ages",
+        cost: cost(&[generic(3), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![
+                CreatureType::Spirit,
+                CreatureType::Wizard,
+                CreatureType::Cleric,
+            ],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+            effect: Effect::Move {
+                what: Selector::take(
+                    Selector::CardsInZone {
+                        who: PlayerRef::You,
+                        zone: Zone::Graveyard,
+                        filter: SelectionRequirement::IsBasicLand,
+                    },
+                    Value::Const(1),
+                ),
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+

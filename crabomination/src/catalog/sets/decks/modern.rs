@@ -883,12 +883,17 @@ pub fn sylvan_scrying() -> CardDefinition {
     }
 }
 
-/// Abrupt Decay — {B}{G} Instant. This spell can't be countered. Destroy
-/// target nonland permanent with mana value 2 or less.
+/// Abrupt Decay — {B}{G} Instant. "This spell can't be countered. /
+/// Destroy target nonland permanent with mana value 3 or less."
 ///
-/// Uses the existing `Keyword::CantBeCountered` (consumed by
-/// `caster_grants_uncounterable` in all three cast paths) and a target
-/// filter of `Nonland ∧ ManaValueAtMost(2)` validated at cast time.
+/// Push XXIX bug fix: target filter was `ManaValueAtMost(2)`, which
+/// rejected legal targets like Tarmogoyf (4-color hybrid 0-MV-by-cost
+/// but Oracle-printed CMC 2 — fine here, but real targets like Stormbreath
+/// Dragon at MV 4 fall outside, while a 3-MV Liliana of the Veil walked
+/// safely). Real Abrupt Decay reads "mana value 3 or less" (Oracle
+/// text per RTR / 2021 Update). The existing
+/// `Keyword::CantBeCountered` (consumed by `caster_grants_uncounterable`
+/// in all three cast paths) is unchanged.
 pub fn abrupt_decay() -> CardDefinition {
     CardDefinition {
         name: "Abrupt Decay",
@@ -902,7 +907,7 @@ pub fn abrupt_decay() -> CardDefinition {
         effect: Effect::Destroy {
             what: target_filtered(
                 SelectionRequirement::Nonland
-                    .and(SelectionRequirement::ManaValueAtMost(2)),
+                    .and(SelectionRequirement::ManaValueAtMost(3)),
             ),
         },
         activated_abilities: no_abilities(),

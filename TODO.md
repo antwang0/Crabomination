@@ -7,6 +7,74 @@ See `CUBE_FEATURES.md` (cube-card implementation status) and
 
 ## Recent additions
 
+- ✅ **Push XXIX (2026-05-02)**: 10 new STX 2021 cards across schools +
+  Abrupt Decay MV bug fix + UI Or-composite filter labels. Tests at
+  1227 (was 1218; +9 net). Pure card additions + non-blocking UX
+  polish — no new engine primitives.
+  - **3 new Lorehold (R/W) cards** (`catalog::sets::stx::lorehold`):
+    - **Rip Apart** ✅ ({R}{W} Sorcery) — modal removal: 3 dmg to
+      creature/PW OR destroy artifact/enchantment via
+      `Effect::ChooseMode` (same shape as Boros Charm). Modal pick
+      is "choose one" so the implementation matches printed Oracle
+      at full fidelity.
+    - **Plargg, Dean of Chaos** 🟡 ({1}{R}, 1/3 Legendary Wizard) —
+      `{T}: Discard a card, then draw a card` rummage activation.
+      The {2}{R} top-3-exile activation is omitted (no exile-from-
+      top primitive). The DFC pairing with Augusta is split into
+      two separate front-face card definitions (engine MDFC pipeline
+      currently lacks an "always-flippable, both faces equally"
+      mode).
+    - **Augusta, Dean of Order** 🟡 ({1}{W}, 2/2 Vigilance Wizard)
+      — per-attacker pump trigger via the `Attacks/AnotherOfYours`
+      broadcast. The "two or more creatures attack" gate collapses
+      to per-attack — single-attacker case is a minor false
+      positive vs. printed text; multi-attacker case matches.
+  - **2 new Prismari (U/R) cards** (`catalog::sets::stx::prismari`):
+    - **Magma Opus** 🟡 ({7}{U}{R} Sorcery) — finisher: 4 dmg to
+      creature/PW + 4/4 Elemental token + draw 2. The "4 dmg
+      divided" + "tap two permanents" both collapse to single-
+      target picks; the discard-for-Treasure alt cost is omitted
+      (alt-cost-by-discard primitive gap).
+    - **Expressive Iteration** 🟡 ({U}{R} Sorcery) — collapsed to
+      Scry 2 + Draw 1 cantrip approximation. The "exile top 3 +
+      may play land + cast spell" rider is omitted (cast-from-exile
+      + play-land-from-exile primitive gap).
+  - **5 new mono-color staples** (`catalog::sets::stx::mono`):
+    - **Environmental Sciences** ✅ ({2} colorless Sorcery —
+      Lesson) — basic-land tutor + 2 life. Universal Lesson at
+      every color.
+    - **Expanded Anatomy** ✅ ({3}{G} Sorcery — Lesson) — three
+      +1/+1 counters on a target creature.
+    - **Big Play** 🟡 ({3}{G}{U} Instant — Lesson) — untap creature
+      + +1/+1 + hexproof + trample EOT. "Up to two" collapses to
+      single-target.
+    - **Confront the Past** 🟡 ({4}{R} Sorcery — Lesson) —
+      `Effect::CounterAbility`. The "steal opponent's PW loyalty
+      ability" mode is omitted (dynamic mode-pick from target's
+      `loyalty_abilities` list is a brand-new primitive).
+    - **Pilgrim of the Ages** ✅ ({3}{W}, 2/3 Spirit Wizard Cleric)
+      — death-trigger basic-land recursion to hand. Mirrors
+      Pillardrop Rescuer's shape on a mono-white slot.
+  - **Engine bug fix**: **Abrupt Decay**'s target filter was
+    `ManaValueAtMost(2)` — printed Oracle is "mana value 3 or less".
+    Fix: `ManaValueAtMost(3)`. Updated the rejection-cap test to
+    swap Phyrexian Arena (CMC 3, now LEGAL) for Sun Titan (CMC 6).
+    Added `abrupt_decay_accepts_cmc_three_target` to lock in the
+    boundary case.
+  - **UI improvement**: `entity_matches_label` Or-composite arm —
+    previously, an Or-of-two-types filter (`Creature OR
+    Planeswalker`, `Artifact OR Enchantment`) fell through to the
+    catch-all "if matches filter". Now binary Or-composites of
+    simple type tokens render as "if A/B" — covers Rip Apart's
+    targets, Magma Opus, Nature's Claim, Igneous Inspiration, and
+    any future binary-Or filter on basic types. Recurses one level
+    deep — three-way Or chains keep the generic hint. New helpers
+    `or_label` + `simple_type_token`.
+  - **13 new tests**: 11 in `tests::stx::*` (one per new card), 1
+    in `tests::modern::*` (`abrupt_decay_accepts_cmc_three_target`),
+    1 in `server::view::tests::*`
+    (`entity_matches_label_covers_or_composite_filters`).
+
 - ✅ **Push XXVIII (2026-05-02)**: Thread trigger subject through
   `StackItem::Trigger` so `PlayerRef::Triggerer` resolves to the actual
   event actor at resolution time. Pre-fix the dispatch path captured
@@ -2551,3 +2619,85 @@ four cross-school Commands.
   low, mode 1 (Spirit tokens) when board is empty, mode 3 (exile
   gy) when opp has a graveyard recursion threat. Reuses the
   existing `auto_target_for_effect` heuristic.
+
+
+## New suggestions (added 2026-05-02 push XXIX)
+
+These items came up while implementing the 10-card Lorehold + STX
+2021 batch + Abrupt Decay bug fix.
+
+### Engine
+
+- **`Value::AttackersThisCombat` primitive**. Augusta, Dean of
+  Order's "two or more creatures attacking" rider currently
+  collapses to per-attacker pump (firing once per attacker rather
+  than one big "two-or-more" trigger). The primitive would read the
+  count of attackers declared this combat — same `Value` Adriana,
+  Captain of the Guard wants. Plumbing: attackers list is already
+  in `GameState.attacks: Vec<Attack>`; just expose the count via a
+  `Value::AttackersThisCombat` arm in `evaluate_value` so a
+  `Predicate::ValueAtLeast(AttackersThisCombat, 2)` filter can gate
+  the trigger.
+
+- **Always-flippable DFC primitive (split-card-style)**. Plargg,
+  Dean of Chaos // Augusta, Dean of Order is the front of a paired
+  legend where the controller picks which face to cast each time.
+  The current MDFC pipeline (`back_face: Some(_)`) is one-directional
+  — once you pick the front face at cast time, you can't flip back.
+  An "either-face-castable" mode (sibling to `back_face`) would
+  unblock the full DFC cycle: Plargg/Augusta (R/W), Will/Rowan
+  (U/R), Lisette/Lukka (G/B?), etc. Each face has independent cost,
+  effect, body — so the engine just needs to materialise the
+  correct face's `CardDefinition` at cast time.
+
+- **`Effect::DivideDamage` primitive for "divided as you choose"**.
+  Magma Opus's "4 damage divided" + Bonecrusher Giant's "2 dmg to
+  opp + 4 dmg to creature" + Twin Bolt's "2 damage divided as you
+  choose" all share the same shape: an integer N to distribute
+  across multiple targets. `Effect::DivideDamage { total, targets:
+  Vec<Selector> }` + a new `Decision::DivideDamage` answer would
+  let the controller spread N damage across M targets.
+
+- **Cast-from-exile + play-land-from-exile primitives**. Expressive
+  Iteration's "exile top 3, you may play a land and cast a spell
+  from among them this turn" is omitted because (a) the engine has
+  no "may cast from exile (without paying)" pipeline, and (b)
+  there's no "may play a land from exile" hook. Both close several
+  ⏳ rows: Augur of Bolas, Outpost Siege, Sin Prodder, future
+  cascade-style cards.
+
+### UI
+
+- **Or-composite filter labels for stack-side filters**.
+  `entity_matches_label`'s Or arm now covers binary type-token
+  composites (push XXIX). The next gap is Or-composites that mix a
+  type token with a stack predicate — e.g., Counterspell-style
+  filters of `IsSpellOnStack ∧ HasCardType(Instant) OR
+  HasCardType(Sorcery)`. A small recursion that rebuilds the label
+  from the inner Or would close that gap.
+
+- **Audit script for STX 2021 cards**. The existing
+  `scripts/audit_strixhaven2.py` audits SOS only. A sibling script
+  that walks `catalog::sets::stx::*` and cross-references against
+  the STX 2021 table at the bottom of STRIXHAVEN2.md would catch
+  status-row drift (a card added to the catalog without a row in
+  the table, or vice versa). Today the STX 2021 status table is
+  hand-maintained.
+
+### Bot / AI
+
+- **Mode picker scored against board state**. The bot enumerates
+  each ChooseMode mode as a separate `CastSpell` candidate, then
+  picks one randomly. A smarter version would score each mode
+  against the current board (mode 0 = "drain 4" → score by opp's
+  life total; mode 1 = "create tokens" → score by board emptiness;
+  mode 2 = "destroy artifact" → score by opp's artifact count) and
+  pick the highest-scoring legal mode.
+
+- **Lesson sideboard model**. Hunt for Specimens, Eyetwitch,
+  Igneous Inspiration, Enthusiastic Study all use Learn at some
+  point — currently approximated as `Draw 1`. A real Lesson
+  sideboard model (a 5-card sideboard the player sees during
+  deckbuilding, accessible only via Learn) would close all of
+  those at once. Plumbing: a new `PlayerData.lesson_sideboard:
+  Vec<CardId>` slot + a Learn-aware `Decision::ChooseLesson` answer.

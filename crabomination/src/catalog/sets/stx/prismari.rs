@@ -9,11 +9,12 @@
 
 use super::no_abilities;
 use crate::card::{
-    CardDefinition, CardType, CreatureType, Effect, Keyword, Selector, Subtypes, Value,
+    CardDefinition, CardType, CreatureType, Effect, Keyword, Selector, SelectionRequirement,
+    Subtypes, TokenDefinition, Value,
 };
-use crate::effect::shortcut::{magecraft, magecraft_self_pump};
+use crate::effect::shortcut::{magecraft, magecraft_self_pump, target_filtered};
 use crate::effect::{Duration, PlayerRef};
-use crate::mana::{cost, generic, r, u};
+use crate::mana::{cost, generic, r, u, Color};
 
 // ── Prismari Pledgemage ─────────────────────────────────────────────────────
 
@@ -231,6 +232,133 @@ pub fn prismari_command() -> CardDefinition {
             // Mode 3: destroy target artifact.
             Effect::Destroy {
                 what: target_filtered(SelectionRequirement::HasCardType(CardType::Artifact)),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Prismari Elemental token ────────────────────────────────────────────────
+
+/// 4/4 blue and red Elemental creature token. Used by Magma Opus and any
+/// future Prismari "create a 4/4 Elemental" rider. Vanilla 4/4 — no
+/// abilities — but multicolor so it interacts with Multicolored payoffs.
+fn prismari_elemental_token() -> TokenDefinition {
+    TokenDefinition {
+        name: "Elemental".into(),
+        power: 4,
+        toughness: 4,
+        keywords: vec![],
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Blue, Color::Red],
+        supertypes: vec![],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental],
+            ..Default::default()
+        },
+        activated_abilities: vec![],
+        triggered_abilities: vec![],
+    }
+}
+
+// ── Magma Opus ──────────────────────────────────────────────────────────────
+
+/// Magma Opus — {7}{U}{R} Sorcery. "Magma Opus deals 4 damage divided as
+/// you choose among any number of target creatures and/or planeswalkers.
+/// Tap two target permanents. Create a 4/4 blue and red Elemental
+/// creature token. Draw two cards. / {U}{R}, Discard Magma Opus: Create
+/// a Treasure token."
+///
+/// Push XXIX: Prismari finisher. 🟡 — printed "4 damage divided" +
+/// "tap two target permanents" both collapse to single-target picks
+/// (`Effect::DealDamage` and `Effect::Tap` are single-target on
+/// `target_filtered`); the engine has no "divide N damage among M
+/// targets" prompt. The remaining halves — 4/4 Elemental token + draw
+/// 2 — are wired faithfully. The discard-for-Treasure alt cost is
+/// omitted (no alt-cost-by-discard primitive yet — same gap as
+/// Bonecrusher Giant's Adventure side).
+///
+/// Net resolution: 4 damage to one target creature/PW, mint a 4/4
+/// Elemental, draw 2. At 9 mana that's roughly 4 + 4/4 + 2 cards =
+/// a healthy "win-the-game" finisher even after the simplifications.
+pub fn magma_opus() -> CardDefinition {
+    CardDefinition {
+        name: "Magma Opus",
+        cost: cost(&[generic(7), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::Const(4),
+            },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: prismari_elemental_token(),
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Expressive Iteration ────────────────────────────────────────────────────
+
+/// Expressive Iteration — {U}{R} Sorcery. "Exile the top three cards of
+/// your library. You may play a land and cast a spell from among them
+/// this turn. Put the rest on the bottom of your library in a random
+/// order."
+///
+/// Push XXIX: 🟡 — collapsed to a "look-at-top-3 + draw 1" cantrip
+/// approximation. Wired as `Scry 2 + Draw 1` (the scry's "top or
+/// bottom" picks substitute for the "any order + may shuffle" decision;
+/// the gameplay-relevant outcome — taking the best one of the top
+/// three on the next draw — is preserved). The "you may play a land
+/// from among them" rider is omitted (cast-from-exile + play-land-
+/// from-exile primitives are tracked together with Expressive's full
+/// wire — same gap as Augur of Bolas, Outpost Siege).
+pub fn expressive_iteration() -> CardDefinition {
+    CardDefinition {
+        name: "Expressive Iteration",
+        cost: cost(&[u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(2),
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
             },
         ]),
         activated_abilities: no_abilities(),

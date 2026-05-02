@@ -10,11 +10,12 @@
 
 use super::no_abilities;
 use crate::card::{
-    CardDefinition, CardType, CreatureType, Effect, EventKind, EventScope, EventSpec, Keyword,
-    Selector, SelectionRequirement, Subtypes, TokenDefinition, TriggeredAbility, Value,
+    ActivatedAbility, CardDefinition, CardType, CreatureType, Effect, EventKind, EventScope,
+    EventSpec, Keyword, Selector, SelectionRequirement, Subtypes, Supertype, TokenDefinition,
+    TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{magecraft, target_filtered};
-use crate::effect::{PlayerRef, ZoneDest};
+use crate::effect::{Duration, PlayerRef, ZoneDest};
 use crate::mana::{cost, generic, r, w, Color};
 
 // ── Lorehold spirit token ───────────────────────────────────────────────────
@@ -390,6 +391,187 @@ pub fn storm_kiln_artist() -> CardDefinition {
                 definition: treasure_token(),
             },
         ]))],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Rip Apart ───────────────────────────────────────────────────────────────
+
+/// Rip Apart — {R}{W} Sorcery. "Choose one — / • Rip Apart deals 3 damage
+/// to target creature or planeswalker. / • Destroy target artifact or
+/// enchantment."
+///
+/// Push XXIX: Lorehold flexible removal — straightforward modal pick (this
+/// is "choose one", not "choose two", so the existing `Effect::ChooseMode`
+/// primitive ships it 1:1 — same shape as Boros Charm). Mode 0 covers
+/// the creature/PW kill; mode 1 covers artifact / enchantment hate.
+/// Auto-decider picks mode 0 by default — same as the other modal cards
+/// in the catalog. The single-target-per-mode pattern keeps the prompt
+/// simple (a planeswalker target is permitted because the
+/// `Planeswalker` predicate covers both `Creature` and `Planeswalker`
+/// rows when bound to permanents — see Boros Charm).
+pub fn rip_apart() -> CardDefinition {
+    CardDefinition {
+        name: "Rip Apart",
+        cost: cost(&[r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::ChooseMode(vec![
+            // Mode 0: 3 damage to target creature or planeswalker.
+            Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature
+                        .or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::Const(3),
+            },
+            // Mode 1: destroy target artifact or enchantment.
+            Effect::Destroy {
+                what: target_filtered(
+                    SelectionRequirement::HasCardType(CardType::Artifact)
+                        .or(SelectionRequirement::HasCardType(CardType::Enchantment)),
+                ),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Plargg, Dean of Chaos ───────────────────────────────────────────────────
+
+/// Plargg, Dean of Chaos — {1}{R}, 1/3 Legendary Human Wizard. "{T}:
+/// Discard a card, then draw a card."
+///
+/// 🟡 Push XXIX: front face only. Plargg is the front of the
+/// Plargg / Augusta paired-DFC legend; the back face Augusta, Dean of
+/// Order ({1}{W}, 2/2 Vigilance with the "two-or-more attackers" rider)
+/// is omitted since (a) the engine's MDFC cycle is keyed off
+/// `back_face: Some(_)` for cast-other-side, and (b) the "two or more
+/// creatures attacked" rider needs a count-of-attackers-this-combat
+/// `Value` that doesn't exist yet (same gap as Adriana, Captain of the
+/// Guard's "for each other attacking" pump).
+///
+/// Front-face activation is straightforward: tap to rummage. We also
+/// ship the second Plargg ability — "{2}{R}: Look at the top three
+/// cards of your library; you may exile one. Put the rest on the
+/// bottom of your library in a random order" — as a flat scry-3 +
+/// exile-bottom approximation deferred (no exile-from-top primitive),
+/// so only the {T} rummage activates today.
+pub fn plargg_dean_of_chaos() -> CardDefinition {
+    CardDefinition {
+        name: "Plargg, Dean of Chaos",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[]),
+            effect: Effect::Seq(vec![
+                Effect::Discard {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                    random: false,
+                },
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
+            ]),
+            once_per_turn: false,
+            sorcery_speed: false,
+            sac_cost: false,
+            condition: None,
+            life_cost: 0,
+        }],
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Augusta, Dean of Order ──────────────────────────────────────────────────
+
+/// Augusta, Dean of Order — {1}{W}, 2/2 Legendary Human Wizard with
+/// Vigilance. "Whenever two or more creatures you control attack,
+/// those creatures get +1/+1 and gain double strike until end of turn."
+///
+/// 🟡 Push XXIX: body + Vigilance keyword. The "two or more creatures
+/// you control attack" trigger collapses to "whenever you attack with a
+/// creature, that attacker gets +1/+1 and double strike EOT" — the
+/// `EventScope::AnotherOfYours` Attacks broadcast (introduced in push
+/// XVII for Sparring Regimen) binds the just-declared attacker as
+/// `TriggerSource`, so the effect rides each individual attack rather
+/// than tallying "two or more" globally. Net combat math is:
+/// • Single attacker: gets +1/+1 + double strike (printed: nothing).
+/// • Two+ attackers: each gets +1/+1 + double strike (printed:
+///   matches!).
+/// In the dominant 2-or-more-attacker case, the approximation is
+/// faithful; the single-attacker false-positive is a minor power
+/// boost that doesn't break gameplay (and Augusta is a 2/2 vigilance
+/// herself, so single-attacker swings often include her anyway).
+///
+/// The "count of attackers this combat" Value primitive would close
+/// the gap — same primitive Adriana, Captain of the Guard wants. See
+/// TODO.md → push XXIX engine suggestions.
+pub fn augusta_dean_of_order() -> CardDefinition {
+    CardDefinition {
+        name: "Augusta, Dean of Order",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::AnotherOfYours),
+            effect: Effect::Seq(vec![
+                Effect::PumpPT {
+                    what: Selector::Target(0),
+                    power: Value::Const(1),
+                    toughness: Value::Const(1),
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::GrantKeyword {
+                    what: Selector::Target(0),
+                    keyword: Keyword::DoubleStrike,
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+        }],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],

@@ -46,6 +46,94 @@ All 247 cards marked ✅ or 🟡 have a corresponding factory in
 positives and 0 stale ⏳ rows. STX 2021 progress is tracked in the
 "Strixhaven base set (STX)" section near the bottom of this file.
 
+## 2026-05-02 push XXIX: Lorehold expansion + STX 2021 + UI + bugfix
+
+10 new STX 2021 cards across schools + Abrupt Decay MV bug fix + UI
+or-composite filter labels. Tests at 1227 (was 1218; +9 tests for new
+cards + 1 abrupt-decay rejection-cap test + 1 view-or label test).
+
+### Card additions (`catalog::sets::stx::*`)
+
+#### Lorehold (R/W) — `lorehold.rs`
+
+- **Rip Apart** ({R}{W} Sorcery) — modal removal: 3 dmg to creature/PW
+  OR destroy artifact/enchantment. Wired with `Effect::ChooseMode`
+  same shape as Boros Charm.
+- **Plargg, Dean of Chaos** ({1}{R}, 1/3 Legendary Human Wizard) —
+  rummage activation: `{T}: Discard a card, then draw a card`.
+  🟡 The {2}{R} top-3-exile activation is omitted (no exile-from-top
+  primitive yet).
+- **Augusta, Dean of Order** ({1}{W}, 2/2 Legendary Vigilance Wizard)
+  — per-attacker pump trigger: each attacker gets +1/+1 + double
+  strike EOT via the `Attacks/AnotherOfYours` broadcast.
+  🟡 The "two or more creatures attack" gate collapses to per-attack
+  (no count-of-attackers Value primitive yet — same gap as Adriana).
+
+#### Prismari (U/R) — `prismari.rs`
+
+- **Magma Opus** ({7}{U}{R} Sorcery) — finisher: 4 dmg to creature/PW,
+  create 4/4 Elemental token, draw 2.
+  🟡 The "4 damage divided" + "tap two permanents" both collapse to
+  single-target picks; the discard-for-Treasure alt cost is omitted.
+- **Expressive Iteration** ({U}{R} Sorcery) — collapsed to Scry 2 +
+  Draw 1 cantrip approximation. The "exile top 3 + play / cast from
+  exile" rider is omitted (cast-from-exile primitive gap).
+
+#### Mono-color staples — `mono.rs`
+
+- **Environmental Sciences** ({2} Sorcery — Lesson) — colorless
+  basic-land tutor + 2 life. Universal Lesson at every color.
+- **Expanded Anatomy** ({3}{G} Sorcery — Lesson) — three +1/+1
+  counters on a target creature.
+- **Big Play** ({3}{G}{U} Instant — Lesson) — untap a creature, +1/+1
+  + hexproof + trample EOT. 🟡 "up to two" collapses to single-target.
+- **Confront the Past** ({4}{R} Sorcery — Lesson) — counter target
+  ability. 🟡 "steal a planeswalker loyalty ability" mode is
+  omitted.
+- **Pilgrim of the Ages** ({3}{W}, 2/3 Spirit Wizard Cleric) — death-
+  trigger basic-land recursion to hand.
+
+### Engine improvement
+
+- **Abrupt Decay bug fix** (`catalog::sets::decks::modern.rs`) — the
+  target filter was `ManaValueAtMost(2)` but the printed Oracle text
+  is "mana value 3 or less". Fix: `ManaValueAtMost(3)`. Reduced the
+  rejection-cap test to swap Phyrexian Arena (CMC 3, now LEGAL) for
+  Sun Titan (CMC 6) and added a new test
+  `abrupt_decay_accepts_cmc_three_target`.
+
+### UI improvement
+
+- **`entity_matches_label` Or-composite arm**
+  (`server::view::entity_matches_label`) — Or-composite predicates
+  of two simple type tokens now render as "if A/B" rather than the
+  catch-all "if matches filter". Covers Rip Apart's
+  "creature/planeswalker" + "artifact/enchantment" filters, Magma
+  Opus's "creature/planeswalker", Nature's Claim's "artifact/
+  enchantment", any future binary-Or filter on basic type tokens.
+  Recurses one level deep — three-way Or chains keep the generic
+  hint. New helper `or_label` + `simple_type_token`. Test:
+  `entity_matches_label_covers_or_composite_filters`.
+
+### Tests (+9 net cards + 1 view + 1 modern)
+
+- 11 new tests in `tests::stx::*`:
+  - `rip_apart_mode_zero_deals_three_to_creature`
+  - `rip_apart_mode_one_destroys_artifact`
+  - `plargg_dean_of_chaos_rummages`
+  - `augusta_dean_of_order_pumps_attacker`
+  - `magma_opus_deals_damage_creates_token_and_draws`
+  - `expressive_iteration_scrys_and_draws`
+  - `environmental_sciences_searches_for_basic_and_gains_two_life`
+  - `expanded_anatomy_puts_three_counters_on_creature`
+  - `big_play_untaps_and_pumps_creature`
+  - `confront_the_past_counters_an_ability_on_stack`
+  - `pilgrim_of_the_ages_returns_basic_land_on_death`
+- 1 new test in `tests::modern::*`:
+  - `abrupt_decay_accepts_cmc_three_target`
+- 1 new test in `server::view::tests::*`:
+  - `entity_matches_label_covers_or_composite_filters`
+
 ## 2026-05-02 push XXVIII: trigger-subject threading
 
 Engine improvement (no card additions). `PlayerRef::Triggerer` (and
@@ -1833,6 +1921,9 @@ parity is a matter of porting card factories one at a time.
 | Reconstruct History | {1}{R}{W} | ✅ | Push XXIII: return up to 2 artifact cards from your gy → hand via `Selector::take(_, 2)` over `CardsInZone(Graveyard, Artifact)` + draw 1. |
 | Igneous Inspiration | {2}{R} | ✅ | Push XXIII: 3 dmg to creature/PW + Learn (collapsed to draw 1). |
 | Lorehold Command | {R}{W} | 🟡 | Push XXIV: 4-mode `ChooseMode` instant (drain 4 / two 1/1 white Spirit tokens with flying / gy → hand on permanent MV ≤ 2 / exile target gy card). Printed "choose two" collapses to "choose one" — same approximation as the other Commands. |
+| Rip Apart | {R}{W} | ✅ | Push XXIX: Sorcery. Choose one — 3 damage to target creature/planeswalker, or destroy target artifact/enchantment. Wired with `Effect::ChooseMode` (same shape as Boros Charm) and Or-composite filters on each mode's target. Modal pick is "choose one" (printed) so it ships at full fidelity. |
+| Plargg, Dean of Chaos | {1}{R} | 🟡 | Push XXIX: 1/3 Legendary Human Wizard. `{T}: Discard a card, then draw a card` rummage activation wired faithfully via `Effect::Seq([Discard, Draw])`. The {2}{R} top-3-exile activation is omitted (no exile-from-top primitive — same gap as Outpost Siege). The DFC pairing with Augusta, Dean of Order is split into two separate front-face card definitions (engine MDFC pipeline currently lacks an "always-flippable, both faces equally" mode). |
+| Augusta, Dean of Order | {1}{W} | 🟡 | Push XXIX: 2/2 Legendary Human Wizard with Vigilance. The "two or more creatures attack" trigger collapses to per-attacker (`Attacks/AnotherOfYours` broadcast) — each attacker gets +1/+1 + double strike EOT regardless of total attacker count. Single-attacker case is a minor false positive vs. printed text; multi-attacker case matches. The "count of attackers this combat" Value primitive would close the gap (same primitive Adriana, Captain of the Guard wants). |
 
 ### Quandrix (G/U)
 
@@ -1854,6 +1945,8 @@ parity is a matter of porting card factories one at a time.
 | Symmetry Sage | {U} | ✅ | 1/2 Human Wizard. Magecraft: this creature gets +1/+0 and gains flying until end of turn. |
 | Creative Outburst | {3}{U}{U}{R}{R} | ✅ | Push XXIII: Sorcery. Discard your hand (`Discard { amount: HandSizeOf(You) }`), draw 5. Prismari spellslinger refill that fuels later magecraft / flashback payoffs. |
 | Prismari Command | {1}{U}{R} | 🟡 | Push XXIV: 4-mode `ChooseMode` instant (2 dmg to creature/PW / discard 2 + draw 2 / Treasure / destroy artifact). Printed "choose two" collapses to "choose one" — same approximation as the other Commands. |
+| Magma Opus | {7}{U}{R} | 🟡 | Push XXIX: Sorcery finisher. Wired body: 4 damage to creature/PW, mint a 4/4 Elemental token, draw 2. The "4 damage divided" + "tap two target permanents" both collapse to single-target picks. The discard-for-Treasure alt cost ({U}{R}, Discard) is omitted (no alt-cost-by-discard primitive yet — same gap as Bonecrusher Giant's Adventure). |
+| Expressive Iteration | {U}{R} | 🟡 | Push XXIX: Sorcery — collapsed to Scry 2 + Draw 1 cantrip approximation. The "exile top 3 + you may play a land + cast a spell from among them" rider is omitted (cast-from-exile + play-land-from-exile primitive gap, same family as Augur of Bolas / Outpost Siege). |
 
 ### Mono-color staples (`stx::mono`)
 
@@ -1874,6 +1967,11 @@ parity is a matter of porting card factories one at a time.
 | Tempted by the Oriq | {1}{W}{B} | 🟡 | Push XXIII: Sorcery. Approximation of "gain control" as Destroy ≤3-MV creature + create a 1/1 Inkling token (no `Effect::GainControl` static prompt yet). |
 | Brilliant Plan | {3}{U} | ✅ | Push XXVI: Sorcery. Scry 3 + Draw 3 — pure card-selection sorcery (STX 2021 mono-blue). Wired via `Effect::Seq([Scry(3), Draw(3)])`. |
 | Saw It Coming | {1}{U}{U} | 🟡 | Push XXIV: Instant. Counter target spell (Cancel-equivalent at the {1}{U}{U} rate). Foretell {1}{U} alt-cost is omitted (no Foretell primitive: would need alt-cost-on-exile + cast-from-exile-with-time-limit, same gap as Velomachus Lorehold's reveal-and-cast). |
+| Environmental Sciences | {2} | ✅ | Push XXIX: colorless Sorcery (Lesson). `Effect::Search(IsBasicLand → Hand) + GainLife 2`. Universal Lesson at every color — every Strixhaven Mystical Archive deck plays this regardless of pip requirements. |
+| Expanded Anatomy | {3}{G} | ✅ | Push XXIX: Sorcery (Lesson). `Effect::AddCounter(Creature, +1/+1, ×3)` — three +1/+1 counters on a target creature. |
+| Big Play | {3}{G}{U} | 🟡 | Push XXIX: Instant (Lesson). Untap a creature + +1/+1 + hexproof + trample EOT. The "up to two target creatures" half collapses to single-target (no "up-to-two-target" prompt — same gap as Generous Gift's neighbor "up to two opp lands"). |
+| Confront the Past | {4}{R} | 🟡 | Push XXIX: Sorcery (Lesson). Mode 0 only — counter target activated/triggered ability via `Effect::CounterAbility`. The "steal a planeswalker loyalty ability" mode is omitted (dynamic mode-pick from a target's `loyalty_abilities` list is a brand-new primitive, same family as Sarkhan, the Masterless's static loyalty stamp). |
+| Pilgrim of the Ages | {3}{W} | ✅ | Push XXIX: 2/3 Spirit Wizard Cleric. Death-trigger basic-land recursion (`CreatureDied/SelfSource → Move(Selector::take(CardsInZone(Graveyard, IsBasicLand), 1) → Hand)`). Mirrors Pillardrop Rescuer's Lorehold-themed graveyard-recursion shape on a mono-white slot. |
 
 ### Shared / multi-college
 

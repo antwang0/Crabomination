@@ -3083,29 +3083,49 @@ fn abrupt_decay_destroys_low_cmc_nonland() {
     assert!(g.players[1].graveyard.iter().any(|c| c.id == bear));
 }
 
-/// Abrupt Decay refuses to target a CMC-3-or-higher permanent at cast time.
+/// Abrupt Decay refuses to target a CMC-4-or-higher permanent at cast time.
 #[test]
 fn abrupt_decay_rejects_high_cmc_target() {
     let mut g = two_player_game();
-    // Tarmogoyf is base {1}{G} → CMC 2 — but the engine validates the cast-
-    // time `ManaValueAtMost(2)` against the *definition* CMC. Use a
-    // 3-CMC card for the rejection test: Cankerbloom is {1}{G}{G}? Actually
-    // it's {1}{G} = 2. Let's use Soul-Guide Lantern which is {1} = 1. Let's
-    // pick something CMC ≥ 3: Pact of Negation is {0}, no good. Let's use
-    // mana_leak ({1}{U} = 2). Use phyrexian_arena ({1}{B}{B} = 3). Yes.
-    let arena = g.add_card_to_battlefield(1, catalog::phyrexian_arena());
+    // Push XXIX bug fix: Abrupt Decay's printed text is "mana value 3 or
+    // less". Phyrexian Arena ({1}{B}{B} = 3) is now legal. We need a
+    // higher-MV target for the rejection assertion — Sun Titan
+    // ({4}{W}{W} = 6) is well above the cap.
+    let titan = g.add_card_to_battlefield(1, catalog::sun_titan());
     let id = g.add_card_to_hand(0, catalog::abrupt_decay());
     g.players[0].mana_pool.add(Color::Black, 1);
     g.players[0].mana_pool.add(Color::Green, 1);
 
     let res = g.perform_action(GameAction::CastSpell {
         card_id: id,
-        target: Some(Target::Permanent(arena)),
+        target: Some(Target::Permanent(titan)),
         mode: None,
         x_value: None,
     });
     assert!(res.is_err(),
-        "Abrupt Decay should reject a CMC-3 permanent target");
+        "Abrupt Decay should reject a CMC-6 permanent target");
+}
+
+/// Abrupt Decay accepts a CMC-3 permanent target (Push XXIX bug fix).
+#[test]
+fn abrupt_decay_accepts_cmc_three_target() {
+    let mut g = two_player_game();
+    // Phyrexian Arena ({1}{B}{B} = 3) — at the cap, should be legal.
+    let arena = g.add_card_to_battlefield(1, catalog::phyrexian_arena());
+    let id = g.add_card_to_hand(0, catalog::abrupt_decay());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(arena)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Abrupt Decay should accept CMC-3 permanent");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == arena),
+        "Phyrexian Arena (CMC 3) should be destroyed");
 }
 
 /// Abrupt Decay is uncounterable via Keyword::CantBeCountered.

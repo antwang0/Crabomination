@@ -396,9 +396,50 @@ fn entity_matches_label(filter: &crate::card::SelectionRequirement) -> String {
         SR::ManaValueAtLeast(n) => format!("if MV ≥{n}"),
         SR::ManaValueAtMost(n) => format!("if MV ≤{n}"),
         SR::HasName(n) => format!("if named {n}"),
+        // Push XXIX: Or-composite filters of two named card types render
+        // as "if A/B" — covers Rip Apart's "creature or planeswalker"
+        // and "artifact or enchantment", Nature's Claim's "artifact or
+        // enchantment", Ravenous Chupacabra's "creature or planeswalker"
+        // family. Recurses one level only — deeper Or chains fall back
+        // to the generic hint.
+        SR::Or(a, b) => or_label(a, b),
         // Composite / complex predicates fall through to the generic
         // "if matches filter" hint.
         _ => "if matches filter".into(),
+    }
+}
+
+/// Helper for `entity_matches_label`'s Or arm. Picks a short token for
+/// each side of the Or (creature, artifact, enchantment, planeswalker,
+/// land, etc.) and joins with "/". Returns the generic "if matches
+/// filter" hint when either side isn't one of the simple type tokens.
+fn or_label(
+    a: &crate::card::SelectionRequirement,
+    b: &crate::card::SelectionRequirement,
+) -> String {
+    let lhs = simple_type_token(a);
+    let rhs = simple_type_token(b);
+    match (lhs, rhs) {
+        (Some(l), Some(r)) => format!("if {l}/{r}"),
+        _ => "if matches filter".into(),
+    }
+}
+
+/// Short type token for a `SelectionRequirement` — used by `or_label`
+/// to render Or-composite filters as "if creature/planeswalker", etc.
+fn simple_type_token(p: &crate::card::SelectionRequirement) -> Option<&'static str> {
+    use crate::card::CardType;
+    use crate::card::SelectionRequirement as SR;
+    match p {
+        SR::Creature => Some("creature"),
+        SR::Artifact | SR::HasCardType(CardType::Artifact) => Some("artifact"),
+        SR::Enchantment | SR::HasCardType(CardType::Enchantment) => Some("enchantment"),
+        SR::Planeswalker | SR::HasCardType(CardType::Planeswalker) => Some("planeswalker"),
+        SR::Land | SR::HasCardType(CardType::Land) => Some("land"),
+        SR::HasCardType(CardType::Instant) => Some("instant"),
+        SR::HasCardType(CardType::Sorcery) => Some("sorcery"),
+        SR::Permanent => Some("permanent"),
+        _ => None,
     }
 }
 
@@ -1047,6 +1088,54 @@ mod tests {
             what: Selector::TriggerSource,
             filter: SelectionRequirement::Creature
                 .and(SelectionRequirement::Multicolored),
+        };
+        assert_eq!(predicate_short_label(&p), "if matches filter");
+    }
+
+    /// Push XXIX: `entity_matches_label` now resolves Or-composite
+    /// filters of two simple type tokens into "if A/B" labels.
+    /// Covers Rip Apart's "creature/planeswalker" + "artifact/
+    /// enchantment", Magma Opus's "creature/planeswalker", and
+    /// Nature's Claim's "artifact/enchantment".
+    #[test]
+    fn entity_matches_label_covers_or_composite_filters() {
+        use crate::card::{Predicate, SelectionRequirement, Selector};
+        // Creature OR Planeswalker → "if creature/planeswalker".
+        let p = Predicate::EntityMatches {
+            what: Selector::TriggerSource,
+            filter: SelectionRequirement::Creature
+                .or(SelectionRequirement::Planeswalker),
+        };
+        assert_eq!(predicate_short_label(&p), "if creature/planeswalker");
+        // Artifact OR Enchantment → "if artifact/enchantment".
+        let p = Predicate::EntityMatches {
+            what: Selector::TriggerSource,
+            filter: SelectionRequirement::HasCardType(
+                crate::card::CardType::Artifact,
+            )
+                .or(SelectionRequirement::HasCardType(
+                    crate::card::CardType::Enchantment,
+                )),
+        };
+        assert_eq!(predicate_short_label(&p), "if artifact/enchantment");
+        // Instant OR Sorcery → "if instant/sorcery".
+        let p = Predicate::EntityMatches {
+            what: Selector::TriggerSource,
+            filter: SelectionRequirement::HasCardType(
+                crate::card::CardType::Instant,
+            )
+                .or(SelectionRequirement::HasCardType(
+                    crate::card::CardType::Sorcery,
+                )),
+        };
+        assert_eq!(predicate_short_label(&p), "if instant/sorcery");
+        // Three-way Or chain falls back to generic hint (we only
+        // recurse one level deep).
+        let p = Predicate::EntityMatches {
+            what: Selector::TriggerSource,
+            filter: SelectionRequirement::Creature
+                .or(SelectionRequirement::Artifact)
+                .or(SelectionRequirement::Enchantment),
         };
         assert_eq!(predicate_short_label(&p), "if matches filter");
     }
