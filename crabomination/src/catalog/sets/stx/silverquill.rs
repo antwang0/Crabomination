@@ -151,10 +151,11 @@ pub fn closing_statement() -> CardDefinition {
 /// Vanishing Verse — {W}{B} Instant. "Exile target nonland, monocolored
 /// permanent."
 ///
-/// 🟡 The Oracle restricts targets to monocolored permanents. The engine
-/// has `HasColor(Color)` but no "exactly-one-color" predicate; we approximate
-/// to "any nonland permanent" and rely on the deck-design context (typical
-/// targets are creatures, which are usually monocolored) for fidelity.
+/// Now wired (push XX) via the new `SelectionRequirement::Monocolored`
+/// predicate (push XX). The target filter is `Permanent ∧ Nonland ∧
+/// Monocolored`, so two-color and colorless permanents reject as
+/// invalid targets at cast time. (Monocolored is `distinct_colors == 1`;
+/// hybrid pips count both halves, Phyrexian counts the colored side.)
 pub fn vanishing_verse() -> CardDefinition {
     CardDefinition {
         name: "Vanishing Verse",
@@ -167,7 +168,9 @@ pub fn vanishing_verse() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Exile {
             what: target_filtered(
-                SelectionRequirement::Permanent.and(SelectionRequirement::Nonland),
+                SelectionRequirement::Permanent
+                    .and(SelectionRequirement::Nonland)
+                    .and(SelectionRequirement::Monocolored),
             ),
         },
         activated_abilities: no_abilities(),
