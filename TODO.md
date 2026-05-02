@@ -7,6 +7,49 @@ See `CUBE_FEATURES.md` (cube-card implementation status) and
 
 ## Recent additions
 
+- ✅ **Push XXIII (2026-05-02)**: 18 new STX 2021 + cube cards + bot
+  walker-attack routing + UI predicate label coverage. Tests at 1159
+  (was 1132, +27 net). No new engine primitives — pure card
+  additions + non-blocking UX/AI improvements.
+  - **12 new STX 2021 card factories**:
+    - **Witherbloom**: Daemogoth Woe-Eater ({2}{B}{G}, 9/9 Demon
+      with sac-on-ETB approximation + `{T}: gain 4 life`),
+      Eyeblight Cullers ({1}{B}{B}, 4/4 Elf with sac-on-ETB +
+      drain 2), Dina, Soul Steeper ({B}{G}, 1/3 Legendary Deathtouch
+      + lifegain → ping opp + -X/-X activation collapsed to flat
+      -1/-1).
+    - **Lorehold**: Reconstruct History ({1}{R}{W}, return up to 2
+      artifacts gy → hand via `Selector::take(_, 2)` + draw 1),
+      Igneous Inspiration ({2}{R}, 3 dmg + Learn).
+    - **Prismari**: Creative Outburst ({3}{U}{U}{R}{R}, full discard
+      via `Value::HandSizeOf(You)` + draw 5).
+    - **Quandrix**: Snow Day ({1}{G}{U}, Fractal token + counters
+      scaled to hand size), Mentor's Guidance ({2}{G}{U}, draw 2 +
+      hand-size +1/+1 counters on a creature).
+    - **Mono-color**: Solve the Equation ({2}{U}, IS tutor + scry
+      1), Enthusiastic Study ({1}{G}, +2/+2 + trample + Learn),
+      Tempted by the Oriq ({1}{W}{B}, destroy-ish + Inkling token —
+      printed "gain control" approximated as Destroy ≤3-MV).
+  - **6 new cube cards in `modern.rs`**: Boros Charm (3-mode modal
+    instant), Dragon's Rage Channeler (1/1 + on-noncreature-cast
+    Surveil 1), Unholy Heat (3-dmg removal), Pelt Collector (1/1
+    body), Frantic Inventory (graveyard-tally cantrip), Pegasus
+    Stampede (2 fliers + flashback).
+  - **Bot improvement**: `server/bot.rs` DeclareAttackers branch now
+    routes attackers at opp planeswalkers when their power matches
+    the walker's loyalty — greedy first-fit accumulator, advances
+    walkers in alpha-strike turns. Closes "Bot / AI — Planeswalker
+    Targeting" in TODO.md.
+  - **UI improvement**: `predicate_short_label` (server/view.rs)
+    gained explicit arms for `SelectorExists`,
+    `SelectorCountAtLeast { n }`, `IsTurnOf`, `All`/`Any` boolean
+    combinators (with empty-list collapses), `Not`, `True`,
+    `False` — six previously-unhandled Predicate variants now read
+    naturally in tooltips.
+  - **27 new tests**: 13 STX (`tests::stx::*`), 9 modern
+    (`tests::modern::*`), 5 server-side (`server::view::tests`,
+    `server::bot::tests`).
+
 - ✅ **Cube + STX push XXII (2026-05-02)**: `SelectionRequirement::HasName`
   predicate + Dragon's Approach 🟡 → ✅ promotion + 17 new card
   factories + Rofellos rewire + Frantic Search comment cleanup.
@@ -2186,3 +2229,78 @@ oracle verification.
   (Creature & ControlledByYou))` would unblock the affinity tax,
   promoting it to ✅. Same mechanism unblocks the affinity static
   on the IS spells caster, which is a separate pass.
+
+## New suggestions (added 2026-05-02 push XXIII)
+
+These items came up while implementing the STX 2021 + cube card batch
++ bot planeswalker-attack routing.
+
+### Engine
+
+- **`Effect::AdditionalCostBeforeCast` primitive**. Daemogoth Woe-
+  Eater, Eyeblight Cullers, and Big Score all share the shape "as an
+  additional cost to cast this spell, X". The current approximation
+  is to fire X at ETB (creatures) or at resolution head (spells).
+  This works for the net board state, but loses the timing nuance —
+  a counterspell can't cancel the additional cost from being paid,
+  for instance, and "if you can't pay the additional cost, you can't
+  cast the spell" doesn't trip when the engine's pre-flight cast-
+  validity check happens. A dedicated primitive (or a flag on
+  `CardDefinition`) that runs the additional cost in
+  `pay_spell_cost` would fix the timing.
+
+- **`Effect::GainControl` static prompt for sorceries**. Tempted by
+  the Oriq currently approximates "gain control of target ≤3-MV
+  creature" with Destroy. Same gap as Mind Control and the Bribery
+  family. A prompt-driven `Effect::GainControl { what, duration }`
+  with `Duration::Permanent` for the static cases + `Duration::EOT`
+  for Threaten would unblock all of them.
+
+- **`Value::DistinctCardTypesInGraveyard(PlayerRef)` primitive**.
+  Dragon's Rage Channeler's Delirium body buff (+2/+2 + flying when
+  ≥4 distinct card types in your gy) and Unholy Heat's Delirium
+  upgrade to 6 dmg both need this. The `Value` resolves to a count
+  by walking the controller's graveyard and taking `iter().map(|c|
+  c.definition.card_types).flatten().unique().count()`. Backed by a
+  fresh helper on `Player`. Also unblocks Tarmogoyf's printed P/T
+  scaling (currently a flat 4/5 approximation).
+
+- **`Effect::CounterSwap { from, to, kind }` primitive**. Pelt
+  Collector's death-rider (move counters from a dying creature to
+  another), Ambitious Augmenter's "fractal-with-counters on death"
+  rider, and Pestbrood Sloth-style transfer abilities all share the
+  shape "move counters off X onto Y on Z event". A first-class
+  primitive (or even `Effect::AddCounter` with `amount: CountersOn(
+  prev_source)`) would close 3+ ⏳ rows.
+
+### UI
+
+- **Auto-target hint for ETB-then-sac creatures**. Daemogoth Woe-
+  Eater, Eyeblight Cullers fire an ETB sacrifice that picks the
+  cheapest creature you control. The UI could surface a tooltip
+  ("This creature requires sacrificing another creature on ETB —
+  click to confirm or cancel") so players don't accidentally
+  sacrifice their best blocker. Currently the prompt fires silently.
+
+- **Walker-attack target indicator**. The bot now picks off
+  planeswalkers; the UI could surface this with a colored arrow
+  from each attacker to its assigned target (red for player attack,
+  yellow for walker attack), so the human player can tell at a
+  glance which walkers are about to die.
+
+### Bot / AI
+
+- **Mana-rock prioritisation for X spells**. The bot's
+  `max_affordable_x` correctly maxes X based on remaining floating
+  mana, but it doesn't tap mana rocks to unlock more X. A 2-step
+  pass — "tap all mana, recompute max X, choose highest-value X
+  spell" — would let the bot sink Sol Ring + Mind Stone into a big
+  Plumb the Forbidden / Snow Day instead of letting the rocks
+  idle.
+
+- **Block prioritisation**. The bot blocks haphazardly today (first
+  available creature blocks the first attacker). A better rule:
+  block to kill the highest-power attacker first, then double-
+  block when no chump-block is favorable. This complements the
+  walker-attack routing — the same "what damage are we accepting"
+  bookkeeping.

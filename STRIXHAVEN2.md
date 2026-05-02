@@ -36,8 +36,8 @@ This file tracks two adjacent Strixhaven catalogs:
 Counts reflect the regenerated tables below (audited via
 `scripts/audit_strixhaven2.py` against `catalog::sets::sos`).
 
-- ✅ done: **108** (unchanged from push XXI; push XXII targeted STX
-  2021 cards in `catalog::sets::stx::mono`, not SOS).
+- ✅ done: **108** (unchanged from push XXI; push XXII–XXIII targeted
+  STX 2021 + cube cards, not SOS).
 - 🟡 partial: **139** (unchanged).
 - ⏳ todo: **8** (unchanged).
 
@@ -45,6 +45,91 @@ All 247 cards marked ✅ or 🟡 have a corresponding factory in
 `crabomination/src/catalog/sets/sos/`; the audit script reports 0 false
 positives and 0 stale ⏳ rows. STX 2021 progress is tracked in the
 "Strixhaven base set (STX)" section near the bottom of this file.
+
+## 2026-05-02 push XXIII: 18 new STX 2021 + cube cards + bot/UI improvements
+
+Pure-card-additions push (no new engine primitives) — extends the STX
+2021 catalog across Witherbloom, Lorehold, Prismari, Quandrix, and
+mono-color staples with 12 new cards, plus 6 new modern cube cards in
+`catalog::sets::decks::modern.rs`. Server bot now picks off opp
+planeswalkers when killable, and `predicate_short_label` covers six
+more `Predicate` variants (SelectorExists, SelectorCountAtLeast,
+IsTurnOf, All/Any/Not/True/False). Tests pass at 1159 (was 1132,
++27 net).
+
+### Card additions
+
+#### STX 2021 (`catalog::sets::stx::*`)
+
+- **Witherbloom**: Daemogoth Woe-Eater (9/9 Demon, sac-on-ETB +
+  `{T}`: gain 4 life), Eyeblight Cullers (4/4 Elf with sac-on-ETB +
+  drain 2), Dina, Soul Steeper (1/3 Legendary Deathtouch + lifegain-
+  pings-opp). Same additional-cost approximation pattern as Vicious
+  Rivalry (sac fires at ETB rather than at cast time).
+- **Lorehold**: Reconstruct History (return up to 2 artifacts gy →
+  hand via `Selector::take(_, 2)` + draw 1), Igneous Inspiration
+  (3 dmg to creature/PW + Learn).
+- **Prismari**: Creative Outburst (full discard via
+  `Value::HandSizeOf(You)` + draw 5).
+- **Quandrix**: Snow Day (Fractal token + counters scaled to hand
+  size), Mentor's Guidance (draw 2 then put hand-size +1/+1 counters
+  on a creature you control).
+- **Mono-color** (`stx::mono`): Solve the Equation ({2}{U} tutor for
+  instant/sorcery + scry 1), Enthusiastic Study ({1}{G} pump +
+  trample + Learn), Tempted by the Oriq ({1}{W}{B} destroy ≤3-MV
+  creature + Inkling token; printed "gain control" approximated as
+  Destroy since `Effect::GainControl` doesn't have a static prompt
+  primitive yet).
+
+#### Modern cube (`catalog::sets::decks::modern.rs`)
+
+- Boros Charm (3-mode `ChooseMode`: 4 dmg to PW / your permanents
+  gain Indestructible EOT / target creature gains Double Strike EOT).
+- Dragon's Rage Channeler (1/1 Human Shaman with Surveil 1 on
+  noncreature cast — filter via `Predicate::EntityMatches +
+  HasCardType(Creature).negate()`). Delirium body buff omitted.
+- Unholy Heat ({R} Instant: 3 dmg to creature/PW; Delirium upgrade
+  to 6 dmg omitted — same gap as DRC's static).
+- Pelt Collector ({G} 1/1 Elf Warrior body — power-comparison
+  ETB/death triggers + counter-gated trample static omitted).
+- Frantic Inventory ({1}{U}: draw 1 + 1 per other named copy in gy
+  via `Value::Sum + CountOf(CardsInZone(Graveyard, HasName))`; same
+  shape as Slime Against Humanity from push XXII).
+- Pegasus Stampede ({3}{W}: two 1/1 white Pegasus tokens with flying
+  + Flashback `{6}{W}{W}`).
+
+### Engine / server improvements
+
+- **Bot planeswalker targeting** (`server/bot.rs`): the
+  DeclareAttackers branch now scans opp planeswalkers, sorts them by
+  loyalty ascending, and assigns its strongest attackers to walker
+  targets first via a greedy first-fit accumulator. Once an attacker
+  pool meets a walker's loyalty, advance to the next walker so an
+  alpha-strike can pick off multiple walkers in one turn. Falls
+  through to the previous Player(opponent) target when no walkers
+  are on the board.
+- **Predicate labels** (`server/view.rs`): `predicate_short_label`
+  gained explicit arms for `SelectorExists`,
+  `SelectorCountAtLeast { n }` (with separate `n=1` collapse and
+  `n=k` "if ≥k match" form), `IsTurnOf`, `All`/`Any` boolean
+  combinators (with empty-list collapses to "always"/"never"),
+  `Not`, `True`, `False`. The catch-all "conditional" arm now only
+  fires for genuinely unhandled cases.
+
+### Tests
+
+- 13 new STX 2021 functionality tests (`tests::stx::*`): body P/T
+  sanity, ETB sac/drain/triggers, lifegain pings, gy-recursion target
+  filtering, hand-size-scaled counter / discard, tutor flow, Learn
+  draw rider, token mint counts.
+- 9 new cube tests (`tests::modern::*`): modal mode-pick (Boros
+  Charm), on-cast trigger filter (DRC), hard-removal damage, scaling
+  card draw via gy-tally, Pegasus token mint.
+- 5 new server-side tests (`server::view::tests`,
+  `server::bot::tests`): predicate label coverage, bot walker-attack
+  routing, walker-absent fallback.
+
+All 1159 lib tests pass (was 1132, +27 net).
 
 ## 2026-05-02 push XXII: HasName predicate + Dragon's Approach + 17 cube cards
 
@@ -1473,6 +1558,9 @@ parity is a matter of porting card factories one at a time.
 | Pest Summoning | {B}{G} | ✅ | Sorcery (Lesson). Creates two 1/1 Pest tokens; the death-trigger lifegain rider rides on the token via SOS-VI's `TokenDefinition.triggered_abilities`. |
 | Witherbloom Pledgemage | {1}{B}{G} | 🟡 | 3/3 Plant Warrior. `{T}, Pay 1 life: Add {B} or {G}.` Wired with `LoseLife 1 → AddMana(B)` in resolution; the timing nuance (cost-paid-first) doesn't matter for the bot harness. |
 | Bayou Groff | {2}{B}{G} | ✅ | 5/4 Beast. Push XVI: "may pay {1} on death to return to hand" rider now wired via the new `Effect::MayPay` primitive (sibling to push XV's `Effect::MayDo`). On the death trigger, the controller is asked yes/no; on yes + sufficient mana, the engine pays {1} and `Move(SelfSource → Hand(OwnerOf(Self)))`. |
+| Daemogoth Woe-Eater | {2}{B}{G} | 🟡 | Push XXIII: 9/9 Demon body + `{T}: gain 4 life` activated ability + ETB sacrifice (approximation of "as additional cost: sacrifice a creature" — sac fires at ETB rather than at cast time). Sad-sack mythic finisher. |
+| Eyeblight Cullers | {1}{B}{B} | 🟡 | Push XXIII: 4/4 Elf Warrior with ETB sac (additional-cost approximation) + drain 2. Tempo creature with built-in burn. |
+| Dina, Soul Steeper | {B}{G} | 🟡 | Push XXIII: 1/3 Legendary Human Druid with Deathtouch + lifegain → ping target opponent for 1. The -X/-X activated ability is collapsed to flat -1/-1 (no Value-keyed `PumpPT` from creature count in activated paths). |
 
 ### Lorehold (R/W)
 
@@ -1484,6 +1572,8 @@ parity is a matter of porting card factories one at a time.
 | Heated Debate | {2}{R} | ✅ | Instant. 4 damage to target creature. Damage-can't-be-prevented rider is a no-op (engine has no prevention layer). |
 | Storm-Kiln Artist | {2}{R}{W} | 🟡 | 3/3 Human Wizard. Magecraft: 1 damage to each opponent + create a Treasure (printed: "1 damage to any target"; collapsed to each-opponent for the auto-target framework). |
 | Sparring Regimen | {2}{R}{W} | ✅ | Push XVII: both abilities wired. ETB creates a 2/2 R/W Spirit token; "whenever you attack, +1/+1 on each attacker" now fires per-attacker via the new combat-side broadcast in `declare_attackers` — the trigger source is Sparring Regimen, the target is pre-bound to the just-declared attacker as `Target(0)`. Net result: each declared attacker ends up with one new counter, matching the printed mass pump. |
+| Reconstruct History | {1}{R}{W} | ✅ | Push XXIII: return up to 2 artifact cards from your gy → hand via `Selector::take(_, 2)` over `CardsInZone(Graveyard, Artifact)` + draw 1. |
+| Igneous Inspiration | {2}{R} | ✅ | Push XXIII: 3 dmg to creature/PW + Learn (collapsed to draw 1). |
 
 ### Quandrix (G/U)
 
@@ -1492,6 +1582,8 @@ parity is a matter of porting card factories one at a time.
 | Quandrix Apprentice | {G}{U} | ✅ | 1/1 Elf Druid. Magecraft: target creature you control gets +1/+1 EOT. |
 | Quandrix Pledgemage | {1}{G}{U} | ✅ | 2/2 Fractal Wizard. Activated `{1}{G}{U}: +1/+1 counter on this creature`. |
 | Decisive Denial | {G}{U} | 🟡 | Instant. Mode 0 (counter target noncreature spell unless its controller pays {2}) wired; mode 1 (fight at variable power) ⏳ pending multi-target prompt. |
+| Snow Day | {1}{G}{U} | ✅ | Push XXIII: Instant. Create a 0/0 Fractal token + put X +1/+1 counters on it where X = `Value::HandSizeOf(You)`. With a 7-card hand the Fractal lands as a 7/7. |
+| Mentor's Guidance | {2}{G}{U} | 🟡 | Push XXIII: Sorcery. Draw 2 + put hand-size +1/+1 counters on a target creature you control. Multi-target "for each" iteration collapsed to single target. |
 
 ### Prismari (U/R)
 
@@ -1500,6 +1592,7 @@ parity is a matter of porting card factories one at a time.
 | Prismari Pledgemage | {1}{U}{R} | ✅ | 2/3 Elemental with Trample + Haste. |
 | Prismari Apprentice | {U}{R} | 🟡 | 2/2 Human Wizard. Magecraft: Scry 1. The "+1/+0 EOT" alt-mode is ⏳ pending a let-the-controller-pick hook on triggered ChooseMode. |
 | Symmetry Sage | {U} | ✅ | 1/2 Human Wizard. Magecraft: this creature gets +1/+0 and gains flying until end of turn. |
+| Creative Outburst | {3}{U}{U}{R}{R} | ✅ | Push XXIII: Sorcery. Discard your hand (`Discard { amount: HandSizeOf(You) }`), draw 5. Prismari spellslinger refill that fuels later magecraft / flashback payoffs. |
 
 ### Mono-color staples (`stx::mono`)
 
@@ -1515,6 +1608,9 @@ parity is a matter of porting card factories one at a time.
 | Bury in Books | {3}{U} | ✅ | Sorcery. Put target creature on top of its owner's library. |
 | Test of Talents | {1}{U}{U} | 🟡 | Counter target instant or sorcery; the search-and-exile-by-name follow-up is ⏳. |
 | Multiple Choice | {1}{U}{U} | 🟡 | Modal sorcery with three modes wired (Scry 2 / 1/1 Pest / +1/+0 hexproof EOT). The "all four" mega-mode is ⏳. |
+| Solve the Equation | {2}{U} | ✅ | Push XXIII: Sorcery. Search library for an instant or sorcery, put it into your hand, then scry 1. |
+| Enthusiastic Study | {1}{G} | ✅ | Push XXIII: Instant. Target creature gets +2/+2 and gains trample EOT, then learn (collapses to draw 1). |
+| Tempted by the Oriq | {1}{W}{B} | 🟡 | Push XXIII: Sorcery. Approximation of "gain control" as Destroy ≤3-MV creature + create a 1/1 Inkling token (no `Effect::GainControl` static prompt yet). |
 
 ### Shared / multi-college
 
