@@ -912,6 +912,88 @@ pub fn pursue_the_past() -> CardDefinition {
     }
 }
 
+/// Molten Note — {X}{R}{W} Lorehold Sorcery.
+/// "Molten Note deals damage to target creature equal to the amount of
+/// mana spent to cast this spell. Untap all creatures you control. /
+/// Flashback {6}{R}{W} (You may cast this card from your graveyard for
+/// its flashback cost. Then exile it.)"
+///
+/// Wired faithfully:
+/// - Damage = mana spent. Engine has no first-class "mana spent to cast"
+///   value, so we branch on `Predicate::CastFromGraveyard` (push XVIII)
+///   to reproduce both halves exactly:
+///   * Hand cast ({X}{R}{W}): damage = X + 2 (the X plus the {R}{W}
+///     portion). `Value::Sum(XFromCost, Const(2))` reads the actual paid
+///     X from `EffectContext.x_value`.
+///   * Flashback cast ({6}{R}{W}, fixed): damage = 8 (the {6} + {R}{W}).
+///     The fixed-cost branch is `Value::Const(8)`.
+/// - "Untap all creatures you control" → `Effect::Untap` on each
+///   creature you control (no `up_to` cap, mirrors the printed wording).
+/// - Flashback wired via `Keyword::Flashback({6}{R}{W})`. The "Then
+///   exile it" tail is the engine's default for flashback-cast cards
+///   (the engine routes flashbacked spells to exile after resolution).
+pub fn molten_note() -> CardDefinition {
+    use crate::card::Keyword;
+    use crate::effect::Predicate;
+    use crate::mana::{ManaCost, ManaSymbol};
+    let flashback_cost = ManaCost {
+        symbols: vec![
+            ManaSymbol::Generic(6),
+            ManaSymbol::Colored(Color::Red),
+            ManaSymbol::Colored(Color::White),
+        ],
+    };
+    let damage_target = target_filtered(SelectionRequirement::Creature);
+    CardDefinition {
+        name: "Molten Note",
+        // {X}{R}{W} — the X is the cast-time variable.
+        cost: ManaCost {
+            symbols: vec![
+                ManaSymbol::X,
+                ManaSymbol::Colored(Color::Red),
+                ManaSymbol::Colored(Color::White),
+            ],
+        },
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![Keyword::Flashback(flashback_cost)],
+        effect: Effect::Seq(vec![
+            // Damage half — branch on cast-face so the "amount of mana
+            // spent" formula matches the actual cost paid.
+            Effect::If {
+                cond: Predicate::CastFromGraveyard,
+                then: Box::new(Effect::DealDamage {
+                    to: damage_target.clone(),
+                    amount: Value::Const(8),
+                }),
+                else_: Box::new(Effect::DealDamage {
+                    to: damage_target,
+                    amount: Value::Sum(vec![Value::XFromCost, Value::Const(2)]),
+                }),
+            },
+            // Untap-all-creatures-you-control half.
+            Effect::Untap {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+                up_to: None,
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
 // ── Silverquill (W/B) ───────────────────────────────────────────────────────
 
 /// Render Speechless — {2}{W}{B} Sorcery.
@@ -1000,6 +1082,68 @@ pub fn moment_of_reckoning() -> CardDefinition {
                     controller: PlayerRef::You,
                     tapped: false,
                 },
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+/// Social Snub — {1}{W}{B} Silverquill Sorcery.
+/// "When you cast this spell while you control a creature, you may
+/// copy this spell. / Each player sacrifices a creature of their
+/// choice. Each opponent loses 1 life and you gain 1 life."
+///
+/// Wired faithfully on the play-pattern halves; the on-cast may-copy
+/// rider is omitted (no copy-spell primitive yet — same gap as
+/// Silverquill the Disputant, Choreographed Sparks, etc.).
+///
+/// - Mass sacrifice: `Effect::Sacrifice` is fanned across **each
+///   player** (you + each opponent) via a `Seq` of two sacrifice
+///   effects. Each player picks their own sac via the auto-decider's
+///   first-matching-creature heuristic, mirroring the printed "of
+///   their choice" wording.
+/// - Drain: `Effect::Drain` from each opponent → you. The {1}{W}{B}
+///   rate of one-life drain is unconditional (vs. the on-cast may-copy
+///   rider that conditionally doubles the body).
+///
+/// Push XIX promotes the row from ⏳ to 🟡 on the Silverquill table.
+pub fn social_snub() -> CardDefinition {
+    CardDefinition {
+        name: "Social Snub",
+        cost: cost(&[generic(1), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            // Each player sacrifices a creature of their choice. Two
+            // separate sac effects so each player's auto-decider gets
+            // its own selection (one for the controller, one for the
+            // EachOpponent fan-out which dispatches per-opp).
+            Effect::Sacrifice {
+                who: Selector::You,
+                count: Value::Const(1),
+                filter: SelectionRequirement::Creature,
+            },
+            Effect::Sacrifice {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                count: Value::Const(1),
+                filter: SelectionRequirement::Creature,
+            },
+            // Drain 1 from each opponent to you.
+            Effect::Drain {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                to: Selector::You,
+                amount: Value::Const(1),
             },
         ]),
         activated_abilities: no_abilities(),

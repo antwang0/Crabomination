@@ -1844,6 +1844,95 @@ pub fn tenured_concocter() -> CardDefinition {
 
 // ── Colorless ───────────────────────────────────────────────────────────────
 
+/// Biblioplex Tomekeeper — {4} body-only wire, 3/4 Construct artifact
+/// creature.
+///
+/// Printed Oracle: "When this creature enters, choose up to one — /
+/// • Target creature becomes prepared. / • Target creature becomes
+/// unprepared." The Prepare keyword and the prepared-state toggle are
+/// SOS-specific and not yet first-class engine concepts (see TODO.md
+/// "Prepare mechanic"). Without those, the ETB would no-op anyway, so
+/// we ship the body alone.
+///
+/// Push XIX promotes the row from ⏳ to 🟡 on the Colorless table.
+pub fn biblioplex_tomekeeper() -> CardDefinition {
+    CardDefinition {
+        name: "Biblioplex Tomekeeper",
+        cost: cost(&[generic(4)]),
+        supertypes: vec![],
+        // Artifact + Creature, with Construct subtype.
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Construct],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+/// Strixhaven Skycoach — {3} body-only Vehicle artifact, printed 3/2
+/// Flying.
+///
+/// Printed Oracle: "Flying / When this Vehicle enters, you may search
+/// your library for a basic land card, reveal it, put it into your
+/// hand, then shuffle. / Crew 2."
+///
+/// 🟡 Wire: ETB land tutor is wired faithfully via `Effect::MayDo` +
+/// `Effect::Search { filter: IsBasicLand, to: Hand }`. The Vehicle
+/// subtype + Crew keyword are *not yet* engine concepts (no Vehicle
+/// crewing primitive), so the card enters the battlefield as an
+/// artifact creature directly — a small over-statement, but the
+/// ETB tutor + 3/2 Flying body still slot into colorless ramp. Tracked
+/// in TODO.md ("Vehicle / Crew primitives").
+pub fn strixhaven_skycoach() -> CardDefinition {
+    CardDefinition {
+        name: "Strixhaven Skycoach",
+        cost: cost(&[generic(3)]),
+        supertypes: vec![],
+        // No Vehicle subtype yet — modelled as a plain artifact creature
+        // until the Crew/Vehicle primitives land.
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Construct],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::MayDo {
+                description:
+                    "Strixhaven Skycoach: search your library for a basic land?".into(),
+                body: Box::new(Effect::Search {
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::IsBasicLand,
+                    to: crate::effect::ZoneDest::Hand(PlayerRef::You),
+                }),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
 /// Rancorous Archaic — {5}, 2/2 Avatar. Trample, reach.
 /// "Trample, reach / Converge — This creature enters with a +1/+1
 /// counter on it for each color of mana spent to cast it."
@@ -2470,6 +2559,46 @@ pub fn expressive_firedancer() -> CardDefinition {
     }
 }
 
+/// Strife Scholar — {2}{R} body-only wire, 3/2 Orc Sorcerer with
+/// `Keyword::Ward(2)`. The MDFC back face "Awaken the Ages" ({5}{R}
+/// Sorcery) and the on-cast magecraft / Ward enforcement riders are
+/// omitted; this push only ships the front-face body so the card slots
+/// into red mid-curve aggressive shells. Tracked in STRIXHAVEN2.md.
+///
+/// Push XIX: promotes the row from ⏳ to 🟡 — same body-only +
+/// Ward shape as Mica, Reader of Ruins (push XVIII) and Colorstorm
+/// Stallion. The Ward enforcement is still pending the engine-side
+/// `Keyword::Ward` cost gate (TODO.md tracks the work).
+pub fn strife_scholar() -> CardDefinition {
+    use crate::mana::r;
+    CardDefinition {
+        name: "Strife Scholar",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Orc, CreatureType::Sorcerer],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        // Default Ward(2) — printed Ward N is unverified (Scryfall
+        // unavailable in this environment). The Ward keyword is a
+        // static-only tag today (engine has no cost-gate enforcement
+        // yet), so the integer is purely cosmetic until that lands.
+        keywords: vec![Keyword::Ward(2)],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
 /// Eternal Student — {3}{B}, 4/2 Zombie Warlock. The
 /// `{1}{B}, exile from graveyard: create two Inkling tokens` activated
 /// ability is omitted (engine activated-ability path only walks the
@@ -2937,7 +3066,7 @@ pub fn hydro_channeler() -> CardDefinition {
                 sorcery_speed: false,
                 sac_cost: false,
                 condition: None,
-            life_cost: 0,
+                life_cost: 0,
             },
             ActivatedAbility {
                 tap_cost: true,
@@ -2950,9 +3079,42 @@ pub fn hydro_channeler() -> CardDefinition {
                 sorcery_speed: false,
                 sac_cost: false,
                 condition: None,
-            life_cost: 0,
+                life_cost: 0,
             },
         ],
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+/// Campus Composer — {3}{U} body-only wire, 3/4 Merfolk Bard with
+/// `Keyword::Ward(2)`. The MDFC back face "Aqueous Aria" ({4}{U}
+/// Sorcery) is omitted — without verified oracle text the back face
+/// would be a guess. Front face slots into blue mid-curve with Ward
+/// the same way Mica / Strife Scholar / Colorstorm Stallion do.
+///
+/// Push XIX promotes the row from ⏳ to 🟡 on the Blue table.
+pub fn campus_composer() -> CardDefinition {
+    use crate::mana::u;
+    CardDefinition {
+        name: "Campus Composer",
+        cost: cost(&[generic(3), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Bard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Ward(2)],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],
         base_loyalty: 0,
@@ -3074,6 +3236,60 @@ pub fn emil_vastlands_roamer() -> CardDefinition {
 }
 
 // ── Prismari (U/R) ──────────────────────────────────────────────────────────
+
+/// Elemental Mascot — {1}{U}{R} body-only wire, 1/4 Elemental Bird with
+/// `Keyword::Flying` + `Keyword::Vigilance`.
+///
+/// Printed Oracle: "Flying, vigilance / Opus — Whenever you cast an
+/// instant or sorcery spell, this creature gets +1/+0 until end of
+/// turn. If five or more mana was spent to cast that spell, exile the
+/// top card of your library. You may play that card until the end of
+/// your next turn."
+///
+/// 🟡 Body wire — the Opus rider (mana-spent introspection on the cast
+/// + cast-from-exile pipeline) is omitted; the +1/+0 EOT pump on every
+/// IS cast is wired faithfully via `cast_is_instant_or_sorcery()` (push
+/// VII), matching the printed +1/+0 pump on the cheap-spell branch. The
+/// 5+-mana exile-top branch is omitted (same cast-from-exile gap as
+/// Practiced Scrollsmith / The Dawning Archaic / Conspiracy Theorist).
+pub fn elemental_mascot() -> CardDefinition {
+    use crate::effect::shortcut::cast_is_instant_or_sorcery;
+    use crate::mana::{r, u};
+    CardDefinition {
+        name: "Elemental Mascot",
+        cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Bird],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 4,
+        keywords: vec![Keyword::Flying, Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        // Cheap-cast magecraft +1/+0 EOT pump (the always-on half of
+        // the printed Opus rider). The 5+-mana exile-top alternative
+        // is omitted (cast-from-exile gap).
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(cast_is_instant_or_sorcery()),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(1),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
 
 /// Colorstorm Stallion — {1}{U}{R}, 3/3 Elemental Horse.
 /// "Ward {1}, haste / Opus — Whenever you cast an instant or sorcery
@@ -3638,6 +3854,124 @@ pub fn lorehold_the_historian() -> CardDefinition {
         power: 5,
         toughness: 5,
         keywords: vec![Keyword::Flying, Keyword::Haste],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+/// Silverquill, the Disputant — {2}{W}{B} Legendary Creature — Elder
+/// Dragon. 4/4 Flying, vigilance.
+///
+/// Printed Oracle: "Flying, vigilance / Each instant and sorcery spell
+/// you cast has casualty 1. (As you cast that spell, you may
+/// sacrifice a creature with power 1 or greater. When you do, copy the
+/// spell and you may choose new targets for the copy.)"
+///
+/// 🟡 Body-only wire — the Casualty 1 grant on every instant/sorcery
+/// you cast is omitted (no copy-spell primitive yet, same gap as
+/// Aziza, Mica, Choreographed Sparks). 4/4 Flying+Vigilance finisher
+/// still slots into Silverquill 5-drops.
+pub fn silverquill_the_disputant() -> CardDefinition {
+    use crate::card::Supertype;
+    CardDefinition {
+        name: "Silverquill, the Disputant",
+        cost: cost(&[generic(2), w(), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elder, CreatureType::Dragon],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Flying, Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+/// Quandrix, the Proof — {4}{G}{U} Legendary Creature — Elder Dragon.
+/// 6/6 Flying, trample.
+///
+/// Printed Oracle: "Flying, trample / Cascade (When you cast this
+/// spell, exile cards from the top of your library until you exile a
+/// nonland card that costs less. You may cast it without paying its
+/// mana cost.) / Instant and sorcery spells you cast from your hand
+/// have cascade."
+///
+/// 🟡 Body-only wire — Cascade is not yet a first-class engine
+/// keyword (no reveal-until-MV-less-than primitive, no cast-from-exile
+/// pipeline; tracked in TODO.md push XVIII). The 6/6 Flying+Trample
+/// Elder Dragon body still hits combat correctly at the 6 CMC slot.
+pub fn quandrix_the_proof() -> CardDefinition {
+    use crate::card::Supertype;
+    use crate::mana::{g, u};
+    CardDefinition {
+        name: "Quandrix, the Proof",
+        cost: cost(&[generic(4), g(), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elder, CreatureType::Dragon],
+            ..Default::default()
+        },
+        power: 6,
+        toughness: 6,
+        keywords: vec![Keyword::Flying, Keyword::Trample],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+/// Prismari, the Inspiration — {5}{U}{R} Legendary Creature — Elder
+/// Dragon. 7/7 Flying with Ward—Pay 5 life.
+///
+/// Printed Oracle: "Flying / Ward—Pay 5 life. / Instant and sorcery
+/// spells you cast have storm. (Whenever you cast an instant or
+/// sorcery spell, copy it for each spell cast before it this turn.
+/// You may choose new targets for the copies.)"
+///
+/// 🟡 Body-only wire with `Keyword::Ward(5)` (the printed alt-life
+/// Ward cost is approximated as a flat mana Ward, same primitive
+/// applied to Mica's Ward—Pay 3 life). The Storm grant on every IS
+/// cast is omitted (no copy-spell primitive). The 7/7 Flying body
+/// remains the dominant printed clause at the 7 CMC slot.
+pub fn prismari_the_inspiration() -> CardDefinition {
+    use crate::card::Supertype;
+    use crate::mana::{r, u};
+    CardDefinition {
+        name: "Prismari, the Inspiration",
+        cost: cost(&[generic(5), u(), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elder, CreatureType::Dragon],
+            ..Default::default()
+        },
+        power: 7,
+        toughness: 7,
+        keywords: vec![Keyword::Flying, Keyword::Ward(5)],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],

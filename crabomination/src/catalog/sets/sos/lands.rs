@@ -183,6 +183,41 @@ pub fn great_hall_of_the_biblioplex() -> CardDefinition {
     }
 }
 
+/// Skycoach Waypoint — colorless utility Land.
+/// Real Oracle: "{T}: Add {C}. / {3}, {T}: Target creature becomes
+/// prepared."
+///
+/// Approximation: the Prepare keyword is not yet a first-class engine
+/// concept (see TODO.md "Prepare mechanic" — toggling a creature
+/// `prepared` state requires creatures with their own Prepare-grant
+/// abilities). The `{3},{T}: prepare a creature` activation is omitted;
+/// the colorless tap-for-{C} mana ability is wired faithfully via the
+/// shared `tap_add_colorless` helper.
+///
+/// Push XIX promotes the row from ⏳ to 🟡 on the Colorless table.
+pub fn skycoach_waypoint() -> CardDefinition {
+    use super::super::tap_add_colorless;
+    CardDefinition {
+        name: "Skycoach Waypoint",
+        cost: ManaCost::default(),
+        supertypes: vec![],
+        card_types: vec![CardType::Land],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: vec![tap_add_colorless()],
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
 /// Petrified Hamlet — Land.
 /// Real Oracle: "When this land enters, choose a land card name. /
 /// Activated abilities of sources with the chosen name can't be activated

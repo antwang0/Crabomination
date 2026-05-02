@@ -7,6 +7,39 @@ See `CUBE_FEATURES.md` (cube-card implementation status) and
 
 ## Recent additions
 
+- ✅ **SOS push XIX (2026-05-02)**: Lorehold school complete + 11 SOS
+  cards added/promoted (1 ✅ + 10 🟡) + UI label cleanup. Tests at
+  1079 (was 1063, +16 new):
+  - **Molten Note** ⏳ → ✅: Lorehold's last ⏳ row closes. Wired the
+    full "amount of mana spent" damage formula by branching on
+    `Predicate::CastFromGraveyard` (push XVIII) — hand cast deals
+    `XFromCost + 2`, flashback cast deals 8 (the fixed {6}{R}{W}
+    mana spent). Untap-all-your-creatures + Flashback {6}{R}{W}
+    wired faithfully.
+  - **10 ⏳→🟡 body-only / partial wires**: Strife Scholar, Campus
+    Composer, Elemental Mascot (with magecraft pump), Biblioplex
+    Tomekeeper, Strixhaven Skycoach (with ETB land tutor), Skycoach
+    Waypoint (mana ability), Silverquill the Disputant, Quandrix the
+    Proof, Prismari the Inspiration, Social Snub (full mass-sac +
+    drain wire). Together: 4/5 Elder Dragons body-wired (only
+    Witherbloom + Lorehold finishers were already done from earlier
+    pushes), 3 Ward bodies (Strife, Campus, Prismari), 2 colorless
+    artifact bodies, 1 colorless utility land.
+  - **Lorehold school = fully implemented** (0 ⏳ rows). Joins
+    Witherbloom (push XV) as the second school with no remaining
+    ⏳ entries. Remaining ⏳: 9 cards across Blue (1), Red (4),
+    Silverquill (2), Quandrix (1), Colorless (1) — all blocked on
+    new primitives (copy-spell, Cascade, Prepare, Vehicle/Crew,
+    cast-from-exile pipeline).
+  - **Server view cleanup**: `Predicate::CastSpellHasX` label
+    updated to the more readable "when you cast an X spell" (was
+    "cast spell w/ {X}"); `CastSpellTargetsMatch` similarly. Push
+    XVIII suggestion item closed.
+  - **Lib hygiene**: minor indent fix in `hydro_channeler()` (two
+    `life_cost: 0,` lines were misaligned vs sibling fields).
+  - **Doc updates**: STRIXHAVEN2.md tables progress 100/135/20 →
+    101/145/9 (✅/🟡/⏳).
+
 - ✅ **SOS push XVIII (2026-05-02)**: 3 engine primitives + 5 new SOS
   cards + 4 promotions. Tests at 1063 (was 1050):
   - **Combat-damage gy-broadcast** — `fire_combat_damage_to_player_
@@ -1888,3 +1921,102 @@ These items came up while implementing the combat-damage gy-broadcast
   keyword primitive" pending — most are body-wired with the Ward
   tag already; the doc could be flipped from 🟡 to ✅ once Ward
   enforcement lands (or stay 🟡 with a clearer note).
+
+## New suggestions (added 2026-05-02 push XIX)
+
+These items came up while implementing Molten Note + the 10 body-only
+⏳→🟡 batch, including the back-face MDFCs that are still pending
+oracle verification.
+
+### Engine
+
+- **`Value::ManaSpentToCast` primitive**. Push XIX needed an "amount
+  of mana spent to cast this spell" formula for Molten Note's damage
+  half. Worked around it via `Predicate::CastFromGraveyard` branching
+  (hand → `XFromCost + 2`, flashback → `Const(8)`). A first-class
+  `Value::ManaSpentToCast` (read from `EffectContext.mana_spent`,
+  stamped onto `StackItem::Spell` at cast time = `cost.cmc()` after X
+  substitution) would unify the formula into a single Value and
+  unblock other "amount of mana spent" cards: Aberrant Manawurm
+  (+X/+0 EOT pump), Together as One ("X is mana spent" — currently
+  approximated as ConvergedValue on the wrong axis), Tackle Artist's
+  5+-mana Opus rider, Spectacular Skywhale's same Opus split,
+  Magmablood Archaic's per-cast pump rider.
+
+- **`SelectionRequirement::ManaValueEqualX` (X-keyed predicate)**.
+  Fix What's Broken's "Return each artifact and creature card with
+  mana value X from your graveyard" needs an X-aware MV filter
+  (current `ManaValueAtMost(N)` takes a literal `u32`). A new
+  `ManaValueEqualX` variant that reads `EffectContext.x_value` would
+  unblock Fix What's Broken, plus other "find/return X-MV cards"
+  cards (Wrath of the Skies' "destroy each nonland X-MV permanent",
+  Reckoner Bankbuster's grant restriction). Implementation requires
+  threading ctx into `evaluate_requirement_static` /
+  `evaluate_requirement_on_card` (or a single new selector wrapper
+  that filters by X-MV without changing the predicate evaluators).
+
+- **Vehicle / Crew keyword**. Strixhaven Skycoach is wired body-only
+  (3/2 Flying with the ETB land tutor). The Vehicle subtype + Crew
+  primitive is gating it from a faithful wire. Vehicles are
+  artifact-creature hybrids that *only* attack/block when crewed;
+  the engine has no "becomes a creature when activated" primitive
+  yet. Add `CardType::Vehicle` + `Keyword::Crew(u32)` + a
+  `Player.crewed_this_turn: HashSet<CardId>` flag set by activation,
+  consulted by combat-eligibility. Unblocks Strixhaven Skycoach,
+  future Strixhaven vehicles, and Kaldheim/MID vehicles.
+
+- **Prepare keyword + prepared-state flag**. Biblioplex Tomekeeper
+  and Skycoach Waypoint both gate on a "prepared" creature state.
+  This is an SOS-only flag flipped on/off by toggle effects (the
+  Tomekeeper's ETB choice, the Waypoint's `{3},{T}` activation),
+  and only consultable by creatures whose own oracle text grants
+  them a "Prepare {cost}" ability. Add `CardInstance.prepared: bool`
+  + `Keyword::Prepare(ManaCost)` + an `Effect::SetPrepared { what,
+  state: bool }` primitive. Then surface "prepare a creature" /
+  "unprepare a creature" effects on the target side.
+
+### UI
+
+- **Ward N tooltip / cost gate**. 11 cards in this push carry
+  `Keyword::Ward(N)` (Strife Scholar, Campus Composer, Mica from
+  XVIII, Colorstorm Stallion from XVIII, Prismari the Inspiration's
+  Ward(5) approximation, etc). The keyword is a static-only tag
+  today — there's no engine cost gate on opponents' targeting. Add
+  a hover tooltip ("Ward N: targeting costs N more mana") so the
+  player sees the printed text even before the gate lands. The
+  gate itself (intercept opp targeting at cast/activation, demand
+  N additional mana to keep target legal) is the larger engine
+  work.
+
+- **MDFC back-face oracle preview for body-only wires**. Push XIX
+  added Strife Scholar and Campus Composer as front-face-only
+  bodies (back-face oracle unverified). The 3D client's hover panel
+  could surface a "back face oracle pending verification" badge so
+  players know the printed back face exists but isn't wired.
+
+### Server
+
+- **`Selector::DiscardedThisResolution` view rendering**. Push XVII
+  added the selector. The `ability_effect_label` in `server/view.rs`
+  doesn't know the variant exists today (falls into the generic
+  `Effect::Move` "Move permanent" arm). A short-form rider on the
+  selector ("discarded this way") in card hover-text would improve
+  replay log readability for Borrowed Knowledge, Mind Roots, etc.
+
+- **`Selector::CardsInZone(Hand, filter)` view label**. Push XVII
+  suggestion still open — add a filter-aware label ("lands in hand",
+  "instants/sorceries in hand") so the UI hover for Embrace the
+  Paradox / Paradox Surveyor's reveal filter renders the printed
+  filter string instead of a generic "cards in hand".
+
+### Card promotions ready (no new primitive)
+
+- **Mind Roots** 🟡 → ✅ — Push XVII says "both halves now wired".
+  The doc could be flipped to ✅ today. Pending verification.
+
+- **Witherbloom, the Balancer** 🟡 — body fully wired with Affinity
+  for creatures cost-reduction omitted. Adding a static-effect cost
+  reduction primitive that scales off `CountOf(Selector::EachPermanent
+  (Creature & ControlledByYou))` would unblock the affinity tax,
+  promoting it to ✅. Same mechanism unblocks the affinity static
+  on the IS spells caster, which is a separate pass.

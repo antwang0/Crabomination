@@ -255,8 +255,11 @@ fn predicate_short_label(p: &crate::card::Predicate) -> String {
             at_least: Value::Const(1), ..
         } => "after creature death".into(),
         // Push XVI: cast-time spell-shape introspection labels.
-        Predicate::CastSpellHasX => "cast spell w/ {X}".into(),
-        Predicate::CastSpellTargetsMatch(_) => "cast spell targets match".into(),
+        // Push XIX: more human-readable form for the Geometer's
+        // Arthropod-style "{X} cost" trigger gate (was the more
+        // technical "cast spell w/ {X}" jargon).
+        Predicate::CastSpellHasX => "when you cast an X spell".into(),
+        Predicate::CastSpellTargetsMatch(_) => "when target matches".into(),
         // Cast-from-graveyard (Flashback resolves): used by Antiquities
         // on the Loose's "if cast from anywhere other than your hand"
         // rider. Surface a short hint so UIs can preview the bonus.

@@ -7570,3 +7570,336 @@ fn zaffai_and_the_tempests_body_legendary_5_7() {
     assert!(card.has_creature_type(crate::card::CreatureType::Human));
     assert!(card.has_creature_type(crate::card::CreatureType::Bard));
 }
+
+// Molten Note — {X}{R}{W} Lorehold Sorcery. Damage = mana spent, untap
+// all your creatures, Flashback {6}{R}{W}.
+#[test]
+fn molten_note_has_flashback_keyword() {
+    let def = catalog::molten_note();
+    assert_eq!(def.name, "Molten Note");
+    assert!(def.card_types.contains(&CardType::Sorcery));
+    assert!(
+        def.keywords.iter().any(|k| matches!(k, Keyword::Flashback(_))),
+        "Molten Note should carry Flashback {{6}}{{R}}{{W}}"
+    );
+}
+
+#[test]
+fn molten_note_hand_cast_x_3_deals_5_damage_and_untaps_creatures() {
+    let mut g = two_player_game();
+    // P1's creature gets shot.
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    // P0's two attackers — both already tapped (e.g. attacked earlier).
+    let mine_a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let mine_b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(mine_a).unwrap().tapped = true;
+    g.battlefield_find_mut(mine_b).unwrap().tapped = true;
+    let id = g.add_card_to_hand(0, catalog::molten_note());
+    // {3}{R}{W}: X = 3 → 5 damage to the bear.
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(bear)),
+        mode: None,
+        x_value: Some(3),
+    })
+    .expect("Molten Note castable for {3}{R}{W} hand cast");
+    drain_stack(&mut g);
+
+    // Bear (toughness 2) takes 5 → dead.
+    assert!(!g.battlefield.iter().any(|c| c.id == bear),
+        "P1's bear should die to 5 damage");
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bear));
+    // Both of P0's bears are untapped.
+    let a = g.battlefield_find(mine_a).unwrap();
+    let b = g.battlefield_find(mine_b).unwrap();
+    assert!(!a.tapped, "P0's bear A should be untapped after Molten Note");
+    assert!(!b.tapped, "P0's bear B should be untapped after Molten Note");
+    // Front-face cast → graveyard, not exile.
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == id),
+        "Molten Note should be in graveyard after front-face resolution");
+}
+
+#[test]
+fn molten_note_hand_cast_x_0_deals_2_damage() {
+    // X=0 → mana spent = {R}{W} = 2. Bear (2 toughness) dies.
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::molten_note());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(bear)),
+        mode: None,
+        x_value: Some(0),
+    })
+    .expect("Molten Note castable for {R}{W} hand cast (X=0)");
+    drain_stack(&mut g);
+
+    assert!(!g.battlefield.iter().any(|c| c.id == bear),
+        "Bear takes 2 damage and dies");
+}
+
+#[test]
+fn molten_note_flashback_deals_8_damage_and_untaps() {
+    // Flashback cost is {6}{R}{W} = 8 mana — bear takes 8 damage.
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(mine).unwrap().tapped = true;
+    let id = g.add_card_to_graveyard(0, catalog::molten_note());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(6);
+
+    g.perform_action(GameAction::CastFlashback {
+        card_id: id,
+        target: Some(Target::Permanent(bear)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Molten Note flashback castable for {6}{R}{W}");
+    drain_stack(&mut g);
+
+    assert!(!g.battlefield.iter().any(|c| c.id == bear),
+        "Bear should die to 8 damage from flashback Molten Note");
+    let view = g.battlefield_find(mine).unwrap();
+    assert!(!view.tapped, "Mine should untap from Molten Note flashback");
+    // Flashback → exile, not graveyard.
+    assert!(g.exile.iter().any(|c| c.id == id),
+        "Flashback-cast Molten Note should be in exile");
+    assert!(!g.players[0].graveyard.iter().any(|c| c.id == id));
+}
+
+// ── Push XIX: Lorehold ⏳ closer + body-only ⏳→🟡 batch ─────────────────────
+
+// Strife Scholar — {2}{R} body-only with Ward(2). MDFC back face
+// Awaken the Ages omitted (oracle unverified). Promotes from ⏳ → 🟡.
+#[test]
+fn strife_scholar_is_3_2_orc_sorcerer_with_ward() {
+    let card = catalog::strife_scholar();
+    assert_eq!(card.name, "Strife Scholar");
+    assert_eq!(card.power, 3);
+    assert_eq!(card.toughness, 2);
+    assert!(card.has_creature_type(crate::card::CreatureType::Orc));
+    assert!(card.has_creature_type(crate::card::CreatureType::Sorcerer));
+    assert!(
+        card.keywords.iter().any(|k| matches!(k, Keyword::Ward(_))),
+        "Strife Scholar should carry Ward"
+    );
+}
+
+// Campus Composer — {3}{U} body-only with Ward(2). MDFC back face
+// Aqueous Aria omitted (oracle unverified). Promotes from ⏳ → 🟡.
+#[test]
+fn campus_composer_is_3_4_merfolk_bard_with_ward() {
+    let card = catalog::campus_composer();
+    assert_eq!(card.name, "Campus Composer");
+    assert_eq!(card.power, 3);
+    assert_eq!(card.toughness, 4);
+    assert!(card.has_creature_type(crate::card::CreatureType::Merfolk));
+    assert!(card.has_creature_type(crate::card::CreatureType::Bard));
+    assert!(
+        card.keywords.iter().any(|k| matches!(k, Keyword::Ward(_))),
+        "Campus Composer should carry Ward"
+    );
+}
+
+// Elemental Mascot — {1}{U}{R} 1/4 Flying+Vigilance Elemental Bird with
+// magecraft +1/+0 EOT pump on every IS cast. Opus exile-top rider
+// omitted (cast-from-exile pipeline gap).
+#[test]
+fn elemental_mascot_is_1_4_flying_vigilance_with_magecraft_pump() {
+    let card = catalog::elemental_mascot();
+    assert_eq!(card.name, "Elemental Mascot");
+    assert_eq!(card.power, 1);
+    assert_eq!(card.toughness, 4);
+    assert!(card.keywords.contains(&Keyword::Flying));
+    assert!(card.keywords.contains(&Keyword::Vigilance));
+    assert!(card.has_creature_type(crate::card::CreatureType::Elemental));
+    assert!(card.has_creature_type(crate::card::CreatureType::Bird));
+    assert_eq!(card.triggered_abilities.len(), 1, "magecraft pump trigger");
+}
+
+#[test]
+fn elemental_mascot_pumps_self_after_is_cast() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::elemental_mascot());
+    g.battlefield_find_mut(id).unwrap().summoning_sick = false;
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(1)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Bolt castable for {R}");
+    drain_stack(&mut g);
+
+    let view = g.computed_permanent(id).unwrap();
+    assert_eq!(view.power, 2, "Elemental Mascot +1/+0 EOT after IS cast");
+    assert_eq!(view.toughness, 4);
+}
+
+// Biblioplex Tomekeeper — {4} body-only 3/4 Construct artifact creature.
+// Prepare-state ETB choice omitted (Prepare keyword pending).
+#[test]
+fn biblioplex_tomekeeper_is_3_4_construct_artifact_creature() {
+    let card = catalog::biblioplex_tomekeeper();
+    assert_eq!(card.name, "Biblioplex Tomekeeper");
+    assert_eq!(card.power, 3);
+    assert_eq!(card.toughness, 4);
+    assert!(card.card_types.contains(&CardType::Artifact));
+    assert!(card.card_types.contains(&CardType::Creature));
+    assert!(card.has_creature_type(crate::card::CreatureType::Construct));
+    assert_eq!(card.cost.cmc(), 4);
+}
+
+// Strixhaven Skycoach — {3} body-only 3/2 Flying. ETB land tutor wired
+// via MayDo. Crew/Vehicle keyword omitted (no Vehicle primitive).
+#[test]
+fn strixhaven_skycoach_is_3_2_flying_artifact_creature() {
+    let card = catalog::strixhaven_skycoach();
+    assert_eq!(card.name, "Strixhaven Skycoach");
+    assert_eq!(card.power, 3);
+    assert_eq!(card.toughness, 2);
+    assert!(card.card_types.contains(&CardType::Artifact));
+    assert!(card.keywords.contains(&Keyword::Flying));
+    assert_eq!(
+        card.triggered_abilities.len(),
+        1,
+        "ETB MayDo land tutor trigger"
+    );
+}
+
+#[test]
+fn strixhaven_skycoach_etb_tutors_basic_land() {
+    let mut g = two_player_game();
+    // Seed the controller's library with a Forest.
+    let forest = g.add_card_to_library(0, catalog::forest());
+    let id = g.add_card_to_hand(0, catalog::strixhaven_skycoach());
+    g.players[0].mana_pool.add_colorless(3);
+    // ScriptedDecider answers "yes" on the MayDo + picks the Forest.
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Search(Some(forest)),
+    ]));
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: None,
+        mode: None,
+        x_value: None,
+    })
+    .expect("Skycoach castable for {3}");
+    drain_stack(&mut g);
+
+    // Forest in hand.
+    assert!(
+        g.players[0].hand.iter().any(|c| c.id == forest),
+        "Forest tutored to hand"
+    );
+}
+
+// Skycoach Waypoint — Land with `{T}: Add {C}`. Prepare activation
+// omitted (Prepare keyword pending).
+#[test]
+fn skycoach_waypoint_taps_for_colorless() {
+    let card = catalog::skycoach_waypoint();
+    assert_eq!(card.name, "Skycoach Waypoint");
+    assert!(card.card_types.contains(&CardType::Land));
+    // {T}: Add {C} mana ability is the only activation.
+    assert_eq!(card.activated_abilities.len(), 1);
+    assert!(card.activated_abilities[0].tap_cost);
+}
+
+// Social Snub — {1}{W}{B} Sorcery. Each player sacs a creature; drain
+// 1 from each opp to you. Copy-spell rider omitted.
+#[test]
+fn social_snub_each_player_sacs_creature_and_drains_one() {
+    let mut g = two_player_game();
+    // Both players have a creature.
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::social_snub());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let p0_life_before = g.players[0].life;
+    let p1_life_before = g.players[1].life;
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: None,
+        mode: None,
+        x_value: None,
+    })
+    .expect("Social Snub castable for {1}{W}{B}");
+    drain_stack(&mut g);
+
+    // Each player sacrificed their bear → both bears in their owners'
+    // graveyards, neither still on the battlefield.
+    assert!(!g.battlefield.iter().any(|c| c.id == mine),
+        "P0's bear sacrificed");
+    assert!(!g.battlefield.iter().any(|c| c.id == theirs),
+        "P1's bear sacrificed");
+    // Drain: P0 gains 1, P1 loses 1.
+    assert_eq!(g.players[0].life, p0_life_before + 1, "P0 gains 1 life");
+    assert_eq!(g.players[1].life, p1_life_before - 1, "P1 loses 1 life");
+}
+
+// Silverquill, the Disputant — {2}{W}{B} 4/4 Flying+Vigilance
+// Legendary Elder Dragon. Casualty 1 grant omitted (no copy-spell
+// primitive).
+#[test]
+fn silverquill_the_disputant_is_4_4_flying_vigilance_dragon() {
+    let card = catalog::silverquill_the_disputant();
+    assert_eq!(card.name, "Silverquill, the Disputant");
+    assert_eq!(card.power, 4);
+    assert_eq!(card.toughness, 4);
+    assert!(card.supertypes.contains(&crate::card::Supertype::Legendary));
+    assert!(card.has_creature_type(crate::card::CreatureType::Elder));
+    assert!(card.has_creature_type(crate::card::CreatureType::Dragon));
+    assert!(card.keywords.contains(&Keyword::Flying));
+    assert!(card.keywords.contains(&Keyword::Vigilance));
+}
+
+// Quandrix, the Proof — {4}{G}{U} 6/6 Flying+Trample Elder Dragon.
+// Cascade keyword omitted (no Cascade primitive).
+#[test]
+fn quandrix_the_proof_is_6_6_flying_trample_dragon() {
+    let card = catalog::quandrix_the_proof();
+    assert_eq!(card.name, "Quandrix, the Proof");
+    assert_eq!(card.power, 6);
+    assert_eq!(card.toughness, 6);
+    assert!(card.supertypes.contains(&crate::card::Supertype::Legendary));
+    assert!(card.has_creature_type(crate::card::CreatureType::Elder));
+    assert!(card.has_creature_type(crate::card::CreatureType::Dragon));
+    assert!(card.keywords.contains(&Keyword::Flying));
+    assert!(card.keywords.contains(&Keyword::Trample));
+}
+
+// Prismari, the Inspiration — {5}{U}{R} 7/7 Flying Elder Dragon with
+// Ward(5). Storm grant on IS casts omitted (no copy-spell primitive).
+#[test]
+fn prismari_the_inspiration_is_7_7_flying_dragon_with_ward() {
+    let card = catalog::prismari_the_inspiration();
+    assert_eq!(card.name, "Prismari, the Inspiration");
+    assert_eq!(card.power, 7);
+    assert_eq!(card.toughness, 7);
+    assert!(card.supertypes.contains(&crate::card::Supertype::Legendary));
+    assert!(card.has_creature_type(crate::card::CreatureType::Elder));
+    assert!(card.has_creature_type(crate::card::CreatureType::Dragon));
+    assert!(card.keywords.contains(&Keyword::Flying));
+    assert!(
+        card.keywords.iter().any(|k| matches!(k, Keyword::Ward(5))),
+        "Prismari should carry Ward(5)"
+    );
+}
