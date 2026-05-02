@@ -46,6 +46,93 @@ All 247 cards marked ✅ or 🟡 have a corresponding factory in
 positives and 0 stale ⏳ rows. STX 2021 progress is tracked in the
 "Strixhaven base set (STX)" section near the bottom of this file.
 
+## 2026-05-02 push XXVIII: trigger-subject threading
+
+Engine improvement (no card additions). `PlayerRef::Triggerer` (and
+`Selector::Player(Triggerer)`) now resolves to the actual event actor
+at trigger resolution time, not the catch-all `Permanent(source)`
+fallback. Pre-fix the dispatch path captured the subject for filter
+evaluation and discarded it; the resolution path rebuilt context with
+`trigger_source = Permanent(source)`. Now every `StackItem::Trigger`
+push records the natural subject (ETB → entering permanent, Magecraft
+→ cast spell, Dies → dying creature, attack → attacker, opponent's
+draw → drawing player). New `subject: Option<EntityRef>` field on
+`StackItem::Trigger` and `ResumeContext::Trigger` with
+`#[serde(default)]` for snapshot back-compat. `EntityRef` gains
+`Serialize` / `Deserialize`. **Sheoldred's drain** (push XXVII) now
+uses exact Triggerer targeting instead of the EachOpponent collapse —
+correct in 3+ player as well as 2-player.
+
+## 2026-05-02 push XXVII: 6 more cards + UI EntityMatches label coverage
+
+Card additions and a server view improvement. Tests at 1214 (was
+1207).
+
+### Card additions (`catalog::sets::decks::modern`)
+
+| Card | Cost | Status | Notes |
+|---|---|---|---|
+| Careful Study | {U} | ✅ | Sorcery. Draw 2, then discard 2. Net-zero hand size, filters two cards out. |
+| Sheoldred, the Apocalypse | {2}{B}{B} | ✅ | 4/5 Legendary Phyrexian Praetor with Deathtouch + Lifelink. CardDrawn/YourControl → +2 life; CardDrawn/OpponentControl → drain 2 to drawing opponent (uses `PlayerRef::Triggerer` from push XXVIII). |
+| Liliana of the Veil | {1}{B}{B} | 🟡 | Legendary Planeswalker — Liliana, base loyalty 3. +1 (each player discards 1) + -2 (target player sacs a creature) wired faithfully. -6 ult omitted (no two-pile-split primitive). |
+| Light Up the Stage | {2}{R} | 🟡 | Sorcery. Approximated as Draw 2. Exile-and-may-play-this-turn rider omitted (cast-from-exile pipeline gap). Spectacle {R} alt cost also omitted. |
+| Liliana of the Last Hope | {1}{B}{B} | 🟡 | Legendary Planeswalker — Liliana, base loyalty 3. +1 (-2/-1 EOT to creature) + -2 (return creature card from gy → hand) wired. -7 emblem omitted (no emblem zone). |
+| Tibalt's Trickery | {1}{R} | 🟡 | Instant. Hard counter at {1}{R}. The chaotic exile-3 + cast-random-nonland cascade rider is omitted (cast-from-exile-without-paying primitive gap). |
+
+### Server view improvements
+
+`predicate_short_label` now unpacks `Predicate::EntityMatches`'s inner
+filter for common simple cases — "if creature" / "if noncreature" /
+"if artifact" / "if multicolored" / "if MV ≤2" / "if power ≥N" /
+"if has counter" — instead of the generic "if matches filter" hint.
+Composite (And / Or) predicates and counter-keyed filters keep the
+generic fallback. Powers Esper Sentinel's "if noncreature" gate
+badge and any future cast-trigger that filters by a single shape
+predicate.
+
+### Tests
+
+- 7 new card-functionality tests in `tests::modern::*` (careful study,
+  Sheoldred drain + life, Liliana +1/-2 each, Light Up the Stage,
+  Liliana of the Last Hope -2, Tibalt's Trickery counter).
+- 4 new EntityMatches label tests in `server::view::tests`.
+
+## 2026-05-02 push XXVI: 10 new cube + STX cards + OpponentControl SpellCast dispatch
+
+Engine improvement + 10 new card factories. Tests at 1207 (was
+1195).
+
+### Engine improvement
+
+`fire_spell_cast_triggers` now walks every battlefield permanent's
+SpellCast trigger and routes by scope. Pre-fix only the caster's
+permanents were considered (`c.controller == caster`), which silently
+ignored `EventScope::OpponentControl` triggers — Esper Sentinel,
+Mindbreak Trap, future "whenever an opponent casts X" payoffs would
+never fire. Now `YourControl` / `AnyPlayer` keep the caster-side path;
+`OpponentControl` walks non-caster permanents and fires under the
+*trigger's* controller (so the body resolves on the Sentinel's
+controller, not the spell-caster).
+
+### Card additions (`catalog::sets::decks::modern`)
+
+| Card | Cost | Status | Notes |
+|---|---|---|---|
+| Cabal Ritual | {B} | ✅ | Sorcery. +3{B} default; threshold ({GraveyardSizeOf(You) ≥ 7}) → +4{B}+{C}. |
+| Rift Bolt | {2}{R} | 🟡 | Sorcery. 3 dmg to any target. Suspend 1—{R} omitted (no time-counter primitive yet). Ships at the printed full cost. |
+| Ancient Stirrings | {G} | ✅ | Sorcery. Look at top 5; reveal colorless card → hand via `RevealUntilFind { find: Colorless, cap: 5 }`. Misses go to graveyard (engine default for `RevealUntilFind`). |
+| Stinkweed Imp | {1}{B} | 🟡 | 1/3 Flying Imp. DealsCombatDamageToPlayer/SelfSource → mill 5. Dredge 5 omitted (no Dredge primitive). |
+| Endurance | {1}{G}{G} | 🟡 | 3/4 Reach Flash Elemental Incarnation. ETB shuffle target player's gy into library. Evoke {2}{G} pitch omitted. |
+| Esper Sentinel | {W} | 🟡 | 1/1 Human Advisor. Whenever opp casts a noncreature spell → you draw 1. Approximated as unconditional draw on every opp noncreature cast (was supposed to be once-per-turn + opp-may-pay-X). |
+| Path of Peril | {2}{B}{B} | ✅ | Sorcery. ForEach Creature ∧ MV≤2 → -3/-3 EOT. Boltable creatures die outright. Boast omitted (no Boast). |
+| Fiery Confluence | {2}{R}{R} | 🟡 | Sorcery. 3-mode `ChooseMode` (1 to each creature / 2 to each opp / destroy artifact). Printed "choose three with repetition" collapses to single-mode pick. |
+| Brilliant Plan | {3}{U} | ✅ | STX 2021 mono-blue. Sorcery. Scry 3 + Draw 3. |
+| Silverquill Apprentice | {W}{B} | 🟡 | STX 2021. 2/2 Human Cleric. Magecraft +1/+1 EOT to a creature. The W/B-mode pip choice (your creature +1/+1 vs opp creature -1/-1) collapses to +1/+1 only. |
+
+### Tests
+
+- 12 new tests in `tests::modern::*`.
+
 ## 2026-05-02 push XXV: STX Silverquill expansion + cube cards + bot/UI improvements
 
 Card additions + non-blocking improvements. Tests at 1195 (was 1179, +16
@@ -1702,6 +1789,7 @@ parity is a matter of porting card factories one at a time.
 
 | Card | Cost | Status | Notes |
 |---|---|---|---|
+| Silverquill Apprentice | {W}{B} | 🟡 | Push XXVI: 2/2 Human Cleric. Magecraft +1/+1 EOT to a creature. The W/B-mode pip choice (your creature +1/+1 vs opp creature -1/-1) collapses to +1/+1 (`magecraft()` shortcut + `Effect::PumpPT` on a creature target). |
 | Spirited Companion | {1}{W} | ✅ | 1/2 Dog Spirit. ETB: draw a card. |
 | Eyetwitch | {B} | ✅ | 1/1 Pest. When dies: "learn" approximated as `Draw 1` (no Lesson sideboard yet). |
 | Closing Statement | {X}{W}{W} | ✅ | Sorcery. Exile target nonland permanent. You gain X life (`Value::XFromCost`). |
@@ -1784,6 +1872,7 @@ parity is a matter of porting card factories one at a time.
 | Solve the Equation | {2}{U} | ✅ | Push XXIII: Sorcery. Search library for an instant or sorcery, put it into your hand, then scry 1. |
 | Enthusiastic Study | {1}{G} | ✅ | Push XXIII: Instant. Target creature gets +2/+2 and gains trample EOT, then learn (collapses to draw 1). |
 | Tempted by the Oriq | {1}{W}{B} | 🟡 | Push XXIII: Sorcery. Approximation of "gain control" as Destroy ≤3-MV creature + create a 1/1 Inkling token (no `Effect::GainControl` static prompt yet). |
+| Brilliant Plan | {3}{U} | ✅ | Push XXVI: Sorcery. Scry 3 + Draw 3 — pure card-selection sorcery (STX 2021 mono-blue). Wired via `Effect::Seq([Scry(3), Draw(3)])`. |
 | Saw It Coming | {1}{U}{U} | 🟡 | Push XXIV: Instant. Counter target spell (Cancel-equivalent at the {1}{U}{U} rate). Foretell {1}{U} alt-cost is omitted (no Foretell primitive: would need alt-cost-on-exile + cast-from-exile-with-time-limit, same gap as Velomachus Lorehold's reveal-and-cast). |
 
 ### Shared / multi-college

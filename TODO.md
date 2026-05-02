@@ -7,6 +7,76 @@ See `CUBE_FEATURES.md` (cube-card implementation status) and
 
 ## Recent additions
 
+- ✅ **Push XXVIII (2026-05-02)**: Thread trigger subject through
+  `StackItem::Trigger` so `PlayerRef::Triggerer` resolves to the actual
+  event actor at resolution time. Pre-fix the dispatch path captured
+  the subject for the filter check and then discarded it when pushing
+  the trigger to the stack — `continue_trigger_resolution` rebuilt
+  the context with `trigger_source = Permanent(source)`, overwriting
+  the actual triggerer. Now every `StackItem::Trigger` push site
+  records the natural subject (ETB → entering permanent, Magecraft /
+  Repartee → cast spell, OpponentControl casts → cast spell, Dies →
+  dying creature, attack → attacker), threaded through to the
+  resolution context. `EntityRef` gains `Serialize` /
+  `Deserialize`. `subject` field defaults to `None` via
+  `#[serde(default)]` for snapshot back-compat — pre-XXVIII snapshots
+  fall back to the source-permanent default.
+  - **Sheoldred, the Apocalypse** drain promoted from `EachOpponent`
+    collapse (push XXVII) to exact `Triggerer`-keyed targeting. In
+    2-player it was already correct; 3+ player now drains *only* the
+    drawing opponent.
+  - Unblocks future "whenever a player X" payoffs (Tergrid,
+    God of Fright; Painful Quandary; Liliana of the Dark Realms;
+    Mindblade Render; symmetric drain triggers) that need to attribute
+    back to the event actor.
+
+- ✅ **Push XXVII (2026-05-02)**: 6 more cards + UI EntityMatches
+  label coverage. Tests at 1214 (was 1207, +7 net).
+  - **Cards**: Careful Study ({U}, draw 2 + discard 2), Sheoldred,
+    the Apocalypse ({2}{B}{B}, 4/5 deathtouch+lifelink with
+    CardDrawn/YourControl → +2 life and CardDrawn/OpponentControl →
+    drain 2 to drawing opp), Liliana of the Veil ({1}{B}{B}, +1 each
+    player discards / -2 sac creature; -6 omitted), Light Up the Stage
+    ({2}{R}, approximated as Draw 2; Spectacle alt cost omitted),
+    Liliana of the Last Hope ({1}{B}{B}, +1 -2/-1 EOT / -2 reanimate
+    creature card from gy → hand; -7 emblem omitted), Tibalt's
+    Trickery ({1}{R}, hard counter; cascade-from-exile rider omitted).
+  - **`entity_matches_label` helper** in `server/view.rs` unpacks
+    `Predicate::EntityMatches`'s inner filter for common simple cases
+    — "if creature" / "if noncreature" / "if artifact" /
+    "if multicolored" / "if MV ≤2" — instead of the generic
+    "if matches filter" hint. Composite (And/Or) predicates and
+    counter-keyed filters keep the generic fallback. Powers Esper
+    Sentinel's "if noncreature" gate badge.
+
+- ✅ **Push XXVI (2026-05-02)**: 10 new cube + STX cards +
+  OpponentControl SpellCast dispatch. Tests at 1207 (was 1195, +12
+  net).
+  - **Engine**: extend `fire_spell_cast_triggers` to walk every
+    battlefield permanent's SpellCast trigger and route by scope. Pre-
+    fix only the caster's permanents were considered (filter on
+    `c.controller == caster`), which silently ignored
+    `EventScope::OpponentControl` triggers — Esper Sentinel,
+    Mindbreak Trap, future "whenever an opponent casts X" payoffs
+    would never fire. Now `YourControl` / `AnyPlayer` keep the
+    caster-side path; `OpponentControl` walks non-caster permanents
+    and fires under the *trigger's* controller.
+  - **10 new card factories** in `catalog::sets::decks::modern`:
+    Cabal Ritual ({B}, +3{B} → +4{B}+{C} threshold gate via
+    `Predicate::ValueAtLeast(GraveyardSizeOf(You), 7)`), Rift Bolt
+    ({2}{R}, 3 dmg; Suspend omitted), Ancient Stirrings ({G}, top-5
+    reveal colorless via `RevealUntilFind { find: Colorless,
+    cap: 5 }`), Stinkweed Imp ({1}{B}, 1/3 Flying +
+    DealsCombatDamageToPlayer mill 5; Dredge omitted), Endurance
+    ({1}{G}{G}, 3/4 Reach Flash + ETB
+    ShuffleGraveyardIntoLibrary; Evoke omitted), Esper Sentinel
+    ({W}, 1/1 + Draw on opp's noncreature cast via OpponentControl +
+    EntityMatches(Noncreature)), Path of Peril ({2}{B}{B}, ForEach
+    Creature ∧ MV≤2 → -3/-3 EOT), Fiery Confluence ({2}{R}{R}, 3-mode
+    `ChooseMode`; multi-pick collapse), Brilliant Plan ({3}{U},
+    Scry 3 + Draw 3 — STX 2021 mono-blue), Silverquill Apprentice
+    ({W}{B}, 2/2 magecraft +1/+1 EOT — STX 2021).
+
 - ✅ **Push XXV (2026-05-02)**: 10 new cards (4 STX 2021 + 6 cube) +
   smarter bot blocking + UI predicate labels + bot/view tests. Tests at
   1195 (was 1179, +16 net). Pure card additions + non-blocking
