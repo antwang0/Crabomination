@@ -7,6 +7,61 @@ See `CUBE_FEATURES.md` (cube-card implementation status) and
 
 ## Recent additions
 
+- ✅ **Push XXV (2026-05-02)**: 10 new cards (4 STX 2021 + 6 cube) +
+  smarter bot blocking + UI predicate labels + bot/view tests. Tests at
+  1195 (was 1179, +16 net). Pure card additions + non-blocking
+  bot/UI/UX polish — no new engine primitives.
+  - **4 new STX 2021 cards** (`catalog::sets::stx::*`):
+    - **Silverquill (W/B)**: Star Pupil ({B}, 0/0 Spirit with ETB +1/+1
+      counter rider + dies-counter-on-target rider — printed two-
+      counters-on-0/0 collapses to base 1/1 + 1 ETB counter, same
+      approximation as Reckless Amplimancer); Codespell Cleric
+      ({W}, 1/1 Lifelink Cleric with ETB Scry 1 — fully wired);
+      Combat Professor ({3}{W}, 2/3 Flying Cat Cleric with magecraft
+      +1/+1 EOT pump — same shape as Eager First-Year on a flier).
+    - **Shared / Lessons**: Spirit Summoning ({3}{W}, Sorcery — Lesson:
+      1/1 white Spirit token with flying — fills white's slot in the
+      STX Lesson cycle alongside Pest Summoning, Inkling Summoning,
+      Mascot Exhibition).
+  - **6 new cube cards** (`catalog::sets::decks::modern.rs`):
+    - Kolaghan's Command ({B}{R}, 4-mode `ChooseMode` — gy-recursion /
+      opp-discard / 2-dmg / artifact-destroy; "choose two" collapsed to
+      "choose one" same as Boros Charm and the STX Commands), Twincast
+      ({U}{U}) and Reverberate ({R}{R}) — both copy target IS via
+      `Effect::CopySpell`; Vendetta ({B}, destroy nonblack creature,
+      lose 2 life — printed "lose life equal to its toughness" collapses
+      to flat 2 since `Value` doesn't read pre-destroy toughness yet),
+      Generous Gift ({2}{W}, destroy nonland + opp gets 3/3 Elephant
+      via `PlayerRef::ControllerOf(Target(0))`), Crackling Doom
+      ({R}{W}{B}, 2 dmg each opp + each opp sacs a creature; "greatest
+      power" filter omitted — same gap as Pithing Edict's "creature or
+      planeswalker" choice).
+  - **Bot improvement**: `pick_blocks` (`server/bot.rs`) now considers
+    trades. Pre-fix the bot threw every legal blocker into a random
+    legal attacker — suicide blocks (1/1 vs 5/5) chewed through bodies
+    for nothing. The new logic carries P/T + relevant keywords
+    (flying / reach / deathtouch / indestructible) up-front and
+    computes a `trade_score` per (attacker, blocker) pair: killing the
+    attacker is the dominant payoff, losing a body is the cost. A
+    per-pressure-tier threshold (lethal / critical / normal) gates
+    the assignment so the bot stops suicide-blocking at high life and
+    chumps under lethal pressure. Greedy assignment by attacker power
+    descending.
+  - **UI improvement**: `predicate_short_label` (`server/view.rs`)
+    gained explicit arms for `ValueAtLeast` / `ValueAtMost` over
+    `GraveyardSizeOf` ("≥N in gy"), `LibrarySizeOf` ("≥N in library"),
+    `CountOf(_)` ("if ≥N match" / "if board matches"), and a generic
+    "if matches filter" for `EntityMatches`. Closes the gap for
+    Dragon's Approach's "≥4 in gy" tutor gate (was the catch-all
+    "conditional"), Resonating Lute's hand-size gate, and any future
+    selector-count predicate.
+  - **16 new tests**: 5 STX (`tests::stx::*`), 8 modern
+    (`tests::modern::*`), 1 server-side view
+    (`server::view::tests::predicate_short_label_covers_value_keyed_predicates`),
+    2 server-side bot
+    (`server::bot::tests::bot_skips_suicide_block_at_high_life`,
+    `bot_chump_blocks_when_lethal_imminent`).
+
 - ✅ **Push XXIV (2026-05-02)**: STX 2021 push — Witherbloom completion
   + 4 cross-school Commands + Saw It Coming + 2 promotions + bot
   life-cost guard + UI plural-tally predicate labels. Tests at 1179
@@ -1438,9 +1493,23 @@ respect "you may sacrifice" optionality (skip when the cheapest
 candidate is more valuable than the payoff).
 
 ### Planeswalker Targeting
-The bot never attacks planeswalkers.  Adding a heuristic that attacks a
-planeswalker when its loyalty is low enough to kill it this turn would make the
-bot more competitive.
+~~The bot never attacks planeswalkers.~~ Push XXIII: bot now routes
+attackers at opp planeswalkers when their power matches the walker's
+loyalty (greedy first-fit accumulator).
+
+### Smarter Blocking
+~~Bot blocks randomly with all eligible blockers.~~ Push XXV: bot now
+considers trades. Each (attacker, blocker) pair gets a `trade_score`
+(killing the attacker is the dominant payoff, losing a body is the
+cost), and a per-pressure-tier threshold gates assignment (lethal /
+critical / normal). Net result: the bot stops suicide-blocking at
+high life and properly chumps under lethal pressure. Future
+improvements: deathtouch attacker handling (any block kills the
+blocker, but every blocker contributes to killing the attacker — the
+current logic counts deathtouch on the *blocker* but not on the
+*attacker*'s "every blocker dies" implication when multiple blockers
+team up); combat-trick anticipation (don't trade into Giant Growth);
+chumping with a token over a real card.
 
 ### Smarter Mana Rock Usage
 The bot taps mana rocks eagerly before knowing what it wants to cast.  A

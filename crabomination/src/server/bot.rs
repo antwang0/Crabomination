@@ -344,53 +344,126 @@ fn pick_loyalty_ability(state: &GameState, seat: usize) -> Option<GameAction> {
 }
 
 fn pick_blocks(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
-    // Bot only blocks attackers that are targeting *this* seat (or a
-    // planeswalker controlled by this seat).
-    let attacker_data: Vec<(CardId, bool)> = state
+    // Push XXV: blocking heuristic now considers trades. Pre-fix the
+    // bot threw every legal blocker into a random legal attacker —
+    // suicide blocks (1/1 vs 5/5) chewed through bodies for nothing.
+    // The new logic:
+    //   1. If the un-blocked combat damage dealt to the bot is lethal
+    //      (or close to it: life ≤ 5 after damage), chump-block the
+    //      biggest attackers first to buy time.
+    //   2. Otherwise, only block if the trade is favorable: the blocker
+    //      survives, or the attacker dies (including via deathtouch
+    //      from the blocker), or the attacker has deathtouch (any block
+    //      kills it).
+    //
+    // Attacker / blocker data carries P/T + relevant keywords up-front
+    // so the inner loop doesn't re-walk the battlefield per pair.
+    struct AtkInfo { id: CardId, power: i32, toughness: i32, flying: bool, deathtouch: bool, indestructible: bool }
+    struct BlkInfo { id: CardId, power: i32, toughness: i32, flying: bool, reach: bool, deathtouch: bool, indestructible: bool }
+
+    let attackers: Vec<AtkInfo> = state
         .attacking()
         .iter()
         .filter(|atk| state.defender_for(atk.target) == Some(seat))
         .filter_map(|atk| {
-            state
-                .battlefield
-                .iter()
-                .find(|c| c.id == atk.attacker)
-                .map(|a| (atk.attacker, a.has_keyword(&Keyword::Flying)))
+            state.battlefield.iter().find(|c| c.id == atk.attacker).map(|a| AtkInfo {
+                id: atk.attacker,
+                power: a.power(),
+                toughness: a.toughness() as i32 - a.damage as i32,
+                flying: a.has_keyword(&Keyword::Flying),
+                deathtouch: a.has_keyword(&Keyword::Deathtouch),
+                indestructible: a.has_keyword(&Keyword::Indestructible),
+            })
         })
         .collect();
 
-    // Same `controller` vs `owner` distinction as the attack filter:
-    // creatures stolen from us we no longer control, and creatures we
-    // stole are blockers we DO control.
-    let blockers: Vec<(CardId, bool, bool)> = state
+    let blockers: Vec<BlkInfo> = state
         .battlefield
         .iter()
         .filter(|c| c.controller == seat && c.can_block())
-        .map(|c| {
-            (
-                c.id,
-                c.has_keyword(&Keyword::Flying),
-                c.has_keyword(&Keyword::Reach),
-            )
+        .map(|c| BlkInfo {
+            id: c.id,
+            power: c.power(),
+            toughness: c.toughness() as i32 - c.damage as i32,
+            flying: c.has_keyword(&Keyword::Flying),
+            reach: c.has_keyword(&Keyword::Reach),
+            deathtouch: c.has_keyword(&Keyword::Deathtouch),
+            indestructible: c.has_keyword(&Keyword::Indestructible),
         })
         .collect();
 
-    let mut r = rng();
-    blockers
-        .into_iter()
-        .filter_map(|(blocker_id, blocker_flying, blocker_reach)| {
-            let legal: Vec<CardId> = attacker_data
-                .iter()
-                .filter(|(_, atk_flying)| !atk_flying || blocker_flying || blocker_reach)
-                .map(|(id, _)| *id)
-                .collect();
-            if legal.is_empty() {
-                None
-            } else {
-                Some((blocker_id, legal[r.random_range(0..legal.len())]))
+    // Lethal-or-close path: if every attacker swings unblocked we drop
+    // by their summed power; if that brings us to ≤ 5 (or 0), we
+    // *must* trade aggressively.
+    let total_swing: i32 = attackers.iter().map(|a| a.power.max(0)).sum();
+    let life = state.players[seat].life;
+    let lethal = total_swing >= life;
+    let critical = !lethal && (life - total_swing) <= 5;
+
+    // Helper: would `b` die to `a`'s damage in this assignment?
+    let blocker_dies = |a: &AtkInfo, b: &BlkInfo| -> bool {
+        if b.indestructible { return false; }
+        // Deathtouch on the attacker = any damage kills the blocker.
+        if a.deathtouch && a.power > 0 { return true; }
+        a.power >= b.toughness
+    };
+    // Helper: would `a` die to `b`'s damage?
+    let attacker_dies = |a: &AtkInfo, b: &BlkInfo| -> bool {
+        if a.indestructible { return false; }
+        if b.deathtouch && b.power > 0 { return true; }
+        b.power >= a.toughness
+    };
+    // Trade evaluation: positive = blocking is good for us. Killing
+    // the attacker is the dominant payoff; losing a body is the cost.
+    // Damage-prevention is only counted when life is at risk (the
+    // critical-or-lethal branch reads it via the `add_blunting`
+    // multiplier so the high-life branch ignores it).
+    let trade_score = |a: &AtkInfo, b: &BlkInfo, add_blunting: bool| -> i32 {
+        let mut score = 0;
+        if attacker_dies(a, b) { score += 3 + a.power.max(0); }
+        if blocker_dies(a, b) { score -= 1 + b.power.max(0); }
+        if add_blunting {
+            score += a.power.max(0);
+        }
+        score
+    };
+
+    // Greedy assignment: highest-power attackers first; for each, pick
+    // the best blocker (highest trade_score) — but only commit if the
+    // trade is actually worth it (or we're under pressure).
+    let mut ranked_atk: Vec<usize> = (0..attackers.len()).collect();
+    ranked_atk.sort_by_key(|i| -attackers[*i].power);
+    let mut used_blockers: std::collections::HashSet<CardId> =
+        std::collections::HashSet::new();
+    let mut assignments: Vec<(CardId, CardId)> = Vec::new();
+
+    for ai in ranked_atk {
+        let a = &attackers[ai];
+        // Find the best blocker for this attacker.
+        let mut best: Option<(usize, i32)> = None;
+        for (bi, b) in blockers.iter().enumerate() {
+            if used_blockers.contains(&b.id) { continue; }
+            // Flying / reach legality.
+            if a.flying && !b.flying && !b.reach { continue; }
+            let score = trade_score(a, b, lethal || critical);
+            // Minimum score to assign: under lethal pressure we accept
+            // any chump (score is essentially "is there *some* defense");
+            // under critical pressure we demand a non-negative trade
+            // (no worse than even); otherwise we demand a strictly
+            // positive trade (kill the attacker or survive the block).
+            let threshold = if lethal { -100 } else if critical { 0 } else { 1 };
+            if score < threshold { continue; }
+            if best.map_or(true, |(_, s)| score > s) {
+                best = Some((bi, score));
             }
-        })
-        .collect()
+        }
+        if let Some((bi, _)) = best {
+            let b = &blockers[bi];
+            used_blockers.insert(b.id);
+            assignments.push((b.id, a.id));
+        }
+    }
+    assignments
 }
 
 /// Find an untapped, non-land permanent the bot controls whose first
@@ -1168,6 +1241,77 @@ mod tests {
             }
             other => panic!("expected DeclareAttackers, got {:?}", other),
         }
+    }
+
+    /// Push XXV: pick_blocks now skips suicide blocks. A 2/2 bear
+    /// blocking a 5/5 dragon (with reach since dragon flies) is a
+    /// suicide trade — at full life the bot should NOT block.
+    #[test]
+    fn bot_skips_suicide_block_at_high_life() {
+        let mut g = two_player_game();
+        // P0 attacks with Shivan Dragon (5/5 flying).
+        let dragon = g.add_card_to_battlefield(0, catalog::shivan_dragon());
+        g.clear_sickness(dragon);
+        // P1 controls a 2/2 with reach (Pelt Collector is 1/1; we use
+        // Resilient Khenra which is 3/2 — still dies to 5 power, so
+        // suicide trade. Easier: use a vanilla 2/2 with reach. The
+        // simplest cube creature with reach is Wall of Omens (0/4).
+        // Wall of Omens (0/4) blocks Dragon: wall dies (5 ≥ 4), wall
+        // deals 0, dragon lives → suicide block.
+        // Wall of Omens has no reach! It's a Defender (0/4). Defender
+        // can block normal creatures. Flying still blocks fail — we
+        // need flying or reach.
+        // Skip the flying case: switch attacker to a 5/5 ground threat.
+        // We don't have a vanilla 5/5 ground in the test catalog
+        // immediately at hand, so we manufacture: take Shivan Dragon's
+        // body and strip flying via clearing keywords.
+        {
+            let d = g.battlefield.iter_mut().find(|c| c.id == dragon).unwrap();
+            d.definition.keywords.retain(|k| k != &Keyword::Flying);
+        }
+        let chump = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        g.clear_sickness(chump);
+        g.active_player_idx = 0;
+        g.set_attacking(vec![crate::game::types::Attack {
+            attacker: dragon,
+            target: AttackTarget::Player(1),
+        }]);
+        g.step = TurnStep::DeclareBlockers;
+        g.priority.player_with_priority = 1;
+        g.players[1].life = 20;
+
+        let blocks = pick_blocks(&g, 1);
+        assert!(blocks.is_empty(),
+            "suicide block (2/2 vs 5/5 at 20 life) should be skipped, got {:?}", blocks);
+    }
+
+    /// At critical life the bot SHOULD chump-block even unfavorable
+    /// trades to buy a turn.
+    #[test]
+    fn bot_chump_blocks_when_lethal_imminent() {
+        let mut g = two_player_game();
+        // P0 attacks with a 2/2 (Grizzly Bears).
+        let attacker = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        g.clear_sickness(attacker);
+        // P1 controls another 2/2.
+        let blocker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        g.clear_sickness(blocker);
+        g.active_player_idx = 0;
+        g.set_attacking(vec![crate::game::types::Attack {
+            attacker,
+            target: AttackTarget::Player(1),
+        }]);
+        g.step = TurnStep::DeclareBlockers;
+        g.priority.player_with_priority = 1;
+        // Drop life so 2 dmg = lethal.
+        g.players[1].life = 2;
+
+        let blocks = pick_blocks(&g, 1);
+        // Even trade (2/2 blocks 2/2: both die) is favorable for us
+        // and trivially blocks; the lethal-pressure branch is an
+        // additional safety net even for unfavorable trades.
+        assert!(!blocks.is_empty(),
+            "should block when life is at 2 and attacker would deal 2 (lethal)");
     }
 
     /// When no planeswalker is on board, the bot still attacks the

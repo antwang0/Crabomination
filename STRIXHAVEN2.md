@@ -36,7 +36,7 @@ This file tracks two adjacent Strixhaven catalogs:
 Counts reflect the regenerated tables below (audited via
 `scripts/audit_strixhaven2.py` against `catalog::sets::sos`).
 
-- ✅ done: **108** (unchanged from push XXI; push XXII–XXIII targeted
+- ✅ done: **108** (unchanged from push XXI; push XXII–XXV targeted
   STX 2021 + cube cards, not SOS).
 - 🟡 partial: **139** (unchanged).
 - ⏳ todo: **8** (unchanged).
@@ -45,6 +45,75 @@ All 247 cards marked ✅ or 🟡 have a corresponding factory in
 `crabomination/src/catalog/sets/sos/`; the audit script reports 0 false
 positives and 0 stale ⏳ rows. STX 2021 progress is tracked in the
 "Strixhaven base set (STX)" section near the bottom of this file.
+
+## 2026-05-02 push XXV: STX Silverquill expansion + cube cards + bot/UI improvements
+
+Card additions + non-blocking improvements. Tests at 1195 (was 1179, +16
+net). Pure card additions + a smarter bot blocking heuristic + extended
+UI predicate labels.
+
+### Card additions
+
+#### STX 2021 (`catalog::sets::stx::*`)
+
+| Card | Cost | Status | Notes |
+|---|---|---|---|
+| Star Pupil | {B} | 🟡 | 0/0 Spirit. ETB with two +1/+1 counters; dies → +1/+1 counter on target creature. Same approximation as Reckless Amplimancer / Body of Research: base 1/1 + ETB AddCounter +1/+1 ×1 (engine has no "enters with N counters" replacement primitive; a 0/0 base would die before the ETB trigger lands). Net effective body is 2/2 with one counter, matching the printed two-counters-on-a-0/0. The dies trigger is faithful — `EventKind::CreatureDied/SelfSource` → `Effect::AddCounter` on a targeted creature. |
+| Codespell Cleric | {W} | ✅ | 1/1 Human Cleric, Lifelink. ETB Scry 1. All three pieces are first-class engine primitives. |
+| Combat Professor | {3}{W} | ✅ | 2/3 Cat Cleric with Flying. Magecraft +1/+1 EOT on target creature (same shape as Eager First-Year, just on a 2/3 flier). |
+| Spirit Summoning | {3}{W} | ✅ | Sorcery — Lesson. Creates a 1/1 white Spirit creature token with flying. White's slot in the STX Lesson cycle (siblings: Pest Summoning B/G, Inkling Summoning W/B, Mascot Exhibition W). |
+
+#### Cube (`catalog::sets::decks::modern.rs`)
+
+| Card | Cost | Status | Notes |
+|---|---|---|---|
+| Kolaghan's Command | {B}{R} | 🟡 | Modal instant; printed "choose two" collapsed to "choose one" via `Effect::ChooseMode` (same approximation as Boros Charm / STX Commands). Each individual mode wired faithfully — gy-recursion (creature card → hand), opp discard (random), 2 dmg to creature/PW, destroy artifact. BR midrange staple. |
+| Twincast | {U}{U} | 🟡 | Copy target instant or sorcery. `Effect::CopySpell` against a target filtered to `IsSpellOnStack ∧ (Instant ∨ Sorcery)`. The "may choose new targets" clause inherits the original's targets (no interactive re-target prompt). |
+| Reverberate | {R}{R} | 🟡 | Functionally identical to Twincast at red. Same `Effect::CopySpell` wiring. Ships for cube color-pool diversity. |
+| Vendetta | {B} | 🟡 | Destroy target nonblack creature. The "lose life equal to its toughness" rider collapses to a flat 2-life payment — `Value` doesn't yet have a "toughness of pre-destroy target" reader (the target is in the graveyard by the time the life-loss step would resolve). Same approximation gap as Bone Splinters' generic-cost. |
+| Generous Gift | {2}{W} | ✅ | Destroy target nonland permanent + the destroyed card's controller creates a 3/3 green Elephant token. The token's controller resolves via `PlayerRef::ControllerOf(Target(0))` (graveyard-fallback path matches Harsh Annotation's Inkling rider — see SOS push XXI). |
+| Crackling Doom | {R}{W}{B} | 🟡 | Each opp loses 2 life + sacrifices a creature. The "creature with greatest power" constraint isn't enforced — the engine's `Effect::Sacrifice` with a `Creature` filter delegates the pick to the targeted player (auto-decider picks the lowest power). Same gap as Pithing Edict's "creature or planeswalker" choice. The 2-damage half is faithful via `Selector::Player(EachOpponent)`. |
+
+### Engine / server improvements
+
+- **`pick_blocks` smarter heuristic** (`server/bot.rs`): pre-fix the bot
+  threw every legal blocker into a random legal attacker — suicide
+  blocks (1/1 vs 5/5) chewed through bodies for nothing. The new logic
+  carries P/T + relevant keywords (flying/reach/deathtouch/
+  indestructible) up-front and computes a `trade_score` per
+  (attacker, blocker) pair: killing the attacker is the dominant
+  payoff (+3 + power), losing a body is the cost (-1 - power).
+  Damage-prevention is only counted when life is at risk
+  (`add_blunting` flag toggled when life ≤ 5 after summed-attack).
+  Greedy assignment: highest-power attackers first, best-scoring
+  blocker per attacker, gated by a per-pressure-tier threshold
+  (lethal=any, critical≥0, normal≥1). Net result: the bot stops
+  suicide-blocking at high life and properly chumps under lethal
+  pressure.
+
+- **`predicate_short_label` Value-keyed coverage** (`server/view.rs`):
+  added human-readable labels for `ValueAtLeast` / `ValueAtMost` over
+  `GraveyardSizeOf` ("≥N in gy") / `LibrarySizeOf` ("≥N in library") /
+  `CountOf(_)` ("if ≥N match" or "if board matches" at n=1) and a
+  generic "if matches filter" for `EntityMatches`. Powers Dragon's
+  Approach's "≥4 in gy" tutor gate (was the catch-all "conditional"),
+  Resonating Lute's hand-size gate, and any future selector-count
+  predicate that doesn't unpack the selector to the UI.
+
+### Tests (+16 net, 1179 → 1195)
+
+- 5 STX (`tests::stx::*`): Star Pupil ETB-counters + dies-counter rider,
+  Codespell Cleric ETB-Scry + lifelink body, Combat Professor magecraft
+  pump, Spirit Summoning Lesson token shape.
+- 8 modern (`tests::modern::*`): Kolaghan's Command 4-mode shape +
+  damage-mode + gy-recursion, Twincast copies a Bolt for 6 total to
+  opponent, Vendetta destroy + 2 life loss, Reverberate body shape,
+  Generous Gift destroy + Elephant token under opp control, Crackling
+  Doom each-opp damage + sac.
+- 2 server-side (`server::view::tests`,
+  `server::bot::tests`): predicate_short_label Value-keyed coverage,
+  pick_blocks suicide-block skip + lethal-pressure chump.
+- 1 server bot (`bot_chump_blocks_when_lethal_imminent`).
 
 ## 2026-05-02 push XXIV: Witherbloom completion + cross-school Commands
 
@@ -1644,6 +1713,9 @@ parity is a matter of porting card factories one at a time.
 | Eager First-Year | {W} | ✅ | 2/1 Human Student. Magecraft: target creature gets +1/+1 EOT. Uses the new `effect::shortcut::magecraft()` helper. |
 | Hunt for Specimens | {3}{B} | ✅ | Push XXIV: promoted from 🟡 to ✅. Creates a 1/1 black Pest token whose on-die +1-life trigger rides on `TokenDefinition.triggered_abilities` (SOS push VI), then Learn → Draw 1 (same Lesson approximation as Eyetwitch / Igneous Inspiration). |
 | Silverquill Command | {2}{W}{B} | 🟡 | Push XXIV: 4-mode `ChooseMode` (counter activated/triggered ability / -3/-3 EOT / drain 3 / draw a card). Printed "choose two" collapses to "choose one" — same approximation as Moment of Reckoning, Witherbloom / Lorehold / Prismari / Quandrix Commands. |
+| Star Pupil | {B} | 🟡 | Push XXV: 0/0 Spirit. Approximated as base 1/1 + ETB AddCounter +1/+1 ×1 (engine has no "enters with N counters" replacement primitive — same approximation as Reckless Amplimancer / Body of Research). Net effective body is 2/2 with one counter, matching the printed two-counters-on-a-0/0. The dies trigger is faithful — `EventKind::CreatureDied/SelfSource` → +1/+1 counter on a targeted creature. |
+| Codespell Cleric | {W} | ✅ | Push XXV: 1/1 Human Cleric, Lifelink. ETB Scry 1. All three pieces are first-class engine primitives. |
+| Combat Professor | {3}{W} | ✅ | Push XXV: 2/3 Cat Cleric with Flying. Magecraft +1/+1 EOT on target creature (same shape as Eager First-Year, just on a 2/3 flier body). |
 
 ### Witherbloom (B/G)
 
@@ -1719,6 +1791,7 @@ parity is a matter of porting card factories one at a time.
 | Card | Cost | Status | Notes |
 |---|---|---|---|
 | Inkling Summoning | {3}{W}{B} | ✅ | Sorcery (Lesson). Creates a 2/1 white-and-black Inkling token with flying. |
+| Spirit Summoning | {3}{W} | ✅ | Push XXV: Sorcery — Lesson. Creates a 1/1 white Spirit creature token with flying. White's slot in the STX Lesson cycle (siblings: Pest Summoning B/G, Inkling Summoning W/B, Mascot Exhibition W). |
 | Tend the Pests | {1}{B}{G} | ✅ | Sacrifice a creature; create X 1/1 Pest tokens (X = sacrificed power); "When this dies, gain 1 life" trigger now rides on the token via SOS-VI's `TokenDefinition.triggered_abilities`. |
 
 ### Iconic / legendary (`stx::iconic` + `stx::legends`)

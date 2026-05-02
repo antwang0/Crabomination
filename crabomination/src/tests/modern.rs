@@ -9383,3 +9383,164 @@ fn pelt_collector_is_a_1_1_elf_warrior() {
     assert!(pc.subtypes.creature_types.contains(&crate::card::CreatureType::Elf));
     assert!(pc.subtypes.creature_types.contains(&crate::card::CreatureType::Warrior));
 }
+
+// ── Push XXV cube additions ─────────────────────────────────────────────────
+
+#[test]
+fn kolaghans_command_has_four_modes_chooses_one() {
+    let kc = catalog::kolaghans_command();
+    assert_eq!(kc.name, "Kolaghan's Command");
+    if let crate::card::Effect::ChooseMode(modes) = &kc.effect {
+        assert_eq!(modes.len(), 4, "Kolaghan's Command should have 4 modes");
+    } else {
+        panic!("Kolaghan's Command should be a ChooseMode effect");
+    }
+}
+
+#[test]
+fn kolaghans_command_mode_2_deals_2_damage_to_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+
+    let id = g.add_card_to_hand(0, catalog::kolaghans_command());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        mode: Some(2), x_value: None,
+    })
+    .expect("Kolaghan's Command mode 2 castable for {B}{R}");
+    drain_stack(&mut g);
+
+    // Bear takes 2 damage (toughness 2) → dies via SBA.
+    assert!(!g.battlefield.iter().any(|c| c.id == bear),
+        "bear should die from 2 damage");
+}
+
+#[test]
+fn kolaghans_command_mode_0_returns_creature_card_from_graveyard() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+
+    let id = g.add_card_to_hand(0, catalog::kolaghans_command());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: Some(0), x_value: None,
+    })
+    .expect("Kolaghan's Command mode 0 castable for {B}{R}");
+    drain_stack(&mut g);
+
+    // Bear should be in hand now.
+    assert!(g.players[0].hand.iter().any(|c| c.id == bear),
+        "bear should be back in hand from graveyard");
+}
+
+#[test]
+fn twincast_copies_target_instant_spell() {
+    // Twincast copies a Lightning Bolt on the stack — opponent should
+    // take 6 (3 from original + 3 from copy).
+    let mut g = two_player_game();
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    let twin = g.add_card_to_hand(0, catalog::twincast());
+
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        mode: None, x_value: None,
+    })
+    .expect("Bolt castable for {R}");
+
+    // Twincast goes on the stack on top, copies the Bolt.
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    let life_before = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: twin, target: Some(Target::Permanent(bolt)),
+        mode: None, x_value: None,
+    })
+    .expect("Twincast castable for {U}{U} targeting Bolt");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[1].life, life_before - 6,
+        "opp should take 6 (Bolt + Twincast copy each deal 3)");
+}
+
+#[test]
+fn vendetta_destroys_nonblack_creature_and_loses_two_life() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    let life_before = g.players[0].life;
+
+    let id = g.add_card_to_hand(0, catalog::vendetta());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        mode: None, x_value: None,
+    })
+    .expect("Vendetta castable for {B}");
+    drain_stack(&mut g);
+
+    assert!(!g.battlefield.iter().any(|c| c.id == bear),
+        "bear should be destroyed");
+    assert_eq!(g.players[0].life, life_before - 2,
+        "Vendetta caster should lose 2 life");
+}
+
+#[test]
+fn reverberate_is_red_copy_spell() {
+    let r = catalog::reverberate();
+    assert_eq!(r.name, "Reverberate");
+    assert_eq!(r.cost.cmc(), 2);
+    assert!(r.is_instant());
+}
+
+#[test]
+fn generous_gift_destroys_and_gives_opponent_a_3_3_elephant() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    let id = g.add_card_to_hand(0, catalog::generous_gift());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        mode: None, x_value: None,
+    })
+    .expect("Generous Gift castable for {2}{W}");
+    drain_stack(&mut g);
+
+    assert!(!g.battlefield.iter().any(|c| c.id == bear),
+        "bear should be destroyed");
+    let elephants: Vec<_> = g.battlefield.iter()
+        .filter(|c| c.is_token && c.definition.name == "Elephant").collect();
+    assert_eq!(elephants.len(), 1, "exactly one elephant should be created");
+    let e = &elephants[0];
+    assert_eq!(e.controller, 1, "elephant should be controlled by the gifted player");
+    assert_eq!(e.power(), 3);
+    assert_eq!(e.toughness(), 3);
+}
+
+#[test]
+fn crackling_doom_deals_2_to_each_opponent_and_sacs_a_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    let id = g.add_card_to_hand(0, catalog::crackling_doom());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    let life_before = g.players[1].life;
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Crackling Doom castable for {R}{W}{B}");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[1].life, life_before - 2,
+        "opp should take 2 damage");
+    assert!(!g.battlefield.iter().any(|c| c.id == bear),
+        "bear should be sacrificed");
+}

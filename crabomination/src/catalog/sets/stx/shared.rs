@@ -105,6 +105,62 @@ pub fn inkling_summoning() -> CardDefinition {
     }
 }
 
+// ── Spirit Summoning (Lesson) ───────────────────────────────────────────────
+
+/// Spirit Summoning — {3}{W} Sorcery — Lesson. Printed Oracle:
+/// "Create a 1/1 white Spirit creature token with flying."
+///
+/// White's slot in the STX Lesson cycle. Same shape as Pest Summoning
+/// (Witherbloom) and Inkling Summoning (Silverquill) — a one-line
+/// `Effect::CreateToken` with the Lesson `SpellSubtype` recorded so
+/// future Lesson-aware cards can filter on it. The token is a vanilla
+/// 1/1 white Spirit with flying — the same definition shape used by
+/// Sparring Regimen (different P/T but same Spirit subtype) and
+/// matching Lorehold Command's mode 1 flying-Spirit token.
+pub fn spirit_summoning() -> CardDefinition {
+    let spirit = TokenDefinition {
+        name: "Spirit".into(),
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::White],
+        supertypes: vec![],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
+        activated_abilities: vec![],
+        triggered_abilities: vec![],
+    };
+    CardDefinition {
+        name: "Spirit Summoning",
+        cost: cost(&[generic(3), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes {
+            spell_subtypes: vec![SpellSubtype::Lesson],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: spirit,
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
 // ── Tend the Pests ──────────────────────────────────────────────────────────
 
 /// Tend the Pests — {1}{B}{G} Sorcery. "As an additional cost to cast this

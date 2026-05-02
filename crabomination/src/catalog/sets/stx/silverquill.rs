@@ -19,8 +19,8 @@
 
 use super::no_abilities;
 use crate::card::{
-    CardDefinition, CardType, CreatureType, Effect, EventKind, EventScope, EventSpec, Keyword,
-    Selector, SelectionRequirement, Subtypes, Supertype, TriggeredAbility, Value,
+    CardDefinition, CardType, CounterType, CreatureType, Effect, EventKind, EventScope, EventSpec,
+    Keyword, Selector, SelectionRequirement, Subtypes, Supertype, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{magecraft, target_filtered};
 use crate::effect::Duration;
@@ -423,6 +423,147 @@ pub fn hunt_for_specimens() -> CardDefinition {
         ]),
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Star Pupil ──────────────────────────────────────────────────────────────
+
+/// Star Pupil — {B}, 0/0 Spirit. Printed Oracle:
+/// "Star Pupil enters the battlefield with two +1/+1 counters on it.
+///  When Star Pupil dies, put a +1/+1 counter on target creature."
+///
+/// 🟡 Same approximation as Reckless Amplimancer / Body of Research:
+/// the engine has no "enters the battlefield with N +1/+1 counters"
+/// replacement primitive, so we ship base 1/1 + ETB `AddCounter +1/+1
+/// ×1` to land at the printed 2/2 effective body. The counter is a real
+/// `CounterType::PlusOnePlusOne`, so Felisa, Fang of Silverquill's
+/// "creature you control with a counter on it dies" trigger fires
+/// correctly when Star Pupil's death-replacement-counter rider drops a
+/// +1/+1 counter on another creature. The dies trigger is faithful —
+/// `EventKind::CreatureDied/SelfSource` → `Effect::AddCounter` on a
+/// targeted creature (auto-target framework picks a friendly creature).
+pub fn star_pupil() -> CardDefinition {
+    CardDefinition {
+        name: "Star Pupil",
+        cost: cost(&[b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
+        // Base 1/1 (printed 0/0) so SBA doesn't drop the body before
+        // the ETB +1/+1 counter trigger lands. Net is 2/2 with one
+        // counter, matching the printed two-counters-on-a-0/0.
+        power: 1,
+        toughness: 1,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+                effect: Effect::AddCounter {
+                    what: target_filtered(SelectionRequirement::Creature),
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                },
+            },
+        ],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Codespell Cleric ────────────────────────────────────────────────────────
+
+/// Codespell Cleric — {W}, 1/1 Human Cleric. Printed Oracle:
+/// "Lifelink. When Codespell Cleric enters the battlefield, scry 1."
+///
+/// Vanilla one-mana Cleric body with Lifelink + ETB scry. Both pieces
+/// are first-class engine primitives — `Keyword::Lifelink` on the body
+/// and `Effect::Scry` on the ETB trigger.
+pub fn codespell_cleric() -> CardDefinition {
+    use crate::effect::PlayerRef;
+    CardDefinition {
+        name: "Codespell Cleric",
+        cost: cost(&[w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Lifelink],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Combat Professor ────────────────────────────────────────────────────────
+
+/// Combat Professor — {3}{W}, 2/3 Cat Cleric, Flying. Printed Oracle:
+/// "Magecraft — Whenever you cast or copy an instant or sorcery spell,
+///  target creature gets +1/+1 until end of turn."
+///
+/// Same shape as Eager First-Year (the Silverquill apprentice) but
+/// gated on a 2/3 flier body for {3}{W}. Wired via the `magecraft()`
+/// helper plus the standard `target_filtered(Creature)` pump body —
+/// auto-target framework picks the highest-power friendly creature.
+pub fn combat_professor() -> CardDefinition {
+    CardDefinition {
+        name: "Combat Professor",
+        cost: cost(&[generic(3), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Cat, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::PumpPT {
+            what: target_filtered(SelectionRequirement::Creature),
+            power: Value::Const(1),
+            toughness: Value::Const(1),
+            duration: Duration::EndOfTurn,
+        })],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],

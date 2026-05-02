@@ -7407,3 +7407,238 @@ pub fn pegasus_stampede() -> CardDefinition {
     }
 }
 
+
+// ── Kolaghan's Command ──────────────────────────────────────────────────────
+
+/// Kolaghan's Command — {B}{R} Instant.
+/// "Choose two —
+///  • Return target creature card from your graveyard to your hand.
+///  • Target opponent discards a card.
+///  • Kolaghan's Command deals 2 damage to target creature or planeswalker.
+///  • Destroy target artifact."
+///
+/// 🟡 Same approximation as Boros Charm and the STX Commands: printed
+/// "choose two" collapses to "choose one" via `Effect::ChooseMode` (no
+/// multi-pick primitive). Each individual mode is wired faithfully —
+/// gy-recursion via `Selector::take` over creatures-in-gy, opp-discard
+/// via `Effect::Discard { random: true }` collapsed to caster-picks
+/// (we use random discard since no opp-side hand picker), 2 dmg via
+/// `target_filtered(Creature ∨ Planeswalker)`, and `Effect::Destroy`
+/// against an artifact target. BR midrange staple.
+pub fn kolaghans_command() -> CardDefinition {
+    use crate::card::Zone;
+    CardDefinition {
+        name: "Kolaghan's Command",
+        cost: cost(&[b(), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseMode(vec![
+            // Mode 0: return creature card from your gy → hand.
+            Effect::Move {
+                what: Selector::take(
+                    Selector::CardsInZone {
+                        who: PlayerRef::You,
+                        zone: Zone::Graveyard,
+                        filter: SelectionRequirement::Creature,
+                    },
+                    Value::Const(1),
+                ),
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+            // Mode 1: target opp discards a card (random — we have no
+            // multi-step "opp picks" prompt for triggered Discard, so the
+            // random flag is a faithful approximation of "they choose").
+            Effect::Discard {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(1),
+                random: true,
+            },
+            // Mode 2: 2 damage to creature or planeswalker.
+            Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::Const(2),
+            },
+            // Mode 3: destroy target artifact.
+            Effect::Destroy {
+                what: target_filtered(SelectionRequirement::HasCardType(CardType::Artifact)),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+// ── Twincast ────────────────────────────────────────────────────────────────
+
+/// Twincast — {U}{U} Instant. "Copy target instant or sorcery spell.
+/// You may choose new targets for the copy."
+///
+/// Wired faithfully via `Effect::CopySpell` over a target filtered to
+/// `IsSpellOnStack ∧ (Instant ∨ Sorcery)`. Same shape as Choreographed
+/// Sparks (SOS) but without the controller filter — Twincast can copy
+/// any IS spell, including opponents'. The copy inherits the original's
+/// targets at copy time (the "may choose new targets" clause is
+/// approximated as keeping the original targets — no interactive
+/// re-target prompt yet).
+pub fn twincast() -> CardDefinition {
+    CardDefinition {
+        name: "Twincast",
+        cost: cost(&[u(), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::CopySpell {
+            what: target_filtered(
+                SelectionRequirement::IsSpellOnStack
+                    .and(
+                        SelectionRequirement::HasCardType(CardType::Instant)
+                            .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+                    ),
+            ),
+            count: Value::Const(1),
+        },
+        ..Default::default()
+    }
+}
+
+// ── Reverberate ─────────────────────────────────────────────────────────────
+
+/// Reverberate — {R}{R} Instant. "Copy target instant or sorcery spell.
+/// You may choose new targets for the copy."
+///
+/// Functionally identical to Twincast at red. Same `Effect::CopySpell`
+/// wiring. (Each card is included for cube color-pool diversity — red
+/// vs blue copy spells slot into different archetypes.)
+pub fn reverberate() -> CardDefinition {
+    CardDefinition {
+        name: "Reverberate",
+        cost: cost(&[r(), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::CopySpell {
+            what: target_filtered(
+                SelectionRequirement::IsSpellOnStack
+                    .and(
+                        SelectionRequirement::HasCardType(CardType::Instant)
+                            .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+                    ),
+            ),
+            count: Value::Const(1),
+        },
+        ..Default::default()
+    }
+}
+
+// ── Vendetta ────────────────────────────────────────────────────────────────
+
+/// Vendetta — {B} Instant. "Destroy target nonblack creature. You lose
+/// life equal to its toughness."
+///
+/// 🟡 Mainline destroy half wired faithfully (target filter = Creature ∧
+/// ¬Black via `SelectionRequirement::HasColor(Black).negate()`). The
+/// "lose life equal to its toughness" rider collapses to a flat 2-life
+/// payment — `Value` doesn't yet have a "toughness of pre-destroy
+/// target" reader (the target is in the graveyard by the time the
+/// life-loss step would resolve, and `Value::ToughnessOf` reads from
+/// the battlefield). Same gap as Bone Splinters' generic-cost
+/// approximation; tracked in TODO.md.
+pub fn vendetta() -> CardDefinition {
+    CardDefinition {
+        name: "Vendetta",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Destroy {
+                what: target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::HasColor(Color::Black).negate()),
+                ),
+            },
+            Effect::LoseLife {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+// ── Generous Gift ───────────────────────────────────────────────────────────
+
+/// Generous Gift — {2}{W} Instant. "Destroy target nonland permanent.
+/// Its controller creates a 3/3 green Elephant creature token."
+///
+/// Wired via `Effect::Destroy` on a `Permanent ∧ Nonland` target +
+/// `Effect::CreateToken` whose `who` field is
+/// `PlayerRef::ControllerOf(Target(0))`. The destroyed card's controller
+/// is read at resolution time (graveyard-fallback path matches Harsh
+/// Annotation's "destroyed creature's controller" Inkling rider — see
+/// SOS push XXI). The token is a 3/3 green Elephant — same colors and
+/// stats as Beast Within's Beast token but typed Elephant per print.
+pub fn generous_gift() -> CardDefinition {
+    use crate::card::TokenDefinition;
+    let elephant = TokenDefinition {
+        name: "Elephant".into(),
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Green],
+        supertypes: vec![],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elephant],
+            ..Default::default()
+        },
+        activated_abilities: vec![],
+        triggered_abilities: vec![],
+    };
+    CardDefinition {
+        name: "Generous Gift",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Destroy {
+                what: target_filtered(
+                    SelectionRequirement::Permanent.and(SelectionRequirement::Nonland),
+                ),
+            },
+            Effect::CreateToken {
+                who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
+                count: Value::Const(1),
+                definition: elephant,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+// ── Crackling Doom ──────────────────────────────────────────────────────────
+
+/// Crackling Doom — {R}{W}{B} Instant. "Crackling Doom deals 2 damage
+/// to each opponent. Each opponent sacrifices a creature with the
+/// greatest power among creatures they control."
+///
+/// 🟡 The "greatest power" sacrifice constraint isn't enforced — the
+/// engine's `Effect::Sacrifice` with a `Creature` filter delegates the
+/// pick to the targeted player (auto-decider picks the lowest power for
+/// that player, opposite of the printed "greatest"). Same approximation
+/// gap as Pithing Edict's "creature or planeswalker" choice. The 2-
+/// damage half is faithful: `Effect::DealDamage` against
+/// `Selector::Player(EachOpponent)` lands the chip damage on every
+/// opponent regardless of their creature situation.
+pub fn crackling_doom() -> CardDefinition {
+    CardDefinition {
+        name: "Crackling Doom",
+        cost: cost(&[r(), w(), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(2),
+            },
+            Effect::Sacrifice {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                count: Value::Const(1),
+                filter: SelectionRequirement::Creature,
+            },
+        ]),
+        ..Default::default()
+    }
+}

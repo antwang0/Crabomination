@@ -2341,3 +2341,130 @@ fn tempted_by_the_oriq_destroys_low_mv_creature_and_makes_inkling() {
     assert_eq!(inkling.toughness(), 1);
 }
 
+
+// ── Push XXV Silverquill additions ─────────────────────────────────────────
+
+#[test]
+fn star_pupil_etb_adds_one_plus_counter_to_self() {
+    // Printed Star Pupil enters with two +1/+1 counters; we approximate
+    // as base 1/1 + ETB +1/+1 ×1 (same approximation as Reckless
+    // Amplimancer) so SBA doesn't drop the body before the trigger
+    // resolves. Net effective body is 2/2 with one counter.
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::star_pupil());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Star Pupil castable for {B}");
+    drain_stack(&mut g);
+
+    let pupil = g.battlefield.iter().find(|c| c.definition.name == "Star Pupil")
+        .expect("Star Pupil on battlefield");
+    assert_eq!(pupil.counter_count(CounterType::PlusOnePlusOne), 1,
+        "Star Pupil should have one +1/+1 counter from ETB trigger");
+    assert_eq!(pupil.power(), 2, "effective body is base 1 + 1 counter = 2");
+    assert_eq!(pupil.toughness(), 2);
+}
+
+#[test]
+fn star_pupil_dies_puts_counter_on_target_creature() {
+    // Star Pupil's death trigger drops a +1/+1 counter on a friendly
+    // creature. We force the death by stamping lethal damage directly.
+    let mut g = two_player_game();
+    let pupil = g.add_card_to_battlefield(0, catalog::star_pupil());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(pupil);
+    g.clear_sickness(bear);
+    // Drop pupil's body to 0 by stamping enough damage.
+    {
+        let p = g.battlefield.iter_mut().find(|c| c.id == pupil).unwrap();
+        p.damage = (p.toughness() as u32) + 1;
+    }
+    g.check_state_based_actions();
+    drain_stack(&mut g);
+
+    let bear_card = g.battlefield.iter().find(|c| c.id == bear)
+        .expect("bear still alive");
+    assert_eq!(bear_card.counter_count(CounterType::PlusOnePlusOne), 1,
+        "death trigger should add a +1/+1 counter to the bear");
+}
+
+#[test]
+fn codespell_cleric_etb_scries_one() {
+    // Codespell Cleric: lifelink + ETB Scry 1. We seed the library and
+    // verify the Scry trigger fires (the auto-decider keeps the top card
+    // — leaving library count unchanged).
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
+    let id = g.add_card_to_hand(0, catalog::codespell_cleric());
+    g.players[0].mana_pool.add(Color::White, 1);
+    let lib_before = g.players[0].library.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Codespell Cleric castable for {W}");
+    drain_stack(&mut g);
+
+    let cleric = g.battlefield.iter().find(|c| c.definition.name == "Codespell Cleric")
+        .expect("Codespell Cleric on battlefield");
+    assert!(cleric.has_keyword(&Keyword::Lifelink),
+        "Codespell Cleric should have lifelink");
+    assert_eq!(cleric.power(), 1);
+    assert_eq!(cleric.toughness(), 1);
+    // Library should be unchanged (Scry 1 keep-on-top doesn't draw).
+    assert_eq!(g.players[0].library.len(), lib_before,
+        "Scry 1 keep-on-top doesn't change library size");
+}
+
+#[test]
+fn combat_professor_pumps_creature_on_magecraft_trigger() {
+    // Combat Professor: 2/3 Flying Cat Cleric. Magecraft → +1/+1 EOT on
+    // target creature.
+    let mut g = two_player_game();
+    let prof = g.add_card_to_battlefield(0, catalog::combat_professor());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(prof);
+    g.clear_sickness(bear);
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    let bear_power_before = g.battlefield.iter().find(|c| c.id == bear).unwrap().power();
+
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)), mode: None, x_value: None,
+    })
+    .expect("Bolt castable for {R}");
+    drain_stack(&mut g);
+
+    let bear_card = g.battlefield.iter().find(|c| c.id == bear).unwrap();
+    assert!(bear_card.power() >= bear_power_before + 1,
+        "bear power should have increased by at least 1 after the magecraft pump (was {}, is {})",
+        bear_power_before, bear_card.power());
+    let prof_card = g.battlefield.iter().find(|c| c.id == prof).unwrap();
+    assert_eq!(prof_card.power(), 2);
+    assert_eq!(prof_card.toughness(), 3);
+    assert!(prof_card.has_keyword(&Keyword::Flying));
+}
+
+#[test]
+fn spirit_summoning_creates_one_one_flying_spirit_token() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::spirit_summoning());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Spirit Summoning castable for {3}{W}");
+    drain_stack(&mut g);
+
+    let spirit = g.battlefield.iter().find(|c| c.is_token
+        && c.definition.name == "Spirit"
+        && c.controller == 0)
+        .expect("Spirit token created");
+    assert!(spirit.has_keyword(&Keyword::Flying), "Spirit should have flying");
+    assert_eq!(spirit.power(), 1);
+    assert_eq!(spirit.toughness(), 1);
+    assert!(spirit.definition.subtypes.creature_types
+        .contains(&crate::card::CreatureType::Spirit));
+}

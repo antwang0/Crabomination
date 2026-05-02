@@ -224,6 +224,47 @@ fn predicate_short_label(p: &crate::card::Predicate) -> String {
         Predicate::ValueAtMost(Value::LifeOf(_), Value::Const(n)) => {
             format!("≤{n} life")
         }
+        // Push XXV: graveyard / library / count Value-keyed predicates.
+        // Used by Dragon's Approach's "≥4 Dragon's Approach in gy" tutor
+        // gate (`ValueAtLeast(CountOf(CardsInZone(Graveyard, HasName)),
+        // Const(4))`), Resonating Lute's hand-size gate, etc. Surface a
+        // short hint instead of falling through to the generic
+        // "conditional" tag.
+        Predicate::ValueAtLeast(Value::GraveyardSizeOf(_), Value::Const(n)) => {
+            format!("≥{n} in gy")
+        }
+        Predicate::ValueAtMost(Value::GraveyardSizeOf(_), Value::Const(n)) => {
+            format!("≤{n} in gy")
+        }
+        Predicate::ValueAtLeast(Value::LibrarySizeOf(_), Value::Const(n)) => {
+            format!("≥{n} in library")
+        }
+        Predicate::ValueAtMost(Value::LibrarySizeOf(_), Value::Const(n)) => {
+            format!("≤{n} in library")
+        }
+        // CountOf(_) compares a selector's resolved count against a
+        // threshold. The selector itself is opaque from the UI's
+        // perspective (could be "creatures you control", "lands of any
+        // color", etc.), so the label is a structural hint —
+        // "if ≥N matching" — without unpacking the selector. Same hint
+        // shape as `SelectorCountAtLeast` (which targets the
+        // count-on-a-zone path).
+        Predicate::ValueAtLeast(Value::CountOf(_), Value::Const(1)) => {
+            "if board matches".into()
+        }
+        Predicate::ValueAtLeast(Value::CountOf(_), Value::Const(n)) => {
+            format!("if ≥{n} match")
+        }
+        Predicate::ValueAtMost(Value::CountOf(_), Value::Const(n)) => {
+            format!("if ≤{n} match")
+        }
+        // EntityMatches {what, filter}: predicate over a specific entity
+        // (the trigger source, target, or source-of-cast spell). The
+        // Repartee filter ("trigger source matches Creature") is the
+        // poster child. Surface as "if X matches" — the `what` slot is
+        // either TriggerSource, Target, or CastSpellSource which are all
+        // implicit context to the player and read naturally as "X".
+        Predicate::EntityMatches { .. } => "if matches filter".into(),
         Predicate::SpellsCastThisTurnAtLeast { at_least: Value::Const(1), .. } => {
             "after spell cast".into()
         }
@@ -875,6 +916,69 @@ mod tests {
             at_least: Value::Const(2),
         };
         assert_eq!(predicate_short_label(&p), "after 2 creature deaths");
+    }
+
+    /// Push XXV: predicate_short_label now covers `ValueAtLeast` /
+    /// `ValueAtMost` over `GraveyardSizeOf` / `LibrarySizeOf` /
+    /// `CountOf(_)` and the `EntityMatches` predicate. Spot-check each
+    /// new arm so future Predicate variants don't regress these labels
+    /// back to the catch-all "conditional".
+    #[test]
+    fn predicate_short_label_covers_value_keyed_predicates() {
+        use crate::card::{Predicate, SelectionRequirement, Selector};
+        use crate::effect::{PlayerRef, Value};
+
+        // GraveyardSizeOf at-least / at-most.
+        let p = Predicate::ValueAtLeast(
+            Value::GraveyardSizeOf(PlayerRef::You),
+            Value::Const(4),
+        );
+        assert_eq!(predicate_short_label(&p), "≥4 in gy");
+        let p = Predicate::ValueAtMost(
+            Value::GraveyardSizeOf(PlayerRef::You),
+            Value::Const(2),
+        );
+        assert_eq!(predicate_short_label(&p), "≤2 in gy");
+
+        // LibrarySizeOf.
+        let p = Predicate::ValueAtLeast(
+            Value::LibrarySizeOf(PlayerRef::You),
+            Value::Const(7),
+        );
+        assert_eq!(predicate_short_label(&p), "≥7 in library");
+        let p = Predicate::ValueAtMost(
+            Value::LibrarySizeOf(PlayerRef::You),
+            Value::Const(0),
+        );
+        assert_eq!(predicate_short_label(&p), "≤0 in library");
+
+        // CountOf — n=1 collapses to "if board matches"; n>=2 formats.
+        let creatures =
+            Selector::EachPermanent(SelectionRequirement::Creature);
+        let p = Predicate::ValueAtLeast(
+            Value::count(creatures.clone()),
+            Value::Const(1),
+        );
+        assert_eq!(predicate_short_label(&p), "if board matches");
+        let p = Predicate::ValueAtLeast(
+            Value::count(creatures.clone()),
+            Value::Const(4),
+        );
+        assert_eq!(predicate_short_label(&p), "if ≥4 match");
+        let p = Predicate::ValueAtMost(
+            Value::count(creatures),
+            Value::Const(2),
+        );
+        assert_eq!(predicate_short_label(&p), "if ≤2 match");
+
+        // EntityMatches: stable hint regardless of which entity slot is
+        // referenced (TriggerSource, Target, etc.) since the label
+        // doesn't unpack the slot.
+        let p = Predicate::EntityMatches {
+            what: Selector::TriggerSource,
+            filter: SelectionRequirement::Creature,
+        };
+        assert_eq!(predicate_short_label(&p), "if matches filter");
     }
 
     /// Planeswalkers' loyalty abilities should surface in the wire view so

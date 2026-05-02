@@ -292,7 +292,36 @@ def main():
                         help="Scryfall response cache (default: scripts/.scryfall_cache.json)")
     parser.add_argument("--no-cache", action="store_true", help="Ignore the cache")
     parser.add_argument("--quiet", action="store_true", help="Only print cards with issues")
+    parser.add_argument("--query", metavar="NAME", action="append", default=[],
+                        help="Print Scryfall data for a card by name (no comparison). "
+                             "May be repeated. Skips the cargo build / dump_cards run.")
     args = parser.parse_args()
+
+    if args.query:
+        cache = None if args.no_cache else ScryfallCache(Path(args.cache))
+        if cache is not None:
+            print(f"Cache: {args.cache} ({len(cache._data)} entries)")
+        for name in args.query:
+            try:
+                sf = scryfall_get(name, cache)
+            except Exception as exc:
+                print(f"[ERROR] {name}: {exc}")
+                continue
+            if sf is None:
+                print(f"[NOT FOUND] {name}")
+                continue
+            print(f"=== {sf.get('name')} ===")
+            print(f"  set: {sf.get('set')!r}  released: {sf.get('released_at')!r}")
+            print(f"  mana_cost: {sf.get('mana_cost')!r}  cmc: {sf.get('cmc')!r}")
+            print(f"  type_line: {sf.get('type_line')!r}")
+            pt = scryfall_pt(sf) if "Creature" in sf.get('type_line', '') else (None, None)
+            if pt[0] is not None:
+                print(f"  P/T: {pt[0]}/{pt[1]}")
+            if sf.get('loyalty'):
+                print(f"  loyalty: {sf.get('loyalty')!r}")
+            print(f"  oracle_text:\n{sf.get('oracle_text', '').strip()}")
+            print()
+        return
 
     cache: Optional[ScryfallCache] = None
     if not args.no_cache:
