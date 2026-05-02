@@ -9148,6 +9148,30 @@ fn persistent_petitioners_activated_mills_one() {
         "Opponent's graveyard grew by 1 (mill 1)");
 }
 
+/// Pulse of Murasa returns a creature to its owner's hand and gains 6
+/// life.
+#[test]
+fn pulse_of_murasa_returns_creature_and_gains_six_life() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::pulse_of_murasa());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    let life_before = g.players[0].life;
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)), mode: None, x_value: None,
+    }).expect("Pulse of Murasa castable for {1}{G}{G}");
+    drain_stack(&mut g);
+
+    assert!(g.players[0].hand.iter().any(|c| c.id == bear),
+        "Bear returned to hand");
+    assert!(!g.players[0].graveyard.iter().any(|c| c.id == bear),
+        "Bear no longer in graveyard");
+    assert_eq!(g.players[0].life, life_before + 6,
+        "Caster gains 6 life unconditionally");
+}
+
 /// Slime Against Humanity creates X+1 Ooze tokens, where X = SAH in
 /// graveyard.
 #[test]

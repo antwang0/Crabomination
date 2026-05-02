@@ -7114,6 +7114,35 @@ pub fn persistent_petitioners() -> CardDefinition {
     }
 }
 
+/// Pulse of Murasa — {1}{G}{G} Instant. "Return target creature or
+/// land card from a graveyard to its owner's hand. You gain 6 life."
+///
+/// Reanimator-class graveyard recursion + lifegain. The target filter
+/// is `Creature ∨ Land` so it accepts both creature and land
+/// graveyard cards (auto-target favors graveyard via the existing
+/// `prefers_graveyard_source` heuristic on Move-to-Hand). The 6 life
+/// is unconditional.
+pub fn pulse_of_murasa() -> CardDefinition {
+    CardDefinition {
+        name: "Pulse of Murasa",
+        cost: cost(&[generic(1), g(), g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Move {
+                what: target_filtered(
+                    SelectionRequirement::Creature.or(SelectionRequirement::Land),
+                ),
+                to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+            },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(6),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
 /// Slime Against Humanity — {1}{G} Sorcery. "Create X 1/1 green Ooze
 /// creature tokens, where X is the number of cards named Slime Against
 /// Humanity in all graveyards plus the number of cards named Slime
