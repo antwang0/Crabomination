@@ -130,6 +130,11 @@ pub struct StackItemSnapshot {
     /// fresh).
     #[serde(default)]
     pub face: crate::game::types::CastFace,
+    /// Whether this stack item is a copy of a spell. Defaults to false
+    /// for snapshot back-compat. Copies are rare in mid-game snapshots
+    /// (they typically resolve same-turn) but the field round-trips.
+    #[serde(default)]
+    pub is_copy: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -164,6 +169,7 @@ impl GameSnapshot {
                     converged_value,
                     uncounterable,
                     face,
+                    is_copy,
                 } => Some(StackItemSnapshot {
                     card: card_snap(card),
                     caster: *caster,
@@ -173,6 +179,7 @@ impl GameSnapshot {
                     converged_value: *converged_value,
                     uncounterable: *uncounterable,
                     face: *face,
+                    is_copy: *is_copy,
                 }),
                 StackItem::Trigger { .. } => {
                     dropped_triggers += 1;
@@ -310,6 +317,7 @@ impl GameSnapshot {
                 converged_value: s.converged_value,
                 uncounterable: s.uncounterable,
                 face: s.face,
+                is_copy: s.is_copy,
             });
         }
         state.stack = restored_stack;
@@ -589,6 +597,7 @@ mod tests {
             converged_value: 0,
             uncounterable: false,
             face: crate::game::types::CastFace::Flashback,
+            is_copy: false,
         });
         let snap = GameSnapshot::capture(&g);
         let json = serde_json::to_string(&snap).expect("serialize");
@@ -598,6 +607,35 @@ mod tests {
             StackItem::Spell { face, .. } => {
                 assert_eq!(*face, crate::game::types::CastFace::Flashback);
             }
+            _ => panic!("expected a Spell on the restored stack"),
+        }
+    }
+
+    #[test]
+    fn stack_spell_is_copy_round_trips_through_snapshot() {
+        // Push a copy-flagged Spell on the stack and verify the
+        // is_copy flag survives a JSON round-trip.
+        let mut g = two_player_game();
+        let bolt_id = g.add_card_to_battlefield(0, catalog::lightning_bolt());
+        let bolt_card = g.battlefield_find(bolt_id).cloned().expect("bolt on bf");
+        g.battlefield.retain(|c| c.id != bolt_id);
+        g.stack.push(StackItem::Spell {
+            card: Box::new(bolt_card),
+            caster: 0,
+            target: None,
+            mode: None,
+            x_value: 0,
+            converged_value: 0,
+            uncounterable: false,
+            face: crate::game::types::CastFace::Front,
+            is_copy: true,
+        });
+        let snap = GameSnapshot::capture(&g);
+        let json = serde_json::to_string(&snap).expect("serialize");
+        let parsed: GameSnapshot = serde_json::from_str(&json).expect("parse");
+        let restored = parsed.restore().expect("restore");
+        match &restored.stack[0] {
+            StackItem::Spell { is_copy, .. } => assert!(*is_copy),
             _ => panic!("expected a Spell on the restored stack"),
         }
     }
@@ -625,6 +663,7 @@ mod tests {
             converged_value: 0,
             uncounterable: false,
             face: crate::game::types::CastFace::Front,
+            is_copy: false,
         });
         g.stack.push(StackItem::Trigger {
             source: bolt_id,

@@ -259,6 +259,7 @@ impl GameState {
                 converged_value,
                 uncounterable: _,
                 face,
+                is_copy,
             } => {
                 let card = *card;
                 let card_id = card.id;
@@ -374,7 +375,11 @@ impl GameState {
                     // that needs special routing on resolve (exile, not
                     // graveyard); Back-face MDFCs always exile-or-not
                     // based on their own keywords.
-                    let mut spell_events = self.continue_spell_resolution_with_face(
+                    //
+                    // `is_copy` is threaded through so a copied spell
+                    // ceases to exist on resolution (no graveyard / exile
+                    // step) — see `continue_spell_resolution_with_face`.
+                    let mut spell_events = self.continue_spell_resolution_with_face_copy(
                         card,
                         caster,
                         target,
@@ -383,6 +388,7 @@ impl GameState {
                         converged_value,
                         None,
                         face,
+                        is_copy,
                     )?;
                     events.append(&mut spell_events);
                     if self.pending_decision.is_some() {

@@ -836,8 +836,15 @@ impl GameState {
                 }
                 to_remove.sort_unstable_by(|a, b| b.cmp(a));
                 for pos in to_remove {
-                    if let StackItem::Spell { card, caster, .. } = self.stack.remove(pos) {
-                        self.players[caster].send_to_graveyard(*card);
+                    if let StackItem::Spell { card, caster, is_copy, .. } =
+                        self.stack.remove(pos)
+                    {
+                        if !is_copy {
+                            self.players[caster].send_to_graveyard(*card);
+                        }
+                        // Copies cease to exist on counter — drop without
+                        // zoning. Per MTG rule 707.10, a countered copy
+                        // disappears from the stack as if it had resolved.
                     }
                 }
                 Ok(())
@@ -873,9 +880,12 @@ impl GameState {
                 self.priority.player_with_priority = saved_priority;
 
                 if !paid
-                    && let StackItem::Spell { card, caster, .. } = self.stack.remove(pos)
+                    && let StackItem::Spell { card, caster, is_copy, .. } =
+                        self.stack.remove(pos)
                 {
-                    self.players[caster].send_to_graveyard(*card);
+                    if !is_copy {
+                        self.players[caster].send_to_graveyard(*card);
+                    }
                 }
                 Ok(())
             }
@@ -1282,9 +1292,81 @@ impl GameState {
             }
 
             Effect::BecomeBasicLand { .. }
-            | Effect::ResetCreature { .. }
-            | Effect::CopySpell { .. } => {
+            | Effect::ResetCreature { .. } => {
                 // TODO: implement via layer/stack mechanics.
+                Ok(())
+            }
+
+            Effect::CopySpell { what, count } => {
+                // Resolve the selector to find the spell to copy. The
+                // typical caller is a magecraft / Casualty-style trigger
+                // that copies the just-cast spell; that spell sits on
+                // the stack as a `StackItem::Spell` with the same
+                // `card.id` as `ctx.trigger_source` (when fired off a
+                // SpellCast event) or `Selector::Target(0)` (when
+                // copying a targeted spell, e.g. Choreographed Sparks).
+                //
+                // Only non-permanent spells (instants, sorceries) are
+                // supported in this first cut. Copies of permanent
+                // spells should become tokens per MTG rule 707.10b — that
+                // path is a follow-up (no permanent-copy primitive yet).
+                let candidates = self.resolve_selector(what, ctx);
+                let Some(target_cid) = candidates.into_iter().find_map(|e| match e {
+                    EntityRef::Permanent(cid) | EntityRef::Card(cid) => Some(cid),
+                    _ => None,
+                }) else {
+                    return Ok(());
+                };
+                // Find the spell's stack-item template (without removing).
+                let template = self.stack.iter().find_map(|si| match si {
+                    StackItem::Spell {
+                        card,
+                        caster,
+                        target,
+                        mode,
+                        x_value,
+                        converged_value,
+                        face,
+                        ..
+                    } if card.id == target_cid && !card.definition.is_permanent() => Some((
+                        (**card).clone(),
+                        *caster,
+                        target.clone(),
+                        *mode,
+                        *x_value,
+                        *converged_value,
+                        *face,
+                    )),
+                    _ => None,
+                });
+                let Some((mut card_template, _original_caster, tgt, md, xv, cv, fc)) = template
+                else {
+                    return Ok(());
+                };
+                // Copies are controlled by the source's controller (the
+                // listener that fired the trigger), not the original
+                // caster. This matches MTG's rule for "you may copy
+                // that spell" (Casualty / Storm) — the copy's
+                // controller is the listener.
+                let copy_controller = ctx.controller;
+                let n = self.evaluate_value(count, ctx).max(0) as usize;
+                for _ in 0..n {
+                    // Mint a fresh `CardInstance` id for each copy so
+                    // they can be distinguished on the stack and don't
+                    // collide with the original.
+                    card_template.id = self.next_id();
+                    self.stack.push(StackItem::Spell {
+                        card: Box::new(card_template.clone()),
+                        caster: copy_controller,
+                        target: tgt.clone(),
+                        mode: md,
+                        x_value: xv,
+                        converged_value: cv,
+                        uncounterable: false,
+                        face: fc,
+                        is_copy: true,
+                    });
+                }
                 Ok(())
             }
 
@@ -1358,6 +1440,21 @@ impl GameState {
                 .map(EntityRef::Permanent)
                 .into_iter()
                 .collect(),
+            Selector::CastSpellSource => {
+                // Walk the stack top-down for the topmost StackItem::Spell.
+                // SpellCast triggers are pushed above the cast spell, so
+                // the topmost remaining Spell IS the just-cast spell.
+                self.stack
+                    .iter()
+                    .rev()
+                    .find_map(|si| match si {
+                        StackItem::Spell { card, .. } => Some(EntityRef::Permanent(card.id)),
+                        _ => None,
+                    })
+                    .into_iter()
+                    .collect()
+            }
+
             Selector::CastSpellTarget(slot) => {
                 // Walk the stack for the spell whose SpellCast event fired
                 // this trigger — that's the topmost matching `Spell` whose
@@ -1856,11 +1953,35 @@ impl GameState {
                 || self.evaluate_requirement_static(b, target, controller),
             R::Not(inner) => !self.evaluate_requirement_static(inner, target, controller),
             R::ControlledByYou => match target {
-                Target::Permanent(cid) => self.battlefield_find(*cid).map(|c| c.controller == controller).unwrap_or(false),
+                Target::Permanent(cid) => self
+                    .battlefield_find(*cid)
+                    .map(|c| c.controller == controller)
+                    .or_else(|| {
+                        // Stack-resident spells (counter / copy targets):
+                        // controller is the caster.
+                        self.stack.iter().find_map(|si| match si {
+                            StackItem::Spell { card, caster, .. } if card.id == *cid => {
+                                Some(*caster == controller)
+                            }
+                            _ => None,
+                        })
+                    })
+                    .unwrap_or(false),
                 Target::Player(p) => *p == controller,
             },
             R::ControlledByOpponent => match target {
-                Target::Permanent(cid) => self.battlefield_find(*cid).map(|c| c.controller != controller).unwrap_or(false),
+                Target::Permanent(cid) => self
+                    .battlefield_find(*cid)
+                    .map(|c| c.controller != controller)
+                    .or_else(|| {
+                        self.stack.iter().find_map(|si| match si {
+                            StackItem::Spell { card, caster, .. } if card.id == *cid => {
+                                Some(*caster != controller)
+                            }
+                            _ => None,
+                        })
+                    })
+                    .unwrap_or(false),
                 Target::Player(p) => *p != controller,
             },
             _ => {

@@ -416,6 +416,7 @@ fn mono_color_pool(c: Color) -> Vec<CardFactory> {
         Color::Red => vec![
             artistic_process,
             charging_strifeknight,
+            choreographed_sparks,
             duel_tactics,
             garrison_excavator,
             living_history,

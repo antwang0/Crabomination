@@ -16,8 +16,12 @@ fn is_mana_ability(effect: &Effect) -> bool {
 /// Pull the "when you cast this spell" (`EventKind::SpellCast` +
 /// `EventScope::SelfSource`) triggers off a card. Used by the cast paths
 /// to push these onto the stack above the cast spell so they resolve
-/// before the spell itself.
-fn collect_self_cast_triggers(card: &crate::card::CardInstance) -> Vec<Effect> {
+/// before the spell itself. Each entry carries the trigger's optional
+/// filter predicate so the caller can gate the push at cast-time
+/// (Lumaret's Favor's "if you gained life this turn" Infusion gate).
+fn collect_self_cast_triggers(
+    card: &crate::card::CardInstance,
+) -> Vec<(Effect, Option<crate::effect::Predicate>)> {
     use crate::effect::{EventKind, EventScope};
     card.definition
         .triggered_abilities
@@ -26,7 +30,7 @@ fn collect_self_cast_triggers(card: &crate::card::CardInstance) -> Vec<Effect> {
             t.event.kind == EventKind::SpellCast
                 && matches!(t.event.scope, EventScope::SelfSource)
         })
-        .map(|t| t.effect.clone())
+        .map(|t| (t.effect.clone(), t.event.filter.clone()))
         .collect()
 }
 
@@ -604,6 +608,7 @@ impl GameState {
             converged_value,
             uncounterable,
             face,
+            is_copy: false,
         });
         self.push_on_cast_triggers(card_id, p, on_cast_triggers);
         // SpellCast / YourControl triggers (Prowess, Magecraft, Repartee, …)
@@ -620,13 +625,33 @@ impl GameState {
     /// just-cast card onto the stack as `Trigger` items, so they resolve
     /// before the spell itself. Caller is responsible for collecting the
     /// effect list before the card moves into the stack item.
+    /// `triggers` carries each trigger's effect plus its optional
+    /// `EventSpec.filter` predicate; the filter is evaluated against
+    /// the cast spell as `trigger_source` and the trigger is skipped
+    /// when the predicate returns false (Lumaret's Favor's "if you
+    /// gained life this turn" Infusion gate).
     pub(crate) fn push_on_cast_triggers(
         &mut self,
         source: CardId,
         controller: usize,
-        triggers: Vec<Effect>,
+        triggers: Vec<(Effect, Option<crate::effect::Predicate>)>,
     ) {
-        for effect in triggers {
+        for (effect, filter) in triggers {
+            if let Some(filter) = filter {
+                let ctx = crate::game::effects::EffectContext {
+                    controller,
+                    source: Some(source),
+                    targets: vec![],
+                    trigger_source: Some(crate::game::effects::EntityRef::Card(source)),
+                    mode: 0,
+                    x_value: 0,
+                    converged_value: 0,
+                    cast_face: crate::game::types::CastFace::Front,
+                };
+                if !self.evaluate_predicate(&filter, &ctx) {
+                    continue;
+                }
+            }
             let auto_target =
                 self.auto_target_for_effect_avoiding(&effect, controller, Some(source));
             self.stack.push(StackItem::Trigger {

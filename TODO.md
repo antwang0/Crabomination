@@ -7,6 +7,54 @@ See `CUBE_FEATURES.md` (cube-card implementation status) and
 
 ## Recent additions
 
+- ✅ **SOS push XXI (2026-05-02)**: `Effect::CopySpell` first-class
+  implementation + `Selector::CastSpellSource` + 7 SOS card promotions
+  to ✅. Tests at 1110 (was 1103, +7):
+  - **`Effect::CopySpell { what, count }`** — was a stub, now wires
+    end-to-end. Resolves `what` to a `CardId`, finds the matching
+    `StackItem::Spell` on the stack, and pushes `count` copies onto
+    the stack with `is_copy: true`. Each copy gets a fresh `CardId`,
+    inherits the original's target / mode / x_value / converged_value,
+    and is controlled by the *source's controller* (the listener that
+    fired the trigger), matching MTG's "you may copy that spell"
+    semantic. Permanent-spell copies are not yet supported (rule
+    707.10b token-version path is a follow-up).
+  - **`StackItem::Spell.is_copy: bool`** — new field with
+    `#[serde(default)]` for snapshot back-compat. Threaded into
+    `continue_spell_resolution_with_face_copy` so a copy resolving
+    doesn't go to the graveyard or exile (copies cease to exist per
+    rule 707.10). Counter spell paths also recognize the flag — a
+    countered copy is dropped silently instead of going to the
+    caster's graveyard.
+  - **`Selector::CastSpellSource`** — resolves to the topmost
+    `StackItem::Spell` on the stack. Since `SpellCast` triggers fire
+    *above* the cast spell, the topmost remaining Spell at trigger-
+    resolution time is the just-cast spell. Used by `CopySpell`'s
+    "copy that spell" semantic.
+  - **`SelectionRequirement::ControlledByYou` / `ControlledByOpponent`
+    fall through to stack-resident spells** — was battlefield-only;
+    now finds the spell on the stack (caster = controller) when the
+    target is a stack-resident spell. Powers Choreographed Sparks's
+    "target IS spell *you control*" filter.
+  - **`push_on_cast_triggers` filter threading** —
+    `collect_self_cast_triggers` now returns `(Effect,
+    Option<Predicate>)` pairs and `push_on_cast_triggers` evaluates
+    the filter against the cast spell as `trigger_source` before
+    pushing. Powers Lumaret's Favor's "if you gained life this turn"
+    Infusion gate without firing the copy trigger when the gate
+    fails.
+  - **7 promotions to ✅**: Aziza Mage Tower Captain (magecraft tap-3
+    + copy), Mica Reader of Ruins (magecraft sac-artifact + copy),
+    Lumaret's Favor (Infusion on-cast self-trigger + copy), Silverquill
+    the Disputant (Casualty 1 grant approximated via magecraft + may-sac
+    + copy), Social Snub (on-cast may-copy with creature-control gate),
+    Harsh Annotation (token now goes to destroyed creature's controller
+    via `PlayerRef::ControllerOf(Target(0))` + graveyard fallback), and
+    Choreographed Sparks (NEW factory — single-mode "Copy target IS
+    spell you control" via `IsSpellOnStack & ControlledByYou` filter).
+  - **8 new tests** in `tests::sos::*` and `snapshot::tests`. All 1110
+    lib tests pass.
+
 - ✅ **STX 2021 push XX (2026-05-02)**: 19 new STX 2021 card factories +
   1 engine primitive (`SelectionRequirement::Monocolored`) + 2 STX
   promotions (Vanishing Verse + Beledros Witherbloom both 🟡 → ✅).
@@ -697,10 +745,28 @@ Cascade resolution).  Currently each is handled ad-hoc or omitted.  A shared
 "cast from alternate zone" code path would unlock dozens of cards.
 
 ### Copy Primitive
-No general "create a copy of target spell/permanent" effect exists.  Needed for:
-Reverberate, Fork, Strionic Resonator, Quasiduplicate, Saheeli Rai −3, etc.
-The `CopySpell` effect stub exists in `effect.rs` but is not wired through
-`apply_effect`.
+**Spell copy**: ✅ DONE in push XXI. `Effect::CopySpell { what, count }`
+is now first-class, finding the matching `StackItem::Spell` on the
+stack and pushing `count` copies with `is_copy: true`. Powers
+Choreographed Sparks, Aziza, Mica, Silverquill the Disputant
+(Casualty 1), Lumaret's Favor (Infusion), Social Snub. Plus
+`Selector::CastSpellSource` for "copy that spell" semantics inside
+SpellCast triggers. See `STRIXHAVEN2.md` push XXI.
+
+**Permanent copy** (rule 707.10b — copy of a permanent spell becomes
+a token): ⏳ still todo. Needed for Echocasting Symposium, Applied
+Geometry, Saheeli Rai −3. The current `CopySpell` no-ops on permanent
+spells. A follow-up `Effect::CopyPermanent { what, count }` plus a
+"copy → token" minting path would close this.
+
+**Permanent activation copy** (Strionic Resonator's "copy that
+ability"): ⏳ still todo. Needs an analogous `Effect::CopyTrigger`
+that copies a `StackItem::Trigger` instead of a Spell.
+
+**New-targets prompt**: copies inherit their original's target slot
+today. The printed "you may choose new targets for the copy" prompt
+is collapsed — closing this needs a target-prompt step on the new
+copy before resolution.
 
 ### Triggered-Ability Event Gaps
 `EventKind` is missing several commonly-needed triggers:

@@ -1113,8 +1113,17 @@ pub fn moment_of_reckoning() -> CardDefinition {
 ///   rate of one-life drain is unconditional (vs. the on-cast may-copy
 ///   rider that conditionally doubles the body).
 ///
-/// Push XIX promotes the row from ⏳ to 🟡 on the Silverquill table.
+/// Now fully wired (post-XX): the on-cast `may copy this spell while
+/// you control a creature` rider is wired via a `SelfSource +
+/// SpellCast` triggered ability filtered on `SelectorExists(Creature &
+/// ControlledByYou)`. The trigger body asks the controller via
+/// `Effect::MayDo` and on yes copies the spell with `CopySpell {
+/// what: CastSpellSource, count: 1 }`. The copy resolves first,
+/// applying mass-sacrifice and drain a second time — matching the
+/// printed semantic of "copy this spell" (each copy resolves its own
+/// body independently).
 pub fn social_snub() -> CardDefinition {
+    use crate::card::{EventKind, EventScope, EventSpec, Predicate, TriggeredAbility};
     CardDefinition {
         name: "Social Snub",
         cost: cost(&[generic(1), w(), b()]),
@@ -1147,7 +1156,20 @@ pub fn social_snub() -> CardDefinition {
             },
         ]),
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::SelfSource).with_filter(
+                Predicate::SelectorExists(Selector::EachPermanent(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                )),
+            ),
+            effect: Effect::MayDo {
+                description: "Copy this spell".to_string(),
+                body: Box::new(Effect::CopySpell {
+                    what: Selector::CastSpellSource,
+                    count: Value::Const(1),
+                }),
+            },
+        }],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],

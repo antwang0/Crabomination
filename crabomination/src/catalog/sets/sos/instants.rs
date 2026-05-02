@@ -66,13 +66,13 @@ pub fn erode() -> CardDefinition {
 /// "Destroy target creature. Its controller creates a 1/1 white and black
 /// Inkling creature token with flying."
 ///
-/// Approximation: the Inkling token is created under the spell's caster
-/// (`PlayerRef::You`) rather than the target creature's controller — the
-/// engine has no zone-stable controller lookup that survives the destroy
-/// step, and 2-player play makes this only a small power-level trade-off
-/// (you give yourself the token instead of giving it to the player whose
-/// creature you killed). Standard single-target destroy is wired
-/// faithfully.
+/// Now wired faithfully (post-XX): the Inkling token is created under
+/// the *target creature's controller* via
+/// `PlayerRef::ControllerOf(Target(0))`. The engine's `ControllerOf`
+/// resolver falls back through graveyards via `find_card_owner` after
+/// the destroy moves the permanent off the battlefield, so the token
+/// lands on the right player's side even though the destroy happens
+/// first in the `Seq`. No more "you give yourself the token" trade-off.
 pub fn harsh_annotation() -> CardDefinition {
     CardDefinition {
         name: "Harsh Annotation",
@@ -88,7 +88,7 @@ pub fn harsh_annotation() -> CardDefinition {
                 what: target_filtered(SelectionRequirement::Creature),
             },
             Effect::CreateToken {
-                who: PlayerRef::You,
+                who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
                 count: Value::Const(1),
                 definition: inkling_token(),
             },
@@ -689,6 +689,48 @@ pub fn heated_argument() -> CardDefinition {
     }
 }
 
+/// Choreographed Sparks — {R}{R} Instant.
+/// "This spell can't be copied. / Choose one or both —
+///  • Copy target instant or sorcery spell you control.
+///  • Copy target creature spell you control. The copy gains haste
+///    and 'At the beginning of the end step, sacrifice this token.'"
+///
+/// Now wired (post-XX) as a single-mode copy of a *targeted* spell on
+/// the stack: target filter is `IsSpellOnStack & ControlledByYou`. The
+/// copy locks onto the targeted spell at cast time so a copy-of-itself
+/// recursion can't run away. The "creature spell — gains haste,
+/// end-step sac" rider is omitted (no permanent-copy primitive yet, no
+/// transient sac trigger). The "this spell can't be copied" rider is
+/// a no-op (engine has no copy-immune flag).
+pub fn choreographed_sparks() -> CardDefinition {
+    use crate::mana::r;
+    CardDefinition {
+        name: "Choreographed Sparks",
+        cost: cost(&[r(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::CopySpell {
+            what: target_filtered(
+                SelectionRequirement::IsSpellOnStack
+                    .and(SelectionRequirement::ControlledByYou),
+            ),
+            count: Value::Const(1),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
 // ── Green ───────────────────────────────────────────────────────────────────
 
 /// Efflorescence — {2}{G} Instant.
@@ -806,10 +848,15 @@ pub fn glorious_decay() -> CardDefinition {
 /// this turn. You may choose new targets for the copy. / Target
 /// creature gets +2/+4 until end of turn."
 ///
-/// Approximation: the Infusion copy half is omitted (no copy-spell
-/// primitive). The mainline +2/+4 EOT pump is wired faithfully against
-/// a single creature target. When/if copy lands the rider drops in.
+/// Now fully wired (post-XX): mainline +2/+4 EOT pump + on-cast self
+/// trigger gated on `Predicate::LifeGainedThisTurnAtLeast(1)` that
+/// copies via `Effect::CopySpell { what: Selector::CastSpellSource,
+/// count: 1 }`. The "you may choose new targets for the copy" rider is
+/// collapsed: the copy inherits the original's target slot (no per-copy
+/// retargeting prompt yet — TODO.md).
 pub fn lumarets_favor() -> CardDefinition {
+    use crate::card::{EventKind, EventScope, EventSpec, Predicate, TriggeredAbility};
+    use crate::effect::PlayerRef;
     use crate::mana::g;
     CardDefinition {
         name: "Lumaret's Favor",
@@ -827,7 +874,18 @@ pub fn lumarets_favor() -> CardDefinition {
             duration: Duration::EndOfTurn,
         },
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::SelfSource).with_filter(
+                Predicate::LifeGainedThisTurnAtLeast {
+                    who: PlayerRef::You,
+                    at_least: Value::Const(1),
+                },
+            ),
+            effect: Effect::CopySpell {
+                what: Selector::CastSpellSource,
+                count: Value::Const(1),
+            },
+        }],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],

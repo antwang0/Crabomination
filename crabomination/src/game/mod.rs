@@ -1358,6 +1358,44 @@ impl GameState {
         )
     }
 
+    /// Same as `continue_spell_resolution_with_face` but threads the
+    /// `is_copy` flag through so a copied spell doesn't go to the
+    /// graveyard (or exile) on resolve — copies cease to exist
+    /// post-resolution per MTG rule 707.10.
+    pub(crate) fn continue_spell_resolution_with_face_copy(
+        &mut self,
+        card: CardInstance,
+        caster: usize,
+        target: Option<Target>,
+        mode: usize,
+        x_value: u32,
+        converged_value: u32,
+        override_effect: Option<Effect>,
+        face: crate::game::types::CastFace,
+        is_copy: bool,
+    ) -> Result<Vec<GameEvent>, GameError> {
+        if is_copy {
+            // Resolve the effect tree but do NOT send the card to the
+            // graveyard or exile; the copy is a virtual card that
+            // ceases to exist after resolution.
+            let effect = override_effect.unwrap_or_else(|| card.definition.effect.clone());
+            let mut ctx = EffectContext::for_spell_full(
+                caster, target.clone(), mode, x_value, converged_value,
+            );
+            ctx.cast_face = face;
+            let events = self.resolve_effect(&effect, &ctx)?;
+            // Note: copies don't suspend on a pending decision in the
+            // same way originals do — we still surface the suspension if
+            // it occurred (the resume context will rerun the body).
+            // Drop `card` (the virtual copy) without zoning it.
+            drop(card);
+            return Ok(events);
+        }
+        self.continue_spell_resolution_with_face(
+            card, caster, target, mode, x_value, converged_value, override_effect, face,
+        )
+    }
+
     /// Same as `continue_spell_resolution` but with the cast face
     /// explicitly threaded from the originating `StackItem::Spell`.
     /// Used by the stack resolver so `EffectContext.cast_face` reflects

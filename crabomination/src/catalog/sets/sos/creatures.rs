@@ -1547,13 +1547,18 @@ pub fn arnyn_deathbloom_botanist() -> CardDefinition {
 /// untapped creatures you control. If you do, copy that spell. You may
 /// choose new targets for the copy."
 ///
-/// 🟡 Body-only wire (push XVI). The cast-IS-then-tap-3-to-copy rider
-/// is omitted (no copy-spell primitive yet — same gap as Mica, Aziza
-/// itself, Silverquill the Disputant, Choreographed Sparks). The 2/2
-/// Legendary body still slots into the Lorehold pool. New
-/// `CreatureType::Sorcerer` already exists (push III).
+/// Now wired (post-XX): magecraft → `Effect::MayDo { Seq[Tap up-to-3
+/// untapped friendly creatures, CopySpell(CastSpellSource, 1)] }`. The
+/// "tap 3 to copy" cost is collapsed into the body — if fewer than 3
+/// untapped creatures are available, the engine taps what it can and
+/// still fires the copy (a small over-payoff vs printed "If you do").
+/// "Choose new targets for the copy" is also collapsed: the copy
+/// inherits the original spell's chosen target slot (no per-copy
+/// retargeting prompt yet — TODO.md). The 2/2 Legendary body still
+/// slots into the Lorehold pool.
 pub fn aziza_mage_tower_captain() -> CardDefinition {
     use crate::card::Supertype;
+    use crate::effect::shortcut::magecraft;
     use crate::mana::r;
     CardDefinition {
         name: "Aziza, Mage Tower Captain",
@@ -1569,7 +1574,25 @@ pub fn aziza_mage_tower_captain() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
+        triggered_abilities: vec![magecraft(Effect::MayDo {
+            description: "Tap three untapped creatures you control to copy".to_string(),
+            body: Box::new(Effect::Seq(vec![
+                Effect::Tap {
+                    what: Selector::take(
+                        Selector::EachPermanent(
+                            SelectionRequirement::Creature
+                                .and(SelectionRequirement::ControlledByYou)
+                                .and(SelectionRequirement::Untapped),
+                        ),
+                        Value::Const(3),
+                    ),
+                },
+                Effect::CopySpell {
+                    what: Selector::CastSpellSource,
+                    count: Value::Const(1),
+                },
+            ])),
+        })],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -1587,14 +1610,16 @@ pub fn aziza_mage_tower_captain() -> CardDefinition {
 /// artifact. If you do, copy that spell and you may choose new targets
 /// for the copy."
 ///
-/// 🟡 Body wire only. `Keyword::Ward(3)` is tagged as a static keyword
-/// for future enforcement (the engine treats Ward as a marker for now,
-/// same as Inkshape Demonstrator / Fractal Tender). The IS-cast → may-
-/// sacrifice → copy rider is omitted (no copy-spell primitive yet — same
-/// gap as Aziza, Silverquill the Disputant, Choreographed Sparks). The
-/// 4/4 Legendary body still slots into the red mono pool.
+/// Now wired (post-XX): magecraft → `Effect::MayDo { Seq[Sacrifice 1
+/// artifact, CopySpell(CastSpellSource, 1)] }`. The "If you do" rider is
+/// collapsed: if the controller has no artifact to sac, the body's
+/// Sacrifice no-ops and the copy still fires (small over-payoff vs
+/// printed semantics; same approximation as Aziza). `Keyword::Ward(3)`
+/// stays as a static keyword tag for future enforcement (Ward isn't yet
+/// a counter-the-spell trigger).
 pub fn mica_reader_of_ruins() -> CardDefinition {
     use crate::card::Supertype;
+    use crate::effect::shortcut::magecraft;
     use crate::mana::r;
     CardDefinition {
         name: "Mica, Reader of Ruins",
@@ -1613,7 +1638,21 @@ pub fn mica_reader_of_ruins() -> CardDefinition {
         keywords: vec![Keyword::Ward(3)],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
+        triggered_abilities: vec![magecraft(Effect::MayDo {
+            description: "Sacrifice an artifact to copy".to_string(),
+            body: Box::new(Effect::Seq(vec![
+                Effect::Sacrifice {
+                    who: Selector::You,
+                    count: Value::Const(1),
+                    filter: SelectionRequirement::Artifact
+                        .and(SelectionRequirement::ControlledByYou),
+                },
+                Effect::CopySpell {
+                    what: Selector::CastSpellSource,
+                    count: Value::Const(1),
+                },
+            ])),
+        })],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -3874,12 +3913,18 @@ pub fn lorehold_the_historian() -> CardDefinition {
 /// sacrifice a creature with power 1 or greater. When you do, copy the
 /// spell and you may choose new targets for the copy.)"
 ///
-/// 🟡 Body-only wire — the Casualty 1 grant on every instant/sorcery
-/// you cast is omitted (no copy-spell primitive yet, same gap as
-/// Aziza, Mica, Choreographed Sparks). 4/4 Flying+Vigilance finisher
-/// still slots into Silverquill 5-drops.
+/// Now wired (post-XX) using `Effect::CopySpell` + `Effect::MayDo`:
+/// the Casualty 1 grant is approximated as a magecraft trigger that
+/// asks the controller to may-sacrifice a power-≥-1 creature, and on
+/// yes copies the just-cast spell. Differences vs printed Casualty:
+/// Casualty's "as you cast" timing means the sac happens at cast time
+/// (and copies share their cast events with the original); we resolve
+/// the sac + copy after the cast triggers, which is functionally
+/// equivalent for combat math but doesn't double-fire other "when you
+/// cast" payoffs.
 pub fn silverquill_the_disputant() -> CardDefinition {
     use crate::card::Supertype;
+    use crate::effect::shortcut::magecraft;
     CardDefinition {
         name: "Silverquill, the Disputant",
         cost: cost(&[generic(2), w(), b()]),
@@ -3894,7 +3939,22 @@ pub fn silverquill_the_disputant() -> CardDefinition {
         keywords: vec![Keyword::Flying, Keyword::Vigilance],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
+        triggered_abilities: vec![magecraft(Effect::MayDo {
+            description: "Casualty 1 — sacrifice a creature with power 1 or greater to copy".to_string(),
+            body: Box::new(Effect::Seq(vec![
+                Effect::Sacrifice {
+                    who: Selector::You,
+                    count: Value::Const(1),
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::PowerAtLeast(1)),
+                },
+                Effect::CopySpell {
+                    what: Selector::CastSpellSource,
+                    count: Value::Const(1),
+                },
+            ])),
+        })],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],

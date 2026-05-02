@@ -105,6 +105,16 @@ pub enum Selector {
     /// up to one *target* creature".
     CastSpellTarget(u8),
 
+    /// The just-cast spell itself — i.e. the topmost `StackItem::Spell`
+    /// on the stack at trigger-resolution time. SpellCast triggers are
+    /// pushed *above* the cast spell so when the trigger resolves the
+    /// topmost remaining Spell is the spell whose cast fired the
+    /// trigger. Used by `Effect::CopySpell` ("copy that spell" /
+    /// Casualty / Storm grant) and any future "operate on the cast
+    /// spell itself" payoff. Empty when there's no Spell on the
+    /// stack (e.g. activated-ability trigger contexts).
+    CastSpellSource,
+
     /// All cards discarded so far in the current effect resolution
     /// (as filtered by `filter`). Backed by
     /// `GameState.cards_discarded_this_resolution_ids`, reset on every

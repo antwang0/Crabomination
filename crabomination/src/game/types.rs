@@ -385,6 +385,15 @@ pub enum StackItem {
         /// snapshot back-compat via `#[serde(default)]`.
         #[serde(default)]
         face: crate::game::types::CastFace,
+        /// True if this stack item is a *copy* of a spell rather than the
+        /// original cast (Casualty / Storm / Choreographed Sparks /
+        /// Prismari Storm grant / Aziza's tap-3-to-copy / Mica's
+        /// sac-artifact-to-copy). Copies don't pay costs, don't fire
+        /// `SpellCast` triggers, and ceaseat resolution instead of going
+        /// to the graveyard. Defaults to `false` for snapshot back-compat
+        /// via `#[serde(default)]`.
+        #[serde(default)]
+        is_copy: bool,
     },
     /// A triggered/loyalty ability waiting to resolve.
     Trigger {
