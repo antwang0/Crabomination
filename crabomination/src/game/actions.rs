@@ -963,34 +963,44 @@ impl GameState {
     /// cast spell's mana value, color, type, etc.
     pub(crate) fn fire_spell_cast_triggers(
         &mut self,
-        controller: usize,
+        caster: usize,
         cast_card: CardId,
         _is_noncreature: bool,
     ) {
         use crate::effect::{EventKind, EventScope};
-        let candidates: Vec<(CardId, Effect, Option<crate::effect::Predicate>)> = self
+        // Walk every permanent on the battlefield whose SpellCast trigger
+        // matches the cast event's scope. `YourControl` / `AnyPlayer` fire
+        // for triggers controlled by the caster; `OpponentControl` fires
+        // for triggers controlled by *another* player than the caster.
+        // Without the OpponentControl arm, "whenever an opponent casts X"
+        // payoffs (Esper Sentinel, Mindbreak Trap, Ethersworn Canonist's
+        // sibling triggers) never fire because the caster doesn't control
+        // them. Each candidate captures its own controller for the trigger-
+        // resolution context (so the trigger's body resolves on the
+        // *trigger's* controller, not the caster).
+        let candidates: Vec<(CardId, usize, Effect, Option<crate::effect::Predicate>)> = self
             .battlefield
             .iter()
-            .filter(|c| c.controller == controller)
             .flat_map(|c| {
                 c.definition
                     .triggered_abilities
                     .iter()
-                    .filter(|t| {
-                        t.event.kind == EventKind::SpellCast
-                            && matches!(
-                                t.event.scope,
-                                EventScope::YourControl | EventScope::AnyPlayer
-                            )
+                    .filter(|t| t.event.kind == EventKind::SpellCast)
+                    .filter(|t| match t.event.scope {
+                        EventScope::YourControl | EventScope::AnyPlayer => {
+                            c.controller == caster
+                        }
+                        EventScope::OpponentControl => c.controller != caster,
+                        _ => false,
                     })
-                    .map(|t| (c.id, t.effect.clone(), t.event.filter.clone()))
+                    .map(|t| (c.id, c.controller, t.effect.clone(), t.event.filter.clone()))
             })
             .collect();
 
-        for (source, effect, filter) in candidates {
+        for (source, source_ctrl, effect, filter) in candidates {
             if let Some(filter) = filter {
                 let ctx = crate::game::effects::EffectContext {
-                    controller,
+                    controller: source_ctrl,
                     source: Some(source),
                     targets: vec![],
                     trigger_source: Some(crate::game::effects::EntityRef::Card(cast_card)),
@@ -1004,10 +1014,10 @@ impl GameState {
                 }
             }
             let auto_target =
-                self.auto_target_for_effect_avoiding(&effect, controller, Some(source));
+                self.auto_target_for_effect_avoiding(&effect, source_ctrl, Some(source));
             self.stack.push(StackItem::Trigger {
                 source,
-                controller,
+                controller: source_ctrl,
                 effect: Box::new(effect),
                 target: auto_target,
                 mode: None,

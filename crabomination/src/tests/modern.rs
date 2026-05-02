@@ -9544,3 +9544,246 @@ fn crackling_doom_deals_2_to_each_opponent_and_sacs_a_creature() {
     assert!(!g.battlefield.iter().any(|c| c.id == bear),
         "bear should be sacrificed");
 }
+
+// ── Push XXVI tests (10 new card factories) ──────────────────────────────────
+
+#[test]
+fn cabal_ritual_below_threshold_adds_three_black() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::cabal_ritual());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Cabal Ritual castable for {B}");
+    drain_stack(&mut g);
+    // Below threshold (gy holds only Cabal Ritual itself = 1 card): +3{B}.
+    assert_eq!(g.players[0].mana_pool.amount(Color::Black), 3,
+        "below-threshold Cabal Ritual adds 3 black mana");
+    assert_eq!(g.players[0].mana_pool.colorless_amount(), 0,
+        "below-threshold Cabal Ritual adds no colorless");
+}
+
+#[test]
+fn cabal_ritual_at_threshold_adds_four_black_plus_colorless() {
+    let mut g = two_player_game();
+    // Stock graveyard with 7 dummy cards. The threshold predicate reads
+    // `GraveyardSizeOf(You)` which the engine evaluates before the spell
+    // itself moves to the graveyard, so we pre-populate to the printed
+    // 7-card threshold.
+    for _ in 0..7 {
+        g.add_card_to_graveyard(0, catalog::island());
+    }
+    let id = g.add_card_to_hand(0, catalog::cabal_ritual());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Cabal Ritual castable for {B}");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.amount(Color::Black), 4,
+        "at-threshold Cabal Ritual adds 4 black mana");
+    assert_eq!(g.players[0].mana_pool.colorless_amount(), 1,
+        "at-threshold Cabal Ritual adds 1 colorless");
+}
+
+#[test]
+fn rift_bolt_deals_three_damage_to_player() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::rift_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let life_before = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Player(1)),
+        mode: None, x_value: None,
+    })
+    .expect("Rift Bolt castable for {2}{R}");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life_before - 3,
+        "Rift Bolt deals 3 damage to a player");
+}
+
+#[test]
+fn ancient_stirrings_pulls_colorless_card_to_hand() {
+    let mut g = two_player_game();
+    // Stock the top of library: 3 Forests (non-colorless), then Sol Ring
+    // (colorless artifact), then more Forest. Library is FIFO from the
+    // top — `add_card_to_library` pushes to the back, so add last-on-top.
+    g.add_card_to_library(0, catalog::sol_ring()); // bottom
+    g.add_card_to_library(0, catalog::forest()); // middle
+    g.add_card_to_library(0, catalog::forest()); // top
+    let id = g.add_card_to_hand(0, catalog::ancient_stirrings());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Ancient Stirrings castable for {G}");
+    drain_stack(&mut g);
+    // Net hand: -1 (cast) +1 (Sol Ring revealed) = unchanged.
+    assert_eq!(g.players[0].hand.len(), hand_before,
+        "cast (-1) + reveal (+1) = net 0");
+    assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Sol Ring"),
+        "Sol Ring should be revealed into hand");
+}
+
+#[test]
+fn stinkweed_imp_is_one_three_flying_imp() {
+    let imp = catalog::stinkweed_imp();
+    assert_eq!(imp.name, "Stinkweed Imp");
+    assert_eq!(imp.power, 1);
+    assert_eq!(imp.toughness, 3);
+    assert!(imp.keywords.contains(&crate::card::Keyword::Flying));
+    assert!(imp.subtypes.creature_types.contains(&crate::card::CreatureType::Imp));
+}
+
+#[test]
+fn endurance_etb_shuffles_target_player_graveyard_into_library() {
+    let mut g = two_player_game();
+    // Seed opp's graveyard with two cards.
+    let dead1 = g.add_card_to_graveyard(1, catalog::lightning_bolt());
+    let dead2 = g.add_card_to_graveyard(1, catalog::ponder());
+    let lib_before = g.players[1].library.len();
+    let _ = g.add_card_to_battlefield(0, catalog::endurance());
+    // Trigger resolves with the player target slot bound to opp (player 1).
+    drain_stack(&mut g);
+    // We can't easily steer target prompt without a custom decider;
+    // instead, fire the trigger directly with PlayerRef::Target(0) → opp.
+    let trig = catalog::endurance().triggered_abilities[0].effect.clone();
+    let ctx = crate::game::effects::EffectContext::for_trigger(
+        g.battlefield.iter().find(|c| c.definition.name == "Endurance").unwrap().id,
+        0, Some(crate::game::Target::Player(1)), 0,
+    );
+    let _ = g.resolve_effect(&trig, &ctx);
+    // Opp's gy emptied; library grew by the same count.
+    assert!(g.players[1].graveyard.iter().all(|c| c.id != dead1 && c.id != dead2),
+        "opp's graveyard should no longer contain the seeded cards");
+    assert_eq!(g.players[1].library.len(), lib_before + 2,
+        "library grew by 2 from the shuffled graveyard");
+}
+
+#[test]
+fn esper_sentinel_draws_when_opp_casts_noncreature_spell() {
+    let mut g = two_player_game();
+    let _ = g.add_card_to_battlefield(0, catalog::esper_sentinel());
+    g.add_card_to_library(0, catalog::island());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)),
+        mode: None, x_value: None,
+    })
+    .expect("Bolt castable for {R}");
+    drain_stack(&mut g);
+    // Esper Sentinel triggered on opp's noncreature spell — you drew.
+    assert_eq!(g.players[0].hand.len(), hand_before + 1,
+        "Esper Sentinel should draw on opp's noncreature spell cast");
+}
+
+#[test]
+fn esper_sentinel_does_not_draw_on_opp_creature_spell() {
+    let mut g = two_player_game();
+    let _ = g.add_card_to_battlefield(0, catalog::esper_sentinel());
+    let bear = g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.players[1].mana_pool.add(Color::Green, 1);
+    g.players[1].mana_pool.add_colorless(1);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear, target: None, mode: None, x_value: None,
+    })
+    .expect("Grizzly Bears castable for {1}{G}");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand_before,
+        "Esper Sentinel should not trigger on opp's creature spell");
+}
+
+#[test]
+fn path_of_peril_kills_two_toughness_creatures() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let scout = g.add_card_to_battlefield(0, catalog::savannah_lions());
+    g.clear_sickness(bear);
+    g.clear_sickness(scout);
+    let id = g.add_card_to_hand(0, catalog::path_of_peril());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Path of Peril castable for {2}{B}{B}");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == bear),
+        "MV-2 Grizzly Bears should die to -3/-3");
+    assert!(!g.battlefield.iter().any(|c| c.id == scout),
+        "MV-1 Savannah Lions should die to -3/-3");
+}
+
+#[test]
+fn fiery_confluence_mode_zero_pings_each_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    let id = g.add_card_to_hand(0, catalog::fiery_confluence());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: Some(0), x_value: None,
+    })
+    .expect("Fiery Confluence castable for {2}{R}{R} mode 0");
+    drain_stack(&mut g);
+    // Bear is 2/2; takes 1 damage; survives (damage clears EOT).
+    assert!(g.battlefield.iter().any(|c| c.id == bear),
+        "Bear survives 1 damage");
+    let bear_card = g.battlefield.iter().find(|c| c.id == bear).unwrap();
+    assert_eq!(bear_card.damage, 1, "Bear took 1 damage");
+}
+
+#[test]
+fn brilliant_plan_draws_three_cards() {
+    let mut g = two_player_game();
+    for _ in 0..5 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let id = g.add_card_to_hand(0, catalog::brilliant_plan());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Brilliant Plan castable for {3}{U}");
+    drain_stack(&mut g);
+    // Hand: -1 (cast) +3 (draw) = +2 net.
+    assert_eq!(g.players[0].hand.len(), hand_before + 2,
+        "Brilliant Plan: cast (-1) + draw 3 = net +2");
+}
+
+#[test]
+fn silverquill_apprentice_magecraft_pumps_target_creature() {
+    let mut g = two_player_game();
+    let _ = g.add_card_to_battlefield(0, catalog::silverquill_apprentice());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    // Cast a noncreature instant — Lightning Bolt — and steer the
+    // Magecraft target to the Bear.
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Target(crate::game::Target::Permanent(bear)),
+    ]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        mode: None, x_value: None,
+    })
+    .expect("Bolt castable for {R}");
+    drain_stack(&mut g);
+    let bear_card = g.battlefield.iter().find(|c| c.id == bear).unwrap();
+    assert_eq!(bear_card.power(), 3, "Bear pumped to 3 power via Magecraft");
+    assert_eq!(bear_card.toughness(), 3, "Bear pumped to 3 toughness via Magecraft");
+}

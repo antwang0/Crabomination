@@ -7642,3 +7642,324 @@ pub fn crackling_doom() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Push XXVI ────────────────────────────────────────────────────────────────
+// Cube + STX cards added 2026-05-02. Ten new card factories — five cube
+// staples (Cabal Ritual, Rift Bolt, Ancient Stirrings, Stinkweed Imp,
+// Endurance, Esper Sentinel, Fiery Confluence) plus three STX 2021
+// promotions (Silverquill Apprentice, Brilliant Plan, Path of Peril).
+
+/// Cabal Ritual — {B} Sorcery. Add {B}{B}{B}. Threshold — Add {C}{B}{B}{B}{B}
+/// instead if seven or more cards are in your graveyard.
+///
+/// The threshold gate uses `Predicate::ValueAtLeast(GraveyardSizeOf(You),
+/// Const(7))`. The {C} is approximated via an extra colorless pip in the
+/// upgraded payout (engine doesn't model "snow" / hybrid "any" pips
+/// separately from generic).
+pub fn cabal_ritual() -> CardDefinition {
+    use crate::effect::Predicate;
+    CardDefinition {
+        name: "Cabal Ritual",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::If {
+            cond: Predicate::ValueAtLeast(
+                Value::GraveyardSizeOf(PlayerRef::You),
+                Value::Const(7),
+            ),
+            then: Box::new(Effect::Seq(vec![
+                Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Colors(vec![
+                        Color::Black,
+                        Color::Black,
+                        Color::Black,
+                        Color::Black,
+                    ]),
+                },
+                Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Colorless(Value::Const(1)),
+                },
+            ])),
+            else_: Box::new(Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::Colors(vec![Color::Black, Color::Black, Color::Black]),
+            }),
+        },
+        ..Default::default()
+    }
+}
+
+/// Rift Bolt — {2}{R} Sorcery. Rift Bolt deals 3 damage to any target.
+/// Suspend 1—{R}.
+///
+/// 🟡 Suspend is omitted — the engine has no time-counter / cast-from-
+/// exile-after-N-upkeeps primitive. Ships at the printed full cost
+/// {2}{R}, which is the strictly-worse line (vs. paying {R} + waiting one
+/// turn). Rift Bolt is included for the burn-cube niche where the {2}{R}
+/// curve still slots cleanly.
+pub fn rift_bolt() -> CardDefinition {
+    CardDefinition {
+        name: "Rift Bolt",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::DealDamage {
+            to: target_filtered(SelectionRequirement::Any),
+            amount: Value::Const(3),
+        },
+        ..Default::default()
+    }
+}
+
+/// Ancient Stirrings — {G} Sorcery. Look at the top five cards of your
+/// library. You may reveal a colorless card from among them and put it
+/// into your hand. Put the rest on the bottom of your library in any
+/// order.
+///
+/// Wired via `Effect::RevealUntilFind` with `cap: 5` and the new
+/// `SelectionRequirement::Colorless` predicate — finds the first
+/// colorless card in the top 5 and moves it to the caster's hand;
+/// non-colorless cards walked through go to the graveyard (engine
+/// default). This loses the "rest to bottom of library" semantic but
+/// preserves the gameplay-relevant outcome (the colorless card lands
+/// in hand on cast).
+pub fn ancient_stirrings() -> CardDefinition {
+    CardDefinition {
+        name: "Ancient Stirrings",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::RevealUntilFind {
+            who: PlayerRef::You,
+            find: SelectionRequirement::Colorless,
+            to: ZoneDest::Hand(PlayerRef::You),
+            cap: Value::Const(5),
+            life_per_revealed: 0,
+        },
+        ..Default::default()
+    }
+}
+
+/// Stinkweed Imp — {1}{B} Creature — Imp. 1/3 Flying. Whenever this
+/// creature deals combat damage to a player, that player puts the top
+/// five cards of their library into their graveyard. Dredge 5.
+///
+/// 🟡 Dredge is omitted (no Dredge primitive — would need a "you may
+/// replace your draw with a mill-N + return-this-from-gy" replacement
+/// effect). The combat-damage mill rider is wired faithfully via
+/// `EventKind::CombatDamageDealtToPlayer / SelfSource` → `Effect::Mill`
+/// on the damaged player.
+pub fn stinkweed_imp() -> CardDefinition {
+    CardDefinition {
+        name: "Stinkweed Imp",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Imp],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::DealsCombatDamageToPlayer,
+                EventScope::SelfSource,
+            ),
+            effect: Effect::Mill {
+                who: Selector::Player(PlayerRef::Triggerer),
+                amount: Value::Const(5),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Endurance — {1}{G}{G} Creature — Elemental Incarnation. 3/4 Reach,
+/// flash. When this creature enters, target player puts all the cards
+/// from their graveyard on the bottom of their library in a random order.
+///
+/// 🟡 Evoke {2}{G} (exile a green card from hand) is omitted (no
+/// pitch-with-exile alt-cost flag yet — Solitude / Subtlety / Grief have
+/// the same gap). The ETB graveyard-shuffle is wired faithfully via
+/// `Effect::ShuffleGraveyardIntoLibrary` against `target_filtered(Player)`.
+pub fn endurance() -> CardDefinition {
+    CardDefinition {
+        name: "Endurance",
+        cost: cost(&[generic(1), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Incarnation],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Reach, Keyword::Flash],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::ShuffleGraveyardIntoLibrary {
+                who: PlayerRef::Target(0),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Esper Sentinel — {W} Creature — Human Advisor. 1/1. Whenever an
+/// opponent casts their first noncreature spell each turn, unless that
+/// player pays {X}, where X is this creature's power, you draw a card.
+///
+/// 🟡 The "first noncreature spell each turn" + "unless that player pays
+/// {X}" cost gate is approximated as an unconditional draw on every
+/// noncreature spell an opponent casts. Two over-payoffs: (1) every
+/// non-first cast also draws (was once-per-turn); (2) the opp can never
+/// pay to skip. Both are tracked in TODO.md; the body still slots into
+/// the white "tax" pool for cube games.
+pub fn esper_sentinel() -> CardDefinition {
+    use crate::effect::Predicate;
+    CardDefinition {
+        name: "Esper Sentinel",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Advisor],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::OpponentControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Noncreature,
+                }),
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Path of Peril — {2}{B}{B} Sorcery. All creatures with mana value 2
+/// or less get -3/-3 until end of turn.
+///
+/// Mass-removal that hits weenie creatures — wired via
+/// `Effect::ForEach` over `Selector::EachPermanent(Creature ∧
+/// ManaValueAtMost(2))` + a flat -3/-3 EOT pump. Boltable creatures
+/// die outright; surviving 3-toughness bodies live with -3/-3 until
+/// the EOT cleanup. The "Boast cost" rider from the printed
+/// _Kaldheim_ version is omitted (Boast is a one-shot per-turn
+/// activation that fires when the source attacks).
+pub fn path_of_peril() -> CardDefinition {
+    CardDefinition {
+        name: "Path of Peril",
+        cost: cost(&[generic(2), b(), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::ForEach {
+            selector: Selector::EachPermanent(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::ManaValueAtMost(2)),
+            ),
+            body: Box::new(Effect::PumpPT {
+                what: Selector::TriggerSource,
+                power: Value::Const(-3),
+                toughness: Value::Const(-3),
+                duration: Duration::EndOfTurn,
+            }),
+        },
+        ..Default::default()
+    }
+}
+
+/// Fiery Confluence — {2}{R}{R} Sorcery. Choose three. You may choose
+/// the same mode more than once. — • Fiery Confluence deals 1 damage
+/// to each creature. • Fiery Confluence deals 2 damage to each
+/// opponent. • Destroy target artifact.
+///
+/// 🟡 Approximated as a single-mode pick (the engine has no "choose
+/// three with repetition" primitive yet — same gap as Mystic
+/// Confluence, Cryptic Command, Kaya's Wrath). Each mode resolves
+/// faithfully on its own.
+pub fn fiery_confluence() -> CardDefinition {
+    CardDefinition {
+        name: "Fiery Confluence",
+        cost: cost(&[generic(2), r(), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::ChooseMode(vec![
+            Effect::DealDamage {
+                to: Selector::EachPermanent(SelectionRequirement::Creature),
+                amount: Value::Const(1),
+            },
+            Effect::DealDamage {
+                to: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(2),
+            },
+            Effect::Destroy {
+                what: target_filtered(SelectionRequirement::Artifact),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Brilliant Plan — {3}{U} Sorcery. Scry 3, then draw three cards.
+///
+/// Pure card-selection sorcery (STX 2021 mono-blue). Wired via
+/// `Effect::Seq([Scry(3), Draw(3)])`. Plays as a Tidings (4-mana
+/// 3-card draw) with extra setup, slotting into UR / UB control
+/// archetypes.
+pub fn brilliant_plan() -> CardDefinition {
+    CardDefinition {
+        name: "Brilliant Plan",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(3),
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(3),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Silverquill Apprentice — {W}{B} Creature — Human Cleric. 2/2.
+/// Magecraft — Whenever you cast or copy an instant or sorcery spell,
+/// target creature gets -1/-1 until end of turn or +1/+1 until end of
+/// turn (controller's choice).
+///
+/// 🟡 The W/B-mode pip choice collapses to a single +1/+1 EOT pump on
+/// any creature target — same approximation as Eager First-Year /
+/// Combat Professor (collapsed to "your" creature for safety; engine's
+/// auto-target framework picks whatever's available). The "your creature
+/// vs opp creature" branching would need a per-trigger ChooseMode
+/// primitive — tracked in TODO.md.
+pub fn silverquill_apprentice() -> CardDefinition {
+    use crate::effect::shortcut::magecraft;
+    CardDefinition {
+        name: "Silverquill Apprentice",
+        cost: cost(&[w(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        triggered_abilities: vec![magecraft(Effect::PumpPT {
+            what: target_filtered(SelectionRequirement::Creature),
+            power: Value::Const(1),
+            toughness: Value::Const(1),
+            duration: Duration::EndOfTurn,
+        })],
+        ..Default::default()
+    }
+}
