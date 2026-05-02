@@ -8807,6 +8807,29 @@ fn sun_titan_etb_returns_three_cmc_permanent_from_graveyard() {
     assert!(!g.players[0].graveyard.iter().any(|c| c.id == bear));
 }
 
+/// Sun Titan attacks fire the same recur trigger as its ETB.
+#[test]
+fn sun_titan_attack_trigger_recurs_low_cmc_permanent() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let st = g.add_card_to_battlefield(0, catalog::sun_titan());
+    g.clear_sickness(st);
+    // Move into combat to legally attack.
+    g.step = TurnStep::DeclareAttackers;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+
+    g.perform_action(GameAction::DeclareAttackers(
+        vec![Attack { attacker: st, target: AttackTarget::Player(1) }],
+    )).expect("Sun Titan can attack");
+
+    // Pre-fill the auto-target so the attack trigger fires the recur half.
+    drain_stack(&mut g);
+
+    assert!(g.battlefield.iter().any(|c| c.id == bear),
+        "Bear returned to battlefield via Sun Titan's attack trigger");
+}
+
 /// Sun Titan declines high-MV targets at trigger-resolution time —
 /// the trigger filter rejects ≥ 4-MV permanents and the recur half
 /// no-ops. The engine's cast-time legality check only runs the
