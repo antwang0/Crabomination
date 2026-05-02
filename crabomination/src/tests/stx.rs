@@ -3118,3 +3118,32 @@ fn clever_lumimancer_pumps_self_on_magecraft() {
     assert_eq!(lumi_card.toughness(), 3,
         "Clever Lumimancer pumped to 3 toughness from magecraft trigger");
 }
+
+#[test]
+fn foul_play_skips_draw_with_one_wizard() {
+    // Foul Play's gate fails (1 < 2) so no draw — only the destroy
+    // resolves. Verifies the predicate evaluates the controller's
+    // current Wizards-you-control count and gates the draw cleanly.
+    let mut g = two_player_game();
+    let _w1 = g.add_card_to_battlefield(0, catalog::hall_monitor());  // 1 Wizard
+    let opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(opp_bear);
+    g.battlefield.iter_mut().find(|c| c.id == opp_bear).unwrap().tapped = true;
+    g.add_card_to_library(0, catalog::island());
+    let id = g.add_card_to_hand(0, catalog::foul_play());
+    let hand_before = g.players[0].hand.len();
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(opp_bear)), mode: None, x_value: None,
+    })
+    .expect("Foul Play castable for {2}{B}");
+    drain_stack(&mut g);
+
+    // Net hand: -1 cast + 0 draw = -1. (Gate fails on 1 < 2.)
+    assert_eq!(g.players[0].hand.len(), hand_before - 1,
+        "no draw — gate fails with one Wizard");
+    assert!(!g.battlefield.iter().any(|c| c.id == opp_bear),
+        "destroy half still resolves regardless of gate");
+}
