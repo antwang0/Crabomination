@@ -420,6 +420,7 @@ fn mono_color_pool(c: Color) -> Vec<CardFactory> {
             garrison_excavator,
             living_history,
             magmablood_archaic,
+            mica_reader_of_ruins,
             rearing_embermare,
             rubble_rouser,
             steal_the_show,

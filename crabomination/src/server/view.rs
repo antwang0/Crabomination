@@ -257,6 +257,10 @@ fn predicate_short_label(p: &crate::card::Predicate) -> String {
         // Push XVI: cast-time spell-shape introspection labels.
         Predicate::CastSpellHasX => "cast spell w/ {X}".into(),
         Predicate::CastSpellTargetsMatch(_) => "cast spell targets match".into(),
+        // Cast-from-graveyard (Flashback resolves): used by Antiquities
+        // on the Loose's "if cast from anywhere other than your hand"
+        // rider. Surface a short hint so UIs can preview the bonus.
+        Predicate::CastFromGraveyard => "if cast from gy".into(),
         // Catch-all: no human-readable form yet.
         _ => "conditional".into(),
     }

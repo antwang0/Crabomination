@@ -1579,6 +1579,50 @@ pub fn aziza_mage_tower_captain() -> CardDefinition {
     }
 }
 
+/// Mica, Reader of Ruins — {3}{R}, 4/4 Legendary Human Artificer.
+/// "Ward—Pay 3 life. (Whenever this creature becomes the target of a
+/// spell or ability an opponent controls, counter it unless that
+/// player pays 3 life.)
+/// Whenever you cast an instant or sorcery spell, you may sacrifice an
+/// artifact. If you do, copy that spell and you may choose new targets
+/// for the copy."
+///
+/// 🟡 Body wire only. `Keyword::Ward(3)` is tagged as a static keyword
+/// for future enforcement (the engine treats Ward as a marker for now,
+/// same as Inkshape Demonstrator / Fractal Tender). The IS-cast → may-
+/// sacrifice → copy rider is omitted (no copy-spell primitive yet — same
+/// gap as Aziza, Silverquill the Disputant, Choreographed Sparks). The
+/// 4/4 Legendary body still slots into the red mono pool.
+pub fn mica_reader_of_ruins() -> CardDefinition {
+    use crate::card::Supertype;
+    use crate::mana::r;
+    CardDefinition {
+        name: "Mica, Reader of Ruins",
+        cost: cost(&[generic(3), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Artificer],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        // Ward—Pay 3 life is approximated as Ward(3) (mana-cost form);
+        // hybrid-mana-or-life Ward is still a single primitive in the
+        // engine's keyword tag.
+        keywords: vec![Keyword::Ward(3)],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
 /// Startled Relic Sloth — {2}{R}{W}, 4/4 Sloth Beast. Trample, lifelink.
 /// "Trample, lifelink / At the beginning of combat on your turn, exile up
 /// to one target card from a graveyard."
@@ -3030,6 +3074,55 @@ pub fn emil_vastlands_roamer() -> CardDefinition {
 }
 
 // ── Prismari (U/R) ──────────────────────────────────────────────────────────
+
+/// Colorstorm Stallion — {1}{U}{R}, 3/3 Elemental Horse.
+/// "Ward {1}, haste / Opus — Whenever you cast an instant or sorcery
+/// spell, this creature gets +1/+1 until end of turn. If five or more
+/// mana was spent to cast that spell, create a token that's a copy of
+/// this creature."
+///
+/// 🟡 Body wire (3/3 Elemental Horse with `Keyword::Ward(1)` + Haste)
+/// + a partial Opus rider — the +1/+1-EOT pump fires on every
+/// instant-or-sorcery cast (the magecraft trigger). The "5+ mana →
+/// create a token copy of this creature" half is omitted (no copy-
+/// permanent primitive yet, same gap as Mica / Aziza / Silverquill the
+/// Disputant). Net play: a 3/3 Haste flier-killer with cumulative
+/// magecraft pump — no copy upside.
+pub fn colorstorm_stallion() -> CardDefinition {
+    use crate::effect::shortcut::cast_is_instant_or_sorcery;
+    use crate::mana::{r, u};
+    CardDefinition {
+        name: "Colorstorm Stallion",
+        cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Horse],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Ward(1), Keyword::Haste],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(cast_is_instant_or_sorcery()),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(1),
+                toughness: Value::Const(1),
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
 
 /// Abstract Paintmage — {U}{U/R}{R}, 2/2 Djinn Sorcerer.
 /// "At the beginning of your first main phase, add {U}{R}. Spend this

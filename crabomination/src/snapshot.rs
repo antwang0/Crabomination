@@ -569,6 +569,39 @@ mod tests {
         }
     }
 
+    /// Stack-item `face` field round-trips through GameSnapshot. Push:
+    /// add a faux Flashback-cast spell to the stack, snapshot, restore,
+    /// and verify the face survives. `#[serde(default)]` on
+    /// `StackItemSnapshot.face` and `StackItem::Spell.face` keeps older
+    /// snapshots loadable (face defaults to Front).
+    #[test]
+    fn stack_spell_face_round_trips_through_snapshot() {
+        let mut g = two_player_game();
+        let bolt_id = g.add_card_to_battlefield(0, catalog::lightning_bolt());
+        let bolt_card = g.battlefield_find(bolt_id).cloned().expect("bolt on bf");
+        g.battlefield.retain(|c| c.id != bolt_id);
+        g.stack.push(StackItem::Spell {
+            card: Box::new(bolt_card),
+            caster: 0,
+            target: None,
+            mode: None,
+            x_value: 0,
+            converged_value: 0,
+            uncounterable: false,
+            face: crate::game::types::CastFace::Flashback,
+        });
+        let snap = GameSnapshot::capture(&g);
+        let json = serde_json::to_string(&snap).expect("serialize");
+        let parsed: GameSnapshot = serde_json::from_str(&json).expect("parse");
+        let restored = parsed.restore().expect("restore");
+        match &restored.stack[0] {
+            StackItem::Spell { face, .. } => {
+                assert_eq!(*face, crate::game::types::CastFace::Flashback);
+            }
+            _ => panic!("expected a Spell on the restored stack"),
+        }
+    }
+
     #[test]
     fn trigger_stack_items_are_counted_and_dropped() {
         // Hand-craft a stack with one Spell and one Trigger. Snapshot

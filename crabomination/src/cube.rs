@@ -468,6 +468,7 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(spectacle_summit);
         v.push(visionarys_dance);
         v.push(abstract_paintmage);
+        v.push(colorstorm_stallion);
         v.push(sanar_unfinished_genius);
     }
     if pair_contains(pair, Color::White) {
@@ -775,6 +776,7 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(spectacle_summit);
         v.push(visionarys_dance);
         v.push(abstract_paintmage);
+        v.push(colorstorm_stallion);
         v.push(sanar_unfinished_genius);
     }
     if pair_contains(pair, Color::White) {
@@ -782,6 +784,8 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(commercial_district);
         // ── SOS push XI: Lorehold (R/W) MDFC ──
         v.push(kirol_history_buff);
+        // Push: Mica, Reader of Ruins (R Legendary, body-only).
+        v.push(mica_reader_of_ruins);
     }
     v
 }

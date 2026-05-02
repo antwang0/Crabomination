@@ -7378,6 +7378,70 @@ fn aziza_mage_tower_captain_body_legendary_djinn_sorcerer() {
     assert!(card.has_creature_type(crate::card::CreatureType::Sorcerer));
 }
 
+// Mica, Reader of Ruins — body-only 4/4 Legendary Human Artificer
+// with Ward(3). The IS-cast → may-sac → copy-spell rider is omitted
+// pending a copy-spell primitive.
+#[test]
+fn mica_reader_of_ruins_is_4_4_legendary_artificer_with_ward() {
+    let card = catalog::mica_reader_of_ruins();
+    assert_eq!(card.name, "Mica, Reader of Ruins");
+    assert_eq!(card.power, 4);
+    assert_eq!(card.toughness, 4);
+    assert!(card.supertypes.contains(&crate::card::Supertype::Legendary));
+    assert!(card.has_creature_type(crate::card::CreatureType::Human));
+    assert!(card.has_creature_type(crate::card::CreatureType::Artificer));
+    assert!(
+        card.keywords.iter().any(|k| matches!(k, Keyword::Ward(3))),
+        "Mica should carry Ward(3)"
+    );
+}
+
+// Colorstorm Stallion — 3/3 Elemental Horse with Ward(1) + Haste +
+// magecraft +1/+1 EOT pump on each instant-or-sorcery cast. The "5+
+// mana → token copy" upper-half is omitted (no copy-permanent
+// primitive).
+#[test]
+fn colorstorm_stallion_is_3_3_with_ward_and_haste() {
+    let card = catalog::colorstorm_stallion();
+    assert_eq!(card.name, "Colorstorm Stallion");
+    assert_eq!(card.power, 3);
+    assert_eq!(card.toughness, 3);
+    assert!(
+        card.keywords.iter().any(|k| matches!(k, Keyword::Ward(1))),
+        "Colorstorm Stallion should carry Ward(1)"
+    );
+    assert!(card.keywords.contains(&Keyword::Haste));
+    assert!(card.has_creature_type(crate::card::CreatureType::Elemental));
+    assert!(card.has_creature_type(crate::card::CreatureType::Horse));
+    assert_eq!(card.triggered_abilities.len(), 1, "magecraft pump trigger");
+}
+
+#[test]
+fn colorstorm_stallion_magecraft_pumps_self_until_eot() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::colorstorm_stallion());
+    g.battlefield_find_mut(id).unwrap().summoning_sick = false;
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+
+    let view = g.computed_permanent(id).unwrap();
+    assert_eq!(view.power, 3);
+
+    // Cast Lightning Bolt — Stallion's magecraft pump trigger fires.
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(1)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Bolt castable for {R}");
+    drain_stack(&mut g);
+
+    let view = g.computed_permanent(id).unwrap();
+    assert_eq!(view.power, 4, "Stallion +1/+1 EOT after IS cast");
+    assert_eq!(view.toughness, 4);
+}
+
 // Emeritus of Ideation // Ancestral Recall — front: 5/5 Human Wizard
 // with Ward(2). Back: instant — target player draws three.
 #[test]
