@@ -260,6 +260,95 @@ pub fn sparring_regimen() -> CardDefinition {
     }
 }
 
+// ── Reconstruct History ─────────────────────────────────────────────────────
+
+/// Reconstruct History — {1}{R}{W} Sorcery. "Return up to two artifact
+/// cards from your graveyard to your hand, then draw a card."
+///
+/// Wired faithfully via `Selector::take(_, 2)` over the controller's
+/// graveyard (filtered to artifacts) — same shape as Pull from the
+/// Grave's "up to two creature cards". Returns up to 2 artifacts; the
+/// draw rider always fires. Lorehold artifact-recursion staple.
+pub fn reconstruct_history() -> CardDefinition {
+    use crate::card::Zone;
+    CardDefinition {
+        name: "Reconstruct History",
+        cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Move {
+                what: Selector::take(
+                    Selector::CardsInZone {
+                        who: PlayerRef::You,
+                        zone: Zone::Graveyard,
+                        filter: SelectionRequirement::HasCardType(CardType::Artifact),
+                    },
+                    Value::Const(2),
+                ),
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Igneous Inspiration ─────────────────────────────────────────────────────
+
+/// Igneous Inspiration — {2}{R} Sorcery. "Igneous Inspiration deals 3
+/// damage to target creature or planeswalker. Then learn."
+///
+/// Learn is approximated as `Draw 1` (matching the rest of the STX
+/// catalog's Learn approximation — see Eyetwitch comment). Mainline
+/// 3-damage half is faithful.
+pub fn igneous_inspiration() -> CardDefinition {
+    CardDefinition {
+        name: "Igneous Inspiration",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::Const(3),
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
 // ── Storm-Kiln Artist ───────────────────────────────────────────────────────
 
 /// Storm-Kiln Artist — {2}{R}{W}, 3/3 Human Wizard. "Magecraft — Whenever

@@ -133,3 +133,44 @@ pub fn symmetry_sage() -> CardDefinition {
     }
 }
 
+// ── Creative Outburst ───────────────────────────────────────────────────────
+
+/// Creative Outburst — {3}{U}{U}{R}{R} Sorcery. "Discard your hand. Draw
+/// five cards."
+///
+/// Pure rummage upgrade: the entire hand goes to the graveyard, then the
+/// caster draws 5. Perfect Prismari spellslinger refill — the discarded
+/// instants/sorceries fuel later Magecraft / flashback payoffs.
+pub fn creative_outburst() -> CardDefinition {
+    use crate::effect::Value as V;
+    CardDefinition {
+        name: "Creative Outburst",
+        cost: cost(&[generic(3), u(), u(), r(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Discard {
+                who: Selector::You,
+                amount: V::HandSizeOf(PlayerRef::You),
+                random: false,
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(5),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+

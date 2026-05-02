@@ -1626,3 +1626,352 @@ fn dragons_approach_tutors_dragon_with_four_copies_in_graveyard() {
         .filter(|c| c.definition.name == "Dragon's Approach").count();
     assert_eq!(names_in_gy, 5, "5 DA in gy after cast (4 seed + 1 cast)");
 }
+
+// ── New STX 2021 cards (push XXIII) ─────────────────────────────────────────
+
+#[test]
+fn daemogoth_woe_eater_is_a_9_9_demon_with_tap_for_4_life() {
+    let woe = catalog::daemogoth_woe_eater();
+    assert_eq!(woe.power, 9);
+    assert_eq!(woe.toughness, 9);
+    assert!(woe.subtypes.creature_types.contains(&crate::card::CreatureType::Demon));
+    assert_eq!(woe.activated_abilities.len(), 1, "has tap-for-4-life ability");
+}
+
+#[test]
+fn daemogoth_woe_eater_etb_sacrifices_a_creature() {
+    let mut g = two_player_game();
+    // Two creatures on the battlefield first — the sac fodder + Woe-Eater.
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    let bf_creatures_before = g.battlefield.iter()
+        .filter(|c| c.controller == 0 && c.definition.is_creature())
+        .count();
+
+    let id = g.add_card_to_hand(0, catalog::daemogoth_woe_eater());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Daemogoth Woe-Eater castable for {2}{B}{G}");
+    drain_stack(&mut g);
+
+    // Net board state: Woe-Eater entered, sacrificed bear → net +1, then
+    // -1, leaving the same count (Woe-Eater on bf, bear in gy).
+    let bf_creatures_after = g.battlefield.iter()
+        .filter(|c| c.controller == 0 && c.definition.is_creature())
+        .count();
+    assert_eq!(bf_creatures_after, bf_creatures_before,
+        "ETB sac means net creature count is unchanged (Woe-Eater entered, bear sac'd)");
+    // Woe-Eater present.
+    assert!(g.battlefield.iter().any(|c| c.id == id),
+        "Woe-Eater on the battlefield post-ETB sac");
+    // Bear in graveyard.
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == bear),
+        "sacrificed bear in graveyard");
+}
+
+#[test]
+fn daemogoth_woe_eater_tap_ability_gains_4_life() {
+    let mut g = two_player_game();
+    let woe = g.add_card_to_battlefield(0, catalog::daemogoth_woe_eater());
+    g.clear_sickness(woe);
+    let life_before = g.players[0].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: woe, ability_index: 0, target: None,
+    })
+    .expect("tap ability activatable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life_before + 4, "should gain 4 life");
+    let woe_card = g.battlefield.iter().find(|c| c.id == woe).unwrap();
+    assert!(woe_card.tapped, "should be tapped after activation");
+}
+
+#[test]
+fn eyeblight_cullers_etb_sacrifices_and_drains() {
+    let mut g = two_player_game();
+    // A creature to sacrifice.
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    let p0_life_before = g.players[0].life;
+    let p1_life_before = g.players[1].life;
+
+    let id = g.add_card_to_hand(0, catalog::eyeblight_cullers());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Eyeblight Cullers castable for {1}{B}{B}");
+    drain_stack(&mut g);
+
+    // Bear is sacrificed; opponent loses 2; you gain 2.
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == bear),
+        "bear sacrificed");
+    assert_eq!(g.players[1].life, p1_life_before - 2, "opp loses 2");
+    assert_eq!(g.players[0].life, p0_life_before + 2, "you gain 2");
+}
+
+#[test]
+fn dina_soul_steeper_pings_opp_on_lifegain() {
+    let mut g = two_player_game();
+    let _dina = g.add_card_to_battlefield(0, catalog::dina_soul_steeper());
+    let p1_life_before = g.players[1].life;
+    // Seed library so the spell's draw doesn't deck the player.
+    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
+
+    // Cast Oracle's Restoration (target creature you control gets +1/+1 EOT
+    // / you draw 1 + gain 1 life).
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    let id = g.add_card_to_hand(0, catalog::oracles_restoration());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)), mode: None, x_value: None,
+    })
+    .expect("Oracle's Restoration castable for {G}");
+    drain_stack(&mut g);
+
+    // P1 lost 1 from Dina's lifegain trigger.
+    assert_eq!(g.players[1].life, p1_life_before - 1,
+        "Dina pings opponent for 1 on lifegain");
+}
+
+#[test]
+fn reconstruct_history_returns_two_artifacts_and_draws() {
+    let mut g = two_player_game();
+    // Seed two artifacts in graveyard.
+    let a1 = catalog::sol_ring();
+    let a2 = catalog::mind_stone();
+    let a1_id = g.add_card_to_graveyard(0, a1);
+    let a2_id = g.add_card_to_graveyard(0, a2);
+    // Seed a creature in the gy that should NOT be returned.
+    let bear_id = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    // Library for the draw.
+    g.add_card_to_library(0, catalog::island());
+    let lib_before = g.players[0].library.len();
+
+    let id = g.add_card_to_hand(0, catalog::reconstruct_history());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Reconstruct History castable for {1}{R}{W}");
+    drain_stack(&mut g);
+
+    // Both artifacts should be in hand; bear stays in graveyard.
+    let hand_names: Vec<&str> = g.players[0].hand.iter()
+        .map(|c| c.definition.name).collect();
+    assert!(hand_names.contains(&"Sol Ring") || hand_names.iter().any(|n| n.contains("Sol Ring")),
+        "Sol Ring should be in hand: {:?}", hand_names);
+    assert!(hand_names.contains(&"Mind Stone") || hand_names.iter().any(|n| n.contains("Mind Stone")),
+        "Mind Stone should be in hand: {:?}", hand_names);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == bear_id),
+        "bear should remain in graveyard");
+    let _ = (a1_id, a2_id);
+    // Drew 1 from library.
+    assert_eq!(g.players[0].library.len(), lib_before - 1,
+        "should draw 1");
+}
+
+#[test]
+fn igneous_inspiration_deals_3_damage_and_draws() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    g.add_card_to_library(0, catalog::island());
+    let lib_before = g.players[0].library.len();
+
+    let id = g.add_card_to_hand(0, catalog::igneous_inspiration());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)), mode: None, x_value: None,
+    })
+    .expect("Igneous Inspiration castable for {2}{R}");
+    drain_stack(&mut g);
+
+    // Bear (2 toughness) takes 3 → dies.
+    assert!(!g.battlefield.iter().any(|c| c.id == bear),
+        "bear should be destroyed by 3 damage");
+    // Drew 1.
+    assert_eq!(g.players[0].library.len(), lib_before - 1, "should draw 1 (Learn)");
+}
+
+#[test]
+fn creative_outburst_discards_hand_then_draws_five() {
+    let mut g = two_player_game();
+    // Seed library with 6 cards to draw.
+    for _ in 0..6 { g.add_card_to_library(0, catalog::island()); }
+    // Seed hand with 3 dummy cards.
+    g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.add_card_to_hand(0, catalog::lightning_bolt());
+
+    let id = g.add_card_to_hand(0, catalog::creative_outburst());
+    let hand_before = g.players[0].hand.len();
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Creative Outburst castable for {3}{U}{U}{R}{R}");
+    drain_stack(&mut g);
+
+    // After cast: hand_before - 1 (cast) - rest_discarded + 5 drawn.
+    // The discard counts the post-cast hand size (= hand_before - 1).
+    let expected = (hand_before - 1) - (hand_before - 1) + 5;
+    assert_eq!(g.players[0].hand.len(), expected,
+        "should end with 5 cards (full discard then draw 5)");
+}
+
+#[test]
+fn snow_day_creates_fractal_with_hand_size_counters() {
+    let mut g = two_player_game();
+    // Hand size after cast.
+    g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.add_card_to_hand(0, catalog::lightning_bolt());
+    let id = g.add_card_to_hand(0, catalog::snow_day());
+    let hand_before = g.players[0].hand.len();
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Snow Day castable for {1}{G}{U}");
+    drain_stack(&mut g);
+
+    // Post-cast hand size = hand_before - 1; Fractal enters at 0/0 + that
+    // many +1/+1 counters.
+    let expected_pt = (hand_before - 1) as i32;
+    let fractal = g.battlefield.iter().find(|c| c.is_token
+        && c.definition.subtypes.creature_types
+            .contains(&crate::card::CreatureType::Fractal))
+        .expect("Fractal token created");
+    assert_eq!(fractal.power(), expected_pt,
+        "Fractal P = post-cast hand size = {}", expected_pt);
+    assert_eq!(fractal.toughness(), expected_pt,
+        "Fractal T = post-cast hand size = {}", expected_pt);
+}
+
+#[test]
+fn mentors_guidance_draws_two_then_pumps_target_by_hand_size() {
+    let mut g = two_player_game();
+    // Seed library with 4 Islands.
+    for _ in 0..4 { g.add_card_to_library(0, catalog::island()); }
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+
+    let id = g.add_card_to_hand(0, catalog::mentors_guidance());
+    let hand_before = g.players[0].hand.len();
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)), mode: None, x_value: None,
+    })
+    .expect("Mentor's Guidance castable for {2}{G}{U}");
+    drain_stack(&mut g);
+
+    // Post-cast hand: hand_before - 1 (cast) + 2 (draw) = hand_before + 1.
+    // The counter amount reads hand size *at the AddCounter step* — so the
+    // target gets that many counters.
+    let expected_counters = (hand_before + 1) as u32;
+    let bear_card = g.battlefield.iter().find(|c| c.id == bear).unwrap();
+    let counters = bear_card.counter_count(CounterType::PlusOnePlusOne);
+    assert_eq!(counters, expected_counters,
+        "bear gets {} +1/+1 counters (post-draw hand size)", expected_counters);
+}
+
+#[test]
+fn solve_the_equation_tutors_an_instant_to_hand() {
+    let mut g = two_player_game();
+    // Library seeded with one instant + one creature; tutor should grab the
+    // instant.
+    let bolt = g.add_card_to_library(0, catalog::lightning_bolt());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    // Search needs a chosen target; auto-decider declines, so a scripted
+    // decider picks Bolt.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(bolt))]));
+
+    let id = g.add_card_to_hand(0, catalog::solve_the_equation());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Solve the Equation castable for {2}{U}");
+    drain_stack(&mut g);
+
+    // Lightning Bolt (Instant) should be tutored to hand.
+    assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Lightning Bolt"),
+        "Lightning Bolt should be in hand");
+    // Bear should still be in library.
+    assert!(g.players[0].library.iter().any(|c| c.definition.name == "Grizzly Bears"),
+        "Bear should remain in library");
+}
+
+#[test]
+fn enthusiastic_study_pumps_and_grants_trample_then_draws() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    g.add_card_to_library(0, catalog::island());
+    let lib_before = g.players[0].library.len();
+
+    let id = g.add_card_to_hand(0, catalog::enthusiastic_study());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)), mode: None, x_value: None,
+    })
+    .expect("Enthusiastic Study castable for {1}{G}");
+    drain_stack(&mut g);
+
+    let bear_card = g.battlefield.iter().find(|c| c.id == bear).unwrap();
+    assert_eq!(bear_card.power(), 4, "bear pumped to 4/4 (2+2)");
+    assert_eq!(bear_card.toughness(), 4);
+    assert!(bear_card.has_keyword(&Keyword::Trample),
+        "bear should have trample EOT");
+    assert_eq!(g.players[0].library.len(), lib_before - 1,
+        "should draw 1 from Learn");
+}
+
+#[test]
+fn tempted_by_the_oriq_destroys_low_mv_creature_and_makes_inkling() {
+    let mut g = two_player_game();
+    // Opp 2-MV creature.
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+
+    let id = g.add_card_to_hand(0, catalog::tempted_by_the_oriq());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)), mode: None, x_value: None,
+    })
+    .expect("Tempted by the Oriq castable for {1}{W}{B}");
+    drain_stack(&mut g);
+
+    // Bear destroyed.
+    assert!(!g.battlefield.iter().any(|c| c.id == bear),
+        "bear should be destroyed");
+    // Inkling token under your control.
+    let inkling = g.battlefield.iter().find(|c| c.is_token
+        && c.controller == 0
+        && c.definition.subtypes.creature_types
+            .contains(&crate::card::CreatureType::Inkling))
+        .expect("Inkling token created");
+    assert!(inkling.has_keyword(&Keyword::Flying),
+        "Inkling should have flying");
+    assert_eq!(inkling.power(), 1);
+    assert_eq!(inkling.toughness(), 1);
+}
+

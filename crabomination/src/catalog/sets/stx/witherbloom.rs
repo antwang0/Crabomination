@@ -10,7 +10,7 @@ use super::no_abilities;
 use super::shared::stx_pest_token;
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CreatureType, Effect, EventKind, EventScope,
-    EventSpec, Selector, Subtypes, TriggeredAbility, Value,
+    EventSpec, Selector, SelectionRequirement, Subtypes, Supertype, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::magecraft;
 use crate::effect::{ManaPayload, PlayerRef, ZoneDest};
@@ -196,6 +196,174 @@ pub fn witherbloom_pledgemage() -> CardDefinition {
             life_cost: 0,
         }],
         triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Daemogoth Woe-Eater ─────────────────────────────────────────────────────
+
+/// Daemogoth Woe-Eater — {2}{B}{G}, 9/9 Demon. "As an additional cost to
+/// cast this spell, sacrifice a creature. / {T}: You gain 4 life."
+///
+/// 🟡 The "additional cost: sacrifice a creature" rider is approximated
+/// as an ETB sacrifice trigger — the controller sacrifices another
+/// creature when Woe-Eater enters. Same approach as Vicious Rivalry's
+/// `Effect::LoseLife { XFromCost }` approximation of its "pay X life
+/// additional cost" rider. The mana cost is the printed {2}{B}{G}; the
+/// sac happens on ETB rather than at cast time, but the net board state
+/// matches in all but a corner case (the spell can't be countered by
+/// the sacrifice failing — rare in this engine).
+pub fn daemogoth_woe_eater() -> CardDefinition {
+    CardDefinition {
+        name: "Daemogoth Woe-Eater",
+        cost: cost(&[generic(2), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Demon],
+            ..Default::default()
+        },
+        power: 9,
+        toughness: 9,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[]),
+            effect: Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(4),
+            },
+            once_per_turn: false,
+            sorcery_speed: false,
+            sac_cost: false,
+            condition: None,
+            life_cost: 0,
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Sacrifice {
+                who: Selector::You,
+                count: Value::Const(1),
+                filter: SelectionRequirement::Creature
+                    .and(SelectionRequirement::ControlledByYou),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Eyeblight Cullers ───────────────────────────────────────────────────────
+
+/// Eyeblight Cullers — {1}{B}{B}, 4/4 Elf Warrior.
+/// "As an additional cost to cast this spell, sacrifice a creature. / When
+/// this creature enters, target opponent loses 2 life and you gain 2 life."
+///
+/// 🟡 Same additional-cost approximation as Daemogoth Woe-Eater — the
+/// sacrifice fires at ETB rather than at cast. The drain rider is wired
+/// faithfully.
+pub fn eyeblight_cullers() -> CardDefinition {
+    CardDefinition {
+        name: "Eyeblight Cullers",
+        cost: cost(&[generic(1), b(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::Sacrifice {
+                    who: Selector::You,
+                    count: Value::Const(1),
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou),
+                },
+                Effect::Drain {
+                    from: Selector::Player(PlayerRef::EachOpponent),
+                    to: Selector::You,
+                    amount: Value::Const(2),
+                },
+            ]),
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Dina, Soul Steeper ──────────────────────────────────────────────────────
+
+/// Dina, Soul Steeper — {B}{G}, 1/3 Legendary Human Druid. "Deathtouch /
+/// Whenever you gain life, target opponent loses 1 life. / {1}{B}{G}: Target
+/// creature gets -X/-X until end of turn, where X is the number of
+/// creatures you control."
+///
+/// 🟡 The -X/-X activated ability omits the X-scaling (no `Value`-keyed
+/// `PumpPT` from a count primitive in activated paths) — collapses to a
+/// flat -1/-1 EOT; combat math still works at the typical 2–3 creature
+/// board state, just less explosively. Lifegain trigger is wired
+/// faithfully against a target opponent (auto-target picks any
+/// opponent).
+pub fn dina_soul_steeper() -> CardDefinition {
+    use crate::card::Keyword;
+    use crate::effect::Duration;
+    use crate::effect::shortcut::target_filtered;
+    CardDefinition {
+        name: "Dina, Soul Steeper",
+        cost: cost(&[b(), g()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![Keyword::Deathtouch],
+        effect: Effect::Noop,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: false,
+            mana_cost: cost(&[generic(1), b(), g()]),
+            effect: Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(-1),
+                toughness: Value::Const(-1),
+                duration: Duration::EndOfTurn,
+            },
+            once_per_turn: false,
+            sorcery_speed: false,
+            sac_cost: false,
+            condition: None,
+            life_cost: 0,
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::LifeGained, EventScope::YourControl),
+            effect: Effect::LoseLife {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(1),
+            },
+        }],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],

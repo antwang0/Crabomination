@@ -1798,3 +1798,142 @@ pub fn manifestation_sage() -> CardDefinition {
         opening_hand: None,
     }
 }
+
+// ── Solve the Equation ──────────────────────────────────────────────────────
+
+/// Solve the Equation — {2}{U} Sorcery. "Search your library for an
+/// instant or sorcery card, reveal it, put it into your hand, then
+/// shuffle. Then scry 1."
+///
+/// Wired faithfully via `Effect::Search { → Hand }` filtered to
+/// instant ∨ sorcery, followed by `Effect::Scry 1`. Mono-blue tutor for
+/// spellslinger / spell-school decks; the Scry 1 rider is just gravy.
+pub fn solve_the_equation() -> CardDefinition {
+    CardDefinition {
+        name: "Solve the Equation",
+        cost: cost(&[generic(2), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Search {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::HasCardType(CardType::Instant)
+                    .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Enthusiastic Study ──────────────────────────────────────────────────────
+
+/// Enthusiastic Study — {1}{G} Instant. "Target creature gets +2/+2 and
+/// gains trample until end of turn. Then learn."
+///
+/// Learn collapses to `Draw 1` (catalog convention). Mainline +2/+2
+/// trample is wired faithfully against any creature; the draw rider
+/// always fires. Mono-green combat trick that stacks with magecraft
+/// triggers when cast (it's an instant).
+pub fn enthusiastic_study() -> CardDefinition {
+    CardDefinition {
+        name: "Enthusiastic Study",
+        cost: cost(&[generic(1), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(2),
+                toughness: Value::Const(2),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: target_filtered(SelectionRequirement::Creature),
+                keyword: Keyword::Trample,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Tempted by the Oriq ─────────────────────────────────────────────────────
+
+/// Tempted by the Oriq — {1}{W}{B} Sorcery. "Destroy target creature with
+/// mana value 3 or less. Create a 1/1 white and black Inkling creature
+/// token with flying."
+///
+/// 🟡 Approximation of the printed card's "gain control of target
+/// creature with mana value 3 or less" using `Effect::Destroy` instead
+/// (the engine has no Effect::GainControl primitive yet — same gap as
+/// Bribery / Mind Control). The Inkling token rider is wired faithfully
+/// via the SOS catalog's `inkling_token()` helper (1/1 W/B Inkling with
+/// flying — matches every other Inkling source in the catalog). Net
+/// swing is similar (a 3-MV creature off the board + a flier you
+/// control), but the printed card is strictly stronger when stealing a
+/// high-value blocker.
+pub fn tempted_by_the_oriq() -> CardDefinition {
+    use crate::catalog::sets::sos::inkling_token;
+    CardDefinition {
+        name: "Tempted by the Oriq",
+        cost: cost(&[generic(1), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Destroy {
+                what: target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ManaValueAtMost(3)),
+                ),
+            },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: inkling_token(),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
