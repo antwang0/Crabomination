@@ -9765,6 +9765,156 @@ fn brilliant_plan_draws_three_cards() {
 }
 
 #[test]
+fn careful_study_draws_two_then_discards_two() {
+    let mut g = two_player_game();
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let id = g.add_card_to_hand(0, catalog::careful_study());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Careful Study castable for {U}");
+    drain_stack(&mut g);
+    // Hand: -1 (cast) +2 (draw) -2 (discard) = -1.
+    assert_eq!(g.players[0].hand.len(), hand_before - 1,
+        "Careful Study: cast (-1) + draw 2 + discard 2 = -1");
+}
+
+#[test]
+fn sheoldred_drains_opp_when_they_draw() {
+    let mut g = two_player_game();
+    let _ = g.add_card_to_battlefield(0, catalog::sheoldred_the_apocalypse());
+    g.add_card_to_library(1, catalog::island());
+    g.add_card_to_library(1, catalog::island());
+    g.add_card_to_library(1, catalog::island());
+    let ponder = g.add_card_to_hand(1, catalog::ponder());
+    g.players[1].mana_pool.add(Color::Blue, 1);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    let opp_life_before = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: ponder, target: None, mode: None, x_value: None,
+    })
+    .expect("Ponder castable for {U}");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, opp_life_before - 2,
+        "Opp loses 2 life from Sheoldred when they draw");
+}
+
+#[test]
+fn sheoldred_gains_life_when_you_draw() {
+    let mut g = two_player_game();
+    let _ = g.add_card_to_battlefield(0, catalog::sheoldred_the_apocalypse());
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_library(0, catalog::island());
+    let ponder = g.add_card_to_hand(0, catalog::ponder());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    let life_before = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: ponder, target: None, mode: None, x_value: None,
+    })
+    .expect("Ponder castable for {U}");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life_before + 2,
+        "You gain 2 life from Sheoldred when you draw");
+}
+
+#[test]
+fn liliana_of_the_veil_plus_one_makes_each_player_discard() {
+    let mut g = two_player_game();
+    let lily = g.add_card_to_battlefield(0, catalog::liliana_of_the_veil());
+    g.clear_sickness(lily);
+    g.add_card_to_hand(0, catalog::island());
+    g.add_card_to_hand(0, catalog::island());
+    g.add_card_to_hand(1, catalog::island());
+    g.add_card_to_hand(1, catalog::island());
+    let p0_hand_before = g.players[0].hand.len();
+    let p1_hand_before = g.players[1].hand.len();
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: lily, ability_index: 0, target: None,
+    })
+    .expect("+1 ability activates");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), p0_hand_before - 1,
+        "you discard 1 from +1");
+    assert_eq!(g.players[1].hand.len(), p1_hand_before - 1,
+        "opp discards 1 from +1");
+}
+
+#[test]
+fn light_up_the_stage_draws_two() {
+    let mut g = two_player_game();
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::mountain());
+    }
+    let id = g.add_card_to_hand(0, catalog::light_up_the_stage());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Light Up the Stage castable for {2}{R}");
+    drain_stack(&mut g);
+    // Hand: -1 (cast) +2 (draw) = +1.
+    assert_eq!(g.players[0].hand.len(), hand_before + 1,
+        "Light Up the Stage: cast (-1) + draw 2 = +1");
+}
+
+#[test]
+fn liliana_of_the_last_hope_minus_two_returns_creature_from_gy() {
+    let mut g = two_player_game();
+    let lily = g.add_card_to_battlefield(0, catalog::liliana_of_the_last_hope());
+    g.clear_sickness(lily);
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: lily, ability_index: 1, target: None,
+    })
+    .expect("-2 ability activates");
+    drain_stack(&mut g);
+    // Bear returns to hand.
+    assert!(g.players[0].hand.iter().any(|c| c.id == bear),
+        "Bear should return to hand from -2 ability");
+    assert_eq!(g.players[0].hand.len(), hand_before + 1,
+        "+1 hand size after -2");
+}
+
+#[test]
+fn tibalts_trickery_counters_target_spell() {
+    let mut g = two_player_game();
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)),
+        mode: None, x_value: None,
+    })
+    .expect("Bolt castable for {R}");
+    // Now seat 0 casts Tibalt's Trickery on the Bolt.
+    let trickery = g.add_card_to_hand(0, catalog::tibalts_trickery());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: trickery, target: Some(Target::Permanent(bolt)),
+        mode: None, x_value: None,
+    })
+    .expect("Trickery castable for {1}{R}");
+    drain_stack(&mut g);
+    // Bolt was countered; opp life unchanged.
+    assert_eq!(g.players[0].life, 20, "Bolt countered → no damage");
+    // Bolt is now in opp's graveyard.
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bolt),
+        "Countered Bolt goes to graveyard");
+}
+
+#[test]
 fn silverquill_apprentice_magecraft_pumps_target_creature() {
     let mut g = two_player_game();
     let _ = g.add_card_to_battlefield(0, catalog::silverquill_apprentice());

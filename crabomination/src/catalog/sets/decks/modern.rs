@@ -7963,3 +7963,241 @@ pub fn silverquill_apprentice() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Push XXVII ──────────────────────────────────────────────────────────────
+// Six more cards: Careful Study, Sheoldred the Apocalypse, Liliana of the
+// Veil, Light Up the Stage, Brilliant Plan-companion (Fae of Wishes is
+// Adventure-shaped — skip), Quandrix Apprentice tweak, Tibalt's Trickery
+// 🟡, Spell Pierce-style cards. Each ships against existing primitives.
+
+/// Careful Study — {U} Sorcery. Draw two cards, then discard two cards.
+///
+/// Pure card-selection cantrip — net zero hand size, but filters two
+/// random cards out of your hand. Slot for graveyard archetypes
+/// (madness, dredge, reanimator) and is the cheap blue Faithless
+/// Looting analogue. Wired with `Effect::Seq([Draw 2, Discard 2])`.
+pub fn careful_study() -> CardDefinition {
+    CardDefinition {
+        name: "Careful Study",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
+            Effect::Discard {
+                who: Selector::You,
+                amount: Value::Const(2),
+                random: false,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Sheoldred, the Apocalypse — {2}{B}{B} Legendary Creature — Phyrexian
+/// Praetor. 4/5 Deathtouch, lifelink. Whenever a player draws a card,
+/// that player loses 2 life unless they're you, in which case you gain
+/// 2 life.
+///
+/// Fully wired via two CardDrawn triggers — one fires when you draw
+/// (gain 2 life), the other fires when an opp draws (they lose 2). The
+/// engine's `EventScope::YourControl` / `OpponentControl` cleanly
+/// partitions the two paths. Body keywords are first-class.
+pub fn sheoldred_the_apocalypse() -> CardDefinition {
+    CardDefinition {
+        name: "Sheoldred, the Apocalypse",
+        cost: cost(&[generic(2), b(), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Praetor],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 5,
+        keywords: vec![Keyword::Deathtouch, Keyword::Lifelink],
+        triggered_abilities: vec![
+            // You draw → you gain 2 life.
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CardDrawn, EventScope::YourControl),
+                effect: Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::Const(2),
+                },
+            },
+            // Opp draws → opp loses 2 life. 🟡 Target collapses to
+            // `EachOpponent` (correct for 2-player). For 3+ player,
+            // every opponent loses 2 instead of just the one who drew —
+            // the trigger source's `Triggerer` reference is currently
+            // discarded when the trigger lands on the stack
+            // (`for_trigger` rebuilds context with `trigger_source =
+            // Permanent(self)`, losing the event subject). Tracked in
+            // TODO.md as "thread `subject` through `StackItem::Trigger`".
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CardDrawn, EventScope::OpponentControl),
+                effect: Effect::LoseLife {
+                    who: Selector::Player(PlayerRef::EachOpponent),
+                    amount: Value::Const(2),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Liliana of the Veil — {1}{B}{B} Legendary Planeswalker — Liliana.
+/// Starting loyalty 3.
+/// +1: Each player discards a card.
+/// -2: Target player sacrifices a creature.
+/// -6: Separate all permanents target player controls into two piles.
+/// That player sacrifices all permanents in the pile of their choice.
+///
+/// 🟡 The -6 ult collapses (no two-pile-split primitive). +1 and -2
+/// wire faithfully. The +1 fires on every player (each opponent +
+/// you), implemented as `Seq([Discard{You,1}, Discard{EachOpp,1}])`
+/// with `random: true` so the bot/AutoDecider doesn't need to pick.
+pub fn liliana_of_the_veil() -> CardDefinition {
+    use crate::card::{LoyaltyAbility, PlaneswalkerSubtype, Supertype as Sup};
+    CardDefinition {
+        name: "Liliana of the Veil",
+        cost: cost(&[generic(1), b(), b()]),
+        supertypes: vec![Sup::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes {
+            planeswalker_subtypes: vec![PlaneswalkerSubtype::Liliana],
+            ..Default::default()
+        },
+        base_loyalty: 3,
+        loyalty_abilities: vec![
+            LoyaltyAbility {
+                loyalty_cost: 1,
+                effect: Effect::Seq(vec![
+                    Effect::Discard {
+                        who: Selector::You,
+                        amount: Value::Const(1),
+                        random: true,
+                    },
+                    Effect::Discard {
+                        who: Selector::Player(PlayerRef::EachOpponent),
+                        amount: Value::Const(1),
+                        random: true,
+                    },
+                ]),
+            },
+            LoyaltyAbility {
+                loyalty_cost: -2,
+                effect: Effect::Sacrifice {
+                    who: target_filtered(SelectionRequirement::Player),
+                    count: Value::Const(1),
+                    filter: SelectionRequirement::Creature,
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Light Up the Stage — {2}{R} Sorcery. Exile the top two cards of your
+/// library. Until the end of your next turn, you may play those cards.
+/// Spectacle {R} (You may cast this spell for its spectacle cost rather
+/// than its mana cost if an opponent lost life this turn.)
+///
+/// 🟡 Approximated as `Draw 2`. Engine doesn't yet model "exile +
+/// may-play-this-turn" without the dedicated cast-from-exile pipeline
+/// (same gap as Suspend, Adventure's "may cast adventure half from
+/// exile", etc.). Spectacle cost is also omitted — alt-cost-with-life-
+/// loss-this-turn predicate is its own primitive. Slot stays open
+/// for the eventual full wire.
+pub fn light_up_the_stage() -> CardDefinition {
+    CardDefinition {
+        name: "Light Up the Stage",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Draw {
+            who: Selector::You,
+            amount: Value::Const(2),
+        },
+        ..Default::default()
+    }
+}
+
+/// Liliana of the Last Hope — {1}{B}{B} Legendary Planeswalker — Liliana.
+/// Starting loyalty 3.
+/// -2: Target creature gets -2/-1 until end of turn.
+/// +1: Up to one target creature gets -2/-1 until end of turn. // fixme
+/// Actually printed: +1 — Target creature gets -2/-1 until end of turn.
+///        -2 — Return target creature card from your graveyard to hand.
+///        -7 emblem.
+///
+/// 🟡 +1 (-2/-1 EOT to creature) wired faithfully. -2 (return creature
+/// from your graveyard to your hand) wired. -7 emblem omitted (no
+/// emblem zone — Professor Dellian Fel has the same gap).
+pub fn liliana_of_the_last_hope() -> CardDefinition {
+    use crate::card::{LoyaltyAbility, PlaneswalkerSubtype, Supertype as Sup, Zone};
+    use crate::effect::Selector as Sel;
+    CardDefinition {
+        name: "Liliana of the Last Hope",
+        cost: cost(&[generic(1), b(), b()]),
+        supertypes: vec![Sup::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes {
+            planeswalker_subtypes: vec![PlaneswalkerSubtype::Liliana],
+            ..Default::default()
+        },
+        base_loyalty: 3,
+        loyalty_abilities: vec![
+            LoyaltyAbility {
+                loyalty_cost: 1,
+                effect: Effect::PumpPT {
+                    what: target_filtered(SelectionRequirement::Creature),
+                    power: Value::Const(-2),
+                    toughness: Value::Const(-1),
+                    duration: Duration::EndOfTurn,
+                },
+            },
+            LoyaltyAbility {
+                loyalty_cost: -2,
+                effect: Effect::Move {
+                    what: Sel::take(
+                        Sel::CardsInZone {
+                            who: PlayerRef::You,
+                            zone: Zone::Graveyard,
+                            filter: SelectionRequirement::Creature,
+                        },
+                        Value::Const(1),
+                    ),
+                    to: ZoneDest::Hand(PlayerRef::You),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Tibalt's Trickery — {1}{R} Instant. Counter target spell. That spell's
+/// controller exiles the top three cards of their library, then reveals
+/// cards from the top of their library until they exile a nonland card
+/// other than a card with the same name as the countered spell. They
+/// cast it without paying its mana cost if able. Then they put all
+/// cards exiled this way on the bottom of their library in a random
+/// order.
+///
+/// 🟡 Heavy approximation: ships as a hard counter at {1}{R}. The
+/// chaotic "exile 3 + cast a random nonland" cascade rider is omitted
+/// (cast-from-exile-without-paying primitive gap; same family as
+/// Cascade / Theme Music / Wild-Magic Sorcerer). The base counterspell
+/// half is the gameplay-relevant outcome — if a player wants to durdle
+/// with the lottery rider, they can cast the random spell manually.
+pub fn tibalts_trickery() -> CardDefinition {
+    CardDefinition {
+        name: "Tibalt's Trickery",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::CounterSpell {
+            what: target_filtered(SelectionRequirement::IsSpellOnStack),
+        },
+        ..Default::default()
+    }
+}

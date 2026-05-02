@@ -261,10 +261,13 @@ fn predicate_short_label(p: &crate::card::Predicate) -> String {
         // EntityMatches {what, filter}: predicate over a specific entity
         // (the trigger source, target, or source-of-cast spell). The
         // Repartee filter ("trigger source matches Creature") is the
-        // poster child. Surface as "if X matches" — the `what` slot is
-        // either TriggerSource, Target, or CastSpellSource which are all
-        // implicit context to the player and read naturally as "X".
-        Predicate::EntityMatches { .. } => "if matches filter".into(),
+        // poster child. Push XXVI: detect common simple filters and emit
+        // a more specific label — "if creature spell" / "if noncreature
+        // spell" / "if artifact" — instead of the generic "if matches
+        // filter" fallback. Powers Esper Sentinel ("OpponentControl +
+        // EntityMatches { Noncreature }"), Felisa's death-with-counter
+        // trigger filter, and any future shape-typed cast trigger.
+        Predicate::EntityMatches { filter, .. } => entity_matches_label(filter),
         Predicate::SpellsCastThisTurnAtLeast { at_least: Value::Const(1), .. } => {
             "after spell cast".into()
         }
@@ -347,6 +350,55 @@ fn predicate_short_label(p: &crate::card::Predicate) -> String {
         Predicate::False => "never".into(),
         // Catch-all: no human-readable form yet.
         _ => "conditional".into(),
+    }
+}
+
+/// Given a [`SelectionRequirement`] used by `Predicate::EntityMatches`,
+/// produce a short human-readable label. Common simple filters get
+/// dedicated labels ("if creature spell" / "if noncreature spell" /
+/// "if artifact" / "if multicolored"); complex `And` / `Or` /
+/// counter-keyed filters fall through to a generic "if matches filter"
+/// hint. The labels read naturally in cast-trigger gate badges:
+/// e.g. Esper Sentinel renders as "when opp casts spell · if noncreature
+/// spell · → draw". Push XXVI helper.
+fn entity_matches_label(filter: &crate::card::SelectionRequirement) -> String {
+    use crate::card::SelectionRequirement as SR;
+    match filter {
+        SR::Creature => "if creature".into(),
+        SR::Noncreature => "if noncreature".into(),
+        SR::Artifact => "if artifact".into(),
+        SR::Enchantment => "if enchantment".into(),
+        SR::Land => "if land".into(),
+        SR::Nonland => "if nonland".into(),
+        SR::Planeswalker => "if planeswalker".into(),
+        SR::Permanent => "if permanent".into(),
+        SR::Multicolored => "if multicolored".into(),
+        SR::Monocolored => "if monocolored".into(),
+        SR::Colorless => "if colorless".into(),
+        SR::IsBasicLand => "if basic land".into(),
+        SR::IsToken => "if token".into(),
+        SR::NotToken => "if non-token".into(),
+        SR::IsAttacking => "if attacking".into(),
+        SR::IsBlocking => "if blocking".into(),
+        SR::IsSpellOnStack => "if spell".into(),
+        SR::Tapped => "if tapped".into(),
+        SR::Untapped => "if untapped".into(),
+        SR::ControlledByYou => "if you control".into(),
+        SR::ControlledByOpponent => "if opp controls".into(),
+        SR::HasCardType(t) => format!("if {t:?}"),
+        SR::HasColor(c) => format!("if {c}"),
+        SR::HasKeyword(_) => "if has keyword".into(),
+        SR::WithCounter(_) => "if has counter".into(),
+        SR::PowerAtLeast(n) => format!("if power ≥{n}"),
+        SR::PowerAtMost(n) => format!("if power ≤{n}"),
+        SR::ToughnessAtLeast(n) => format!("if toughness ≥{n}"),
+        SR::ToughnessAtMost(n) => format!("if toughness ≤{n}"),
+        SR::ManaValueAtLeast(n) => format!("if MV ≥{n}"),
+        SR::ManaValueAtMost(n) => format!("if MV ≤{n}"),
+        SR::HasName(n) => format!("if named {n}"),
+        // Composite / complex predicates fall through to the generic
+        // "if matches filter" hint.
+        _ => "if matches filter".into(),
     }
 }
 
@@ -971,12 +1023,29 @@ mod tests {
         );
         assert_eq!(predicate_short_label(&p), "if ≤2 match");
 
-        // EntityMatches: stable hint regardless of which entity slot is
-        // referenced (TriggerSource, Target, etc.) since the label
-        // doesn't unpack the slot.
+        // EntityMatches: push XXVI now reads the inner filter and emits a
+        // type-specific label for common cases. Composite / counter-keyed
+        // filters fall through to "if matches filter".
         let p = Predicate::EntityMatches {
             what: Selector::TriggerSource,
             filter: SelectionRequirement::Creature,
+        };
+        assert_eq!(predicate_short_label(&p), "if creature");
+        let p = Predicate::EntityMatches {
+            what: Selector::TriggerSource,
+            filter: SelectionRequirement::Noncreature,
+        };
+        assert_eq!(predicate_short_label(&p), "if noncreature");
+        let p = Predicate::EntityMatches {
+            what: Selector::TriggerSource,
+            filter: SelectionRequirement::Artifact,
+        };
+        assert_eq!(predicate_short_label(&p), "if artifact");
+        // Composite predicate falls through to the generic hint.
+        let p = Predicate::EntityMatches {
+            what: Selector::TriggerSource,
+            filter: SelectionRequirement::Creature
+                .and(SelectionRequirement::Multicolored),
         };
         assert_eq!(predicate_short_label(&p), "if matches filter");
     }
