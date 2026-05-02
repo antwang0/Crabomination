@@ -6535,3 +6535,406 @@ pub fn sudden_edict() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── 2026-05-02 push XXII: classic cube staples ─────────────────────────────
+//
+// Eleven new card factories spanning W/U/B/R/G + colorless. Each card uses
+// existing engine primitives — no engine changes required. The cards are
+// long-standing cube staples (Modern Horizons / Innistrad-era reprints +
+// command tower classics) that fit cleanly into the cube's
+// per-color pools without needing replacement effects, alt-cost gymnastics,
+// or new keyword primitives.
+
+/// 3/3 green Ape token. Used by Pongify's "controller creates a 3/3
+/// green Ape" rider.
+fn ape_token() -> crate::card::TokenDefinition {
+    use crate::card::TokenDefinition;
+    TokenDefinition {
+        name: "Ape".into(),
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Green],
+        supertypes: vec![],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Ape],
+            ..Default::default()
+        },
+        activated_abilities: vec![],
+        triggered_abilities: vec![],
+    }
+}
+
+/// 3/3 green Lizard token. Used by Rapid Hybridization's "controller
+/// creates a 3/3 green Lizard" rider.
+fn lizard_token() -> crate::card::TokenDefinition {
+    use crate::card::TokenDefinition;
+    TokenDefinition {
+        name: "Lizard".into(),
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Green],
+        supertypes: vec![],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Lizard],
+            ..Default::default()
+        },
+        activated_abilities: vec![],
+        triggered_abilities: vec![],
+    }
+}
+
+/// Pongify — {U} Instant. Destroy target creature. Its controller
+/// creates a 3/3 green Ape creature token.
+///
+/// Hard-removal-with-an-ape: dodges indestructible (it's a destroy, not
+/// exile, but the target's dying triggers still fire on the original).
+/// The 3/3 token goes to the destroyed creature's controller via
+/// `PlayerRef::ControllerOf(Target(0))` — the engine's
+/// `find_card_owner` graveyard fallback resolves the post-destroy
+/// controller (same path Harsh Annotation took in push XXI).
+pub fn pongify() -> CardDefinition {
+    CardDefinition {
+        name: "Pongify",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Destroy {
+                what: target_filtered(SelectionRequirement::Creature),
+            },
+            Effect::CreateToken {
+                who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
+                count: Value::Const(1),
+                definition: ape_token(),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Rapid Hybridization — {U} Instant. Destroy target creature. Its
+/// controller creates a 3/3 green Lizard creature token.
+///
+/// Pongify twin — same removal pattern, distinct token type for tribal
+/// interactions. Cube games rarely care about Ape vs. Lizard, but the
+/// distinct factory + token mints preserve printed identity.
+pub fn rapid_hybridization() -> CardDefinition {
+    CardDefinition {
+        name: "Rapid Hybridization",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Destroy {
+                what: target_filtered(SelectionRequirement::Creature),
+            },
+            Effect::CreateToken {
+                who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
+                count: Value::Const(1),
+                definition: lizard_token(),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Mulldrifter — {4}{U} Creature — Elemental. 2/2 with Flying. "When
+/// this creature enters, draw two cards."
+///
+/// Approximation: the Evoke {2}{U} alternative cost (cast for {2}{U}
+/// but sacrifice on resolution) is omitted — `AlternativeCost`
+/// machinery currently handles "exile from hand" pitches but doesn't
+/// chain into a sacrifice-on-resolution rider. Body + ETB draw 2 are
+/// fully wired; in cube the card is most often hard-cast for value
+/// anyway.
+pub fn mulldrifter() -> CardDefinition {
+    CardDefinition {
+        name: "Mulldrifter",
+        cost: cost(&[generic(4), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Wall of Omens — {1}{W} Creature — Wall. 0/4 with Defender. "When
+/// this creature enters, draw a card."
+///
+/// Cantrip wall — a classic two-mana cube include for white midrange
+/// shells. Body + ETB draw via `Effect::Draw`. The Defender keyword is
+/// enforced inside `declare_attackers` (creatures with Defender can't
+/// attack).
+pub fn wall_of_omens() -> CardDefinition {
+    CardDefinition {
+        name: "Wall of Omens",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Wall],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 4,
+        keywords: vec![Keyword::Defender],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Sun Titan — {4}{W}{W} Creature — Giant. 6/6 with Vigilance. "When
+/// this creature enters and whenever it attacks, you may return target
+/// permanent card with mana value 3 or less from your graveyard to the
+/// battlefield."
+///
+/// Recursive value engine. Both triggers fire the same body — a
+/// `Move(target → Battlefield)` against a `Permanent ∧ ManaValueAtMost
+/// (3)` graveyard card. Auto-target leans on the engine's
+/// `prefers_graveyard_source` classification (move-to-bf reads as
+/// reanimate), preferring a graveyard pick over an empty target slot.
+/// "May" is collapsed to always-do (auto-decider takes the value
+/// every time).
+pub fn sun_titan() -> CardDefinition {
+    let recur = Effect::Move {
+        what: target_filtered(
+            SelectionRequirement::Permanent
+                .and(SelectionRequirement::ManaValueAtMost(3)),
+        ),
+        to: ZoneDest::Battlefield {
+            controller: PlayerRef::You,
+            tapped: false,
+        },
+    };
+    CardDefinition {
+        name: "Sun Titan",
+        cost: cost(&[generic(4), w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Giant],
+            ..Default::default()
+        },
+        power: 6,
+        toughness: 6,
+        keywords: vec![Keyword::Vigilance],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::EntersBattlefield,
+                    EventScope::SelfSource,
+                ),
+                effect: recur.clone(),
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+                effect: recur,
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Solemn Simulacrum — {4} Artifact Creature — Golem. 2/2. "When this
+/// creature enters, you may search your library for a basic land card,
+/// put it onto the battlefield tapped, then shuffle. / When this
+/// creature dies, you may draw a card."
+///
+/// "Sad robot" — a cube staple for ramp + draw value. The "you may"
+/// clauses collapse to always-do (auto-decider takes both lines).
+/// Search uses `Effect::Search` to BF-tapped; the death draw uses
+/// `EventKind::CreatureDied + SelfSource`.
+pub fn solemn_simulacrum() -> CardDefinition {
+    CardDefinition {
+        name: "Solemn Simulacrum",
+        cost: cost(&[generic(4)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Golem],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::EntersBattlefield,
+                    EventScope::SelfSource,
+                ),
+                effect: search_to_battlefield(SelectionRequirement::IsBasicLand, true),
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+                effect: Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Three Visits — {1}{G} Sorcery. Search your library for a Forest
+/// card, put it onto the battlefield, then shuffle.
+///
+/// Nature's Lore twin — same shape, distinct factory for cube variety.
+/// The forest enters **untapped** (per Oracle).
+pub fn three_visits() -> CardDefinition {
+    CardDefinition {
+        name: "Three Visits",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: search_to_battlefield(
+            SelectionRequirement::Land
+                .and(SelectionRequirement::HasLandType(crate::card::LandType::Forest)),
+            false,
+        ),
+        ..Default::default()
+    }
+}
+
+/// Fume Spitter — {B} Creature — Horror. 1/1. "Sacrifice this creature:
+/// Target creature gets -1/-1 until end of turn."
+///
+/// One-mana attrition piece — kills X/1 chump blockers, threatens
+/// removal at instant speed, fits sac fodder shells. Activation uses
+/// `ActivatedAbility::sac_cost` so the source dies before the pump
+/// resolves; the -1/-1 is `PumpPT { -1, -1, EOT }` against the chosen
+/// creature target.
+pub fn fume_spitter() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    use crate::effect::Duration;
+    CardDefinition {
+        name: "Fume Spitter",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Horror],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: false,
+            mana_cost: ManaCost::default(),
+            effect: Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(-1),
+                toughness: Value::Const(-1),
+                duration: Duration::EndOfTurn,
+            },
+            once_per_turn: false,
+            sorcery_speed: false,
+            sac_cost: true,
+            condition: None,
+            life_cost: 0,
+        }],
+        ..Default::default()
+    }
+}
+
+/// Galvanic Blast — {R} Instant. "Galvanic Blast deals 2 damage to any
+/// target. Metalcraft — It deals 4 damage to that target instead if you
+/// control three or more artifacts."
+///
+/// Metalcraft fold: damage = `2 + 2 if your-artifact-count ≥ 3 else 0`
+/// — encoded via `If(ValueAtLeast(PermanentCountControlledBy(You) ∧
+/// Artifact, 3))` branching on a Const(4) vs Const(2) DealDamage.
+/// Filtering "artifacts you control" via the new
+/// `Selector::EachPermanent(Artifact ∧ ControlledByYou)` count
+/// primitive. Metalcraft is approximated as "≥ 3 artifacts you control"
+/// without distinguishing artifact lands; cube games rarely have 3+
+/// nonland artifacts and 0 artifact lands or vice versa, so the
+/// approximation is faithful.
+pub fn galvanic_blast() -> CardDefinition {
+    use crate::effect::Predicate;
+    CardDefinition {
+        name: "Galvanic Blast",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::If {
+            cond: Predicate::ValueAtLeast(
+                Value::count(Selector::EachPermanent(
+                    SelectionRequirement::Artifact.and(SelectionRequirement::ControlledByYou),
+                )),
+                Value::Const(3),
+            ),
+            then: Box::new(Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Any),
+                amount: Value::Const(4),
+            }),
+            else_: Box::new(Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Any),
+                amount: Value::Const(2),
+            }),
+        },
+        ..Default::default()
+    }
+}
+
+/// Pithing Edict — {1}{B} Sorcery. "Target opponent sacrifices a
+/// creature or planeswalker."
+///
+/// Variant of Sudden Edict that hits planeswalkers as well. Encoded
+/// via `Effect::Sacrifice` with a `Creature ∨ Planeswalker` filter.
+/// Single-target opponent prompt collapses to `EachOpponent` since
+/// the engine has no per-spell player target picker that filters on
+/// opponent-only — same shape as the Sudden Edict pattern.
+pub fn pithing_edict() -> CardDefinition {
+    CardDefinition {
+        name: "Pithing Edict",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Sacrifice {
+            who: Selector::Player(PlayerRef::EachOpponent),
+            count: Value::Const(1),
+            filter: SelectionRequirement::Creature
+                .or(SelectionRequirement::Planeswalker),
+        },
+        ..Default::default()
+    }
+}
+
+/// Lash of Malice — {B} Instant. "Target creature gets -2/-2 until
+/// end of turn."
+///
+/// Approximation: the printed Magecraft rider ("If you've cast or
+/// copied an instant or sorcery spell this turn, that creature
+/// instead gets +2/+2") collapses to the base mode (always -2/-2).
+/// The cube use case is one-mana removal of an X/2 chump or pre-
+/// combat shrink to swing through; the magecraft +2/+2 inversion is a
+/// rare aggressive line.
+pub fn lash_of_malice() -> CardDefinition {
+    use crate::effect::Duration;
+    CardDefinition {
+        name: "Lash of Malice",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::PumpPT {
+            what: target_filtered(SelectionRequirement::Creature),
+            power: Value::Const(-2),
+            toughness: Value::Const(-2),
+            duration: Duration::EndOfTurn,
+        },
+        ..Default::default()
+    }
+}

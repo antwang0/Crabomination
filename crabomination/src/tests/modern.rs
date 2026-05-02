@@ -8668,3 +8668,349 @@ fn sudden_edict_rejects_creature_target() {
         "Sudden Edict should reject a creature target (Player filter): {:?}",
         err);
 }
+
+// ── 2026-05-02 push XXII: classic cube staples ─────────────────────────────
+
+/// Pongify destroys the target creature and mints a 3/3 green Ape token
+/// under the destroyed creature's controller. Verifies both halves of
+/// the Effect::Seq.
+#[test]
+fn pongify_destroys_target_and_creates_three_three_ape_for_controller() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::pongify());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(bear)),
+        mode: None, x_value: None,
+    }).expect("Pongify castable for {U}");
+    drain_stack(&mut g);
+
+    assert!(!g.battlefield.iter().any(|c| c.id == bear),
+        "Pongify destroys the bear");
+    let ape = g.battlefield.iter()
+        .find(|c| c.definition.name == "Ape")
+        .expect("Pongify mints an Ape token");
+    assert_eq!(ape.definition.power, 3);
+    assert_eq!(ape.definition.toughness, 3);
+    assert_eq!(ape.controller, 1, "Ape goes under the bear's controller");
+}
+
+/// Rapid Hybridization is the Lizard variant of Pongify — distinct
+/// token name, identical removal pattern.
+#[test]
+fn rapid_hybridization_destroys_target_and_creates_three_three_lizard() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::rapid_hybridization());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(bear)),
+        mode: None, x_value: None,
+    }).expect("Rapid Hybridization castable for {U}");
+    drain_stack(&mut g);
+
+    assert!(!g.battlefield.iter().any(|c| c.id == bear));
+    let lizard = g.battlefield.iter()
+        .find(|c| c.definition.name == "Lizard")
+        .expect("Rapid Hybridization mints a Lizard token");
+    assert_eq!(lizard.definition.power, 3);
+    assert_eq!(lizard.definition.toughness, 3);
+    assert_eq!(lizard.controller, 1);
+}
+
+/// Mulldrifter is a 2/2 Flying Elemental whose ETB draws two cards.
+#[test]
+fn mulldrifter_etb_draws_two_cards() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
+    let id = g.add_card_to_hand(0, catalog::mulldrifter());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    let hand_before = g.players[0].hand.len();
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    }).expect("Mulldrifter castable for {4}{U}");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[0].hand.len(), hand_before - 1 + 2,
+        "Mulldrifter nets +1 card (-1 cast +2 draw)");
+    let mull = g.battlefield.iter()
+        .find(|c| c.definition.name == "Mulldrifter")
+        .expect("Mulldrifter resolves to battlefield");
+    assert!(mull.definition.keywords.contains(&Keyword::Flying));
+    assert_eq!(mull.definition.power, 2);
+}
+
+/// Wall of Omens is a 0/4 Defender that draws a card when it enters.
+#[test]
+fn wall_of_omens_etb_draws_a_card() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let id = g.add_card_to_hand(0, catalog::wall_of_omens());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let hand_before = g.players[0].hand.len();
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    }).expect("Wall of Omens castable for {1}{W}");
+    drain_stack(&mut g);
+
+    // -1 cast + 1 draw = no net change on hand size.
+    assert_eq!(g.players[0].hand.len(), hand_before);
+    let wall = g.battlefield.iter()
+        .find(|c| c.definition.name == "Wall of Omens")
+        .expect("Wall of Omens resolves");
+    assert!(wall.definition.keywords.contains(&Keyword::Defender));
+    assert_eq!(wall.definition.toughness, 4);
+}
+
+/// Sun Titan is a 6/6 Vigilance that returns a ≤3-MV permanent from
+/// your graveyard on ETB.
+#[test]
+fn sun_titan_etb_returns_three_cmc_permanent_from_graveyard() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    // Seed a 2-CMC creature in the graveyard for Sun Titan to recur.
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::sun_titan());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(4);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(bear)),
+        mode: None, x_value: None,
+    }).expect("Sun Titan castable for {4}{W}{W}");
+    drain_stack(&mut g);
+
+    let st = g.battlefield.iter()
+        .find(|c| c.definition.name == "Sun Titan")
+        .expect("Sun Titan resolves");
+    assert_eq!(st.definition.power, 6);
+    assert!(st.definition.keywords.contains(&Keyword::Vigilance));
+    assert!(g.battlefield.iter().any(|c| c.id == bear),
+        "Bear returned to battlefield via Sun Titan ETB");
+    assert!(!g.players[0].graveyard.iter().any(|c| c.id == bear));
+}
+
+/// Sun Titan declines high-MV targets at trigger-resolution time —
+/// the trigger filter rejects ≥ 4-MV permanents and the recur half
+/// no-ops. The engine's cast-time legality check only runs the
+/// primary-target filter (Sun Titan's own ETB trigger checks the
+/// graveyard card) so ≥ 4-MV cards are kept in the graveyard rather
+/// than coming back.
+#[test]
+fn sun_titan_does_not_recur_high_cmc_target() {
+    let mut g = two_player_game();
+    // 5-CMC Solemn Simulacrum exceeds the ≤3 cap.
+    let solemn = g.add_card_to_graveyard(0, catalog::solemn_simulacrum());
+    let id = g.add_card_to_hand(0, catalog::sun_titan());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(4);
+
+    let _ = g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(solemn)),
+        mode: None, x_value: None,
+    });
+    drain_stack(&mut g);
+
+    // Solemn must stay in the graveyard — high-MV target is illegal at
+    // resolution time, so the recur half no-ops.
+    assert!(!g.battlefield.iter().any(|c| c.id == solemn),
+        "Solemn Simulacrum must NOT be returned (5-MV exceeds the ≤3 cap)");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == solemn),
+        "Solemn Simulacrum stays in the graveyard");
+}
+
+/// Solemn Simulacrum: ETB tutors a basic land tapped, death draws 1.
+#[test]
+fn solemn_simulacrum_etb_tutors_basic_land_tapped() {
+    let mut g = two_player_game();
+    let plains = g.add_card_to_library(0, catalog::plains());
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Search(Some(plains)),
+    ]));
+    let id = g.add_card_to_hand(0, catalog::solemn_simulacrum());
+    g.players[0].mana_pool.add_colorless(4);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    }).expect("Solemn Simulacrum castable for {4}");
+    drain_stack(&mut g);
+
+    let view = g.battlefield.iter().find(|c| c.id == plains)
+        .expect("Plains tutored to battlefield");
+    assert!(view.tapped, "Tutored basic enters tapped");
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Solemn Simulacrum"));
+}
+
+/// Solemn Simulacrum's death trigger draws a card.
+#[test]
+fn solemn_simulacrum_death_draws_a_card() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let solemn = g.add_card_to_battlefield(0, catalog::solemn_simulacrum());
+    let hand_before = g.players[0].hand.len();
+    // Lethal: deal 3 damage to the 2/2 body. We just SBA-kill it via
+    // direct destruction.
+    g.battlefield.iter_mut().find(|c| c.id == solemn).unwrap().damage = 99;
+    g.check_state_based_actions();
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[0].hand.len(), hand_before + 1,
+        "Solemn Simulacrum draws on death");
+}
+
+/// Three Visits is a Forest tutor that puts the land onto the
+/// battlefield untapped (Nature's Lore twin).
+#[test]
+fn three_visits_tutors_forest_untapped() {
+    let mut g = two_player_game();
+    let forest = g.add_card_to_library(0, catalog::forest());
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Search(Some(forest)),
+    ]));
+    let id = g.add_card_to_hand(0, catalog::three_visits());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    }).expect("Three Visits castable for {1}{G}");
+    drain_stack(&mut g);
+
+    let view = g.battlefield.iter().find(|c| c.id == forest)
+        .expect("Forest tutored to battlefield");
+    assert!(!view.tapped, "Three Visits puts the Forest in untapped");
+}
+
+/// Fume Spitter is a 1/1 with sacrifice → -1/-1 to a target creature.
+#[test]
+fn fume_spitter_sacrifices_to_shrink_target() {
+    let mut g = two_player_game();
+    let spitter = g.add_card_to_battlefield(0, catalog::fume_spitter());
+    g.clear_sickness(spitter);
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let bear_t_before = g.battlefield.iter()
+        .find(|c| c.id == bear).unwrap().definition.toughness;
+
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: spitter,
+        ability_index: 0,
+        target: Some(Target::Permanent(bear)),
+    }).expect("Fume Spitter sacrifices for the pump");
+    drain_stack(&mut g);
+    g.check_state_based_actions();
+
+    // Spitter is in graveyard (sac_cost burned the source).
+    assert!(!g.battlefield.iter().any(|c| c.id == spitter),
+        "Spitter sacrificed off the battlefield");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == spitter));
+    // 2/2 bear took -1/-1 → effective 1/1, still alive at 0 damage.
+    let bear_view = g.battlefield.iter().find(|c| c.id == bear);
+    if let Some(b) = bear_view {
+        // Bear still on bf → P/T modified.
+        assert!(b.toughness() < bear_t_before as i32,
+            "Bear toughness should be reduced");
+    }
+}
+
+/// Galvanic Blast deals 2 damage when you control fewer than 3
+/// artifacts.
+#[test]
+fn galvanic_blast_deals_two_without_metalcraft() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::galvanic_blast());
+    g.players[0].mana_pool.add(Color::Red, 1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(bear)),
+        mode: None, x_value: None,
+    }).expect("Galvanic Blast castable for {R}");
+    drain_stack(&mut g);
+    g.check_state_based_actions();
+
+    // 2/2 bear takes 2 damage → SBA destroys it.
+    assert!(!g.battlefield.iter().any(|c| c.id == bear),
+        "2-damage Galvanic Blast removes a 2/2 bear");
+}
+
+/// Galvanic Blast deals 4 damage when Metalcraft is online.
+#[test]
+fn galvanic_blast_deals_four_with_metalcraft() {
+    let mut g = two_player_game();
+    // Three artifacts under your control = Metalcraft.
+    g.add_card_to_battlefield(0, catalog::ornithopter());
+    g.add_card_to_battlefield(0, catalog::ornithopter());
+    g.add_card_to_battlefield(0, catalog::ornithopter());
+    // 4-toughness target survives 2 dmg but dies to 4 dmg.
+    let wall = g.add_card_to_battlefield(1, catalog::wall_of_omens());
+    let id = g.add_card_to_hand(0, catalog::galvanic_blast());
+    g.players[0].mana_pool.add(Color::Red, 1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(wall)),
+        mode: None, x_value: None,
+    }).expect("Galvanic Blast castable for {R}");
+    drain_stack(&mut g);
+    g.check_state_based_actions();
+
+    // Wall is 0/4 + draws a card on ETB; opp's hand grew by 1 then the
+    // wall takes 4 damage → SBA kills it.
+    assert!(!g.battlefield.iter().any(|c| c.id == wall),
+        "Metalcraft Galvanic Blast deals 4, killing the 0/4 wall");
+}
+
+/// Pithing Edict forces each opponent to sacrifice a creature or
+/// planeswalker (collapsed to "each opponent" since the engine has no
+/// per-spell opponent target picker).
+#[test]
+fn pithing_edict_forces_each_opponent_to_sacrifice_a_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::pithing_edict());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    }).expect("Pithing Edict castable for {1}{B}");
+    drain_stack(&mut g);
+
+    assert!(!g.battlefield.iter().any(|c| c.id == bear),
+        "Opponent sacrifices the bear (only legal target)");
+}
+
+/// Lash of Malice gives target creature -2/-2 EOT.
+#[test]
+fn lash_of_malice_shrinks_target_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::lash_of_malice());
+    g.players[0].mana_pool.add(Color::Black, 1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(bear)),
+        mode: None, x_value: None,
+    }).expect("Lash of Malice castable for {B}");
+    drain_stack(&mut g);
+    g.check_state_based_actions();
+
+    // 2/2 - 2/2 = 0/0 → SBA destroys.
+    assert!(!g.battlefield.iter().any(|c| c.id == bear),
+        "Bear takes -2/-2 → 0/0 → dies to SBA");
+}
