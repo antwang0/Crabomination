@@ -264,6 +264,34 @@ fn predicate_short_label(p: &crate::card::Predicate) -> String {
         // on the Loose's "if cast from anywhere other than your hand"
         // rider. Surface a short hint so UIs can preview the bonus.
         Predicate::CastFromGraveyard => "if cast from gy".into(),
+        // Push XXIII: SelectorExists labels for "you control X" /
+        // "any X exists" board-state predicates. These commonly gate
+        // Social Snub's may-copy ("while you control a creature"),
+        // future X-counter triggers, etc. The fallback "if X exists"
+        // form is short and reads naturally in the gate badge.
+        Predicate::SelectorExists(_) => "if board matches".into(),
+        Predicate::SelectorCountAtLeast { n: Value::Const(1), .. } => {
+            "if board matches".into()
+        }
+        Predicate::SelectorCountAtLeast { n: Value::Const(k), .. } => {
+            format!("if ≥{k} match")
+        }
+        // Push XXIII: turn-of-controller label. Used by Rapier Wit's
+        // "if it's your turn" stun rider and similar timing gates.
+        Predicate::IsTurnOf(_) => "on your turn".into(),
+        // Push XXIII: top-level And/Or short labels. The All / Any
+        // boolean combinators are common as the *outer* shape of
+        // chained predicate filters (Repartee = magecraft AND target-
+        // is-creature). Surfacing a generic "all conditions" / "any
+        // condition" form is more informative than the catch-all
+        // "conditional" tag.
+        Predicate::All(parts) if parts.is_empty() => "always".into(),
+        Predicate::Any(parts) if parts.is_empty() => "never".into(),
+        Predicate::All(_) => "all conditions".into(),
+        Predicate::Any(_) => "any condition".into(),
+        Predicate::Not(_) => "if not".into(),
+        Predicate::True => "always".into(),
+        Predicate::False => "never".into(),
         // Catch-all: no human-readable form yet.
         _ => "conditional".into(),
     }
@@ -748,6 +776,59 @@ mod tests {
         let lab = &lifegain.gate_label;
         assert!(lab.contains("instant/sorcery") || lab.contains("spell"),
             "gate_label should describe the predicate (got {:?})", lab);
+    }
+
+    /// Push XXIII: predicate_short_label gained labels for
+    /// `SelectorExists`, `SelectorCountAtLeast`, `IsTurnOf`, the
+    /// All/Any boolean combinators, and the Not / True / False trivia.
+    /// Spot-check each new arm so future refactors don't regress the
+    /// labels back to the catch-all "conditional".
+    #[test]
+    fn predicate_short_label_covers_new_variants() {
+        use crate::card::{Predicate, SelectionRequirement, Selector};
+        use crate::effect::{PlayerRef, Value};
+
+        // SelectorExists → "if board matches".
+        let lab = predicate_short_label(&Predicate::SelectorExists(
+            Selector::EachPermanent(SelectionRequirement::Creature),
+        ));
+        assert_eq!(lab, "if board matches");
+
+        // SelectorCountAtLeast: n=1 collapses to the same; n=k formats.
+        let lab = predicate_short_label(&Predicate::SelectorCountAtLeast {
+            sel: Selector::EachPermanent(SelectionRequirement::Creature),
+            n: Value::Const(1),
+        });
+        assert_eq!(lab, "if board matches");
+        let lab = predicate_short_label(&Predicate::SelectorCountAtLeast {
+            sel: Selector::EachPermanent(SelectionRequirement::Creature),
+            n: Value::Const(3),
+        });
+        assert_eq!(lab, "if ≥3 match");
+
+        // IsTurnOf → "on your turn".
+        let lab = predicate_short_label(&Predicate::IsTurnOf(PlayerRef::You));
+        assert_eq!(lab, "on your turn");
+
+        // Boolean combinators.
+        assert_eq!(predicate_short_label(&Predicate::All(vec![])), "always");
+        assert_eq!(predicate_short_label(&Predicate::Any(vec![])), "never");
+        assert_eq!(
+            predicate_short_label(&Predicate::All(vec![Predicate::True])),
+            "all conditions"
+        );
+        assert_eq!(
+            predicate_short_label(&Predicate::Any(vec![Predicate::True])),
+            "any condition"
+        );
+        assert_eq!(
+            predicate_short_label(&Predicate::Not(Box::new(Predicate::True))),
+            "if not"
+        );
+
+        // Trivial constants.
+        assert_eq!(predicate_short_label(&Predicate::True), "always");
+        assert_eq!(predicate_short_label(&Predicate::False), "never");
     }
 
     /// Planeswalkers' loyalty abilities should surface in the wire view so

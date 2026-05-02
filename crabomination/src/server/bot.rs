@@ -99,21 +99,68 @@ impl Bot for RandomBot {
                     // Pick the next alive opponent as the default attack
                     // target; in multiplayer this is just the next seat.
                     let target_player = state.next_alive_seat(seat);
+                    // Push XXIII: walk opp planeswalkers so the bot can pick
+                    // one off when the assigned attackers' total power
+                    // matches its loyalty. Returns Vec<(CardId, loyalty)>
+                    // sorted by loyalty ascending — cheapest to kill first.
+                    let mut opp_walkers: Vec<(crate::card::CardId, u32)> = state
+                        .battlefield
+                        .iter()
+                        .filter(|c| c.controller != seat && c.definition.is_planeswalker())
+                        .map(|c| {
+                            let loyalty = c.counter_count(
+                                crate::card::CounterType::Loyalty,
+                            );
+                            (c.id, loyalty)
+                        })
+                        .collect();
+                    opp_walkers.sort_by_key(|(_, l)| *l);
+
                     // Filter on `controller`, not `owner`: cards that have
                     // changed control (Threaten / Mind Control / etc.) are
                     // attacked WITH by the new controller, not the original
-                    // owner. Mismatching here would have us declare attackers
-                    // we don't actually control — the engine rejects with
-                    // `NotYourPriority` and the bot loop deadlocks.
-                    let attacks: Vec<Attack> = state
+                    // owner.
+                    let mut available: Vec<&crate::card::CardInstance> = state
                         .battlefield
                         .iter()
                         .filter(|c| c.controller == seat && c.can_attack())
-                        .map(|c| Attack {
-                            attacker: c.id,
-                            target: AttackTarget::Player(target_player),
-                        })
                         .collect();
+                    // Sort attackers by power descending so we apply the
+                    // strongest to the cheapest walker first (greedy
+                    // first-fit). Power == 0 attackers (Defender flickers)
+                    // contribute zero to walker damage so they fall through
+                    // to the player target.
+                    available.sort_by_key(|c| std::cmp::Reverse(c.power()));
+
+                    let mut attacks: Vec<Attack> = Vec::with_capacity(available.len());
+                    let mut walker_iter = opp_walkers.into_iter();
+                    let mut current_walker: Option<(crate::card::CardId, u32)> =
+                        walker_iter.next();
+                    let mut acc_power: i32 = 0;
+
+                    for c in available {
+                        // If a walker is open and we'd still need power to
+                        // kill it, send this attacker its way. Once a
+                        // walker accumulates ≥ loyalty, advance to the
+                        // next walker (so multiple walkers can die in
+                        // one alpha-strike turn).
+                        if let Some((wid, wloyalty)) = current_walker {
+                            attacks.push(Attack {
+                                attacker: c.id,
+                                target: AttackTarget::Planeswalker(wid),
+                            });
+                            acc_power += c.power();
+                            if acc_power >= wloyalty as i32 {
+                                current_walker = walker_iter.next();
+                                acc_power = 0;
+                            }
+                        } else {
+                            attacks.push(Attack {
+                                attacker: c.id,
+                                target: AttackTarget::Player(target_player),
+                            });
+                        }
+                    }
                     Some(GameAction::DeclareAttackers(attacks))
                 } else {
                     Some(GameAction::PassPriority)
@@ -1059,5 +1106,61 @@ mod tests {
         let bolt = catalog::lightning_bolt();
         assert_eq!(modal_mode_count(&bolt.effect), None,
             "Lightning Bolt is not modal");
+    }
+
+    /// Push XXIII: bot now considers opp planeswalkers as attack
+    /// targets and picks them off when its attackers' total power
+    /// matches the walker's loyalty. Build a bot-controlled 4-power
+    /// attacker against a 3-loyalty planeswalker — the bot should
+    /// route the attacker at the walker (cheaper kill) instead of
+    /// the player.
+    #[test]
+    fn bot_attacks_killable_planeswalker() {
+        let mut g = two_player_game();
+        // P0 (active player) controls a Shivan Dragon (5/5).
+        let dragon = g.add_card_to_battlefield(0, catalog::shivan_dragon());
+        g.clear_sickness(dragon);
+        // P1 controls Karn, Scion of Urza (3 starting loyalty).
+        let karn = g.add_card_to_battlefield(1, catalog::karn_scion_of_urza());
+        g.clear_sickness(karn);
+        // Force the bot into the DeclareAttackers step on its own turn.
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        g.step = TurnStep::DeclareAttackers;
+
+        let mut bot = RandomBot::new();
+        let action = bot.next_action(&g, 0).expect("bot should declare attackers");
+        match action {
+            GameAction::DeclareAttackers(attacks) => {
+                assert_eq!(attacks.len(), 1, "exactly one attacker");
+                assert_eq!(attacks[0].attacker, dragon, "Dragon attacks");
+                assert_eq!(attacks[0].target, AttackTarget::Planeswalker(karn),
+                    "Dragon should target the killable walker, not the player");
+            }
+            other => panic!("expected DeclareAttackers, got {:?}", other),
+        }
+    }
+
+    /// When no planeswalker is on board, the bot still attacks the
+    /// player as before.
+    #[test]
+    fn bot_attacks_player_when_no_walkers_present() {
+        let mut g = two_player_game();
+        let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        g.clear_sickness(bear);
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        g.step = TurnStep::DeclareAttackers;
+
+        let mut bot = RandomBot::new();
+        let action = bot.next_action(&g, 0).expect("bot should declare attackers");
+        match action {
+            GameAction::DeclareAttackers(attacks) => {
+                assert_eq!(attacks.len(), 1);
+                assert_eq!(attacks[0].target, AttackTarget::Player(1),
+                    "no walker → bot attacks the player");
+            }
+            other => panic!("expected DeclareAttackers, got {:?}", other),
+        }
     }
 }
