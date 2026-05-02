@@ -7,6 +7,37 @@ See `CUBE_FEATURES.md` (cube-card implementation status) and
 
 ## Recent additions
 
+- ✅ **STX 2021 push XX (2026-05-02)**: 19 new STX 2021 card factories +
+  1 engine primitive (`SelectionRequirement::Monocolored`) + 2 STX
+  promotions (Vanishing Verse + Beledros Witherbloom both 🟡 → ✅).
+  Tests at 1102 (was 1079, +23 new):
+  - **`SelectionRequirement::Monocolored`** — sibling to push VII's
+    `Multicolored` and `Colorless`. Matches when a card's mana cost
+    contains exactly one distinct colored pip (`distinct_colors() ==
+    1`). Wired into both `evaluate_requirement` (battlefield/permanent)
+    and `evaluate_requirement_on_card` (library/non-bf zones), so it
+    works for both target prompts and library searches.
+  - **Vanishing Verse 🟡 → ✅** — target filter promoted to `Permanent
+    ∧ Nonland ∧ Monocolored` via the new predicate. Two-color and
+    colorless permanents now reject as invalid targets at cast time.
+  - **Beledros Witherbloom 🟡 → ✅** — "Pay 10 life: Untap each land
+    you control. Activate only as a sorcery." now wired via push XV's
+    `ActivatedAbility.life_cost: u32` gate + `Effect::Untap` over
+    `Selector::EachPermanent(Land & ControlledByYou)`. Sorcery-speed
+    flag set true; pre-flight life check rejects with
+    `InsufficientLife` when life < 10.
+  - **19 new STX 2021 cards** in `catalog::sets::stx::mono`:
+    Pillardrop Warden, Beaming Defiance, Ageless Guardian, Expel
+    (white); Eureka Moment, Curate, Skyswimmer Koi, Stonebinder's
+    Familiar (blue); Necrotic Fumes, Specter of the Fens (black);
+    Ardent Dustspeaker, Dragon's Approach (red); Bookwurm, Spined
+    Karok, Field Trip, Reckless Amplimancer (green); Square Up,
+    Thrilling Discovery, Quandrix Cultivator, Quintorius Field
+    Historian (multicolor). 10 of the 19 ship as ✅ on existing
+    primitives; 9 ship as 🟡 with one-line gaps tracked in the
+    table.
+  - 22 new tests in `tests::stx::*`. All 1102 lib tests pass.
+
 - ✅ **SOS push XIX (2026-05-02)**: Lorehold school complete + 11 SOS
   cards added/promoted (1 ✅ + 10 🟡) + UI label cleanup. Tests at
   1079 (was 1063, +16 new):

@@ -49,6 +49,61 @@ All 246 cards marked ✅ or 🟡 have a corresponding factory in
 `crabomination/src/catalog/sets/sos/`; the audit script reports 0 false
 positives and 0 stale ⏳ rows.
 
+## 2026-05-02 push XX: STX 2021 expansion + Monocolored predicate + Beledros wire
+
+19 new STX 2021 card factories + 1 engine primitive + 2 SOS/STX
+🟡→✅ promotions. Tests pass at 1102 (was 1079, +23 new).
+
+### Engine improvements
+
+- **`SelectionRequirement::Monocolored`** — sibling to push VII's
+  `Multicolored` and `Colorless`. Matches when a card's mana cost
+  contains exactly one distinct colored pip (`distinct_colors() == 1`).
+  Wired into both `evaluate_requirement` (battlefield/permanent) and
+  `evaluate_requirement_on_card` (library/non-bf zones), so it works
+  for both target prompts and library searches. Powers Vanishing
+  Verse's "exile target nonland, monocolored permanent" exact-printed
+  filter.
+
+### Card promotions to ✅
+
+| Card | School / Color | Status before → after | Notes |
+|---|---|---|---|
+| Vanishing Verse | Silverquill (STX) | 🟡 → ✅ | Target filter promoted to `Permanent ∧ Nonland ∧ Monocolored` via the new predicate. Two-color and colorless permanents now reject as invalid targets at cast time. |
+| Beledros Witherbloom | Witherbloom (STX) | 🟡 → ✅ | "Pay 10 life: Untap each land you control. Activate only as a sorcery." now wired via push XV's `ActivatedAbility.life_cost: u32` gate (rejects with `InsufficientLife` < 10) + `Effect::Untap` over `Selector::EachPermanent(Land & ControlledByYou)`. Sorcery-speed flag matches printed restriction. |
+
+### New STX 2021 cards (`catalog::sets::stx::mono`)
+
+| Card | Cost | Status | Notes |
+|---|---|---|---|
+| Pillardrop Warden | {2}{W} | 🟡 | 2/3 Spirit Cleric. ETB Scry 1. |
+| Beaming Defiance | {1}{W} | ✅ | Instant: +1/+1 EOT and Hexproof EOT on target friendly creature. |
+| Ageless Guardian | {1}{W} | 🟡 | 0/4 Spirit Wall with Defender + Vigilance. Becomes-attacker rider omitted. |
+| Expel | {2}{W} | ✅ | Instant: exile target attacking or blocking creature. |
+| Eureka Moment | {2}{U} | ✅ | Instant: untap target land + draw 2. |
+| Curate | {1}{U} | ✅ | Instant: Surveil 2 + draw 1. |
+| Skyswimmer Koi | {2}{U} | ✅ | 2/3 Fish; {4}{U}: +1/+1 EOT activated mana sink. |
+| Stonebinder's Familiar | {U} | 🟡 | 1/2 Spirit. Approximates "permanent → graveyard" trigger as `EventKind::CreatureDied/AnyPlayer` (engine has no PermanentToGraveyard event yet). |
+| Necrotic Fumes | {1}{B}{B} | 🟡 | Sorcery: sac a creature + exile target creature. Additional-cost-on-cast collapsed to in-resolution sac. |
+| Specter of the Fens | {2}{B}{B} | ✅ | 3/3 Flying Specter; ETB mints a 1/1 black Pest with the standard die-→-gain-1 rider. |
+| Ardent Dustspeaker | {3}{R} | ✅ | 3/3 Minotaur Shaman. Begin-combat trigger exiles up to one card from a graveyard. |
+| Dragon's Approach | {1}{R} | 🟡 | Sorcery: 3 damage to any target. The "if 4+ Dragon's Approach in gy, may search for a Dragon" rider omitted (no card-name-match predicate). |
+| Bookwurm | {3}{G}{G} | ✅ | 4/5 Wurm; ETB gain 4 life + draw a card. |
+| Spined Karok | {3}{G} | ✅ | 4/5 vanilla Beast (printed Wurm flavor; we use Beast since Wurm is reserved for Strixhaven-specific tribal hooks). |
+| Field Trip | {2}{G} | ✅ | Sorcery — Lesson. Search library for a basic Forest, put it onto the battlefield tapped, then Scry 1. |
+| Reckless Amplimancer | {2}{G} | 🟡 | 1/1 base body + ETB AddCounter scaled by `Value::PermanentCountControlledBy(You)`. Approximates "for each mana symbol on permanents you control". |
+| Square Up | {U}{R} | 🟡 | Instant: +0/+1 EOT pump on target friendly + fight an opp creature. Multi-target prompt collapsed to one chosen friendly + auto-picked enemy. |
+| Thrilling Discovery | {1}{U}{R} | 🟡 | Instant: discard 1 + 2 life + draw 2. Additional-cost-on-cast collapsed to in-resolution discard. |
+| Quandrix Cultivator | {3}{G}{U} | ✅ | 3/4 Elf Druid; ETB tutors two basic lands tapped (the printed "up to two" is approximated as exactly-two; second search no-ops if library is empty). |
+| Quintorius, Field Historian | {2}{R}{W} | 🟡 | 3/4 Elephant Spirit. ETB exiles a graveyard card + creates a 3/2 R/W Spirit token. The "may pay {3}{R}{W} on gy-leave to make another Spirit" rider omitted. |
+
+### Tests
+
+22 new functionality tests in `tests::stx::*` exercising P/T,
+ETB triggers, activated abilities, target filtering, and the
+Beledros + Vanishing Verse promotions. All 1102 lib tests pass
+(was 1079, +23 net).
+
 ## 2026-05-02 push XIX: Molten Note + Lorehold-closer + body-only batch
 
 One engine-faithful Lorehold finisher (Molten Note — closes the last
@@ -1286,7 +1341,7 @@ parity is a matter of porting card factories one at a time.
 | Spirited Companion | {1}{W} | ✅ | 1/2 Dog Spirit. ETB: draw a card. |
 | Eyetwitch | {B} | ✅ | 1/1 Pest. When dies: "learn" approximated as `Draw 1` (no Lesson sideboard yet). |
 | Closing Statement | {X}{W}{W} | ✅ | Sorcery. Exile target nonland permanent. You gain X life (`Value::XFromCost`). |
-| Vanishing Verse | {W}{B} | 🟡 | Instant. Exile target nonland permanent. Real Oracle restricts to monocoloured permanents — collapsed to "any nonland permanent" pending a `MonocoloredOnly` predicate. |
+| Vanishing Verse | {W}{B} | ✅ | Push XX: target filter is now `Permanent ∧ Nonland ∧ Monocolored` via the new `SelectionRequirement::Monocolored` predicate. Two-color and colorless permanents reject as invalid targets at cast time. |
 | Killian, Ink Duelist | {W}{B} | 🟡 | 2/3 Legendary Human Warlock. Lifelink wired. "Spells you cast that target a creature cost {2} less" static still ⏳ (target-aware cost reduction primitive). |
 | Devastating Mastery | {4}{W}{W} | 🟡 | Sorcery. Destroy each nonland permanent ("Wrath of God + lands"). Alt cost {7}{W}{W} reanimate clause is ⏳ (alt-cost-implies-mode primitive). |
 | Felisa, Fang of Silverquill | {2}{W}{B} | ✅ | 4/3 Legendary Cat Cleric, Flying + Lifelink. Push XVI: counter-bearing-creature-dies → Inkling trigger now wired via `EventKind::CreatureDied/AnotherOfYours` filtered by `EntityMatches { what: TriggerSource, filter: WithCounter(+1/+1) }`. Counters persist on a card after move-to-graveyard (only `damage`/`tapped`/`attached_to` are cleared on zone-out), so the post-die graveyard-resident card still reports its `+1/+1` counters via `evaluate_requirement_static`. |
@@ -1364,7 +1419,7 @@ each college's flagship Dragon, plus a few cross-college staples.
 | Spectacle Mage | {U}{R} | 🟡 | 1/2 Human Wizard with Prowess. Hybrid {U/R}{U/R} approximated as {U}{R}. Prowess keyword tag is correct (engine-side wiring still pending). |
 | Mage Hunters' Onslaught | {2}{B}{B} | ✅ | Sorcery. Destroy target creature; draw a card. Test: `mage_hunters_onslaught_destroys_creature_and_draws_card`. |
 | Galazeth Prismari | {2}{U}{R} | 🟡 | 3/4 Legendary Dragon Wizard, Flying. ETB creates a Treasure token (full real-card behaviour). The "artifacts you control are mana sources" static is still ⏳ (no `GrantActivatedAbility(applies_to)` primitive). Test: `galazeth_prismari_is_three_four_flying_dragon_with_etb_treasure`. |
-| Beledros Witherbloom | {3}{B}{B}{G}{G} | 🟡 | 6/6 Legendary Demon, Flying + Trample + Lifelink. Pay-10-life mass-untap activated is ⏳. |
+| Beledros Witherbloom | {3}{B}{B}{G}{G} | ✅ | Push XX: 6/6 Legendary Demon, Flying + Trample + Lifelink. "Pay 10 life: Untap each land you control. Activate only as a sorcery." now wired via push XV's `ActivatedAbility.life_cost: u32` gate (rejects with `InsufficientLife` < 10) + `Effect::Untap` over `Selector::EachPermanent(Land & ControlledByYou)`. Sorcery-speed flag set true to match printed restriction. |
 | Velomachus Lorehold | {3}{R}{R}{W} | 🟡 | 5/5 Legendary Dragon, Flying + Vigilance + Haste. Attack-trigger reveal-and-cast is ⏳ (cast-from-exile-without-paying primitive). |
 | Tanazir Quandrix | {2}{G}{G}{U}{U} | 🟡 | 5/5 Legendary Dragon, Flying + Trample. ETB +1/+1-counter doubling is ⏳ (no counter-multiplier primitive). |
 | Shadrix Silverquill | {2}{W}{B} | 🟡 | 4/4 Legendary Dragon, Flying + Double Strike. Choose-2-of-3 attack-trigger is ⏳ (no multi-mode-pick primitive). |
