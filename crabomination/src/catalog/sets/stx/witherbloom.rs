@@ -586,3 +586,63 @@ pub fn witherbloom_command() -> CardDefinition {
         opening_hand: None,
     }
 }
+
+// ── Foul Play ───────────────────────────────────────────────────────────────
+
+/// Foul Play — {2}{B} Instant. Printed Oracle:
+/// "Destroy target tapped creature.
+///  If you control two or more Wizards, draw a card."
+///
+/// Push XXX: ✅. Witherbloom-flavoured tapped-creature kill. Wired via
+/// `Effect::Seq([Destroy(Creature ∧ Tapped), If(≥2 Wizards, Draw 1)])`
+/// — the existing `Predicate::ValueAtLeast(CountOf(...), 2)` shape
+/// (same family as Galvanic Blast's metalcraft branching).
+/// `Effect::If` resolves the gate against the controller's
+/// battlefield Wizards-you-control count post-destroy. The Wizard
+/// tribal predicate uses `HasCreatureType(Wizard)` so token Wizards
+/// (Mascot Exhibition's birds aren't Wizards, but Spectacle Mage,
+/// Symmetry Sage, Codespell Cleric all qualify) feed the gate.
+pub fn foul_play() -> CardDefinition {
+    use crate::card::{CreatureType, Predicate};
+    use crate::effect::shortcut::target_filtered;
+    CardDefinition {
+        name: "Foul Play",
+        cost: cost(&[generic(2), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Destroy {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::Tapped),
+                ),
+            },
+            Effect::If {
+                cond: Predicate::ValueAtLeast(
+                    Value::count(Selector::EachPermanent(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::HasCreatureType(CreatureType::Wizard))
+                            .and(SelectionRequirement::ControlledByYou),
+                    )),
+                    Value::Const(2),
+                ),
+                then: Box::new(Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}

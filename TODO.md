@@ -12,13 +12,17 @@ See `CUBE_FEATURES.md` (cube-card implementation status) and
   on broadcast Attack triggers + UI labels for AttackersThisCombat
   and And-composite stack filters. Tests at 1241 (was 1227; +14
   net).
-  - **8 new STX 2021 cards**:
+  - **10 new STX 2021 cards**:
     - **Witherbloom**: **Mortality Spear** ✅ ({3}{B}{G} Sorcery —
-      Lesson, destroy creature/PW).
+      Lesson, destroy creature/PW), **Foul Play** ✅ ({2}{B} Instant,
+      destroy tapped creature + draw if ≥2 Wizards via
+      `Predicate::ValueAtLeast(CountOf(Wizards), 2)`).
     - **Silverquill**: **Dueling Coach** ✅ ({2}{W}, 3/3 Vigilance
       Cleric, magecraft +1/+1 counter), **Hall Monitor** ✅ ({W},
-      1/1 Wizard, magecraft CantBlock-EOT grant), **Karok Wrangler**
-      🟡 ({2}{W}, 3/3 Wizard, ETB tap+stun).
+      1/1 Wizard, magecraft CantBlock-EOT grant), **Clever
+      Lumimancer** ✅ ({W}, 1/1 Wizard, magecraft self-pump
+      +2/+2 EOT), **Karok Wrangler** 🟡 ({2}{W}, 3/3 Wizard, ETB
+      tap+stun).
     - **Lorehold**: **Hofri Ghostforge** 🟡 ({2}{R}{W}, 3/4 Legendary
       with anthem), **Mascot Interception** 🟡 ({2}{R}{W} Instant,
       destroy-substitute for "gain control"), **Approach of the
@@ -58,12 +62,14 @@ See `CUBE_FEATURES.md` (cube-card implementation status) and
     Choreographed Sparks's stack-spell filter, Saw It Coming-
     style counter targets, and any "your creature" / "opp's
     artifact" matters.
-  - **14 new tests**: 11 in `tests::stx::*` (one per new card +
-    one per promotion + Augusta's solo-attacker negative case),
-    2 server-side view (`entity_matches_label_covers_and_
-    composite_filters`, `predicate_short_label_covers_attackers_
-    this_combat`), 1 replacement test (`augusta_dean_of_order_
-    pumps_when_two_attackers` replacing the old `_pumps_attacker`).
+  - **18 new tests**: 15 in `tests::stx::*` (one per new card +
+    one per promotion + Augusta's solo-attacker negative case +
+    3 Foul Play tests including untapped-target rejection +
+    Wizard-count gate + Clever Lumimancer self-pump), 2 server-side
+    view (`entity_matches_label_covers_and_composite_filters`,
+    `predicate_short_label_covers_attackers_this_combat`), 1
+    replacement test (`augusta_dean_of_order_pumps_when_two_
+    attackers` replacing the old `_pumps_attacker`).
 
 - ✅ **Push XXIX (2026-05-02)**: 10 new STX 2021 cards across schools +
   Abrupt Decay MV bug fix + UI Or-composite filter labels. Tests at

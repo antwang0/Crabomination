@@ -717,6 +717,43 @@ pub fn hall_monitor() -> CardDefinition {
     }
 }
 
+// ── Clever Lumimancer ───────────────────────────────────────────────────────
+
+/// Clever Lumimancer — {W}, 1/1 Human Wizard. Printed Oracle:
+/// "Magecraft — Whenever you cast or copy an instant or sorcery spell,
+///  Clever Lumimancer gets +2/+2 until end of turn."
+///
+/// Push XXX: ✅. Aggressive Silverquill magecraft creature — bigger
+/// per-magecraft pump than Symmetry Sage's +1/+0 (just stat-line, no
+/// flying) on the same {W} 1/1 frame. Wired via the `magecraft_self_
+/// pump(2, 2)` shortcut: the self-source pump fires on every IS cast
+/// for +2/+2 EOT.
+pub fn clever_lumimancer() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_self_pump;
+    CardDefinition {
+        name: "Clever Lumimancer",
+        cost: cost(&[w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_self_pump(2, 2)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
 // ── Inkling Summoning siblings: Karok Wrangler ──────────────────────────────
 
 /// Karok Wrangler — {2}{W}, 3/3 Human Wizard. Printed Oracle:
