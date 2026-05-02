@@ -315,16 +315,32 @@ pub fn eyeblight_cullers() -> CardDefinition {
 /// creature gets -X/-X until end of turn, where X is the number of
 /// creatures you control."
 ///
-/// 🟡 The -X/-X activated ability omits the X-scaling (no `Value`-keyed
-/// `PumpPT` from a count primitive in activated paths) — collapses to a
-/// flat -1/-1 EOT; combat math still works at the typical 2–3 creature
-/// board state, just less explosively. Lifegain trigger is wired
-/// faithfully against a target opponent (auto-target picks any
-/// opponent).
+/// Push XXX: 🟡 → ✅. The activated -X/-X is now properly scaled by
+/// `Value::CountOf(EachPermanent(Creature ∧ ControlledByYou))` —
+/// Dina counts as one of her own creatures (matches the printed
+/// counting; the activation auto-targets a creature you don't control,
+/// so the self-counting pump is never self-defeating). At a typical 3-
+/// creature board state the activated ability shrinks the target by
+/// 3/3 EOT (hard kill on most early-game blockers); at 5-creature
+/// snowball it's -5/-5. Lifegain trigger remains wired against a target
+/// opponent (auto-target picks any opponent).
+///
+/// Engine plumbing: `Value::Diff(Const(0), CountOf(...))` yields the
+/// negated count (PumpPT accepts negative i32 power/toughness — same
+/// shape as Lash of Malice's flat -2/-2). The new selector evaluates
+/// at activation-resolution time, so casting Dina + ramping creatures
+/// before activating snowballs the X.
 pub fn dina_soul_steeper() -> CardDefinition {
     use crate::card::Keyword;
     use crate::effect::Duration;
     use crate::effect::shortcut::target_filtered;
+    let creatures_you_control = Selector::EachPermanent(
+        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+    );
+    let neg_x = Value::Diff(
+        Box::new(Value::Const(0)),
+        Box::new(Value::CountOf(Box::new(creatures_you_control))),
+    );
     CardDefinition {
         name: "Dina, Soul Steeper",
         cost: cost(&[b(), g()]),
@@ -343,8 +359,8 @@ pub fn dina_soul_steeper() -> CardDefinition {
             mana_cost: cost(&[generic(1), b(), g()]),
             effect: Effect::PumpPT {
                 what: target_filtered(SelectionRequirement::Creature),
-                power: Value::Const(-1),
-                toughness: Value::Const(-1),
+                power: neg_x.clone(),
+                toughness: neg_x,
                 duration: Duration::EndOfTurn,
             },
             once_per_turn: false,
@@ -443,6 +459,47 @@ pub fn pest_infestation() -> CardDefinition {
             who: PlayerRef::You,
             count: Value::XFromCost,
             definition: pest,
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Mortality Spear (Lesson) ────────────────────────────────────────────────
+
+/// Mortality Spear — {3}{B}{G} Sorcery — Lesson.
+/// "Destroy target creature or planeswalker."
+///
+/// Push XXX: ✅. Witherbloom's flexible Lesson removal — bigger fixed
+/// cost than Necrotic Fumes ({1}{B}{B} sac-2 + exile-2) but no per-cast
+/// rider, just a clean two-target-type kill. Wired with
+/// `Effect::Destroy` on a `Creature OR Planeswalker` target filter (same
+/// shape as Hero's Downfall / Killing Wave / Mage Hunters' Onslaught).
+/// Lesson sub-type is set so future Learn-aware code can filter on it.
+pub fn mortality_spear() -> CardDefinition {
+    use crate::effect::shortcut::target_filtered;
+    CardDefinition {
+        name: "Mortality Spear",
+        cost: cost(&[generic(3), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes {
+            spell_subtypes: vec![crate::card::SpellSubtype::Lesson],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Destroy {
+            what: target_filtered(
+                SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+            ),
         },
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],

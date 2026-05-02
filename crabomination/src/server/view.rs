@@ -258,6 +258,20 @@ fn predicate_short_label(p: &crate::card::Predicate) -> String {
         Predicate::ValueAtMost(Value::CountOf(_), Value::Const(n)) => {
             format!("if ≤{n} match")
         }
+        // Push XXX: AttackersThisCombat-keyed gates. Used by Augusta,
+        // Dean of Order's "two or more creatures attack" trigger
+        // (`Predicate::ValueAtLeast(AttackersThisCombat, Const(2))`)
+        // and the Adriana, Captain of the Guard family. Surface a
+        // short hint so UIs can preview the gate.
+        Predicate::ValueAtLeast(Value::AttackersThisCombat, Value::Const(1)) => {
+            "if attacking".into()
+        }
+        Predicate::ValueAtLeast(Value::AttackersThisCombat, Value::Const(n)) => {
+            format!("if ≥{n} attackers")
+        }
+        Predicate::ValueAtMost(Value::AttackersThisCombat, Value::Const(n)) => {
+            format!("if ≤{n} attackers")
+        }
         // EntityMatches {what, filter}: predicate over a specific entity
         // (the trigger source, target, or source-of-cast spell). The
         // Repartee filter ("trigger source matches Creature") is the
@@ -403,6 +417,37 @@ fn entity_matches_label(filter: &crate::card::SelectionRequirement) -> String {
         // family. Recurses one level only — deeper Or chains fall back
         // to the generic hint.
         SR::Or(a, b) => or_label(a, b),
+        // Push XXX: And-composite filters where one side is
+        // `IsSpellOnStack` (counter-target-spell filters) collapse to
+        // the *other* side's label — the "spell" qualifier is
+        // implicit when the trigger is over a spell-on-stack
+        // selector. Powers Choreographed Sparks's "target IS spell
+        // you control" filter rendering as "if you control" instead
+        // of the generic "if matches filter". Also covers the
+        // Counterspell-style "IsSpellOnStack AND (Instant OR
+        // Sorcery)" — recurses into the right-hand-side via Or label.
+        SR::And(a, b) if matches!(a.as_ref(), SR::IsSpellOnStack) => entity_matches_label(b),
+        SR::And(a, b) if matches!(b.as_ref(), SR::IsSpellOnStack) => entity_matches_label(a),
+        // Push XXX: And-composite of `ControlledByYou`/`ControlledBy
+        // Opponent` plus a type token collapses to "if your X" /
+        // "if opp's X" — covers `Creature ∧ ControlledByYou`,
+        // `Artifact ∧ ControlledByOpponent`, etc.
+        SR::And(a, b) if matches!(a.as_ref(), SR::ControlledByYou) => {
+            if let Some(t) = simple_type_token(b) { format!("if your {t}") }
+            else { "if matches filter".into() }
+        }
+        SR::And(a, b) if matches!(b.as_ref(), SR::ControlledByYou) => {
+            if let Some(t) = simple_type_token(a) { format!("if your {t}") }
+            else { "if matches filter".into() }
+        }
+        SR::And(a, b) if matches!(a.as_ref(), SR::ControlledByOpponent) => {
+            if let Some(t) = simple_type_token(b) { format!("if opp's {t}") }
+            else { "if matches filter".into() }
+        }
+        SR::And(a, b) if matches!(b.as_ref(), SR::ControlledByOpponent) => {
+            if let Some(t) = simple_type_token(a) { format!("if opp's {t}") }
+            else { "if matches filter".into() }
+        }
         // Composite / complex predicates fall through to the generic
         // "if matches filter" hint.
         _ => "if matches filter".into(),
@@ -1138,6 +1183,56 @@ mod tests {
                 .or(SelectionRequirement::Enchantment),
         };
         assert_eq!(predicate_short_label(&p), "if matches filter");
+    }
+
+    /// Push XXX: `entity_matches_label` now collapses common
+    /// And-composite filters too. `IsSpellOnStack ∧ X` strips the
+    /// "spell" qualifier; `ControlledByYou ∧ X` / `ControlledBy
+    /// Opponent ∧ X` collapse to "if your X" / "if opp's X".
+    /// Covers Choreographed Sparks's "you control" stack-spell
+    /// filter, Saw It Coming-style counter-target-IS filters, and
+    /// any future "your creature" / "opp's artifact" matters.
+    #[test]
+    fn entity_matches_label_covers_and_composite_filters() {
+        use crate::card::{Predicate, SelectionRequirement, Selector};
+        // IsSpellOnStack ∧ ControlledByYou → "if you control"
+        let p = Predicate::EntityMatches {
+            what: Selector::TriggerSource,
+            filter: SelectionRequirement::IsSpellOnStack
+                .and(SelectionRequirement::ControlledByYou),
+        };
+        assert_eq!(predicate_short_label(&p), "if you control");
+        // Creature ∧ ControlledByYou → "if your creature"
+        let p = Predicate::EntityMatches {
+            what: Selector::TriggerSource,
+            filter: SelectionRequirement::Creature
+                .and(SelectionRequirement::ControlledByYou),
+        };
+        assert_eq!(predicate_short_label(&p), "if your creature");
+        // Artifact ∧ ControlledByOpponent → "if opp's artifact"
+        let p = Predicate::EntityMatches {
+            what: Selector::TriggerSource,
+            filter: SelectionRequirement::Artifact
+                .and(SelectionRequirement::ControlledByOpponent),
+        };
+        assert_eq!(predicate_short_label(&p), "if opp's artifact");
+    }
+
+    /// Push XXX: `predicate_short_label` now formats the new
+    /// `Value::AttackersThisCombat` primitive in
+    /// `Predicate::ValueAtLeast(_, Const(n))` shape — surfaces the
+    /// gate as "if ≥N attackers" so Augusta, Dean of Order's
+    /// "two or more creatures attack" rider reads cleanly.
+    #[test]
+    fn predicate_short_label_covers_attackers_this_combat() {
+        use crate::card::Predicate;
+        use crate::effect::Value;
+        let p = Predicate::ValueAtLeast(Value::AttackersThisCombat, Value::Const(2));
+        assert_eq!(predicate_short_label(&p), "if ≥2 attackers");
+        let p = Predicate::ValueAtLeast(Value::AttackersThisCombat, Value::Const(1));
+        assert_eq!(predicate_short_label(&p), "if attacking");
+        let p = Predicate::ValueAtMost(Value::AttackersThisCombat, Value::Const(3));
+        assert_eq!(predicate_short_label(&p), "if ≤3 attackers");
     }
 
     /// Planeswalkers' loyalty abilities should surface in the wire view so

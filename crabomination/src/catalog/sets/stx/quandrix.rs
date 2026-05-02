@@ -10,8 +10,8 @@
 
 use super::no_abilities;
 use crate::card::{
-    ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, Effect, Selector,
-    SelectionRequirement, Subtypes, TokenDefinition, Value,
+    ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, Effect, Keyword,
+    Selector, SelectionRequirement, Subtypes, TokenDefinition, Value,
 };
 use crate::effect::shortcut::{magecraft, target_filtered};
 use crate::effect::{Duration, PlayerRef};
@@ -323,6 +323,45 @@ pub fn quandrix_command() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+
+// ── Augmenter Pugilist ──────────────────────────────────────────────────────
+
+/// Augmenter Pugilist — {3}{G}{G}, 6/6 Human Warrior with Trample.
+/// Printed Oracle: "Trample. Activated abilities of creatures cost {2}
+/// more to activate."
+///
+/// Push XXX: 🟡. Big-body Quandrix beater — six power, six toughness,
+/// trample, all on a {3}{G}{G} curve. The static "activated abilities of
+/// creatures cost {2} more" is omitted (no `StaticEffect::TaxActivated
+/// Abilities` primitive yet — same gap as Trinisphere's "minimum cost"
+/// flavor in CUBE_FEATURES.md). The body alone is still a respectable
+/// 5-mana finisher; the static would round it up to a hate piece against
+/// equipment / Walking Ballista / +X infinite combos.
+pub fn augmenter_pugilist() -> CardDefinition {
+    CardDefinition {
+        name: "Augmenter Pugilist",
+        cost: cost(&[generic(3), g(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 6,
+        toughness: 6,
+        keywords: vec![Keyword::Trample],
+        effect: Effect::Noop,
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],

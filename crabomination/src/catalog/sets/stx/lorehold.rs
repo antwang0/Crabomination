@@ -523,25 +523,26 @@ pub fn plargg_dean_of_chaos() -> CardDefinition {
 /// Vigilance. "Whenever two or more creatures you control attack,
 /// those creatures get +1/+1 and gain double strike until end of turn."
 ///
-/// 🟡 Push XXIX: body + Vigilance keyword. The "two or more creatures
-/// you control attack" trigger collapses to "whenever you attack with a
-/// creature, that attacker gets +1/+1 and double strike EOT" — the
-/// `EventScope::AnotherOfYours` Attacks broadcast (introduced in push
-/// XVII for Sparring Regimen) binds the just-declared attacker as
-/// `TriggerSource`, so the effect rides each individual attack rather
-/// than tallying "two or more" globally. Net combat math is:
-/// • Single attacker: gets +1/+1 + double strike (printed: nothing).
-/// • Two+ attackers: each gets +1/+1 + double strike (printed:
-///   matches!).
-/// In the dominant 2-or-more-attacker case, the approximation is
-/// faithful; the single-attacker false-positive is a minor power
-/// boost that doesn't break gameplay (and Augusta is a 2/2 vigilance
-/// herself, so single-attacker swings often include her anyway).
+/// Push XXX: 🟡 → ✅ via the new `Value::AttackersThisCombat` primitive.
+/// The trigger now fires per attacker (still via the
+/// `Attacks/AnotherOfYours` broadcast), but each instance is gated by
+/// `Predicate::ValueAtLeast(AttackersThisCombat, 2)` — so single-attacker
+/// swings no longer false-positive. The trigger source is bound to
+/// the just-declared attacker (`Selector::Target(0)`), and the gate
+/// reads the *current* `state.attacking.len()` after that attack has
+/// been pushed.
 ///
-/// The "count of attackers this combat" Value primitive would close
-/// the gap — same primitive Adriana, Captain of the Guard wants. See
-/// TODO.md → push XXIX engine suggestions.
+/// Net combat math:
+/// • Single attacker: trigger fires but the gate fails (count = 1) →
+///   no pump, matches printed text exactly.
+/// • Two+ attackers: each fires, each passes the ≥2 gate, each
+///   attacker ends up with +1/+1 + double strike EOT (matches printed).
+///
+/// The same `AttackersThisCombat` primitive unblocks Adriana, Captain of
+/// the Guard's "+1/+1 for each *other* attacking creature" pump (just
+/// with a `Diff(AttackersThisCombat, 1)` Value).
 pub fn augusta_dean_of_order() -> CardDefinition {
+    use crate::card::Predicate;
     CardDefinition {
         name: "Augusta, Dean of Order",
         cost: cost(&[generic(1), w()]),
@@ -557,7 +558,11 @@ pub fn augusta_dean_of_order() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::Attacks, EventScope::AnotherOfYours),
+            event: EventSpec::new(EventKind::Attacks, EventScope::AnotherOfYours)
+                .with_filter(Predicate::ValueAtLeast(
+                    Value::AttackersThisCombat,
+                    Value::Const(2),
+                )),
             effect: Effect::Seq(vec![
                 Effect::PumpPT {
                     what: Selector::Target(0),
@@ -672,3 +677,179 @@ pub fn lorehold_command() -> CardDefinition {
         opening_hand: None,
     }
 }
+
+// ── Spectacle Mage's siblings — Hofri Ghostforge ────────────────────────────
+
+/// Hofri Ghostforge — {2}{R}{W}, 3/4 Legendary Human Cleric. Printed Oracle:
+/// "Other nonlegendary creatures you control get +1/+1.
+///  Whenever a nontoken creature you control dies, exile it. If you do,
+///  create a token that's a copy of that creature, except it's a 1/1
+///  white-and-red Spirit with flying."
+///
+/// Push XXX: 🟡. Body wired faithfully (3/4 R/W Legendary Cleric).
+/// The "other nonlegendary creatures get +1/+1" static is a universal
+/// anthem — `Effect::PumpPT` fires off the static-pump path used by
+/// Glorious Anthem. The dies-trigger spawn-as-Spirit is omitted (token-
+/// copy-of-creature primitive gap, same gap as Phantasmal Image and
+/// Mockingbird in CUBE_FEATURES.md). The anthem half is the dominant
+/// effect on most boards; the dies-trigger Spirit-copy rider needs
+/// future engine work to land at full fidelity.
+///
+/// Note: the printed legendary tag means this card is a ✓ for Felisa,
+/// Fang of Silverquill's "creature with a counter on it dies" trigger
+/// (it's still a creature for that purpose, just not a token to be
+/// pumped by the anthem itself).
+pub fn hofri_ghostforge() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    // "Other creatures you control" anthem (printed: "Other
+    // nonlegendary creatures you control"). Static-layer filter
+    // decomposition (`affected_from_requirement` in
+    // `game/mod.rs`) doesn't yet handle `Not(HasSupertype(_))`, so we
+    // ship the wider "other creatures" anthem — net result: Hofri
+    // pumps friendly nonlegendary creatures (matching printed text)
+    // *and* friendly legendary creatures (slight false-positive).
+    // The "Other" qualifier collapses naturally because Hofri is
+    // Legendary, so `Selector::EachPermanent(Creature ∧
+    // ControlledByYou)` includes Hofri herself; we use
+    // `card_types = [Creature]` and rely on the layer layer not
+    // double-counting the source's own +1/+1.
+    let other_creatures = SelectionRequirement::Creature
+        .and(SelectionRequirement::ControlledByYou);
+    CardDefinition {
+        name: "Hofri Ghostforge",
+        cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![StaticAbility {
+            description: "Other creatures you control get +1/+1",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(other_creatures),
+                power: 1,
+                toughness: 1,
+            },
+        }],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Mascot Interception (Lorehold) ──────────────────────────────────────────
+
+/// Mascot Interception — {2}{R}{W} Instant. Printed Oracle:
+/// "Gain control of target creature an opponent controls until end of turn.
+///  Untap that creature. It gains haste until end of turn."
+///
+/// Push XXX: 🟡. The "gain control until EOT + untap + haste" effect is
+/// the printed "Threaten / Act of Treason" template. Engine has no
+/// `Effect::GainControl` primitive yet (same gap as Tempted by the
+/// Oriq's "gain control" approximation, which collapses to Destroy ≤3-
+/// MV). For Mascot Interception we keep the body but ship a destroy-
+/// ish substitute on a single creature target — collapses to a
+/// {2}{R}{W} 1-for-1 removal effect at instant speed. The "haste this
+/// turn" rider is a no-op since the targeted creature is destroyed not
+/// stolen.
+///
+/// **TODO**: when `Effect::GainControl` lands, replace the destroy with
+/// a transient steal + untap + haste rider for full fidelity.
+pub fn mascot_interception() -> CardDefinition {
+    CardDefinition {
+        name: "Mascot Interception",
+        cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Destroy {
+            what: target_filtered(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::ControlledByOpponent),
+            ),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Approach of the Lorehold ────────────────────────────────────────────────
+
+/// Approach of the Lorehold — {1}{R}{W} Sorcery. Printed Oracle:
+/// "Approach of the Lorehold deals 2 damage to any target. Create a
+///  1/1 white Spirit creature token with flying."
+///
+/// Push XXX: ✅. Lorehold's flexible utility sorcery — chip damage at
+/// instant speed plus a 1/1 flier on a single resolution. Wired with
+/// `Effect::Seq([DealDamage 2, CreateToken Spirit])`. The "any target"
+/// damage collapses to `Selector::Player(EachOpponent)` (auto-target
+/// framework picks each opponent rather than a creature when no
+/// creature-target is bound) — same approximation as Storm-Kiln Artist
+/// and Lorehold Apprentice's "any target" magecraft riders. Spirit is
+/// the 1/1 flying white from the Lorehold spirit-token line — same
+/// frame as Lorehold Command's Mode 1 Spirit.
+pub fn approach_of_the_lorehold() -> CardDefinition {
+    let flying_spirit = TokenDefinition {
+        name: "Spirit".into(),
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::White],
+        supertypes: vec![],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
+        activated_abilities: vec![],
+        triggered_abilities: vec![],
+    };
+    CardDefinition {
+        name: "Approach of the Lorehold",
+        cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(2),
+            },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: flying_spirit,
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+

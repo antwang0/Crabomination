@@ -256,6 +256,15 @@ pub enum Value {
     /// 1 ("draw cards equal to the number of cards discarded this
     /// way") and Colossus of the Blood Age's death rider.
     CardsDiscardedThisResolution,
+    /// Number of attackers declared so far this combat. Backed by
+    /// `GameState.attacking.len()` — the engine clears the list at the
+    /// end of combat (`combat.rs:313`) and replenishes it on each new
+    /// declare-attackers step. Used by Augusta, Dean of Order's
+    /// "whenever two or more creatures you control attack" gate
+    /// (combined with `Predicate::ValueAtLeast(AttackersThisCombat,
+    /// 2)`) and any future "for each attacker" payoff (Adriana, Captain
+    /// of the Guard's "+1/+1 for each other attacking creature" pump).
+    AttackersThisCombat,
 }
 
 impl Value {

@@ -1830,6 +1830,7 @@ impl GameState {
                 })
                 .unwrap_or(0),
             Value::CardsDiscardedThisResolution => self.cards_discarded_this_resolution as i32,
+            Value::AttackersThisCombat => self.attacking.len() as i32,
         }
     }
 

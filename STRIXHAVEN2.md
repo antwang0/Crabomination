@@ -46,6 +46,121 @@ All 247 cards marked ✅ or 🟡 have a corresponding factory in
 positives and 0 stale ⏳ rows. STX 2021 progress is tracked in the
 "Strixhaven base set (STX)" section near the bottom of this file.
 
+## 2026-05-02 push XXX: STX 2021 expansion + AttackersThisCombat + 2 promotions
+
+8 new STX 2021 cards + 2 promotions + new `Value::AttackersThisCombat`
+primitive + `Effect::Attacks/AnotherOfYours` filter evaluation in
+`combat.rs` + UI labels for the new primitive and And-composite stack
+filters. Tests at 1241 (was 1227; +14 tests).
+
+### Card additions (`catalog::sets::stx::*`)
+
+#### Witherbloom (B/G) — `witherbloom.rs`
+
+- **Mortality Spear** ✅ ({3}{B}{G} Sorcery — Lesson) — destroy target
+  creature or planeswalker. Lesson sub-type recorded so future
+  Lesson-aware code can filter on it. Same shape as Hero's Downfall on
+  a Witherbloom-flavoured curve.
+- **Dina, Soul Steeper** 🟡 → ✅ — the activated -X/-X EOT now scales
+  with `Value::Diff(Const(0), CountOf(EachPermanent(Creature ∧
+  ControlledByYou)))`. Three creatures-you-control yields -3/-3, five
+  creatures yields -5/-5. Lifegain trigger unchanged.
+
+#### Silverquill (W/B) — `silverquill.rs`
+
+- **Dueling Coach** ✅ ({2}{W}, 3/3 Vigilance Human Cleric) — magecraft
+  +1/+1 counter on target creature. Same shape as the existing
+  Lecturing Scornmage / Stonebinder's Familiar magecraft-counter
+  family on a meatier {3} body with Vigilance.
+- **Hall Monitor** ✅ ({W}, 1/1 Human Wizard) — magecraft "target
+  creature can't block this turn". Wired via `Effect::GrantKeyword`
+  with `Keyword::CantBlock` (EOT) — same primitive Duel Tactics uses
+  for its CantBlock rider. Auto-target picks the largest opposing
+  blocker.
+- **Karok Wrangler** 🟡 ({2}{W}, 3/3 Human Wizard) — ETB tap target
+  opp's creature + stun counter. Same shape as Frost Trickster (the
+  blue mono mainline) on a {2}{W} 3/3 frame without flash. The "if
+  you control two or more Wizards, additional stun counter" rider is
+  omitted (no SelectorCount-keyed branching inside triggered abilities
+  yet).
+
+#### Lorehold (R/W) — `lorehold.rs`
+
+- **Hofri Ghostforge** 🟡 ({2}{R}{W}, 3/4 Legendary Human Cleric) —
+  static anthem on other creatures you control (printed: "Other
+  *nonlegendary* creatures"). Static-layer filter decomposition
+  doesn't yet support `Not(HasSupertype(Legendary))` so the wider
+  "Other creatures" anthem ships — minor false-positive on legendary
+  friendly creatures. The dies-as-Spirit-copy rider is omitted
+  (token-copy-of-permanent primitive gap, same as Phantasmal Image /
+  Mockingbird).
+- **Mascot Interception** 🟡 ({2}{R}{W} Instant) — printed "gain
+  control + untap + haste" approximated as Destroy on a single opp
+  creature. Engine has no `Effect::GainControl` primitive yet.
+- **Approach of the Lorehold** ✅ ({1}{R}{W} Sorcery) — 2 damage to
+  each opponent (auto-target collapse) + creates a 1/1 white Spirit
+  with flying. Lorehold's flexible utility sorcery.
+- **Augusta, Dean of Order** 🟡 → ✅ — the per-attacker pump trigger is
+  now gated by `Predicate::ValueAtLeast(Value::AttackersThisCombat,
+  Const(2))`. Single-attacker swings no longer false-positive
+  (matches printed text); two-or-more attacker swings each get +1/+1
+  + double strike EOT.
+
+#### Quandrix (G/U) — `quandrix.rs`
+
+- **Augmenter Pugilist** 🟡 ({3}{G}{G}, 6/6 Trample Human Warrior) —
+  body + Trample only. The "activated abilities of creatures cost
+  {2} more" static is omitted (no `StaticEffect::TaxActivatedAbilities`
+  primitive yet — same gap as Trinisphere's "minimum cost" flavor in
+  CUBE_FEATURES.md).
+
+### Engine improvements
+
+- **`Value::AttackersThisCombat`** — new primitive. Reads
+  `state.attacking.len()`. Used by Augusta's "two or more attackers"
+  gate via `Predicate::ValueAtLeast(AttackersThisCombat, 2)`.
+  Unblocks Adriana, Captain of the Guard's "+1/+1 for each *other*
+  attacking creature" pump (just `Diff(AttackersThisCombat, 1)`).
+- **Filter evaluation on broadcast Attack triggers** (`combat.rs`).
+  Pre-fix the `AnotherOfYours` / `YourControl` / `AnyPlayer`-scoped
+  Attack broadcast collected `(source, effect, target)` tuples and
+  pushed every trigger unconditionally, silently ignoring
+  `EventSpec.filter`. Now a second pass evaluates each trigger's
+  filter against an `EffectContext::for_trigger` after every
+  attacker is in `self.attacking`, so `AttackersThisCombat`-keyed
+  gates read the *final* count uniformly across all attackers
+  (rather than off-by-one against declaration order). Augusta's
+  symmetric pumps both fire when 2+ attack; neither fires when 1
+  attacks.
+
+### UI improvements
+
+- **`predicate_short_label`** gained an arm for
+  `Value::AttackersThisCombat` — formats Augusta-style gates as
+  "if attacking" (≥1) / "if ≥N attackers" / "if ≤N attackers".
+- **`entity_matches_label`** now collapses common And-composite
+  filters: `IsSpellOnStack ∧ X` strips the "spell" qualifier;
+  `ControlledByYou ∧ X` / `ControlledByOpponent ∧ X` collapse to
+  "if your X" / "if opp's X". Powers Choreographed Sparks's "you
+  control" stack-spell filter, Saw It Coming-style counter targets,
+  and any "your creature" / "opp's artifact" matters.
+
+### Tests
+
+- 9 new card-functionality tests: Mortality Spear (destroy + Lesson
+  flag), Dueling Coach (magecraft +1/+1 counter + Vigilance body),
+  Hall Monitor (magecraft CantBlock grant), Karok Wrangler (ETB tap
+  + stun), Approach of the Lorehold (2 dmg + flying Spirit token),
+  Mascot Interception (destroy on opp creature), Hofri Ghostforge
+  (anthem pumps via `computed_permanent`), Augmenter Pugilist (body
+  sanity check), Dina, Soul Steeper (-X/-X scaling).
+- 2 new Augusta tests: `_pumps_when_two_attackers` (≥2 gate passes,
+  both attackers pump) + `_skips_pump_when_solo_attacker` (gate
+  fails, lone attacker stays at base P/T).
+- 2 new view tests:
+  `entity_matches_label_covers_and_composite_filters` and
+  `predicate_short_label_covers_attackers_this_combat`.
+
 ## 2026-05-02 push XXIX: Lorehold expansion + STX 2021 + UI + bugfix
 
 10 new STX 2021 cards across schools + Abrupt Decay MV bug fix + UI
@@ -1892,6 +2007,9 @@ parity is a matter of porting card factories one at a time.
 | Star Pupil | {B} | 🟡 | Push XXV: 0/0 Spirit. Approximated as base 1/1 + ETB AddCounter +1/+1 ×1 (engine has no "enters with N counters" replacement primitive — same approximation as Reckless Amplimancer / Body of Research). Net effective body is 2/2 with one counter, matching the printed two-counters-on-a-0/0. The dies trigger is faithful — `EventKind::CreatureDied/SelfSource` → +1/+1 counter on a targeted creature. |
 | Codespell Cleric | {W} | ✅ | Push XXV: 1/1 Human Cleric, Lifelink. ETB Scry 1. All three pieces are first-class engine primitives. |
 | Combat Professor | {3}{W} | ✅ | Push XXV: 2/3 Cat Cleric with Flying. Magecraft +1/+1 EOT on target creature (same shape as Eager First-Year, just on a 2/3 flier body). |
+| Dueling Coach | {2}{W} | ✅ | Push XXX: 3/3 Human Cleric with Vigilance. Magecraft +1/+1 counter on target creature (any side) — same shape as Lecturing Scornmage / Stonebinder's Familiar's magecraft-counter family on a meatier {3} body with Vigilance. |
+| Hall Monitor | {W} | ✅ | Push XXX: 1/1 Human Wizard. Magecraft "target creature can't block this turn" — wired via `Effect::GrantKeyword(Keyword::CantBlock, EOT)` (same primitive Duel Tactics uses). Auto-target picks the largest opposing blocker. |
+| Karok Wrangler | {2}{W} | 🟡 | Push XXX: 3/3 Human Wizard. ETB tap target opp's creature + stun counter — same shape as Frost Trickster on a {2}{W} 3/3 frame without flash. The "if you control two or more Wizards, additional stun counter" rider is omitted (no SelectorCount-keyed branching in triggered abilities yet — same gap as Augusta's pre-promotion two-attacker gate). |
 
 ### Witherbloom (B/G)
 
@@ -1906,7 +2024,8 @@ parity is a matter of porting card factories one at a time.
 | Bayou Groff | {2}{B}{G} | ✅ | 5/4 Beast. Push XVI: "may pay {1} on death to return to hand" rider now wired via the new `Effect::MayPay` primitive (sibling to push XV's `Effect::MayDo`). On the death trigger, the controller is asked yes/no; on yes + sufficient mana, the engine pays {1} and `Move(SelfSource → Hand(OwnerOf(Self)))`. |
 | Daemogoth Woe-Eater | {2}{B}{G} | 🟡 | Push XXIII: 9/9 Demon body + `{T}: gain 4 life` activated ability + ETB sacrifice (approximation of "as additional cost: sacrifice a creature" — sac fires at ETB rather than at cast time). Sad-sack mythic finisher. |
 | Eyeblight Cullers | {1}{B}{B} | 🟡 | Push XXIII: 4/4 Elf Warrior with ETB sac (additional-cost approximation) + drain 2. Tempo creature with built-in burn. |
-| Dina, Soul Steeper | {B}{G} | 🟡 | Push XXIII: 1/3 Legendary Human Druid with Deathtouch + lifegain → ping target opponent for 1. The -X/-X activated ability is collapsed to flat -1/-1 (no Value-keyed `PumpPT` from creature count in activated paths). |
+| Dina, Soul Steeper | {B}{G} | ✅ | Push XXX: promoted from 🟡 to ✅. The activated -X/-X EOT now scales with `Value::Diff(Const(0), CountOf(EachPermanent(Creature ∧ ControlledByYou)))` (was flat -1/-1). At three creatures-you-control the activation shrinks the target by -3/-3 EOT (hard kill on most early-game blockers); at five creatures it's -5/-5. Lifegain → opp-loses-1 trigger unchanged. |
+| Mortality Spear | {3}{B}{G} | ✅ | Push XXX: Sorcery — Lesson. "Destroy target creature or planeswalker." Wired with `Effect::Destroy` on a `Creature OR Planeswalker` filter (same shape as Hero's Downfall / Mage Hunters' Onslaught). Lesson sub-type recorded so future Lesson-aware code (Mascot Exhibition's Lesson filter, Learn payoffs) can filter on it. |
 
 ### Lorehold (R/W)
 
@@ -1923,7 +2042,10 @@ parity is a matter of porting card factories one at a time.
 | Lorehold Command | {R}{W} | 🟡 | Push XXIV: 4-mode `ChooseMode` instant (drain 4 / two 1/1 white Spirit tokens with flying / gy → hand on permanent MV ≤ 2 / exile target gy card). Printed "choose two" collapses to "choose one" — same approximation as the other Commands. |
 | Rip Apart | {R}{W} | ✅ | Push XXIX: Sorcery. Choose one — 3 damage to target creature/planeswalker, or destroy target artifact/enchantment. Wired with `Effect::ChooseMode` (same shape as Boros Charm) and Or-composite filters on each mode's target. Modal pick is "choose one" (printed) so it ships at full fidelity. |
 | Plargg, Dean of Chaos | {1}{R} | 🟡 | Push XXIX: 1/3 Legendary Human Wizard. `{T}: Discard a card, then draw a card` rummage activation wired faithfully via `Effect::Seq([Discard, Draw])`. The {2}{R} top-3-exile activation is omitted (no exile-from-top primitive — same gap as Outpost Siege). The DFC pairing with Augusta, Dean of Order is split into two separate front-face card definitions (engine MDFC pipeline currently lacks an "always-flippable, both faces equally" mode). |
-| Augusta, Dean of Order | {1}{W} | 🟡 | Push XXIX: 2/2 Legendary Human Wizard with Vigilance. The "two or more creatures attack" trigger collapses to per-attacker (`Attacks/AnotherOfYours` broadcast) — each attacker gets +1/+1 + double strike EOT regardless of total attacker count. Single-attacker case is a minor false positive vs. printed text; multi-attacker case matches. The "count of attackers this combat" Value primitive would close the gap (same primitive Adriana, Captain of the Guard wants). |
+| Augusta, Dean of Order | {1}{W} | ✅ | Push XXX: promoted from 🟡 to ✅ via the new `Value::AttackersThisCombat` primitive. The per-attacker pump trigger is now gated by `Predicate::ValueAtLeast(AttackersThisCombat, 2)` — single-attacker swings no longer false-positive. Two-or-more attacker swings: each attacker passes the gate and ends up with +1/+1 + double strike EOT (matches printed). `combat.rs` was extended to evaluate broadcast Attack-trigger filters in a second pass, so the `attacking.len()` reading is uniform across all attackers. |
+| Hofri Ghostforge | {2}{R}{W} | 🟡 | Push XXX: 3/4 Legendary Human Cleric. Static anthem on other creatures you control (printed: "Other *nonlegendary* creatures") — engine static-layer doesn't yet support `Not(HasSupertype(Legendary))` so the wider "Other creatures" anthem ships (minor false-positive on legendary friendly creatures). The dies-as-Spirit-copy rider is omitted (token-copy-of-permanent primitive gap, same as Phantasmal Image / Mockingbird in CUBE_FEATURES.md). |
+| Mascot Interception | {2}{R}{W} | 🟡 | Push XXX: Instant. Printed "gain control of opp's creature + untap + haste" approximated as Destroy on a single opp creature. Engine has no `Effect::GainControl` primitive yet (same gap as Tempted by the Oriq, Threaten / Act of Treason). |
+| Approach of the Lorehold | {1}{R}{W} | ✅ | Push XXX: Sorcery. 2 damage to each opponent (auto-target collapse — printed "any target") + creates a 1/1 white Spirit creature token with flying. Lorehold's flexible utility sorcery; same Spirit token shape as Lorehold Command's mode 1. |
 
 ### Quandrix (G/U)
 
@@ -1935,6 +2057,7 @@ parity is a matter of porting card factories one at a time.
 | Snow Day | {1}{G}{U} | ✅ | Push XXIII: Instant. Create a 0/0 Fractal token + put X +1/+1 counters on it where X = `Value::HandSizeOf(You)`. With a 7-card hand the Fractal lands as a 7/7. |
 | Mentor's Guidance | {2}{G}{U} | 🟡 | Push XXIII: Sorcery. Draw 2 + put hand-size +1/+1 counters on a target creature you control. Multi-target "for each" iteration collapsed to single target. |
 | Quandrix Command | {1}{G}{U} | 🟡 | Push XXIV: 4-mode `ChooseMode` instant (counter target activated ability / +1/+1 ×2 on creature / gy → bottom of owner's library / draw a card). Printed "choose two" collapses to "choose one" — same approximation as the other Commands. |
+| Augmenter Pugilist | {3}{G}{G} | 🟡 | Push XXX: 6/6 Trample Human Warrior. Body + Trample only. The "activated abilities of creatures cost {2} more" static is omitted (no `StaticEffect::TaxActivatedAbilities` primitive yet — same gap as Trinisphere's "minimum cost" flavor in CUBE_FEATURES.md). |
 
 ### Prismari (U/R)
 

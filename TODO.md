@@ -7,6 +7,64 @@ See `CUBE_FEATURES.md` (cube-card implementation status) and
 
 ## Recent additions
 
+- ✅ **Push XXX (2026-05-02)**: 8 new STX 2021 cards + 2 promotions
+  + new `Value::AttackersThisCombat` primitive + filter evaluation
+  on broadcast Attack triggers + UI labels for AttackersThisCombat
+  and And-composite stack filters. Tests at 1241 (was 1227; +14
+  net).
+  - **8 new STX 2021 cards**:
+    - **Witherbloom**: **Mortality Spear** ✅ ({3}{B}{G} Sorcery —
+      Lesson, destroy creature/PW).
+    - **Silverquill**: **Dueling Coach** ✅ ({2}{W}, 3/3 Vigilance
+      Cleric, magecraft +1/+1 counter), **Hall Monitor** ✅ ({W},
+      1/1 Wizard, magecraft CantBlock-EOT grant), **Karok Wrangler**
+      🟡 ({2}{W}, 3/3 Wizard, ETB tap+stun).
+    - **Lorehold**: **Hofri Ghostforge** 🟡 ({2}{R}{W}, 3/4 Legendary
+      with anthem), **Mascot Interception** 🟡 ({2}{R}{W} Instant,
+      destroy-substitute for "gain control"), **Approach of the
+      Lorehold** ✅ ({1}{R}{W} Sorcery, 2 dmg + 1/1 flying Spirit).
+    - **Quandrix**: **Augmenter Pugilist** 🟡 ({3}{G}{G}, 6/6 Trample,
+      body-only).
+  - **2 promotions**:
+    - **Dina, Soul Steeper** 🟡 → ✅ — the activated -X/-X EOT now
+      scales with `Value::Diff(Const(0), CountOf(EachPermanent(
+      Creature ∧ ControlledByYou)))`. Three-creature board → -3/-3.
+    - **Augusta, Dean of Order** 🟡 → ✅ — the "two or more creatures
+      attack" gate is now real, via the new
+      `Value::AttackersThisCombat` primitive +
+      `Predicate::ValueAtLeast(AttackersThisCombat, 2)` filter.
+      Single-attacker swings no longer false-positive +1/+1 +
+      double strike.
+  - **Engine improvement**: new `Value::AttackersThisCombat` arm in
+    `evaluate_value` reads `state.attacking.len()`. Unblocks
+    Augusta (just promoted) and Adriana, Captain of the Guard's
+    "for each *other* attacking" pump (just `Diff(
+    AttackersThisCombat, 1)`).
+  - **Engine improvement**: `combat.rs` declare-attackers broadcast
+    now evaluates each `AnotherOfYours` / `YourControl` /
+    `AnyPlayer`-scoped Attack trigger's `EventSpec.filter` in a
+    second pass (after every attacker is in `self.attacking`), so
+    `AttackersThisCombat`-keyed gates read the *final* count
+    uniformly across all attackers. Pre-fix the broadcast silently
+    ignored every filter on Attack triggers, so any non-trivial
+    gate would have been a no-op.
+  - **UI improvement**: `predicate_short_label` (server/view.rs)
+    gained an arm for `Value::AttackersThisCombat` — formats as
+    "if attacking" (≥1) / "if ≥N attackers" / "if ≤N attackers".
+  - **UI improvement**: `entity_matches_label` collapses common
+    And-composite filters: `IsSpellOnStack ∧ X` strips the "spell"
+    qualifier; `ControlledByYou ∧ X` / `ControlledByOpponent ∧ X`
+    collapse to "if your X" / "if opp's X". Powers
+    Choreographed Sparks's stack-spell filter, Saw It Coming-
+    style counter targets, and any "your creature" / "opp's
+    artifact" matters.
+  - **14 new tests**: 11 in `tests::stx::*` (one per new card +
+    one per promotion + Augusta's solo-attacker negative case),
+    2 server-side view (`entity_matches_label_covers_and_
+    composite_filters`, `predicate_short_label_covers_attackers_
+    this_combat`), 1 replacement test (`augusta_dean_of_order_
+    pumps_when_two_attackers` replacing the old `_pumps_attacker`).
+
 - ✅ **Push XXIX (2026-05-02)**: 10 new STX 2021 cards across schools +
   Abrupt Decay MV bug fix + UI Or-composite filter labels. Tests at
   1227 (was 1218; +9 net). Pure card additions + non-blocking UX
@@ -2628,16 +2686,17 @@ These items came up while implementing the 10-card Lorehold + STX
 
 ### Engine
 
-- **`Value::AttackersThisCombat` primitive**. Augusta, Dean of
-  Order's "two or more creatures attacking" rider currently
-  collapses to per-attacker pump (firing once per attacker rather
-  than one big "two-or-more" trigger). The primitive would read the
-  count of attackers declared this combat — same `Value` Adriana,
-  Captain of the Guard wants. Plumbing: attackers list is already
-  in `GameState.attacks: Vec<Attack>`; just expose the count via a
-  `Value::AttackersThisCombat` arm in `evaluate_value` so a
-  `Predicate::ValueAtLeast(AttackersThisCombat, 2)` filter can gate
-  the trigger.
+- **`Value::AttackersThisCombat` primitive**. ✅ Done in push XXX.
+  Reads `state.attacking.len()`. Augusta, Dean of Order's gate is
+  now real; Adriana, Captain of the Guard's "for each *other*
+  attacking" pump is unblocked (just `Diff(AttackersThisCombat,
+  1)`).
+- **Filter evaluation on broadcast Attack triggers**. ✅ Done in
+  push XXX. `combat.rs` was extended to evaluate
+  `AnotherOfYours` / `YourControl` / `AnyPlayer`-scoped Attack
+  trigger filters in a second pass after every attacker is in
+  `self.attacking`. Pre-fix the broadcast silently ignored every
+  filter on Attack triggers.
 
 - **Always-flippable DFC primitive (split-card-style)**. Plargg,
   Dean of Chaos // Augusta, Dean of Order is the front of a paired

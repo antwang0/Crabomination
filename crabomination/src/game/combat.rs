@@ -45,6 +45,17 @@ impl GameState {
 
         let mut events = vec![];
         let mut triggers: Vec<(CardId, Effect, usize)> = vec![];
+        // Pending broadcast triggers — collected during attack
+        // processing (so each attacker contributes its broadcast
+        // tuples), then evaluated in a second pass *after* every
+        // attacker is registered in `self.attacking`. This way
+        // `AttackersThisCombat`-keyed gates (Augusta, Dean of Order's
+        // "two or more creatures attack" rider) read the final
+        // post-declaration count and gate uniformly across all
+        // attackers, rather than off-by-one against the declaration
+        // order.
+        let mut broadcast_triggers: Vec<(CardId, Effect, Option<crate::card::Predicate>, Target, CardId)> =
+            Vec::new();
         let computed = self.compute_battlefield();
         let computed_kw = |id: CardId| -> &[Keyword] {
             computed
@@ -99,43 +110,29 @@ impl GameState {
             // attacker's own self-source triggers, which we already
             // added above.
             let attacker_id = id;
-            let other_triggers: Vec<(CardId, Effect, Target)> = self
-                .battlefield
-                .iter()
-                .filter(|c| c.controller == p && c.id != attacker_id)
-                .flat_map(|c| {
-                    let cid = c.id;
-                    c.definition.triggered_abilities.iter().filter_map(move |t| {
-                        if t.event.kind == EventKind::Attacks
-                            && matches!(
-                                t.event.scope,
-                                EventScope::AnotherOfYours
-                                    | EventScope::YourControl
-                                    | EventScope::AnyPlayer
-                            )
-                        {
-                            Some((cid, t.effect.clone(), Target::Permanent(attacker_id)))
-                        } else {
-                            None
-                        }
-                    })
-                })
-                .collect();
-            for (src, eff, tgt) in other_triggers {
-                let auto_target = Some(tgt);
-                self.stack.push(StackItem::Trigger {
-                    source: src,
-                    controller: p,
-                    effect: Box::new(eff),
-                    target: auto_target,
-                    mode: None,
-                    x_value: 0,
-                    converged_value: 0,
-                    // Sparring Regimen-style "whenever you attack, +1/+1
-                    // on each attacking creature" — subject is the
-                    // attacker the trigger fires off.
-                    subject: Some(crate::game::effects::EntityRef::Permanent(id)),
-                });
+            for c in &self.battlefield {
+                if c.controller != p || c.id == attacker_id {
+                    continue;
+                }
+                let cid = c.id;
+                for t in &c.definition.triggered_abilities {
+                    if t.event.kind == EventKind::Attacks
+                        && matches!(
+                            t.event.scope,
+                            EventScope::AnotherOfYours
+                                | EventScope::YourControl
+                                | EventScope::AnyPlayer
+                        )
+                    {
+                        broadcast_triggers.push((
+                            cid,
+                            t.effect.clone(),
+                            t.event.filter.clone(),
+                            Target::Permanent(attacker_id),
+                            attacker_id,
+                        ));
+                    }
+                }
             }
             // Annihilator: TODO — translate to Effect tree (no-op for now).
             let _annihilator_n = computed_kw(id).iter().find_map(|kw| {
@@ -144,6 +141,38 @@ impl GameState {
                 } else {
                     None
                 }
+            });
+        }
+        // Second pass: evaluate broadcast trigger filters now that
+        // every attacker is in `self.attacking`. A passing predicate
+        // (or no predicate) lets the trigger push; a failing one
+        // drops it silently. Push order is per-attacker-then-source,
+        // matching the original iteration order so visible behavior
+        // is unchanged for unfiltered triggers.
+        for (src, eff, filter, tgt, attacker_id) in broadcast_triggers {
+            if let Some(ref pred) = filter {
+                let ctx = crate::game::effects::EffectContext::for_trigger(
+                    src,
+                    p,
+                    Some(tgt.clone()),
+                    0,
+                );
+                if !self.evaluate_predicate(pred, &ctx) {
+                    continue;
+                }
+            }
+            self.stack.push(StackItem::Trigger {
+                source: src,
+                controller: p,
+                effect: Box::new(eff),
+                target: Some(tgt),
+                mode: None,
+                x_value: 0,
+                converged_value: 0,
+                // Sparring Regimen-style "whenever you attack, +1/+1
+                // on each attacking creature" — subject is the
+                // attacker the trigger fires off.
+                subject: Some(crate::game::effects::EntityRef::Permanent(attacker_id)),
             });
         }
         for (source, effect, controller) in triggers {

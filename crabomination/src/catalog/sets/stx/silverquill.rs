@@ -633,3 +633,142 @@ pub fn silverquill_command() -> CardDefinition {
         opening_hand: None,
     }
 }
+
+// ── Dueling Coach ───────────────────────────────────────────────────────────
+
+/// Dueling Coach — {2}{W}, 3/3 Human Cleric. Printed Oracle:
+/// "Vigilance.
+///  Magecraft — Whenever you cast or copy an instant or sorcery spell,
+///  put a +1/+1 counter on target creature."
+///
+/// Push XXX: ✅. Silverquill counter-payoff body — same magecraft rider as
+/// Lecturing Scornmage / Stonebinder's Familiar but with a much bigger
+/// 3/3 Vigilance frame and a `Creature` (any-side) target. Wired via the
+/// `magecraft()` shortcut + `Effect::AddCounter` on a target_filtered
+/// creature. Auto-decider picks the highest-power friendly creature.
+pub fn dueling_coach() -> CardDefinition {
+    CardDefinition {
+        name: "Dueling Coach",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::AddCounter {
+            what: target_filtered(SelectionRequirement::Creature),
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Hall Monitor ────────────────────────────────────────────────────────────
+
+/// Hall Monitor — {W}, 1/1 Human Wizard. Printed Oracle:
+/// "Magecraft — Whenever you cast or copy an instant or sorcery spell,
+///  target creature can't block this turn."
+///
+/// Push XXX: ✅. One-mana Silverquill defensive magecraft creature —
+/// the printed "can't block this turn" rider is wired via
+/// `Effect::GrantKeyword { keyword: Keyword::CantBlock, duration:
+/// EndOfTurn }` against a target creature (any side — auto-decider picks
+/// the largest opposing blocker), reusing the same primitive Duel
+/// Tactics uses for its CantBlock EOT clause. Auto-target framework
+/// chooses the most threatening opposing creature.
+pub fn hall_monitor() -> CardDefinition {
+    CardDefinition {
+        name: "Hall Monitor",
+        cost: cost(&[w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::GrantKeyword {
+            what: target_filtered(SelectionRequirement::Creature),
+            keyword: Keyword::CantBlock,
+            duration: Duration::EndOfTurn,
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Inkling Summoning siblings: Karok Wrangler ──────────────────────────────
+
+/// Karok Wrangler — {2}{W}, 3/3 Human Wizard. Printed Oracle:
+/// "When this creature enters, tap target creature an opponent controls,
+///  then put a stun counter on it."
+///
+/// Push XXX: 🟡. Body + ETB tap-and-stun wired faithfully — same shape
+/// as Frost Trickster ({1}{U}, 2/2 Flash + Flying with the same ETB) on
+/// a meatier {2}{W} 3/3 frame without flash. The "if you control two or
+/// more Wizards, put an additional stun counter on it" rider is
+/// **omitted** (engine has no SelectorCount-keyed branching inside
+/// triggered abilities yet — same gap as Augusta's "two-or-more-attackers"
+/// gate). Net: a single stun counter lands either way; the additional
+/// rider would only matter against a target that already had an untap
+/// step queued, so the gameplay impact of the omission is limited.
+pub fn karok_wrangler() -> CardDefinition {
+    CardDefinition {
+        name: "Karok Wrangler",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::Tap {
+                    what: target_filtered(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::ControlledByOpponent),
+                    ),
+                },
+                Effect::AddCounter {
+                    what: Selector::Target(0),
+                    kind: CounterType::Stun,
+                    amount: Value::Const(1),
+                },
+            ]),
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+

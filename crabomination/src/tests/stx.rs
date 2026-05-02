@@ -2711,37 +2711,71 @@ fn plargg_dean_of_chaos_rummages() {
 }
 
 #[test]
-fn augusta_dean_of_order_pumps_attacker() {
-    // Augusta has Vigilance and the per-attacker pump trigger. Declare
-    // an attacker (a friendly bear) and verify it gains +1/+1 + double
-    // strike EOT via the attack-side broadcast.
+fn augusta_dean_of_order_pumps_when_two_attackers() {
+    // Push XXX promotion: Augusta now requires *two or more* attackers
+    // before the per-attacker pump trigger fires (gate: `Predicate::
+    // ValueAtLeast(AttackersThisCombat, 2)`). Declare two friendly
+    // attackers and verify each gains +1/+1 + double strike EOT via
+    // the attack-side broadcast.
     let mut g = two_player_game();
     let _augusta = g.add_card_to_battlefield(0, catalog::augusta_dean_of_order());
-    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let bear_a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let bear_b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.clear_sickness(_augusta);
-    g.clear_sickness(bear);
+    g.clear_sickness(bear_a);
+    g.clear_sickness(bear_b);
 
     // Augusta has Vigilance baked in.
     let aug = g.battlefield.iter().find(|c| c.id == _augusta).unwrap();
     assert!(aug.has_keyword(&Keyword::Vigilance),
         "Augusta should have Vigilance");
 
-    // Drive to declare-attackers and attack with bear.
+    // Drive to declare-attackers and swing with both bears.
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: bear_a, target: AttackTarget::Player(1) },
+        Attack { attacker: bear_b, target: AttackTarget::Player(1) },
+    ]))
+    .expect("DeclareAttackers should accept both bears");
+    drain_stack(&mut g);
+
+    // Both attackers receive +1/+1 + double strike via the gated trigger.
+    for &id in &[bear_a, bear_b] {
+        let bear_card = g.battlefield.iter().find(|c| c.id == id).unwrap();
+        assert!(bear_card.power() >= 3,
+            "bear should be pumped to ≥3 power (2 + 1 from Augusta's gate-passing trigger), got {}",
+            bear_card.power());
+        assert!(bear_card.has_keyword(&Keyword::DoubleStrike),
+            "bear should have double strike from Augusta's trigger");
+    }
+}
+
+#[test]
+fn augusta_dean_of_order_skips_pump_when_solo_attacker() {
+    // Push XXX promotion: with only one attacker the trigger's "two or
+    // more attackers" gate now fails, so the lone attacker doesn't get
+    // pumped (matches printed text). Pre-promotion this test would
+    // false-positive +1/+1 + double strike on a solo swing.
+    let mut g = two_player_game();
+    let _augusta = g.add_card_to_battlefield(0, catalog::augusta_dean_of_order());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(_augusta);
+    g.clear_sickness(bear);
+
     g.step = TurnStep::DeclareAttackers;
     g.perform_action(GameAction::DeclareAttackers(vec![Attack {
         attacker: bear,
         target: AttackTarget::Player(1),
     }]))
-    .expect("DeclareAttackers should accept the bear");
+    .expect("DeclareAttackers should accept the lone bear");
     drain_stack(&mut g);
 
     let bear_card = g.battlefield.iter().find(|c| c.id == bear).unwrap();
-    // +1/+1 EOT pump applied.
-    assert!(bear_card.power() >= 3,
-        "bear should be pumped to ≥3 power (was 2 + 1 from Augusta's trigger), got {}",
-        bear_card.power());
-    assert!(bear_card.has_keyword(&Keyword::DoubleStrike),
-        "bear should have double strike from Augusta's trigger");
+    // No pump — only one attacker fails the ≥2 gate.
+    assert_eq!(bear_card.power(), 2,
+        "lone attacker should not be pumped (Augusta's two-or-more gate)");
+    assert!(!bear_card.has_keyword(&Keyword::DoubleStrike),
+        "lone attacker should not have double strike");
 }
 
 #[test]
@@ -2765,4 +2799,228 @@ fn spirit_summoning_creates_one_one_flying_spirit_token() {
     assert_eq!(spirit.toughness(), 1);
     assert!(spirit.definition.subtypes.creature_types
         .contains(&crate::card::CreatureType::Spirit));
+}
+
+// ── Push XXX (2026-05-02) STX 2021 additions ────────────────────────────────
+
+#[test]
+fn mortality_spear_destroys_creature() {
+    // Mortality Spear — {3}{B}{G} Sorcery — Lesson. Destroy target
+    // creature or planeswalker. Verify it kills a vanilla bear.
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    let id = g.add_card_to_hand(0, catalog::mortality_spear());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)), mode: None, x_value: None,
+    })
+    .expect("Mortality Spear castable for {3}{B}{G}");
+    drain_stack(&mut g);
+
+    assert!(!g.battlefield.iter().any(|c| c.id == bear),
+        "bear should be destroyed by Mortality Spear");
+}
+
+#[test]
+fn mortality_spear_is_a_lesson() {
+    // Lesson sub-type is recorded on the spell, so future Lesson-aware
+    // effects (Mascot Exhibition's "search your sideboard for a
+    // Lesson", Learn payoffs) can filter on it.
+    let spear = catalog::mortality_spear();
+    assert!(spear.subtypes.spell_subtypes.contains(&crate::card::SpellSubtype::Lesson),
+        "Mortality Spear should carry the Lesson sub-type");
+}
+
+#[test]
+fn dueling_coach_pumps_creature_with_counter_on_magecraft() {
+    // Dueling Coach has Vigilance and a magecraft +1/+1 counter on a
+    // target creature trigger. Cast a Bolt while a friendly bear is in
+    // play; the bear should get a +1/+1 counter from the trigger.
+    let mut g = two_player_game();
+    let _coach = g.add_card_to_battlefield(0, catalog::dueling_coach());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)), mode: None, x_value: None,
+    })
+    .expect("Bolt castable for {R}");
+    drain_stack(&mut g);
+
+    let bear_card = g.battlefield.iter().find(|c| c.id == bear).unwrap();
+    assert_eq!(bear_card.counter_count(CounterType::PlusOnePlusOne), 1,
+        "bear should have one +1/+1 counter from Dueling Coach's magecraft trigger");
+}
+
+#[test]
+fn dueling_coach_has_vigilance() {
+    // Body sanity-check: 3/3 Human Cleric with Vigilance.
+    let coach = catalog::dueling_coach();
+    assert!(coach.keywords.contains(&Keyword::Vigilance));
+    assert_eq!(coach.power, 3);
+    assert_eq!(coach.toughness, 3);
+}
+
+#[test]
+fn hall_monitor_grants_cant_block_on_magecraft() {
+    // Hall Monitor magecraft: target creature can't block this turn.
+    // We grant the keyword on a target creature, exercise the
+    // `Effect::GrantKeyword + Keyword::CantBlock` plumbing.
+    let mut g = two_player_game();
+    let _hall = g.add_card_to_battlefield(0, catalog::hall_monitor());
+    let opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(opp_bear);
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)), mode: None, x_value: None,
+    })
+    .expect("Bolt castable for {R}");
+    drain_stack(&mut g);
+
+    let opp_bear_card = g.battlefield.iter().find(|c| c.id == opp_bear).unwrap();
+    assert!(opp_bear_card.has_keyword(&Keyword::CantBlock),
+        "opp's bear should have CantBlock from Hall Monitor's magecraft trigger");
+}
+
+#[test]
+fn karok_wrangler_etb_taps_and_stuns_opponent_creature() {
+    // Karok Wrangler — ETB: tap an opp's creature + put a stun
+    // counter on it. Same shape as Frost Trickster on a {2}{W} body.
+    let mut g = two_player_game();
+    let opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(opp_bear);
+    let id = g.add_card_to_hand(0, catalog::karok_wrangler());
+
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(opp_bear)), mode: None, x_value: None,
+    })
+    .expect("Karok Wrangler castable for {2}{W}");
+    drain_stack(&mut g);
+
+    let bear_card = g.battlefield.iter().find(|c| c.id == opp_bear).unwrap();
+    assert!(bear_card.tapped, "opp's bear should be tapped");
+    assert_eq!(bear_card.counter_count(CounterType::Stun), 1,
+        "opp's bear should have a stun counter");
+}
+
+#[test]
+fn approach_of_the_lorehold_deals_damage_and_creates_spirit() {
+    // Approach of the Lorehold: 2 dmg to opp + creates a 1/1 white
+    // Spirit token with flying.
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::approach_of_the_lorehold());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    let opp_life_before = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Approach of the Lorehold castable for {1}{R}{W}");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[1].life, opp_life_before - 2,
+        "opp should take 2 damage");
+    let spirit = g.battlefield.iter().find(|c| {
+        c.is_token && c.definition.name == "Spirit" && c.controller == 0
+    }).expect("Spirit token created under controller");
+    assert!(spirit.has_keyword(&Keyword::Flying));
+    assert_eq!(spirit.power(), 1);
+    assert_eq!(spirit.toughness(), 1);
+}
+
+#[test]
+fn mascot_interception_destroys_opp_creature() {
+    // Mascot Interception (🟡 destroy-substitute for the printed
+    // "gain control" effect — engine has no GainControl primitive).
+    // Verify the destroy half resolves on a single opp creature.
+    let mut g = two_player_game();
+    let opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(opp_bear);
+    let id = g.add_card_to_hand(0, catalog::mascot_interception());
+
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(opp_bear)), mode: None, x_value: None,
+    })
+    .expect("Mascot Interception castable for {2}{R}{W}");
+    drain_stack(&mut g);
+
+    assert!(!g.battlefield.iter().any(|c| c.id == opp_bear),
+        "opp's bear should be destroyed");
+}
+
+#[test]
+fn hofri_ghostforge_anthem_pumps_other_creatures() {
+    // Hofri Ghostforge — anthem pumps other creatures you control
+    // +1/+1. Engine static-layer doesn't yet support
+    // `Not(HasSupertype(Legendary))` filters, so we ship the wider
+    // "Other creatures you control" anthem (printed: "Other
+    // *nonlegendary* creatures") — see the card's doc comment.
+    // Reads via `computed_permanent` so static-layer modifications
+    // are applied (vs `battlefield.iter()...power()` which reads
+    // raw definition + counters only).
+    let mut g = two_player_game();
+    let _hofri = g.add_card_to_battlefield(0, catalog::hofri_ghostforge());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+
+    let bear_cp = g.computed_permanent(bear).expect("bear is on the battlefield");
+    assert_eq!(bear_cp.power, 3, "bear should be pumped to 3 by Hofri's anthem");
+    assert_eq!(bear_cp.toughness, 3, "bear should be pumped to 3 toughness by Hofri's anthem");
+}
+
+#[test]
+fn augmenter_pugilist_is_a_six_six_trample() {
+    // Body-only sanity check: 6/6 trample green threat at {3}{G}{G}.
+    let pugilist = catalog::augmenter_pugilist();
+    assert_eq!(pugilist.power, 6);
+    assert_eq!(pugilist.toughness, 6);
+    assert!(pugilist.keywords.contains(&Keyword::Trample));
+    assert!(pugilist.subtypes.creature_types.contains(&crate::card::CreatureType::Human));
+}
+
+#[test]
+fn dina_soul_steeper_minus_x_minus_x_scales_with_creature_count() {
+    // Push XXX promotion: Dina's -X/-X activated ability now scales
+    // with `Value::CountOf(EachPermanent(Creature ∧
+    // ControlledByYou))`. With 3 creatures (Dina + two bears), a 4-
+    // toughness target should die when shrunk to 4 - 3 = 1 toughness.
+    let mut g = two_player_game();
+    let _dina = g.add_card_to_battlefield(0, catalog::dina_soul_steeper());
+    let _b1 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let _b2 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let opp_target = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(_dina);
+    g.clear_sickness(_b1);
+    g.clear_sickness(_b2);
+    g.clear_sickness(opp_target);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: _dina,
+        ability_index: 0,
+        target: Some(Target::Permanent(opp_target)),
+    })
+    .expect("Dina's -X/-X activatable for {1}{B}{G}");
+    drain_stack(&mut g);
+
+    // Three creatures-you-control (Dina + 2 bears) → -3/-3.
+    // Opp's bear (2/2) should die from -3/-3.
+    assert!(!g.battlefield.iter().any(|c| c.id == opp_target),
+        "opp's bear should die to Dina's scaled -3/-3");
 }
