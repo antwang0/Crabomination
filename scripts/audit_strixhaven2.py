@@ -188,10 +188,13 @@ print("─" * 70)
 print("HEADER CLAIMS vs. ACTUAL")
 print("─" * 70)
 doc_text = DOC.read_text(encoding="utf-8")
-claim_re = re.compile(r"-\s+(✅|🟡|⏳)\s+\S+:\s*(\d+)")
+# Match `- ✅ done: **108**` (markdown bold) or `- ✅ done: 108` (raw).
+claim_re = re.compile(r"-\s+(✅|🟡|⏳)\s+\S+:\s*\**\s*(\d+)\s*\**")
+matched_any = False
 for line in doc_text.splitlines()[:60]:
     m = claim_re.match(line)
     if m:
+        matched_any = True
         sym, n = m.group(1), int(m.group(2))
         actual = (
             total_ok if "✅" in sym else
@@ -202,3 +205,5 @@ for line in doc_text.splitlines()[:60]:
         delta = actual - n
         flag = " (drift)" if delta != 0 else ""
         print(f"  Header: {sym_tag} = {n}  | Actual: {actual}  | delta {delta:+d}{flag}")
+if not matched_any:
+    print("  (no header claim lines found in first 60 lines)")

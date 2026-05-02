@@ -7,6 +7,64 @@ See `CUBE_FEATURES.md` (cube-card implementation status) and
 
 ## Recent additions
 
+- ✅ **Cube + STX push XXII (2026-05-02)**: `SelectionRequirement::HasName`
+  predicate + Dragon's Approach 🟡 → ✅ promotion + 17 new card
+  factories + Rofellos rewire + Frantic Search comment cleanup.
+  Tests at 1132 (was 1110, +22 net):
+  - **New `SelectionRequirement::HasName(Cow<'static, str>)`** — name-
+    match predicate. Wired into both `evaluate_requirement` and
+    `evaluate_requirement_on_card` so it works for both target prompts
+    and library/graveyard counts. Powers Dragon's Approach + Slime
+    Against Humanity + future "named X" payoffs (Rat Colony, Persistent
+    Petitioners, Shadowborn Apostle, etc.). Stored as `Cow` so card-
+    side construction is allocation-free for `&'static str` literals
+    while snapshot restore (which builds owned strings from JSON)
+    avoids leaking.
+  - **Dragon's Approach** 🟡 → ✅: full wire of "if 4+ DA in graveyard,
+    may search for a Dragon" via `Predicate::ValueAtLeast(CountOf(
+    CardsInZone(Graveyard, HasName)), Const(4))` gating an
+    `Effect::Search { Creature ∧ Dragon → Battlefield(untapped) }`
+    branch.
+  - **17 new card factories** (modern.rs):
+    - **Pongify** ({U}) + **Rapid Hybridization** ({U}) — destroy
+      creature, controller gets a 3/3 token (Ape / Lizard distinct
+      tokens via the new `ape_token()` / `lizard_token()` helpers).
+    - **Mulldrifter** ({4}{U}) — 2/2 Flying Elemental, ETB Draw 2.
+    - **Wall of Omens** ({1}{W}) — 0/4 Defender, ETB Draw 1.
+    - **Sun Titan** ({4}{W}{W}) — 6/6 Vigilance, ETB+attacks recur ≤3-
+      MV permanent from your graveyard.
+    - **Solemn Simulacrum** ({4}) — 2/2 with ETB land tutor + death
+      draw.
+    - **Three Visits** ({1}{G}) — Forest tutor untapped (Nature's Lore
+      twin).
+    - **Fume Spitter** ({B}) — 1/1 with sac → -1/-1 EOT.
+    - **Galvanic Blast** ({R}) — 2 dmg, Metalcraft → 4 dmg via the new
+      `Predicate::ValueAtLeast(CountOf(Artifact & ControlledByYou), 3)`
+      branching.
+    - **Pithing Edict** ({1}{B}) — each opponent sacrifices a
+      creature/PW.
+    - **Lash of Malice** ({B}) — -2/-2 EOT.
+    - **Aether Adept** ({1}{U}{U}) — 2/2 with ETB Unsummon.
+    - **Wind Drake** ({2}{U}) — 2/2 Flying Drake (vanilla baseline).
+    - **Cursecatcher** ({U}) — 1/1 Merfolk Wizard, sac →
+      `CounterUnlessPaid({1})`.
+    - **Resilient Khenra** ({2}{G}) — 3/2 with death-pump on a
+      friendly creature.
+    - **Persistent Petitioners** ({1}{U}) — 1/3 Advisor, `{1},{T}`
+      mill 1 (the tap-4-Advisors mode is omitted).
+    - **Slime Against Humanity** ({1}{G}) — X+1 Ooze tokens, X = SAH in
+      your gy (HasName-driven).
+  - **Rofellos, Llanowar Emissary** rewire — `{T}: Add {G}` now scales
+    via `ManaPayload::OfColor(Green, CountOf(Forest & ControlledByYou))`
+    (push VI primitive that previously only powered Topiary Lecturer).
+    Flat-`{G}{G}` collapse removed; Forest count snowballs as printed.
+  - **22 new tests** in `tests::modern::*` and `tests::stx::*` covering
+    Pongify/Hybridization controller-of-target tokens, Sun Titan low-MV
+    recursion + high-MV no-op, Galvanic Blast metalcraft branching,
+    Cursecatcher sac-counter, Slime Against Humanity X scaling, Dragon's
+    Approach gate-skip + tutor, Rofellos forest scaling. All 1132 lib
+    tests pass.
+
 - ✅ **SOS push XXI (2026-05-02)**: `Effect::CopySpell` first-class
   implementation + `Selector::CastSpellSource` + 7 SOS card promotions
   to ✅. Tests at 1110 (was 1103, +7):
@@ -1168,20 +1226,31 @@ Strixhaven coverage push). Remaining gaps:
 | Card / Feature | Current Approximation | Correct Behaviour |
 |---|---|---|
 | Windfall | draws flat 7 | draw equal to most cards discarded |
-| Frantic Search | untaps all tapped lands | untap up to three |
 | Dark Confidant | fixed 2 life loss | lose life = CMC of revealed card |
 | Biorhythm | drain opponents to 0 | set each player's life to creature count |
 | Coalition Relic | tap for 1 of any color | tap + charge counter → burst WUBRG |
 | Fellwar Stone | tap for 1 of any color | tap for a color an opponent's land produces |
 | Static Prison | ETB taps target | also suppresses untap while stun counters exist |
-| Rofellos | flat {G}{G} | {G} per Forest you control |
 | Spectral Procession | {3}{W}{W}{W} | {2/W}{2/W}{2/W} hybrid (CMC 6) |
 | Grim Lavamancer | {R}{T}: 2 damage | must exile 2 cards as additional cost |
 | Ichorid | no graveyard gate | requires opponent to have a black creature in GY |
-| Pursue the Past | always discards then draws 2 | "you may discard … if you do, draw 2" |
-| Witherbloom Charm (mode 0) | always sacrifices | "you may sacrifice … if you do, draw 2" |
 | Render Speechless | required creature target | optional second creature target |
 | Dina's Guidance | always to hand | choice of hand or graveyard |
+| Slime Against Humanity | counts your gy only | counts all gy + your exile per printed Oracle |
+
+### Resolved approximations (push XXII, 2026-05-02)
+
+- **Frantic Search** — `up_to: Some(Const(3))` cap precise (push V).
+- **Rofellos, Llanowar Emissary** — `{T}: Add {G} per Forest you
+  control` now scales via `ManaPayload::OfColor(Green,
+  CountOf(Forest & ControlledByYou))`; flat-`{G}{G}` collapse removed.
+- **Pursue the Past** — `Effect::MayDo` discard-then-draw branch wired
+  faithfully (push XV).
+- **Witherbloom Charm (mode 0)** — `Effect::MayDo` may-sac branch wired
+  (push XV).
+- **Dragon's Approach** — "if 4+ named copies in graveyard, search for
+  a Dragon" tutor now wired via the new `SelectionRequirement::HasName`
+  predicate (push XXII).
 
 ---
 

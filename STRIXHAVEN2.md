@@ -36,18 +36,61 @@ This file tracks two adjacent Strixhaven catalogs:
 Counts reflect the regenerated tables below (audited via
 `scripts/audit_strixhaven2.py` against `catalog::sets::sos`).
 
-- ✅ done: **108** (+7 in push XXI: Aziza Mage Tower Captain,
-  Mica Reader of Ruins, Lumaret's Favor, Silverquill the Disputant,
-  Social Snub, Harsh Annotation, Choreographed Sparks all promoted
-  to ✅ via the new `Effect::CopySpell` engine primitive).
-- 🟡 partial: **139** (-6 net: 7 cards promoted out of 🟡, with
-  Choreographed Sparks transiting 🟡 → ✅ for a net of -6).
-- ⏳ todo: **8** (-1 in push XXI: Choreographed Sparks
-  ⏳ → ✅).
+- ✅ done: **108** (unchanged from push XXI; push XXII targeted STX
+  2021 cards in `catalog::sets::stx::mono`, not SOS).
+- 🟡 partial: **139** (unchanged).
+- ⏳ todo: **8** (unchanged).
 
-All 246 cards marked ✅ or 🟡 have a corresponding factory in
+All 247 cards marked ✅ or 🟡 have a corresponding factory in
 `crabomination/src/catalog/sets/sos/`; the audit script reports 0 false
-positives and 0 stale ⏳ rows.
+positives and 0 stale ⏳ rows. STX 2021 progress is tracked in the
+"Strixhaven base set (STX)" section near the bottom of this file.
+
+## 2026-05-02 push XXII: HasName predicate + Dragon's Approach + 17 cube cards
+
+Engine improvement (`SelectionRequirement::HasName`) +
+1 STX 2021 promotion + 17 brand-new cube cards (modern.rs) +
+Rofellos rewire to scale with Forest count. Tests pass at 1132 (was
+1110, +22 net).
+
+### Engine improvement
+
+- **`SelectionRequirement::HasName(Cow<'static, str>)`** — name-match
+  predicate. Wired into both `evaluate_requirement` (battlefield path)
+  and `evaluate_requirement_on_card` (library/graveyard path) so it
+  works for both target prompts and CardsInZone counts. The `Cow`
+  storage avoids allocating for `&'static str` literals at card
+  construction while letting snapshot restore (which builds owned
+  strings from JSON) avoid leaking. Powers Dragon's Approach +
+  Slime Against Humanity + future "named X" payoffs.
+
+### Card promotion
+
+| Card | Status before → after | Notes |
+|---|---|---|
+| Dragon's Approach | 🟡 → ✅ | "if 4+ DA in graveyard, search for a Dragon" rider now wired via `Predicate::ValueAtLeast(CountOf(CardsInZone(Graveyard, HasName)), Const(4))` gating an `Effect::Search { Creature ∧ Dragon → Battlefield(untapped) }` branch. Auto-decider takes the value (collapses the "may"). |
+
+### New cube cards (`catalog::sets::decks::modern`)
+
+17 new card factories spanning W/U/B/R/G + colorless. Each card uses
+existing engine primitives — no engine changes required. See the push
+XXII section in `TODO.md` for the full per-card list.
+
+### Tests
+
+22 new functionality tests covering:
+- ETB triggers on bouncers / draw-on-ETB / death triggers (Aether
+  Adept, Wall of Omens, Mulldrifter, Resilient Khenra, Solemn
+  Simulacrum)
+- Token-mint-to-target-controller (Pongify, Rapid Hybridization)
+- Recursion target validation (Sun Titan low-MV recur + high-MV no-op)
+- Conditional damage scaling (Galvanic Blast metalcraft branching)
+- Sac-counter activation (Cursecatcher)
+- Forest-count mana scaling (Rofellos rewire)
+- Card-name graveyard payoffs (Dragon's Approach gate-skip + tutor,
+  Slime Against Humanity X scaling)
+
+All 1132 lib tests pass.
 
 ## 2026-05-02 push XXI: Effect::CopySpell + Selector::CastSpellSource + 7 promotions
 
@@ -160,7 +203,7 @@ All 1110 lib tests pass (was 1103, +7).
 | Necrotic Fumes | {1}{B}{B} | 🟡 | Sorcery: sac a creature + exile target creature. Additional-cost-on-cast collapsed to in-resolution sac. |
 | Specter of the Fens | {2}{B}{B} | ✅ | 3/3 Flying Specter; ETB mints a 1/1 black Pest with the standard die-→-gain-1 rider. |
 | Ardent Dustspeaker | {3}{R} | ✅ | 3/3 Minotaur Shaman. Begin-combat trigger exiles up to one card from a graveyard. |
-| Dragon's Approach | {1}{R} | 🟡 | Sorcery: 3 damage to any target. The "if 4+ Dragon's Approach in gy, may search for a Dragon" rider omitted (no card-name-match predicate). |
+| Dragon's Approach | {1}{R} | ✅ | Sorcery: 3 damage to any target + "if 4+ Dragon's Approach in gy, search for a Dragon" rider now wired via the new `SelectionRequirement::HasName` predicate (push XXII). The "may" optionality collapses to always-tutor (auto-decider takes the value). |
 | Bookwurm | {3}{G}{G} | ✅ | 4/5 Wurm; ETB gain 4 life + draw a card. |
 | Spined Karok | {3}{G} | ✅ | 4/5 vanilla Beast (printed Wurm flavor; we use Beast since Wurm is reserved for Strixhaven-specific tribal hooks). |
 | Field Trip | {2}{G} | ✅ | Sorcery — Lesson. Search library for a basic Forest, put it onto the battlefield tapped, then Scry 1. |

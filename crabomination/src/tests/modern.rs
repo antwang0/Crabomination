@@ -7743,16 +7743,21 @@ fn elvish_reclaimer_sacrifices_land_to_search_for_one() {
 }
 
 #[test]
-fn rofellos_taps_for_two_green_mana() {
+fn rofellos_taps_for_one_green_per_forest_you_control() {
+    // Push XXII: Rofellos now scales with Forest count via the
+    // ManaPayload::OfColor primitive — 4 Forests → 4 green per activation.
     let mut g = two_player_game();
+    for _ in 0..4 {
+        g.add_card_to_battlefield(0, catalog::forest());
+    }
     let id = g.add_card_to_battlefield(0, catalog::rofellos_llanowar_emissary());
     g.battlefield.iter_mut().find(|c| c.id == id).unwrap().tapped = false;
 
     g.perform_action(GameAction::ActivateAbility {
         card_id: id, ability_index: 0, target: None,
     }).expect("Rofellos's mana ability");
-    assert_eq!(g.players[0].mana_pool.amount(Color::Green), 2,
-        "Rofellos adds two green mana per activation");
+    assert_eq!(g.players[0].mana_pool.amount(Color::Green), 4,
+        "Rofellos adds 1 green per Forest you control (4 forests → 4 G)");
 }
 
 #[test]

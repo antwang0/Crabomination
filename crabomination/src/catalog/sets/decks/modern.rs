@@ -5551,15 +5551,14 @@ pub fn elvish_reclaimer() -> CardDefinition {
 }
 
 /// Rofellos, Llanowar Emissary — {G}{G} Legendary Creature — Elf Druid. 2/1.
-/// {T}: Add {G}{G} for each Forest you control.
+/// {T}: Add {G} for each Forest you control.
 ///
-/// Approximation: scaling generic-green-mana abilities aren't modeled, so
-/// we use a flat `{T}: Add {G}{G}` (Fanatic-of-Rhonas-style net gain). The
-/// "Forest count" multiplier collapses to 2 — gameplay-relevant for the
-/// "ramp into a 6-drop on turn 3" line, but doesn't snowball with extra
-/// Forests.
+/// ✅ Push XXII: now uses the SOS-VI `ManaPayload::OfColor(Green,
+/// CountOf(EachPermanent(Forest & ControlledByYou)))` primitive — the
+/// activation now scales correctly with the Forest count, matching
+/// the printed Oracle's "snowball with each new Forest" behavior.
 pub fn rofellos_llanowar_emissary() -> CardDefinition {
-    use crate::card::{ActivatedAbility, Supertype as Sup};
+    use crate::card::{ActivatedAbility, LandType, Supertype as Sup};
     CardDefinition {
         name: "Rofellos, Llanowar Emissary",
         cost: cost(&[g(), g()]),
@@ -5576,7 +5575,14 @@ pub fn rofellos_llanowar_emissary() -> CardDefinition {
             mana_cost: ManaCost::default(),
             effect: Effect::AddMana {
                 who: PlayerRef::You,
-                pool: ManaPayload::Colors(vec![Color::Green, Color::Green]),
+                pool: ManaPayload::OfColor(
+                    Color::Green,
+                    Value::count(Selector::EachPermanent(
+                        SelectionRequirement::Land
+                            .and(SelectionRequirement::HasLandType(LandType::Forest))
+                            .and(SelectionRequirement::ControlledByYou),
+                    )),
+                ),
             },
             once_per_turn: false,
             sorcery_speed: false,
