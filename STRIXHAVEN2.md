@@ -46,6 +46,68 @@ All 247 cards marked ✅ or 🟡 have a corresponding factory in
 positives and 0 stale ⏳ rows. STX 2021 progress is tracked in the
 "Strixhaven base set (STX)" section near the bottom of this file.
 
+## 2026-05-03 push XXXII: 13 new STX 2021 cards + lethal-first auto-target + UI label coverage
+
+13 new STX 2021 cards added across mono and cross-college slots, plus
+an engine improvement to the auto-target picker for hostile damage
+spells, and three UI label arms.
+
+### Card additions (`catalog::sets::stx::mono`)
+
+All 13 cards use existing engine primitives — no new primitives gated.
+
+| Card | Cost | Status | Notes |
+|---|---|---|---|
+| Vortex Runner | {1}{U} | ✅ NEW | 1/2 Salamander Warrior. `Keyword::Unblockable` (matches printed "can't be blocked") + `Attacks/SelfSource → Scry 1`. |
+| Burrog Befuddler | {1}{U} | ✅ NEW | 1/3 Frog Wizard with Flash + magecraft `PumpPT(-2, 0, EOT)` on a target creature — combat-trick magecraft body. |
+| Crackle with Power | {X}{R}{R}{R} | ✅ NEW | Sorcery. `DealDamage` to any target, amount = `Times(XFromCost, 5)`. At X=3 deals 15 damage; at X=2 deals 10. Routes through the new lethal-first auto-target picker for "any target" creature kills. |
+| Sundering Stroke | {3}{R}{R}{R} | 🟡 NEW | Sorcery. 7 damage to one target. The "divided as you choose among 1, 2, or 3 targets" multi-target variant + the {R}{R}{R}{R}-spent doubling rider are both omitted (no divided-damage primitive — same gap as Magma Opus). |
+| Professor of Symbology | {1}{W} | 🟡 NEW | 1/1 Bird Wizard with Flying. ETB Learn collapses to `Draw 1` (Lesson sideboard model not yet present — same approximation as Eyetwitch / Hunt for Specimens / Igneous Inspiration). |
+| Professor of Zoomancy | {1}{G} | ✅ NEW | 1/1 Squirrel Wizard. ETB mints a 1/1 green Squirrel creature token. |
+| Leyline Invocation | {4}{G} | ✅ NEW | Sorcery — Lesson. Mint a 0/0 green Elemental token + stamp it with N +1/+1 counters where N = lands you control. Uses `Selector::LastCreatedToken` + `AddCounter` with `Value::CountOf(EachPermanent(Land ∧ ControlledByYou))` — same shape as Body of Research / Snow Day. Token P/T are locked at creation time. |
+| Verdant Mastery | {3}{G}{G} | 🟡 NEW | Sorcery. Two `Effect::Search` calls (basic land tapped to bf, then basic land to hand). The opp-half search is omitted (no `Effect::Search` variant targeting an opponent). The {7}{G}{G} alt cost is omitted (alt-cost-implies-mode primitive gap). |
+| Rise of Extus | {3}{W}{B} | ✅ NEW | Sorcery — Lesson. `Seq([Exile(Creature OR Planeswalker), Move(graveyard pick → battlefield)])` — exile + reanimate combo, single-target on each half. |
+| Gnarled Professor | {3}{G} | ✅ NEW | 4/4 Treefolk Druid with Reach. ETB `MayDo(Discard 1 → Draw 1)`. AutoDecider defaults "no"; ScriptedDecider can flip "yes" for tests. |
+| Inkfathom Witch | {2}{B} | ✅ NEW | 2/2 Faerie Warlock with Flying. `Attacks/SelfSource → MayPay({1}{B}, Drain 2)` attack-trigger optional drain. |
+| Blood Researcher | {1}{B} | ✅ NEW | 1/1 Vampire Wizard. `LifeGained/YourControl → AddCounter(This, +1/+1, ×1)` — lifegain payoff that scales linearly with Witherbloom drains. |
+| First Day of Class | {W} | ✅ NEW | Sorcery. Two `ForEach` passes over `EachPermanent(IsToken ∧ Creature ∧ ControlledByYou)`: PumpPT(+1/+1, EOT) + GrantKeyword(Haste, EOT). Targets *only* token creatures (a non-token bear stays at base P/T). |
+
+### Engine improvement: lethal-first auto-target
+
+New `Effect::hostile_damage_amount(&self) -> Option<i32>` static
+classifier that returns the constant damage amount of a damage effect.
+Covers `DealDamage(Const)`, `DealDamage(Times(Const, Const))`, and
+`Seq` leading with one. Returns None for X-cost folded values
+(Crackle's `Times(XFromCost, 5)`) since X is only known at cast-time.
+
+`auto_target_for_effect_avoiding` now consults that classifier on
+hostile-target picks and re-sorts the primary-candidate list so
+creatures whose toughness ≤ damage (lethal kills) come first, then by
+descending power for tiebreaks. Pre-fix the picker walked battlefield
+order and could pick a 2/2 utility creature when a 4/4 next-in-scan
+was a clean kill.
+
+### UI improvement: predicate_short_label coverage
+
+Three new arms in `predicate_short_label` (server/view.rs) covering:
+- `Value::CardsDrawnThisTurn(_)` — "after drawing" (≥1) / "if drew ≥N"
+  / "if drew ≤N" — surfaces lifegain-on-draw style gates and
+  Niv-Mizzet-flavored counts.
+- `Value::PermanentCountControlledBy(_)` — "if has permanents" / "if
+  ≥N permanents" / "if ≤N permanents" — pairs with the existing
+  CountOf arm, but reads off the per-player tally directly.
+
+### Tests (+18 net, 1261 → 1279)
+
+- `tests::stx::*` — 13 new tests (one per new card); plus
+  `first_day_of_class_pumps_token_creatures_only` covering the
+  IsToken-only filter.
+- `tests::modern::*` — 2 new tests for the lethal-first auto-target
+  picker (`heated_debate_auto_target_prefers_lethal_kill`,
+  `heated_debate_auto_target_falls_through_when_no_lethal`).
+- `server::view::tests::*` — 1 new test
+  (`predicate_short_label_covers_cards_drawn_and_permanent_count`).
+
 ## 2026-05-03 push XXXI: ManaSpentToCast + Opus/Increment shortcuts + EventKind::Blocks + 15 promotions
 
 Mana-spent introspection lands as a first-class engine primitive,
@@ -2198,6 +2260,19 @@ parity is a matter of porting card factories one at a time.
 | Big Play | {3}{G}{U} | 🟡 | Push XXIX: Instant (Lesson). Untap a creature + +1/+1 + hexproof + trample EOT. The "up to two target creatures" half collapses to single-target (no "up-to-two-target" prompt — same gap as Generous Gift's neighbor "up to two opp lands"). |
 | Confront the Past | {4}{R} | 🟡 | Push XXIX: Sorcery (Lesson). Mode 0 only — counter target activated/triggered ability via `Effect::CounterAbility`. The "steal a planeswalker loyalty ability" mode is omitted (dynamic mode-pick from a target's `loyalty_abilities` list is a brand-new primitive, same family as Sarkhan, the Masterless's static loyalty stamp). |
 | Pilgrim of the Ages | {3}{W} | ✅ | Push XXIX: 2/3 Spirit Wizard Cleric. Death-trigger basic-land recursion (`CreatureDied/SelfSource → Move(Selector::take(CardsInZone(Graveyard, IsBasicLand), 1) → Hand)`). Mirrors Pillardrop Rescuer's Lorehold-themed graveyard-recursion shape on a mono-white slot. |
+| Vortex Runner | {1}{U} | ✅ | Push XXXII: 1/2 Salamander Warrior. `Keyword::Unblockable` (printed "can't be blocked") + `Attacks/SelfSource → Scry 1` attack-trigger card selection. |
+| Burrog Befuddler | {1}{U} | ✅ | Push XXXII: 1/3 Frog Wizard with Flash + magecraft `PumpPT(-2, 0, EOT)` on a target creature. Combat-trick magecraft body. |
+| Crackle with Power | {X}{R}{R}{R} | ✅ | Push XXXII: Sorcery. `DealDamage` to any target with amount = `Times(XFromCost, 5)`. At X=3 → 15 damage. Routes through the new lethal-first auto-target picker for "any target" creature kills. |
+| Sundering Stroke | {3}{R}{R}{R} | 🟡 | Push XXXII: 7 damage to one target. Multi-target divided-damage variant + the {R}{R}{R}{R}-spent doubling rider both omitted (no divided-damage primitive — same gap as Magma Opus). |
+| Professor of Symbology | {1}{W} | 🟡 | Push XXXII: 1/1 Bird Wizard with Flying. ETB Learn collapsed to Draw 1 (Lesson sideboard model not yet present). |
+| Professor of Zoomancy | {1}{G} | ✅ | Push XXXII: 1/1 Squirrel Wizard. ETB mints a 1/1 green Squirrel creature token. |
+| Leyline Invocation | {4}{G} | ✅ | Push XXXII: Sorcery — Lesson. Mints a 0/0 green Elemental token + stamps it with N +1/+1 counters where N = `Value::CountOf(EachPermanent(Land ∧ ControlledByYou))` via `Selector::LastCreatedToken`. Net: an X/X Elemental at curve. Token P/T are locked at creation time (same shape as Body of Research / Snow Day). |
+| Verdant Mastery | {3}{G}{G} | 🟡 | Push XXXII: Sorcery. Search basic land tapped to bf + search basic land to hand (two `Effect::Search` calls). Opponent half + the {7}{G}{G} alt cost both omitted. |
+| Rise of Extus | {3}{W}{B} | ✅ | Push XXXII: Sorcery — Lesson. `Seq([Exile(Creature OR Planeswalker), Move(graveyard pick → battlefield)])` — exile + reanimate combo, single-target on each half. |
+| Gnarled Professor | {3}{G} | ✅ | Push XXXII: 4/4 Treefolk Druid with Reach. ETB `MayDo(Discard 1 → Draw 1)`. AutoDecider defaults "no"; ScriptedDecider can flip "yes" for tests. |
+| Inkfathom Witch | {2}{B} | ✅ | Push XXXII: 2/2 Faerie Warlock with Flying. `Attacks/SelfSource → MayPay({1}{B}, Drain 2)` — attack-trigger optional drain. |
+| Blood Researcher | {1}{B} | ✅ | Push XXXII: 1/1 Vampire Wizard. `LifeGained/YourControl → AddCounter(This, +1/+1, ×1)` — lifegain-payoff body. |
+| First Day of Class | {W} | ✅ | Push XXXII: Sorcery. Two `ForEach` passes over `EachPermanent(IsToken ∧ Creature ∧ ControlledByYou)`: PumpPT(+1/+1, EOT) + GrantKeyword(Haste, EOT). Targets *only* token creatures. |
 
 ### Shared / multi-college
 

@@ -3587,3 +3587,51 @@ fn inkfathom_witch_attack_drain_resolves_with_scripted_yes() {
     assert_eq!(g.players[0].life, your_life_before + 2,
         "you gained 2");
 }
+
+#[test]
+fn first_day_of_class_pumps_token_creatures_only() {
+    // First Day of Class — {W} Sorcery — pumps creature *tokens* you
+    // control +1/+1 and grants haste EOT. A non-token friendly creature
+    // does NOT get the buff.
+    let mut g = two_player_game();
+    // Token: mint via Professor of Zoomancy (1/1 Squirrel token).
+    let prof_id = g.add_card_to_hand(0, catalog::professor_of_zoomancy());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: prof_id, target: None, mode: None, x_value: None,
+    })
+    .expect("zoomancy castable");
+    drain_stack(&mut g);
+    // Non-token creature: vanilla Bears (2/2, baseline).
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+
+    // Cast First Day of Class.
+    let id = g.add_card_to_hand(0, catalog::first_day_of_class());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("first day castable");
+    drain_stack(&mut g);
+
+    // Squirrel token: was 1/1, now 2/2 + haste.
+    let squirrel = g.battlefield.iter()
+        .find(|c| c.definition.name == "Squirrel" && c.controller == 0)
+        .expect("squirrel token");
+    assert_eq!(squirrel.power(), 2, "Squirrel pumped to 2 power");
+    assert_eq!(squirrel.toughness(), 2, "Squirrel pumped to 2 toughness");
+    assert!(squirrel.has_keyword(&Keyword::Haste),
+        "Squirrel granted haste");
+
+    // Bears (non-token): 2/2, no buff.
+    let bear_card = g.battlefield.iter().find(|c| c.id == bear).unwrap();
+    assert_eq!(bear_card.power(), 2, "non-token Bear unchanged");
+    assert_eq!(bear_card.toughness(), 2);
+    assert!(!bear_card.has_keyword(&Keyword::Haste),
+        "non-token Bear didn't get haste");
+
+    // Professor of Zoomancy (non-token): unchanged.
+    let prof_card = g.battlefield.iter().find(|c| c.id == prof_id).unwrap();
+    assert_eq!(prof_card.power(), 1, "non-token Professor unchanged");
+}

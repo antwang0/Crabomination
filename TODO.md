@@ -7,6 +7,87 @@ See `CUBE_FEATURES.md` (cube-card implementation status) and
 
 ## Recent additions
 
+- ✅ **Push XXXII (2026-05-03)**: 13 new STX 2021 cards + lethal-first
+  auto-target + UI label coverage. Tests at 1279 (was 1261; +18 net).
+  - **13 new STX 2021 cards** (`catalog::sets::stx::mono`): Vortex
+    Runner ({1}{U}, 1/2 Unblockable + Attack/Scry 1), Burrog Befuddler
+    ({1}{U}, 1/3 Frog Wizard Flash + magecraft -2/-0), Crackle with
+    Power ({X}{R}{R}{R}, 5X damage via `Times(XFromCost, 5)`),
+    Sundering Stroke ({3}{R}{R}{R}, 7 damage; divided-damage rider
+    omitted), Professor of Symbology ({1}{W}, 1/1 Bird Wizard Flying +
+    ETB Learn), Professor of Zoomancy ({1}{G}, 1/1 Squirrel Wizard +
+    ETB Squirrel token), Leyline Invocation ({4}{G} Lesson, X/X
+    Elemental where X = lands), Verdant Mastery ({3}{G}{G}, two basic-
+    land searches), Rise of Extus ({3}{W}{B} Lesson, exile +
+    reanimate), Gnarled Professor ({3}{G}, 4/4 Reach + ETB MayDo
+    loot), Inkfathom Witch ({2}{B}, 2/2 Flying + Attack/MayPay drain
+    2), Blood Researcher ({1}{B}, 1/1 Vampire Wizard with
+    LifeGained → +1/+1 counter), First Day of Class ({W}, token-only
+    +1/+1 + haste anthem via two ForEach passes).
+  - **Engine improvement**: new
+    `Effect::hostile_damage_amount(&self) -> Option<i32>` static
+    classifier returning the constant damage amount of a damage
+    effect. `auto_target_for_effect_avoiding` consults it on hostile
+    picks and re-sorts the primary candidate list so creatures whose
+    toughness ≤ damage (lethal kills) come first, then by descending
+    power. Pre-fix the picker walked battlefield order — could pick a
+    2/2 utility creature when a 4/4 next-in-scan was a clean kill.
+    Covers `DealDamage(Const)`, `DealDamage(Times(Const, Const))`,
+    and `Seq` leading with one. Returns None for X-cost folded values
+    (Crackle's `Times(XFromCost, 5)`) since X is only known at
+    cast-time.
+  - **UI improvement**: `predicate_short_label` (server/view.rs) gained
+    arms for `Value::CardsDrawnThisTurn(_)` ("after drawing" / "if
+    drew ≥N" / "if drew ≤N") and `Value::PermanentCountControlledBy
+    (_)` ("if has permanents" / "if ≥N permanents" / "if ≤N
+    permanents"). Pairs with the existing `CountOf` arm for
+    permanent-count thresholds, but reads off the per-player tally
+    directly.
+  - **18 new tests**: 14 in `tests::stx::*` (one per new card +
+    `first_day_of_class_pumps_token_creatures_only`), 2 in
+    `tests::modern::*` (`heated_debate_auto_target_prefers_lethal_kill`,
+    `heated_debate_auto_target_falls_through_when_no_lethal`), 1 in
+    `server::view::tests::*`
+    (`predicate_short_label_covers_cards_drawn_and_permanent_count`),
+    plus 1 misc.
+
+## Future work — engine/UI suggestions surfaced by push XXXII
+
+- **Divided damage primitive** — Sundering Stroke ("7 damage divided
+  among 1, 2, or 3 targets"), Magma Opus ("4 damage divided"), Crackling
+  Doom ("greatest power" sac), and Volcanic Geyser-class spells all
+  collapse to single-target today. A new `Effect::DealDamageDivided
+  { amount, max_targets }` with a per-target distribution prompt
+  would unlock all of them. Multi-target prompt plumbing through
+  `GameAction::CastSpell` is the gating dependency (also blocks
+  Render Speechless / Cost of Brilliance / Homesickness — see
+  "Multi-Target Prompt" below).
+- **Cost-doubling-by-pip-count rider** — Sundering Stroke's "if
+  {R}{R}{R}{R} was spent to cast it, deals 14 damage instead" needs
+  a `Predicate::ColoredManaSpent(Color, AtLeast)` over
+  `Value::ManaSpentToCast`-like primitive. Same family as
+  Crackling Geyser-style "X colored mana spent" gates.
+- **Lesson sideboard model** — Professor of Symbology's "reveal a
+  Lesson card from outside the game" still collapses to Draw 1.
+  Five push-XXIX-and-prior cards share this approximation
+  (Eyetwitch, Hunt for Specimens, Igneous Inspiration, Field Trip,
+  the new Professor of Symbology). Adding a `learn_pool: Vec<
+  CardDefinition>` field on `Player` plus a `RevealAndChoose`
+  decision shape would unblock the cycle at full fidelity.
+- **Effect::Search variant against opponents** — Verdant Mastery's
+  "target opponent searches their library for a basic land card,
+  puts it onto the battlefield tapped, then shuffles" half is
+  omitted. The `Effect::Search { who: PlayerRef, ... }` already
+  takes a player ref; the gap is the controller-of-search authority
+  (does the caster pick, or does the opp pick?). Could be a new
+  flag on `Effect::Search { search_decider: PlayerRef }`.
+- **PumpPT label improvement** — `ability_effect_label` returns
+  "Pump" for both positive PumpPT (Giant Growth) and negative
+  PumpPT (Lash of Malice / Burrog Befuddler / Witherbloom Command's
+  -3/-3). A simple sign-aware split ("Pump" vs "Shrink") would
+  improve readability in the activated-ability badge UI for the
+  ~12 catalog cards that use negative PumpPT.
+
 - ✅ **Push XXXI (2026-05-03)**: Mana-spent-to-cast introspection lands
   + 15 SOS / STX 2021 promotions + new `EventKind::Blocks` event + UI
   label coverage. Tests at 1261 (was 1246, +15 net).

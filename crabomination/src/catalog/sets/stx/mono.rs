@@ -2755,6 +2755,63 @@ pub fn blood_researcher() -> CardDefinition {
     }
 }
 
+// ── First Day of Class ──────────────────────────────────────────────────────
+
+/// First Day of Class — {W} Sorcery (Strixhaven 2021 uncommon).
+/// Printed Oracle: "Until end of turn, creature tokens you control get
+/// +1/+1 and gain haste."
+///
+/// Mono-White token-anthem-on-the-stack. Wired with two `ForEach`
+/// passes over `EachPermanent(IsToken & Creature & ControlledByYou)`:
+/// the first applies `PumpPT(+1/+1, EOT)` to each token, the second
+/// grants `Keyword::Haste` (EOT). Stack with Pest Summoning / Spirit
+/// Summoning / Mascot Exhibition / Hunt for Specimens / Tend the
+/// Pests for an immediate go-wide swing turn.
+pub fn first_day_of_class() -> CardDefinition {
+    let your_token_creatures = Selector::EachPermanent(
+        SelectionRequirement::IsToken
+            .and(SelectionRequirement::Creature)
+            .and(SelectionRequirement::ControlledByYou),
+    );
+    CardDefinition {
+        name: "First Day of Class",
+        cost: cost(&[w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::ForEach {
+                selector: your_token_creatures.clone(),
+                body: Box::new(Effect::PumpPT {
+                    what: Selector::TriggerSource,
+                    power: Value::Const(1),
+                    toughness: Value::Const(1),
+                    duration: Duration::EndOfTurn,
+                }),
+            },
+            Effect::ForEach {
+                selector: your_token_creatures,
+                body: Box::new(Effect::GrantKeyword {
+                    what: Selector::TriggerSource,
+                    keyword: Keyword::Haste,
+                    duration: Duration::EndOfTurn,
+                }),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
 // ── Pilgrim of the Ages ─────────────────────────────────────────────────────
 
 /// Pilgrim of the Ages — {3}{W} 2/3 Spirit Wizard Cleric. "When this
