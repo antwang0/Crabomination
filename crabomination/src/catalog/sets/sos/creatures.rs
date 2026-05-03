@@ -62,6 +62,7 @@ pub fn eager_glyphmage() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -113,6 +114,7 @@ pub fn stirring_hopesinger() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -146,6 +148,7 @@ pub fn rehearsed_debater() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -184,6 +187,7 @@ pub fn informed_inkwright() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -239,6 +243,7 @@ pub fn owlin_historian() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -288,6 +293,7 @@ pub fn inkshape_demonstrator() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -333,6 +339,7 @@ pub fn inkling_mascot() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -366,6 +373,7 @@ pub fn imperious_inkmage() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -408,6 +416,7 @@ pub fn sneering_shadewriter() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -450,6 +459,7 @@ pub fn burrog_banemaker() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -493,6 +503,7 @@ pub fn noxious_newt() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -544,6 +555,7 @@ pub fn mindful_biomancer() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -578,6 +590,7 @@ pub fn shopkeepers_bane() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -624,6 +637,7 @@ pub fn studious_first_year() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     };
@@ -646,6 +660,7 @@ pub fn studious_first_year() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: Some(Box::new(back)),
         opening_hand: None,
     }
@@ -689,6 +704,7 @@ pub fn bogwater_lumaret() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -725,6 +741,7 @@ pub fn pest_mascot() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -783,6 +800,7 @@ pub fn blech_loafing_pest() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -812,6 +830,7 @@ pub fn rearing_embermare() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -873,6 +892,7 @@ pub fn ascendant_dustspeaker() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -918,6 +938,7 @@ pub fn shattered_acolyte() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -953,6 +974,7 @@ pub fn summoned_dromedary() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -1013,6 +1035,7 @@ pub fn stirring_honormancer() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -1095,6 +1118,7 @@ pub fn conciliators_duelist() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -1131,6 +1155,7 @@ pub fn lecturing_scornmage() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -1164,6 +1189,7 @@ pub fn melancholic_poet() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -1224,6 +1250,7 @@ pub fn snooping_page() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -1288,6 +1315,7 @@ pub fn scolding_administrator() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -1331,6 +1359,7 @@ pub fn zealous_lorecaster() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -1371,6 +1400,7 @@ pub fn environmental_scientist() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -1414,6 +1444,7 @@ pub fn pestbrood_sloth() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -1466,6 +1497,7 @@ pub fn old_growth_educator() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -1506,6 +1538,7 @@ pub fn teachers_pest() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -1557,6 +1590,7 @@ pub fn arnyn_deathbloom_botanist() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -1619,6 +1653,7 @@ pub fn aziza_mage_tower_captain() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -1679,6 +1714,7 @@ pub fn mica_reader_of_ruins() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -1727,6 +1763,7 @@ pub fn startled_relic_sloth() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -1804,6 +1841,7 @@ pub fn hardened_academic() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -1862,6 +1900,7 @@ pub fn slumbering_trudge() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -1899,6 +1938,7 @@ pub fn tenured_concocter() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -1938,6 +1978,7 @@ pub fn biblioplex_tomekeeper() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -1990,6 +2031,7 @@ pub fn strixhaven_skycoach() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -2034,6 +2076,7 @@ pub fn rancorous_archaic() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -2091,6 +2134,7 @@ pub fn pterafractyl() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -2137,6 +2181,7 @@ pub fn fractal_mascot() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -2202,6 +2247,7 @@ pub fn stadium_tidalmage() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -2250,6 +2296,7 @@ pub fn charging_strifeknight() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -2293,6 +2340,7 @@ pub fn cuboid_colony() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -2334,6 +2382,7 @@ pub fn fractal_tender() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -2370,6 +2419,7 @@ pub fn thornfist_striker() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -2401,6 +2451,7 @@ pub fn hungry_graffalon() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -2434,6 +2485,7 @@ pub fn pensive_professor() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -2473,6 +2525,7 @@ pub fn tester_of_the_tangential() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -2527,6 +2580,7 @@ pub fn muse_seeker() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -2569,6 +2623,7 @@ pub fn aberrant_manawurm() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -2623,6 +2678,7 @@ pub fn tackle_artist() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -2675,6 +2731,7 @@ pub fn thunderdrum_soloist() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -2732,6 +2789,7 @@ pub fn molten_core_maestro() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -2786,6 +2844,7 @@ pub fn expressive_firedancer() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -2826,6 +2885,7 @@ pub fn strife_scholar() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -2855,6 +2915,7 @@ pub fn eternal_student() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -2898,6 +2959,7 @@ pub fn postmortem_professor() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -2942,6 +3004,7 @@ pub fn spirit_mascot() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -2997,6 +3060,7 @@ pub fn witherbloom_the_balancer() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -3038,6 +3102,7 @@ pub fn garrison_excavator() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -3098,6 +3163,7 @@ pub fn topiary_lecturer() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -3152,6 +3218,7 @@ pub fn transcendent_archaic() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -3221,6 +3288,7 @@ pub fn sundering_archaic() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -3275,6 +3343,7 @@ pub fn poisoners_apprentice() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -3342,6 +3411,7 @@ pub fn hydro_channeler() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -3375,6 +3445,7 @@ pub fn campus_composer() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -3409,6 +3480,7 @@ pub fn ulna_alley_shopkeep() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -3486,6 +3558,7 @@ pub fn emil_vastlands_roamer() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -3542,6 +3615,7 @@ pub fn elemental_mascot() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -3591,6 +3665,7 @@ pub fn colorstorm_stallion() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -3640,6 +3715,7 @@ pub fn abstract_paintmage() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -3687,6 +3763,7 @@ pub fn geometers_arthropod() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -3741,6 +3818,7 @@ pub fn matterbending_mage() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -3784,6 +3862,7 @@ pub fn orysa_tide_choreographer() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -3840,6 +3919,7 @@ pub fn exhibition_tidecaller() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -3902,6 +3982,7 @@ pub fn practiced_scrollsmith() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -3983,6 +4064,7 @@ pub fn colossus_of_the_blood_age() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -4021,6 +4103,7 @@ pub fn soaring_stoneglider() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -4076,6 +4159,7 @@ pub fn spectacular_skywhale() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -4117,6 +4201,7 @@ pub fn zaffai_and_the_tempests() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -4181,6 +4266,7 @@ pub fn lorehold_the_historian() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -4240,6 +4326,7 @@ pub fn silverquill_the_disputant() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -4280,6 +4367,7 @@ pub fn quandrix_the_proof() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -4320,6 +4408,7 @@ pub fn prismari_the_inspiration() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -4369,6 +4458,7 @@ pub fn mage_tower_referee() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -4465,6 +4555,7 @@ pub fn ennis_debate_moderator() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -4501,6 +4592,7 @@ pub fn tragedy_feaster() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -4546,6 +4638,7 @@ pub fn forum_necroscribe() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -4635,6 +4728,7 @@ pub fn berta_wise_extrapolator() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -4682,6 +4776,7 @@ pub fn paradox_surveyor() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -4738,6 +4833,7 @@ pub fn magmablood_archaic() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -4789,6 +4885,7 @@ pub fn wildgrowth_archaic() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -4836,6 +4933,7 @@ pub fn ambitious_augmenter() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -4892,6 +4990,7 @@ pub fn rubble_rouser() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -4966,6 +5065,7 @@ pub fn professor_dellian_fel() -> CardDefinition {
             },
         ],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -5043,6 +5143,7 @@ pub fn ral_zarek_guest_lecturer() -> CardDefinition {
             },
         ],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -5088,6 +5189,7 @@ pub fn textbook_tabulator() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -5162,6 +5264,7 @@ pub fn deluge_virtuoso() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -5213,6 +5316,7 @@ pub fn moseo_veins_new_dean() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -5248,6 +5352,7 @@ pub fn stone_docent() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -5287,6 +5392,7 @@ pub fn page_loose_leaf() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -5357,6 +5463,7 @@ pub fn essenceknit_scholar() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -5415,6 +5522,7 @@ pub fn the_dawning_archaic() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }

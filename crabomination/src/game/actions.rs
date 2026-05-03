@@ -610,6 +610,29 @@ impl GameState {
             return Err(GameError::SelectionRequirementViolated);
         }
 
+        // Pre-flight check for additional sacrifice cost ("As an
+        // additional cost to cast this spell, sacrifice a [filter]"):
+        // require that the controller has at least one matching
+        // permanent. Without it the cast is illegal — the spell goes
+        // back to hand. The actual sacrifice happens *after* mana
+        // payment succeeds (below), so we don't need to revert it on
+        // mana-payment failure.
+        if let Some(filter) = card.definition.additional_sac_cost.clone() {
+            let has_one = self.battlefield.iter().any(|c| {
+                c.controller == p
+                    && c.id != card.id
+                    && self.evaluate_requirement_static(
+                        &filter,
+                        &Target::Permanent(c.id),
+                        p,
+                    )
+            });
+            if !has_one {
+                self.players[p].hand.push(card);
+                return Err(GameError::SelectionRequirementViolated);
+            }
+        }
+
         // Pay the cost (substitute X if present, then apply any
         // static-ability discounts (Killian's "{2} less if targeting a
         // creature") and surcharges (Damping Sphere's "{1} more after
@@ -663,6 +686,47 @@ impl GameState {
         let converged_value = converge_count(&receipt.pool_before, &self.players[p].mana_pool);
 
         let mut auto_events = receipt.auto_events;
+
+        // Pay the additional sacrifice cost (after mana, before going on
+        // stack). Auto-pick the lowest-value matching permanent — same
+        // heuristic as `Effect::Sacrifice` (tokens first, then by mana
+        // value, then by power). This keeps the spell card itself out
+        // of the candidate pool (we already filtered on `c.id !=
+        // card.id` in the pre-flight check).
+        if let Some(filter) = card.definition.additional_sac_cost.clone() {
+            let mut candidates: Vec<&crate::card::CardInstance> = self
+                .battlefield
+                .iter()
+                .filter(|c| c.controller == p)
+                .filter(|c| c.id != card.id)
+                .filter(|c| {
+                    self.evaluate_requirement_static(
+                        &filter,
+                        &Target::Permanent(c.id),
+                        p,
+                    )
+                })
+                .collect();
+            candidates.sort_by_key(|c| {
+                (
+                    !c.is_token,
+                    c.definition.cost.cmc(),
+                    c.power(),
+                )
+            });
+            if let Some(picked) = candidates.first().map(|c| c.id) {
+                let is_creature = self
+                    .battlefield_find(picked)
+                    .map(|c| c.definition.is_creature())
+                    .unwrap_or(false);
+                if is_creature {
+                    auto_events.push(GameEvent::CreatureDied { card_id: picked });
+                }
+                let mut die_evs = self.remove_to_graveyard_with_triggers(picked);
+                auto_events.append(&mut die_evs);
+            }
+        }
+
         auto_events.push(GameEvent::SpellCast {
             player: p,
             card_id,

@@ -34,6 +34,7 @@ pub fn glorious_anthem() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -73,6 +74,7 @@ pub fn animate_dead() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }

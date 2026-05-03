@@ -1966,6 +1966,13 @@ impl GameState {
                 .unwrap_or(0),
             Value::CardsDiscardedThisResolution => self.cards_discarded_this_resolution as i32,
             Value::AttackersThisCombat => self.attacking.len() as i32,
+            Value::IfPredicate { cond, then, else_ } => {
+                if self.evaluate_predicate(cond, ctx) {
+                    self.evaluate_value(then, ctx)
+                } else {
+                    self.evaluate_value(else_, ctx)
+                }
+            }
             Value::ManaSpentToCast => {
                 // Locate the trigger-source spell on the stack. Magecraft /
                 // SpellCast triggers stash the cast spell's `CardId` in
@@ -2707,6 +2714,7 @@ pub fn token_to_card_definition(token: &TokenDefinition) -> CardDefinition {
         triggered_abilities: token.triggered_abilities.clone(),
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }

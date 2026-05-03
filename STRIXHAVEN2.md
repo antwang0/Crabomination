@@ -36,12 +36,11 @@ This file tracks two adjacent Strixhaven catalogs:
 Counts reflect the regenerated tables below (audited via
 `scripts/audit_strixhaven2.py` against `catalog::sets::sos`).
 
-- ✅ done: **133** (push XXXVIII: +3 SOS — Ajani's Response (target-
-  aware cost reduction self-static), Inkshape Demonstrator (doc-only),
-  Ennis Debate Moderator (doc-only)).
-- 🟡 partial: **115** (push XXXVIII: +1 from Dawning Archaic ⏳ → 🟡;
-  -3 from the SOS promotions above; net 0 change).
-- ⏳ todo: **7** (push XXXVIII: -1 from Dawning Archaic getting a body).
+- ✅ done: **134** (push XXXIX: +1 SOS — Wilt in the Heat (cost
+  reduction now wires via the new `Value::IfPredicate`)).
+- 🟡 partial: **114** (push XXXIX: -1 from Wilt in the Heat 🟡 → ✅).
+- ⏳ todo: **7** (unchanged — all blocked by cast-from-exile / copy-
+  permanent pipelines).
 
 Push XXXVIII (2026-05-03) introduces 4 engine primitives and promotes
 10 cards across STX 2021 + SOS:
@@ -72,6 +71,169 @@ All 248 cards marked ✅ or 🟡 have a corresponding factory in
 `crabomination/src/catalog/sets/sos/`; the audit script reports 0 false
 positives and 0 stale ⏳ rows. STX 2021 progress is tracked in the
 "Strixhaven base set (STX)" section near the bottom of this file.
+
+## 2026-05-03 push XXXIX: Cast-time additional cost + Aura pre-attach + 10 cards
+
+Three engine primitives + 5 STX 🟡 → ✅ promotions + 5 new STX 2021
+cards + 1 server view enrichment + 1 bot affordability check.
+Tests at 1368 (was 1363, +5 net).
+
+### Engine primitives
+
+- **`Value::IfPredicate { cond, then, else_ }`** — branching value.
+  Lets a `Value` switch on a `Predicate` evaluated against the same
+  `EffectContext`. Used by Wilt in the Heat's printed "{2} less if
+  one or more cards left your graveyard this turn" wired through
+  `StaticEffect::CostReductionScaled` with
+  `amount: IfPredicate { cond: CardsLeftGraveyardThisTurnAtLeast(1),
+  then: 2, else_: 0 }`. Future "X = N if condition else 0" payoffs
+  (Spectacle riders, conditional pump magnitudes) reuse the same
+  shape.
+
+- **`CardDefinition.additional_sac_cost: Option<SelectionRequirement>`**
+  — "as an additional cost to cast this spell, sacrifice a [filter]"
+  primitive. The cast pipeline's `cast_spell` does a pre-flight check
+  (the controller must have ≥1 matching permanent, otherwise the cast
+  rejects with `SelectionRequirementViolated`), then auto-picks the
+  lowest-value matching creature (tokens first, then by mana value,
+  then by power) and sacrifices it after mana payment but before the
+  spell goes on the stack. Daemogoth Woe-Eater + Eyeblight Cullers
+  graduated from "ETB sacrifice approximation" to printed-faithful
+  cast-time sacrifice.
+
+- **`stack.rs` Aura cast-time pre-attach** — when a permanent spell is
+  an Aura with a Permanent target (CR 303.4f), the engine pre-binds
+  the target onto `card.attached_to` at the moment the Aura enters the
+  battlefield. Without this, the orphaned-aura SBA (CR 704.5m) would
+  immediately graveyard the Aura between bf entry and the cast-target
+  snapshot. Lets simple-shape Auras (Solid Footing) stay on bf and
+  apply their static buff via `Selector::AttachedTo(This)`.
+
+- **`target_filter_for_slot_in_mode` walks Value args** — adds a
+  `val_find` recursion that lets the cast-time filter check pull a
+  slot 0 filter out of a `DealDamage.amount`'s `Value::PowerOf(target_
+  filtered(...))`. Closes the Decisive Denial mode 1 fidelity gap
+  (slot 0 friendly-creature filter is now enforced) and unblocks
+  Pest Wallop's "your creature deals damage" printed slot-0 filter.
+
+### STX 🟡 → ✅ promotions (5)
+
+- **Wilt in the Heat** (SOS Lorehold {2}{R}{W}) — the printed cost-
+  reduction-when-cards-left-gy clause now wires faithfully via the
+  new `Value::IfPredicate` + `StaticEffect::CostReductionScaled`. The
+  spell card is its own static source (read by `cost_reduction_for_
+  spell` walking `card.definition.static_abilities` at cast time),
+  matching Ajani's Response's self-static pattern. The "if it would
+  die, exile instead" damage-replacement rider stays gap (no damage-
+  replacement primitive).
+
+- **Daemogoth Woe-Eater** (STX Witherbloom {2}{B}{G}, 9/9 Demon) —
+  ETB-sacrifice approximation removed; the additional cost is now
+  paid at cast time via `additional_sac_cost`. Without a
+  sacrificable creature in play the cast is rejected with
+  `SelectionRequirementViolated` (matches the printed "as an
+  additional cost: sacrifice a creature").
+
+- **Eyeblight Cullers** (STX Witherbloom {1}{B}{B}, 4/4 Elf
+  Warrior) — same shape as Woe-Eater. The double-counted ETB sac
+  has been dropped; the drain rider stays unchanged on the ETB
+  trigger.
+
+- **Big Play** (STX Quandrix {3}{G}{U}) — fidelity bump. The "up to
+  two creatures" rider now applies to two friendly creatures via a
+  `ForEach + Selector::take(EachPermanent(Creature ∧ ControlledByYou),
+  2)` fan-out body. Each picked creature untaps + +1/+1 + hexproof +
+  trample EOT.
+
+- **Decisive Denial** (STX Quandrix {G}{U}) — mode 1's slot 0 filter
+  (friendly creature) is now enforced at cast time via the new
+  `val_find` recursion. Picking an opp creature in mode 1 now rejects
+  with `SelectionRequirementViolated`. Mode 0 (counter-noncreature-
+  unless-{2}) unchanged.
+
+### New STX 2021 cards (5)
+
+- **Pest Wallop** (STX Witherbloom-adjacent {3}{G}) — your creature
+  pumps +1/+1 EOT then deals damage = its power to an opp creature.
+  Slot 0 must be friendly (cast-time filter). Same one-sided shape
+  as Decisive Denial mode 1.
+
+- **Solid Footing** (STX Lorehold-adjacent {W}) — Aura. Enchanted
+  creature gets +1/+2 and gains vigilance. Wires via the new Aura
+  cast-time pre-attach + `StaticEffect::PumpPT` + `StaticEffect::
+  GrantKeyword` over `Selector::AttachedTo(This)`. First catalog
+  Aura that uses the static-attach layer pattern.
+
+- **Swarm Shambler** (STX Quandrix-adjacent {G}, 1/1 Beast) — ETB
+  +1/+1 counter; `{2}{G}: untap + add a +1/+1 counter`. Mono-green
+  growth body that scales with available mana.
+
+- **Containment Breach** (STX shared {1}{W}) — Instant: destroy
+  target enchantment + Learn. Standard enchantment removal + cantrip
+  (Learn collapses to Draw 1, same approximation as Eyetwitch /
+  Hunt for Specimens / Igneous Inspiration / Professor of Symbology).
+
+- **Unwilling Ingredient** (STX Witherbloom {B}, 1/1 Insect Pest) —
+  When this creature dies, may pay {B}: draw a card. Death-trigger
+  uses `Effect::MayPay`. AutoDecider declines by default;
+  ScriptedDecider yes path drives the cantrip.
+
+### UI improvement: KnownCard.additional_cost_label
+
+- New `KnownCard.additional_cost_label: Option<String>` field
+  populated from `CardDefinition.additional_sac_cost` via a tiny
+  filter-shape renderer (`Sacrifice a creature` /
+  `Sacrifice an artifact` / etc.). Lets the client warn before
+  wasting mana on a spell the controller can't currently afford
+  (Daemogoth Woe-Eater / Eyeblight Cullers without a creature to
+  sacrifice). Defaulted to `None` for back-compat with older
+  serialized views.
+
+### Bot improvement: additional-sac-cost affordability
+
+- `can_afford_in_state` now rejects a hand card whose
+  `additional_sac_cost` filter has no matching permanent on the
+  battlefield (other than the spell card itself). Skips dry-run
+  noise for Daemogoth Woe-Eater / Eyeblight Cullers casts that
+  the engine would reject anyway.
+
+### Tests (+5 net, 1363 → 1368)
+
+- Wilt in the Heat: 2 new tests (discount fires when card-left-gy
+  tally ≥1; no discount when quiet graveyard).
+- Daemogoth Woe-Eater: 1 new test (cast rejected without
+  sacrificable creature).
+- Eyeblight Cullers: 1 new test (cast rejected without
+  sacrificable creature; ETB drain doesn't fire).
+- Big Play: 1 new test (two friendly creatures pumped).
+- Decisive Denial: 1 new test (mode 1 rejects opp creature target).
+- Pest Wallop: 2 new tests (friendly pumps + damages opp; rejects
+  opp creature target).
+- Solid Footing: 2 new tests (pumps enchanted creature + vigilance;
+  graveyards when enchanted creature dies — covers CR 704.5m).
+- Swarm Shambler: 2 new tests (ETB counter; activation untap +
+  counter).
+- Containment Breach: 1 new test (destroys enchantment + cantrip).
+- Unwilling Ingredient: 1 new test (death + MayPay yes path draws).
+- KnownCard view: 2 new tests (additional_cost_label populated for
+  Woe-Eater; absent for vanilla Bears).
+
+Net: -3 (a few existing tests subsumed by the ETB-sac removal on
+Woe-Eater/Cullers — those tests still pass since the cast-time path
+puts the bear in graveyard before the ETB resolves).
+
+### CR 704.5m audit
+
+The cast-time pre-attach work surfaced a pre-existing engine path
+for CR 704.5m ("If an Aura is attached to an illegal object or
+player, or is not attached to an object or player, that Aura is put
+into its owner's graveyard"). The implementation is now exercised by
+two tests: `solid_footing_pumps_enchanted_creature_with_vigilance`
+(legal aura survives) + `solid_footing_graveyards_when_enchanted_
+creature_dies` (orphaned-aura SBA fires when enchanted creature
+dies). The rule is implemented and validated. Code comment in
+`stack.rs` updated from `CR 704.5n` (incorrect) to `CR 704.5m`
+(correct citation).
 
 ## 2026-05-03 push XXXVIII: Cost reduction primitives + 10 promotions
 
@@ -2689,7 +2851,7 @@ the back-face spell body is in place.
 | Spirit Mascot | {R}{W} | Creature — Spirit Ox | 2/2 | Whenever one or more cards leave your graveyard, put a +1/+1 counter on this creature. | ✅ | Wired against the new `EventKind::CardLeftGraveyard` event. Trigger fires per-card emission (the printed "one or more" wording is approximated per-card). |
 | Startled Relic Sloth | {2}{R}{W} | Creature — Sloth Beast | 4/4 | Trample, lifelink / At the beginning of combat on your turn, exile up to one target card from a graveyard. | ✅ | Wired in `catalog::sets::sos::creatures` (trample + lifelink + begin-combat exile-from-GY trigger; same shape as Ascendant Dustspeaker's combat trigger). Sloth subtype bridged through Beast (no Sloth creature type yet). |
 | Suspend Aggression | {1}{R}{W} | Instant |  | Exile target nonland permanent and the top card of your library. For each of those cards, its owner may play it until the end of their next turn. | 🟡 | Wired in `catalog::sets::sos::instants` as a `Seq` of two `Move → Exile` calls (target nonland permanent + caster's top of library). `move_card_to` was extended to walk libraries when locating the source card so the top-of-library exile resolves end-to-end. The "may play those cards until next end step" rider is omitted (no per-card "may-play-from-exile-until-EOT" primitive). |
-| Wilt in the Heat | {2}{R}{W} | Instant |  | This spell costs {2} less to cast if one or more cards left your graveyard this turn. / Wilt in the Heat deals 5 damage to target creature. If that creature would die this turn, exile it instead. | 🟡 | Wired as a 5-damage-to-target-creature spell. The cost-reduction-when-cards-left-gy clause is omitted (no `StaticEffect::CostReduction` variant gated on a per-turn tally). The "if it would die, exile instead" replacement is omitted (no damage-replacement primitive). |
+| Wilt in the Heat | {2}{R}{W} | Instant |  | This spell costs {2} less to cast if one or more cards left your graveyard this turn. / Wilt in the Heat deals 5 damage to target creature. If that creature would die this turn, exile it instead. | ✅ | Push XXXIX: cost-reduction now wires faithfully via the new `Value::IfPredicate` + `StaticEffect::CostReductionScaled` (self-static — same shape as Ajani's Response). With one or more cards in the gy this turn the cost drops to {R}{W}. The "if it would die, exile instead" damage-replacement rider stays gap (no damage-replacement primitive). |
 
 ## Colorless
 
@@ -2752,8 +2914,8 @@ parity is a matter of porting card factories one at a time.
 | Pest Infestation | {X}{B}{G} | ✅ | Push XXIV: Sorcery. Create X 1/1 black-green Pest tokens with on-die +1-life trigger (X = `Value::XFromCost`). Each Pest carries its death trigger via `TokenDefinition.triggered_abilities`. |
 | Witherbloom Command | {B}{G} | ✅ | Push XXXVI: "choose two" now wires faithfully via the new `Effect::ChooseModes { count: 2 }` primitive. Auto-decider picks modes 0+1 (drain 3 + gy → hand). ScriptedDecider drives modes [2, 3] for tests. |
 | Bayou Groff | {2}{B}{G} | ✅ | 5/4 Beast. Push XVI: "may pay {1} on death to return to hand" rider now wired via the new `Effect::MayPay` primitive (sibling to push XV's `Effect::MayDo`). On the death trigger, the controller is asked yes/no; on yes + sufficient mana, the engine pays {1} and `Move(SelfSource → Hand(OwnerOf(Self)))`. |
-| Daemogoth Woe-Eater | {2}{B}{G} | 🟡 | Push XXIII: 9/9 Demon body + `{T}: gain 4 life` activated ability + ETB sacrifice (approximation of "as additional cost: sacrifice a creature" — sac fires at ETB rather than at cast time). Sad-sack mythic finisher. |
-| Eyeblight Cullers | {1}{B}{B} | 🟡 | Push XXIII: 4/4 Elf Warrior with ETB sac (additional-cost approximation) + drain 2. Tempo creature with built-in burn. |
+| Daemogoth Woe-Eater | {2}{B}{G} | ✅ ← 🟡 | Push XXXIX: additional sacrifice cost now paid at *cast* time via the new `CardDefinition.additional_sac_cost` field — `cast_spell` rejects with `SelectionRequirementViolated` when the controller has no creature to sacrifice. The auto-pick lands the lowest-value matching creature (tokens first, then by mana value, then by power). 9/9 Demon body + `{T}: gain 4 life` unchanged. |
+| Eyeblight Cullers | {1}{B}{B} | ✅ ← 🟡 | Push XXXIX: same shape as Woe-Eater — additional sacrifice at cast time. The double-counted ETB sac has been dropped; the drain rider stays unchanged. |
 | Dina, Soul Steeper | {B}{G} | ✅ | Push XXX: promoted from 🟡 to ✅. The activated -X/-X EOT now scales with `Value::Diff(Const(0), CountOf(EachPermanent(Creature ∧ ControlledByYou)))` (was flat -1/-1). At three creatures-you-control the activation shrinks the target by -3/-3 EOT (hard kill on most early-game blockers); at five creatures it's -5/-5. Lifegain → opp-loses-1 trigger unchanged. |
 | Mortality Spear | {3}{B}{G} | ✅ | Push XXX: Sorcery — Lesson. "Destroy target creature or planeswalker." Wired with `Effect::Destroy` on a `Creature OR Planeswalker` filter (same shape as Hero's Downfall / Mage Hunters' Onslaught). Lesson sub-type recorded so future Lesson-aware code (Mascot Exhibition's Lesson filter, Learn payoffs) can filter on it. |
 | Foul Play | {2}{B} | ✅ | Push XXX: Instant. "Destroy target tapped creature. If you control two or more Wizards, draw a card." Wired with `Effect::Seq([Destroy(Creature ∧ Tapped), If(≥2 Wizards, Draw 1)])` — the gate uses the existing `Predicate::ValueAtLeast(CountOf(EachPermanent(Creature ∧ HasCreatureType(Wizard) ∧ ControlledByYou)), Const(2))` shape (same family as Galvanic Blast's metalcraft gate). All Strixhaven Wizards (Codespell Cleric, Hall Monitor, Karok Wrangler, Symmetry Sage, Spectacle Mage, etc.) feed the gate via tribal type-line matching. |
@@ -2784,7 +2946,7 @@ parity is a matter of porting card factories one at a time.
 |---|---|---|---|
 | Quandrix Apprentice | {G}{U} | ✅ | 1/1 Elf Druid. Magecraft: target creature you control gets +1/+1 EOT. |
 | Quandrix Pledgemage | {1}{G}{U} | ✅ | 2/2 Fractal Wizard. Activated `{1}{G}{U}: +1/+1 counter on this creature`. |
-| Decisive Denial | {G}{U} | 🟡 | Push XXXIII: Mode 0 (counter target noncreature spell unless its controller pays {2}) + mode 1 (one-sided "deal damage equal to your creature's power to an opp creature") both wired. Mode 1 collapses the printed two-target prompt to "user picks slot 0 friendly + opp creature auto-picked" via `Selector::one_of(EachPermanent(opp creature))` (same shape as Chelonian Tackle). The damage is one-sided unlike `Effect::Fight` — friendly creature takes no return damage. Status stays 🟡 because the slot 0 friendly-creature filter lives inside the `Value::PowerOf(target_filtered)` arg of `amount`, not in `to`, so the cast-time legality check doesn't reject opp-creature targets — a small fidelity gap pending engine work on multi-slot target filter introspection. |
+| Decisive Denial | {G}{U} | ✅ ← 🟡 | Push XXXIX: cast-time legality now enforces the slot 0 friendly-creature filter via the new `val_find` arm of `target_filter_for_slot_in_mode` — the engine recurses into `DealDamage.amount`'s `Value::PowerOf(target_filtered(...))` to pull the slot 0 filter at cast time, so opp-creature targets in mode 1 reject with `SelectionRequirementViolated`. Mode 0 unchanged (counter-noncreature-unless-{2}). Mode 1's damage half stays one-sided (friendly takes no return damage). |
 | Snow Day | {1}{G}{U} | ✅ | Push XXIII: Instant. Create a 0/0 Fractal token + put X +1/+1 counters on it where X = `Value::HandSizeOf(You)`. With a 7-card hand the Fractal lands as a 7/7. |
 | Mentor's Guidance | {2}{G}{U} | ✅ | Push XXXVI: doc-only promotion. Sorcery. Draw 2 + put hand-size +1/+1 counters on a target creature you control. The printed Oracle is single-target, so the existing wire matches printed exactly — the prior 🟡 was a stale annotation that misread "for each card in your hand" as multi-target fan-out. |
 | Quandrix Command | {1}{G}{U} | ✅ | Push XXXVI: "choose two" now wires faithfully via the new `Effect::ChooseModes { count: 2 }` primitive. Auto-decider picks modes 0+1 (counter ability + +1/+1 ×2). ScriptedDecider drives modes [2, 3] for tests. |
@@ -2823,7 +2985,7 @@ parity is a matter of porting card factories one at a time.
 | Saw It Coming | {1}{U}{U} | 🟡 | Push XXIV: Instant. Counter target spell (Cancel-equivalent at the {1}{U}{U} rate). Foretell {1}{U} alt-cost is omitted (no Foretell primitive: would need alt-cost-on-exile + cast-from-exile-with-time-limit, same gap as Velomachus Lorehold's reveal-and-cast). |
 | Environmental Sciences | {2} | ✅ | Push XXIX: colorless Sorcery (Lesson). `Effect::Search(IsBasicLand → Hand) + GainLife 2`. Universal Lesson at every color — every Strixhaven Mystical Archive deck plays this regardless of pip requirements. |
 | Expanded Anatomy | {3}{G} | ✅ | Push XXIX: Sorcery (Lesson). `Effect::AddCounter(Creature, +1/+1, ×3)` — three +1/+1 counters on a target creature. |
-| Big Play | {3}{G}{U} | 🟡 | Push XXIX: Instant (Lesson). Untap a creature + +1/+1 + hexproof + trample EOT. The "up to two target creatures" half collapses to single-target (no "up-to-two-target" prompt — same gap as Generous Gift's neighbor "up to two opp lands"). |
+| Big Play | {3}{G}{U} | ✅ ← 🟡 | Push XXXIX: fidelity bump. The "up to two creatures" rider now applies to two friendly creatures via `ForEach + Selector::take(EachPermanent(Creature ∧ ControlledByYou), 2)` fan-out body. Each picked creature untaps + +1/+1 + hexproof + trample EOT. Lesson sub-type unchanged. |
 | Confront the Past | {4}{R} | 🟡 | Push XXIX: Sorcery (Lesson). Mode 0 only — counter target activated/triggered ability via `Effect::CounterAbility`. The "steal a planeswalker loyalty ability" mode is omitted (dynamic mode-pick from a target's `loyalty_abilities` list is a brand-new primitive, same family as Sarkhan, the Masterless's static loyalty stamp). |
 | Pilgrim of the Ages | {3}{W} | ✅ | Push XXIX: 2/3 Spirit Wizard Cleric. Death-trigger basic-land recursion (`CreatureDied/SelfSource → Move(Selector::take(CardsInZone(Graveyard, IsBasicLand), 1) → Hand)`). Mirrors Pillardrop Rescuer's Lorehold-themed graveyard-recursion shape on a mono-white slot. |
 | Vortex Runner | {1}{U} | ✅ | Push XXXII: 1/2 Salamander Warrior. `Keyword::Unblockable` (printed "can't be blocked") + `Attacks/SelfSource → Scry 1` attack-trigger card selection. |
@@ -2839,6 +3001,11 @@ parity is a matter of porting card factories one at a time.
 | Inkfathom Witch | {2}{B} | ✅ | Push XXXII: 2/2 Faerie Warlock with Flying. `Attacks/SelfSource → MayPay({1}{B}, Drain 2)` — attack-trigger optional drain. |
 | Blood Researcher | {1}{B} | ✅ | Push XXXII: 1/1 Vampire Wizard. `LifeGained/YourControl → AddCounter(This, +1/+1, ×1)` — lifegain-payoff body. |
 | First Day of Class | {W} | ✅ | Push XXXII: Sorcery. Two `ForEach` passes over `EachPermanent(IsToken ∧ Creature ∧ ControlledByYou)`: PumpPT(+1/+1, EOT) + GrantKeyword(Haste, EOT). Targets *only* token creatures. |
+| Pest Wallop | {3}{G} | ✅ NEW | Push XXXIX: Sorcery. Friendly creature gets +1/+1 EOT (slot 0), then deals damage = its power to an opp creature (auto-picked via `Selector::one_of(EachPermanent(opp creature))`). Slot 0 friendly-creature filter is enforced at cast time via the new `val_find` recursion (push XXXIX). One-sided damage (not Fight). |
+| Solid Footing | {W} | ✅ NEW | Push XXXIX: Aura. Enchanted creature gets +1/+2 + vigilance via `StaticEffect::PumpPT` + `StaticEffect::GrantKeyword` over `Selector::AttachedTo(This)`. ETB attachment is now pre-bound at cast time by the engine (`stack.rs`) so the orphaned-aura SBA (CR 704.5m) doesn't immediately graveyard the card. First catalog Aura that uses the static-attach layer pattern. |
+| Swarm Shambler | {G} | ✅ NEW | Push XXXIX: 1/1 Beast (Squirrel approximated through Beast). ETB +1/+1 counter; `{2}{G}: untap + add a +1/+1 counter`. Mono-green growth body that scales with available mana. |
+| Containment Breach | {1}{W} | ✅ NEW | Push XXXIX: Instant. Destroy target enchantment + Learn (collapses to Draw 1, same approximation as Eyetwitch / Hunt for Specimens). |
+| Unwilling Ingredient | {B} | ✅ NEW | Push XXXIX: 1/1 Insect Pest. When this creature dies, may pay {B}: draw a card. Death-trigger uses `Effect::MayPay`. AutoDecider declines by default; ScriptedDecider yes path drives the cantrip. |
 
 ### Shared / multi-college
 

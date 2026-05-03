@@ -28,6 +28,7 @@ pub fn ornithopter() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -66,6 +67,7 @@ pub fn ornithopter_of_paradise() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -105,6 +107,7 @@ pub fn millstone() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -163,6 +166,7 @@ pub fn mind_stone() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -224,6 +228,7 @@ pub fn aether_spellbomb() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -272,6 +277,7 @@ pub fn zuran_orb() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -327,6 +333,7 @@ pub fn chromatic_star() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -401,6 +408,7 @@ pub fn soul_guide_lantern() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -452,6 +460,7 @@ pub fn cankerbloom() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -495,6 +504,7 @@ pub fn fellwar_stone() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }

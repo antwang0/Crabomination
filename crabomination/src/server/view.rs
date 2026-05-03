@@ -117,6 +117,44 @@ fn known_card(card: &CardInstance) -> KnownCard {
             .back_face
             .as_ref()
             .map(|b| b.name.to_string()),
+        // Additional cast cost label: today only "sacrifice a creature"
+        // is supported (Daemogoth Woe-Eater, Eyeblight Cullers); a
+        // future filter could surface "sacrifice an artifact",
+        // "sacrifice a land", etc. Maps the SelectionRequirement to a
+        // human-readable phrase via a tiny ad-hoc renderer.
+        additional_cost_label: card
+            .definition
+            .additional_sac_cost
+            .as_ref()
+            .map(additional_sac_cost_label),
+    }
+}
+
+/// Render an `additional_sac_cost` filter as a one-line human label.
+/// The set of filters here is small (cast-time sacrifice on STX
+/// `additional_sac_cost`-using cards), so an explicit shape-match is
+/// sufficient. Falls back to a generic "sacrifice a permanent" when
+/// the filter shape isn't recognised.
+fn additional_sac_cost_label(filter: &crate::card::SelectionRequirement) -> String {
+    use crate::card::SelectionRequirement as R;
+    fn contains(req: &R, target: &R) -> bool {
+        if std::mem::discriminant(req) == std::mem::discriminant(target) {
+            return true;
+        }
+        match req {
+            R::And(a, b) | R::Or(a, b) => contains(a, target) || contains(b, target),
+            R::Not(inner) => contains(inner, target),
+            _ => false,
+        }
+    }
+    if contains(filter, &R::Creature) {
+        "Sacrifice a creature".to_string()
+    } else if contains(filter, &R::Artifact) {
+        "Sacrifice an artifact".to_string()
+    } else if contains(filter, &R::Land) {
+        "Sacrifice a land".to_string()
+    } else {
+        "Sacrifice a permanent".to_string()
     }
 }
 
@@ -897,6 +935,32 @@ mod tests {
         let perm = view.battlefield.iter().find(|p| p.id == id).unwrap();
         assert_eq!(perm.power, 2);
         assert_eq!(perm.toughness, 2);
+    }
+
+    /// Push XXXIX: KnownCard surfaces an `additional_cost_label`
+    /// for cards with `additional_sac_cost` set. Daemogoth Woe-Eater's
+    /// "sacrifice a creature" cast cost should render as the printed
+    /// shorthand.
+    #[test]
+    fn known_card_surfaces_additional_sac_cost_label() {
+        let woe = catalog::daemogoth_woe_eater();
+        let id = crate::card::CardId(0);
+        let instance = crate::card::CardInstance::new(id, woe, 0);
+        let kc = known_card(&instance);
+        assert_eq!(kc.additional_cost_label.as_deref(), Some("Sacrifice a creature"),
+            "Daemogoth Woe-Eater's additional sac cost should render");
+    }
+
+    /// Cards without an additional cast cost should leave the label
+    /// `None` (back-compat for older serialized views).
+    #[test]
+    fn known_card_omits_additional_cost_label_when_none() {
+        let bear = catalog::grizzly_bears();
+        let id = crate::card::CardId(0);
+        let instance = crate::card::CardInstance::new(id, bear, 0);
+        let kc = known_card(&instance);
+        assert!(kc.additional_cost_label.is_none(),
+            "vanilla creatures should not surface a cost label");
     }
 
     /// Sac+payoff abilities (Goblin Bombardment, Greater Good, Thud)

@@ -388,6 +388,28 @@ pub struct CardDefinition {
     /// some life and exiling a card from hand matching `exile_filter`.
     /// Used for Force of Will, Force of Negation, and similar.
     pub alternative_cost: Option<AlternativeCost>,
+    /// "As an additional cost to cast this spell, sacrifice a [filter]."
+    /// When `Some(filter)`, casting this spell requires the controller to
+    /// sacrifice exactly one of their permanents matching `filter` *as
+    /// part of the cast*, in addition to mana. The cast is illegal if the
+    /// controller has no matching permanent. The pre-cast sacrifice
+    /// happens before the spell goes on the stack — so the sacrificed
+    /// permanent is in the graveyard before the spell resolves and any
+    /// ETB triggers see the post-sacrifice board.
+    ///
+    /// Used by Strixhaven's "as an additional cost: sacrifice a creature"
+    /// design (Daemogoth Woe-Eater, Eyeblight Cullers, Tend the Pests'
+    /// pre-cast sacrifice clause), and any future cast-time-sacrifice
+    /// alternative-cost shape.
+    ///
+    /// Distinct from a regular `Effect::Sacrifice` rider on an ETB
+    /// trigger: the cast-time path makes the spell *illegal* without a
+    /// matching permanent, while ETB-sacrifice silently no-ops (the
+    /// spell still resolves). It also fires *before* the spell goes on
+    /// the stack, so the sacrificed permanent's death triggers run
+    /// before the cast spell does.
+    #[serde(default)]
+    pub additional_sac_cost: Option<crate::card::SelectionRequirement>,
     /// Modal-double-faced-card back face. When `Some`, the player can play
     /// the card via its back face (e.g. `GameAction::PlayLandBack`); the
     /// resulting `CardInstance` adopts this definition wholesale, so all

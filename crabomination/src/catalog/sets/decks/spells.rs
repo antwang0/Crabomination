@@ -46,6 +46,7 @@ pub fn pact_of_negation() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -110,6 +111,7 @@ pub fn plunge_into_darkness() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -158,6 +160,7 @@ pub fn serum_powder() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: Some(OpeningHandEffect::MulliganHelper),
     }
@@ -198,6 +201,7 @@ pub fn spoils_of_the_vault() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -239,6 +243,7 @@ pub fn summoners_pact() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -280,6 +285,7 @@ pub fn thud() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -314,6 +320,7 @@ pub fn inquisition_of_kozilek() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -351,6 +358,7 @@ pub fn leyline_of_sanctity() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: Some(OpeningHandEffect::StartInPlay {
             tapped: false,
@@ -407,6 +415,7 @@ pub fn ephemerate() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -462,6 +471,7 @@ pub fn faithful_mending() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -498,6 +508,7 @@ pub fn force_of_negation() -> CardDefinition {
             target_filter: None,
             mode_on_alt: None,
         }),
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -554,6 +565,7 @@ pub fn goryos_vengeance() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -595,6 +607,7 @@ pub fn prismatic_ending() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -629,6 +642,7 @@ pub fn thoughtseize() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -676,6 +690,7 @@ pub fn consign_to_memory() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -724,6 +739,7 @@ pub fn damping_sphere() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -766,6 +782,7 @@ pub fn mystical_dispute() -> CardDefinition {
             target_filter: Some(SelectionRequirement::HasColor(Color::Blue)),
             mode_on_alt: None,
         }),
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -808,6 +825,7 @@ pub fn pest_control() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -855,6 +873,7 @@ pub fn wrath_of_the_skies() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }

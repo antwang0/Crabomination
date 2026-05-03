@@ -62,6 +62,7 @@ pub fn callous_sell_sword() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -98,6 +99,7 @@ pub fn chancellor_of_the_tangle() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: Some(OpeningHandEffect::RevealForDelayedTrigger {
             kind: DelayedTriggerKind::YourNextMainPhase,
@@ -138,6 +140,7 @@ pub fn cosmogoyf() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -170,6 +173,7 @@ pub fn devourer_of_destiny() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -226,6 +230,7 @@ pub fn atraxa_grand_unifier() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -271,6 +276,7 @@ pub fn griselbrand() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -348,6 +354,7 @@ pub fn psychic_frog() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -383,6 +390,7 @@ pub fn quantum_riddler() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -437,6 +445,7 @@ pub fn solitude() -> CardDefinition {
             target_filter: None,
             mode_on_alt: None,
         }),
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -475,6 +484,7 @@ pub fn chancellor_of_the_annex() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: Some(OpeningHandEffect::RevealForDelayedTrigger {
             // Fire on the upkeep so the first spell each opponent casts
@@ -524,6 +534,7 @@ pub fn elesh_norn_mother_of_machines() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -600,6 +611,7 @@ pub fn teferi_time_raveler() -> CardDefinition {
             },
         ],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }

@@ -55,6 +55,7 @@ pub fn pop_quiz() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -143,6 +144,7 @@ pub fn mascot_exhibition() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -191,6 +193,7 @@ pub fn plumb_the_forbidden() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -222,6 +225,7 @@ pub fn owlin_shieldmage() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -271,6 +275,7 @@ pub fn frost_trickster() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -329,6 +334,7 @@ pub fn body_of_research() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -365,6 +371,7 @@ pub fn show_of_confidence() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -398,6 +405,7 @@ pub fn bury_in_books() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -438,6 +446,7 @@ pub fn test_of_talents() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -522,6 +531,7 @@ pub fn multiple_choice() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -569,6 +579,7 @@ pub fn charge_through() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -630,6 +641,7 @@ pub fn resculpt() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -687,6 +699,7 @@ pub fn letter_of_acceptance() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -732,6 +745,7 @@ pub fn reduce_to_memory() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -770,6 +784,7 @@ pub fn defend_the_campus() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -807,6 +822,7 @@ pub fn conspiracy_theorist() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -839,6 +855,7 @@ pub fn honor_troll() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -875,6 +892,7 @@ pub fn pillardrop_warden() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -920,6 +938,7 @@ pub fn beaming_defiance() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -952,6 +971,7 @@ pub fn ageless_guardian() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -986,6 +1006,7 @@ pub fn expel() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -1024,6 +1045,7 @@ pub fn eureka_moment() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -1061,6 +1083,7 @@ pub fn curate() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -1106,6 +1129,7 @@ pub fn necrotic_fumes() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -1149,6 +1173,7 @@ pub fn bookwurm() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -1179,6 +1204,7 @@ pub fn spined_karok() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -1229,6 +1255,7 @@ pub fn field_trip() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -1285,6 +1312,7 @@ pub fn quandrix_cultivator() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -1342,6 +1370,7 @@ pub fn square_up() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -1388,6 +1417,7 @@ pub fn thrilling_discovery() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -1437,6 +1467,7 @@ pub fn reckless_amplimancer() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -1476,6 +1507,7 @@ pub fn specter_of_the_fens() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -1519,6 +1551,7 @@ pub fn ardent_dustspeaker() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -1569,6 +1602,7 @@ pub fn skyswimmer_koi() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -1616,6 +1650,7 @@ pub fn stonebinders_familiar() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -1687,6 +1722,7 @@ pub fn quintorius_field_historian() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -1758,6 +1794,7 @@ pub fn dragons_approach() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -1808,6 +1845,7 @@ pub fn manifestation_sage() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -1850,6 +1888,7 @@ pub fn solve_the_equation() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -1897,6 +1936,7 @@ pub fn enthusiastic_study() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -1948,6 +1988,7 @@ pub fn tempted_by_the_oriq() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -1980,6 +2021,7 @@ pub fn saw_it_coming() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -2026,6 +2068,7 @@ pub fn environmental_sciences() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -2064,6 +2107,7 @@ pub fn expanded_anatomy() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -2075,13 +2119,21 @@ pub fn expanded_anatomy() -> CardDefinition {
 /// creatures. Each of those creatures gets +1/+1 and gains hexproof and
 /// trample until end of turn."
 ///
-/// Push XXIX: 🟡 — collapsed to single-target. Engine has no
-/// "up-to-two-target" prompt; a single-creature pick still nets the
-/// dominant gameplay (untap + +1/+1 + hexproof + trample for one
-/// attacker). The "up to two" half is omitted — same gap as Mentor's
-/// Guidance's "for each card in hand on multiple targets" approximation.
-/// The Lesson sub-type is recorded for future Lesson-aware effects.
+/// Push XXXIX: fidelity bump. The "up to two creatures" rider is now
+/// approximated as user-targeted slot 0 plus an auto-picked second
+/// friendly creature via `Selector::take(EachPermanent(Creature ∧
+/// ControlledByYou), 2)` for the fan-out body. Each picked creature
+/// untaps, gains +1/+1 EOT, and gains hexproof + trample EOT. Net:
+/// the printed two-creature combat trick lands on two friendly
+/// creatures (Mentor's Guidance-style fan-out). The Lesson sub-type
+/// stays recorded for future Lesson-aware effects.
 pub fn big_play() -> CardDefinition {
+    let pick = Selector::take(
+        Selector::EachPermanent(
+            SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+        ),
+        Value::Const(2),
+    );
     CardDefinition {
         name: "Big Play",
         cost: cost(&[generic(3), g(), u()]),
@@ -2095,25 +2147,27 @@ pub fn big_play() -> CardDefinition {
         toughness: 0,
         keywords: vec![],
         effect: Effect::Seq(vec![
-            Effect::Untap {
-                what: target_filtered(SelectionRequirement::Creature),
-                up_to: None,
-            },
-            Effect::PumpPT {
-                what: Selector::Target(0),
-                power: Value::Const(1),
-                toughness: Value::Const(1),
-                duration: Duration::EndOfTurn,
-            },
-            Effect::GrantKeyword {
-                what: Selector::Target(0),
-                keyword: Keyword::Hexproof,
-                duration: Duration::EndOfTurn,
-            },
-            Effect::GrantKeyword {
-                what: Selector::Target(0),
-                keyword: Keyword::Trample,
-                duration: Duration::EndOfTurn,
+            Effect::Untap { what: pick.clone(), up_to: None },
+            Effect::ForEach {
+                selector: pick.clone(),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::PumpPT {
+                        what: Selector::TriggerSource,
+                        power: Value::Const(1),
+                        toughness: Value::Const(1),
+                        duration: Duration::EndOfTurn,
+                    },
+                    Effect::GrantKeyword {
+                        what: Selector::TriggerSource,
+                        keyword: Keyword::Hexproof,
+                        duration: Duration::EndOfTurn,
+                    },
+                    Effect::GrantKeyword {
+                        what: Selector::TriggerSource,
+                        keyword: Keyword::Trample,
+                        duration: Duration::EndOfTurn,
+                    },
+                ])),
             },
         ]),
         activated_abilities: no_abilities(),
@@ -2122,6 +2176,7 @@ pub fn big_play() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -2163,6 +2218,7 @@ pub fn confront_the_past() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -2204,6 +2260,7 @@ pub fn vortex_runner() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -2246,6 +2303,7 @@ pub fn burrog_befuddler() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -2287,6 +2345,7 @@ pub fn crackle_with_power() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -2328,6 +2387,7 @@ pub fn sundering_stroke() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -2371,6 +2431,7 @@ pub fn professor_of_symbology() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -2426,6 +2487,7 @@ pub fn professor_of_zoomancy() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -2508,6 +2570,7 @@ pub fn leyline_invocation() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -2561,6 +2624,7 @@ pub fn verdant_mastery() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -2622,6 +2686,7 @@ pub fn rise_of_extus() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -2675,6 +2740,7 @@ pub fn gnarled_professor() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -2722,6 +2788,7 @@ pub fn inkfathom_witch() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -2765,6 +2832,7 @@ pub fn blood_researcher() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -2822,6 +2890,7 @@ pub fn first_day_of_class() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -2880,6 +2949,270 @@ pub fn pilgrim_of_the_ages() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Containment Breach ──────────────────────────────────────────────────────
+
+/// Containment Breach — {1}{W} Instant. "Destroy target enchantment.
+/// / Learn."
+///
+/// Push XXXIX: NEW. Standard enchantment removal + cantrip learn.
+/// Learn collapses to `Draw 1` (Lesson sideboard model still pending —
+/// same approximation as Eyetwitch / Hunt for Specimens / Igneous
+/// Inspiration / Professor of Symbology).
+pub fn containment_breach() -> CardDefinition {
+    CardDefinition {
+        name: "Containment Breach",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Destroy {
+                what: target_filtered(SelectionRequirement::Enchantment),
+            },
+            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        additional_sac_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Unwilling Ingredient ────────────────────────────────────────────────────
+
+/// Unwilling Ingredient — {B} 1/1 Insect Pest. "When this creature
+/// dies, you may pay {B}. If you do, draw a card."
+///
+/// Push XXXIX: NEW. Mono-black sac fodder with a pay-to-draw rider.
+/// Death-trigger uses `Effect::MayPay { mana_cost: {B}, body: Draw 1
+/// }`. AutoDecider declines the pay by default; ScriptedDecider can
+/// flip it for the cantrip.
+pub fn unwilling_ingredient() -> CardDefinition {
+    CardDefinition {
+        name: "Unwilling Ingredient",
+        cost: cost(&[b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Insect, CreatureType::Pest],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+            effect: Effect::MayPay {
+                description: "Pay {B}: draw a card.".to_string(),
+                mana_cost: cost(&[b()]),
+                body: Box::new(Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                }),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        additional_sac_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Pest Wallop ─────────────────────────────────────────────────────────────
+
+/// Pest Wallop — {3}{G} Sorcery. "Target creature you control gets
+/// +1/+1 until end of turn. Then it deals damage equal to its power
+/// to target creature you don't control."
+///
+/// Push XXXIX: NEW. Functional approximation as a Seq:
+/// 1. PumpPT(+1/+1, EOT) on a friendly creature (slot 0).
+/// 2. DealDamage(amount = PowerOf(slot 0), to = auto-picked opp
+///    creature) — same one-sided shape as Decisive Denial mode 1.
+///
+/// The friendly creature target must be in slot 0; the opp creature
+/// is auto-picked via `Selector::one_of(EachPermanent(opp creature))`.
+/// One-sided damage (not Fight) — friendly creature takes no return
+/// damage. The slot 0 filter is enforced at cast time via the new
+/// `val_find` recursion (push XXXIX) so opp-creature picks reject.
+pub fn pest_wallop() -> CardDefinition {
+    let friendly = target_filtered(
+        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+    );
+    CardDefinition {
+        name: "Pest Wallop",
+        cost: cost(&[generic(3), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: friendly.clone(),
+                power: Value::Const(1),
+                toughness: Value::Const(1),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::DealDamage {
+                to: Selector::one_of(Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByOpponent),
+                )),
+                amount: Value::PowerOf(Box::new(friendly)),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        additional_sac_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Solid Footing ───────────────────────────────────────────────────────────
+
+/// Solid Footing — {W} Aura. "Enchant creature / Enchanted creature
+/// gets +1/+2 and has vigilance."
+///
+/// Push XXXIX: NEW. Aura-grant approximation: ETB attaches to a
+/// friendly creature, then grants +1/+2 + vigilance via
+/// `StaticEffect::PumpPT` + `StaticEffect::GrantKeyword` over
+/// `Selector::AttachedToMe(This)`. The Aura subtype is recorded
+/// (matches printed type line); the engine doesn't enforce
+/// targeting-rules-via-Aura yet.
+pub fn solid_footing() -> CardDefinition {
+    use crate::card::{EnchantmentSubtype, StaticAbility};
+    use crate::effect::StaticEffect;
+    // `selector_to_affected` recognises `AttachedTo(This)` and resolves
+    // it through `card.attached_to` at layer time → the static buffs
+    // the creature this aura is attached to.
+    let attached = Selector::AttachedTo(Box::new(Selector::This));
+    CardDefinition {
+        name: "Solid Footing",
+        cost: cost(&[w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        // Attachment is pre-set at cast time by the engine when the
+        // spell is an Aura with a Permanent target (`stack.rs`). No
+        // ETB trigger is needed since the orphaned-aura SBA reads the
+        // pre-bound `attached_to` immediately on entering bf.
+        triggered_abilities: vec![],
+        static_abilities: vec![
+            StaticAbility {
+                description: "Enchanted creature gets +1/+2",
+                effect: StaticEffect::PumpPT {
+                    applies_to: attached.clone(),
+                    power: 1,
+                    toughness: 2,
+                },
+            },
+            StaticAbility {
+                description: "Enchanted creature has vigilance",
+                effect: StaticEffect::GrantKeyword {
+                    applies_to: attached,
+                    keyword: Keyword::Vigilance,
+                },
+            },
+        ],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        additional_sac_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Swarm Shambler ──────────────────────────────────────────────────────────
+
+/// Swarm Shambler — {G} 1/1 Squirrel Beast. "When this creature
+/// enters, put a +1/+1 counter on it. / {2}{G}: Untap this creature.
+/// Put a +1/+1 counter on it."
+///
+/// Push XXXIX: NEW. Mono-green growth tribal — each activation untaps
+/// + counters, so the body scales with available mana. Squirrel
+/// creature-type bridges through Beast (no Squirrel creature type
+/// yet); the Squirrel-tribal payoff Professor of Zoomancy still
+/// triggers via the Beast subtype + a future Squirrel addition.
+pub fn swarm_shambler() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Swarm Shambler",
+        cost: cost(&[g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Beast],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: false,
+            mana_cost: cost(&[generic(2), g()]),
+            effect: Effect::Seq(vec![
+                Effect::Untap { what: Selector::This, up_to: None },
+                Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                },
+            ]),
+            once_per_turn: false,
+            sorcery_speed: false,
+            sac_cost: false,
+            condition: None,
+            life_cost: 0,
+            exile_gy_cost: 0,
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }

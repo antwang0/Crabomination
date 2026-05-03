@@ -57,6 +57,7 @@ pub fn erode() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -99,6 +100,7 @@ pub fn harsh_annotation() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -135,6 +137,7 @@ pub fn interjection() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -163,6 +166,7 @@ pub fn stand_up_for_yourself() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -209,6 +213,7 @@ pub fn rapier_wit() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -248,6 +253,7 @@ pub fn banishing_betrayal() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -283,6 +289,7 @@ pub fn brush_off() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -335,6 +342,7 @@ pub fn mana_sculpt() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -376,6 +384,7 @@ pub fn run_behind() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -416,6 +425,7 @@ pub fn chase_inspiration() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -464,6 +474,7 @@ pub fn foolish_fate() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -535,6 +546,7 @@ pub fn dissection_practice() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -560,6 +572,7 @@ pub fn wander_off() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -599,6 +612,7 @@ pub fn masterful_flourish() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -637,6 +651,7 @@ pub fn impractical_joke() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -708,6 +723,7 @@ pub fn heated_argument() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -750,6 +766,7 @@ pub fn choreographed_sparks() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -810,6 +827,7 @@ pub fn efflorescence() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -862,6 +880,7 @@ pub fn glorious_decay() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -914,6 +933,7 @@ pub fn lumarets_favor() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -969,6 +989,7 @@ pub fn embrace_the_paradox() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -1017,6 +1038,7 @@ pub fn proctors_gaze() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -1084,6 +1106,7 @@ pub fn witherbloom_charm() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -1159,6 +1182,7 @@ pub fn lorehold_charm() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -1210,6 +1234,7 @@ pub fn vibrant_outburst() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -1268,6 +1293,7 @@ pub fn stress_dream() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -1318,6 +1344,7 @@ pub fn traumatic_critique() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -1366,6 +1393,7 @@ pub fn fractal_anomaly() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -1422,6 +1450,7 @@ pub fn quandrix_charm() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -1467,6 +1496,7 @@ pub fn ajanis_response() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -1519,6 +1549,7 @@ pub fn silverquill_charm() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -1600,6 +1631,7 @@ pub fn burrog_barrage() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -1614,15 +1646,21 @@ pub fn burrog_barrage() -> CardDefinition {
 /// graveyard this turn. / Wilt in the Heat deals 5 damage to target
 /// creature. If that creature would die this turn, exile it instead."
 ///
-/// Approximations:
-/// - The cost-reduction-when-cards-left-gy clause is omitted (no
-///   `StaticEffect::CostReduction` variant gated on a per-turn tally;
-///   tracked in TODO.md). Spell pays its full {2}{R}{W}.
-/// - The "if it would die, exile instead" replacement is omitted (no
-///   damage-replacement primitive). The 5-damage half lands faithfully
-///   and any creature with toughness ≤ 5 dies normally to graveyard
-///   rather than getting exiled.
+/// Push XXXIX: cost-reduction clause now wires faithfully via the new
+/// `Value::IfPredicate` branching value. The reduction is a self-static
+/// `CostReductionScaled { amount: IfPredicate { cond:
+/// CardsLeftGraveyardThisTurnAtLeast(1), then: 2, else_: 0 } }` —
+/// `cost_reduction_for_spell` walks the spell card's own static
+/// abilities at cast time and sums the discount, so the printed
+/// {2}{R}{W} drops to {R}{W} when the gate fires.
+///
+/// Remaining gap: the "if it would die, exile instead" damage-
+/// replacement still omitted (no damage-replacement primitive). The
+/// 5-damage half lands faithfully; any creature with toughness ≤ 5
+/// dies normally to graveyard rather than getting exiled.
 pub fn wilt_in_the_heat() -> CardDefinition {
+    use crate::card::{StaticAbility, Predicate};
+    use crate::effect::{PlayerRef, StaticEffect};
     use crate::mana::{r, w};
     CardDefinition {
         name: "Wilt in the Heat",
@@ -1639,10 +1677,25 @@ pub fn wilt_in_the_heat() -> CardDefinition {
         },
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
+        static_abilities: vec![StaticAbility {
+            description:
+                "This spell costs {2} less to cast if one or more cards left your graveyard this turn.",
+            effect: StaticEffect::CostReductionScaled {
+                filter: SelectionRequirement::Any,
+                amount: Value::IfPredicate {
+                    cond: Box::new(Predicate::CardsLeftGraveyardThisTurnAtLeast {
+                        who: PlayerRef::You,
+                        at_least: Value::Const(1),
+                    }),
+                    then: Box::new(Value::Const(2)),
+                    else_: Box::new(Value::Const(0)),
+                },
+            },
+        }],
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -1694,6 +1747,7 @@ pub fn suspend_aggression() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -1734,6 +1788,7 @@ pub fn rabid_attack() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -1772,6 +1827,7 @@ pub fn tome_blast() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -1815,6 +1871,7 @@ pub fn duel_tactics() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -1891,6 +1948,7 @@ pub fn homesickness() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -1931,6 +1989,7 @@ pub fn fractalize() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -1970,6 +2029,7 @@ pub fn divergent_equation() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -2011,6 +2071,7 @@ pub fn unsubtle_mockery() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -2051,6 +2112,7 @@ pub fn muses_encouragement() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -2112,6 +2174,7 @@ pub fn prismari_charm() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }

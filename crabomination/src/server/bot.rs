@@ -537,7 +537,30 @@ pub fn can_afford_in_state(
     card: &crate::card::CardInstance,
 ) -> bool {
     let extra = state.extra_cost_for_card_in_hand(seat, card.id);
-    can_afford_with_extra(&card.definition, &state.players[seat].mana_pool, extra)
+    if !can_afford_with_extra(&card.definition, &state.players[seat].mana_pool, extra) {
+        return false;
+    }
+    // Push XXXIX: cards with an additional cast-time sacrifice cost
+    // (Daemogoth Woe-Eater, Eyeblight Cullers) are unaffordable when
+    // the controller has no other matching permanent. The engine
+    // would reject the cast with `SelectionRequirementViolated` —
+    // skipping the dry-run noise here makes the bot's pick_action
+    // walker O(1) on these gates rather than retrying.
+    if let Some(filter) = card.definition.additional_sac_cost.as_ref() {
+        let has_one = state.battlefield.iter().any(|c| {
+            c.controller == seat
+                && c.id != card.id
+                && state.evaluate_requirement_static(
+                    filter,
+                    &crate::game::types::Target::Permanent(c.id),
+                    seat,
+                )
+        });
+        if !has_one {
+            return false;
+        }
+    }
+    true
 }
 
 /// For an X-cost spell (or a spell whose effect reads

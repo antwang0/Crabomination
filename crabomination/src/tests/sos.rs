@@ -159,6 +159,7 @@ fn stand_up_for_yourself_only_targets_power_three_or_more() {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     };
@@ -1929,6 +1930,7 @@ fn quandrix_charm_mode_1_destroys_enchantment() {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     };
@@ -2295,6 +2297,7 @@ fn arnyn_drains_when_a_one_power_creature_you_control_dies() {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     };
@@ -4841,6 +4844,57 @@ fn wilt_in_the_heat_deals_five_to_creature() {
     assert!(g.players[1].graveyard.iter().any(|c| c.id == bear));
 }
 
+/// Push XXXIX: Wilt's self-static reduces cost by {2} when at least
+/// one card has left your graveyard this turn. With only {R}{W}
+/// floated, the cast succeeds because the per-turn tally has been
+/// bumped.
+#[test]
+fn wilt_in_the_heat_costs_two_less_after_card_leaves_graveyard() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::wilt_in_the_heat());
+    // Simulate something having left your graveyard this turn —
+    // engines normally bump this when a card moves out of the
+    // controller's graveyard (Lorehold's central per-turn tally).
+    g.players[0].cards_left_graveyard_this_turn = 1;
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(bear)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Wilt should cost {R}{W} after a card has left your graveyard");
+    drain_stack(&mut g);
+
+    assert!(!g.battlefield.iter().any(|c| c.id == bear),
+        "Bear should still die to 5 damage on the discounted cast");
+}
+
+/// Without a card-left-graveyard event this turn, Wilt charges its
+/// full {2}{R}{W}. {R}{W} alone should be insufficient — the cast
+/// must reject before the spell goes on the stack.
+#[test]
+fn wilt_in_the_heat_no_discount_when_quiet_graveyard() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::wilt_in_the_heat());
+    g.players[0].cards_left_graveyard_this_turn = 0;
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+
+    let result = g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(bear)),
+        mode: None,
+        x_value: None,
+    });
+    assert!(result.is_err(),
+        "Wilt should reject at {{R}}{{W}} without a graveyard exit (no discount)");
+}
+
 #[test]
 fn daydream_flickers_and_adds_counter() {
     let mut g = two_player_game();
@@ -6635,7 +6689,8 @@ fn choreographed_sparks_copies_target_lightning_bolt() {
             base_loyalty: 0,
             loyalty_abilities: vec![],
             alternative_cost: None,
-            back_face: None,
+            additional_sac_cost: None,
+        back_face: None,
             opening_hand: None,
         },
     );

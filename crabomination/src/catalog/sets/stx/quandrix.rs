@@ -54,6 +54,7 @@ pub fn quandrix_apprentice() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -101,6 +102,7 @@ pub fn quandrix_pledgemage() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -113,17 +115,16 @@ pub fn quandrix_pledgemage() -> CardDefinition {
 /// you control deals damage equal to its power to target creature you
 /// don't control."
 ///
-/// 🟡 Push: both modes wired. Mode 0: counter-noncreature-unless-{2}.
-/// Mode 1: one-sided "deal damage equal to power" — slot 0 is the
-/// user-picked friendly creature (used as the damage-source value via
-/// `Value::PowerOf(Target(0))`); the opp creature is auto-picked via
-/// `Selector::one_of(EachPermanent(opp creature))` since the engine
-/// doesn't yet support a multi-target prompt (slot 1 wouldn't be
-/// populated by the cast). Same approximation as Chelonian Tackle's
-/// "fights up to one target creature an opponent controls". The
-/// damage is one-sided (printed "deals damage to", not "fights"), so
-/// the friendly creature doesn't take return damage like in `Effect::
-/// Fight`.
+/// Push XXXIX: 🟡 → ✅. Cast-time legality now enforces the slot 0
+/// friendly-creature filter via the new `val_find` arm of
+/// `target_filter_for_slot_in_mode` — the engine recurses into a
+/// `DealDamage.amount`'s `Value::PowerOf(target_filtered(...))` to
+/// pull the slot 0 filter at cast time, so opp-creature targets in
+/// mode 1 are now rejected with `SelectionRequirementViolated`. Mode
+/// 0 unchanged (counter-noncreature-unless-{2}). Mode 1's damage half
+/// stays one-sided (friendly creature doesn't take return damage,
+/// unlike `Effect::Fight`); the opp creature target is still auto-
+/// picked via `Selector::one_of(EachPermanent(opp creature))`.
 pub fn decisive_denial() -> CardDefinition {
     use crate::mana::{ManaCost, generic as gen_pip};
     let two = ManaCost { symbols: vec![gen_pip(2)] };
@@ -170,6 +171,7 @@ pub fn decisive_denial() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -238,6 +240,7 @@ pub fn snow_day() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -286,6 +289,7 @@ pub fn mentors_guidance() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -366,6 +370,7 @@ pub fn quandrix_command() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -416,6 +421,7 @@ pub fn augmenter_pugilist() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }

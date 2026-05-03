@@ -7,6 +7,73 @@ See `CUBE_FEATURES.md` (cube-card implementation status) and
 
 ## Recent additions
 
+- ✅ **Push XXXIX (2026-05-03)**: 3 engine primitives + 5 card
+  promotions + 5 new STX 2021 cards + 1 server view enrichment +
+  1 bot affordability fold-in. Tests at 1368 (was 1363, +5 net).
+  - **Engine: `Value::IfPredicate { cond, then, else_ }`** — branching
+    value evaluated at effect time. Lets a `Value` switch on a
+    `Predicate` against the same `EffectContext`. Used by Wilt in the
+    Heat's "{2} less if cards left graveyard" cost reduction; future
+    "X = N if condition else 0" payoffs (conditional pump magnitudes,
+    Spectacle riders) reuse the same shape.
+  - **Engine: `CardDefinition.additional_sac_cost: Option<Selection
+    Requirement>`** — "as an additional cost: sacrifice a [filter]"
+    primitive on the cast pipeline. `cast_spell` does a pre-flight
+    check (controller must control ≥1 matching permanent other than
+    the spell itself), then auto-picks the lowest-value matching
+    creature (tokens first, then by mana value, then by power) and
+    sacrifices it after mana payment but before the spell goes on
+    the stack. Daemogoth Woe-Eater / Eyeblight Cullers graduated
+    from "ETB sacrifice approximation" to printed-faithful cast-time
+    sacrifice.
+  - **Engine: Aura cast-time pre-attach (`stack.rs`)** — when a
+    permanent spell is an Aura with a Permanent target (CR 303.4f),
+    the engine pre-binds the target onto `card.attached_to` at the
+    moment the Aura enters the battlefield. Without this, the
+    orphaned-aura SBA (CR 704.5m) would immediately graveyard the
+    Aura between bf entry and the cast-target snapshot. Solid
+    Footing is the first catalog Aura that uses the static-attach
+    layer pattern via `Selector::AttachedTo(This)`.
+  - **Engine: `target_filter_for_slot_in_mode` walks Value args** —
+    new `val_find` recursion that pulls a slot 0 filter out of a
+    `DealDamage.amount`'s `Value::PowerOf(target_filtered(...))`.
+    Closes Decisive Denial mode 1's fidelity gap (slot 0 friendly-
+    creature filter is now enforced at cast time) and unblocks Pest
+    Wallop's "your creature deals damage" printed slot-0 filter.
+  - **5 STX 🟡 → ✅ promotions**: Wilt in the Heat (cost reduction
+    wired); Daemogoth Woe-Eater + Eyeblight Cullers (cast-time
+    sacrifice); Big Play (up-to-two-creatures fan-out); Decisive
+    Denial (slot 0 filter enforced).
+  - **5 new STX 2021 cards**: Pest Wallop ({3}{G} Sorcery, friendly-
+    creature damage), Solid Footing ({W} Aura, +1/+2 + vigilance),
+    Swarm Shambler ({G} 1/1 Beast, ETB counter + activation grow),
+    Containment Breach ({1}{W} Instant, destroy enchantment + Learn),
+    Unwilling Ingredient ({B} 1/1 Insect Pest, MayPay death cantrip).
+  - **UI: `KnownCard.additional_cost_label: Option<String>`** —
+    populated from `additional_sac_cost` via a tiny filter-shape
+    renderer. Lets the client warn before wasting mana on a spell
+    the controller can't currently afford (Daemogoth Woe-Eater /
+    Eyeblight Cullers without a creature to sacrifice). Defaulted
+    to `None` for back-compat with older serialized views.
+  - **Bot: additional-sac-cost affordability fold-in** —
+    `can_afford_in_state` now rejects a hand card whose
+    `additional_sac_cost` filter has no matching permanent on the
+    battlefield. Skips dry-run noise on Woe-Eater / Cullers casts
+    that the engine would reject anyway.
+  - **CR 704.5m audit**: rule is implemented (orphaned-aura SBA in
+    `stack.rs`) and now validated by two tests
+    (`solid_footing_pumps_enchanted_creature_with_vigilance` for
+    legal-aura survival; `solid_footing_graveyards_when_enchanted_
+    creature_dies` for the SBA fire). Code comment in `stack.rs`
+    updated from `CR 704.5n` (incorrect) to `CR 704.5m` (correct
+    citation).
+  - **Tests**: +5 net (1363 → 1368). New tests cover Wilt's
+    discount fires + no-discount paths, Woe-Eater + Cullers cast
+    rejection, Big Play 2-creature fan-out, Decisive Denial mode 1
+    rejection, Pest Wallop pump+damage + reject, Solid Footing pump
+    + die-graveyards, Swarm Shambler ETB + activation, Containment
+    Breach + Unwilling Ingredient cantrips, KnownCard view label.
+
 - ✅ **Push XXXVIII (2026-05-03)**: 4 engine primitives + 10 card
   promotions across STX 2021 + SOS. Tests at 1363 (was 1336; +27 net).
   - **Engine: `StaticEffect::CostReductionTargeting`** — Killian's
@@ -245,6 +312,53 @@ See `CUBE_FEATURES.md` (cube-card implementation status) and
     reject / Mascot steal + revert), 9 cube-card tests (one per new
     card + body sanity for vanilla bodies), 1 view test
     (`ability_cost_label_renders_exile_gy_cost`).
+
+## Future work — engine/UI suggestions surfaced by push XXXIX
+
+- **Damage-replacement primitive ("if it would die, exile instead")** —
+  Wilt in the Heat's "If that creature would die this turn, exile it
+  instead" rider stays gap. Same shape as Anger of the Gods, Path of
+  Peril's exile-instead clauses. Engine would need a per-permanent
+  `damage_to_exile_until_eot` flag (or a `Effect::ApplyExileInsteadOf
+  Damage`) read by the SBA-graveyard handler. Would also unblock
+  Sundering Stroke's "exile instead" multi-target lines (still gap on
+  divided damage too).
+
+- **`additional_sac_cost` count generalisation** — the current shape
+  is `Option<SelectionRequirement>` (sacrifice exactly one matching
+  permanent). Future "as additional cost: sacrifice TWO creatures" /
+  "sacrifice X creatures" shapes (Mortal Combat, Wing Storm, Bone
+  Splinters family) need a count field or a separate `Vec<Sacrifice
+  Requirement>` to express multi-sacrifice. Would also unblock
+  **escalate** ({1}{B} per extra mode picked → sacrifice cost per
+  extra mode) and similar additive costs.
+
+- **Aura targeting prompt UI** — Solid Footing currently relies on
+  the cast-time pre-attach to set `attached_to`. The client's
+  targeting UI doesn't yet special-case Auras (CR 303.4f says Aura
+  targets must match the Aura's own targeting filter — "enchant
+  creature" → only creatures legal). Future UI work: read
+  `EnchantmentSubtype::Aura` and only show creature-shaped target
+  candidates at cast time (today the cast can attach to non-creature
+  permanents because there's no enchant-target filter). Same UI gap
+  as Equipment's Equip-target prompt.
+
+- **`val_find` recursion on more effect arms** — the new recursion
+  walks `DealDamage.amount`. Future cards may store slot 0 filters
+  inside other Value-typed effect args (`AddCounter.amount`,
+  `PumpPT.power`, `PumpPT.toughness`) — when those arms grow filter-
+  bearing Values, extend `val_find` to them. Tracked here as a
+  reminder; no current card needs it.
+
+- **Auto-pick smarter sacrifice fodder** — `additional_sac_cost`
+  picks the lowest-value matching creature (tokens first, then by
+  mana value, then by power). Future improvement: avoid creatures
+  with valuable triggers (a Spirit token from Sparring Regimen would
+  actually be MORE valuable to sacrifice into Daemogoth Woe-Eater
+  than a generic Pest token, since the Spirit isn't part of an
+  on-attack engine), or prefer tokens with on-die abilities (Pest
+  token → +1 life). Today the heuristic is a flat sort; a payoff-
+  weighted sort would be a small cleanup.
 
 ## Future work — engine/UI suggestions surfaced by push XXXVIII
 

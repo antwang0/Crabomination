@@ -49,6 +49,7 @@ pub fn witherbloom_apprentice() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -96,6 +97,7 @@ pub fn pest_summoning() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -144,6 +146,7 @@ pub fn bayou_groff() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -197,6 +200,7 @@ pub fn witherbloom_pledgemage() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -212,9 +216,17 @@ pub fn witherbloom_pledgemage() -> CardDefinition {
 /// creature when Woe-Eater enters. Same approach as Vicious Rivalry's
 /// `Effect::LoseLife { XFromCost }` approximation of its "pay X life
 /// additional cost" rider. The mana cost is the printed {2}{B}{G}; the
-/// sac happens on ETB rather than at cast time, but the net board state
-/// matches in all but a corner case (the spell can't be countered by
-/// the sacrifice failing — rare in this engine).
+/// sac is now paid at *cast* time (push XXXIX promotes 🟡 → ✅).
+///
+/// Push XXXIX: the additional sacrifice is paid by the new
+/// `CardDefinition.additional_sac_cost` field — `cast_spell` rejects
+/// the cast with `SelectionRequirementViolated` when the controller
+/// has no other creature to sacrifice, then auto-picks the lowest-
+/// value matching creature (tokens first, then by mana value, then by
+/// power) and sacrifices it before the spell goes on the stack. Net:
+/// the spell is illegal without a creature to feed (matching printed
+/// semantics), and the sacrificed creature's death triggers run before
+/// Woe-Eater resolves.
 pub fn daemogoth_woe_eater() -> CardDefinition {
     CardDefinition {
         name: "Daemogoth Woe-Eater",
@@ -243,19 +255,14 @@ pub fn daemogoth_woe_eater() -> CardDefinition {
             life_cost: 0,
             exile_gy_cost: 0,
         }],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::Sacrifice {
-                who: Selector::You,
-                count: Value::Const(1),
-                filter: SelectionRequirement::Creature
-                    .and(SelectionRequirement::ControlledByYou),
-            },
-        }],
+        triggered_abilities: vec![],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: Some(
+            SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+        ),
         back_face: None,
         opening_hand: None,
     }
@@ -267,9 +274,11 @@ pub fn daemogoth_woe_eater() -> CardDefinition {
 /// "As an additional cost to cast this spell, sacrifice a creature. / When
 /// this creature enters, target opponent loses 2 life and you gain 2 life."
 ///
-/// 🟡 Same additional-cost approximation as Daemogoth Woe-Eater — the
-/// sacrifice fires at ETB rather than at cast. The drain rider is wired
-/// faithfully.
+/// Push XXXIX: 🟡 → ✅. The additional sacrifice is now paid at cast
+/// time via `CardDefinition.additional_sac_cost` (same shape as
+/// Daemogoth Woe-Eater). The ETB-resident `Effect::Sacrifice` has been
+/// dropped — it would have double-counted the sacrifice. The drain
+/// rider stays unchanged on the ETB trigger.
 pub fn eyeblight_cullers() -> CardDefinition {
     CardDefinition {
         name: "Eyeblight Cullers",
@@ -287,24 +296,19 @@ pub fn eyeblight_cullers() -> CardDefinition {
         activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::Seq(vec![
-                Effect::Sacrifice {
-                    who: Selector::You,
-                    count: Value::Const(1),
-                    filter: SelectionRequirement::Creature
-                        .and(SelectionRequirement::ControlledByYou),
-                },
-                Effect::Drain {
-                    from: Selector::Player(PlayerRef::EachOpponent),
-                    to: Selector::You,
-                    amount: Value::Const(2),
-                },
-            ]),
+            effect: Effect::Drain {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                to: Selector::You,
+                amount: Value::Const(2),
+            },
         }],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: Some(
+            SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+        ),
         back_face: None,
         opening_hand: None,
     }
@@ -383,6 +387,7 @@ pub fn dina_soul_steeper() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -435,6 +440,7 @@ pub fn daemogoth_titan() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -474,6 +480,7 @@ pub fn pest_infestation() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -515,6 +522,7 @@ pub fn mortality_spear() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -597,6 +605,7 @@ pub fn witherbloom_command() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -657,6 +666,7 @@ pub fn foul_play() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }

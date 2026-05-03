@@ -77,6 +77,7 @@ fn vanilla_front(
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: Some(Box::new(back)),
         opening_hand: None,
     }
@@ -105,6 +106,7 @@ fn spell_back(
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }

@@ -88,6 +88,7 @@ fn pathway_face(name: &'static str, land_type: LandType, color: Color) -> CardDe
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -288,6 +289,7 @@ pub fn gemstone_mine() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -376,6 +378,7 @@ pub fn gemstone_caverns() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: Some(OpeningHandEffect::StartInPlay {
             tapped: false,
@@ -453,6 +456,7 @@ pub fn cavern_of_souls() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }
@@ -513,6 +517,7 @@ pub fn cephalid_coliseum() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
+        additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
     }

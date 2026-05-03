@@ -1788,6 +1788,30 @@ fn daemogoth_woe_eater_tap_ability_gains_4_life() {
     assert!(woe_card.tapped, "should be tapped after activation");
 }
 
+/// Push XXXIX: with no other creature on the battlefield, casting
+/// Daemogoth Woe-Eater is illegal (additional sacrifice cost can't be
+/// paid). The spell card stays in hand and the mana is not consumed.
+#[test]
+fn daemogoth_woe_eater_cast_rejected_without_sacrificable_creature() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::daemogoth_woe_eater());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let result = g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: None,
+        mode: None,
+        x_value: None,
+    });
+    assert!(result.is_err(), "cast should be illegal with no sac fodder");
+    assert!(g.players[0].hand.iter().any(|c| c.id == id),
+        "Woe-Eater should still be in hand after rejected cast");
+    // Mana untouched.
+    assert_eq!(g.players[0].mana_pool.amount(Color::Black), 1);
+    assert_eq!(g.players[0].mana_pool.amount(Color::Green), 1);
+}
+
 #[test]
 fn eyeblight_cullers_etb_sacrifices_and_drains() {
     let mut g = two_player_game();
@@ -1811,6 +1835,27 @@ fn eyeblight_cullers_etb_sacrifices_and_drains() {
         "bear sacrificed");
     assert_eq!(g.players[1].life, p1_life_before - 2, "opp loses 2");
     assert_eq!(g.players[0].life, p0_life_before + 2, "you gain 2");
+}
+
+/// Push XXXIX: Eyeblight Cullers' cast is illegal without a creature
+/// to sacrifice. The drain rider on its ETB never fires.
+#[test]
+fn eyeblight_cullers_cast_rejected_without_sacrificable_creature() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::eyeblight_cullers());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    let p1_life_before = g.players[1].life;
+    let result = g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: None,
+        mode: None,
+        x_value: None,
+    });
+    assert!(result.is_err(), "Cullers' cast should be illegal with no sac fodder");
+    assert_eq!(g.players[1].life, p1_life_before, "ETB drain must not fire");
+    assert!(g.players[0].hand.iter().any(|c| c.id == id),
+        "Cullers should still be in hand after rejected cast");
 }
 
 #[test]
@@ -2944,6 +2989,47 @@ fn big_play_untaps_and_pumps_creature() {
         "bear should have trample EOT");
     assert!(bear_card.has_keyword(&Keyword::Hexproof),
         "bear should have hexproof EOT");
+}
+
+/// Push XXXIX: Big Play's "up to two creatures" rider now applies to
+/// two friendly creatures via the auto-pick fan-out. With two bears
+/// in play, both end up untapped + +1/+1 + hexproof + trample EOT.
+#[test]
+fn big_play_pumps_two_friendly_creatures() {
+    let mut g = two_player_game();
+    let bear_a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let bear_b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear_a);
+    g.clear_sickness(bear_b);
+    {
+        let a = g.battlefield.iter_mut().find(|c| c.id == bear_a).unwrap();
+        a.tapped = true;
+    }
+    {
+        let b = g.battlefield.iter_mut().find(|c| c.id == bear_b).unwrap();
+        b.tapped = true;
+    }
+    let id = g.add_card_to_hand(0, catalog::big_play());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear_a)), mode: None, x_value: None,
+    })
+    .expect("Big Play castable");
+    drain_stack(&mut g);
+
+    for cid in [bear_a, bear_b] {
+        let card = g.battlefield.iter().find(|c| c.id == cid)
+            .expect("bear should still be on bf");
+        assert!(!card.tapped, "bear {cid:?} should be untapped");
+        assert_eq!(card.power(), 3, "bear {cid:?} should be 3 power");
+        assert!(card.has_keyword(&Keyword::Trample),
+            "bear {cid:?} should have trample EOT");
+        assert!(card.has_keyword(&Keyword::Hexproof),
+            "bear {cid:?} should have hexproof EOT");
+    }
 }
 
 #[test]
@@ -4137,6 +4223,31 @@ fn decisive_denial_mode_one_uses_target_creature_power() {
         "friendly Tyrant takes no return damage (Decisive Denial is one-sided)");
 }
 
+/// Push XXXIX: 🟡 → ✅ for Decisive Denial. Mode 1's slot 0 filter
+/// (friendly creature) is now enforced at cast time via the new
+/// `val_find` recursion — picking an opp creature in mode 1 now
+/// rejects with `SelectionRequirementViolated`.
+#[test]
+fn decisive_denial_mode_one_rejects_opp_creature_target() {
+    let mut g = two_player_game();
+    // Opp creature in slot 0 — should reject (slot 0 must be friendly).
+    let opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let dd = g.add_card_to_hand(0, catalog::decisive_denial());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    let result = g.perform_action(GameAction::CastSpell {
+        card_id: dd,
+        target: Some(Target::Permanent(opp_bear)),
+        mode: Some(1),
+        x_value: None,
+    });
+    assert!(result.is_err(),
+        "mode 1 should reject opp-creature targets at cast time");
+    // Decisive Denial should still be in hand.
+    assert!(g.players[0].hand.iter().any(|c| c.id == dd),
+        "Decisive Denial back in hand after rejected cast");
+}
+
 // ── Push XXXVII: Effect::PickModeAtResolution + ChooseModes triggered ──────
 
 /// Push XXXVII: Prismari Apprentice's printed magecraft "choose one — Scry 1
@@ -4547,4 +4658,234 @@ fn spectacle_mage_hybrid_cost_pays_from_blue() {
     .expect("Spectacle Mage castable from 2 blue mana via hybrid pips");
     drain_stack(&mut g);
     assert!(g.battlefield.iter().any(|c| c.id == id));
+}
+
+// ── Push XXXIX: New STX 2021 cards (Lash of Malice, Pest Wallop, ─────────────
+//                Solid Footing, Swarm Shambler) ────────────────────────────────
+
+/// Push XXXIX: Lash of Malice — {B} Sorcery, target creature gets
+/// -2/-2 EOT. A 2/2 Bear shrunk to 0/0 dies via SBA.
+#[test]
+fn lash_of_malice_kills_two_two_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::lash_of_malice());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        mode: None, x_value: None,
+    })
+    .expect("Lash of Malice castable for {B}");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == bear),
+        "2/2 Bear should die after -2/-2 from Lash of Malice");
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bear));
+}
+
+/// Push XXXIX: Pest Wallop — friendly creature pumps +1/+1 then deals
+/// damage = its power to an opp creature. A 2/2 Bear becomes 3/3,
+/// then deals 3 damage to an opp Bear (kills it).
+#[test]
+fn pest_wallop_pumps_friendly_then_damages_opp_creature() {
+    let mut g = two_player_game();
+    let friendly = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let opp = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(friendly);
+    let id = g.add_card_to_hand(0, catalog::pest_wallop());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(friendly)),
+        mode: None, x_value: None,
+    })
+    .expect("Pest Wallop castable for {3}{G}");
+    drain_stack(&mut g);
+    // Friendly bear pumped to 3/3.
+    let f = g.battlefield.iter().find(|c| c.id == friendly).unwrap();
+    assert_eq!(f.power(), 3, "friendly should be 3 power post-pump");
+    // Opp bear (2/2) takes 3 damage → dies.
+    assert!(!g.battlefield.iter().any(|c| c.id == opp),
+        "opp bear should die to 3 damage");
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == opp));
+}
+
+/// Push XXXIX: Pest Wallop's slot 0 must be a friendly creature
+/// (cast-time filter via the new `val_find` recursion). Picking an
+/// opp creature in slot 0 rejects with `SelectionRequirementViolated`.
+#[test]
+fn pest_wallop_rejects_opp_creature_target() {
+    let mut g = two_player_game();
+    let opp = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::pest_wallop());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    let result = g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(opp)),
+        mode: None, x_value: None,
+    });
+    assert!(result.is_err(),
+        "Pest Wallop should reject opp creature in slot 0");
+    assert!(g.players[0].hand.iter().any(|c| c.id == id));
+}
+
+/// Push XXVIII: Solid Footing — {W} Aura. Enchanted creature gets
+/// +1/+2 + vigilance. ETB attaches to the chosen creature; static
+/// auras grant the buff while attached. Computed view (post-layer)
+/// must read 3/4 + vigilance on the enchanted creature.
+#[test]
+fn solid_footing_pumps_enchanted_creature_with_vigilance() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    let id = g.add_card_to_hand(0, catalog::solid_footing());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        mode: None, x_value: None,
+    })
+    .expect("Solid Footing castable");
+    drain_stack(&mut g);
+    // Aura on battlefield + attached to bear (cast-time pre-attach for
+    // permanent Auras with a permanent target; see `stack.rs`).
+    let aura = g.battlefield.iter().find(|c| c.id == id)
+        .expect("Solid Footing should be on battlefield");
+    assert_eq!(aura.attached_to, Some(bear),
+        "aura should be attached to the targeted bear");
+    let view = g.computed_permanent(bear)
+        .expect("bear should be on battlefield");
+    assert_eq!(view.power, 3, "bear should be 3 power (2 + 1) post-layer");
+    assert_eq!(view.toughness, 4, "bear should be 4 toughness (2 + 2)");
+    assert!(view.keywords.contains(&Keyword::Vigilance),
+        "bear should have vigilance from the aura");
+}
+
+/// Push XXXIX: CR 704.5m — when an enchanted creature dies, the
+/// Aura is also put into its owner's graveyard via the orphaned-
+/// aura SBA. Solid Footing on the bear → bear takes 5 damage from
+/// Wilt in the Heat → bear dies → Solid Footing is graveyarded too.
+#[test]
+fn solid_footing_graveyards_when_enchanted_creature_dies() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    let aura = g.add_card_to_hand(0, catalog::solid_footing());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura, target: Some(Target::Permanent(bear)),
+        mode: None, x_value: None,
+    })
+    .expect("Solid Footing castable");
+    drain_stack(&mut g);
+    // Now player 1 zaps the bear with Wilt in the Heat for 5 damage.
+    // Wilt requires a graveyard exit for its discount, but we're
+    // paying full cost.
+    let wilt = g.add_card_to_hand(1, catalog::wilt_in_the_heat());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.players[1].mana_pool.add(Color::White, 1);
+    g.players[1].mana_pool.add_colorless(2);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: wilt, target: Some(Target::Permanent(bear)),
+        mode: None, x_value: None,
+    })
+    .expect("Wilt castable");
+    drain_stack(&mut g);
+    // Bear and aura both in graveyards.
+    assert!(!g.battlefield.iter().any(|c| c.id == bear),
+        "bear dies to 5 damage");
+    assert!(!g.battlefield.iter().any(|c| c.id == aura),
+        "aura should be graveyarded by SBA when enchanted creature dies");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == aura),
+        "aura should be in p0 graveyard (its owner)");
+}
+
+/// Push XXXIX: Containment Breach — {1}{W} Instant. Destroys an
+/// opp enchantment and draws a card (Learn = Draw 1 approximation).
+#[test]
+fn containment_breach_destroys_enchantment_and_draws() {
+    let mut g = two_player_game();
+    // Place an enchantment to destroy.
+    let glory = g.add_card_to_battlefield(1, catalog::glorious_anthem());
+    let id = g.add_card_to_hand(0, catalog::containment_breach());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    // Seed library so the cantrip has something to draw.
+    g.add_card_to_library(0, catalog::island());
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(glory)),
+        mode: None, x_value: None,
+    })
+    .expect("Containment Breach castable");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == glory),
+        "Glorious Anthem should be destroyed");
+    // Hand: -1 (cast Containment Breach) + 1 (Learn cantrip) = 0 net.
+    assert_eq!(g.players[0].hand.len(), hand_before, "Learn draws a card");
+}
+
+/// Push XXXIX: Unwilling Ingredient — {B} 1/1 Insect Pest. ETB no
+/// effect; on death, may pay {B}: draw a card. ScriptedDecider yes
+/// path drives the cantrip (auto-decider declines).
+#[test]
+fn unwilling_ingredient_dies_and_pays_for_draw() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
+    let ingredient = g.add_card_to_battlefield(0, catalog::unwilling_ingredient());
+    g.clear_sickness(ingredient);
+    // Pre-float mana for the may-pay path.
+    g.players[0].mana_pool.add(Color::Black, 1);
+    // Seed library so the draw has something.
+    g.add_card_to_library(0, catalog::island());
+    let hand_before = g.players[0].hand.len();
+    // Sacrifice the ingredient (any way to put it in the graveyard).
+    let _ = g.remove_to_graveyard_with_triggers(ingredient);
+    drain_stack(&mut g);
+    // After the death trigger resolves, hand should be +1.
+    assert_eq!(g.players[0].hand.len(), hand_before + 1,
+        "MayPay yes path draws a card");
+}
+
+/// Push XXXIX: Swarm Shambler — {G} 1/1 Beast. ETB places a +1/+1
+/// counter on itself.
+#[test]
+fn swarm_shambler_etb_adds_counter() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::swarm_shambler());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Swarm Shambler castable for {G}");
+    drain_stack(&mut g);
+    let card = g.battlefield.iter().find(|c| c.id == id).unwrap();
+    assert_eq!(card.power(), 2, "1/1 base + 1 counter = 2 power");
+    assert_eq!(card.toughness(), 2);
+    assert!(card.counter_count(CounterType::PlusOnePlusOne) >= 1);
+}
+
+/// Push XXXIX: Swarm Shambler's `{2}{G}` activation untaps + adds
+/// a +1/+1 counter. Each successful activation grows the body 1
+/// power and untaps it for re-tapping.
+#[test]
+fn swarm_shambler_activation_untaps_and_adds_counter() {
+    let mut g = two_player_game();
+    let shambler = g.add_card_to_battlefield(0, catalog::swarm_shambler());
+    g.clear_sickness(shambler);
+    {
+        let s = g.battlefield.iter_mut().find(|c| c.id == shambler).unwrap();
+        s.tapped = true;
+    }
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: shambler, ability_index: 0, target: None,
+    })
+    .expect("activation should succeed for {2}{G}");
+    drain_stack(&mut g);
+    let card = g.battlefield.iter().find(|c| c.id == shambler).unwrap();
+    assert!(!card.tapped, "shambler should be untapped post-activation");
+    // 1/1 base + 1 counter from activation = 2/2 (no ETB counter since added_to_battlefield in this test path).
+    assert!(card.counter_count(CounterType::PlusOnePlusOne) >= 1);
 }

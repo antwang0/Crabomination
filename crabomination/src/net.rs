@@ -173,6 +173,14 @@ pub struct KnownCard {
     /// `PlayLand`.
     #[serde(default)]
     pub back_face_name: Option<String>,
+    /// Short label for an additional cast cost beyond mana — currently
+    /// "sacrifice a creature" / similar. `None` when the spell has no
+    /// extra cost. Lets the client warn before wasting mana on a spell
+    /// the controller can't currently afford (Daemogoth Woe-Eater /
+    /// Eyeblight Cullers without a creature to sacrifice). Defaulted
+    /// to `None` for older serialized views.
+    #[serde(default)]
+    pub additional_cost_label: Option<String>,
 }
 
 /// One activated ability as projected for the client.

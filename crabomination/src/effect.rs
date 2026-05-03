@@ -279,6 +279,18 @@ pub enum Value {
     /// the post-X cmc off the stack item, so a {X}{R} bolt cast for X=3
     /// returns 4.
     ManaSpentToCast,
+    /// Conditional value: evaluates `then` if `cond` holds, else `else_`.
+    /// Lets a `Value` branch on a `Predicate` evaluated against the same
+    /// `EffectContext`. Used by Wilt in the Heat's cost-reduction-when-
+    /// cards-left-graveyard ({2} less if cards left your graveyard this
+    /// turn — `IfPredicate { cond: CardsLeftGraveyardThisTurnAtLeast(1),
+    /// then: 2, else_: 0 }`) and any future "discount keyed off a runtime
+    /// gate" / "X = 1 if condition else 0" payoffs.
+    IfPredicate {
+        cond: Box<Predicate>,
+        then: Box<Value>,
+        else_: Box<Value>,
+    },
 }
 
 impl Value {
@@ -1414,6 +1426,31 @@ impl Effect {
                 _ => None,
             }
         }
+        // Walk nested Value arguments (PowerOf, ToughnessOf, ManaValueOf,
+        // CountOf, CountersOn) for a target-slot filter. Lets the cast-
+        // time legality check enforce filters that live inside an
+        // effect's `amount` argument (Decisive Denial mode 1's "deal
+        // damage equal to your creature's power" puts the friendly-
+        // creature filter inside `Value::PowerOf(Target(0))`).
+        fn val_find(v: &Value, slot: u8) -> Option<&SelectionRequirement> {
+            match v {
+                Value::PowerOf(s)
+                | Value::ToughnessOf(s)
+                | Value::ManaValueOf(s)
+                | Value::CountOf(s) => sel_find(s, slot),
+                Value::CountersOn { what, .. } => sel_find(what, slot),
+                Value::Sum(vs) => vs.iter().find_map(|v| val_find(v, slot)),
+                Value::Diff(a, b)
+                | Value::Times(a, b)
+                | Value::Min(a, b)
+                | Value::Max(a, b) => val_find(a, slot).or_else(|| val_find(b, slot)),
+                Value::NonNeg(v) | Value::Pow2(v) | Value::HalfDown(v) => val_find(v, slot),
+                Value::IfPredicate { then, else_, .. } => {
+                    val_find(then, slot).or_else(|| val_find(else_, slot))
+                }
+                _ => None,
+            }
+        }
         fn eff_find(
             e: &Effect,
             slot: u8,
@@ -1447,7 +1484,9 @@ impl Effect {
                 Effect::MayDo { body, .. } | Effect::MayPay { body, .. } => {
                     eff_find(body, slot, mode)
                 }
-                Effect::DealDamage { to, .. } => sel_find(to, slot),
+                Effect::DealDamage { to, amount } => {
+                    sel_find(to, slot).or_else(|| val_find(amount, slot))
+                }
                 Effect::Fight { attacker, defender } => {
                     sel_find(attacker, slot).or_else(|| sel_find(defender, slot))
                 }

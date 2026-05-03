@@ -282,6 +282,22 @@ impl GameState {
                         .map(|t| t.effect.clone())
                         .collect();
                     let evoked = card.evoked;
+                    let mut card = card;
+                    // Aura targeting: an Aura spell pre-binds its enchanted
+                    // permanent to its `attached_to` field at the moment it
+                    // enters the battlefield, so the orphaned-aura SBA
+                    // (CR 704.5m — "an Aura that isn't attached to an
+                    // object or player is put into its owner's graveyard")
+                    // doesn't immediately graveyard the aura between bf
+                    // entry and the cast-target snapshot. The cast's
+                    // target (slot 0) is always a permanent for Auras
+                    // (CR 303.4f).
+                    if card.definition.is_aura()
+                        && card.attached_to.is_none()
+                        && let Some(crate::game::types::Target::Permanent(t_id)) = &target
+                    {
+                        card.attached_to = Some(*t_id);
+                    }
                     self.battlefield.push(card);
                     events.push(GameEvent::PermanentEntered { card_id });
 
@@ -732,7 +748,11 @@ impl GameState {
             self.remove_from_battlefield_to_graveyard(id);
         }
 
-        // Auras with no valid attachment target go to their owner's graveyard (CR 704.5n/5q).
+        // Auras with no valid attachment target go to their owner's
+        // graveyard (CR 704.5m). Note: the cast-time pre-attach in
+        // `resolve_top_of_stack` snapshots the target onto
+        // `attached_to` before this SBA fires, so a freshly-resolved
+        // Aura with a legal target survives.
         let orphaned_auras: Vec<CardId> = self
             .battlefield
             .iter()
