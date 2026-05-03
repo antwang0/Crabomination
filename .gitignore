@@ -23,8 +23,17 @@ target
 # Card images are auto-downloaded from Scryfall on first run by
 # `crabomination_client::scryfall::ensure_card_images`; tracking them just
 # bloats the repo and goes stale when the catalog grows. Fonts stay tracked
-# (they're not auto-fetched and the UI needs them at startup).
+# (they're not auto-fetched and the UI needs them at startup), and the
+# cardback at `crabomination_client/assets/cardback.png` is tracked because
+# it's a single small file the renderer needs at startup before the
+# prefetcher has a chance to run.
+#
+# Both paths are listed because `cfg.paths.asset_dir` resolves through
+# `CARGO_MANIFEST_DIR` (→ `crabomination_client/assets/`), but a stale
+# workspace-root copy can linger from earlier runs that resolved against
+# the cwd instead.
 crabomination_client/assets/cards/
+/assets/cards/
 
 # Per-user Claude Code harness settings (allow-lists, hooks, etc.).
 # Each contributor maintains their own.

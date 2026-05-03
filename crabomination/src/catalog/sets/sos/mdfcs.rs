@@ -1,12 +1,21 @@
-//! Secrets of Strixhaven (SOS) — Modal Double-Faced Cards.
+//! Secrets of Strixhaven (SOS) — "Prepared" cards (engine-invented MDFCs).
 //!
-//! These MDFCs each pair a vanilla-ish creature front face with a
-//! reprinted spell on the back. The engine routes the front cast through
-//! `GameAction::CastSpell` and the back through `GameAction::CastSpellBack`
-//! (added in push X). The back face's `CardDefinition` is constructed
-//! inline because each spell needs slightly different `effect`/cost
-//! plumbing — keeping the helpers out of `super::sorceries` avoids
-//! cluttering the named-spell module with one-off MDFC variants.
+//! Each card here is a **prepared card**: a vanilla-ish creature front
+//! face glued to a reprinted spell back face (the *prepare spell*). See
+//! `STRIXHAVEN2.md` → "Prepare mechanic" → Half 1, and `.claude/prepared.md`
+//! for the cross-cutting context. Mechanically these ride the engine's
+//! existing MDFC plumbing — the front cast routes through
+//! `GameAction::CastSpell` and the back through
+//! `GameAction::CastSpellBack` (added in push X) — but the front+back
+//! pair is engine-invented, so Scryfall has no MDFC printing for them.
+//! The client prefetcher handles that via a 422-fallback in
+//! `crabomination_client::scryfall::download_card_image` (queries the
+//! back name directly when `face=back` on the front 422s).
+//!
+//! The back face's `CardDefinition` is constructed inline because each
+//! spell needs slightly different `effect`/cost plumbing — keeping the
+//! helpers out of `super::sorceries` avoids cluttering the named-spell
+//! module with one-off MDFC variants.
 //!
 //! Cards in this module:
 //! - Elite Interceptor // Rejoinder

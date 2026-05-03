@@ -2328,17 +2328,53 @@ Ulna Alley Shopkeep, Tragedy Feaster, Withering Curse, …) need either
 Ward enforcement or static "as long as you've gained life this turn"
 gating which is a separate engine primitive.
 
-### Prepare mechanic (SOS colorless)
+### Prepare mechanic (SOS)
 
-A small SOS sub-theme where one card toggles a "prepared" flag on a
-creature and another card cares about it. The flag works like a stun /
-phased / monstrosity counter: it's a per-permanent boolean (or counter
-of count 1) set by `becomes prepared` and cleared by `becomes
-unprepared`. Cards that *care* about the flag have a **Prepare {cost}**
-activated/triggered ability and reminder text "(Only creatures with
-prepare spells can become prepared.)".
+The Prepare mechanic has two halves that interact. The first ships
+today; the second is still ⏳.
 
-Cards in the SOS table that touch the mechanic:
+#### Half 1 — Prepared cards (the spell side)
+
+A "prepared card" is a creature whose front face carries a vanilla
+(or near-vanilla) body and whose back face is a fully-castable
+**prepare spell** — usually a real reprinted spell (Careful Study,
+Lightning Bolt, Raise Dead, …). The owner picks which face to cast
+when the card leaves their hand, identical to the engine's existing
+MDFC plumbing (`back_face: Some(Box<CardDefinition>)` + the
+`GameAction::CastSpell` / `CastSpellBack` action pair). Mechanically
+this is just an MDFC; the **distinguishing feature** is that the pair
+is engine-invented — Scryfall has the back card on its own and the
+front creature standalone, but not the two glued together as a
+double-faced printing.
+
+The catalog lives in `crabomination/src/catalog/sets/sos/mdfcs.rs`
+(plus a few stragglers in `sos/creatures.rs`). Every entry uses the
+`vanilla_front(...) / spell_back(...)` helpers in that module.
+
+**Client image prefetch:** `crabomination_client::scryfall` looks up
+each MDFC back by querying the **front** name with `face=back` first
+(real-MDFC path — pathways and the like). On HTTP 422 (Scryfall:
+"unprocessable" — the front isn't a double-faced card) or 404 (the
+front is engine-invented and not on Scryfall), it falls back to a
+direct `cards/named` lookup of the **back** name as a regular card.
+That second path is what saves prepared cards: the back is always a
+real Scryfall printing on its own, so the fallback always succeeds
+and the runtime renders the actual spell art instead of a cardback
+placeholder. See `download_card_image` in `scryfall.rs`.
+
+#### Half 2 — The prepared flag (still ⏳)
+
+Independent of who has a prepare spell, certain SOS cards toggle a
+per-permanent boolean **prepared** flag on a creature. The flag works
+like a stun / phased / monstrosity counter: a per-permanent boolean
+(or counter of count 1) set by "becomes prepared" and cleared by
+"becomes unprepared". Cards that *care* about the flag have a
+**Prepare {cost}** activated/triggered ability with the reminder text
+"(Only creatures with prepare spells can become prepared.)" — i.e.
+the gating predicate is "this creature's `back_face` is a prepare
+spell, **and** the prepared flag is set".
+
+Cards in the SOS table that toggle the flag:
 
 - **Biblioplex Tomekeeper** ({4} 3/4) — ETB toggle (prepare or unprepare).
 - **Skycoach Waypoint** (land) — `{3},{T}: prepare target`.
@@ -2347,7 +2383,7 @@ Cards in the SOS table that touch the mechanic:
   when re-running `scripts/gen_strixhaven2.py` look for "prepare " or
   "prepared" in the oracle column to spot them.
 
-Engine-side this needs:
+Engine-side, Half 2 still needs:
 
 1. A new `CounterType::Prepared` (or a `PermanentFlag::Prepared` boolean)
    on `Permanent`, surfaced through `PermanentView` for the client UI.
@@ -2357,8 +2393,10 @@ Engine-side this needs:
 4. The activated ability *itself* on payoff cards — those need an
    ability authored from the truncated body of the card.
 
-None of these are wired today; all prepare cards are ⏳ until at least
-(1) and (2) land. Track in `TODO.md` under Engine — Missing Mechanics.
+The flag side is ⏳ until at least (1) and (2) land. Track in
+`TODO.md` under Engine — Missing Mechanics. The spell-side prepared
+cards (Half 1) are wired today and tagged 🟡 in the SOS table when
+the back-face spell body is in place.
 
 ---
 

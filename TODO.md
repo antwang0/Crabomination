@@ -2205,20 +2205,40 @@ sacrifice when the last chapter triggers.  No `SagaLore` counter type or
 upkeep-advance primitive exists.
 
 ### Prepare Mechanic (SOS)
-Secrets of Strixhaven introduces a per-permanent "prepared" flag toggled
+Secrets of Strixhaven splits Prepare into two halves; only the flag
+side is missing.
+
+**Half 1 — Prepared cards (the spell side).** Already wired. A
+"prepared card" is a creature with a back-face *prepare spell* (e.g.
+Spellbook Seeker // Careful Study, Pigment Wrangler // Striking
+Palette). The pair rides the engine's existing MDFC plumbing
+(`back_face: Some(...)` + `GameAction::CastSpell` /
+`CastSpellBack`). Catalog: `crabomination/src/catalog/sets/sos/mdfcs.rs`.
+The client image prefetcher (`crabomination_client::scryfall`) handles
+these via a 422/404 fallback in `download_card_image` — the front is
+engine-invented so `face=back` returns 422; the back name is always a
+real Scryfall printing on its own. See STRIXHAVEN2.md → "Prepare
+mechanic" for the lookup contract.
+
+**Half 2 — The prepared flag (⏳).** A per-permanent boolean toggled
 by `becomes prepared` / `becomes unprepared` effects. Cards like
-Biblioplex Tomekeeper and Skycoach Waypoint flip the flag; payoff cards
-have a `Prepare {cost}` activated/triggered ability and reminder text
-"(Only creatures with prepare spells can become prepared.)" Engine
-needs:
+Biblioplex Tomekeeper and Skycoach Waypoint flip the flag; payoff
+cards have a `Prepare {cost}` activated/triggered ability and
+reminder text "(Only creatures with prepare spells can become
+prepared.)" — note the gate references the spell-side from Half 1.
+Engine needs:
 - `PermanentFlag::Prepared` (or `CounterType::Prepared` count-1) on
   `Permanent`, surfaced through `PermanentView`.
 - `Effect::SetPrepared { what, value: bool }`.
-- `Predicate::IsPrepared` for prepare-payoff conditional clauses.
+- `Predicate::IsPrepared` for prepare-payoff conditional clauses
+  (combined with `back_face.is_some_and(is_prepare_spell)` for the
+  full reminder-text gate).
 - A short oracle-text helper that wires "Prepare {cost}: …" into a
   standard activated ability with `gate: IsPrepared`.
 
-Until (1) and (2) land, all prepare-touching SOS cards are ⏳.
+Until the flag-side primitives land, flag-toggling cards (Tomekeeper,
+Waypoint, prepare-payoff activations) stay ⏳; spell-side prepared
+cards are 🟡 today (back-face castable, no flag interaction yet).
 
 ### Vehicle / Crew
 `CardType::Artifact` exists but there is no `CrewN` keyword or "becomes a
@@ -3198,15 +3218,21 @@ oracle verification.
   consulted by combat-eligibility. Unblocks Strixhaven Skycoach,
   future Strixhaven vehicles, and Kaldheim/MID vehicles.
 
-- **Prepare keyword + prepared-state flag**. Biblioplex Tomekeeper
-  and Skycoach Waypoint both gate on a "prepared" creature state.
-  This is an SOS-only flag flipped on/off by toggle effects (the
-  Tomekeeper's ETB choice, the Waypoint's `{3},{T}` activation),
-  and only consultable by creatures whose own oracle text grants
-  them a "Prepare {cost}" ability. Add `CardInstance.prepared: bool`
-  + `Keyword::Prepare(ManaCost)` + an `Effect::SetPrepared { what,
-  state: bool }` primitive. Then surface "prepare a creature" /
-  "unprepare a creature" effects on the target side.
+- **Prepare keyword + prepared-state flag** (Half 2 of Prepare —
+  Half 1, the spell-side "prepared cards", already ships via the
+  MDFC plumbing; see "Prepare Mechanic (SOS)" above and STRIXHAVEN2.md).
+  Biblioplex Tomekeeper and Skycoach Waypoint both gate on a
+  "prepared" creature state. This is an SOS-only flag flipped on/off
+  by toggle effects (the Tomekeeper's ETB choice, the Waypoint's
+  `{3},{T}` activation), and only consultable by creatures whose own
+  oracle text grants them a "Prepare {cost}" ability. Add
+  `CardInstance.prepared: bool` + `Keyword::Prepare(ManaCost)` + an
+  `Effect::SetPrepared { what, state: bool }` primitive. Then surface
+  "prepare a creature" / "unprepare a creature" effects on the target
+  side. The reminder-text gate "Only creatures with prepare spells can
+  become prepared" maps to "the target's `back_face` is a prepare
+  spell" — i.e. the flag-toggle effects must reject targets with
+  `back_face: None`.
 
 ### UI
 

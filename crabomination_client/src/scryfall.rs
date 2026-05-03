@@ -38,10 +38,20 @@ use std::time::Duration;
 pub enum CardImage {
     /// Single-faced card. Looked up on Scryfall by `name`.
     Front(&'static str),
-    /// Modal-double-faced / transform back face. Looked up by the
-    /// **front** face's name with `face=back`, saved under the back
-    /// face's filename so the asset loader can retrieve it via
-    /// [`card_back_face_asset_path(back)`].
+    /// Modal-double-faced / transform back face, **or** the spell side
+    /// of a "prepared" creature (see `STRIXHAVEN2.md` → Prepare mechanic).
+    ///
+    /// Lookup strategy:
+    /// 1. Try the real-MDFC path: query Scryfall for the **front** name
+    ///    with `face=back` (works for pathways and any genuine MDFC).
+    /// 2. If Scryfall returns 422 (Unprocessable — the front isn't an
+    ///    MDFC) or 404 (Not Found — the front isn't on Scryfall), fall
+    ///    back to looking up the **back** name as a normal card. This
+    ///    handles "prepared" cards where the front is engine-invented
+    ///    but the back is always a real reprinted spell.
+    ///
+    /// Saved under the back face's filename so the asset loader can
+    /// retrieve it via [`card_back_face_asset_path(back)`].
     MdfcBack {
         front: &'static str,
         back: &'static str,
@@ -90,9 +100,14 @@ impl CardImage {
 }
 
 /// Card names that don't exist on Scryfall and should be skipped by
-/// the prefetcher. Engine-invented MDFCs only — tokens are now
-/// fetched via the real Scryfall token-search path (`is:token+t:…`)
-/// in [`download_token_image`].
+/// the prefetcher. Reserved for **fully-fictional** cards where
+/// neither face is on Scryfall (e.g. Sundering Eruption // Mount Tyrhus,
+/// an engine-invented MDFC pair). Prepared cards (`STRIXHAVEN2.md` →
+/// Prepare mechanic) do **not** belong here: their back face is always
+/// a real reprinted spell, so the 422-fallback path in
+/// [`download_card_image`] downloads the real art automatically.
+/// Tokens are also handled separately via
+/// [`download_token_image`]'s `is:token+t:…` search.
 const FICTIONAL_CARDS: &[&str] = &[
     "Sundering Eruption",
     "Mount Tyrhus",
@@ -114,7 +129,7 @@ fn is_fictional(name: &str) -> bool {
 pub fn ensure_card_images(specs: &[CardImage], assets_dir: &Path) {
     let cards_dir = assets_dir.join("cards");
     fs::create_dir_all(&cards_dir).expect("failed to create assets/cards/ directory");
-    let cardback_placeholder = cards_dir.join("cardback.png");
+    let cardback_placeholder = assets_dir.join("cardback.png");
 
     for spec in specs {
         let path = cards_dir.join(spec.filename());
@@ -208,22 +223,34 @@ pub fn card_back_face_asset_path(name: &str) -> String {
 fn download_card_image(spec: &CardImage) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
     match spec {
         CardImage::Token { name } => download_token_image(name),
-        spec => {
-            // Query parameters: which name to look up, and whether to ask
-            // Scryfall for the back face.
-            let (lookup_name, face_param) = match spec {
-                CardImage::Front(n) => (*n, ""),
-                CardImage::MdfcBack { front, .. } => (*front, "&face=back"),
-                CardImage::Token { .. } => unreachable!("handled above"),
-            };
-            match try_lookup("exact", lookup_name, face_param) {
+        CardImage::Front(n) => lookup_named(n, "").map_err(Into::into),
+        CardImage::MdfcBack { front, back } => {
+            // Real MDFCs (e.g. pathways): the back face is fetched by
+            // querying the front name with `face=back`. "Prepared"
+            // creatures (Strixhaven-style engine-invented front + a
+            // real reprinted spell on the back) aren't on Scryfall as
+            // MDFCs, so `face=back` returns 422 (or 404 when the front
+            // is also fictional). In those cases the back is always a
+            // real card name on its own, so fall back to a direct
+            // front-style lookup of the back name.
+            match lookup_named(front, "&face=back") {
                 Ok(bytes) => Ok(bytes),
-                Err(e) if matches!(e, LookupError::NotFound) => {
-                    try_lookup("fuzzy", lookup_name, face_param).map_err(Into::into)
+                Err(LookupError::Unprocessable) | Err(LookupError::NotFound) => {
+                    lookup_named(back, "").map_err(Into::into)
                 }
                 Err(e) => Err(e.into()),
             }
         }
+    }
+}
+
+/// `cards/named` lookup with exact→fuzzy fallback. Encapsulates the
+/// retry shared by every front-style and `face=back` query.
+fn lookup_named(name: &str, face_param: &str) -> Result<Vec<u8>, LookupError> {
+    match try_lookup("exact", name, face_param) {
+        Ok(bytes) => Ok(bytes),
+        Err(LookupError::NotFound) => try_lookup("fuzzy", name, face_param),
+        Err(e) => Err(e),
     }
 }
 
@@ -263,7 +290,15 @@ fn download_token_image(token_name: &str) -> Result<Vec<u8>, Box<dyn std::error:
 
 #[derive(Debug)]
 enum LookupError {
+    /// Scryfall returned 404 — no card matched. Caller may retry with
+    /// `fuzzy` matching.
     NotFound,
+    /// Scryfall returned 422 — the request was syntactically valid but
+    /// the card can't be served that way. The only place this fires in
+    /// practice is `face=back` against a card that isn't double-faced;
+    /// the MDFC fallback path uses this signal to redirect to a direct
+    /// back-name lookup.
+    Unprocessable,
     Other(String),
 }
 
@@ -271,6 +306,7 @@ impl std::fmt::Display for LookupError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             LookupError::NotFound => write!(f, "not found on Scryfall"),
+            LookupError::Unprocessable => write!(f, "Scryfall rejected request as unprocessable (422)"),
             LookupError::Other(msg) => write!(f, "{msg}"),
         }
     }
@@ -289,14 +325,17 @@ fn try_lookup(
     );
     let response = match ureq::get(&url).call() {
         Ok(r) => r,
-        // ureq reports 404 as a body-bearing status error; bubble that
-        // out as `NotFound` so the caller can decide whether to retry
-        // with `fuzzy`. All other errors (network, 5xx, parse failure)
-        // are terminal.
+        // ureq reports HTTP error statuses as body-bearing status
+        // errors; classify the ones the prefetcher cares about so the
+        // caller can decide whether to retry. Everything else (network,
+        // 5xx, parse failure) is terminal.
         Err(err) => {
             let msg = err.to_string();
             if msg.contains("status: 404") || msg.contains("404 Not Found") {
                 return Err(LookupError::NotFound);
+            }
+            if msg.contains("status: 422") {
+                return Err(LookupError::Unprocessable);
             }
             return Err(LookupError::Other(msg));
         }
@@ -385,7 +424,7 @@ mod tests {
         fs::create_dir_all(tmp.join("cards")).expect("temp setup");
         // Stamp a 1-byte fake cardback so the placeholder logic has
         // something to copy from.
-        fs::write(tmp.join("cards").join("cardback.png"), b"FAKE").expect("write fake cardback");
+        fs::write(tmp.join("cardback.png"), b"FAKE").expect("write fake cardback");
 
         let specs = vec![CardImage::Front("Mount Tyrhus")];
         ensure_card_images(&specs, &tmp);

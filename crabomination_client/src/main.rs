@@ -1,5 +1,5 @@
 use std::f32::consts::PI;
-use std::path::Path;
+use std::path::PathBuf;
 
 use bevy::image::{ImageFilterMode, ImageSamplerDescriptor};
 use bevy::light::{CascadeShadowConfigBuilder, DirectionalLightShadowMap, GlobalAmbientLight};
@@ -140,7 +140,21 @@ fn main() {
             .map(|(front, back)| CardImage::MdfcBack { front, back }),
     );
     specs.extend(token_names.iter().map(|name| CardImage::Token { name }));
-    scryfall::ensure_card_images(&specs, Path::new(&cfg.paths.asset_dir));
+
+    // Resolve a relative `asset_dir` against this crate's manifest dir, the
+    // same root Bevy uses for relative `AssetPlugin::file_path` values. Without
+    // this the prefetcher (cwd-relative) and Bevy's AssetServer (manifest-relative)
+    // can write to and read from different directories when the binary is run
+    // from the workspace root.
+    let asset_dir: PathBuf = {
+        let p = PathBuf::from(&cfg.paths.asset_dir);
+        if p.is_absolute() {
+            p
+        } else {
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(p)
+        }
+    };
+    scryfall::ensure_card_images(&specs, &asset_dir);
 
     let gfx = cfg.graphics;
     App::new()
@@ -159,7 +173,7 @@ fn main() {
                     },
                 })
                 .set(AssetPlugin {
-                    file_path: cfg.paths.asset_dir,
+                    file_path: asset_dir.to_string_lossy().into_owned(),
                     ..default()
                 }),
             MeshPickingPlugin,
