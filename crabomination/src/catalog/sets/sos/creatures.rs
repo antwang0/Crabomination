@@ -2604,9 +2604,20 @@ pub fn tackle_artist() -> CardDefinition {
     }
 }
 
-/// Thunderdrum Soloist — {1}{R}, 1/3 Dwarf Bard with Reach. Opus damage
-/// rider omitted.
+/// Thunderdrum Soloist — {1}{R}, 1/3 Dwarf Bard with Reach.
+/// "Opus — Whenever you cast an instant or sorcery spell, this creature
+/// deals 1 damage to each opponent. If five or more mana was spent to
+/// cast that spell, this creature deals 3 damage to each opponent
+/// instead."
+///
+/// ✅ Push: Opus rider now wired via `effect::shortcut::opus(5, ...)`.
+/// Always-fires half: 1 damage to each opp. Big-cast (≥5 mana) half:
+/// an additional 2 damage (net 3 to each opp). Same additive
+/// "instead" approximation as Spectacular Skywhale / Tackle Artist:
+/// the printed swap is approximated as `1 + 2 = 3`, which is
+/// arithmetically equivalent to the 3-replacement.
 pub fn thunderdrum_soloist() -> CardDefinition {
+    use crate::effect::shortcut::{each_opponent, opus};
     use crate::mana::r;
     CardDefinition {
         name: "Thunderdrum Soloist",
@@ -2622,7 +2633,20 @@ pub fn thunderdrum_soloist() -> CardDefinition {
         keywords: vec![Keyword::Reach],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
+        triggered_abilities: vec![opus(
+            5,
+            // Big-cast bonus: deal an additional 2 damage to each opp
+            // (1 base + 2 extra = 3 total).
+            Effect::DealDamage {
+                to: each_opponent(),
+                amount: Value::Const(2),
+            },
+            // Always: deal 1 damage to each opp.
+            Effect::DealDamage {
+                to: each_opponent(),
+                amount: Value::Const(1),
+            },
+        )],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -2632,9 +2656,22 @@ pub fn thunderdrum_soloist() -> CardDefinition {
     }
 }
 
-/// Molten-Core Maestro — {1}{R}, 2/2 Goblin Bard with Menace. Opus rider
-/// omitted.
+/// Molten-Core Maestro — {1}{R}, 2/2 Goblin Bard with Menace.
+/// "Opus — Whenever you cast an instant or sorcery spell, put a +1/+1
+/// counter on this creature. If five or more mana was spent to cast
+/// that spell, add an amount of {R} equal to this creature's power."
+///
+/// ✅ Push: Opus rider now wired via `effect::shortcut::opus(5, ...)`.
+/// Always: a +1/+1 counter on This (permanent counter — same shape as
+/// Cuboid Colony / Berta's Increment counter accrual). Big-cast (≥5
+/// mana): an additional `AddMana { OfColor(Red, PowerOf(This)) }`,
+/// reading the post-counter power so a Big-cast trigger off a 3/3
+/// adds {R}{R}{R}{R} (the +1/+1 counter resolves first as `always`
+/// runs before the Big-cast block per `opus()`'s `Seq` ordering).
 pub fn molten_core_maestro() -> CardDefinition {
+    use crate::card::CounterType;
+    use crate::effect::ManaPayload;
+    use crate::effect::shortcut::opus;
     use crate::mana::r;
     CardDefinition {
         name: "Molten-Core Maestro",
@@ -2650,7 +2687,23 @@ pub fn molten_core_maestro() -> CardDefinition {
         keywords: vec![Keyword::Menace],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
+        triggered_abilities: vec![opus(
+            5,
+            // Big-cast: add {R} equal to this creature's power.
+            Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::OfColor(
+                    Color::Red,
+                    Value::PowerOf(Box::new(Selector::This)),
+                ),
+            },
+            // Always: a +1/+1 counter on This.
+            Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        )],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -2660,8 +2713,20 @@ pub fn molten_core_maestro() -> CardDefinition {
     }
 }
 
-/// Expressive Firedancer — {1}{R}, 2/2 Human Sorcerer. Opus rider omitted.
+/// Expressive Firedancer — {1}{R}, 2/2 Human Sorcerer.
+/// "Opus — Whenever you cast an instant or sorcery spell, this creature
+/// gets +1/+1 until end of turn. If five or more mana was spent to cast
+/// that spell, this creature also gains double strike until end of
+/// turn."
+///
+/// ✅ Push: Opus rider now wired via `effect::shortcut::opus(5, ...)`.
+/// Always-fires half: +1/+1 EOT pump on This. Big-cast (≥5 mana):
+/// `Keyword::DoubleStrike` granted EOT (the "also gains" wording is
+/// additive on top of the always +1/+1 — no swap, both halves run on
+/// big casts). Combat-correct: a 3/3 Double Strike trigger after a 5+
+/// mana spell deals 6 unblocked damage in one swing.
 pub fn expressive_firedancer() -> CardDefinition {
+    use crate::effect::shortcut::opus;
     use crate::mana::r;
     CardDefinition {
         name: "Expressive Firedancer",
@@ -2677,7 +2742,22 @@ pub fn expressive_firedancer() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
+        triggered_abilities: vec![opus(
+            5,
+            // Big-cast: gain Double Strike EOT.
+            Effect::GrantKeyword {
+                what: Selector::This,
+                keyword: Keyword::DoubleStrike,
+                duration: Duration::EndOfTurn,
+            },
+            // Always: +1/+1 EOT.
+            Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(1),
+                toughness: Value::Const(1),
+                duration: Duration::EndOfTurn,
+            },
+        )],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -2932,13 +3012,19 @@ pub fn garrison_excavator() -> CardDefinition {
 /// counter on this creature.) / {T}: Add an amount of {G} equal to this
 /// creature's power."
 ///
-/// The Increment rider is omitted (engine has no mana-spent introspection
-/// on cast — see TODO.md). The mana ability now uses the new
-/// `ManaPayload::OfColor(Green, PowerOf(This))` primitive — fixed color,
-/// value-scaled count — so a single AddMana effect produces power-many
-/// {G} pips in one shot (cleaner than the prior `Repeat` approximation).
+/// The Increment rider now wires via `effect::shortcut::increment()`
+/// (push XXXI primitive backed by `Value::ManaSpentToCast`): every
+/// spell cast at ≥3 mana drops a +1/+1 counter on this creature
+/// (since min(P=1, T=2) = 1 → "greater than 1" = ≥2 mana, but
+/// `increment()` uses min+1 = 2 as the threshold).
+/// The mana ability uses the new `ManaPayload::OfColor(Green,
+/// PowerOf(This))` primitive — fixed color, value-scaled count — so a
+/// single AddMana effect produces power-many {G} pips in one shot
+/// (cleaner than the prior `Repeat` approximation). The mana ability
+/// scales linearly with each Increment-grown counter.
 pub fn topiary_lecturer() -> CardDefinition {
     use crate::effect::ManaPayload;
+    use crate::effect::shortcut::increment;
     use crate::mana::g;
     CardDefinition {
         name: "Topiary Lecturer",
@@ -2969,7 +3055,7 @@ pub fn topiary_lecturer() -> CardDefinition {
             condition: None,
             life_cost: 0,
         }],
-        triggered_abilities: vec![],
+        triggered_abilities: vec![increment()],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -4649,13 +4735,21 @@ pub fn wildgrowth_archaic() -> CardDefinition {
 /// had one or more counters on it, create a 0/0 green and blue Fractal
 /// creature token, then put this creature's counters on that token."
 ///
-/// Body wired (1/1 Turtle Wizard at {G} — Increment-grown shell).
-/// Increment is omitted (mana-spent-on-cast introspection missing —
-/// tracked in TODO.md). The death-with-counters → Fractal-with-
-/// counters trigger is also omitted (engine has no
-/// `Selector::Self.counters_at_death` snapshot — we'd need a counter-
-/// transfer-on-death primitive, which is tracked separately).
+/// Body wired (1/1 Turtle Wizard at {G}). Increment trigger now wired
+/// via `effect::shortcut::increment()` (push XXXI primitive backed by
+/// `Value::ManaSpentToCast`): every spell cast at ≥2 mana drops a
+/// +1/+1 counter on this creature (since min(P, T) starts at 1).
+/// 🟡 still — the death-with-counters → Fractal-with-counters
+/// transfer trigger is omitted pending a counter-transfer-on-death
+/// primitive (`Selector::Self.counters_at_death` snapshot would
+/// expose the counter count to the death-trigger body via
+/// `Value::CountersOn(SelfSource)` — that read already works on the
+/// graveyard-resident copy via the push XVII fallback, but the
+/// fan-out wants to *move* counters onto a freshly-minted token,
+/// which would need a per-counter "transfer to LastCreatedToken"
+/// primitive).
 pub fn ambitious_augmenter() -> CardDefinition {
+    use crate::effect::shortcut::increment;
     use crate::mana::g;
     CardDefinition {
         name: "Ambitious Augmenter",
@@ -4671,7 +4765,7 @@ pub fn ambitious_augmenter() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
+        triggered_abilities: vec![increment()],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],

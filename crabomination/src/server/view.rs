@@ -6,7 +6,7 @@
 //! gains reveal-to-seat metadata, this file is where it plugs in.
 
 use crate::card::{CardId, CardInstance};
-use crate::effect::Effect;
+use crate::effect::{Effect, Value};
 use crate::game::{GameState, StackItem};
 use crate::mana::ManaSymbol;
 use crate::net::{
@@ -454,6 +454,34 @@ fn entity_matches_label(filter: &crate::card::SelectionRequirement) -> String {
         // enchantment", Ravenous Chupacabra's "creature or planeswalker"
         // family. Recurses one level only — deeper Or chains fall back
         // to the generic hint.
+        //
+        // Push: 3-way Or covering creature/planeswalker/player (the
+        // `effect::shortcut::any_target()` shape) collapses to
+        // "any target" — same wording the printed cards use ("deals
+        // 1 damage to any target"). The shortcut is left-associative
+        // (`Creature.or(Planeswalker).or(Player)` →
+        // `Or(Or(Creature, Planeswalker), Player)`), so we match on
+        // either nesting order.
+        SR::Or(outer, last)
+            if matches!(last.as_ref(), SR::Player)
+                && matches!(
+                    outer.as_ref(),
+                    SR::Or(c, p) if matches!(c.as_ref(), SR::Creature)
+                        && matches!(p.as_ref(), SR::Planeswalker)
+                ) =>
+        {
+            "any target".into()
+        }
+        SR::Or(first, outer)
+            if matches!(first.as_ref(), SR::Player)
+                && matches!(
+                    outer.as_ref(),
+                    SR::Or(c, p) if matches!(c.as_ref(), SR::Creature)
+                        && matches!(p.as_ref(), SR::Planeswalker)
+                ) =>
+        {
+            "any target".into()
+        }
         SR::Or(a, b) => or_label(a, b),
         // Push XXX: And-composite filters where one side is
         // `IsSpellOnStack` (counter-target-spell filters) collapse to
@@ -625,7 +653,22 @@ fn ability_effect_label(effect: &Effect) -> &'static str {
         Effect::DelayUntil { .. } => "Delayed trigger",
         Effect::Tap { .. } => "Tap",
         Effect::Untap { .. } => "Untap",
-        Effect::PumpPT { .. } => "Pump",
+        Effect::PumpPT { power, toughness, .. } => {
+            // Sign-aware split: when both terms are negative constants the
+            // ability is shrinking the target rather than buffing it.
+            // Burrog Befuddler ({1}{U}, magecraft -2/-0), Witherbloom
+            // Command's mode 3 (-3/-3 EOT), Lash of Malice's -2/-2 EOT,
+            // and Dina, Soul Steeper's activated -X/-X all read as
+            // "Shrink" rather than "Pump" in the activated-ability badge
+            // UI. Any non-Const value (XFromCost, CountOf, Diff) routes
+            // to the conservative default of "Pump" since we can't
+            // statically classify the sign at definition time.
+            match (power, toughness) {
+                (Value::Const(p), Value::Const(t)) if *p < 0 && *t <= 0 => "Shrink",
+                (Value::Const(p), Value::Const(t)) if *p <= 0 && *t < 0 => "Shrink",
+                _ => "Pump",
+            }
+        }
         Effect::GrantKeyword { .. } => "Grant keyword",
         Effect::AddPoison { .. } => "Add poison",
         Effect::RevealUntilFind { .. } => "Reveal until find",
@@ -1221,6 +1264,18 @@ mod tests {
                 .or(SelectionRequirement::Enchantment),
         };
         assert_eq!(predicate_short_label(&p), "if matches filter");
+
+        // The `effect::shortcut::any_target()` shape (Creature ∨
+        // Planeswalker ∨ Player, left-associative) renders as the
+        // canonical "any target" — same wording the printed cards
+        // use for "deals N damage to any target".
+        let p = Predicate::EntityMatches {
+            what: Selector::TriggerSource,
+            filter: SelectionRequirement::Creature
+                .or(SelectionRequirement::Planeswalker)
+                .or(SelectionRequirement::Player),
+        };
+        assert_eq!(predicate_short_label(&p), "any target");
     }
 
     /// Push XXX: `entity_matches_label` now collapses common
@@ -1314,6 +1369,55 @@ mod tests {
         let p = Predicate::ValueAtMost(
             Value::PermanentCountControlledBy(PlayerRef::You), Value::Const(2));
         assert_eq!(predicate_short_label(&p), "if ≤2 permanents");
+    }
+
+    /// Push: `ability_effect_label` for `Effect::PumpPT` now splits on
+    /// the sign of `power`/`toughness`. Both negative → "Shrink"
+    /// (Burrog Befuddler / Witherbloom Command's mode 3 / Lash of
+    /// Malice / Dina, Soul Steeper). Positive or mixed (X-cost,
+    /// dynamic) → "Pump". Without the split, Burrog Befuddler's
+    /// magecraft -2/-0 trigger labels as "Pump" in the activated-
+    /// ability badge UI — misleading flavor.
+    #[test]
+    fn ability_effect_label_splits_pump_vs_shrink_by_sign() {
+        use crate::card::Selector;
+        use crate::effect::{Duration, Value};
+        let pump = Effect::PumpPT {
+            what: Selector::This,
+            power: Value::Const(2),
+            toughness: Value::Const(2),
+            duration: Duration::EndOfTurn,
+        };
+        assert_eq!(ability_effect_label(&pump), "Pump");
+        let shrink_neg_power = Effect::PumpPT {
+            what: Selector::This,
+            power: Value::Const(-2),
+            toughness: Value::Const(0),
+            duration: Duration::EndOfTurn,
+        };
+        assert_eq!(ability_effect_label(&shrink_neg_power), "Shrink");
+        let shrink_neg_tough = Effect::PumpPT {
+            what: Selector::This,
+            power: Value::Const(0),
+            toughness: Value::Const(-3),
+            duration: Duration::EndOfTurn,
+        };
+        assert_eq!(ability_effect_label(&shrink_neg_tough), "Shrink");
+        let shrink_both = Effect::PumpPT {
+            what: Selector::This,
+            power: Value::Const(-3),
+            toughness: Value::Const(-3),
+            duration: Duration::EndOfTurn,
+        };
+        assert_eq!(ability_effect_label(&shrink_both), "Shrink");
+        // X-cost / dynamic values default to "Pump" (conservative).
+        let dyn_pump = Effect::PumpPT {
+            what: Selector::This,
+            power: Value::XFromCost,
+            toughness: Value::XFromCost,
+            duration: Duration::EndOfTurn,
+        };
+        assert_eq!(ability_effect_label(&dyn_pump), "Pump");
     }
 
     /// Planeswalkers' loyalty abilities should surface in the wire view so

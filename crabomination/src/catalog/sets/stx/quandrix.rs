@@ -112,11 +112,17 @@ pub fn quandrix_pledgemage() -> CardDefinition {
 /// you control deals damage equal to its power to target creature you
 /// don't control."
 ///
-/// 🟡 We ship just mode 0 (counter-noncreature-unless-{2}) faithfully.
-/// Mode 1 is a fight-with-tax — the engine has `Effect::Fight` but it
-/// uses one target slot, while Decisive Denial wants two. The fight
-/// half is omitted until the multi-target prompt lands; mode 0 alone is
-/// still a respectable Quandrix counterspell.
+/// 🟡 Push: both modes wired. Mode 0: counter-noncreature-unless-{2}.
+/// Mode 1: one-sided "deal damage equal to power" — slot 0 is the
+/// user-picked friendly creature (used as the damage-source value via
+/// `Value::PowerOf(Target(0))`); the opp creature is auto-picked via
+/// `Selector::one_of(EachPermanent(opp creature))` since the engine
+/// doesn't yet support a multi-target prompt (slot 1 wouldn't be
+/// populated by the cast). Same approximation as Chelonian Tackle's
+/// "fights up to one target creature an opponent controls". The
+/// damage is one-sided (printed "deals damage to", not "fights"), so
+/// the friendly creature doesn't take return damage like in `Effect::
+/// Fight`.
 pub fn decisive_denial() -> CardDefinition {
     use crate::mana::{ManaCost, generic as gen_pip};
     let two = ManaCost { symbols: vec![gen_pip(2)] };
@@ -138,6 +144,23 @@ pub fn decisive_denial() -> CardDefinition {
                         .and(SelectionRequirement::HasCardType(CardType::Creature).negate()),
                 ),
                 mana_cost: two,
+            },
+            // Mode 1: target creature you control deals damage equal to
+            // its power to a creature you don't control. The friendly
+            // creature is the user-picked slot 0 (filtered via the
+            // primary-target check on cast); the opp creature is auto-
+            // picked via `Selector::one_of(EachPermanent(opp creature))`
+            // — same approximation as Chelonian Tackle's "fights up to
+            // one target opp creature".
+            Effect::DealDamage {
+                to: Selector::one_of(Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByOpponent),
+                )),
+                amount: Value::PowerOf(Box::new(target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou),
+                ))),
             },
         ]),
         activated_abilities: no_abilities(),

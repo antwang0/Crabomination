@@ -14,7 +14,7 @@ use crate::card::{
     EventSpec, Keyword, Selector, SelectionRequirement, Subtypes, Supertype, TokenDefinition,
     TriggeredAbility, Value,
 };
-use crate::effect::shortcut::{magecraft, target_filtered};
+use crate::effect::shortcut::{any_target, magecraft, target_filtered};
 use crate::effect::{Duration, PlayerRef, ZoneDest};
 use crate::mana::{cost, generic, r, w, Color};
 
@@ -48,14 +48,12 @@ pub fn lorehold_spirit_token() -> TokenDefinition {
 /// "Magecraft — Whenever you cast or copy an instant or sorcery spell,
 /// you gain 1 life and Lorehold Apprentice deals 1 damage to any target."
 ///
-/// 🟡 Push XX: lifegain + 1-damage-to-each-opponent now both wired
-/// (was lifegain only). Same approximation as Storm-Kiln Artist: the
-/// "any target" damage collapses to `Selector::Player(EachOpponent)`
-/// because the Magecraft trigger fires off the cast event and binds
-/// targets at trigger-resolution time. Mono-target picking on
-/// triggered-ability bodies is still tracked as an engine TODO; the
-/// each-opponent collapse keeps the spell on its printed cast/curve
-/// without losing the chip-damage payoff.
+/// ✅ Both clauses wired faithfully: `Effect::Seq([GainLife 1, DealDamage(1, any_target)])`.
+/// "Any target" routes through the new `effect::shortcut::any_target()`
+/// helper (`Creature ∨ Planeswalker ∨ Player`); the auto-target picker
+/// prefers the opp player face for hostile damage but falls through to
+/// creatures / planeswalkers when face damage isn't legal (hexproof,
+/// shroud).
 pub fn lorehold_apprentice() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Apprentice",
@@ -77,7 +75,7 @@ pub fn lorehold_apprentice() -> CardDefinition {
                 amount: Value::Const(1),
             },
             Effect::DealDamage {
-                to: Selector::Player(PlayerRef::EachOpponent),
+                to: any_target(),
                 amount: Value::Const(1),
             },
         ]))],
@@ -353,18 +351,16 @@ pub fn igneous_inspiration() -> CardDefinition {
 // ── Storm-Kiln Artist ───────────────────────────────────────────────────────
 
 /// Storm-Kiln Artist — {2}{R}{W}, 3/3 Human Wizard. "Magecraft — Whenever
-/// you cast or copy an instant or sorcery spell, this creature deals 1
-/// damage to each opponent. Then create a Treasure token."
+/// you cast or copy an instant or sorcery spell, Storm-Kiln Artist deals
+/// 1 damage to any target. Then create a Treasure token."
 ///
-/// Note: the printed Strixhaven Storm-Kiln Artist's text is "Magecraft —
-/// Whenever you cast or copy an instant or sorcery spell, Storm-Kiln
-/// Artist deals 1 damage to any target. Then create a Treasure token."
-/// We collapse the "any target" damage to "each opponent" because the
-/// magecraft trigger fires on cast and binds its targets at trigger-
-/// resolution time — and our auto-targeting framework picks "each
-/// opponent" cleanly when no creature target is available. The Treasure
-/// half is pure: standard `treasure_token()` helper.
+/// ✅ "Any target" routes through the new `effect::shortcut::any_target()`
+/// helper (`Creature ∨ Planeswalker ∨ Player`); the auto-target picker
+/// prefers the opp player face for hostile damage but falls through to
+/// creatures / planeswalkers when face damage isn't legal. The Treasure
+/// follow-up is pure: standard `treasure_token()` helper.
 pub fn storm_kiln_artist() -> CardDefinition {
+    use crate::effect::shortcut::any_target;
     use crate::game::effects::treasure_token;
     CardDefinition {
         name: "Storm-Kiln Artist",
@@ -382,7 +378,7 @@ pub fn storm_kiln_artist() -> CardDefinition {
         activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::Seq(vec![
             Effect::DealDamage {
-                to: Selector::Player(PlayerRef::EachOpponent),
+                to: any_target(),
                 amount: Value::Const(1),
             },
             Effect::CreateToken {

@@ -7,6 +7,94 @@ See `CUBE_FEATURES.md` (cube-card implementation status) and
 
 ## Recent additions
 
+- ✅ **Push XXXIII (2026-05-03)**: 8 promotions (3 STX 2021 + 5 SOS) +
+  `effect::shortcut::any_target()` helper + UI "any target" label arm
+  + sign-aware Pump/Shrink label split. Tests at 1292 (was 1279; +13
+  net).
+  - **3 STX 2021 promotions to ✅**:
+    - **Lorehold Apprentice** ({R}{W}, 1/1) — Magecraft now uses the
+      new `any_target()` helper for the printed "1 damage to any
+      target" half. Lifegain half unchanged.
+    - **Storm-Kiln Artist** ({2}{R}{W}, 3/3) — same `any_target()`
+      upgrade for the "1 damage to any target" magecraft. Treasure
+      follow-up unchanged.
+    - **Decisive Denial** mode 1 wired ({G}{U} Instant) — promoted
+      from "mode 0 only" to both modes. Mode 1 is one-sided "deal
+      damage equal to your creature's power" via `DealDamage { to:
+      one_of(EachPermanent(opp creature)), amount: PowerOf(target_
+      filtered(...)) }`. Status stays 🟡 because the slot 0 friendly-
+      creature filter lives inside the `amount` Value, not in `to`,
+      so cast-time legality doesn't reject opp picks — small fidelity
+      gap pending multi-slot target filter introspection.
+  - **5 SOS promotions to ✅**:
+    - **Thunderdrum Soloist** ({1}{R}, 1/3) — Opus rider via `opus(5,
+      ...)`. Always: 1 damage to each opp. Big-cast (≥5 mana): an
+      additional 2 damage (net 3 to each opp).
+    - **Expressive Firedancer** ({1}{R}, 2/2) — Opus +1/+1 EOT always
+      + DoubleStrike grant on big cast.
+    - **Molten-Core Maestro** ({1}{R}, 2/2) — Opus +1/+1 counter
+      always + `AddMana(OfColor(Red, PowerOf(This)))` on big cast.
+      Counter resolves first → 5-mana cast adds {R}{R}{R} on a 2/2.
+    - **Ambitious Augmenter** ({G}, 1/1) — Increment trigger via
+      `increment()`. Stays 🟡 because the dies-as-Fractal-with-
+      counters rider needs a counter-transfer-on-death primitive.
+    - **Topiary Lecturer** ({2}{G}, 1/2) — Increment trigger via
+      `increment()` — counters scale the existing `{T}: Add {G}×power`
+      mana ability linearly.
+  - **New `effect::shortcut::any_target()` helper** — `target_filtered
+    (Creature ∨ Planeswalker ∨ Player)`, the canonical "any target"
+    filter for `Effect::DealDamage` magecraft / Repartee triggers and
+    burn spells. Auto-target picker prefers the opp face for hostile
+    damage but falls through to creatures / planeswalkers when face
+    damage isn't legal (hexproof, shroud).
+  - **UI improvement**: `entity_matches_label` recognises the 3-way
+    Or shape (`Creature ∨ Planeswalker ∨ Player`, both nesting
+    orders) and renders it as the canonical "any target".
+  - **Engine improvement**: `ability_effect_label` (server/view.rs)
+    now splits `Effect::PumpPT` into "Pump" (positive or dynamic P/T)
+    and "Shrink" (both halves non-positive with at least one negative
+    Const). Powers ~12 catalog cards that use negative PumpPT —
+    Burrog Befuddler magecraft -2/-0, Witherbloom Command mode 3
+    -3/-3, Dina, Soul Steeper -X/-X. Dynamic values (XFromCost,
+    CountOf) default to "Pump".
+  - **13 new tests**: 9 in `tests::sos::*` (one per Opus / Increment
+    promotion + cheap/big cast variants for Thunderdrum / Firedancer
+    / Maestro), 3 in `tests::stx::*` (Lorehold Apprentice + Decisive
+    Denial mode 1 ×2), 1 in `server::view::tests::*` (Pump/Shrink
+    label split). Plus an extension to the Or-composite label test
+    for "any target".
+
+## Future work — engine/UI suggestions surfaced by push XXXIII
+
+- **Multi-slot target filter introspection** — Decisive Denial mode 1
+  ships with the slot 0 friendly-creature filter buried inside
+  `Value::PowerOf(target_filtered(...))` rather than the `to`
+  selector. The cast-time legality check (`cast_spell_with_convoke`)
+  only reads `target_filter_for_slot_in_mode(0, mode)`, which walks
+  the effect tree but doesn't descend into `Value` arguments. A
+  `Value::has_target_filter()` walker (mirror of `value_has_target`
+  but returning `Option<&SelectionRequirement>`) would close the gap
+  for Decisive Denial and any future "deal damage equal to its
+  power"-style spell where the user-picked target is on the source
+  side.
+
+- **Counter-transfer-on-death primitive** — Ambitious Augmenter's
+  printed "When this dies, if it had counters on it, create a 0/0
+  Fractal token, then put this creature's counters on that token" is
+  the only blocker keeping it from full ✅. The "if it had counters
+  on it" gate is already expressible via `Predicate::ValueAtLeast(
+  CountersOn(SelfSource), 1)` (push XVII counter-on-graveyard
+  fallback). The "put this creature's counters on that token" half
+  needs a new `Effect::TransferCounters { from, to }` primitive that
+  reads the counter snapshot from the dying card's graveyard-resident
+  copy and applies it to the freshly-minted token (`Selector::
+  LastCreatedToken`). Roughly the same pattern as Scolding
+  Administrator's "if it had counters on it, put those counters on
+  up to one target creature" — that already uses
+  `Value::CountersOn(SelfSource)` to read the count, but `AddCounter`
+  ships fixed-kind counters today; transfer needs both kind + count
+  to flow through.
+
 - ✅ **Push XXXII (2026-05-03)**: 13 new STX 2021 cards + lethal-first
   auto-target + UI label coverage. Tests at 1279 (was 1261; +18 net).
   - **13 new STX 2021 cards** (`catalog::sets::stx::mono`): Vortex

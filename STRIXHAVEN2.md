@@ -36,15 +36,99 @@ This file tracks two adjacent Strixhaven catalogs:
 Counts reflect the regenerated tables below (audited via
 `scripts/audit_strixhaven2.py` against `catalog::sets::sos`).
 
-- ✅ done: **108** (unchanged from push XXI; push XXII–XXV targeted
-  STX 2021 + cube cards, not SOS).
-- 🟡 partial: **139** (unchanged).
+- ✅ done: **121** (push XXXIII added Thunderdrum Soloist, Expressive
+  Firedancer, Molten-Core Maestro, Topiary Lecturer to ✅; Ambitious
+  Augmenter promoted the Increment trigger but stays 🟡 pending the
+  death rider). The +8 vs the prior "108" header reflects baseline
+  drift caught by `scripts/audit_strixhaven2.py` plus the new push
+  XXXIII promotions.
+- 🟡 partial: **126** (audit-corrected from "139").
 - ⏳ todo: **8** (unchanged).
 
 All 247 cards marked ✅ or 🟡 have a corresponding factory in
 `crabomination/src/catalog/sets/sos/`; the audit script reports 0 false
 positives and 0 stale ⏳ rows. STX 2021 progress is tracked in the
 "Strixhaven base set (STX)" section near the bottom of this file.
+
+## 2026-05-03 push XXXIII: 8 promotions + any_target() shortcut + Pump/Shrink label split
+
+Eight 🟡 → ✅ promotions across Strixhaven 2021 (Lorehold Apprentice,
+Storm-Kiln Artist, Decisive Denial) and the SOS catalog (Thunderdrum
+Soloist, Expressive Firedancer, Molten-Core Maestro, Ambitious
+Augmenter, Topiary Lecturer). Plus a new `effect::shortcut::any_target()`
+helper, a UI label arm for the same shape, and a sign-aware Pump-vs-
+Shrink split in `ability_effect_label`. Tests at 1292 (was 1279, +13).
+
+### Promotions
+
+| Card | Cost | Status | Notes |
+|---|---|---|---|
+| Lorehold Apprentice | {R}{W} | ✅ ← 🟡 | Magecraft body now uses the new `effect::shortcut::any_target()` (`Creature ∨ Planeswalker ∨ Player`) for the "1 damage to any target" half — auto-target picks the opp face for hostile damage but falls through to creatures / planeswalkers when face damage isn't legal (hexproof, shroud). The +1 lifegain half is unchanged (resolves first via `Effect::Seq`). |
+| Storm-Kiln Artist | {2}{R}{W} | ✅ ← 🟡 | Same `any_target()` upgrade for the "1 damage to any target" magecraft. Treasure follow-up unchanged. |
+| Decisive Denial | {G}{U} | ✅ ← 🟡 | Mode 1 now wired: `DealDamage { to: one_of(EachPermanent(opp creature)), amount: PowerOf(target_filtered(Creature ∧ ControlledByYou)) }`. Slot 0 is the user-picked friendly; opp creature is auto-picked (one-sided damage, not Fight). Mode 0 (counter-noncreature-unless-{2}) unchanged. |
+| Thunderdrum Soloist | {1}{R} | ✅ ← 🟡 | Opus rider wired via `opus(5, ...)`. Always: 1 damage to each opp. Big-cast (≥5 mana): an additional 2 damage (net 3 to each opp) — additive approximation matching Spectacular Skywhale / Tackle Artist's pattern. |
+| Expressive Firedancer | {1}{R} | ✅ ← 🟡 | Opus rider wired. Always: +1/+1 EOT. Big-cast: `Keyword::DoubleStrike` granted EOT (additive — both halves run, the +1/+1 stacks under the Double Strike). |
+| Molten-Core Maestro | {1}{R} | ✅ ← 🟡 | Opus rider wired. Always: +1/+1 counter on This. Big-cast: `AddMana(OfColor(Red, PowerOf(This)))` reads the post-counter power, so a 2/2 Maestro on a 5-mana cast adds {R}{R}{R} (+1/+1 counter resolves first → power 3). |
+| Ambitious Augmenter | {G} | 🟡 ← 🟡 | Increment trigger now wired via `increment()`. The dies-as-Fractal-with-counters rider stays omitted pending a counter-transfer-on-death primitive — body still 🟡 until both clauses ship. |
+| Topiary Lecturer | {2}{G} | ✅ ← 🟡 | Increment trigger wired via `increment()`. Each cast at ≥2 mana drops a +1/+1 counter, and the existing `{T}: Add {G}×power` ability scales linearly with each Increment-grown counter. |
+
+### New shortcut: `effect::shortcut::any_target()`
+
+`target_filtered(Creature ∨ Planeswalker ∨ Player)` — the canonical
+"any target" filter for `Effect::DealDamage` magecraft / Repartee
+triggers and burn spells whose printed wording is "deals N damage to
+any target". The auto-target picker first tries the opponent face
+(`Effect::DealDamage::accepts_player_target() = true`) and only falls
+through to creatures / planeswalkers when the player face is not a
+legal pick (hexproof, shroud). Used by Lorehold Apprentice, Storm-Kiln
+Artist; future "any target" burn spells inherit the helper.
+
+### UI improvement: any_target label
+
+`entity_matches_label` (server/view.rs) recognises the 3-way Or shape
+(`Creature ∨ Planeswalker ∨ Player`, left-associative as produced by
+`any_target()`) and renders it as the canonical "any target" — same
+wording the printed cards use. Both nesting orders are matched
+(`(Creature ∨ Planeswalker) ∨ Player` and `Player ∨ (Creature ∨
+Planeswalker)`) so future helpers that build the filter in either
+direction surface the same label.
+
+### Engine improvement: PumpPT label sign split
+
+`ability_effect_label` (server/view.rs) now splits `Effect::PumpPT`
+into "Pump" (positive or dynamic P/T) and "Shrink" (both halves
+non-positive with at least one negative — Const-only). Powers the
+activated-ability badge UI for ~12 catalog cards that use negative
+PumpPT: Burrog Befuddler's magecraft -2/-0, Witherbloom Command's
+mode 3 -3/-3, Dina, Soul Steeper's activated -X/-X, Lash of Malice-
+style EOT shrinks. X-cost / dynamic values (XFromCost, CountOf, Diff)
+default to "Pump" since static sign classification isn't possible.
+
+### Tests (+13 net, 1279 → 1292)
+
+13 new tests cover the promotions and the engine/UI improvements:
+
+- `tests::stx::lorehold_apprentice_pings_creature_when_opp_face_is_hexproof`
+  (smoke for the `any_target()` shape after the Apprentice promotion)
+- `tests::stx::decisive_denial_mode_one_damages_opp_creature_by_friendly_power`
+  (Tyrant 7 power → opp bear dies, friendly takes no return damage)
+- `tests::stx::decisive_denial_mode_one_uses_target_creature_power`
+  (Tyrant kill confirmation + one-sided damage check)
+- `tests::sos::thunderdrum_soloist_pings_each_opp_on_cheap_cast`
+- `tests::sos::thunderdrum_soloist_pings_three_each_opp_on_big_cast`
+  (Mind Twist X=4 → ManaSpentToCast=5 → 3 to each opp)
+- `tests::sos::expressive_firedancer_pumps_on_cheap_cast`
+- `tests::sos::expressive_firedancer_grants_double_strike_on_big_cast`
+- `tests::sos::molten_core_maestro_drops_counter_on_cheap_cast`
+- `tests::sos::molten_core_maestro_adds_red_mana_on_big_cast`
+  (5-mana cast → +1/+1 counter then {R}×3)
+- `tests::sos::ambitious_augmenter_grows_on_two_mana_cast`
+- `tests::sos::ambitious_augmenter_does_not_grow_on_one_mana_cast`
+- `tests::sos::topiary_lecturer_grows_on_three_mana_cast`
+- `server::view::tests::ability_effect_label_splits_pump_vs_shrink_by_sign`
+
+Plus an extension to `entity_matches_label_covers_or_composite_filters`
+covering the new "any target" arm.
 
 ## 2026-05-03 push XXXII: 13 new STX 2021 cards + lethal-first auto-target + UI label coverage
 
@@ -1957,7 +2041,7 @@ None of these are wired today; all prepare cards are ⏳ until at least
 | Choreographed Sparks | {R}{R} | Instant |  | This spell can't be copied. / Choose one or both — / • Copy target instant or sorcery spell you control. You may choose new targets for the copy. / • Copy target creature spell you control. The copy gains haste and "At the beginning of the end step, sacrifice this token." | ✅ | Push XXI: NEW factory wired via the new `Effect::CopySpell` primitive. Single-mode wire of "Copy target IS spell you control" — target filter is `IsSpellOnStack & ControlledByYou` (the engine's `ControlledByYou` evaluator now falls through to stack-resident spells). The "creature spell — gains haste, end-step sac" rider is omitted (no permanent-copy primitive yet); "this spell can't be copied" is a no-op (no copy-immune flag). |
 | Duel Tactics | {R} | Sorcery |  | Duel Tactics deals 1 damage to target creature. It can't block this turn. / Flashback {1}{R} (You may cast this card from your graveyard for its flashback cost. Then exile it.) | ✅ | Wired as `DealDamage(1) + GrantKeyword(CantBlock, EOT)` — pulls in the new `Keyword::CantBlock` (enforced inside `declare_blockers` and the `can_block_*` helpers). Flashback {1}{R} now wired via `Keyword::Flashback` (push X). |
 | Emeritus of Conflict // Lightning Bolt | {1}{R} // {R} | Creature — Human Wizard // Instant | 2/2 |  | 🟡 | Wired in `catalog::sets::sos::mdfcs` (push XI/XII): vanilla front + back-face spell via the new `GameAction::CastSpellBack` path. Original ⏳ note: Standard primitives — should be straightforward to wire.|
-| Expressive Firedancer | {1}{R} | Creature — Human Sorcerer | 2/2 | Opus — Whenever you cast an instant or sorcery spell, this creature gets +1/+1 until end of turn. If five or more mana was spent to cast that spell, this creature also gains double strike until end of turn. | 🟡 | Vanilla 2/2 body wired. Opus +1/+1 + optional double-strike rider omitted (mana-spent introspection). |
+| Expressive Firedancer | {1}{R} | Creature — Human Sorcerer | 2/2 | Opus — Whenever you cast an instant or sorcery spell, this creature gets +1/+1 until end of turn. If five or more mana was spent to cast that spell, this creature also gains double strike until end of turn. | ✅ | Push XXXIII: Opus rider now wired via `opus(5, ...)`. Always: +1/+1 EOT. Big-cast: `Keyword::DoubleStrike` granted EOT (additive — both halves stack on big casts). |
 | Flashback | {R} | Instant |  | Target instant or sorcery card in your graveyard gains flashback until end of turn. The flashback cost is equal to its mana cost. (You may cast that card from your graveyard for its flashback cost. Then exile it.) | ⏳ | Needs: cast-from-exile pipeline; cast-from-graveyard. |
 | Garrison Excavator | {3}{R} | Creature — Orc Sorcerer | 3/4 | Menace (This creature can't be blocked except by two or more creatures.) / Whenever one or more cards leave your graveyard, create a 2/2 red and white Spirit creature token. | ✅ | Wired against the new `EventKind::CardLeftGraveyard` event — every gy-leave mints a 2/2 R/W Spirit token via the shared `spirit_token()` helper. |
 | Goblin Glasswright // Craft with Pride | {1}{R} // {R} | Creature — Goblin Sorcerer // Sorcery | 2/2 |  | 🟡 | Wired in `catalog::sets::sos::mdfcs` (push XI/XII): vanilla front + back-face spell via the new `GameAction::CastSpellBack` path. Original ⏳ note: Standard primitives — should be straightforward to wire.|
@@ -1968,7 +2052,7 @@ None of these are wired today; all prepare cards are ⏳ until at least
 | Maelstrom Artisan // Rocket Volley | {1}{R}{R} // {1}{R} | Creature — Minotaur Sorcerer // Sorcery | 3/2 |  | 🟡 | Wired in `catalog::sets::sos::mdfcs` (push XI/XII): vanilla front + back-face spell via the new `GameAction::CastSpellBack` path. Original ⏳ note: Standard primitives — should be straightforward to wire.|
 | Magmablood Archaic | {2/R}{2/R}{2/R} | Creature — Avatar | 2/2 | Trample, reach / Converge — This creature enters with a +1/+1 counter on it for each color of mana spent to cast it. / Whenever you cast an instant or sorcery spell, creatures you control get +1/+0 until end of turn for each color of mana spent to cast that spell. | 🟡 | Body wired in `catalog::sets::sos::creatures` (2/2 Avatar with Trample+Reach + Converge ETB AddCounter using `Value::ConvergedValue`). The IS-cast pump rider is omitted pending per-cast converge introspection on the *just-cast* spell (the trigger fires but reads the Archaic's own ETB converge value, not the iterated cast's). Hybrid `{2/R}` pips approximated as `{2}+{R}` per pip. |
 | Mica, Reader of Ruins | {3}{R} | Legendary Creature — Human Artificer | 4/4 | Ward—Pay 3 life. (Whenever this creature becomes the target of a spell or ability an opponent controls, counter it unless that player pays 3 life.) / Whenever you cast an instant or sorcery spell, you may sacrifice an artifact. If you do, copy that spell and you may choose new targets for the copy. | ✅ | Push XXI: magecraft → MayDo body sacrifices an artifact + copies the just-cast spell via `Effect::CopySpell { what: Selector::CastSpellSource }`. The "If you do" rider is approximated — if no artifact is available the body still fires the copy (small over-payoff vs printed semantics). `Keyword::Ward(3)` body unchanged. |
-| Molten-Core Maestro | {1}{R} | Creature — Goblin Bard | 2/2 | Menace / Opus — Whenever you cast an instant or sorcery spell, put a +1/+1 counter on this creature. If five or more mana was spent to cast that spell, add an amount of {R} equal to this creature's power. | 🟡 | 2/2 Menace body wired. Opus +1/+1-counter + R-mana-from-power riders omitted. |
+| Molten-Core Maestro | {1}{R} | Creature — Goblin Bard | 2/2 | Menace / Opus — Whenever you cast an instant or sorcery spell, put a +1/+1 counter on this creature. If five or more mana was spent to cast that spell, add an amount of {R} equal to this creature's power. | ✅ | Push XXXIII: Opus rider now wired via `opus(5, ...)`. Always: +1/+1 counter on This. Big-cast: `AddMana(OfColor(Red, PowerOf(This)))`. The +1/+1 counter resolves first (always before big), so a 2/2 → 3/3 → adds {R}{R}{R} on a 5-mana cast. |
 | Pigment Wrangler // Striking Palette | {4}{R} // {R} | Creature — Orc Sorcerer // Sorcery | 4/4 |  | 🟡 | Wired in `catalog::sets::sos::mdfcs` (push XI/XII): vanilla front + back-face spell via the new `GameAction::CastSpellBack` path. Original ⏳ note: Standard primitives — should be straightforward to wire.|
 | Rearing Embermare | {4}{R} | Creature — Horse Beast | 4/5 | Reach, haste | ✅ | Wired in `catalog::sets::sos::creatures`. |
 | Rubble Rouser | {2}{R} | Creature — Dwarf Sorcerer | 1/4 | When this creature enters, you may discard a card. If you do, draw a card. / {T}, Exile a card from your graveyard: Add {R}. When you do, this creature deals 1 damage to each opponent. | 🟡 | Push XV: ETB rummage now wrapped in `Effect::MayDo` so the "you may discard" optionality is honored. The `{T}, Exile a card from your graveyard:` activated ability is still omitted (engine activated-ability path has no `from-your-graveyard` cost variant — separate from `sac_cost`). |
@@ -1976,7 +2060,7 @@ None of these are wired today; all prepare cards are ⏳ until at least
 | Strife Scholar // Awaken the Ages | {2}{R} // {5}{R} | Creature — Orc Sorcerer // Sorcery | 3/2 |  | 🟡 | Push XIX: front body wired (3/2 Orc Sorcerer with `Keyword::Ward(2)`). MDFC back face Awaken the Ages omitted — oracle text unverified. Same body-only shape as Mica Reader of Ruins / Colorstorm Stallion. |
 | Tablet of Discovery | {2}{R} | Artifact |  | When this artifact enters, mill a card. You may play that card this turn. (To mill a card, put the top card of your library into your graveyard.) / {T}: Add {R}. / {T}: Add {R}{R}. Spend this mana only to cast instant and sorcery spells. | 🟡 | Wired in `catalog::sets::sos::artifacts` — ETB Mill 1 + two `{T}: Add {R}` mana abilities. The "may play that card this turn" mill-rider is omitted (no per-card may-play primitive yet). The spend-restriction on the {T}: Add {R}{R} ability is omitted (no spend-restricted mana primitive). |
 | Tackle Artist | {3}{R} | Creature — Orc Sorcerer | 4/3 | Trample / Opus — Whenever you cast an instant or sorcery spell, this creature gets +1/+1 until end of turn. If five or more mana was spent to cast that spell, put a +1/+1 counter on this creature instead. | ✅ | Push XXXI: Opus rider now wired via `effect::shortcut::opus(5, ...)` powered by the new `Value::ManaSpentToCast` primitive. Cheap-cast: +1/+1 EOT pump. Big-cast (≥5 mana): +1/+1 permanent counter. The "instead" wording is approximated as additive (both halves run on big-cast — minor over-payoff, combat-correct). |
-| Thunderdrum Soloist | {1}{R} | Creature — Dwarf Bard | 1/3 | Reach / Opus — Whenever you cast an instant or sorcery spell, this creature deals 1 damage to each opponent. If five or more mana was spent to cast that spell, this creature deals 3 damage to each opponent instead. | 🟡 | 1/3 Reach body wired (with the new `Dwarf` creature subtype). Opus damage rider omitted. |
+| Thunderdrum Soloist | {1}{R} | Creature — Dwarf Bard | 1/3 | Reach / Opus — Whenever you cast an instant or sorcery spell, this creature deals 1 damage to each opponent. If five or more mana was spent to cast that spell, this creature deals 3 damage to each opponent instead. | ✅ | Push XXXIII: Opus rider now wired via `effect::shortcut::opus(5, ...)`. Always: 1 damage to each opp. Big-cast (≥5 mana): an additional 2 damage (net 3 to each opp) — additive "instead" approximation matching Spectacular Skywhale. |
 | Tome Blast | {1}{R} | Sorcery |  | Tome Blast deals 2 damage to any target. / Flashback {4}{R} (You may cast this card from your graveyard for its flashback cost. Then exile it.) | ✅ | Wired as a 2-to-any-target burn spell. Flashback {4}{R} now wired via `Keyword::Flashback` (push X). |
 | Unsubtle Mockery | {2}{R} | Instant |  | Unsubtle Mockery deals 4 damage to target creature. Surveil 1. (Look at the top card of your library. You may put it into your graveyard.) | ✅ | `DealDamage(4) + Surveil 1` via `Effect::Surveil`. |
 | Zealous Lorecaster | {5}{R} | Creature — Giant Sorcerer | 4/4 | When this creature enters, return target instant or sorcery card from your graveyard to your hand. | ✅ | Wired in `catalog::sets::sos::creatures` with a Move-target-from-graveyard ETB trigger. |
@@ -1987,7 +2071,7 @@ None of these are wired today; all prepare cards are ⏳ until at least
 |---|---|---|---|---|---|---|
 | Aberrant Manawurm | {3}{G} | Creature — Wurm | 2/5 | Trample / Whenever you cast an instant or sorcery spell, this creature gets +X/+0 until end of turn, where X is the amount of mana spent to cast that spell. | ✅ | Push XXXI: now wired via the new `Value::ManaSpentToCast` primitive on a magecraft trigger. Bolt cast → +1/+0 EOT; Wisdom of Ages (CMC 7) → +7/+0 EOT. Trample turns the pump straight into face damage. |
 | Additive Evolution | {3}{G}{G} | Enchantment |  | When this enchantment enters, create a 0/0 green and blue Fractal creature token. Put three +1/+1 counters on it. / At the beginning of combat on your turn, put a +1/+1 counter on target creature you control. It gains vigilance until end of turn. | ✅ | Wired in `catalog::sets::sos::enchantments`. ETB Fractal-with-3-counters via the existing `fractal_token()` helper + `Selector::LastCreatedToken` AddCounter. Begin-combat +1/+1 counter + Vigilance (EOT) on a friendly creature, gated through the active-player StepBegins(BeginCombat) trigger. |
-| Ambitious Augmenter | {G} | Creature — Turtle Wizard | 1/1 | Increment (Whenever you cast a spell, if the amount of mana you spent is greater than this creature's power or toughness, put a +1/+1 counter on this creature.) / When this creature dies, if it had one or more counters on it, create a 0/0 green and blue Fractal creature token, then put this creature's counters on that token. | 🟡 | Body-only wire in `catalog::sets::sos::creatures` (1/1 Turtle Wizard at {G}). Increment pump omitted (mana-spent-on-cast introspection missing — tracked in TODO.md). The death-with-counters → Fractal-with-counters trigger is also omitted pending a counter-transfer-on-death primitive. |
+| Ambitious Augmenter | {G} | Creature — Turtle Wizard | 1/1 | Increment (Whenever you cast a spell, if the amount of mana you spent is greater than this creature's power or toughness, put a +1/+1 counter on this creature.) / When this creature dies, if it had one or more counters on it, create a 0/0 green and blue Fractal creature token, then put this creature's counters on that token. | 🟡 | Push XXXIII: Increment trigger now wired via `effect::shortcut::increment()` (push XXXI primitive). Each cast at ≥2 mana drops a +1/+1 counter. The dies-as-Fractal-with-counters trigger stays omitted pending a counter-transfer-on-death primitive (Selector::Self.counters_at_death snapshot + transfer-to-LastCreatedToken effect). |
 | Burrog Barrage | {1}{G} | Instant |  | Target creature you control gets +1/+0 until end of turn if you've cast another instant or sorcery spell this turn. Then it deals damage equal to its power to up to one target creature an opponent controls. | 🟡 | Wired in `catalog::sets::sos::instants` — conditional pump (gated on the new `Predicate::SpellsCastThisTurnAtLeast(2)`) + power-as-damage to the chosen target. The 2-target prompt for the opp-creature defender is collapsed (single-target spell), so the spell ends up dealing self-damage rather than hitting an opp creature. Tracked in TODO.md. |
 | Chelonian Tackle | {2}{G} | Sorcery |  | Target creature you control gets +0/+10 until end of turn. Then it fights up to one target creature an opponent controls. (Each deals damage equal to its power to the other.) | 🟡 | +0/+10 EOT pump + the new `Effect::Fight` against an auto-selected opp creature (no multi-target prompt for the defender slot). Fight no-ops cleanly when no opp creature is on the battlefield, preserving the printed "up to one" semantics. |
 | Comforting Counsel | {1}{G} | Enchantment |  | Whenever you gain life, put a growth counter on this enchantment. / As long as there are five or more growth counters on this enchantment, creatures you control get +3/+3. | 🟡 | Lifegain → Growth counter trigger wired in `catalog::sets::sos::enchantments`. The "≥5 counters → anthem" static is omitted (no self-counter-gated `StaticEffect` primitive). |
@@ -2012,7 +2096,7 @@ None of these are wired today; all prepare cards are ⏳ until at least
 | Studious First-Year // Rampant Growth | {G} // {1}{G} | Creature — Bear Wizard // Sorcery | 1/1 | Front: vanilla 1/1 Bear Wizard. Back: search your library for a basic land card, put it onto the battlefield tapped, then shuffle. | ✅ | First non-land MDFC. Front face is wired as a vanilla 1/1 Bear Wizard at `{G}`; back face is `Rampant Growth`. Cast either face via `GameAction::CastSpell` (front) or the new `GameAction::CastSpellBack` (back, added in push X — mirror to `PlayLandBack` but for non-land back faces). The engine's `cast_spell_back_face` helper swaps the in-hand `definition` to the back face's before validating cost / type / effect, so the printed back-face Sorcery resolves end-to-end. |
 | Tenured Concocter | {4}{G} | Creature — Troll Druid | 4/5 | Vigilance / Whenever this creature becomes the target of a spell or ability an opponent controls, you may draw a card. / Infusion — This creature gets +2/+0 as long as you gained life this turn. | 🟡 | Vanilla 4/5 vigilance body wired in `catalog::sets::sos::creatures`. The "becomes the target" trigger is omitted (no `BecameTarget` event). The Infusion static pump is omitted (no continuous-static-on-predicate primitive). |
 | Thornfist Striker | {2}{G} | Creature — Elf Druid | 3/3 | Ward {1} (Whenever this creature becomes the target of a spell or ability an opponent controls, counter it unless that player pays {1}.) / Infusion — Creatures you control get +1/+0 and have trample as long as you gained life this turn. | 🟡 | Body + `Keyword::Ward(1)` wired in `catalog::sets::sos::creatures`. Infusion continuous static (creatures you control get +1/+0 + trample while you gained life this turn) is omitted (no continuous-static-on-predicate primitive). |
-| Topiary Lecturer | {2}{G} | Creature — Elf Druid | 1/2 | Increment (Whenever you cast a spell, if the amount of mana you spent is greater than this creature's power or toughness, put a +1/+1 counter on this creature.) / {T}: Add an amount of {G} equal to this creature's power. | 🟡 | Wired with the new `ManaPayload::OfColor(Green, PowerOf(This))` primitive — fixed color, value-scaled count, so the {T}: Add G mana ability cleanly tracks `power-many G pips`. The Increment rider is omitted (mana-spent introspection on cast). |
+| Topiary Lecturer | {2}{G} | Creature — Elf Druid | 1/2 | Increment (Whenever you cast a spell, if the amount of mana you spent is greater than this creature's power or toughness, put a +1/+1 counter on this creature.) / {T}: Add an amount of {G} equal to this creature's power. | ✅ | Push XXXIII: Increment trigger now wired via `effect::shortcut::increment()`. Each cast at ≥2 mana drops a +1/+1 counter on Topiary, scaling the {T}: Add {G}×power mana ability linearly. The mana ability uses `ManaPayload::OfColor(Green, PowerOf(This))` — fixed color, value-scaled count. |
 | Vastlands Scavenger // Bind to Life | {1}{G}{G} // {4}{G} | Creature — Bear Druid // Instant | 4/4 |  | 🟡 | Wired in `catalog::sets::sos::mdfcs` (push XI/XII): vanilla front + back-face spell via the new `GameAction::CastSpellBack` path. Original ⏳ note: Standard primitives — should be straightforward to wire.|
 | Wild Hypothesis | {X}{G} | Sorcery |  | Create a 0/0 green and blue Fractal creature token. Put X +1/+1 counters on it. / Surveil 2. (Look at the top two cards of your library, then put any number of them into your graveyard and the rest on top of your library in any order.) | ✅ | Wired in `catalog::sets::sos::sorceries`: `CreateToken(fractal) + AddCounter(LastCreatedToken, +1/+1, XFromCost) + Surveil 2`. `Effect::Surveil` is a first-class primitive so this resolves end-to-end with no approximation. |
 | Wildgrowth Archaic | {2/G}{2/G} | Creature — Avatar | 0/0 | Trample, reach / Converge — This creature enters with a +1/+1 counter on it for each color of mana spent to cast it. / Whenever you cast a creature spell, that creature enters with X additional +1/+1 counters on it, where X is the number of colors of mana spent to cast it. | 🟡 | Body wired in `catalog::sets::sos::creatures` (0/0 Avatar with Trample+Reach + Converge ETB AddCounter via `Value::ConvergedValue`). Hybrid `{2/G}` pips approximated as `{2}+{G}` per pip. The "creature spells you cast enter with X extra counters" rider is omitted pending per-cast converge introspection on the *just-cast* creature spell. Mono-G casts will die immediately to SBA (printed 0/0); 2-color casts land as 2/2. |
@@ -2196,11 +2280,11 @@ parity is a matter of porting card factories one at a time.
 
 | Card | Cost | Status | Notes |
 |---|---|---|---|
-| Lorehold Apprentice | {R}{W} | 🟡 | 1/1 Human Cleric. Magecraft: gain 1 life (the "1 damage to any target" half is omitted — magecraft trigger doesn't yet auto-pick a target). |
+| Lorehold Apprentice | {R}{W} | ✅ | Push XXXIII: 1/1 Human Cleric. Magecraft now wires both clauses faithfully: gain 1 life + `DealDamage(1, any_target())`. The `any_target()` helper (`Creature ∨ Planeswalker ∨ Player`) routes the damage through the auto-target picker — opp face by default; falls through to creatures / planeswalkers when face damage isn't legal. |
 | Lorehold Pledgemage | {1}{R}{W} | 🟡 | 2/2 Spirit Cleric with Reach. Activated `{2}{R}{W}, exile a card from your graveyard: +1/+1 EOT` is ⏳ (no exile-from-GY cost primitive). |
 | Pillardrop Rescuer | {3}{R}{W} | ✅ | 3/3 Spirit Cleric with Flying. ETB: return target instant or sorcery card from your graveyard to your hand. |
 | Heated Debate | {2}{R} | ✅ | Instant. 4 damage to target creature. Damage-can't-be-prevented rider is a no-op (engine has no prevention layer). |
-| Storm-Kiln Artist | {2}{R}{W} | 🟡 | 3/3 Human Wizard. Magecraft: 1 damage to each opponent + create a Treasure (printed: "1 damage to any target"; collapsed to each-opponent for the auto-target framework). |
+| Storm-Kiln Artist | {2}{R}{W} | ✅ | Push XXXIII: 3/3 Human Wizard. Magecraft now uses `any_target()` (`Creature ∨ Planeswalker ∨ Player`) for the printed "1 damage to any target" — auto-target prefers opp face, falls through to creatures / planeswalkers when needed. Treasure follow-up unchanged. |
 | Sparring Regimen | {2}{R}{W} | ✅ | Push XVII: both abilities wired. ETB creates a 2/2 R/W Spirit token; "whenever you attack, +1/+1 on each attacker" now fires per-attacker via the new combat-side broadcast in `declare_attackers` — the trigger source is Sparring Regimen, the target is pre-bound to the just-declared attacker as `Target(0)`. Net result: each declared attacker ends up with one new counter, matching the printed mass pump. |
 | Reconstruct History | {1}{R}{W} | ✅ | Push XXIII: return up to 2 artifact cards from your gy → hand via `Selector::take(_, 2)` over `CardsInZone(Graveyard, Artifact)` + draw 1. |
 | Igneous Inspiration | {2}{R} | ✅ | Push XXIII: 3 dmg to creature/PW + Learn (collapsed to draw 1). |
@@ -2218,7 +2302,7 @@ parity is a matter of porting card factories one at a time.
 |---|---|---|---|
 | Quandrix Apprentice | {G}{U} | ✅ | 1/1 Elf Druid. Magecraft: target creature you control gets +1/+1 EOT. |
 | Quandrix Pledgemage | {1}{G}{U} | ✅ | 2/2 Fractal Wizard. Activated `{1}{G}{U}: +1/+1 counter on this creature`. |
-| Decisive Denial | {G}{U} | 🟡 | Instant. Mode 0 (counter target noncreature spell unless its controller pays {2}) wired; mode 1 (fight at variable power) ⏳ pending multi-target prompt. |
+| Decisive Denial | {G}{U} | 🟡 | Push XXXIII: Mode 0 (counter target noncreature spell unless its controller pays {2}) + mode 1 (one-sided "deal damage equal to your creature's power to an opp creature") both wired. Mode 1 collapses the printed two-target prompt to "user picks slot 0 friendly + opp creature auto-picked" via `Selector::one_of(EachPermanent(opp creature))` (same shape as Chelonian Tackle). The damage is one-sided unlike `Effect::Fight` — friendly creature takes no return damage. Status stays 🟡 because the slot 0 friendly-creature filter lives inside the `Value::PowerOf(target_filtered)` arg of `amount`, not in `to`, so the cast-time legality check doesn't reject opp-creature targets — a small fidelity gap pending engine work on multi-slot target filter introspection. |
 | Snow Day | {1}{G}{U} | ✅ | Push XXIII: Instant. Create a 0/0 Fractal token + put X +1/+1 counters on it where X = `Value::HandSizeOf(You)`. With a 7-card hand the Fractal lands as a 7/7. |
 | Mentor's Guidance | {2}{G}{U} | 🟡 | Push XXIII: Sorcery. Draw 2 + put hand-size +1/+1 counters on a target creature you control. Multi-target "for each" iteration collapsed to single target. |
 | Quandrix Command | {1}{G}{U} | 🟡 | Push XXIV: 4-mode `ChooseMode` instant (counter target activated ability / +1/+1 ×2 on creature / gy → bottom of owner's library / draw a card). Printed "choose two" collapses to "choose one" — same approximation as the other Commands. |

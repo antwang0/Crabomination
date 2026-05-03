@@ -8381,3 +8381,185 @@ fn prismari_the_inspiration_is_7_7_flying_dragon_with_ward() {
         "Prismari should carry Ward(5)"
     );
 }
+
+// ── Opus / Increment promotions ─────────────────────────────────────────────
+
+#[test]
+fn thunderdrum_soloist_pings_each_opp_on_cheap_cast() {
+    // Cheap cast (1 mana, < 5 mana) → 1 damage to each opponent.
+    let mut g = two_player_game();
+    let _t = g.add_card_to_battlefield(0, catalog::thunderdrum_soloist());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let opp_life_before = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)), mode: None, x_value: None,
+    })
+    .expect("bolt castable");
+    drain_stack(&mut g);
+    // Bolt → P0 (3), Soloist Opus → P1 (-1). Soloist's "Opus — deals 1
+    // to each opp" hits P1 once.
+    assert_eq!(g.players[1].life, opp_life_before - 1,
+        "cheap cast: Thunderdrum Soloist deals 1 to each opp");
+}
+
+#[test]
+fn thunderdrum_soloist_pings_three_each_opp_on_big_cast() {
+    // Big cast (5+ mana) → 3 damage to each opponent (1 + 2 from
+    // big-cast bonus). We use Mind Twist with x_value=4 since
+    // `Value::ManaSpentToCast` reads `cost.cmc() + x_value` (push XXXI),
+    // landing at 5 mana spent for Opus's `at_least: 5` gate. Mind Twist
+    // doesn't damage creatures, so the Soloist body survives the cast
+    // and we can read its trigger's effect on opp life cleanly.
+    let mut g = two_player_game();
+    let _t = g.add_card_to_battlefield(0, catalog::thunderdrum_soloist());
+    let mt = g.add_card_to_hand(0, catalog::mind_twist());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    let opp_life_before = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: mt, target: Some(Target::Player(1)), mode: None, x_value: Some(4),
+    })
+    .expect("Mind Twist castable for {B} (X read separately)");
+    drain_stack(&mut g);
+    // Soloist Opus big-cast: 1 + 2 = 3 to each opp.
+    assert_eq!(g.players[1].life, opp_life_before - 3,
+        "big cast (≥5 mana): Thunderdrum Soloist deals 3 to each opp (1 base + 2 bonus)");
+}
+
+#[test]
+fn expressive_firedancer_pumps_on_cheap_cast() {
+    // Cheap cast → +1/+1 EOT only (no double strike).
+    let mut g = two_player_game();
+    let fd = g.add_card_to_battlefield(0, catalog::expressive_firedancer());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)), mode: None, x_value: None,
+    })
+    .expect("bolt castable");
+    drain_stack(&mut g);
+    let fd_card = g.battlefield.iter().find(|c| c.id == fd).unwrap();
+    assert_eq!((fd_card.power(), fd_card.toughness()), (3, 3),
+        "Firedancer pumps to 3/3 on cheap cast");
+    assert!(!fd_card.has_keyword(&Keyword::DoubleStrike),
+        "Firedancer should NOT gain Double Strike on cheap cast");
+}
+
+#[test]
+fn expressive_firedancer_grants_double_strike_on_big_cast() {
+    // Big cast triggers the Opus rider. Use Mind Twist X=4 (cmc 1 +
+    // X 4 = 5 ManaSpentToCast) so the Firedancer body survives.
+    let mut g = two_player_game();
+    let fd = g.add_card_to_battlefield(0, catalog::expressive_firedancer());
+    let mt = g.add_card_to_hand(0, catalog::mind_twist());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: mt, target: Some(Target::Player(1)), mode: None, x_value: Some(4),
+    })
+    .expect("Mind Twist castable");
+    drain_stack(&mut g);
+    let fd_card = g.battlefield.iter().find(|c| c.id == fd).unwrap();
+    // Always +1/+1 EOT pump (3/3) + DoubleStrike grant on big cast.
+    assert!(fd_card.has_keyword(&Keyword::DoubleStrike),
+        "Firedancer should gain Double Strike on big cast");
+    assert_eq!((fd_card.power(), fd_card.toughness()), (3, 3),
+        "Firedancer at 3/3 EOT after big cast");
+}
+
+#[test]
+fn molten_core_maestro_drops_counter_on_cheap_cast() {
+    // Cheap cast (1 mana) → +1/+1 counter, no mana ramp.
+    let mut g = two_player_game();
+    let mm = g.add_card_to_battlefield(0, catalog::molten_core_maestro());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)), mode: None, x_value: None,
+    })
+    .expect("bolt castable");
+    drain_stack(&mut g);
+    let mm_card = g.battlefield.iter().find(|c| c.id == mm).unwrap();
+    assert_eq!(mm_card.counter_count(CounterType::PlusOnePlusOne), 1,
+        "cheap cast: Molten-Core Maestro gains 1 +1/+1 counter");
+    // Mana pool empty — no Red ramp on cheap.
+    assert_eq!(g.players[0].mana_pool.amount(Color::Red), 0,
+        "no Red mana added on cheap cast");
+}
+
+#[test]
+fn molten_core_maestro_adds_red_mana_on_big_cast() {
+    let mut g = two_player_game();
+    let mm = g.add_card_to_battlefield(0, catalog::molten_core_maestro());
+    let mt = g.add_card_to_hand(0, catalog::mind_twist());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: mt, target: Some(Target::Player(1)), mode: None, x_value: Some(4),
+    })
+    .expect("Mind Twist castable");
+    drain_stack(&mut g);
+    // After Mind Twist (ManaSpentToCast=5, big cast): Maestro gets
+    // +1/+1 counter first (always), then power = 3, then adds
+    // {R} × power = {R}{R}{R}.
+    let mm_card = g.battlefield.iter().find(|c| c.id == mm).unwrap();
+    assert_eq!(mm_card.counter_count(CounterType::PlusOnePlusOne), 1,
+        "big cast: Maestro still gains the always +1/+1 counter");
+    assert_eq!(mm_card.power(), 3, "Maestro now 3 power after counter");
+    // The order is always-first, then big — power = 3 by the time
+    // the big block runs, so {R}{R}{R} is added.
+    assert_eq!(g.players[0].mana_pool.amount(Color::Red), 3,
+        "big cast: 3 Red mana added (power-many R after counter)");
+}
+
+#[test]
+fn ambitious_augmenter_grows_on_two_mana_cast() {
+    // Augmenter is 1/1; min(P, T) = 1. A 2-mana cast triggers +1/+1.
+    let mut g = two_player_game();
+    let aug = g.add_card_to_battlefield(0, catalog::ambitious_augmenter());
+    let div = g.add_card_to_hand(0, catalog::divination());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: div, target: None, mode: None, x_value: None,
+    })
+    .expect("Divination castable for {2}{U}");
+    drain_stack(&mut g);
+    let aug_card = g.battlefield.iter().find(|c| c.id == aug).unwrap();
+    assert_eq!(aug_card.counter_count(CounterType::PlusOnePlusOne), 1,
+        "2+ mana cast pushes a +1/+1 counter on Augmenter");
+}
+
+#[test]
+fn ambitious_augmenter_does_not_grow_on_one_mana_cast() {
+    // 1-mana cast (= min(P, T)) does NOT trigger Increment.
+    let mut g = two_player_game();
+    let aug = g.add_card_to_battlefield(0, catalog::ambitious_augmenter());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)), mode: None, x_value: None,
+    })
+    .expect("bolt castable");
+    drain_stack(&mut g);
+    let aug_card = g.battlefield.iter().find(|c| c.id == aug).unwrap();
+    assert_eq!(aug_card.counter_count(CounterType::PlusOnePlusOne), 0,
+        "1-mana cast (≤ min(P, T)) should NOT trigger Increment");
+}
+
+#[test]
+fn topiary_lecturer_grows_on_three_mana_cast() {
+    // Topiary is 1/2; min(P, T) = 1. A 2-mana cast triggers Increment.
+    let mut g = two_player_game();
+    let top = g.add_card_to_battlefield(0, catalog::topiary_lecturer());
+    let div = g.add_card_to_hand(0, catalog::divination());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: div, target: None, mode: None, x_value: None,
+    })
+    .expect("Divination castable for {2}{U}");
+    drain_stack(&mut g);
+    let top_card = g.battlefield.iter().find(|c| c.id == top).unwrap();
+    assert_eq!(top_card.counter_count(CounterType::PlusOnePlusOne), 1,
+        "2+ mana cast pushes a +1/+1 counter on Topiary Lecturer");
+    assert_eq!(top_card.power(), 2, "Topiary now 2 power after Increment");
+}

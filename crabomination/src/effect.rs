@@ -1527,6 +1527,23 @@ pub mod shortcut {
     }
     pub fn trigger_source() -> Selector { Selector::TriggerSource }
 
+    /// "Any target" — `target_filtered(Creature ∨ Planeswalker ∨ Player)`.
+    /// Powers `DealDamage` magecraft / Repartee triggers and burn spells whose
+    /// printed wording is "deals N damage to any target". The auto-target
+    /// picker first tries the opponent face (since `Effect::DealDamage`
+    /// `accepts_player_target() = true`) and only falls through to creatures
+    /// / planeswalkers when the player face is not a legal pick (hexproof,
+    /// shroud, etc.). Used by Lorehold Apprentice ("magecraft — 1 damage to
+    /// any target"), Storm-Kiln Artist's magecraft, and Crackle with Power /
+    /// Heated Debate-style any-target burn.
+    pub fn any_target() -> Selector {
+        target_filtered(
+            SelectionRequirement::Creature
+                .or(SelectionRequirement::Planeswalker)
+                .or(SelectionRequirement::Player),
+        )
+    }
+
     pub fn each_creature() -> Selector {
         Selector::EachPermanent(SelectionRequirement::Creature)
     }
