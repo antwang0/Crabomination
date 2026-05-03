@@ -1,12 +1,6 @@
-﻿Magic: The Gathering Comprehensive Rules
-
-These rules are effective as of April 17, 2026.
-
-Introduction
+﻿Introduction
 
 This document is the ultimate authority for Magic: The Gathering® competitive game play. It consists of a series of numbered rules followed by a glossary. Many of the numbered rules are divided into subrules, and each separate rule and subrule of the game has its own number. (Note that subrules skip the letters “l” and “o” due to potential confusion with the numbers “1” and “0”; subrule 704.5k is followed by 704.5m, then 704.5n, then 704.5p, for example.)
-
-Changes may have been made to this document since its publication. You can download the most recent version from the Magic rules website at Magic.Wizards.com/Rules.
 
 Contents
 
@@ -662,7 +656,7 @@ Example: Spitting Image is a sorcery that says, in part, “Create a token that�
 
 111.8. A token that has left the battlefield can’t move to another zone or come back onto the battlefield. If such a token would change zones, it remains in its current zone instead. It ceases to exist the next time state-based actions are checked; see rule 704.
 
-111.9. Some effects instruct a player to create a legendary token. These may be written “create [name], a . . .” and list characteristics for the token. This is the same as an instruction to create a token with the listed characteristics that has the given name. 
+111.9. Some effects instruct a player to create a legendary token. These may be written “create [name], a . . .” and list characteristics for the token. This is the same as an instruction to create a token with the listed characteristics that has the given name.
 
 111.10. Some effects instruct a player to create a predefined token. These effects use the definition below to determine the characteristics the token is created with. The effect that creates a predefined token may also modify or add to the predefined characteristics.
 
@@ -2166,7 +2160,7 @@ Example: Obeka, Splitter of Seconds says, in part, “Whenever Obeka deals comba
 504.1. First, the active player draws a card. This turn-based action doesn’t use the stack.
 
 504.2. Second, the active player gets priority. (See rule 117, “Timing and Priority.”)
- 
+
 505. Main Phase
 
 505.1. There are two main phases in a turn. In each turn, the first main phase (also known as the precombat main phase) and the second main phase (also known as the postcombat main phase) are separated by the combat phase (see rule 506, “Combat Phase”). The precombat and postcombat main phases are individually and collectively known as the main phase.
@@ -2795,7 +2789,7 @@ Example: A spell’s instruction reads, “You may sacrifice a creature. If you 
 
 608.2f Some spells and abilities include actions taken on multiple players and/or objects. In most cases, each such action is processed simultaneously. If the action can’t be processed simultaneously, it’s instead processed considering each affected player or object individually. APNAP order is used to make the primary determination of the order of those actions. Secondarily, if the action is to be taken on both a player and an object they control or on multiple objects controlled by the same player, the player who controls the resolving spell or ability chooses the relative order of those actions.
 Example: Blatant Thievery says “For each opponent, gain control of target permanent that player controls.” As Blatant Thievery resolves, its controller gains control of all permanents chosen as targets simultaneously.
-Example: Soulfire Eruption says, in part, “Choose any number of target creatures, planeswalkers, and/or players. For each of them, exile the top card of your library, then Soulfire Eruption deals damage equal to that card’s mana value to that permanent or player.” A player casts Soulfire Eruption targeting an opponent and a creature that opponent controls. As Soulfire Eruption resolves, the player can’t exile the top card of their library multiple times at the same time, so they first choose which target they are considering, then they exile the top card of their library, and finally Soulfire Eruption deals damage to that target. They then repeat this process for the remaining target. 
+Example: Soulfire Eruption says, in part, “Choose any number of target creatures, planeswalkers, and/or players. For each of them, exile the top card of your library, then Soulfire Eruption deals damage equal to that card’s mana value to that permanent or player.” A player casts Soulfire Eruption targeting an opponent and a creature that opponent controls. As Soulfire Eruption resolves, the player can’t exile the top card of their library multiple times at the same time, so they first choose which target they are considering, then they exile the top card of their library, and finally Soulfire Eruption deals damage to that target. They then repeat this process for the remaining target.
 
 608.2g If an effect gives a player the option to pay mana, they may activate mana abilities before taking that action. If an effect specifically instructs or allows a player to cast a spell during resolution, they do so by following the steps in rules 601.2a–i, except no player receives priority after it’s cast. That spell becomes the topmost object on the stack, and the currently resolving spell or ability continues to resolve, which may include casting other spells this way. No other spells can normally be cast and no other abilities can normally be activated during resolution.
 
@@ -3117,7 +3111,7 @@ Example: Ashiok, Wicked Manipulator has an ability that reads “If you would pa
 
 614.15. Some replacement effects are not continuous effects. Rather, they are an effect of a resolving spell or ability that replace part or all of that spell or ability’s own effect(s). Such effects are called self-replacement effects. The text creating a self-replacement effect is usually part of the ability whose effect is being replaced, but the text can be a separate ability, particularly when preceded by an ability word. When applying replacement effects to an event, self-replacement effects are applied before other replacement effects.
 
-614.16. Some replacement effects apply “if an effect would create one or more tokens” or “if an effect would put one or more counters on a permanent.” These replacement effects apply if the effect of a resolving spell or ability creates a token or puts a counter on a permanent, and they also apply if another replacement or prevention effect does so, even if the original event being modified wasn’t itself an effect. 
+614.16. Some replacement effects apply “if an effect would create one or more tokens” or “if an effect would put one or more counters on a permanent.” These replacement effects apply if the effect of a resolving spell or ability creates a token or puts a counter on a permanent, and they also apply if another replacement or prevention effect does so, even if the original event being modified wasn’t itself an effect.
 
 614.17. Some effects state that something can’t happen. These effects aren’t replacement effects, but follow similar rules.
 
@@ -3311,7 +3305,7 @@ Example: A player casts Bark-Knuckle Boxer, which costs {1}{G} and reads “When
 701.7c Previously, an effect that created tokens instructed a player to “put [those tokens] onto the battlefield.” Cards that were printed with that text have received errata in the Oracle card reference so they now “create” those tokens.
 
 701.8. Destroy
- 
+
 701.8a To destroy a permanent, move it from the battlefield to its owner’s graveyard.
 
 701.8b The only ways a permanent can be destroyed are as a result of an effect that uses the word “destroy” or as a result of the state-based actions that check for lethal damage (see rule 704.5g) or damage from a source with deathtouch (see rule 704.5h). If a permanent is put into its owner’s graveyard for any other reason, it hasn’t been “destroyed.”
@@ -5301,7 +5295,7 @@ Example: If a creature with toxic 2 gains toxic 1 due to another effect, its tot
 702.176. Impending
 
 702.176a Impending is a keyword that represents four abilities. The first is a static ability that functions while the spell with impending is on the stack. The second is static ability that creates a replacement effect that may apply to the permanent with impending as it enters the battlefield from the stack. The third is a static ability that functions on the battlefield. The fourth is a triggered ability that functions on the battlefield. “Impending N—[cost]” means “You may choose to pay [cost] rather than pay this spell’s mana cost,” “If you chose to pay this permanent’s impending cost, it enters with N time counters on it,” “As long as this permanent’s impending cost was paid and it has a time counter on it, it’s not a creature,” and “At the beginning of your end step, if this permanent’s impending cost was paid and it has a time counter on it, remove a time counter from it.” Casting a spell for its impending cost follows the rules for paying alternative costs in rules 601.2b and 601.2f–h.
- 
+
 702.177. Exhaust
 
 702.177a An exhaust ability is a special kind of activated ability. “Exhaust — [Cost]: [Effect]” means “[Cost]: [Effect]. Activate only once.”
@@ -5517,7 +5511,7 @@ Example: A player controls Maro, a creature with the ability “Maro’s power a
 
 704.6c In a Commander game, a player who’s been dealt 21 or more combat damage by the same commander over the course of the game loses the game. See rule 903, “Commander.”
 
-704.6d In a Commander game, if a commander is in a graveyard or in exile and that object was put into that zone since the last time state-based actions were checked, its owner may put it into the command zone. See rule 903, “Commander.” 
+704.6d In a Commander game, if a commander is in a graveyard or in exile and that object was put into that zone since the last time state-based actions were checked, its owner may put it into the command zone. See rule 903, “Commander.”
 
 704.6e In an Archenemy game, if a non-ongoing scheme card is face up in the command zone, and no triggered abilities of any scheme are on the stack or waiting to be put on the stack, that scheme card is turned face down and put on the bottom of its owner’s scheme deck. See rule 904, “Archenemy.”
 
@@ -6047,9 +6041,9 @@ Example: Leyline of the Void is an enchantment that reads, in part, “If a card
 
 719.2. The Case frame has no additional rules meaning.
 
-719.3. Case cards have two special keyword abilities that appear before a long dash and represent a triggered ability and an ability that may be static, triggered, or activated. 
+719.3. Case cards have two special keyword abilities that appear before a long dash and represent a triggered ability and an ability that may be static, triggered, or activated.
 
-719.3a “To solve — [Condition]” means “At the beginning of your end step, if [condition] and this Case is not solved, this Case becomes solved.” 
+719.3a “To solve — [Condition]” means “At the beginning of your end step, if [condition] and this Case is not solved, this Case becomes solved.”
 
 719.3b Solved is a designation a permanent can have. It has no rules meaning other than to act as a marker that spells and abilities can identify. Once a permanent becomes solved, it stays solved until it leaves the battlefield. The solved designation is neither an ability nor part of the permanent’s copiable values.
 
@@ -7326,7 +7320,7 @@ Cascade
 A keyword ability that may let a player cast a random extra spell for no cost. See rule 702.85, “Cascade.”
 
 Case
-An enchantment subtype. Cases have a “to solve” ability that set a condition its controller must meet in order for the “solved” ability to take effect. See rule 719, “Case Cards.” 
+An enchantment subtype. Cases have a “to solve” ability that set a condition its controller must meet in order for the “solved” ability to take effect. See rule 719, “Case Cards.”
 
 Cast
 To take a card from where it is (usually the hand), put it on the stack, and pay its costs, so that it will eventually resolve and have its effect. See rule 601, “Casting Spells.”
@@ -9097,7 +9091,7 @@ Transform
 To turn a double-faced card so its other face is up. See rule 701.27, “Transform.”
 
 Transforming Double-Faced Cards (Obsolete)
-An older name for nonmodal double-faced cards. See rule 712, “Double-Faced Cards.” 
+An older name for nonmodal double-faced cards. See rule 712, “Double-Faced Cards.”
 
 Transmute
 A keyword ability that lets a player search their library for a replacement card. See rule 702.53, “Transmute.”
@@ -9283,41 +9277,3 @@ A place where objects can be during a game. See section 4, “Zones.”
 
 Zone-Change Triggers
 Trigger events that involve objects changing zones. See rule 603.6.
-
-
-Credits
-
-Magic: The Gathering Original Game Design: Richard Garfield
-Comprehensive Rules Design and Development: Paul Barclay, Mark L. Gottlieb, Beth Moursund, Bill Rose, Eli Shiffrin, and Matt Tabak, with contributions from Charlie Cactino, John Carter, Elaine Chase, Laurie Cheers, Stephen D’Angelo, Dave DeLaney, Brady Dommermuth, Mike Donais, Skaff Elias, Mike Elliott, Richard Garfield, Dan Gray, Robert Gutschera, Collin Jackson, William Jockusch, Jeff Jordan, Yonemura Kaoru, Russell Linnemann, Jim Lin, Steve Lord, Sheldon Menery, Michael Phoenix, Mark Rosewater, David Sachs, Lee Sharpe, Henry Stern, Donald X. Vaccarino, Thijs van Ommen, Ingo Warnke, Tom Wylie, and Bryan Zembruski
-Editing: Del Laugel (principal), Matt Tabak (principal), Nat Moes, Samantha Phelan, Michael Zhang, and Hans Ziegler
-Magic Rules Management: Jess Dunks, Eric Levine, and Eliana Rabinowitz
-
-The Magic: The Gathering game was designed by Richard Garfield, with contributions from Charlie Cactino, Skaff Elias, Don Felice, Tom Fontaine, Jim Lin, Joel Mick, Chris Page, Dave Pettey, Barry “Bit” Reich, Bill Rose, and Elliott Segal. The mana symbols were designed by Christopher Rush.
-
-Thanks to all our project team members and the many others too numerous to mention who have contributed to this product.
-
-
-
-
-
-
-
-
-
-These rules are effective as of April 17, 2026.
-
-Published by Wizards of the Coast LLC, PO Box 707, Renton, WA 98057-0707, USA. Wizards of the Coast, Magic: The Gathering, Magic, their respective logos, Mirrodin, Kamigawa, Lorwyn, Zendikar, Innistrad, Ravnica, Khans of Tarkir, Magic Origins, Magic: The Gathering—Conspiracy, Ixalan, Unfinity, Dominaria, Ikoria, Kaldheim, Baldur’s Gate, The Brothers’ War, and Planeswalker Decks are trademarks of Wizards of the Coast LLC in the USA and other countries. ©2025 Wizards. U.S. Pat. No. RE 37,957.
-
-Astartes, C’tan, Custodes, Necron, Primarch, and Tyranid ® & © Games Workshop Limited 2022. All Rights Reserved.
-
-© 2023 Middle-earth Enterprises. Tales of Middle-earth and The Lord of the Rings and the names of the characters, events, items and places therein, are trademarks of Middle-earth Enterprises, LLC used under license by Wizards of the Coast LLC. All rights reserved.
-
-BBC, DOCTOR WHO, TARDIS, DALEK, CYBERMAN and K-9 (word marks and devices) are trade marks of the British Broadcasting Corporation and are used under licence. BBC logo © BBC 1996.
-
-Moogle; Qu; Fang, Fearless l’Cie; Vanille, Cheerful l’Cie; and Ragnarok, Divine Deliverance ® & © SQUARE ENIX.
-
-© 2025 MARVEL.
-
-© 2025 Viacom International Inc. All Rights Reserved. Nickelodeon, Avatar: The Last Airbender and all related titles, logos and characters are trademarks of Viacom International Inc.
-
-© 2026 Viacom International Inc. All Rights Reserved. Nickelodeon, Teenage Mutant Ninja Turtles and all related titles, logos and characters are trademarks of Viacom International Inc.
