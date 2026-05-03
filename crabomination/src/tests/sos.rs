@@ -1239,6 +1239,9 @@ fn pestbrood_sloth_death_creates_two_pest_tokens() {
 
 #[test]
 fn dinas_guidance_searches_creature_to_hand() {
+    // Push: Mode 0 (the default, search-to-hand) — promotes Dina's
+    // Guidance from 🟡 (collapsed-to-hand) to ✅ (`ChooseMode` between
+    // hand and graveyard destinations).
     let mut g = two_player_game();
     let bear = g.add_card_to_library(0, catalog::grizzly_bears());
     g.decider = Box::new(ScriptedDecider::new([
@@ -1251,7 +1254,7 @@ fn dinas_guidance_searches_creature_to_hand() {
     let hand_before = g.players[0].hand.len();
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: None, mode: Some(0), x_value: None,
     })
     .expect("Dina's Guidance castable for {1}{B}{G}");
     drain_stack(&mut g);
@@ -1259,7 +1262,46 @@ fn dinas_guidance_searches_creature_to_hand() {
     // Hand: -1 cast +1 bears = same.
     assert_eq!(g.players[0].hand.len(), hand_before);
     assert!(g.players[0].hand.iter().any(|c| c.id == bear),
-        "Grizzly Bears should be in hand after search");
+        "Grizzly Bears should be in hand after search (mode 0)");
+    assert!(!g.players[0].graveyard.iter().any(|c| c.id == bear),
+        "Grizzly Bears should NOT be in graveyard (mode 0 picks hand)");
+}
+
+#[test]
+fn dinas_guidance_searches_creature_to_graveyard() {
+    // Push: Mode 1 (the new reanimator-fuel mode) drops the searched
+    // creature directly into the graveyard. Pairs with Goryo's
+    // Vengeance / Animate Dead / Reanimate downstream — closes the
+    // hand-or-graveyard prompt gap that kept Dina's Guidance at 🟡.
+    let mut g = two_player_game();
+    let griselbrand = g.add_card_to_library(0, catalog::griselbrand());
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Search(Some(griselbrand)),
+    ]));
+    let id = g.add_card_to_hand(0, catalog::dinas_guidance());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let hand_before = g.players[0].hand.len();
+    let gy_before = g.players[0].graveyard.len();
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: Some(1), x_value: None,
+    })
+    .expect("Dina's Guidance mode 1 castable for {1}{B}{G}");
+    drain_stack(&mut g);
+
+    // Hand: -1 (cast Dina's Guidance) = -1 net (Griselbrand goes to gy,
+    // not hand).
+    assert_eq!(g.players[0].hand.len(), hand_before - 1);
+    assert!(!g.players[0].hand.iter().any(|c| c.id == griselbrand),
+        "Griselbrand should NOT be in hand (mode 1 picks graveyard)");
+    // Graveyard: +1 Griselbrand + 1 Dina's Guidance (the resolved
+    // spell) = +2.
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == griselbrand),
+        "Griselbrand should be in graveyard (mode 1 reanimator fuel)");
+    assert!(g.players[0].graveyard.len() >= gy_before + 2,
+        "Graveyard should hold Griselbrand + the resolved Dina's Guidance");
 }
 
 #[test]
@@ -1576,6 +1618,32 @@ fn cost_of_brilliance_draws_two_loses_two_pumps_creature() {
     let pumped = g.battlefield.iter().find(|c| c.id == bear).unwrap();
     assert_eq!(pumped.counter_count(CounterType::PlusOnePlusOne), 1,
         "Bear should have 1 +1/+1 counter");
+}
+
+#[test]
+fn cost_of_brilliance_castable_with_no_creature() {
+    // Push: the +1/+1 half is now optional via `Selector::one_of` —
+    // the spell castable even when no creature exists. Was 🟡 (cast
+    // would fail without a creature target); now ✅.
+    let mut g = two_player_game();
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let id = g.add_card_to_hand(0, catalog::cost_of_brilliance());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let life_before = g.players[0].life;
+    let hand_before = g.players[0].hand.len();
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Cost of Brilliance castable even with no creature on the battlefield");
+    drain_stack(&mut g);
+
+    // Hand and life still resolve.
+    assert_eq!(g.players[0].hand.len(), hand_before + 1);
+    assert_eq!(g.players[0].life, life_before - 2);
 }
 
 // ── Mind Roots ──────────────────────────────────────────────────────────────
@@ -1901,6 +1969,65 @@ fn vibrant_outburst_deals_three_damage() {
         "Bear should die to 3 damage");
 }
 
+#[test]
+fn vibrant_outburst_taps_opp_creature_alongside_damage() {
+    // Push: the printed "tap up to one target creature" half is now
+    // wired via `Selector::one_of(EachPermanent(opp creature))` — same
+    // approximation as Decisive Denial mode 1 / Chelonian Tackle. Was
+    // 🟡 (tap half dropped); now ✅. Verify both halves fire when both
+    // legal targets exist.
+    let mut g = two_player_game();
+    // Sacrificial damage target: opp player face (auto-target picks
+    // the player when legal). Use a friendly creature target for the
+    // damage so we explicitly verify the Tap half hits an opp creature.
+    let friendly = g.add_card_to_battlefield(0, catalog::serra_angel());
+    let opp_blocker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::vibrant_outburst());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+
+    // Aim the 3 damage at our own Serra Angel (4 toughness — survives).
+    // The Tap half auto-picks the opp Bear.
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(friendly)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Vibrant Outburst castable for {U}{R}");
+    drain_stack(&mut g);
+
+    // Friendly Serra took 3 damage but survives (4 toughness).
+    let serra = g.battlefield.iter().find(|c| c.id == friendly).unwrap();
+    assert_eq!(serra.damage, 3,
+        "Serra Angel should take 3 damage and survive");
+    // Opp Bear was tapped by the second half.
+    let bear = g.battlefield.iter().find(|c| c.id == opp_blocker).unwrap();
+    assert!(bear.tapped,
+        "Opp Bear should have been tapped by Vibrant Outburst's second half");
+}
+
+#[test]
+fn vibrant_outburst_no_op_tap_when_no_opp_creature() {
+    // The "up to one target creature" tap half is a no-op when no
+    // opp creature is on the battlefield — the auto-target falls
+    // through cleanly without panicking.
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::vibrant_outburst());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let opp_life_before = g.players[1].life;
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Player(1)), mode: None, x_value: None,
+    })
+    .expect("Vibrant Outburst castable at opp face");
+    drain_stack(&mut g);
+
+    // 3 to opp face.
+    assert_eq!(g.players[1].life, opp_life_before - 3);
+}
+
 // ── Stress Dream ────────────────────────────────────────────────────────────
 
 #[test]
@@ -1924,6 +2051,31 @@ fn stress_dream_kills_creature_and_draws_a_card() {
     assert!(!g.battlefield.iter().any(|c| c.id == bear),
         "Bear should die to 5 damage");
     // Hand: -1 cast +1 draw = unchanged.
+    assert_eq!(g.players[0].hand.len(), hand_before);
+}
+
+#[test]
+fn stress_dream_castable_with_no_opp_creature() {
+    // Push: the 5-damage half is now optional via `Selector::one_of(
+    // EachPermanent(opp creature))` — the spell castable even when no
+    // opp creature is on the battlefield (was 🟡: the cast required
+    // a creature target). Just the scry + draw resolves.
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_library(0, catalog::island());
+    let id = g.add_card_to_hand(0, catalog::stress_dream());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    let hand_before = g.players[0].hand.len();
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Stress Dream castable with no creature targets");
+    drain_stack(&mut g);
+
+    // -1 (cast) + 1 (draw) = same.
     assert_eq!(g.players[0].hand.len(), hand_before);
 }
 
@@ -2903,6 +3055,36 @@ fn dissection_practice_drains_one_and_shrinks_target() {
     let target = g.battlefield.iter().find(|c| c.id == bear).unwrap();
     assert_eq!(target.power(), 1);
     assert_eq!(target.toughness(), 1);
+}
+
+#[test]
+fn dissection_practice_pumps_friendly_creature() {
+    // Push: the printed "Up to one target creature gets +1/+1 EOT"
+    // half is now wired via `Selector::one_of(EachPermanent(Creature
+    // ∧ ControlledByYou))`. Was 🟡 (+1/+1 half dropped); now ✅. Verify
+    // the +1/+1 lands on a friendly creature when one is on the
+    // battlefield.
+    let mut g = two_player_game();
+    let friendly = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    let opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2 — gets -1/-1
+    let id = g.add_card_to_hand(0, catalog::dissection_practice());
+    g.players[0].mana_pool.add(Color::Black, 1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(opp_bear)),
+        mode: None, x_value: None,
+    })
+    .expect("Dissection Practice castable for {B}");
+    drain_stack(&mut g);
+
+    // Friendly 2/2 +1/+1 = 3/3.
+    let f = g.battlefield.iter().find(|c| c.id == friendly).unwrap();
+    assert_eq!(f.power(), 3, "Friendly bear pumped to 3 power");
+    assert_eq!(f.toughness(), 3, "Friendly bear pumped to 3 toughness");
+    // Opp 2/2 -1/-1 = 1/1.
+    let opp = g.battlefield.iter().find(|c| c.id == opp_bear).unwrap();
+    assert_eq!(opp.power(), 1);
+    assert_eq!(opp.toughness(), 1);
 }
 
 // ── Heated Argument ─────────────────────────────────────────────────────────
@@ -4148,7 +4330,13 @@ fn rabid_attack_pumps_friendly_creature() {
 }
 
 #[test]
-fn burrog_barrage_no_pump_on_first_spell_kills_bear() {
+fn burrog_barrage_no_pump_on_first_spell_no_opp_creature_no_damage() {
+    // Push: damage half now auto-targets an *opp* creature via
+    // `Selector::one_of(EachPermanent(opp creature))` (was: dealt
+    // damage to slot 0 = the friendly creature, which was self-fight).
+    // With no opp creature on the battlefield, the damage no-ops
+    // cleanly (preserves the printed "up to one" semantics) — the
+    // friendly bear survives.
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let id = g.add_card_to_hand(0, catalog::burrog_barrage());
@@ -4161,12 +4349,38 @@ fn burrog_barrage_no_pump_on_first_spell_kills_bear() {
     .expect("Burrog Barrage castable for {1}{G}");
     drain_stack(&mut g);
 
-    // No prior spell → no pump → bear deals its base power (2) to itself
-    // and dies (2 toughness, 2 damage = lethal).
+    // No opp creature → damage half no-ops → friendly bear survives.
     assert!(
-        g.players[0].graveyard.iter().any(|c| c.id == bear),
-        "bear should die from self-fight (2 power vs 2 toughness)"
+        g.battlefield.iter().any(|c| c.id == bear),
+        "bear should survive (no opp creature to take the damage)"
     );
+    let view = g.computed_permanent(bear).unwrap();
+    assert_eq!(view.power, 2, "no prior IS spell → no +1/+0 pump");
+}
+
+#[test]
+fn burrog_barrage_kills_opp_creature_via_friendly_power() {
+    // Push: damage half now hits an opp creature with damage equal
+    // to slot 0's power. Friendly bear (2 power) → 2 damage to opp
+    // bear (2 toughness) → opp bear dies. Was 🟡 (self-damage).
+    let mut g = two_player_game();
+    let friendly = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let opp = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::burrog_barrage());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(friendly)), mode: None, x_value: None,
+    })
+    .expect("Burrog Barrage castable for {1}{G}");
+    drain_stack(&mut g);
+
+    // Friendly survives (no return damage); opp dies.
+    assert!(g.battlefield.iter().any(|c| c.id == friendly),
+        "friendly bear should survive (Burrog Barrage is one-sided)");
+    assert!(!g.battlefield.iter().any(|c| c.id == opp),
+        "opp bear should die to 2 damage");
 }
 
 #[test]
@@ -4241,6 +4455,8 @@ fn tablet_of_discovery_etb_mills_one() {
 
 #[test]
 fn practiced_offense_pumps_creatures_and_grants_double_strike() {
+    // Push: mode 0 (the default) pumps each creature you control by
+    // a +1/+1 counter, then grants double strike to the chosen target.
     let mut g = two_player_game();
     let bear1 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let bear2 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
@@ -4249,7 +4465,7 @@ fn practiced_offense_pumps_creatures_and_grants_double_strike() {
     g.players[0].mana_pool.add_colorless(2);
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: Some(Target::Permanent(bear1)), mode: None, x_value: None,
+        card_id: id, target: Some(Target::Permanent(bear1)), mode: Some(0), x_value: None,
     })
     .expect("Practiced Offense castable for {2}{W}");
     drain_stack(&mut g);
@@ -4261,6 +4477,35 @@ fn practiced_offense_pumps_creatures_and_grants_double_strike() {
     assert_eq!(v1.power, 3, "bear1 = 2 + 1 counter");
     assert_eq!(v2.power, 3, "bear2 = 2 + 1 counter");
     assert!(v1.keywords.contains(&Keyword::DoubleStrike));
+    // Mode 0 grants DS, NOT lifelink.
+    assert!(!v1.keywords.contains(&Keyword::Lifelink),
+        "Mode 0 (DS) should not also grant Lifelink");
+}
+
+#[test]
+fn practiced_offense_mode_one_pumps_and_grants_lifelink() {
+    // Push: mode 1 = +1/+1 fan-out + grant lifelink EOT (was 🟡:
+    // "lifelink alternative dropped"). Promotes the printed "your
+    // choice of double strike or lifelink" prompt to a top-level
+    // ChooseMode pick.
+    let mut g = two_player_game();
+    let bear1 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::practiced_offense());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear1)), mode: Some(1), x_value: None,
+    })
+    .expect("Practiced Offense castable for {2}{W} mode 1");
+    drain_stack(&mut g);
+
+    let v1 = g.computed_permanent(bear1).unwrap();
+    assert_eq!(v1.power, 3, "bear1 = 2 + 1 counter");
+    assert!(v1.keywords.contains(&Keyword::Lifelink),
+        "Mode 1 should grant Lifelink");
+    assert!(!v1.keywords.contains(&Keyword::DoubleStrike),
+        "Mode 1 (Lifelink) should not also grant Double Strike");
 }
 
 #[test]
@@ -4644,6 +4889,36 @@ fn homesickness_draws_two_taps_and_stuns() {
     assert!(bear_card.tapped, "bear tapped");
     // Stun counter present.
     assert!(bear_card.counter_count(CounterType::Stun) >= 1, "stun counter on bear");
+}
+
+#[test]
+fn homesickness_stuns_more_than_one_counter_with_only_one_creature() {
+    // Push: the second creature slot is now auto-picked via
+    // `Selector::one_of(EachPermanent(opp creature))`. With only one
+    // opp creature on the battlefield, the second auto-pick collides
+    // with slot 0 — net 2 stun counters on the single creature
+    // (matches printed "up to two" semantics when only one creature
+    // is available; a deterministic auto-target re-picks slot 0
+    // since multi-target uniqueness is an open engine gap).
+    let mut g = two_player_game();
+    let opp_a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::homesickness());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_library(0, catalog::island());
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(opp_a)), mode: None, x_value: None,
+    })
+    .expect("Homesickness castable for {4}{U}{U}");
+    drain_stack(&mut g);
+
+    // 2 stun counters land (slot 0 + auto-picked second slot collide).
+    let a = g.battlefield.iter().find(|c| c.id == opp_a).unwrap();
+    assert!(a.tapped, "opp_a tapped");
+    assert!(a.counter_count(CounterType::Stun) >= 2,
+        "2 stun counters on opp_a (slot 0 + collided second auto-pick)");
 }
 
 #[test]

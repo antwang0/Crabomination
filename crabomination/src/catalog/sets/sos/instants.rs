@@ -482,6 +482,16 @@ pub fn foolish_fate() -> CardDefinition {
 /// removal half), which is the strongest play in 2-player. The +1/+1
 /// half is omitted. Net: the spell behaves like a 1-mana drain-1 +
 /// shrink-1 — within the printed power band.
+/// Dissection Practice — {B} Instant. Three-mode "splice" instant:
+/// drain 1 + optional pump halves on a friendly and an opp creature.
+///
+/// Push: ✅ (was 🟡, "+1/+1 half dropped"). The two optional creature
+/// halves now both fire — the user-picked target slot 0 takes the
+/// -1/-1 EOT (auto-picks an opp creature when no explicit target was
+/// chosen, falls through harmlessly when none exist), and a Selector::
+/// one_of-picked friendly creature takes the +1/+1 EOT pump (no-op
+/// when you control no creatures). Same multi-target-collapse pattern
+/// as Vibrant Outburst's tap half / Decisive Denial mode 1.
 pub fn dissection_practice() -> CardDefinition {
     CardDefinition {
         name: "Dissection Practice",
@@ -498,6 +508,20 @@ pub fn dissection_practice() -> CardDefinition {
                 to: Selector::You,
                 amount: Value::Const(1),
             },
+            // +1/+1 half: auto-picks a friendly creature (falls
+            // through cleanly when you control none).
+            Effect::PumpPT {
+                what: Selector::one_of(Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou),
+                )),
+                power: Value::Const(1),
+                toughness: Value::Const(1),
+                duration: Duration::EndOfTurn,
+            },
+            // -1/-1 half: user-picked slot 0 (any creature). The auto-
+            // target picker prefers an opp creature with low toughness
+            // (lethal-first), matching the printed flavour.
             Effect::PumpPT {
                 what: target_filtered(SelectionRequirement::Creature),
                 power: Value::Const(-1),
@@ -1146,12 +1170,13 @@ pub fn lorehold_charm() -> CardDefinition {
 /// "Vibrant Outburst deals 3 damage to any target. Tap up to one target
 /// creature."
 ///
-/// Approximation: collapses the two-target structure into a single
-/// "any target" damage hit — the optional second creature target (the
-/// tap half) is dropped. The 3-damage primary mode is the spell's main
-/// pressure use, so the loss is felt mostly in the rare both-halves
-/// usage. A multi-target prompt for sorceries/instants is the
-/// underlying engine gap.
+/// Push: the printed two-target structure is collapsed to a user-
+/// targeted "any target" damage hit (slot 0) + an auto-picked opp
+/// creature for the tap half (slot 1) via `Selector::one_of(
+/// EachPermanent(opp creature))` — same approximation as Decisive
+/// Denial mode 1 / Chelonian Tackle. The tap no-ops cleanly when no
+/// opp creature is on the battlefield, preserving the printed "up to
+/// one" semantics. Status: ✅ now (was 🟡, "tap half dropped").
 pub fn vibrant_outburst() -> CardDefinition {
     use crate::mana::{r, u};
     CardDefinition {
@@ -1163,14 +1188,22 @@ pub fn vibrant_outburst() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![],
-        effect: Effect::DealDamage {
-            to: target_filtered(
-                SelectionRequirement::Creature
-                    .or(SelectionRequirement::Player)
-                    .or(SelectionRequirement::Planeswalker),
-            ),
-            amount: Value::Const(3),
-        },
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature
+                        .or(SelectionRequirement::Player)
+                        .or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::Const(3),
+            },
+            Effect::Tap {
+                what: Selector::one_of(Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByOpponent),
+                )),
+            },
+        ]),
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -1187,12 +1220,14 @@ pub fn vibrant_outburst() -> CardDefinition {
 /// top two cards of your library. Put one of those cards into your hand
 /// and the other on the bottom of your library."
 ///
-/// Approximation: the "look at top two, put one in hand and the other
-/// on the bottom" half is collapsed to **scry 1 then draw 1** — the
-/// engine has no "look at N, choose K to hand, rest to bottom"
-/// primitive. Net swing: a loose card-selection is preserved (filter
-/// the bottom card) and the same card-advantage tally is preserved.
-/// The 5 damage half is faithfully wired against a creature target.
+/// Push: the 5-damage half is now wired against a `Selector::one_of`-
+/// picked opp creature (auto-targets the top opp creature, no-ops when
+/// none exist) — promotes the printed "up to one target creature" to
+/// always-fire-when-possible without requiring a user creature target,
+/// so the cast is legal even when the opp has no creatures (just the
+/// scry+draw resolves). The "look at top two, put one in hand and the
+/// other on the bottom" half is still collapsed to **scry 1 + draw 1**
+/// (no "look at N, choose K to hand, rest to bottom" primitive yet).
 pub fn stress_dream() -> CardDefinition {
     use crate::mana::{r, u};
     CardDefinition {
@@ -1205,8 +1240,17 @@ pub fn stress_dream() -> CardDefinition {
         toughness: 0,
         keywords: vec![],
         effect: Effect::Seq(vec![
+            // 5 damage to up to one target creature — the auto-target
+            // picker prefers opp-controlled creatures (lethal-first
+            // shape, same as Decisive Denial mode 1 / Chelonian
+            // Tackle). Falls through cleanly when no opp creature
+            // exists, so the spell stays castable for the scry+draw
+            // half alone.
             Effect::DealDamage {
-                to: target_filtered(SelectionRequirement::Creature),
+                to: Selector::one_of(Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByOpponent),
+                )),
                 amount: Value::Const(5),
             },
             Effect::Scry {
@@ -1517,9 +1561,24 @@ pub fn burrog_barrage() -> CardDefinition {
                 }),
                 else_: Box::new(Effect::Noop),
             },
+            // "Then it deals damage equal to its power to up to one
+            // target creature an opponent controls." Slot 0 is the
+            // user-picked friendly (the damage source); slot 1 is
+            // auto-picked via `Selector::one_of(EachPermanent(opp
+            // creature))` — same multi-target collapse as Decisive
+            // Denial mode 1. The damage no-ops cleanly when no opp
+            // creature is on the battlefield (just the +1/+0 fires).
+            // Power is read from slot 0 (the friendly creature),
+            // matching the printed wording.
             Effect::DealDamage {
-                to: Selector::Target(0),
-                amount: Value::PowerOf(Box::new(Selector::Target(0))),
+                to: Selector::one_of(Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByOpponent),
+                )),
+                amount: Value::PowerOf(Box::new(target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou),
+                ))),
             },
         ]),
         activated_abilities: no_abilities(),
@@ -1763,6 +1822,20 @@ pub fn duel_tactics() -> CardDefinition {
 /// plays as a respectable late-game tempo card.
 pub fn homesickness() -> CardDefinition {
     use crate::mana::u;
+    // Auto-pick selector for the second creature slot — picks an
+    // opp creature (lethal-first / first-eligible). The selector is
+    // re-evaluated for the Tap and AddCounter effects independently,
+    // so we leave the Untapped filter off here to avoid the second-
+    // pick re-resolving to "no eligible target" after the first Tap
+    // already ran. If the auto-pick collides with slot 0, the Tap
+    // half is a no-op (already-tapped) but the second stun counter
+    // still lands — net 2 stun counters on slot 0 when only one
+    // opp creature is on the battlefield (matches the printed "up
+    // to two" when only one creature exists).
+    let second_target = Selector::one_of(Selector::EachPermanent(
+        SelectionRequirement::Creature
+            .and(SelectionRequirement::ControlledByOpponent),
+    ));
     CardDefinition {
         name: "Homesickness",
         cost: cost(&[generic(4), u(), u()]),
@@ -1777,11 +1850,24 @@ pub fn homesickness() -> CardDefinition {
                 who: Selector::You,
                 amount: Value::Const(2),
             },
+            // First tap+stun: user-targeted creature (slot 0).
             Effect::Tap {
                 what: target_filtered(SelectionRequirement::Creature),
             },
             Effect::AddCounter {
                 what: Selector::Target(0),
+                kind: CounterType::Stun,
+                amount: Value::Const(1),
+            },
+            // Second tap+stun: auto-picked opp creature, may collide
+            // with slot 0 (in which case the tap is a no-op since the
+            // creature is already tapped) but the second stun counter
+            // still lands. Net: 2 stun counters on slot 0 if no
+            // additional opp creature is on the battlefield (matches
+            // the printed "up to two" when only one creature exists).
+            Effect::Tap { what: second_target.clone() },
+            Effect::AddCounter {
+                what: second_target,
                 kind: CounterType::Stun,
                 amount: Value::Const(1),
             },

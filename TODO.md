@@ -7,6 +7,65 @@ See `CUBE_FEATURES.md` (cube-card implementation status) and
 
 ## Recent additions
 
+- ✅ **Push XXXV (2026-05-03)**: 6 SOS 🟡 → ✅ promotions + 3 fidelity
+  bumps using the existing `Selector::one_of` and `Effect::ChooseMode`
+  primitives — no new engine work. Tests at 1315 (was 1306; +9 net).
+  - **6 SOS promotions to ✅**:
+    - **Dina's Guidance** ({1}{B}{G}, Sorcery) — hand-or-graveyard
+      destination prompt now wired as `Effect::ChooseMode` with two
+      modes (Search → Hand vs Search → Graveyard). Both modes use
+      the existing `Effect::Search` primitive. Reanimator decks
+      (Goryo's Vengeance / Animate Dead / Reanimate downstream) can
+      flip to mode 1 via the cast-time `mode` argument.
+    - **Vibrant Outburst** ({U}{R}, Instant) — printed "tap up to one
+      target creature" half now wired via `Selector::one_of(
+      EachPermanent(opp creature))`. Tap auto-picks an opp creature,
+      no-ops cleanly when no opp creature exists. 3-damage primary
+      slot still user-targeted (any target).
+    - **Dissection Practice** ({B}, Instant) — printed "Up to one
+      target creature gets +1/+1 EOT" half now wired via `Selector::
+      one_of(EachPermanent(Creature ∧ ControlledByYou))`. All three
+      optional halves now fire (drain 1 + +1/+1 friendly + -1/-1 user-
+      targeted).
+    - **Practiced Offense** ({2}{W}, Sorcery) — printed "your choice
+      of double strike or lifelink" mode pick now a top-level `Effect::
+      ChooseMode`: mode 0 = +1/+1 fan-out + double strike grant;
+      mode 1 = +1/+1 fan-out + lifelink grant. Cast-time `mode: Some(
+      0)` / `Some(1)` flips between the two; default is DS.
+    - **Cost of Brilliance** ({2}{B}, Sorcery) — +1/+1 half is now
+      optional via `Selector::one_of(EachPermanent(Creature ∧
+      ControlledByYou))`. Cast is now legal even when you control no
+      creatures.
+    - **Render Speechless** ({2}{W}{B}, Sorcery) — same treatment as
+      Cost of Brilliance: "up to one creature target" half now
+      auto-picks a friendly creature, no-ops cleanly when none exist.
+  - **3 fidelity bumps (still 🟡)**:
+    - **Stress Dream** ({3}{U}{R}, Instant) — 5-damage half now uses
+      `Selector::one_of(EachPermanent(opp creature))`. Cast is now
+      legal even when no opp creature exists. The look-at-top-2 half
+      stays approximated as scry 1 + draw 1.
+    - **Burrog Barrage** ({1}{G}, Instant) — damage half now hits an
+      opp creature via `Selector::one_of(EachPermanent(opp creature))`
+      (was: self-damage to slot 0). One-sided power-as-damage.
+    - **Homesickness** ({4}{U}{U}, Instant) — second creature slot
+      now wired via `Selector::one_of(EachPermanent(opp creature))`.
+      With 2 distinct opp creatures both get tapped + stunned. With
+      only 1 opp creature, the auto-pick collides with slot 0
+      (multi-target uniqueness gap).
+  - **9 new tests**: one per promotion + the no-creature-on-bf path
+    for the 5 promotions that gained "castable with no targets"
+    semantics (Dina's Guidance mode 1, Vibrant Outburst no-creature,
+    Cost of Brilliance no-creature, Stress Dream no-creature,
+    Practiced Offense lifelink mode), plus Vibrant Outburst's tap-half
+    + Dissection Practice's +1/+1 friendly-creature half + Burrog
+    Barrage's friendly-power-vs-opp test + Homesickness's collision
+    behavior with one opp creature.
+  - **Engine note**: nested `ChooseMode` works correctly when `ctx.mode`
+    is set at cast time (Practiced Offense, Dina's Guidance verify).
+    Future cards that need *resolution-time* mode picks (e.g. Prismari
+    Apprentice's "Scry 1 or +1/+0 EOT" magecraft) still need a separate
+    `Effect::PickModeAtResolution` primitive — tracked below.
+
 - ✅ **Push XXXIV (2026-05-03)**: 2 STX 🟡 → ✅ promotions + 9 new cube
   cards + 2 engine primitives + 1 UI label. Tests at 1306 (was 1292;
   +14 net).
@@ -46,6 +105,55 @@ See `CUBE_FEATURES.md` (cube-card implementation status) and
     reject / Mascot steal + revert), 9 cube-card tests (one per new
     card + body sanity for vanilla bodies), 1 view test
     (`ability_cost_label_renders_exile_gy_cost`).
+
+## Future work — engine/UI suggestions surfaced by push XXXV
+
+- **`Effect::PickModeAtResolution(Vec<Effect>)`** — sibling to
+  `Effect::ChooseMode` that prompts at *resolution* time rather than
+  cast time. Needed by:
+  - **Prismari Apprentice** ({U}{R}, 1/2): Magecraft "Scry 1 or +1/+0
+    EOT" — currently collapsed to Scry 1 only.
+  - Other "your choice of X or Y" embedded mode picks in Effect::Seq
+    that don't fit the spell-level cast-time `ctx.mode` shape (today
+    a nested ChooseMode would re-read the spell's `ctx.mode` and pick
+    the *same* mode index for both, which is incorrect).
+  - The new primitive would push a `Decision::Mode { source, modes,
+    description }` at resolution time, suspend on `wants_ui`, and
+    answer with `DecisionAnswer::Mode(idx)` — reusing the existing
+    decision plumbing. Auto-decider picks mode 0.
+
+- **Multi-target uniqueness in auto-target** — push XXXV's
+  Homesickness, Burrog Barrage, Stress Dream all use `Selector::
+  one_of(EachPermanent(...))` for the second creature slot. The
+  auto-target picker re-evaluates the selector each Effect resolution,
+  so when only one eligible creature exists, the second pick collides
+  with slot 0 (e.g. 2 stun counters on a single creature instead of
+  2 separate ones). A `Selector::one_of_excluding(filter, slot_to_
+  exclude)` variant — or a per-resolution "already picked" set fed
+  into `resolve_selector` — would close the gap. Cards: Homesickness
+  (tap up to two), Pull from the Grave (return up to two), Together
+  as One (target player + any-target dual prompt), Cost of Brilliance
+  (target player + creature dual).
+
+- **Multi-target prompt for sorceries/instants** — ongoing engine
+  gap (tracked across many pushes). Cards collapsed because the
+  caster can't pick two distinct entities at cast time:
+  - **Together as One**: target player draws X (collapsed to "you"),
+    any-target damage (single slot 0) — needs 2 separate target slots.
+  - **Cost of Brilliance**: target player draws 2 + loses 2 (collapsed
+    to "you"), +1/+1 counter on creature (slot 0).
+  - **Practiced Offense**: target player gets +1/+1 fan-out
+    (collapsed to "you"), creature target gets DS/Lifelink (slot 0).
+  Closing this needs `Decision::ChooseTargets { slot_count, filters }`
+  + a multi-slot `Target` value, plus `Selector::Target(n)` already
+  supports n > 0 — just the cast-time prompt is missing.
+
+- **`Effect::Search` to graveyard prompt UX** — Dina's Guidance
+  (push XXXV) shows the working pattern: `Effect::ChooseMode` between
+  two `Effect::Search { to: ZoneDest::Hand }` and `Effect::Search { to:
+  ZoneDest::Graveyard }` modes. Could be promoted to a helper
+  `effect::shortcut::tutor_to_hand_or_graveyard(filter)` once a 2nd
+  card uses the same shape.
 
 ## Future work — engine/UI suggestions surfaced by push XXXIV
 

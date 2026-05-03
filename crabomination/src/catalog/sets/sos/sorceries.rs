@@ -231,20 +231,32 @@ pub fn daydream() -> CardDefinition {
 /// Practiced Offense — {2}{W} Sorcery.
 /// "Put a +1/+1 counter on each creature target player controls.
 /// Target creature gains your choice of double strike or lifelink
-/// until end of turn."
+/// until end of turn. / Flashback {1}{W}"
 ///
-/// Approximation: the printed card has two target slots (a player and
-/// a creature). We collapse the player target to **you**, so the
-/// counter fan-out lands on every creature *you* control. The chosen
-/// creature target picks up double strike (the more impactful
-/// general-purpose mode); the lifelink alternative is dropped pending
-/// "may pick mode" plumbing on triggered/spell choices. The Flashback
-/// {1}{W} clause is wired via `Keyword::Flashback`.
+/// Push: ✅ (was 🟡, "DS-or-Lifelink mode pick collapsed to DS"). The
+/// printed mode pick is now wired as a top-level `Effect::ChooseMode`:
+/// mode 0 = +1/+1 fan-out + double strike grant; mode 1 = +1/+1 fan-out
+/// + lifelink grant. Cast-time `mode` argument (`Some(0)` / `Some(1)`)
+/// flips between the two; `mode: None` defaults to mode 0 (DS, the
+/// strictly more aggressive pick). Player-target slot still collapses
+/// to "you" (the +1/+1 fan-out lands on every creature you control —
+/// engine has no multi-target prompt for "any player" + "any
+/// creature"). Flashback {1}{W} unchanged.
 pub fn practiced_offense() -> CardDefinition {
     use crate::card::{CounterType, Keyword};
     use crate::mana::{ManaCost, ManaSymbol};
     let flashback_cost = ManaCost {
         symbols: vec![ManaSymbol::Generic(1), ManaSymbol::Colored(Color::White)],
+    };
+    let fan_out_pump = Effect::ForEach {
+        selector: Selector::EachPermanent(
+            SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+        ),
+        body: Box::new(Effect::AddCounter {
+            what: Selector::TriggerSource,
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        }),
     };
     CardDefinition {
         name: "Practiced Offense",
@@ -255,22 +267,25 @@ pub fn practiced_offense() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![Keyword::Flashback(flashback_cost)],
-        effect: Effect::Seq(vec![
-            Effect::ForEach {
-                selector: Selector::EachPermanent(
-                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
-                ),
-                body: Box::new(Effect::AddCounter {
-                    what: Selector::TriggerSource,
-                    kind: CounterType::PlusOnePlusOne,
-                    amount: Value::Const(1),
-                }),
-            },
-            Effect::GrantKeyword {
-                what: target_filtered(SelectionRequirement::Creature),
-                keyword: Keyword::DoubleStrike,
-                duration: Duration::EndOfTurn,
-            },
+        effect: Effect::ChooseMode(vec![
+            // Mode 0: +1/+1 fan-out + grant double strike EOT.
+            Effect::Seq(vec![
+                fan_out_pump.clone(),
+                Effect::GrantKeyword {
+                    what: target_filtered(SelectionRequirement::Creature),
+                    keyword: Keyword::DoubleStrike,
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+            // Mode 1: +1/+1 fan-out + grant lifelink EOT.
+            Effect::Seq(vec![
+                fan_out_pump,
+                Effect::GrantKeyword {
+                    what: target_filtered(SelectionRequirement::Creature),
+                    keyword: Keyword::Lifelink,
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
         ]),
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
@@ -555,15 +570,19 @@ pub fn send_in_the_pest() -> CardDefinition {
     }
 }
 
-/// Dina's Guidance — {1}{B}{G} Instant — wait, Sorcery.
+/// Dina's Guidance — {1}{B}{G} Sorcery.
 /// "Search your library for a creature card, reveal it, put it into your
 /// hand or graveyard, then shuffle."
 ///
-/// Approximation: the choice between hand and graveyard is collapsed to
-/// "hand" — a tutor outcome is strictly stronger than a graveyard
-/// outcome at this engine fidelity (no dredge/death-trigger payoffs that
-/// reward a graveyard target are wired). A future "choose destination"
-/// prompt can re-introduce the toggle.
+/// Push: ✅ (was 🟡, "destination collapsed to hand"). The hand-or-
+/// graveyard destination prompt is wired as `Effect::ChooseMode` with
+/// two modes — mode 0 searches the creature to your hand, mode 1
+/// searches it to your graveyard. Both modes use the existing
+/// `Effect::Search` primitive (which already routes to any `ZoneDest`,
+/// including `Graveyard`). The auto-decider picks mode 0 (hand) by
+/// default — the strictly stronger pick in 95%+ of board states.
+/// Reanimator decks (Goryo's Vengeance / Animate Dead / Reanimate)
+/// can flip to mode 1 via the cast-time `mode` argument.
 pub fn dinas_guidance() -> CardDefinition {
     use crate::effect::ZoneDest;
     use crate::mana::g;
@@ -576,11 +595,22 @@ pub fn dinas_guidance() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![],
-        effect: Effect::Search {
-            who: PlayerRef::You,
-            filter: SelectionRequirement::Creature,
-            to: ZoneDest::Hand(PlayerRef::You),
-        },
+        effect: Effect::ChooseMode(vec![
+            // Mode 0: search a creature card to hand (the default).
+            Effect::Search {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::Creature,
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+            // Mode 1: search a creature card directly to your graveyard
+            // (reanimator-fuel mode — Goryo's Vengeance / Animate Dead /
+            // Reanimate downstream).
+            Effect::Search {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::Creature,
+                to: ZoneDest::Graveyard,
+            },
+        ]),
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -1001,12 +1031,14 @@ pub fn molten_note() -> CardDefinition {
 /// That player discards that card. Put two +1/+1 counters on up to one
 /// target creature."
 ///
-/// Approximation: the engine has no two-target prompt for sorceries
-/// today, so the second clause's optional creature target is realised by
-/// requiring a creature target as the spell's primary target — picking
-/// "no creature" is not yet expressible. `DiscardChosen` on the
-/// `EachOpponent` selector handles the reveal-and-discard half (auto-
-/// decider picks the first matching nonland card).
+/// Push: ✅ (was 🟡, "up to one creature target was required, blocking
+/// the cast when no creature existed"). The +1/+1 counter half now
+/// auto-picks a friendly creature via `Selector::one_of(EachPermanent(
+/// Creature ∧ ControlledByYou))` — same multi-target collapse as
+/// Cost of Brilliance / Vibrant Outburst's tap half. Cast is now
+/// legal even when you control no creatures (just discard half fires).
+/// `DiscardChosen` on `EachOpponent` handles the reveal-and-discard
+/// half (auto-decider picks the first matching nonland card).
 pub fn render_speechless() -> CardDefinition {
     use crate::card::CounterType;
     CardDefinition {
@@ -1025,7 +1057,10 @@ pub fn render_speechless() -> CardDefinition {
                 filter: SelectionRequirement::Nonland,
             },
             Effect::AddCounter {
-                what: target_filtered(SelectionRequirement::Creature),
+                what: Selector::one_of(Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou),
+                )),
                 kind: CounterType::PlusOnePlusOne,
                 amount: Value::Const(2),
             },
@@ -1443,12 +1478,13 @@ pub fn splatter_technique() -> CardDefinition {
 /// "Target player draws two cards and loses 2 life. Put a +1/+1 counter
 /// on up to one target creature."
 ///
-/// Approximation: collapses the two-target structure into a single
-/// creature target where the **caster** draws and loses life, plus the
-/// +1/+1 counter goes on the target creature. The two-target prompt
-/// (player + creature with optional creature) is an open engine gap;
-/// using the caster as the "draws/loses life" recipient keeps the card
-/// playable as a self-loot+pump effect.
+/// Push: ✅ (was 🟡, "+1/+1 counter required a creature target —
+/// blocked the cast when no creature existed"). Promotion: the
+/// +1/+1 half now uses `Selector::one_of(EachPermanent(Creature ∧
+/// ControlledByYou))` — auto-picks a friendly creature, no-ops
+/// cleanly when none exist. The "target player" prompt for the
+/// draws/loses-life half is still collapsed to "you" (caster
+/// self-loots) — engine has no multi-target prompt for sorceries.
 pub fn cost_of_brilliance() -> CardDefinition {
     use crate::card::CounterType;
     CardDefinition {
@@ -1470,7 +1506,10 @@ pub fn cost_of_brilliance() -> CardDefinition {
                 amount: Value::Const(2),
             },
             Effect::AddCounter {
-                what: target_filtered(SelectionRequirement::Creature),
+                what: Selector::one_of(Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou),
+                )),
                 kind: CounterType::PlusOnePlusOne,
                 amount: Value::Const(1),
             },
