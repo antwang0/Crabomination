@@ -41,6 +41,9 @@ pub struct CounterCoinAssets {
 /// stacking colours stay consistent across frames.
 #[derive(Component)]
 pub struct CounterCoin {
+    // Stored for future engine-state cross-matching; currently a marker
+    // only — the despawn pass keys off `kind` and entity identity.
+    #[allow(dead_code)]
     pub card_id: CardId,
     pub kind: CounterType,
 }

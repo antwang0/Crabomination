@@ -369,7 +369,7 @@ fn pick_blocks(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
             state.battlefield.iter().find(|c| c.id == atk.attacker).map(|a| AtkInfo {
                 id: atk.attacker,
                 power: a.power(),
-                toughness: a.toughness() as i32 - a.damage as i32,
+                toughness: a.toughness() - a.damage as i32,
                 flying: a.has_keyword(&Keyword::Flying),
                 deathtouch: a.has_keyword(&Keyword::Deathtouch),
                 indestructible: a.has_keyword(&Keyword::Indestructible),
@@ -384,7 +384,7 @@ fn pick_blocks(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
         .map(|c| BlkInfo {
             id: c.id,
             power: c.power(),
-            toughness: c.toughness() as i32 - c.damage as i32,
+            toughness: c.toughness() - c.damage as i32,
             flying: c.has_keyword(&Keyword::Flying),
             reach: c.has_keyword(&Keyword::Reach),
             deathtouch: c.has_keyword(&Keyword::Deathtouch),
@@ -453,7 +453,7 @@ fn pick_blocks(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
             // positive trade (kill the attacker or survive the block).
             let threshold = if lethal { -100 } else if critical { 0 } else { 1 };
             if score < threshold { continue; }
-            if best.map_or(true, |(_, s)| score > s) {
+            if best.is_none_or(|(_, s)| score > s) {
                 best = Some((bi, score));
             }
         }

@@ -132,11 +132,10 @@ pub(crate) fn cost_reduction_for_spell(
     let self_iter = card.definition.static_abilities.iter();
     for sa in bf_iter.chain(self_iter) {
         match &sa.effect {
-            StaticEffect::CostReduction { filter, amount } => {
-                if state.evaluate_requirement_on_card(filter, card, caster) {
+            StaticEffect::CostReduction { filter, amount }
+                if state.evaluate_requirement_on_card(filter, card, caster) => {
                     discount += amount;
                 }
-            }
             StaticEffect::CostReductionTargeting {
                 spell_filter,
                 target_filter,
@@ -1563,11 +1562,10 @@ impl GameState {
         // Mark the ability as used for the once-per-turn budget. (After
         // tap/mana cost validation succeeds, before sacrifice or stack
         // queueing — all of which are guaranteed to commit if we get here.)
-        if ability.once_per_turn {
-            if let Some(card) = self.battlefield.iter_mut().find(|c| c.id == card_id) {
+        if ability.once_per_turn
+            && let Some(card) = self.battlefield.iter_mut().find(|c| c.id == card_id) {
                 card.once_per_turn_used.push(ability_index);
             }
-        }
 
         // Exile-from-graveyard cost: with tap, mana, and life costs
         // paid, exile the controller's oldest `exile_gy_cost` cards

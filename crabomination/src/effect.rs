@@ -546,6 +546,13 @@ impl EventSpec {
 /// activated-ability effects — are `Effect` trees. Combinators let a single
 /// card express modal choices, iteration, and conditionals without needing
 /// engine changes per card.
+// `large_enum_variant` flags `CreateToken { definition: TokenDefinition, .. }`
+// (~368 B vs. a ~160 B second-largest). Boxing the field would touch ~80
+// catalog construction sites for a one-shot allocation that's almost never
+// on the hot path; effects flow as values through the engine and the size
+// hit hasn't shown up in profiles. Revisit if the enum starts hurting cache
+// behaviour or if `CreateToken` is no longer the long pole.
+#[allow(clippy::large_enum_variant)]
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Effect {
     // ── Combinators ──────────────────────────────────────────────────────────
@@ -1870,7 +1877,7 @@ pub mod shortcut {
     /// `Min(PowerOf(This), ToughnessOf(This)) + 1` — "greater than P
     /// or T" reduces to "greater than min(P, T)" which is "≥ min(P, T)
     /// + 1". Used by Berta, Cuboid Colony, Fractal Tender, Pensive
-    /// Professor, Tester of the Tangential, Textbook Tabulator.
+    ///   Professor, Tester of the Tangential, Textbook Tabulator.
     ///
     /// The trigger fires on every spell cast (not just instant/sorcery).
     pub fn increment() -> TriggeredAbility {

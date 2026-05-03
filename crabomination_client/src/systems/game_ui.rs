@@ -951,7 +951,7 @@ pub fn update_pass_button(
 
     // Classify the top stack item if any.
     use crabomination::net::{StackItemKind, StackItemView};
-    let top_is_opp_spell = cv.stack.last().map_or(false, |item| {
+    let top_is_opp_spell = cv.stack.last().is_some_and(|item| {
         matches!(item,
             StackItemView::Known(k)
             if k.controller != cv.your_seat && k.kind == StackItemKind::Spell

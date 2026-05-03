@@ -1159,6 +1159,7 @@ pub fn handle_put_on_library_hand_click(
 
 /// Handle Keep / Mulligan / Serum Powder button presses (and keyboard
 /// shortcuts K / M / P for the first-listed powder).
+#[allow(clippy::type_complexity)]
 pub fn handle_mulligan_buttons(
     view: Res<CurrentView>,
     outbox: Option<Res<NetOutbox>>,

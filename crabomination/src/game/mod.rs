@@ -1376,6 +1376,7 @@ impl GameState {
     /// `is_copy` flag through so a copied spell doesn't go to the
     /// graveyard (or exile) on resolve — copies cease to exist
     /// post-resolution per MTG rule 707.10.
+    #[allow(clippy::too_many_arguments)]
     pub(crate) fn continue_spell_resolution_with_face_copy(
         &mut self,
         card: CardInstance,
@@ -1415,6 +1416,7 @@ impl GameState {
     /// Used by the stack resolver so `EffectContext.cast_face` reflects
     /// the actual cast path (Front / Back / Flashback) instead of
     /// being re-derived heuristically.
+    #[allow(clippy::too_many_arguments)]
     pub(crate) fn continue_spell_resolution_with_face(
         &mut self,
         card: CardInstance,
@@ -1486,6 +1488,7 @@ impl GameState {
     }
 
     /// Resolve a triggered ability's effect tree.
+    #[allow(clippy::too_many_arguments)]
     pub(crate) fn continue_trigger_resolution(
         &mut self,
         source: CardId,
@@ -1799,7 +1802,7 @@ fn affected_from_requirement(
             // Not(HasSupertype(Legendary))`.
             R::Not(inner) => {
                 if let R::HasSupertype(st) = inner.as_ref() {
-                    excluded_supertypes.push(st.clone());
+                    excluded_supertypes.push(*st);
                 } else {
                     return None;
                 }

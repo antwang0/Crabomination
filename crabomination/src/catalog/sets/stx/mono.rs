@@ -2838,10 +2838,10 @@ pub fn first_day_of_class() -> CardDefinition {
 /// hand) at the mono-white color slot with a Plains target rather
 /// than IS. The "return target Plains" filter matches `IsBasicLand`
 /// + a name-equals-Plains follow-up — but we use the simpler
-/// `IsBasicLand` filter for the auto-target framework's first-pick
-/// (printed Oracle would land here only on a Plains-card decision,
-/// since no other basic-land filter exists in the engine yet). Net:
-/// graveyard → hand on a basic land card.
+///   `IsBasicLand` filter for the auto-target framework's first-pick
+///   (printed Oracle would land here only on a Plains-card decision,
+///   since no other basic-land filter exists in the engine yet). Net:
+///   graveyard → hand on a basic land card.
 pub fn pilgrim_of_the_ages() -> CardDefinition {
     use crate::card::Zone;
     CardDefinition {

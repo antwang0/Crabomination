@@ -82,6 +82,7 @@ pub fn export_full(
 /// Backward-compatible wrapper that exports just the seat-projected view
 /// (no full engine snapshot). Used by network-game exports where the
 /// client doesn't have direct access to the authoritative state.
+#[allow(dead_code)]
 pub fn export_client_view(view: &ClientView, message: &str) -> Result<PathBuf, String> {
     write_export(view, message, None, None)
 }
@@ -145,7 +146,7 @@ pub fn list_exports() -> Vec<PathBuf> {
             Some((p, mtime))
         })
         .collect();
-    entries.sort_by(|a, b| b.1.cmp(&a.1));
+    entries.sort_by_key(|e| std::cmp::Reverse(e.1));
     entries.into_iter().map(|(p, _)| p).collect()
 }
 

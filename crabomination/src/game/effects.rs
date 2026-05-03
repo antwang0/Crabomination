@@ -947,14 +947,12 @@ impl GameState {
                 for pos in to_remove {
                     if let StackItem::Spell { card, caster, is_copy, .. } =
                         self.stack.remove(pos)
-                    {
-                        if !is_copy {
+                        && !is_copy {
                             self.players[caster].send_to_graveyard(*card);
                         }
                         // Copies cease to exist on counter — drop without
                         // zoning. Per MTG rule 707.10, a countered copy
                         // disappears from the stack as if it had resolved.
-                    }
                 }
                 Ok(())
             }
@@ -991,11 +989,9 @@ impl GameState {
                 if !paid
                     && let StackItem::Spell { card, caster, is_copy, .. } =
                         self.stack.remove(pos)
-                {
-                    if !is_copy {
+                    && !is_copy {
                         self.players[caster].send_to_graveyard(*card);
                     }
-                }
                 Ok(())
             }
 
@@ -2378,7 +2374,7 @@ impl GameState {
         let mut primary_candidates = collect_legal_on_player(primary_player);
         if prefer_friendly && !primary_candidates.is_empty() {
             // Sort by descending power so the strongest creature wins.
-            primary_candidates.sort_by(|a, b| b.1.cmp(&a.1));
+            primary_candidates.sort_by_key(|c| std::cmp::Reverse(c.1));
         }
         // Hostile damage spells: prefer creatures the spell can lethally
         // kill (toughness ≤ damage minus already-marked damage), then
@@ -2387,8 +2383,8 @@ impl GameState {
         // miss the chance to kill an opp's 3/3 standing on 0 marked
         // damage. Push XXXII improvement: lethal-first auto-target
         // picker for hostile burn.
-        if !prefer_friendly && !primary_candidates.is_empty() {
-            if let Some(damage) = eff.hostile_damage_amount() {
+        if !prefer_friendly && !primary_candidates.is_empty()
+            && let Some(damage) = eff.hostile_damage_amount() {
                 let toughness_with_damage =
                     |cid: crate::card::CardId| -> Option<(i32, i32)> {
                         let cp = self.computed_permanent(cid)?;
@@ -2408,7 +2404,6 @@ impl GameState {
                         .then(b.1.cmp(&a.1))
                 });
             }
-        }
         if let Some(&(cid, _)) = primary_candidates.first() {
             return Some(Target::Permanent(cid));
         }

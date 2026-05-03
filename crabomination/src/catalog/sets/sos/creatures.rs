@@ -3504,10 +3504,10 @@ pub fn emil_vastlands_roamer() -> CardDefinition {
 ///
 /// 🟡 Body wire — the Opus rider (mana-spent introspection on the cast
 /// + cast-from-exile pipeline) is omitted; the +1/+0 EOT pump on every
-/// IS cast is wired faithfully via `cast_is_instant_or_sorcery()` (push
-/// VII), matching the printed +1/+0 pump on the cheap-spell branch. The
-/// 5+-mana exile-top branch is omitted (same cast-from-exile gap as
-/// Practiced Scrollsmith / The Dawning Archaic / Conspiracy Theorist).
+///   IS cast is wired faithfully via `cast_is_instant_or_sorcery()` (push
+///   VII), matching the printed +1/+0 pump on the cheap-spell branch. The
+///   5+-mana exile-top branch is omitted (same cast-from-exile gap as
+///   Practiced Scrollsmith / The Dawning Archaic / Conspiracy Theorist).
 pub fn elemental_mascot() -> CardDefinition {
     use crate::effect::shortcut::cast_is_instant_or_sorcery;
     use crate::mana::{r, u};
@@ -3555,11 +3555,11 @@ pub fn elemental_mascot() -> CardDefinition {
 ///
 /// 🟡 Body wire (3/3 Elemental Horse with `Keyword::Ward(1)` + Haste)
 /// + a partial Opus rider — the +1/+1-EOT pump fires on every
-/// instant-or-sorcery cast (the magecraft trigger). The "5+ mana →
-/// create a token copy of this creature" half is omitted (no copy-
-/// permanent primitive yet, same gap as Mica / Aziza / Silverquill the
-/// Disputant). Net play: a 3/3 Haste flier-killer with cumulative
-/// magecraft pump — no copy upside.
+///   instant-or-sorcery cast (the magecraft trigger). The "5+ mana →
+///   create a token copy of this creature" half is omitted (no copy-
+///   permanent primitive yet, same gap as Mica / Aziza / Silverquill the
+///   Disputant). Net play: a 3/3 Haste flier-killer with cumulative
+///   magecraft pump — no copy upside.
 pub fn colorstorm_stallion() -> CardDefinition {
     use crate::effect::shortcut::cast_is_instant_or_sorcery;
     use crate::mana::{r, u};

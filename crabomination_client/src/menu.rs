@@ -582,6 +582,7 @@ fn refresh_format_toggle_visuals(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn handle_action_buttons(
     mut next_state: ResMut<NextState<AppState>>,
     mut pending: ResMut<PendingNetMode>,

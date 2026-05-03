@@ -138,7 +138,7 @@ fn fraction_to_speed(frac: f32) -> f32 {
 }
 
 fn format_speed(speed: f32) -> String {
-    if speed >= 0.95 && speed <= 1.05 {
+    if (0.95..=1.05).contains(&speed) {
         "Speed: 1.0×".into()
     } else if speed < 1.0 {
         format!("Speed: {:.2}×", speed)

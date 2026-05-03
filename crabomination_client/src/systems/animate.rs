@@ -458,6 +458,12 @@ pub const ANIM_SPEED_MAX: f32 = 10.0;
 /// that actually conflict on the same entity in practice — chiefly tap,
 /// play, hand-slide, and graveyard-flight). Adding a new variant is a
 /// one-line append to this enum plus a one-line arm in the dispatcher.
+///
+/// `dead_code` is allowed because the dispatcher matches every variant
+/// today even though no caller currently *enqueues* one — the queue is
+/// dormant infrastructure waiting on the systems that will start
+/// pushing into it.
+#[allow(dead_code)]
 pub enum QueuedAnim {
     /// Run a tap/untap rotation animation. The bool is the `TapState`
     /// the card should land in once the animation finishes.
@@ -484,6 +490,7 @@ pub struct AnimQueue {
 }
 
 impl AnimQueue {
+    #[allow(dead_code)]
     pub fn from_one(anim: QueuedAnim) -> Self {
         let mut q = AnimQueue::default();
         q.queue.push_back(anim);
@@ -503,6 +510,7 @@ pub const INTER_ANIM_DELAY: f32 = 0.18;
 /// completion). When an animation just ended (detected via
 /// `RemovedComponents<Animating>`), arms a brief delay so consecutive
 /// queued animations don't visually merge.
+#[allow(clippy::type_complexity)]
 pub fn dispatch_animation_queue(
     mut commands: Commands,
     time: Res<Time>,

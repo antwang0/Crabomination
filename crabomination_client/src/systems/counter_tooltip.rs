@@ -29,6 +29,7 @@ pub struct AltTooltip;
 pub struct AltTooltipText;
 
 #[allow(clippy::too_many_arguments)]
+#[allow(clippy::type_complexity)]
 pub fn update_alt_tooltip(
     mut commands: Commands,
     keys: Res<ButtonInput<KeyCode>>,
@@ -79,11 +80,10 @@ pub fn update_alt_tooltip(
         // Update existing tooltip's position and text.
         node.left = Val::Px(screen.x + 18.0);
         node.top = Val::Px(screen.y - 16.0);
-        if let Ok(mut text) = text_q.single_mut() {
-            if text.0 != body {
+        if let Ok(mut text) = text_q.single_mut()
+            && text.0 != body {
                 text.0 = body;
             }
-        }
         return;
     }
 
