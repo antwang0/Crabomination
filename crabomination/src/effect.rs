@@ -1573,6 +1573,23 @@ pub enum StaticEffect {
         target_filter: SelectionRequirement,
         amount: u32,
     },
+    /// Affinity-style "this spell costs N less to cast for each
+    /// [thing]." Generalizes `CostReduction` to a Value-typed amount,
+    /// evaluated at cast time against an EffectContext rooted at the
+    /// caster. Used by:
+    /// - **Witherbloom, the Balancer** ({6}{B}{G}, "Affinity for
+    ///   creatures") — `amount: CountOf(EachPermanent(Creature ∧
+    ///   ControlledByYou))`.
+    /// - The Dawning Archaic ({10}, "{1} less for each instant and
+    ///   sorcery card in your graveyard") — same shape against the
+    ///   graveyard.
+    ///
+    /// The discount drains generic mana only (capped at 0), same as
+    /// the other cost-reduction variants.
+    CostReductionScaled {
+        filter: SelectionRequirement,
+        amount: Value,
+    },
 }
 
 // ── Triggered / activated / loyalty ability shells ───────────────────────────

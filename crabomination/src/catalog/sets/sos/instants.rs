@@ -1431,11 +1431,16 @@ pub fn quandrix_charm() -> CardDefinition {
 /// "This spell costs {3} less to cast if it targets a tapped creature.
 /// Destroy target creature."
 ///
-/// Approximation: the cost-reduction-when-target-is-tapped rider is omitted
-/// (the engine has no target-aware cost reduction primitive yet — tracked
-/// in TODO under "target-aware cost reduction"). The destroy-creature
-/// half is wired faithfully; it pays the printed {4}{W} unconditionally.
+/// ✅ Push XXXVIII: 🟡 → ✅. The "{3} less if targets a tapped
+/// creature" rider now wires faithfully via a self-static
+/// `StaticEffect::CostReductionTargeting`. `cost_reduction_for_spell`
+/// walks the cast card's own static abilities in addition to the
+/// battlefield, so self-discount spells (Ajani's Response, future
+/// "this spell costs N less" patterns) close the cost-reduction gap
+/// without needing a permanent in play. Floating just {1}{W} with a
+/// tapped opp creature targeted is now a legal cast.
 pub fn ajanis_response() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
     CardDefinition {
         name: "Ajani's Response",
         cost: cost(&[generic(4), w()]),
@@ -1450,7 +1455,15 @@ pub fn ajanis_response() -> CardDefinition {
         },
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
+        static_abilities: vec![StaticAbility {
+            description: "Costs {3} less if it targets a tapped creature",
+            effect: StaticEffect::CostReductionTargeting {
+                spell_filter: SelectionRequirement::Any,
+                target_filter: SelectionRequirement::Creature
+                    .and(SelectionRequirement::Tapped),
+                amount: 3,
+            },
+        }],
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,

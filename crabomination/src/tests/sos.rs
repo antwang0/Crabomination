@@ -3500,6 +3500,50 @@ fn ajanis_response_only_targets_creatures() {
     assert!(err.is_err(), "Ajani's Response only targets creatures");
 }
 
+/// Push XXXVIII: Ajani's Response self-discount fires when targeting a
+/// tapped creature. {4}{W} → {1}{W} when target is tapped.
+#[test]
+fn ajanis_response_costs_three_less_against_tapped_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    // Tap the bear by hand (simulates a previous attack / tap effect).
+    g.battlefield.iter_mut().find(|c| c.id == bear).unwrap().tapped = true;
+
+    let resp = g.add_card_to_hand(0, catalog::ajanis_response());
+    // Float just {1}{W} — discount should land us at exactly the cost.
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: resp,
+        target: Some(Target::Permanent(bear)),
+        mode: None, x_value: None,
+    })
+    .expect("Ajani's Response should cost {1}{W} when targeting a tapped creature");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == bear),
+        "tapped bear should be destroyed");
+}
+
+/// Self-discount does NOT apply to an untapped creature. With only
+/// {1}{W} floated, Ajani's Response can't afford its full {4}{W} cost.
+#[test]
+fn ajanis_response_no_discount_against_untapped_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    // Bear is untapped.
+    let resp = g.add_card_to_hand(0, catalog::ajanis_response());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let result = g.perform_action(GameAction::CastSpell {
+        card_id: resp,
+        target: Some(Target::Permanent(bear)),
+        mode: None, x_value: None,
+    });
+    assert!(result.is_err(),
+        "Ajani's Response should reject when target is untapped (no discount)");
+}
+
 #[test]
 fn cuboid_colony_is_a_one_one_with_flash_flying_trample() {
     let mut g = two_player_game();
@@ -4352,6 +4396,113 @@ fn witherbloom_balancer_etb_with_keywords() {
     assert_eq!(drag.definition.toughness, 5);
     assert!(drag.definition.keywords.contains(&Keyword::Flying));
     assert!(drag.definition.keywords.contains(&Keyword::Deathtouch));
+}
+
+/// Push XXXVIII: Witherbloom's Affinity for creatures self-discount
+/// drains generic mana per creature controlled. With 4 friendly bears
+/// on the battlefield, the printed {6}{B}{G} cost drops to {2}{B}{G}.
+#[test]
+fn witherbloom_balancer_affinity_for_creatures_discounts_generic() {
+    let mut g = two_player_game();
+    // Seed 4 friendly creatures.
+    for _ in 0..4 {
+        let _ = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    }
+    let id = g.add_card_to_hand(0, catalog::witherbloom_the_balancer());
+    // Float discounted cost: {2}{B}{G} (= 6 generic - 4 affinity + B + G).
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("With 4 creatures, Witherbloom should cast for {2}{B}{G}");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == id));
+}
+
+/// Without enough creatures, Affinity doesn't discount enough to make
+/// Balancer castable on a low mana pool.
+#[test]
+fn witherbloom_balancer_affinity_zero_creatures_no_discount() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::witherbloom_the_balancer());
+    // Float {2}{B}{G} but no creatures = no discount; cast must reject.
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let result = g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    });
+    assert!(result.is_err(),
+        "Without creatures, Affinity provides no discount and {{2}}{{B}}{{G}} is insufficient");
+}
+
+// ── The Dawning Archaic (push XXXVIII) ────────────────────────────────────
+// New ⏳ → 🟡: 7/7 Reach Avatar at {10}, with self-discount via the
+// new `StaticEffect::CostReductionScaled` primitive.
+
+#[test]
+fn the_dawning_archaic_is_seven_seven_reach() {
+    let def = catalog::the_dawning_archaic();
+    assert_eq!(def.power, 7);
+    assert_eq!(def.toughness, 7);
+    assert!(def.keywords.contains(&Keyword::Reach));
+    assert!(def.is_legendary());
+}
+
+#[test]
+fn the_dawning_archaic_discounts_per_is_card_in_graveyard() {
+    let mut g = two_player_game();
+    // Seed 5 IS cards in P0's graveyard (Lightning Bolts).
+    for _ in 0..5 {
+        let _ = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    }
+    let id = g.add_card_to_hand(0, catalog::the_dawning_archaic());
+    // Float discounted cost: 10 - 5 = {5}.
+    g.players[0].mana_pool.add_colorless(5);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Dawning Archaic should cost {5} with 5 IS cards in graveyard");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == id),
+        "Dawning Archaic should be on the battlefield");
+}
+
+/// Without enough IS cards in the graveyard, Dawning Archaic costs the
+/// full printed {10}. {5} floated rejects.
+#[test]
+fn the_dawning_archaic_no_discount_with_empty_graveyard() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::the_dawning_archaic());
+    g.players[0].mana_pool.add_colorless(5);
+    let result = g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    });
+    assert!(result.is_err(),
+        "Dawning Archaic without IS cards in gy should reject for insufficient mana");
+}
+
+/// Affinity caps at 0 generic — even with 20 creatures, the {B}{G}
+/// colored requirement still must be paid.
+#[test]
+fn witherbloom_balancer_affinity_caps_at_zero_generic() {
+    let mut g = two_player_game();
+    // 8 friendly creatures = 8 generic discount, exceeding the printed 6.
+    for _ in 0..8 {
+        let _ = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    }
+    let id = g.add_card_to_hand(0, catalog::witherbloom_the_balancer());
+    // Float just {B}{G} — generic is fully drained, only colored remains.
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("With 8 creatures, Witherbloom should cast for just {B}{G}");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == id));
 }
 
 #[test]

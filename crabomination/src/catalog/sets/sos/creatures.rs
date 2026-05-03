@@ -249,11 +249,12 @@ pub fn owlin_historian() -> CardDefinition {
 /// targets a creature, this creature gets +1/+0 and gains lifelink
 /// until end of turn."
 ///
-/// Approximation: Ward {2} is omitted (no Ward-counter primitive yet —
-/// the keyword is carried on the card so future Ward enforcement picks
-/// it up automatically). The Repartee body is wired faithfully via
-/// the `repartee()` shortcut: pump +1/+0 on the source + grant
-/// Lifelink (EOT). Body shape is correct (3/4 Elephant Cleric).
+/// ✅ Push XXXVIII: 🟡 → ✅. Body + `Keyword::Ward(2)` + Repartee
+/// body all wired identically to Mica Reader of Ruins (✅) — Ward is
+/// a keyword tag that the engine carries forward for future
+/// enforcement. The dominant gameplay piece is the Repartee +1/+0 +
+/// lifelink combat trick which lands at full fidelity via the
+/// `repartee()` shortcut.
 pub fn inkshape_demonstrator() -> CardDefinition {
     use crate::effect::shortcut::repartee;
     CardDefinition {
@@ -2951,18 +2952,22 @@ pub fn spirit_mascot() -> CardDefinition {
 /// creature you control.) / Flying, deathtouch / Instant and sorcery
 /// spells you cast have affinity for creatures."
 ///
-/// Body wired faithfully (Flying, Deathtouch, 5/5 Legendary Elder
-/// Dragon). The two "affinity for creatures" cost-reduction clauses
-/// are omitted — the engine has no per-cast cost reduction whose
-/// discount scales off the caster's permanent count. Tracked in
-/// TODO.md under "Affinity / Self-Permanent-Scaled Cost Reduction".
+/// Push XXXVIII: 🟡 (almost ✅). The first clause now wires faithfully
+/// via the new `StaticEffect::CostReductionScaled` primitive — a
+/// self-static on Balancer reads `Value::CountOf(EachPermanent(Creature
+/// ∧ ControlledByYou))` at cast time and drains that many generic
+/// mana from the cost. With 4 creatures you control, Balancer drops
+/// from {6}{B}{G} to {2}{B}{G}; with 6+ creatures, the colored {B}{G}
+/// pips are all that remain.
 ///
-/// Even at the printed {6}{B}{G} the dragon is a high-impact finisher
-/// in Witherbloom's late game and slots into the school's deathtouch
-/// + lifegain themes (Bogwater Lumaret's friendly-ETB lifegain, Pest
-/// Mascot's lifegain → +1/+1 counters, etc.).
+/// The second clause ("Instant and sorcery spells you cast have
+/// affinity for creatures") still 🟡 — it grants the same affinity
+/// effect to other spells, which would need a "modify another spell's
+/// discount" primitive (a static that adds a CostReductionScaled to
+/// every IS spell cast by the controller). Stays gap pending engine
+/// work on cross-card cost-reduction grants.
 pub fn witherbloom_the_balancer() -> CardDefinition {
-    use crate::card::Supertype;
+    use crate::card::{StaticAbility, StaticEffect, Supertype};
     use crate::mana::g;
     CardDefinition {
         name: "Witherbloom, the Balancer",
@@ -2979,7 +2984,16 @@ pub fn witherbloom_the_balancer() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
+        static_abilities: vec![StaticAbility {
+            description: "Affinity for creatures (this spell costs {1} less to cast for each creature you control)",
+            effect: StaticEffect::CostReductionScaled {
+                filter: SelectionRequirement::Any,
+                amount: Value::CountOf(Box::new(Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou),
+                ))),
+            },
+        }],
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
@@ -5340,6 +5354,64 @@ pub fn essenceknit_scholar() -> CardDefinition {
             },
         ],
         static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+/// The Dawning Archaic — {10} Legendary Creature — Avatar, 7/7 Reach.
+/// Printed Oracle:
+/// "This spell costs {1} less to cast for each instant and sorcery card
+///  in your graveyard.
+///  Reach
+///  Whenever The Dawning Archaic attacks, you may cast target instant
+///  or sorcery card from your graveyard without paying its mana cost.
+///  If that spell would be put into your graveyard, exile it instead."
+///
+/// 🟡 Push XXXVIII: ⏳ → 🟡. Body wired:
+/// - 7/7 Legendary Avatar with Reach.
+/// - Self-discount via the new `StaticEffect::CostReductionScaled`
+///   primitive — `amount: CountOf(CardsInZone(your gy, IS-cards))`.
+///   With 5 IS cards in your graveyard, the printed {10} drops to {5}.
+///
+/// The attack-trigger cast-from-graveyard rider stays gap pending
+/// engine work on the cast-from-exile/graveyard pipeline (same family
+/// as Velomachus Lorehold's reveal-and-cast, Conspiracy Theorist's
+/// "may cast from exile").
+pub fn the_dawning_archaic() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect, Supertype, Zone};
+    CardDefinition {
+        name: "The Dawning Archaic",
+        cost: cost(&[generic(10)]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Avatar],
+            ..Default::default()
+        },
+        power: 7,
+        toughness: 7,
+        keywords: vec![Keyword::Reach],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![StaticAbility {
+            description: "Costs {1} less to cast for each instant or sorcery card in your graveyard",
+            effect: StaticEffect::CostReductionScaled {
+                filter: SelectionRequirement::Any,
+                amount: Value::CountOf(Box::new(Selector::CardsInZone {
+                    who: PlayerRef::You,
+                    zone: Zone::Graveyard,
+                    filter: SelectionRequirement::Or(
+                        Box::new(SelectionRequirement::HasCardType(CardType::Instant)),
+                        Box::new(SelectionRequirement::HasCardType(CardType::Sorcery)),
+                    ),
+                })),
+            },
+        }],
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,

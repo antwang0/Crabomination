@@ -119,32 +119,55 @@ pub(crate) fn cost_reduction_for_spell(
 ) -> u32 {
     use crate::effect::StaticEffect;
     let mut discount = 0u32;
-    for src in &state.battlefield {
-        if src.controller != caster {
-            continue;
-        }
-        for sa in &src.definition.static_abilities {
-            match &sa.effect {
-                StaticEffect::CostReduction { filter, amount } => {
-                    if state.evaluate_requirement_on_card(filter, card, caster) {
-                        discount += amount;
-                    }
+    // Walk both the battlefield's static abilities (controller-scoped
+    // to the caster) AND the cast card's own static abilities. The
+    // latter handles "self-discount" spells like Ajani's Response
+    // ("{3} less if targets a tapped creature") whose discount is
+    // baked into the spell card itself rather than a permanent.
+    let bf_iter = state
+        .battlefield
+        .iter()
+        .filter(|src| src.controller == caster)
+        .flat_map(|src| src.definition.static_abilities.iter());
+    let self_iter = card.definition.static_abilities.iter();
+    for sa in bf_iter.chain(self_iter) {
+        match &sa.effect {
+            StaticEffect::CostReduction { filter, amount } => {
+                if state.evaluate_requirement_on_card(filter, card, caster) {
+                    discount += amount;
                 }
-                StaticEffect::CostReductionTargeting {
-                    spell_filter,
-                    target_filter,
-                    amount,
-                } => {
-                    if !state.evaluate_requirement_on_card(spell_filter, card, caster) {
-                        continue;
-                    }
-                    let Some(t) = target else { continue };
-                    if state.evaluate_requirement_static(target_filter, t, caster) {
-                        discount += amount;
-                    }
-                }
-                _ => {}
             }
+            StaticEffect::CostReductionTargeting {
+                spell_filter,
+                target_filter,
+                amount,
+            } => {
+                if !state.evaluate_requirement_on_card(spell_filter, card, caster) {
+                    continue;
+                }
+                let Some(t) = target else { continue };
+                if state.evaluate_requirement_static(target_filter, t, caster) {
+                    discount += amount;
+                }
+            }
+            StaticEffect::CostReductionScaled { filter, amount } => {
+                if !state.evaluate_requirement_on_card(filter, card, caster) {
+                    continue;
+                }
+                let ctx = crate::game::effects::EffectContext {
+                    controller: caster,
+                    source: None,
+                    targets: vec![],
+                    trigger_source: None,
+                    mode: 0,
+                    x_value: 0,
+                    converged_value: 0,
+                    cast_face: crate::game::types::CastFace::Front,
+                };
+                let scaled = state.evaluate_value(amount, &ctx).max(0) as u32;
+                discount = discount.saturating_add(scaled);
+            }
+            _ => {}
         }
     }
     discount

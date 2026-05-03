@@ -1714,7 +1714,11 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             // CostReductionTargeting is read at cast time by
             // `cost_reduction_for_spell` (Killian, Ink Duelist's
             // target-aware discount) — not a continuous-layer effect.
-            | StaticEffect::CostReductionTargeting { .. } => vec![],
+            | StaticEffect::CostReductionTargeting { .. }
+            // CostReductionScaled is read at cast time by
+            // `cost_reduction_for_spell` (Witherbloom's Affinity for
+            // creatures, etc.) — not a continuous-layer effect.
+            | StaticEffect::CostReductionScaled { .. } => vec![],
         })
         .collect()
 }
