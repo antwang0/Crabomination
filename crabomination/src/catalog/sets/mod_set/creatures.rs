@@ -122,6 +122,7 @@ pub fn sylvan_caryatid() -> CardDefinition {
             sac_cost: false,
             condition: None,
             life_cost: 0,
+            exile_gy_cost: 0,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -276,6 +277,7 @@ pub fn loran_of_the_third_path() -> CardDefinition {
             sac_cost: false,
             condition: None,
             life_cost: 0,
+            exile_gy_cost: 0,
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(
@@ -423,6 +425,7 @@ pub fn cathar_commando() -> CardDefinition {
             sac_cost: true,
             condition: None,
             life_cost: 0,
+            exile_gy_cost: 0,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -470,6 +473,7 @@ pub fn haywire_mite() -> CardDefinition {
             sac_cost: true,
             condition: None,
             life_cost: 0,
+            exile_gy_cost: 0,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -846,6 +850,7 @@ pub fn sylvan_safekeeper() -> CardDefinition {
             sac_cost: false,
             condition: None,
             life_cost: 0,
+            exile_gy_cost: 0,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -907,6 +912,7 @@ pub fn grim_lavamancer() -> CardDefinition {
             sac_cost: false,
             condition: None,
             life_cost: 0,
+            exile_gy_cost: 0,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -1079,6 +1085,7 @@ pub fn heliod_sun_crowned() -> CardDefinition {
             sac_cost: false,
             condition: None,
             life_cost: 0,
+            exile_gy_cost: 0,
         }],
         triggered_abilities: vec![TriggeredAbility {
             // "Whenever you gain life, put a +1/+1 counter on target

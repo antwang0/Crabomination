@@ -1,6 +1,6 @@
 use super::*;
 use crate::card::{CardType, Keyword};
-use crate::effect::{Effect, ManaPayload};
+use crate::effect::{Effect, ManaPayload, ZoneDest};
 use crate::mana::{Color as ManaColor, ManaSymbol};
 
 /// Returns true if the given effect is purely a mana ability — only adds
@@ -293,6 +293,7 @@ impl GameState {
                     sac_cost: false,
                     condition: None,
             life_cost: 0,
+            exile_gy_cost: 0,
                 },
             ];
         }
@@ -1328,6 +1329,17 @@ impl GameState {
             return Err(GameError::InsufficientLife);
         }
 
+        // Pre-flight graveyard-exile-cost gate: reject if the
+        // controller's graveyard has fewer cards than required. Used
+        // by Lorehold Pledgemage's `{2}{R}{W}, Exile a card from your
+        // graveyard: +1/+1 EOT` and similar exile-from-gy-cost
+        // activations.
+        if ability.exile_gy_cost > 0
+            && self.players[p].graveyard.len() < ability.exile_gy_cost as usize
+        {
+            return Err(GameError::InsufficientGraveyard);
+        }
+
         // Snapshot pristine state before applying tap-cost so a failed mana
         // payment rolls back both the auto-tap of mana sources AND the
         // tap-cost on the source itself.
@@ -1372,6 +1384,35 @@ impl GameState {
         if ability.once_per_turn {
             if let Some(card) = self.battlefield.iter_mut().find(|c| c.id == card_id) {
                 card.once_per_turn_used.push(ability_index);
+            }
+        }
+
+        // Exile-from-graveyard cost: with tap, mana, and life costs
+        // paid, exile the controller's oldest `exile_gy_cost` cards
+        // from their graveyard. Auto-pick is the oldest cards (gy
+        // index 0..N) — same heuristic the auto-decider uses for
+        // similar cost picks. Emits CardLeftGraveyard for each pick
+        // so Strixhaven gy-leave payoffs trigger.
+        if ability.exile_gy_cost > 0 {
+            let n = ability.exile_gy_cost as usize;
+            let picked: Vec<CardId> = self.players[p]
+                .graveyard
+                .iter()
+                .take(n)
+                .map(|c| c.id)
+                .collect();
+            for cid in picked {
+                let ctx = crate::game::effects::EffectContext {
+                    controller: p,
+                    source: Some(card_id),
+                    targets: vec![],
+                    trigger_source: None,
+                    mode: 0,
+                    x_value: 0,
+                    converged_value: 0,
+                    cast_face: crate::game::types::CastFace::Front,
+                };
+                self.move_card_to(cid, &ZoneDest::Exile, &ctx, &mut events);
             }
         }
 

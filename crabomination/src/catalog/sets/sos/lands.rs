@@ -35,6 +35,7 @@ fn school_land(
         sac_cost: false,
         condition: None,
         life_cost: 0,
+        exile_gy_cost: 0,
     };
     CardDefinition {
         name,
@@ -161,6 +162,7 @@ pub fn great_hall_of_the_biblioplex() -> CardDefinition {
         sac_cost: false,
         condition: None,
         life_cost: 1,
+        exile_gy_cost: 0,
     };
     CardDefinition {
         name: "Great Hall of the Biblioplex",

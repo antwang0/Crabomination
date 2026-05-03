@@ -108,6 +108,7 @@ pub fn beledros_witherbloom() -> CardDefinition {
             sorcery_speed: true,
             condition: None,
             life_cost: 10,
+            exile_gy_cost: 0,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],

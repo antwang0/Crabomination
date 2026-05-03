@@ -7,6 +7,95 @@ See `CUBE_FEATURES.md` (cube-card implementation status) and
 
 ## Recent additions
 
+- ✅ **Push XXXIV (2026-05-03)**: 2 STX 🟡 → ✅ promotions + 9 new cube
+  cards + 2 engine primitives + 1 UI label. Tests at 1306 (was 1292;
+  +14 net).
+  - **Engine: `ActivatedAbility::exile_gy_cost: u32`** — pre-flight
+    gate rejects with the new `GameError::InsufficientGraveyard`
+    when the controller has fewer cards than the cost requires. After
+    tap/mana/life payment, the engine picks the oldest gy cards and
+    moves them to exile via `move_card_to`. Each pick fires
+    `CardLeftGraveyard` so SOS gy-leave payoffs trigger off the cost.
+    `#[serde(default)]` on the new field keeps snapshot wire format
+    back-compat. Used by **Lorehold Pledgemage** (🟡 → ✅).
+  - **Engine: `Effect::GainControl` is now Duration-aware** —
+    refactored from a permanent-flip stub to a Layer-2 continuous
+    effect (`Modification::ChangeController`) that honors the
+    `Duration` field. EOT/EndOfCombat → `UntilEndOfTurn`,
+    UntilNextTurn/UntilYourNextUntap → `UntilNextTurn`, Permanent →
+    `Indefinite`. The cleanup step's `expire_end_of_turn_effects`
+    drops the EOT bindings, restoring the original controller. Used
+    by **Mascot Interception** (🟡 → ✅).
+  - **Engine: post-move filter introspection** —
+    `evaluate_requirement_static` now walks **hands and libraries**
+    as a fallback for card-id lookups (in addition to the existing
+    battlefield → graveyards → exile → stack chain). Powers trigger
+    filters that fire after a card has already been moved out of
+    the graveyard — Murktide Regent's "instant or sorcery card left
+    your gy" trigger evaluates the filter after Zealous Lorecaster
+    has returned the bolt to hand.
+  - **9 new cube / MH2 cards** (`catalog::sets::decks::modern`):
+    Subtlety, Monastery Swiftspear, Wild Nacatl, Seasoned Pyromancer,
+    Murktide Regent, Faerie Mastermind, Fury, Young Pyromancer, Grief,
+    Sage of the Falls.
+  - **UI improvement**: `ability_cost_label` (server view) now renders
+    the new `exile_gy_cost` field as printed-text "Exile a card from
+    your graveyard" / "Exile N cards from your graveyard", mirroring
+    the existing `sac_cost` / `life_cost` rendering.
+  - **14 new tests**: 5 STX promotion tests (Pledgemage activate +
+    reject / Mascot steal + revert), 9 cube-card tests (one per new
+    card + body sanity for vanilla bodies), 1 view test
+    (`ability_cost_label_renders_exile_gy_cost`).
+
+## Future work — engine/UI suggestions surfaced by push XXXIV
+
+- **`Effect::GrantKeyword` should honor its `duration` field**
+  (currently mutates `card.definition.keywords` directly,
+  irrespective of the `duration: Duration::EndOfTurn` argument).
+  The fix is to migrate the resolution arm to push a Layer-6
+  `ContinuousEffect { modification: AddKeyword(_), duration:
+  EffectDuration::UntilEndOfTurn, … }` (mirroring how
+  `Effect::GainControl` was just refactored). This would close the
+  haste-grant-on-Mascot-Interception gap (Layer-2 control change
+  expires correctly at Cleanup, but the haste grant doesn't —
+  documented in the
+  `mascot_interception_control_reverts_at_end_of_turn` test).
+  Touches every `Keyword::DoubleStrike`/`Haste`/`CantBlock`/etc.
+  granted-EOT path, so a careful diff is required: the existing
+  ETB-pump-and-grant family (Augusta, Storm-Kiln Artist, Eager
+  First-Year, etc.) shouldn't change behaviour mid-turn — only the
+  cleanup-step revert behaviour gets fixed.
+
+- **`ActivatedAbility::exile_gy_cost` interactive picker** — the
+  current implementation auto-picks the oldest cards in the
+  controller's graveyard (gy index `0..N`). Real MTG lets the
+  controller pick any N cards. A future `Decision::PickFromZone`
+  variant + UI prompt would close the gap; for now the auto-pick
+  matches the auto-decider's "least-valuable card first" heuristic.
+
+- **`Effect::GainControl` interactive Duration prompt** — the new
+  Duration-aware GainControl honors EOT, but the Threaten / Bribery
+  / Mind Control family also needs:
+  - **Bribery's "from opp's library" target prompt** — needs a
+    new `Selector::OpponentLibraryCreature` + `move_card_to`
+    walking the *opp's* library, then placing under the caster's
+    control.
+  - **"For as long as you control X" duration** — `Duration::
+    WhileSourceOnBattlefield` would suffice via the existing
+    `EffectDuration::WhileSourceOnBattlefield` mapping; just needs
+    the card factory to wire it.
+
+- **Hands & libraries as filter-eval lookup fallback** (push XXXIV
+  shipped this) — opens up trigger filters like "exile every
+  artifact card that left your graveyard this turn" where the
+  card may end up in any zone. Future improvement: a single
+  `find_card_anywhere(cid)` helper that consolidates the now-five-
+  zone fallback chain (battlefield, graveyards, exile, hands,
+  libraries, stack). Hot path for `evaluate_requirement_static`,
+  so the fallback chain order matters for performance — battlefield
+  first (the most common case), exile / graveyards second,
+  hands / libraries last.
+
 - ✅ **Push XXXIII (2026-05-03)**: 8 promotions (3 STX 2021 + 5 SOS) +
   `effect::shortcut::any_target()` helper + UI "any target" label arm
   + sign-aware Pump/Shrink label split. Tests at 1292 (was 1279; +13

@@ -9993,3 +9993,248 @@ fn heated_debate_auto_target_falls_through_when_no_lethal() {
     assert!(matches!(target, Some(Target::Permanent(t)) if t == big1 || t == _big2),
         "Both targets lethal — picker returns one of them");
 }
+
+// ── Push XXXIV: 6 new MH2 / cube cards ─────────────────────────────────────
+
+#[test]
+fn subtlety_returns_target_creature_to_top_of_owner_library() {
+    let mut g = two_player_game();
+    // Opponent's Bear is on the battlefield — Subtlety bounces it to top.
+    let opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(opp_bear);
+    let lib_before = g.players[1].library.len();
+
+    let id = g.add_card_to_hand(0, catalog::subtlety());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(opp_bear)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Subtlety castable for {3}{U}{U}");
+    drain_stack(&mut g);
+
+    // Bear should no longer be on the battlefield.
+    assert!(!g.battlefield.iter().any(|c| c.id == opp_bear),
+        "Bear should be returned from battlefield");
+    // Bear should be on top of opp's library (last inserted at front).
+    assert_eq!(g.players[1].library.len(), lib_before + 1);
+    assert_eq!(g.players[1].library[0].id, opp_bear,
+        "Bear should be on top of P1's library");
+    // Subtlety itself is on the battlefield (3/3 Flying Flash).
+    let sub = g.battlefield.iter().find(|c| c.id == id).expect("Subtlety entered the bf");
+    assert_eq!(sub.power(), 3);
+    assert_eq!(sub.toughness(), 3);
+}
+
+#[test]
+fn monastery_swiftspear_is_a_one_drop_with_haste_and_prowess() {
+    use crate::card::Keyword;
+    let s = catalog::monastery_swiftspear();
+    assert_eq!(s.power, 1);
+    assert_eq!(s.toughness, 2);
+    assert!(s.keywords.contains(&Keyword::Haste));
+    assert!(s.keywords.contains(&Keyword::Prowess));
+    assert_eq!(s.cost.symbols.len(), 1, "Swiftspear is a one-drop");
+}
+
+#[test]
+fn wild_nacatl_ships_as_one_one_green() {
+    let n = catalog::wild_nacatl();
+    assert_eq!(n.power, 1);
+    assert_eq!(n.toughness, 1);
+    assert_eq!(n.card_types, vec![CardType::Creature]);
+    assert!(n.keywords.is_empty(),
+        "Wild Nacatl ships as a vanilla 1/1 — Mountain/Plains lord effects pending");
+}
+
+#[test]
+fn seasoned_pyromancer_etb_loots_and_creates_two_elementals() {
+    let mut g = two_player_game();
+    // Seed 3 cards to draw + 2 cards in hand to discard.
+    for _ in 0..5 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let _filler1 = g.add_card_to_hand(0, catalog::island());
+    let _filler2 = g.add_card_to_hand(0, catalog::island());
+    let id = g.add_card_to_hand(0, catalog::seasoned_pyromancer());
+    let hand_before = g.players[0].hand.len();
+    let lib_before = g.players[0].library.len();
+
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Seasoned Pyromancer castable for {1}{R}{R}");
+    drain_stack(&mut g);
+
+    // Hand: -1 (cast Pyromancer) -2 (discard) +2 (draw) = -1 net.
+    assert_eq!(g.players[0].hand.len(), hand_before - 1,
+        "Loot should net -1 hand size (cast cost)");
+    // Library: -2 (drawn) = -2.
+    assert_eq!(g.players[0].library.len(), lib_before - 2);
+    // Two Elemental tokens minted.
+    let tokens: Vec<_> = g.battlefield.iter()
+        .filter(|c| c.is_token && c.definition.name == "Elemental")
+        .collect();
+    assert_eq!(tokens.len(), 2, "Should mint 2 Elemental tokens");
+}
+
+#[test]
+fn murktide_regent_grows_when_instants_leave_graveyard() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    // Murktide on the battlefield + a Lightning Bolt in our graveyard.
+    let mt = g.add_card_to_battlefield(0, catalog::murktide_regent());
+    let _bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    g.clear_sickness(mt);
+    let counters_before = g.battlefield_find(mt).unwrap()
+        .counter_count(CounterType::PlusOnePlusOne);
+
+    // Cast a Zealous Lorecaster to exile a card from gy → fires the
+    // CardLeftGraveyard trigger end-to-end (mirrors the Spirit Mascot
+    // test pattern in tests/sos.rs).
+    let lor_id = g.add_card_to_hand(0, catalog::zealous_lorecaster());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(5);
+    g.perform_action(GameAction::CastSpell {
+        card_id: lor_id, target: None, mode: None, x_value: None,
+    })
+    .expect("Zealous Lorecaster castable for {5}{R}");
+    drain_stack(&mut g);
+
+    let counters_after = g.battlefield_find(mt).unwrap()
+        .counter_count(CounterType::PlusOnePlusOne);
+    assert!(
+        counters_after > counters_before,
+        "Bolt leaving gy should put a +1/+1 counter on Murktide \
+         (before={counters_before}, after={counters_after})",
+    );
+}
+
+#[test]
+fn faerie_mastermind_draws_when_opp_draws() {
+    let mut g = two_player_game();
+    let _fm = g.add_card_to_battlefield(0, catalog::faerie_mastermind());
+    // Stock our library so the Mastermind's draw trigger has a card.
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    // Stock opp's library so they can draw via Ponder.
+    for _ in 0..3 {
+        g.add_card_to_library(1, catalog::island());
+    }
+    let ponder = g.add_card_to_hand(1, catalog::ponder());
+    g.players[1].mana_pool.add(Color::Blue, 1);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    let our_hand_before = g.players[0].hand.len();
+
+    // Opp casts Ponder → resolves with a draw → Mastermind triggers.
+    g.perform_action(GameAction::CastSpell {
+        card_id: ponder, target: None, mode: None, x_value: None,
+    })
+    .expect("Ponder castable for {U}");
+    drain_stack(&mut g);
+
+    // Our hand should be one larger (Mastermind triggered on opp's
+    // Ponder draw — note the Mastermind doesn't have the "except
+    // first card on their turn" gate yet, so it fires on every draw).
+    assert!(g.players[0].hand.len() > our_hand_before,
+        "Faerie Mastermind should draw us a card on opp's Ponder-driven draw");
+}
+
+#[test]
+fn fury_etb_deals_4_damage_to_target_creature() {
+    let mut g = two_player_game();
+    // 4-toughness opp creature dies to Fury's 4 damage.
+    let opp = g.add_card_to_battlefield(1, catalog::gnarled_professor());  // 4/4 reach
+    g.clear_sickness(opp);
+
+    let id = g.add_card_to_hand(0, catalog::fury());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(opp)), mode: None, x_value: None,
+    })
+    .expect("Fury castable for {2}{R}{R}");
+    drain_stack(&mut g);
+
+    // The 4/4 should be destroyed by 4 damage.
+    assert!(!g.battlefield.iter().any(|c| c.id == opp),
+        "Fury's 4 damage should kill the 4/4");
+}
+
+#[test]
+fn young_pyromancer_creates_elemental_on_instant_cast() {
+    let mut g = two_player_game();
+    let _yp = g.add_card_to_battlefield(0, catalog::young_pyromancer());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let tokens_before = g.battlefield.iter()
+        .filter(|c| c.is_token && c.definition.name == "Elemental")
+        .count();
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)), mode: None, x_value: None,
+    })
+    .expect("Bolt castable for {R}");
+    drain_stack(&mut g);
+
+    let tokens_after = g.battlefield.iter()
+        .filter(|c| c.is_token && c.definition.name == "Elemental")
+        .count();
+    assert_eq!(tokens_after, tokens_before + 1,
+        "Young Pyromancer should mint a 1/1 Elemental on instant cast");
+}
+
+#[test]
+fn grief_etb_makes_opp_discard_a_nonland() {
+    let mut g = two_player_game();
+    // Give P1 some cards in hand — a creature + a land. Grief picks
+    // the nonland (creature).
+    let _opp_creature = g.add_card_to_hand(1, catalog::grizzly_bears());
+    let _opp_land = g.add_card_to_hand(1, catalog::forest());
+    let opp_hand_before = g.players[1].hand.len();
+    let opp_gy_before = g.players[1].graveyard.len();
+
+    let id = g.add_card_to_hand(0, catalog::grief());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Grief castable for {2}{B}");
+    drain_stack(&mut g);
+
+    // Opp should have discarded one card (a nonland — creature picked).
+    assert_eq!(g.players[1].hand.len(), opp_hand_before - 1,
+        "Grief should make opp discard a card");
+    assert_eq!(g.players[1].graveyard.len(), opp_gy_before + 1,
+        "Discarded card should be in opp's graveyard");
+    // The discarded card should not be the land.
+    assert!(g.players[1].graveyard.iter().any(|c| c.definition.is_creature()),
+        "Grief should pick the nonland (creature) over the land");
+}
+
+#[test]
+fn sage_of_the_falls_definition_has_draw_trigger_with_handsize_gate() {
+    use crate::card::Predicate;
+    use crate::effect::Value;
+    let s = catalog::sage_of_the_falls();
+    assert_eq!(s.power, 2);
+    assert_eq!(s.toughness, 4);
+    assert!(s.keywords.contains(&Keyword::Flying));
+    // Trigger is gated on HandSizeOf(You) ≥ 5 — verify the predicate
+    // shape so the gate is wired correctly even though the auto-decider
+    // declines the may-do half by default.
+    let trigger = s.triggered_abilities.first().expect("Sage has a trigger");
+    let filter = trigger.event.filter.as_ref().expect("trigger gated");
+    match filter {
+        Predicate::ValueAtLeast(_, Value::Const(5)) => {}
+        other => panic!("Sage trigger should be gated on HandSize ≥ 5, got {:?}", other),
+    }
+}

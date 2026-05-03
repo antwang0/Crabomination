@@ -94,12 +94,13 @@ pub fn lorehold_apprentice() -> CardDefinition {
 /// Exile a card from your graveyard: This creature gets +1/+1 until end
 /// of turn."
 ///
-/// 🟡 The activated ability requires "exile a card from your graveyard"
-/// as part of its cost — there's no `exile_gy_cost` flag on
-/// `ActivatedAbility` (we have `tap_cost` and `sac_cost` only). The
-/// pumped body still ships; the activation is omitted until the cost
-/// primitive lands. Tracked in TODO.md.
+/// ✅ Push XXXIV: activation now wires via the new
+/// `ActivatedAbility::exile_gy_cost: u32` field — `{2}{R}{W}, exile one
+/// card from your graveyard: +1/+1 EOT`. Pre-flight gate rejects with
+/// `GameError::InsufficientGraveyard` when the controller has 0 cards
+/// in their graveyard. Auto-pick is the oldest gy card (index 0).
 pub fn lorehold_pledgemage() -> CardDefinition {
+    use crate::effect::Duration;
     CardDefinition {
         name: "Lorehold Pledgemage",
         cost: cost(&[generic(1), r(), w()]),
@@ -113,7 +114,22 @@ pub fn lorehold_pledgemage() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Reach],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: false,
+            mana_cost: cost(&[generic(2), r(), w()]),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(1),
+                toughness: Value::Const(1),
+                duration: Duration::EndOfTurn,
+            },
+            once_per_turn: false,
+            sorcery_speed: false,
+            sac_cost: false,
+            condition: None,
+            life_cost: 0,
+            exile_gy_cost: 1,
+        }],
         triggered_abilities: vec![],
         static_abilities: vec![],
         base_loyalty: 0,
@@ -502,6 +518,7 @@ pub fn plargg_dean_of_chaos() -> CardDefinition {
             sac_cost: false,
             condition: None,
             life_cost: 0,
+            exile_gy_cost: 0,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -748,19 +765,17 @@ pub fn hofri_ghostforge() -> CardDefinition {
 /// "Gain control of target creature an opponent controls until end of turn.
 ///  Untap that creature. It gains haste until end of turn."
 ///
-/// Push XXX: 🟡. The "gain control until EOT + untap + haste" effect is
-/// the printed "Threaten / Act of Treason" template. Engine has no
-/// `Effect::GainControl` primitive yet (same gap as Tempted by the
-/// Oriq's "gain control" approximation, which collapses to Destroy ≤3-
-/// MV). For Mascot Interception we keep the body but ship a destroy-
-/// ish substitute on a single creature target — collapses to a
-/// {2}{R}{W} 1-for-1 removal effect at instant speed. The "haste this
-/// turn" rider is a no-op since the targeted creature is destroyed not
-/// stolen.
-///
-/// **TODO**: when `Effect::GainControl` lands, replace the destroy with
-/// a transient steal + untap + haste rider for full fidelity.
+/// ✅ Push XXXIV: the printed "Threaten / Act of Treason" template now
+/// wires faithfully via `Effect::GainControl` (push XXXIV — turned the
+/// previously-stub `Effect::GainControl` arm into a Layer-2 continuous
+/// effect with `EffectDuration::UntilEndOfTurn`, so control reverts at
+/// Cleanup). The body is `Seq([GainControl, Untap, GrantKeyword(Haste,
+/// EOT)])` — control change first so the untap and haste land on the
+/// freshly-stolen creature. EOT cleanup drops the control change *and*
+/// the haste grant; the original controller regains the creature
+/// untapped at end of turn.
 pub fn mascot_interception() -> CardDefinition {
+    use crate::effect::Duration;
     CardDefinition {
         name: "Mascot Interception",
         cost: cost(&[generic(2), r(), w()]),
@@ -770,12 +785,24 @@ pub fn mascot_interception() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![],
-        effect: Effect::Destroy {
-            what: target_filtered(
-                SelectionRequirement::Creature
-                    .and(SelectionRequirement::ControlledByOpponent),
-            ),
-        },
+        effect: Effect::Seq(vec![
+            Effect::GainControl {
+                what: target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByOpponent),
+                ),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::Untap {
+                what: Selector::Target(0),
+                up_to: None,
+            },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::Haste,
+                duration: Duration::EndOfTurn,
+            },
+        ]),
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],

@@ -1504,6 +1504,20 @@ pub struct ActivatedAbility {
     /// initialisations pick up the new field automatically.
     #[serde(default)]
     pub life_cost: u32,
+    /// Number of cards from your graveyard that must be exiled as part
+    /// of the activation cost. Activation is rejected with
+    /// `GameError::InsufficientResources` when the controller's
+    /// graveyard has fewer cards than `exile_gy_cost`. Cards are picked
+    /// in graveyard order (oldest first); an auto-decider can pick the
+    /// least-valuable cards. Used by activated abilities like Lorehold
+    /// Pledgemage's `{2}{R}{W}, Exile a card from your graveyard: This
+    /// creature gets +1/+1 until end of turn.`, Crucible of Worlds-
+    /// style flashback proxies, etc.
+    ///
+    /// Defaults to 0 via `#[serde(default)]` so existing literal
+    /// initialisations pick up the new field automatically.
+    #[serde(default)]
+    pub exile_gy_cost: u32,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -150,6 +150,7 @@ pub fn serum_powder() -> CardDefinition {
             sac_cost: false,
             condition: None,
             life_cost: 0,
+            exile_gy_cost: 0,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],

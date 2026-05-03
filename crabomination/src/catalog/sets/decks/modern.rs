@@ -524,6 +524,7 @@ pub fn putrid_imp() -> CardDefinition {
             sac_cost: false,
             condition: None,
             life_cost: 0,
+            exile_gy_cost: 0,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -682,6 +683,7 @@ pub fn karakas() -> CardDefinition {
                 sac_cost: false,
                 condition: None,
             life_cost: 0,
+            exile_gy_cost: 0,
             },
             // {T}: Return target legendary creature to its owner's hand.
             ActivatedAbility {
@@ -699,6 +701,7 @@ pub fn karakas() -> CardDefinition {
                 sac_cost: false,
                 condition: None,
             life_cost: 0,
+            exile_gy_cost: 0,
             },
         ],
         triggered_abilities: vec![],
@@ -999,6 +1002,7 @@ pub fn lotus_petal() -> CardDefinition {
             sac_cost: true,
             condition: None,
             life_cost: 0,
+            exile_gy_cost: 0,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -1045,6 +1049,7 @@ pub fn tormods_crypt() -> CardDefinition {
             sac_cost: true,
             condition: None,
             life_cost: 0,
+            exile_gy_cost: 0,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -1097,6 +1102,7 @@ pub fn mishras_bauble() -> CardDefinition {
             sac_cost: true,
             condition: None,
             life_cost: 0,
+            exile_gy_cost: 0,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -1186,6 +1192,7 @@ pub fn qasali_pridemage() -> CardDefinition {
             sac_cost: true,
             condition: None,
             life_cost: 0,
+            exile_gy_cost: 0,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -1243,6 +1250,7 @@ pub fn greater_good() -> CardDefinition {
             sac_cost: false,
             condition: None,
             life_cost: 0,
+            exile_gy_cost: 0,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -1306,6 +1314,7 @@ pub fn bojuka_bog() -> CardDefinition {
             sac_cost: false,
             condition: None,
             life_cost: 0,
+            exile_gy_cost: 0,
         }],
         triggered_abilities: vec![etb],
         static_abilities: vec![],
@@ -1388,6 +1397,7 @@ pub fn goblin_bombardment() -> CardDefinition {
             sac_cost: false,
             condition: None,
             life_cost: 0,
+            exile_gy_cost: 0,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -1433,6 +1443,7 @@ pub fn wasteland() -> CardDefinition {
                 sac_cost: false,
                 condition: None,
             life_cost: 0,
+            exile_gy_cost: 0,
             },
             ActivatedAbility {
                 tap_cost: true,
@@ -1448,6 +1459,7 @@ pub fn wasteland() -> CardDefinition {
                 sac_cost: true,
                 condition: None,
             life_cost: 0,
+            exile_gy_cost: 0,
             },
         ],
         triggered_abilities: vec![],
@@ -1489,6 +1501,7 @@ pub fn strip_mine() -> CardDefinition {
                 sac_cost: false,
                 condition: None,
             life_cost: 0,
+            exile_gy_cost: 0,
             },
             ActivatedAbility {
                 tap_cost: true,
@@ -1501,6 +1514,7 @@ pub fn strip_mine() -> CardDefinition {
                 sac_cost: true,
                 condition: None,
             life_cost: 0,
+            exile_gy_cost: 0,
             },
         ],
         triggered_abilities: vec![],
@@ -1899,6 +1913,7 @@ pub fn fanatic_of_rhonas() -> CardDefinition {
             sac_cost: false,
             condition: None,
             life_cost: 0,
+            exile_gy_cost: 0,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -1984,6 +1999,7 @@ pub fn orcish_lumberjack() -> CardDefinition {
             sac_cost: false,
             condition: None,
             life_cost: 0,
+            exile_gy_cost: 0,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -2153,6 +2169,7 @@ pub fn talisman_of_progress() -> CardDefinition {
         sac_cost: false,
         condition: None,
             life_cost: 0,
+            exile_gy_cost: 0,
     };
     CardDefinition {
         name: "Talisman of Progress",
@@ -2178,6 +2195,7 @@ pub fn talisman_of_progress() -> CardDefinition {
                 sac_cost: false,
                 condition: None,
             life_cost: 0,
+            exile_gy_cost: 0,
             },
             make_color(Color::White),
             make_color(Color::Blue),
@@ -2212,6 +2230,7 @@ pub fn talisman_of_dominance() -> CardDefinition {
         sac_cost: false,
         condition: None,
             life_cost: 0,
+            exile_gy_cost: 0,
     };
     CardDefinition {
         name: "Talisman of Dominance",
@@ -2236,6 +2255,7 @@ pub fn talisman_of_dominance() -> CardDefinition {
                 sac_cost: false,
                 condition: None,
             life_cost: 0,
+            exile_gy_cost: 0,
             },
             make_color(Color::Blue),
             make_color(Color::Black),
@@ -2310,6 +2330,7 @@ fn talisman_cycle(name: &'static str, c1: Color, c2: Color) -> CardDefinition {
         sac_cost: false,
         condition: None,
             life_cost: 0,
+            exile_gy_cost: 0,
     };
     CardDefinition {
         name,
@@ -2334,6 +2355,7 @@ fn talisman_cycle(name: &'static str, c1: Color, c2: Color) -> CardDefinition {
                 sac_cost: false,
                 condition: None,
             life_cost: 0,
+            exile_gy_cost: 0,
             },
             make_color(c1),
             make_color(c2),
@@ -4057,6 +4079,7 @@ pub fn sakura_tribe_elder() -> CardDefinition {
             sac_cost: true,
             condition: None,
             life_cost: 0,
+            exile_gy_cost: 0,
         }],
         ..Default::default()
     }
@@ -4121,6 +4144,7 @@ pub fn elvish_mystic() -> CardDefinition {
             sac_cost: false,
             condition: None,
             life_cost: 0,
+            exile_gy_cost: 0,
         }],
         ..Default::default()
     }
@@ -4455,6 +4479,7 @@ pub fn wild_mongrel() -> CardDefinition {
             sac_cost: false,
             condition: None,
             life_cost: 0,
+            exile_gy_cost: 0,
         }],
         ..Default::default()
     }
@@ -4540,6 +4565,7 @@ pub fn glimmerpost() -> CardDefinition {
             sac_cost: false,
             condition: None,
             life_cost: 0,
+            exile_gy_cost: 0,
         }],
         triggered_abilities: vec![
             modern_etb_tap(),
@@ -4584,6 +4610,7 @@ pub fn cloudpost() -> CardDefinition {
             sac_cost: false,
             condition: None,
             life_cost: 0,
+            exile_gy_cost: 0,
         }],
         triggered_abilities: vec![modern_etb_tap()],
         ..Default::default()
@@ -4628,6 +4655,7 @@ pub fn lotus_field() -> CardDefinition {
             sac_cost: false,
             condition: None,
             life_cost: 0,
+            exile_gy_cost: 0,
         }],
         triggered_abilities: vec![etb],
         ..Default::default()
@@ -4663,6 +4691,7 @@ pub fn evolving_wilds() -> CardDefinition {
             sac_cost: true,
             condition: None,
             life_cost: 0,
+            exile_gy_cost: 0,
         }],
         triggered_abilities: vec![modern_etb_tap()],
         ..Default::default()
@@ -4704,6 +4733,7 @@ fn bridge_land(
             sac_cost: false,
             condition: None,
             life_cost: 0,
+            exile_gy_cost: 0,
         }],
         triggered_abilities: vec![modern_etb_tap()],
         ..Default::default()
@@ -4796,6 +4826,7 @@ pub fn coalition_relic() -> CardDefinition {
             sac_cost: false,
             condition: None,
             life_cost: 0,
+            exile_gy_cost: 0,
         }],
         ..Default::default()
     }
@@ -4974,6 +5005,7 @@ pub fn krark_clan_ironworks() -> CardDefinition {
             sac_cost: false,
             condition: None,
             life_cost: 0,
+            exile_gy_cost: 0,
         }],
         ..Default::default()
     }
@@ -5095,6 +5127,7 @@ pub fn ghost_vacuum() -> CardDefinition {
             sac_cost: false,
             condition: None,
             life_cost: 0,
+            exile_gy_cost: 0,
         }],
         ..Default::default()
     }
@@ -5550,6 +5583,7 @@ pub fn elvish_reclaimer() -> CardDefinition {
             sac_cost: false,
             condition: None,
             life_cost: 0,
+            exile_gy_cost: 0,
         }],
         ..Default::default()
     }
@@ -5594,6 +5628,7 @@ pub fn rofellos_llanowar_emissary() -> CardDefinition {
             sac_cost: false,
             condition: None,
             life_cost: 0,
+            exile_gy_cost: 0,
         }],
         ..Default::default()
     }
@@ -5838,6 +5873,7 @@ pub fn pentad_prism() -> CardDefinition {
             sac_cost: false,
             condition: None,
             life_cost: 0,
+            exile_gy_cost: 0,
         }],
         ..Default::default()
     }
@@ -6154,6 +6190,7 @@ pub fn mortuary_mire() -> CardDefinition {
             sac_cost: false,
             condition: None,
             life_cost: 0,
+            exile_gy_cost: 0,
         }],
         ..Default::default()
     }
@@ -6185,6 +6222,7 @@ pub fn geier_reach_sanitarium() -> CardDefinition {
                 sac_cost: false,
                 condition: None,
             life_cost: 0,
+            exile_gy_cost: 0,
             },
             ActivatedAbility {
                 tap_cost: true,
@@ -6205,6 +6243,7 @@ pub fn geier_reach_sanitarium() -> CardDefinition {
                 sac_cost: false,
                 condition: None,
             life_cost: 0,
+            exile_gy_cost: 0,
             },
         ],
         ..Default::default()
@@ -6858,6 +6897,7 @@ pub fn fume_spitter() -> CardDefinition {
             sac_cost: true,
             condition: None,
             life_cost: 0,
+            exile_gy_cost: 0,
         }],
         ..Default::default()
     }
@@ -7034,6 +7074,7 @@ pub fn cursecatcher() -> CardDefinition {
             sac_cost: true,
             condition: None,
             life_cost: 0,
+            exile_gy_cost: 0,
         }],
         ..Default::default()
     }
@@ -7114,6 +7155,7 @@ pub fn persistent_petitioners() -> CardDefinition {
             sac_cost: false,
             condition: None,
             life_cost: 0,
+            exile_gy_cost: 0,
         }],
         ..Default::default()
     }
@@ -8201,6 +8243,453 @@ pub fn tibalts_trickery() -> CardDefinition {
         effect: Effect::CounterSpell {
             what: target_filtered(SelectionRequirement::IsSpellOnStack),
         },
+        ..Default::default()
+    }
+}
+
+// ── Subtlety — Modern Horizons 2 elemental incarnation ──────────────────────
+
+/// Subtlety — {3}{U}{U}, 3/3 Elemental Incarnation. "Flash. Flying. When
+/// Subtlety enters the battlefield, return target creature or planeswalker
+/// to its owner's library second from the top. Evoke—Exile a blue card
+/// from your hand."
+///
+/// Push XXXIV: ETB tucks a target creature/planeswalker via
+/// `Effect::Move` to `ZoneDest::Library { who: OwnerOf(Target(0)),
+/// pos: Top }` (one position from top approximated as top — engine
+/// has no positional library insert primitive yet). The Evoke alt-
+/// cost (exile blue card) is omitted (alt-cost-by-pitch primitive
+/// gap, same as the existing Solitude / Endurance entries).
+pub fn subtlety() -> CardDefinition {
+    use crate::effect::LibraryPosition;
+    CardDefinition {
+        name: "Subtlety",
+        cost: cost(&[generic(3), u(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Incarnation],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying, Keyword::Flash],
+        effect: Effect::Noop,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Move {
+                what: target_filtered(
+                    SelectionRequirement::Creature
+                        .or(SelectionRequirement::Planeswalker),
+                ),
+                to: ZoneDest::Library {
+                    who: PlayerRef::OwnerOf(Box::new(Selector::Target(0))),
+                    pos: LibraryPosition::Top,
+                },
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+// ── Monastery Swiftspear — Khans of Tarkir / Modern staple ─────────────────
+
+/// Monastery Swiftspear — {R}, 1/2 Human Monk with Haste and Prowess.
+///
+/// Push XXXIV: simple body — Haste + Prowess keywords on a 1-drop. The
+/// engine's Prowess wiring is not yet first-class (no per-IS-cast +1/+0
+/// trigger primitive specific to Prowess), so the keyword is recorded
+/// for tooltip / future wiring but doesn't yet pump per cast. Body
+/// alone slots into UR Prowess shells / aggressive RDW.
+pub fn monastery_swiftspear() -> CardDefinition {
+    CardDefinition {
+        name: "Monastery Swiftspear",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Monk],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![Keyword::Haste, Keyword::Prowess],
+        effect: Effect::Noop,
+        ..Default::default()
+    }
+}
+
+// ── Wild Nacatl — Zendikar / Modern aggressive 1-drop ──────────────────────
+
+/// Wild Nacatl — {G}, 1/1 Cat Warrior. Printed: "Wild Nacatl gets +1/+1
+/// as long as you control a Mountain. / Wild Nacatl gets +1/+1 as long
+/// as you control a Plains."
+///
+/// Push XXXIV: ships as a vanilla 1/1 (the Mountain/Plains static lord
+/// effects need a `StaticEffect::SelfPumpIfLandcontrolled` primitive
+/// that doesn't exist yet — same gap as Steppe Lynx's "landfall +1/+0"
+/// rider). Body alone slots into Naya aggro shells; the lord effect is
+/// the dominant clause but the {G} 1/1 baseline is still legal.
+pub fn wild_nacatl() -> CardDefinition {
+    CardDefinition {
+        name: "Wild Nacatl",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Cat, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![],
+        effect: Effect::Noop,
+        ..Default::default()
+    }
+}
+
+// ── Seasoned Pyromancer — Modern Horizons / Modern staple ──────────────────
+
+/// Seasoned Pyromancer — {1}{R}{R}, 2/2 Human Shaman. "When this
+/// creature enters, discard up to two cards, then draw that many cards.
+/// For each nonland card discarded this way, create a 1/1 red Elemental
+/// creature token."
+///
+/// Push XXXIV: simplified to "discard 2 + draw 2 + create 2 elemental
+/// tokens" (the printed "for each nonland discarded" rider is
+/// approximated as "always 2 tokens" since engine has no
+/// `CardsDiscardedThisResolution` filter on token-creation count
+/// keyed by card-type). On a typical hand of nonlands, this matches
+/// the printed effect exactly. The graveyard ability ({3}{R},
+/// exile this from gy: each player discards one) is omitted (no
+/// cast-from-gy with `exile_self_cost` cost yet — same gap as
+/// Faithless Looting's flashback's exile-instead-of-grave rider).
+pub fn seasoned_pyromancer() -> CardDefinition {
+    use crate::card::{Subtypes as Subs, TokenDefinition};
+    let elemental_token = TokenDefinition {
+        name: "Elemental".into(),
+        power: 1,
+        toughness: 1,
+        keywords: vec![],
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Red],
+        supertypes: vec![],
+        subtypes: Subs {
+            creature_types: vec![CreatureType::Elemental],
+            ..Default::default()
+        },
+        activated_abilities: vec![],
+        triggered_abilities: vec![],
+    };
+    CardDefinition {
+        name: "Seasoned Pyromancer",
+        cost: cost(&[generic(1), r(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Shaman],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::Discard {
+                    who: Selector::You,
+                    amount: Value::Const(2),
+                    random: false,
+                },
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(2),
+                },
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(2),
+                    definition: elemental_token,
+                },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+// ── Murktide Regent — Modern Horizons 2 finisher ───────────────────────────
+
+/// Murktide Regent — {3}{U}{U}, 3/3 Dragon. "Delve. Flying. Murktide
+/// Regent enters the battlefield with a +1/+1 counter on it for each
+/// instant and sorcery card exiled with it. Whenever an instant or
+/// sorcery card leaves your graveyard, put a +1/+1 counter on Murktide
+/// Regent."
+///
+/// Push XXXIV: simplified — Delve isn't yet a first-class engine
+/// primitive (`alternative_cost: gy-pay-for-generic` gap), so the
+/// printed "exile up to N cards from your graveyard for {1}" alt
+/// payment is omitted. The card ships at full {3}{U}{U} cost as a 3/3
+/// Flying Dragon body. The graveyard-leave growth trigger fires on
+/// `EventKind::CardLeftGraveyard` filtered to instants / sorceries
+/// (uses the existing per-card emission framework — same shape as
+/// Spirit Mascot, Hardened Academic). The "ETB with N counters"
+/// rider is omitted (Delve dependency).
+pub fn murktide_regent() -> CardDefinition {
+    use crate::card::{CounterType, Predicate};
+    CardDefinition {
+        name: "Murktide Regent",
+        cost: cost(&[generic(3), u(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dragon],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::CardLeftGraveyard,
+                EventScope::YourControl,
+            )
+            .with_filter(Predicate::EntityMatches {
+                what: Selector::TriggerSource,
+                filter: SelectionRequirement::HasCardType(CardType::Instant)
+                    .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+            }),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+// ── Faerie Mastermind — March of the Machine Faerie ────────────────────────
+
+/// Faerie Mastermind — {1}{U}, 2/1 Faerie Rogue with Flash and Flying.
+/// "Whenever an opponent draws a card except for the first card they
+/// draw on their turn, you draw a card. {2}{U}, Sacrifice this
+/// creature: Draw a card."
+///
+/// Push XXXIV: the "draw extra" trigger is approximated as a fire on
+/// **every** opp `EventKind::CardDrawn` (the "except for the first
+/// draw on their turn" rider needs a per-turn "drew on their draw
+/// step" gate that doesn't exist yet — same approximation as Esper
+/// Sentinel's "once per turn" rider). The {2}{U}, Sac: draw 1
+/// activation is wired faithfully via `sac_cost: true`. Slots into
+/// blue-x card-advantage shells.
+pub fn faerie_mastermind() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Faerie Mastermind",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Faerie, CreatureType::Rogue],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Flying, Keyword::Flash],
+        effect: Effect::Noop,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CardDrawn, EventScope::OpponentControl),
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: false,
+            mana_cost: cost(&[generic(2), u()]),
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+            once_per_turn: false,
+            sorcery_speed: false,
+            sac_cost: true,
+            condition: None,
+            life_cost: 0,
+            exile_gy_cost: 0,
+        }],
+        ..Default::default()
+    }
+}
+
+// ── Young Pyromancer — M14 / Modern staple ─────────────────────────────────
+
+/// Young Pyromancer — {1}{R}, 2/1 Human Shaman. "Whenever you cast an
+/// instant or sorcery spell, create a 1/1 red Elemental creature
+/// token."
+///
+/// Push XXXIV: classic spellslinger payoff — token-on-IS-cast trigger
+/// via `magecraft()` shortcut (which fires on cast or copy of an
+/// instant/sorcery). The Elemental token shape matches the printed
+/// 1/1 red Elemental (no other abilities). Slots into UR Tempo /
+/// Mardu spellslinger shells.
+pub fn young_pyromancer() -> CardDefinition {
+    use crate::card::{Subtypes as Subs, TokenDefinition};
+    use crate::effect::shortcut::magecraft;
+    let elemental_token = TokenDefinition {
+        name: "Elemental".into(),
+        power: 1,
+        toughness: 1,
+        keywords: vec![],
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Red],
+        supertypes: vec![],
+        subtypes: Subs {
+            creature_types: vec![CreatureType::Elemental],
+            ..Default::default()
+        },
+        activated_abilities: vec![],
+        triggered_abilities: vec![],
+    };
+    CardDefinition {
+        name: "Young Pyromancer",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Shaman],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![],
+        effect: Effect::Noop,
+        triggered_abilities: vec![magecraft(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: elemental_token,
+        })],
+        ..Default::default()
+    }
+}
+
+// ── Grief — Modern Horizons 2 elemental incarnation ────────────────────────
+
+/// Grief — {2}{B}, 3/2 Elemental Incarnation with Menace. "When this
+/// creature enters, target opponent reveals their hand. You choose a
+/// nonland card from it. That player discards that card. / Evoke—
+/// Exile a black card from your hand."
+///
+/// Push XXXIV: ETB discard wired via `Effect::DiscardChosen` (same
+/// shape as Ravenous Chupacabra / Render Speechless's discard half).
+/// The Evoke alt-cost (exile a black card from hand) is omitted —
+/// ships at full {2}{B} mana cost. Body + ETB hand-strip alone is
+/// already a top-tier discard effect at {2}{B}.
+pub fn grief() -> CardDefinition {
+    CardDefinition {
+        name: "Grief",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Incarnation],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Menace],
+        effect: Effect::Noop,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::DiscardChosen {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                count: Value::Const(1),
+                filter: SelectionRequirement::Nonland,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+// ── Sage of the Falls — Modern Horizons 3 mill payoff ──────────────────────
+
+/// Sage of the Falls — {3}{U}, 2/4 Bird Fish. "Flying. Whenever you
+/// draw a card, if there are five or more cards in your hand, you may
+/// draw a card. If you do, discard a card."
+///
+/// Push XXXIV: simplified — the trigger fires on each draw and the
+/// "5+ in hand" gate uses `Predicate::ValueAtLeast(HandSizeOf(You),
+/// 5)`. The "you may" is collapsed (auto-decider answers no by
+/// default; tests can flip). The body wires `Seq([Draw 1, Discard
+/// 1])` once the gate passes. Slots into blue Tempo / Faerie shells.
+pub fn sage_of_the_falls() -> CardDefinition {
+    use crate::card::Predicate;
+    CardDefinition {
+        name: "Sage of the Falls",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bird, CreatureType::Fish],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CardDrawn, EventScope::YourControl)
+                .with_filter(Predicate::ValueAtLeast(
+                    Value::HandSizeOf(PlayerRef::You),
+                    Value::Const(5),
+                )),
+            effect: Effect::MayDo {
+                description: "Draw a card; if you do, discard a card.".into(),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::Const(1),
+                    },
+                    Effect::Discard {
+                        who: Selector::You,
+                        amount: Value::Const(1),
+                        random: false,
+                    },
+                ])),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+// ── Fury — Modern Horizons 2 elemental incarnation ─────────────────────────
+
+/// Fury — {2}{R}{R}, 3/3 Elemental Incarnation. "Double Strike. When
+/// this creature enters, it deals 4 damage divided as you choose among
+/// any number of target creatures and/or planeswalkers. Evoke—Exile a
+/// red card from your hand."
+///
+/// Push XXXIV: ETB simplified to "4 damage to a single target creature
+/// or planeswalker" (the printed "divided as you choose" rider is the
+/// same gap that bites Magma Opus / Sundering Stroke). The Evoke
+/// alt-cost is omitted (same pitch-cost gap as Solitude / Endurance).
+/// At full 4-mana body it's still a respectable 3/3 Double Strike +
+/// 4-damage burn package.
+pub fn fury() -> CardDefinition {
+    CardDefinition {
+        name: "Fury",
+        cost: cost(&[generic(2), r(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Incarnation],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::DoubleStrike],
+        effect: Effect::Noop,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature
+                        .or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::Const(4),
+            },
+        }],
         ..Default::default()
     }
 }

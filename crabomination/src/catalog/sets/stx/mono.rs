@@ -656,6 +656,7 @@ pub fn letter_of_acceptance() -> CardDefinition {
             sorcery_speed: false,
             condition: None,
             life_cost: 0,
+            exile_gy_cost: 0,
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -1549,6 +1550,7 @@ pub fn skyswimmer_koi() -> CardDefinition {
             sorcery_speed: false,
             condition: None,
             life_cost: 0,
+            exile_gy_cost: 0,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],

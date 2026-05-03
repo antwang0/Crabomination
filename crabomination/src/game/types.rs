@@ -518,4 +518,6 @@ pub enum GameError {
     NotEnoughLoyalty(CardId),
     #[error("Cannot pay this ability's life cost (would lose at or below 0 life)")]
     InsufficientLife,
+    #[error("Cannot pay graveyard exile cost (not enough cards in your graveyard)")]
+    InsufficientGraveyard,
 }

@@ -274,6 +274,7 @@ pub fn gemstone_mine() -> CardDefinition {
             sac_cost: false,
             condition: None,
             life_cost: 0,
+            exile_gy_cost: 0,
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -335,6 +336,7 @@ pub fn gemstone_caverns() -> CardDefinition {
                 sac_cost: false,
                 condition: None,
             life_cost: 0,
+            exile_gy_cost: 0,
             },
             // {T}, Remove a luck counter: Add one mana of any color.
             ActivatedAbility {
@@ -366,6 +368,7 @@ pub fn gemstone_caverns() -> CardDefinition {
                 sac_cost: false,
                 condition: None,
             life_cost: 0,
+            exile_gy_cost: 0,
             },
         ],
         triggered_abilities: vec![],
@@ -431,6 +434,7 @@ pub fn cavern_of_souls() -> CardDefinition {
             sac_cost: false,
             condition: None,
             life_cost: 0,
+            exile_gy_cost: 0,
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -501,6 +505,7 @@ pub fn cephalid_coliseum() -> CardDefinition {
                 sac_cost: false,
                 condition: None,
             life_cost: 0,
+            exile_gy_cost: 0,
             },
         ],
         triggered_abilities: vec![etb_tap()],

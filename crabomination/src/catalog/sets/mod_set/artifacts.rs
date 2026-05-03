@@ -59,6 +59,7 @@ pub fn ornithopter_of_paradise() -> CardDefinition {
             sac_cost: false,
             condition: None,
             life_cost: 0,
+            exile_gy_cost: 0,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -97,6 +98,7 @@ pub fn millstone() -> CardDefinition {
             sac_cost: false,
             condition: None,
             life_cost: 0,
+            exile_gy_cost: 0,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -139,6 +141,7 @@ pub fn mind_stone() -> CardDefinition {
                 sac_cost: false,
                 condition: None,
             life_cost: 0,
+            exile_gy_cost: 0,
             },
             ActivatedAbility {
                 tap_cost: true,
@@ -152,6 +155,7 @@ pub fn mind_stone() -> CardDefinition {
                 sac_cost: true,
                 condition: None,
             life_cost: 0,
+            exile_gy_cost: 0,
             },
         ],
         triggered_abilities: vec![],
@@ -200,6 +204,7 @@ pub fn aether_spellbomb() -> CardDefinition {
                 sac_cost: true,
                 condition: None,
             life_cost: 0,
+            exile_gy_cost: 0,
             },
             // {1}, Sacrifice this: Draw a card.
             ActivatedAbility {
@@ -211,6 +216,7 @@ pub fn aether_spellbomb() -> CardDefinition {
                 sac_cost: true,
                 condition: None,
             life_cost: 0,
+            exile_gy_cost: 0,
             },
         ],
         triggered_abilities: vec![],
@@ -259,6 +265,7 @@ pub fn zuran_orb() -> CardDefinition {
             sac_cost: false,
             condition: None,
             life_cost: 0,
+            exile_gy_cost: 0,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -304,6 +311,7 @@ pub fn chromatic_star() -> CardDefinition {
             sac_cost: true,
             condition: None,
             life_cost: 0,
+            exile_gy_cost: 0,
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(
@@ -363,6 +371,7 @@ pub fn soul_guide_lantern() -> CardDefinition {
                 sac_cost: false,
                 condition: None,
             life_cost: 0,
+            exile_gy_cost: 0,
             },
             // {2}, {T}, Sac: Each player exiles their graveyard, you draw.
             ActivatedAbility {
@@ -384,6 +393,7 @@ pub fn soul_guide_lantern() -> CardDefinition {
                 sac_cost: true,
                 condition: None,
             life_cost: 0,
+            exile_gy_cost: 0,
             },
         ],
         triggered_abilities: vec![],
@@ -435,6 +445,7 @@ pub fn cankerbloom() -> CardDefinition {
             sac_cost: true,
             condition: None,
             life_cost: 0,
+            exile_gy_cost: 0,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -477,6 +488,7 @@ pub fn fellwar_stone() -> CardDefinition {
             sac_cost: false,
             condition: None,
             life_cost: 0,
+            exile_gy_cost: 0,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],

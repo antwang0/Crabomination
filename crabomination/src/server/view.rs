@@ -588,6 +588,20 @@ fn ability_cost_label(ability: &crate::effect::ActivatedAbility) -> String {
     if ability.life_cost > 0 {
         parts.push(format!("Pay {} life", ability.life_cost));
     }
+    // Push XXXIV: graveyard-exile-cost activations (Lorehold
+    // Pledgemage's `{2}{R}{W}, exile a card from your graveyard:
+    // +1/+1 EOT`). Render with the printed wording — matches MTG
+    // card-text style.
+    if ability.exile_gy_cost > 0 {
+        if ability.exile_gy_cost == 1 {
+            parts.push("Exile a card from your graveyard".into());
+        } else {
+            parts.push(format!(
+                "Exile {} cards from your graveyard",
+                ability.exile_gy_cost
+            ));
+        }
+    }
     if parts.is_empty() { "0".into() } else { parts.join(", ") }
 }
 
@@ -916,6 +930,7 @@ mod tests {
             sac_cost: false,
             condition: None,
             life_cost: 0,
+            exile_gy_cost: 0,
         };
         let label = ability_cost_label(&ab);
         assert!(label.contains("{W}"), "{label} should contain {{W}}");
@@ -935,6 +950,7 @@ mod tests {
             sac_cost: false,
             condition: None,
             life_cost: 0,
+            exile_gy_cost: 0,
         };
         assert_eq!(ability_cost_label(&ab_x), "{X}",
             "X-cost ability renders as {{X}}");
@@ -958,6 +974,7 @@ mod tests {
             sac_cost: true,
             condition: None,
             life_cost: 0,
+            exile_gy_cost: 0,
         };
         let label = ability_cost_label(&ab);
         assert!(label.contains("{1}"), "{label} must include the {{1}} cost");
@@ -975,6 +992,7 @@ mod tests {
             sac_cost: true,
             condition: None,
             life_cost: 0,
+            exile_gy_cost: 0,
         };
         let label = ability_cost_label(&petal);
         assert!(label.contains("{T}") && label.contains("Sac"),
@@ -1435,5 +1453,39 @@ mod tests {
         assert_eq!(costs, vec![1, -1, -2]);
         // The -2 ability creates a token; pre-rendered label should reflect that.
         assert_eq!(perm.loyalty_abilities[2].effect_label, "Create token");
+    }
+
+    /// Push XXXIV: graveyard-exile-cost activations (Lorehold Pledgemage)
+    /// surface the printed wording in the cost label. Both the `1`
+    /// case (printed "exile a card") and `≥2` (printed "exile N cards")
+    /// render with the printed-text wording.
+    #[test]
+    fn ability_cost_label_renders_exile_gy_cost() {
+        use crate::effect::{ActivatedAbility, Effect};
+        use crate::mana::{cost, generic, r, w};
+        // Lorehold Pledgemage: {2}{R}{W}, exile-gy: +1/+1 EOT.
+        let pledge = ActivatedAbility {
+            tap_cost: false,
+            mana_cost: cost(&[generic(2), r(), w()]),
+            effect: Effect::Noop,
+            once_per_turn: false,
+            sorcery_speed: false,
+            sac_cost: false,
+            condition: None,
+            life_cost: 0,
+            exile_gy_cost: 1,
+        };
+        let label = ability_cost_label(&pledge);
+        assert!(label.contains("Exile a card from your graveyard"),
+            "Label should advertise the gy-exile cost: got `{label}`");
+
+        // Plural form for hypothetical multi-exile cost.
+        let multi = ActivatedAbility {
+            exile_gy_cost: 3,
+            ..pledge
+        };
+        let label = ability_cost_label(&multi);
+        assert!(label.contains("Exile 3 cards from your graveyard"),
+            "Plural form should include the count: got `{label}`");
     }
 }

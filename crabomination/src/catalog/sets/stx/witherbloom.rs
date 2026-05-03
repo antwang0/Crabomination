@@ -190,6 +190,7 @@ pub fn witherbloom_pledgemage() -> CardDefinition {
             sac_cost: false,
             condition: None,
             life_cost: 1,
+            exile_gy_cost: 0,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -240,6 +241,7 @@ pub fn daemogoth_woe_eater() -> CardDefinition {
             sac_cost: false,
             condition: None,
             life_cost: 0,
+            exile_gy_cost: 0,
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -368,6 +370,7 @@ pub fn dina_soul_steeper() -> CardDefinition {
             sac_cost: false,
             condition: None,
             life_cost: 0,
+            exile_gy_cost: 0,
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::LifeGained, EventScope::YourControl),

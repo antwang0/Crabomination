@@ -50,6 +50,94 @@ All 247 cards marked ✅ or 🟡 have a corresponding factory in
 positives and 0 stale ⏳ rows. STX 2021 progress is tracked in the
 "Strixhaven base set (STX)" section near the bottom of this file.
 
+## 2026-05-03 push XXXIV: exile_gy_cost + EOT-aware GainControl + 9 new cube cards
+
+Two engine primitives + 2 STX 🟡 → ✅ promotions + 9 new cube/MH2 cards.
+Tests at 1306 (was 1292; +14 net).
+
+### Engine primitives
+
+- **`ActivatedAbility::exile_gy_cost: u32`** (field on the existing
+  `ActivatedAbility` struct). Pre-flight gate rejects with the new
+  `GameError::InsufficientGraveyard` when the controller's graveyard
+  has fewer cards than `exile_gy_cost`. After tap/mana/life payment
+  succeeds, the engine picks the controller's `exile_gy_cost` oldest
+  graveyard cards (gy index 0..N) and moves them to exile via
+  `move_card_to(_, &ZoneDest::Exile)`. Each pick fires the standard
+  `CardLeftGraveyard` event so SOS gy-leave payoffs (Spirit Mascot,
+  Hardened Academic, Garrison Excavator, Living History) trigger
+  off the cost. `#[serde(default)]` on the new field keeps the
+  snapshot wire format back-compat (existing initialisers don't
+  need to set it). Used by Lorehold Pledgemage's `{2}{R}{W}, exile
+  a card from your graveyard: +1/+1 EOT`.
+- **`Effect::GainControl` is now Duration-aware** (refactor of the
+  previously-stub arm — used to permanently flip `card.controller`
+  irrespective of its `duration` field). Now creates a Layer-2
+  continuous effect (`Modification::ChangeController`) with the
+  `Duration` mapped to `EffectDuration` — `EndOfTurn`/`EndOfCombat`
+  → `UntilEndOfTurn` (reverted by `expire_end_of_turn_effects` at
+  Cleanup), `UntilNextTurn`/`UntilYourNextUntap` → `UntilNextTurn`,
+  `Permanent` → `Indefinite`. The computed-permanent `controller`
+  field reflects the temporary new owner; combat / activation /
+  decision pipelines already read computed_permanent.controller for
+  ownership checks, so no other plumbing was needed. Used by
+  Mascot Interception's "gain control until EOT + untap + haste"
+  Threaten template.
+
+### Engine improvement: post-move filter introspection
+
+`evaluate_requirement_static` (server-side filter resolver) now walks
+**hands and libraries** as a fallback for card-id lookups, in addition
+to the existing battlefield → graveyards → exile → stack chain. Powers
+trigger filters that fire *after* a card has already been moved out of
+the graveyard — e.g. Murktide Regent's "instant or sorcery card left
+your gy" trigger evaluates the filter after Zealous Lorecaster has
+returned the bolt to hand. The card data is the same regardless of
+zone — the lookup just needs to find it.
+
+### STX 2021 promotions
+
+| Card | Cost | Status | Notes |
+|---|---|---|---|
+| Lorehold Pledgemage | {1}{R}{W} | ✅ ← 🟡 | Activation now wires via the new `exile_gy_cost: 1` field. Pre-flight gate rejects with `InsufficientGraveyard` when gy is empty; otherwise auto-picks oldest gy card and moves to exile after tap/mana payment. Pump is +1/+1 EOT on `Selector::This`. |
+| Mascot Interception | {2}{R}{W} | ✅ ← 🟡 | "Threaten / Act of Treason + untap + haste" now wires faithfully via `Effect::GainControl` (Layer-2 continuous effect) + `Untap` + `GrantKeyword(Haste, EOT)`. Control reverts to opp at Cleanup; haste grant is durable due to a separate engine gap (tracked in TODO.md). |
+
+### 9 new cube / MH2 cards (`catalog::sets::decks::modern`)
+
+| Card | Cost | Status | Notes |
+|---|---|---|---|
+| Subtlety | {3}{U}{U} | ✅ | 3/3 Elemental Incarnation (Flying + Flash). ETB tucks target creature/PW to top of owner's library via `Move → Library{Top}`. Evoke pitch-cost omitted (alt-cost-by-pitch gap, same as Solitude / Endurance). |
+| Monastery Swiftspear | {R} | 🟡 | 1/2 Human Monk with Haste + Prowess. Prowess keyword tag is correct; per-IS-cast +1/+0 trigger is engine work pending. |
+| Wild Nacatl | {G} | 🟡 | Vanilla 1/1 Cat Warrior. Mountain/Plains lord effects pending (`StaticEffect::SelfPumpIfLandcontrolled` primitive gap). |
+| Seasoned Pyromancer | {1}{R}{R} | 🟡 | 2/2 Human Shaman. ETB discard 2 + draw 2 + create 2 Elemental tokens (printed "for each nonland discarded" rider approximated as always-2). Gy-exile cast ability omitted. |
+| Murktide Regent | {3}{U}{U} | 🟡 | 3/3 Flying Dragon. Gy-leave-by-IS trigger wired (`+1/+1 counter`); ETB-with-counters and Delve alt-cost both omitted. |
+| Faerie Mastermind | {1}{U} | 🟡 | 2/1 Faerie Rogue (Flash + Flying). Opp-draw trigger fires on every CardDrawn (the "except first turn draw" gate is pending). {2}{U}, sac: draw 1 activation wired faithfully. |
+| Fury | {2}{R}{R} | 🟡 | 3/3 Elemental Incarnation (Double Strike). ETB 4-damage to a single creature/PW; "divided" rider omitted (same gap as Magma Opus). Evoke pitch-cost omitted. |
+| Young Pyromancer | {1}{R} | ✅ | 2/1 Human Shaman. Magecraft (cast/copy IS) → 1/1 red Elemental token. |
+| Grief | {2}{B} | 🟡 | 3/2 Elemental Incarnation (Menace). ETB targeted hand-strip via `DiscardChosen`. Evoke pitch-cost omitted. |
+| Sage of the Falls | {3}{U} | 🟡 | 2/4 Bird Fish (Flying). Draw trigger gated on `HandSize ≥ 5` → may-do `Seq([Draw, Discard])`. Auto-decider declines the may-do by default. |
+
+### UI improvement: exile-gy cost label
+
+`ability_cost_label` (`server::view`) now renders the new
+`exile_gy_cost` field as printed-text "Exile a card from your
+graveyard" (or "Exile N cards from your graveyard" for `≥2`), mirroring
+the existing `sac_cost` / `life_cost` rendering. Powers Lorehold
+Pledgemage's UI tooltip; future `exile_gy_cost`-flavoured activations
+inherit the label automatically. Tests:
+`ability_cost_label_renders_exile_gy_cost`.
+
+### Tests (+14 net)
+
+- **3 STX promotions**: `lorehold_pledgemage_pumps_via_exile_from_graveyard_cost`,
+  `lorehold_pledgemage_rejects_when_graveyard_is_empty`, augmented
+  `lorehold_pledgemage_has_reach`. `mascot_interception_steals_opp_creature_until_eot`,
+  `mascot_interception_control_reverts_at_end_of_turn`.
+- **9 new card tests**: subtlety / monastery_swiftspear / wild_nacatl /
+  seasoned_pyromancer / murktide_regent / faerie_mastermind / young_pyromancer /
+  grief / sage_of_the_falls / fury (one per card; play-pattern coverage).
+- **1 view test**: `ability_cost_label_renders_exile_gy_cost`.
+
 ## 2026-05-03 push XXXIII: 8 promotions + any_target() shortcut + Pump/Shrink label split
 
 Eight 🟡 → ✅ promotions across Strixhaven 2021 (Lorehold Apprentice,
@@ -2281,7 +2369,7 @@ parity is a matter of porting card factories one at a time.
 | Card | Cost | Status | Notes |
 |---|---|---|---|
 | Lorehold Apprentice | {R}{W} | ✅ | Push XXXIII: 1/1 Human Cleric. Magecraft now wires both clauses faithfully: gain 1 life + `DealDamage(1, any_target())`. The `any_target()` helper (`Creature ∨ Planeswalker ∨ Player`) routes the damage through the auto-target picker — opp face by default; falls through to creatures / planeswalkers when face damage isn't legal. |
-| Lorehold Pledgemage | {1}{R}{W} | 🟡 | 2/2 Spirit Cleric with Reach. Activated `{2}{R}{W}, exile a card from your graveyard: +1/+1 EOT` is ⏳ (no exile-from-GY cost primitive). |
+| Lorehold Pledgemage | {1}{R}{W} | ✅ | Push XXXIV: 2/2 Spirit Cleric with Reach. Activated `{2}{R}{W}, exile a card from your graveyard: +1/+1 EOT` now wires via the new `ActivatedAbility::exile_gy_cost: u32` field — pre-flight gate rejects with `GameError::InsufficientGraveyard` when the controller has 0 cards in their graveyard, otherwise picks the oldest gy card (index 0) and moves it to exile after tap/mana/life payment. |
 | Pillardrop Rescuer | {3}{R}{W} | ✅ | 3/3 Spirit Cleric with Flying. ETB: return target instant or sorcery card from your graveyard to your hand. |
 | Heated Debate | {2}{R} | ✅ | Instant. 4 damage to target creature. Damage-can't-be-prevented rider is a no-op (engine has no prevention layer). |
 | Storm-Kiln Artist | {2}{R}{W} | ✅ | Push XXXIII: 3/3 Human Wizard. Magecraft now uses `any_target()` (`Creature ∨ Planeswalker ∨ Player`) for the printed "1 damage to any target" — auto-target prefers opp face, falls through to creatures / planeswalkers when needed. Treasure follow-up unchanged. |
@@ -2293,7 +2381,7 @@ parity is a matter of porting card factories one at a time.
 | Plargg, Dean of Chaos | {1}{R} | 🟡 | Push XXIX: 1/3 Legendary Human Wizard. `{T}: Discard a card, then draw a card` rummage activation wired faithfully via `Effect::Seq([Discard, Draw])`. The {2}{R} top-3-exile activation is omitted (no exile-from-top primitive — same gap as Outpost Siege). The DFC pairing with Augusta, Dean of Order is split into two separate front-face card definitions (engine MDFC pipeline currently lacks an "always-flippable, both faces equally" mode). |
 | Augusta, Dean of Order | {1}{W} | ✅ | Push XXX: promoted from 🟡 to ✅ via the new `Value::AttackersThisCombat` primitive. The per-attacker pump trigger is now gated by `Predicate::ValueAtLeast(AttackersThisCombat, 2)` — single-attacker swings no longer false-positive. Two-or-more attacker swings: each attacker passes the gate and ends up with +1/+1 + double strike EOT (matches printed). `combat.rs` was extended to evaluate broadcast Attack-trigger filters in a second pass, so the `attacking.len()` reading is uniform across all attackers. |
 | Hofri Ghostforge | {2}{R}{W} | 🟡 | Push XXX: 3/4 Legendary Human Cleric. Static anthem on other creatures you control (printed: "Other *nonlegendary* creatures") — engine static-layer doesn't yet support `Not(HasSupertype(Legendary))` so the wider "Other creatures" anthem ships (minor false-positive on legendary friendly creatures). The dies-as-Spirit-copy rider is omitted (token-copy-of-permanent primitive gap, same as Phantasmal Image / Mockingbird in CUBE_FEATURES.md). |
-| Mascot Interception | {2}{R}{W} | 🟡 | Push XXX: Instant. Printed "gain control of opp's creature + untap + haste" approximated as Destroy on a single opp creature. Engine has no `Effect::GainControl` primitive yet (same gap as Tempted by the Oriq, Threaten / Act of Treason). |
+| Mascot Interception | {2}{R}{W} | ✅ | Push XXXIV: Instant. Printed "gain control of opp's creature + untap + haste" now wires faithfully — `Effect::GainControl` graduated from a permanent-control-flip stub to a Layer-2 continuous effect with `EffectDuration::UntilEndOfTurn`, so the steal reverts at Cleanup. Body is `Seq([GainControl, Untap, GrantKeyword(Haste)])` — control change first so the untap and haste land on the freshly-stolen creature. (Haste-grant-expiration is tracked separately — `Effect::GrantKeyword` still mutates `card.definition.keywords` directly without honoring its `duration` field; see TODO.md push XXXIV.) |
 | Approach of the Lorehold | {1}{R}{W} | ✅ | Push XXX: Sorcery. 2 damage to each opponent (auto-target collapse — printed "any target") + creates a 1/1 white Spirit creature token with flying. Lorehold's flexible utility sorcery; same Spirit token shape as Lorehold Command's mode 1. |
 
 ### Quandrix (G/U)

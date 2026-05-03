@@ -12,8 +12,8 @@ use crate::card::{
     Keyword, SelectionRequirement, Subtypes, Supertype, TokenDefinition, Zone,
 };
 use crate::effect::{
-    Effect, EventKind, EventScope, EventSpec, LibraryPosition, ManaPayload, PlayerRef, Predicate,
-    Selector, Value, ZoneDest, ZoneRef,
+    Duration, Effect, EventKind, EventScope, EventSpec, LibraryPosition, ManaPayload, PlayerRef,
+    Predicate, Selector, Value, ZoneDest, ZoneRef,
 };
 use crate::mana::{Color, ManaCost, ManaSymbol};
 
@@ -779,13 +779,53 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::GainControl { what, duration: _ } => {
+            Effect::GainControl { what, duration } => {
+                use crate::game::layers::{
+                    AffectedPermanents, ContinuousEffect, EffectDuration, Layer, Modification,
+                };
                 let new_ctrl = ctx.controller;
+                let eff_dur = match duration {
+                    Duration::EndOfTurn | Duration::EndOfCombat => EffectDuration::UntilEndOfTurn,
+                    Duration::UntilNextTurn | Duration::UntilYourNextUntap => {
+                        EffectDuration::UntilNextTurn
+                    }
+                    Duration::Permanent => EffectDuration::Indefinite,
+                };
+                let source = ctx.source.unwrap_or_else(|| {
+                    self.resolve_selector(what, ctx)
+                        .into_iter()
+                        .find_map(|e| match e { EntityRef::Permanent(c) => Some(c), _ => None })
+                        .unwrap_or(crate::card::CardId(0))
+                });
                 for ent in self.resolve_selector(what, ctx) {
                     if let EntityRef::Permanent(cid) = ent
-                        && let Some(c) = self.battlefield_find_mut(cid) {
-                            c.controller = new_ctrl;
-                        }
+                        && self.battlefield_find(cid).is_some()
+                    {
+                        // EOT-bounded control change is now a continuous
+                        // effect at Layer 2 — `expire_end_of_turn_effects`
+                        // drops it during Cleanup, restoring the original
+                        // controller. Indefinite/while-on-battlefield
+                        // bindings still use the same code path so a
+                        // Threaten-on-stack copy and a permanent steal
+                        // share one resolution shape.
+                        let ts = self.next_timestamp();
+                        self.continuous_effects.push(ContinuousEffect {
+                            timestamp: ts,
+                            source,
+                            affected: AffectedPermanents::Specific(vec![cid]),
+                            layer: Layer::L2Control,
+                            sublayer: None,
+                            duration: eff_dur.clone(),
+                            modification: Modification::ChangeController(new_ctrl),
+                        });
+                        // The base `card.controller` field is the
+                        // *original* controller; the layer-applied
+                        // computed_permanent reports the temporary new
+                        // owner. Combat / activation / decision pipelines
+                        // already read computed_permanent.controller for
+                        // ownership checks, so no other plumbing is
+                        // needed.
+                    }
                 }
                 Ok(())
             }
@@ -2015,10 +2055,19 @@ impl GameState {
                     StackItem::Spell { card, .. } if card.id == *cid => Some(&**card),
                     _ => None,
                 });
+                // Push XXXIV: also walk hands and libraries as a final
+                // fallback so post-move trigger filters (e.g. Murktide
+                // Regent's "instant or sorcery card left your gy" filter,
+                // which evaluates *after* Zealous Lorecaster has already
+                // returned the bolt to hand) can still introspect the
+                // card's definition. The card data is the same regardless
+                // of zone — this just lets the lookup find it.
                 let card = self
                     .battlefield_find(*cid)
                     .or_else(|| self.players.iter().find_map(|p| p.graveyard.iter().find(|c| c.id == *cid)))
                     .or_else(|| self.exile.iter().find(|c| c.id == *cid))
+                    .or_else(|| self.players.iter().find_map(|p| p.hand.iter().find(|c| c.id == *cid)))
+                    .or_else(|| self.players.iter().find_map(|p| p.library.iter().find(|c| c.id == *cid)))
                     .or(stack_card);
                 let Some(card) = card else { return false; };
                 match req {
@@ -2352,7 +2401,7 @@ impl GameState {
         }
     }
 
-    fn move_card_to(
+    pub(crate) fn move_card_to(
         &mut self,
         cid: CardId,
         dest: &ZoneDest,
@@ -2779,6 +2828,7 @@ pub fn food_token() -> TokenDefinition {
             sac_cost: true,
             condition: None,
             life_cost: 0,
+            exile_gy_cost: 0,
         }],
         triggered_abilities: vec![],
     }
@@ -2811,6 +2861,7 @@ pub fn treasure_token() -> TokenDefinition {
             sac_cost: true,
             condition: None,
             life_cost: 0,
+            exile_gy_cost: 0,
         }],
         triggered_abilities: vec![],
     }
@@ -2855,6 +2906,7 @@ pub fn blood_token() -> TokenDefinition {
             sac_cost: true,
             condition: None,
             life_cost: 0,
+            exile_gy_cost: 0,
         }],
         triggered_abilities: vec![],
     }
@@ -2889,6 +2941,7 @@ pub fn clue_token() -> TokenDefinition {
             sac_cost: true,
             condition: None,
             life_cost: 0,
+            exile_gy_cost: 0,
         }],
         triggered_abilities: vec![],
     }

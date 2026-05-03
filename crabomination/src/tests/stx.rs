@@ -426,6 +426,58 @@ fn lorehold_pledgemage_has_reach() {
     assert!(p.keywords.contains(&Keyword::Reach));
     assert_eq!(p.power, 2);
     assert_eq!(p.toughness, 2);
+    // Push XXXIV: activated ability now wired with exile_gy_cost: 1.
+    assert_eq!(p.activated_abilities.len(), 1,
+        "should have one activated ability: 2RW, exile gy: +1/+1 EOT");
+    let ab = &p.activated_abilities[0];
+    assert_eq!(ab.exile_gy_cost, 1);
+}
+
+#[test]
+fn lorehold_pledgemage_pumps_via_exile_from_graveyard_cost() {
+    let mut g = two_player_game();
+    let pledge = g.add_card_to_battlefield(0, catalog::lorehold_pledgemage());
+    g.clear_sickness(pledge);
+    // Seed graveyard with one expendable card so the exile-cost has a valid pick.
+    let _gy = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    let gy_before = g.players[0].graveyard.len();
+    let exile_before = g.exile.len();
+
+    // Pay {2}{R}{W}: 2 generic + 1 R + 1 W.
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: pledge, ability_index: 0, target: None,
+    })
+    .expect("activation should succeed when graveyard has a card");
+    drain_stack(&mut g);
+
+    let cp = g.computed_permanent(pledge).unwrap();
+    assert_eq!(cp.power, 3, "+1 power EOT (2 base + 1)");
+    assert_eq!(cp.toughness, 3, "+1 toughness EOT (2 base + 1)");
+    assert_eq!(g.players[0].graveyard.len(), gy_before - 1,
+        "exactly one card exiled from graveyard");
+    assert_eq!(g.exile.len(), exile_before + 1, "one card moved to exile");
+}
+
+#[test]
+fn lorehold_pledgemage_rejects_when_graveyard_is_empty() {
+    let mut g = two_player_game();
+    let pledge = g.add_card_to_battlefield(0, catalog::lorehold_pledgemage());
+    g.clear_sickness(pledge);
+    // Empty graveyard → activation is rejected pre-pay.
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+
+    let result = g.perform_action(GameAction::ActivateAbility {
+        card_id: pledge, ability_index: 0, target: None,
+    });
+    assert!(result.is_err(), "activation should be rejected with empty graveyard");
+    let cp = g.computed_permanent(pledge).unwrap();
+    assert_eq!(cp.power, 2, "no pump applied on rejected activation");
 }
 
 #[test]
@@ -3002,13 +3054,16 @@ fn approach_of_the_lorehold_deals_damage_and_creates_spirit() {
 }
 
 #[test]
-fn mascot_interception_destroys_opp_creature() {
-    // Mascot Interception (🟡 destroy-substitute for the printed
-    // "gain control" effect — engine has no GainControl primitive).
-    // Verify the destroy half resolves on a single opp creature.
+fn mascot_interception_steals_opp_creature_until_eot() {
+    // Push XXXIV: Mascot Interception now wires the printed
+    // "Threaten / Act of Treason + untap + haste" effect via
+    // `Effect::GainControl` (Layer-2 continuous effect). The targeted
+    // creature is stolen until end of turn, untapped on resolution,
+    // and gains haste EOT.
     let mut g = two_player_game();
     let opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
-    g.clear_sickness(opp_bear);
+    // Tap the bear so we can verify the "untap that creature" half.
+    g.battlefield_find_mut(opp_bear).unwrap().tapped = true;
     let id = g.add_card_to_hand(0, catalog::mascot_interception());
 
     g.players[0].mana_pool.add(Color::Red, 1);
@@ -3020,8 +3075,46 @@ fn mascot_interception_destroys_opp_creature() {
     .expect("Mascot Interception castable for {2}{R}{W}");
     drain_stack(&mut g);
 
-    assert!(!g.battlefield.iter().any(|c| c.id == opp_bear),
-        "opp's bear should be destroyed");
+    // The bear is still on the battlefield (not destroyed).
+    assert!(g.battlefield.iter().any(|c| c.id == opp_bear),
+        "opp's bear should still be on the battlefield (stolen, not destroyed)");
+    // Computed controller is now the active player (P0); the raw
+    // controller field stays at 1 (continuous effect at Layer 2).
+    let cp = g.computed_permanent(opp_bear).expect("bear is on the battlefield");
+    assert_eq!(cp.controller, 0, "P0 controls the bear until EOT");
+    // Bear should have been untapped.
+    let raw = g.battlefield_find(opp_bear).unwrap();
+    assert!(!raw.tapped, "untap target rider should fire");
+    // Haste grant lands so the freshly-stolen creature can attack.
+    assert!(cp.keywords.contains(&Keyword::Haste),
+        "Mascot Interception should grant Haste EOT");
+}
+
+#[test]
+fn mascot_interception_control_reverts_at_end_of_turn() {
+    // After EOT cleanup the Layer-2 GainControl continuous effect
+    // expires; the original opp regains control. (Haste-grant
+    // expiration is tracked separately — see TODO.md push XXXIV;
+    // GrantKeyword still mutates `card.definition.keywords` directly
+    // without honoring its `duration` field.)
+    let mut g = two_player_game();
+    let opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::mascot_interception());
+
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(opp_bear)), mode: None, x_value: None,
+    })
+    .expect("Mascot Interception castable for {2}{R}{W}");
+    drain_stack(&mut g);
+
+    // Force the cleanup step's EOT-effect expiration.
+    g.expire_end_of_turn_effects();
+
+    let cp = g.computed_permanent(opp_bear).expect("bear is on the battlefield");
+    assert_eq!(cp.controller, 1, "control reverts to original opp at EOT cleanup");
 }
 
 #[test]

@@ -442,6 +442,7 @@ pub fn burrog_banemaker() -> CardDefinition {
             sac_cost: false,
             condition: None,
             life_cost: 0,
+            exile_gy_cost: 0,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -484,6 +485,7 @@ pub fn noxious_newt() -> CardDefinition {
             sac_cost: false,
             condition: None,
             life_cost: 0,
+            exile_gy_cost: 0,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -528,6 +530,7 @@ pub fn mindful_biomancer() -> CardDefinition {
             sac_cost: false,
             condition: None,
             life_cost: 0,
+            exile_gy_cost: 0,
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -907,6 +910,7 @@ pub fn shattered_acolyte() -> CardDefinition {
             sac_cost: true,
             condition: None,
             life_cost: 0,
+            exile_gy_cost: 0,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -1765,6 +1769,7 @@ pub fn hardened_academic() -> CardDefinition {
             sac_cost: false,
             condition: None,
             life_cost: 0,
+            exile_gy_cost: 0,
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::CardLeftGraveyard, EventScope::YourControl),
@@ -2220,6 +2225,7 @@ pub fn charging_strifeknight() -> CardDefinition {
             sac_cost: false,
             condition: None,
             life_cost: 0,
+            exile_gy_cost: 0,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -3054,6 +3060,7 @@ pub fn topiary_lecturer() -> CardDefinition {
             sac_cost: false,
             condition: None,
             life_cost: 0,
+            exile_gy_cost: 0,
         }],
         triggered_abilities: vec![increment()],
         static_abilities: vec![],
@@ -3167,6 +3174,7 @@ pub fn sundering_archaic() -> CardDefinition {
             sac_cost: false,
             condition: None,
             life_cost: 0,
+            exile_gy_cost: 0,
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -3281,6 +3289,7 @@ pub fn hydro_channeler() -> CardDefinition {
                 sac_cost: false,
                 condition: None,
                 life_cost: 0,
+                exile_gy_cost: 0,
             },
             ActivatedAbility {
                 tap_cost: true,
@@ -3294,6 +3303,7 @@ pub fn hydro_channeler() -> CardDefinition {
                 sac_cost: false,
                 condition: None,
                 life_cost: 0,
+                exile_gy_cost: 0,
             },
         ],
         triggered_abilities: vec![],
@@ -3426,6 +3436,7 @@ pub fn emil_vastlands_roamer() -> CardDefinition {
             sac_cost: false,
             condition: None,
             life_cost: 0,
+            exile_gy_cost: 0,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![StaticAbility {
@@ -4545,6 +4556,7 @@ pub fn berta_wise_extrapolator() -> CardDefinition {
             sac_cost: false,
             condition: None,
             life_cost: 0,
+            exile_gy_cost: 0,
         }],
         triggered_abilities: vec![
             TriggeredAbility {
