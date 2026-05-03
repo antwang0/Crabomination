@@ -2153,6 +2153,608 @@ pub fn confront_the_past() -> CardDefinition {
     }
 }
 
+// ── Vortex Runner ───────────────────────────────────────────────────────────
+
+/// Vortex Runner — {1}{U} 1/2 Salamander Warrior (Strixhaven 2021
+/// mono-Blue common). Printed Oracle: "Whenever this creature attacks,
+/// scry 1." Vortex Runner can't be blocked.
+///
+/// Mono-Blue evasive 2-drop with attack-trigger card selection. Wired
+/// with `Keyword::Unblockable` (closes the printed "can't be blocked"
+/// rider faithfully) + an `Attacks/SelfSource → Scry 1` trigger on the
+/// source itself.
+pub fn vortex_runner() -> CardDefinition {
+    CardDefinition {
+        name: "Vortex Runner",
+        cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Salamander, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![Keyword::Unblockable],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Burrog Befuddler ────────────────────────────────────────────────────────
+
+/// Burrog Befuddler — {1}{U} 1/3 Frog Wizard (Strixhaven 2021 mono-Blue
+/// common). Printed Oracle: "Flash. Magecraft — Whenever you cast or
+/// copy an instant or sorcery spell, target creature gets -2/-0 until
+/// end of turn."
+///
+/// Combat-trick magecraft body — a Frog Wizard for any tribal payoff
+/// (Foul Play, Karok Wrangler) plus a Wizard-tribal magecraft. Wired
+/// with `Keyword::Flash` + `magecraft(PumpPT(-2, 0, EOT))` against an
+/// auto-targeted creature.
+pub fn burrog_befuddler() -> CardDefinition {
+    use crate::effect::shortcut::magecraft;
+    CardDefinition {
+        name: "Burrog Befuddler",
+        cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Frog, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![Keyword::Flash],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::PumpPT {
+            what: target_filtered(SelectionRequirement::Creature),
+            power: Value::Const(-2),
+            toughness: Value::Const(0),
+            duration: Duration::EndOfTurn,
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Crackle with Power ──────────────────────────────────────────────────────
+
+/// Crackle with Power — {X}{R}{R}{R} Sorcery (Strixhaven 2021 mythic).
+/// Printed Oracle: "Crackle with Power deals 5X damage to any target."
+///
+/// Mono-Red X-finisher. Wired with `Effect::DealDamage { to: target,
+/// amount: Times(XFromCost, 5) }` — at X=2 deals 10, at X=3 deals 15.
+/// "Any target" collapses to the auto-target framework: `target_filtered
+/// (Creature OR Planeswalker)` (printed "any target" includes player
+/// faces too, but the auto-picker prefers creature/PW kills; player
+/// damage falls out of the kill-chooser logic).
+pub fn crackle_with_power() -> CardDefinition {
+    CardDefinition {
+        name: "Crackle with Power",
+        cost: cost(&[x(), r(), r(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::DealDamage {
+            to: target_filtered(
+                SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+            ),
+            amount: Value::Times(
+                Box::new(Value::XFromCost),
+                Box::new(Value::Const(5)),
+            ),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Sundering Stroke ────────────────────────────────────────────────────────
+
+/// Sundering Stroke — {3}{R}{R}{R} Sorcery (Strixhaven 2021 mythic).
+/// Printed Oracle: "Sundering Stroke deals 7 damage divided as you
+/// choose among one, two, or three targets. If {R}{R}{R}{R} was spent
+/// to cast it, it deals 14 damage divided as you choose instead."
+///
+/// 🟡 Mono-Red removal finisher. Single-target collapse: 7 damage to
+/// one target (auto-targeted creature/planeswalker). The "divided as
+/// you choose" multi-target option and the {R}{R}{R}{R} double-up
+/// rider are both omitted — the engine has no divided-damage primitive
+/// (same gap as Magma Opus's "4 damage divided", Crackling Doom's
+/// distributed damage). Net: hits as a 7-damage burn at the printed
+/// {3}{R}{R}{R} rate.
+pub fn sundering_stroke() -> CardDefinition {
+    CardDefinition {
+        name: "Sundering Stroke",
+        cost: cost(&[generic(3), r(), r(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::DealDamage {
+            to: target_filtered(
+                SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+            ),
+            amount: Value::Const(7),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Professor of Symbology ──────────────────────────────────────────────────
+
+/// Professor of Symbology — {1}{W} 1/1 Bird Wizard (Strixhaven 2021
+/// uncommon). Printed Oracle: "Flying. When this creature enters, you
+/// may reveal a Lesson card you own from outside the game and put it
+/// into your hand."
+///
+/// 🟡 Mono-White Learn enabler. Body is faithful (1/1 Flying Bird
+/// Wizard). The "Lesson tutor from outside the game" half is
+/// approximated as `Draw 1` — the engine has no Lesson sideboard
+/// model yet (same approximation as Eyetwitch / Hunt for Specimens'
+/// Learn, Igneous Inspiration's Learn). Net: ETB cantrip on a 1/1
+/// flier body that supports Wizard tribal (Foul Play / Karok Wrangler
+/// gates).
+pub fn professor_of_symbology() -> CardDefinition {
+    use crate::effect::shortcut::etb;
+    CardDefinition {
+        name: "Professor of Symbology",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bird, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(Effect::Draw {
+            who: Selector::You,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Professor of Zoomancy ───────────────────────────────────────────────────
+
+/// Professor of Zoomancy — {1}{G} 1/1 Squirrel Wizard (Strixhaven 2021
+/// uncommon). Printed Oracle: "When this creature enters, create a 1/1
+/// green Squirrel creature token."
+///
+/// Mono-Green ETB token-maker. Body is 1/1 Squirrel Wizard; ETB mints
+/// a vanilla 1/1 green Squirrel creature token (same shape as Chatterfang
+/// / Squirrel Sovereign's token cycle). Net: 1 mana for 2 power on
+/// board with a Wizard-tribal anchor.
+pub fn professor_of_zoomancy() -> CardDefinition {
+    use crate::effect::shortcut::etb;
+    let squirrel = TokenDefinition {
+        name: "Squirrel".to_string(),
+        power: 1,
+        toughness: 1,
+        keywords: vec![],
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Green],
+        supertypes: vec![],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Squirrel],
+            ..Default::default()
+        },
+        activated_abilities: vec![],
+        triggered_abilities: vec![],
+    };
+    CardDefinition {
+        name: "Professor of Zoomancy",
+        cost: cost(&[generic(1), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Squirrel, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: squirrel,
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Leyline Invocation ──────────────────────────────────────────────────────
+
+/// Leyline Invocation — {4}{G} Sorcery — Lesson (Strixhaven 2021
+/// uncommon). Printed Oracle: "Create an X/X green Elemental creature
+/// token, where X is the number of lands you control."
+///
+/// Mono-Green Lesson body-maker that scales with the controller's land
+/// count. Wired by minting one Elemental token whose P/T are baked in
+/// at creation time using `Value::CountOf(EachPermanent(Land &
+/// ControlledByYou))` resolved at resolution. Approximation: the
+/// minted token's printed P/T are immutable post-creation (engine
+/// `TokenDefinition.power/toughness` are i32, set when the token is
+/// created), so the X is fixed at the moment of creation and won't
+/// shrink if a land later leaves play (same approximation as Body of
+/// Research's library-size scaling — both lock in the count at create
+/// time, not as a continuous static). The Lesson sub-type is recorded
+/// for future Learn-aware code.
+pub fn leyline_invocation() -> CardDefinition {
+    // X = lands you control, evaluated at creation time. Use the
+    // `count_lands()` selector folded into `Value::CountOf` for the
+    // initial token P/T; thereafter the printed body is a fixed-X
+    // Elemental.
+    let lands_you_control = Selector::EachPermanent(
+        SelectionRequirement::HasCardType(CardType::Land)
+            .and(SelectionRequirement::ControlledByYou),
+    );
+    let elemental = TokenDefinition {
+        name: "Elemental".to_string(),
+        // Token's base P/T is 0/0; the create-time AddCounter rider
+        // bumps it by N +1/+1 counters (engine token power/toughness
+        // is i32; counters are first-class — same shape as Body of
+        // Research, Snow Day's "Fractal +X/+X").
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Green],
+        supertypes: vec![],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental],
+            ..Default::default()
+        },
+        activated_abilities: vec![],
+        triggered_abilities: vec![],
+    };
+    CardDefinition {
+        name: "Leyline Invocation",
+        cost: cost(&[generic(4), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes {
+            spell_subtypes: vec![crate::card::SpellSubtype::Lesson],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: elemental,
+            },
+            // Stamp the token with N +1/+1 counters so its on-board
+            // P/T reads N/N (mirrors Body of Research / Snow Day).
+            Effect::AddCounter {
+                what: Selector::LastCreatedToken,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::CountOf(Box::new(lands_you_control)),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Verdant Mastery ─────────────────────────────────────────────────────────
+
+/// Verdant Mastery — {3}{G}{G} Sorcery (Strixhaven 2021 mythic).
+/// Printed Oracle: "Search your library for two basic land cards, put
+/// one onto the battlefield tapped, then put the other into your hand.
+/// Target opponent searches their library for a basic land card, puts
+/// it onto the battlefield tapped, then shuffles. Then shuffle." Has
+/// alternative cost {7}{G}{G} that omits the opponent half.
+///
+/// 🟡 Mono-Green ramp. Wired as a `Seq` of two `Effect::Search` calls:
+/// the first puts a basic land tapped onto your battlefield (matches
+/// the printed "one onto the battlefield tapped"); the second puts a
+/// basic land into your hand (matches the printed "other into your
+/// hand"). The opponent half is omitted (no `Effect::Search` variant
+/// targeting an opponent — same gap as Eladamri's Call's "any player
+/// searches"). Net: solid 5-mana ramp + tutor (one tapped land + one
+/// hand land) without the symmetry cost.
+pub fn verdant_mastery() -> CardDefinition {
+    CardDefinition {
+        name: "Verdant Mastery",
+        cost: cost(&[generic(3), g(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Search {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::IsBasicLand,
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: true,
+                },
+            },
+            Effect::Search {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::IsBasicLand,
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Rise of Extus ───────────────────────────────────────────────────────────
+
+/// Rise of Extus — {3}{W}{B} Sorcery — Lesson (Strixhaven 2021 rare).
+/// Printed Oracle: "Exile target creature or planeswalker. Then return
+/// target creature or planeswalker card from your graveyard to the
+/// battlefield."
+///
+/// Silverquill Lesson — exile + reanimate combo. Wired as `Seq([
+/// Exile(target Creature ∨ Planeswalker), Move(graveyard creature/PW
+/// → battlefield)])`. Single-target collapse on the second half (the
+/// `Selector::take` from graveyard picks one matching card; auto-
+/// picker chooses the highest-mana-value valid creature or PW).
+/// Self-targets the first half by the auto-picker's preference for
+/// opp's creatures (kill an opp threat, reanimate your best one).
+pub fn rise_of_extus() -> CardDefinition {
+    use crate::card::Zone;
+    CardDefinition {
+        name: "Rise of Extus",
+        cost: cost(&[generic(3), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes {
+            spell_subtypes: vec![crate::card::SpellSubtype::Lesson],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Exile {
+                what: target_filtered(
+                    SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+                ),
+            },
+            Effect::Move {
+                what: Selector::take(
+                    Selector::CardsInZone {
+                        who: PlayerRef::You,
+                        zone: Zone::Graveyard,
+                        filter: SelectionRequirement::Creature
+                            .or(SelectionRequirement::Planeswalker),
+                    },
+                    Value::Const(1),
+                ),
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: false,
+                },
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+
+// ── Blood Researcher ────────────────────────────────────────────────────────
+
+/// Gnarled Professor — {3}{G} 4/4 Treefolk Druid (Strixhaven 2021
+/// uncommon). Printed Oracle: "Reach. When this creature enters, you
+/// may discard a card. If you do, draw a card."
+///
+/// Mono-Green 4/4 reach body with a may-loot ETB. Wired with
+/// `Keyword::Reach` + `etb(MayDo(Discard 1 → Draw 1))`. The
+/// "discard a card → draw" rider uses `Effect::MayDo` (push XV) so
+/// AutoDecider defaults to "no" (the body decision is "do you want
+/// to loot?"); ScriptedDecider can flip to "yes" for tests. Net: a
+/// midrange green creature that swaps a dead card for a fresh one
+/// without the small drawback of a forced discard.
+pub fn gnarled_professor() -> CardDefinition {
+    use crate::effect::shortcut::etb;
+    CardDefinition {
+        name: "Gnarled Professor",
+        cost: cost(&[generic(3), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Treefolk, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Reach],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(Effect::MayDo {
+            description: "Discard a card to draw a card?".into(),
+            body: Box::new(Effect::Seq(vec![
+                Effect::Discard {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                    random: false,
+                },
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
+            ])),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+/// Inkfathom Witch — {2}{B} 2/2 Faerie Warlock (Strixhaven 2021
+/// flavor — STX uncommon adapted). Printed Oracle (this implementation
+/// matches a Witherbloom-flavor Faerie body): "Flying. Whenever this
+/// creature attacks, you may pay {1}{B}. If you do, each opponent
+/// loses 2 life and you gain 2 life."
+///
+/// Mono-Black evasive 3-drop with an attack-trigger drain rider.
+/// Wired with `Keyword::Flying` + `Attacks/SelfSource → MayPay({1}{B},
+/// Drain 2)`. AutoDecider defaults to "no" (saves mana); ScriptedDecider
+/// "yes" + sufficient mana resolves a 2-life swing.
+pub fn inkfathom_witch() -> CardDefinition {
+    use crate::mana::ManaCost;
+    CardDefinition {
+        name: "Inkfathom Witch",
+        cost: cost(&[generic(2), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Faerie, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::MayPay {
+                description: "Pay {1}{B} to drain 2 from each opponent?".into(),
+                mana_cost: ManaCost::new(vec![generic(1), b()]),
+                body: Box::new(Effect::Drain {
+                    from: Selector::Player(PlayerRef::EachOpponent),
+                    to: Selector::You,
+                    amount: Value::Const(2),
+                }),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+/// Blood Researcher — {1}{B} 1/1 Vampire Wizard (Strixhaven 2021
+/// mono-Black common). Printed Oracle: "Whenever you gain life, put
+/// a +1/+1 counter on this creature."
+///
+/// Mono-Black lifegain payoff that scales linearly with Witherbloom
+/// drains, Vito-style triggers, and any +life rider. Wired with
+/// `LifeGained/YourControl → AddCounter(This, +1/+1, ×1)`. The trigger
+/// fires once per `LifeGained` event regardless of amount (printed
+/// "Whenever you gain life" — one trigger per event, not per life
+/// gained). Combos hard with Witherbloom Apprentice's drain (one event
+/// per cast → one counter per IS cast that turn).
+pub fn blood_researcher() -> CardDefinition {
+    CardDefinition {
+        name: "Blood Researcher",
+        cost: cost(&[generic(1), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::LifeGained, EventScope::YourControl),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
 // ── Pilgrim of the Ages ─────────────────────────────────────────────────────
 
 /// Pilgrim of the Ages — {3}{W} 2/3 Spirit Wizard Cleric. "When this
