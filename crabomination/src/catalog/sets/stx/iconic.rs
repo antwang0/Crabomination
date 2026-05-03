@@ -11,7 +11,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::{magecraft, target_filtered};
 use crate::effect::PlayerRef;
-use crate::mana::{b, cost, generic, r, u, w};
+use crate::mana::{b, cost, generic, w};
 
 // ── Strict Proctor ──────────────────────────────────────────────────────────
 
@@ -90,17 +90,23 @@ pub fn sedgemoor_witch() -> CardDefinition {
 
 // ── Spectacle Mage ──────────────────────────────────────────────────────────
 
-/// Spectacle Mage — {U/R}{U/R}, 1/2 Human Wizard. Prowess. Real Oracle
-/// flavor: "Whenever you cast a noncreature spell, this creature gets
-/// +1/+1 until end of turn." (Standard prowess.) Hybrid {U/R}{U/R} is
-/// approximated as `{U}{R}` (engine has no hybrid mana resolver — a
-/// player who can produce only U or only R can still cast). Prowess
-/// keyword is declared today but not yet wired into the trigger
-/// system; the body and stat line are correct.
+/// Spectacle Mage — {U/R}{U/R}, 1/2 Human Wizard. Prowess.
+///
+/// ✅ Push XXXVIII: 🟡 → ✅. Two pieces:
+/// 1. **Hybrid mana**: cost is now exactly `{U/R}{U/R}` via two
+///    `ManaSymbol::Hybrid(Blue, Red)` pips (not the prior {U}{R}
+///    approximation). The mana payment path already supports hybrid
+///    pips — see `pay()` in `mana.rs`.
+/// 2. **Prowess** is now first-class: `fire_spell_cast_triggers` in
+///    `game/actions.rs` sweeps every battlefield permanent with
+///    `Keyword::Prowess` whenever a noncreature spell is cast and
+///    pushes a synthetic +1/+1 EOT pump trigger. Spectacle Mage's
+///    Prowess fires identically to Monastery Swiftspear's.
 pub fn spectacle_mage() -> CardDefinition {
+    use crate::mana::{Color, hybrid};
     CardDefinition {
         name: "Spectacle Mage",
-        cost: cost(&[u(), r()]),
+        cost: cost(&[hybrid(Color::Blue, Color::Red), hybrid(Color::Blue, Color::Red)]),
         supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {

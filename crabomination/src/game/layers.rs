@@ -125,7 +125,20 @@ pub enum AffectedPermanents {
     Source,
     /// All permanents matching the given predicate.
     /// `controller: Some(p)` — only that player's permanents; `None` — all players.
-    All { controller: Option<usize>, card_types: Vec<CardType> },
+    /// `excluded_supertypes`: permanents bearing any of these supertypes
+    /// are filtered out (Hofri Ghostforge's "Other *nonlegendary*
+    /// creatures you control"). Defaults empty for back-compat.
+    /// `exclude_source`: when true, the source permanent itself is
+    /// filtered out (the printed "Other …" qualifier on lord-style
+    /// statics). Defaults false for back-compat.
+    All {
+        controller: Option<usize>,
+        card_types: Vec<CardType>,
+        #[serde(default)]
+        excluded_supertypes: Vec<Supertype>,
+        #[serde(default)]
+        exclude_source: bool,
+    },
     /// All permanents controlled by any player *other* than `source_controller`.
     AllOpponents { source_controller: usize, card_types: Vec<CardType> },
     /// A specific set of permanents.
@@ -319,11 +332,15 @@ fn affects(effect: &ContinuousEffect, card: &crate::card::CardInstance) -> bool 
     match &effect.affected {
         AffectedPermanents::Source => effect.source == card.id,
         AffectedPermanents::Specific(ids) => ids.contains(&card.id),
-        AffectedPermanents::All { controller, card_types } => {
+        AffectedPermanents::All { controller, card_types, excluded_supertypes, exclude_source } => {
             let ctrl_ok = controller.is_none_or(|c| c == card.controller);
             let type_ok = card_types.is_empty()
                 || card_types.iter().any(|t| card.definition.card_types.contains(t));
-            ctrl_ok && type_ok
+            let supertype_ok = excluded_supertypes
+                .iter()
+                .all(|st| !card.definition.supertypes.contains(st));
+            let source_ok = !*exclude_source || effect.source != card.id;
+            ctrl_ok && type_ok && supertype_ok && source_ok
         }
         AffectedPermanents::AllOpponents { source_controller, card_types } => {
             let ctrl_ok = card.controller != *source_controller;

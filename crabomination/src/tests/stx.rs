@@ -2652,9 +2652,12 @@ fn hunt_for_specimens_promoted_pest_dies_trigger() {
 }
 
 #[test]
-fn tempted_by_the_oriq_destroys_low_mv_creature_and_makes_inkling() {
+fn tempted_by_the_oriq_steals_low_mv_creature_and_makes_inkling() {
+    // Push XXXVIII: Tempted by the Oriq now uses Effect::GainControl
+    // with Duration::Permanent — the printed "Gain control of target
+    // creature with mana value 3 or less" wires faithfully via the
+    // existing Layer-2 control change.
     let mut g = two_player_game();
-    // Opp 2-MV creature.
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     g.clear_sickness(bear);
 
@@ -2668,9 +2671,12 @@ fn tempted_by_the_oriq_destroys_low_mv_creature_and_makes_inkling() {
     .expect("Tempted by the Oriq castable for {1}{W}{B}");
     drain_stack(&mut g);
 
-    // Bear destroyed.
-    assert!(!g.battlefield.iter().any(|c| c.id == bear),
-        "bear should be destroyed");
+    // Bear stolen (not destroyed) — controller is now P0 via the
+    // Layer-2 ContinuousEffect; the underlying CardInstance.controller
+    // field is unchanged but `computed_permanent.controller` reports
+    // the new owner.
+    let bear_cp = g.computed_permanent(bear).expect("bear still on bf");
+    assert_eq!(bear_cp.controller, 0, "bear should be under P0's control");
     // Inkling token under your control.
     let inkling = g.battlefield.iter().find(|c| c.is_token
         && c.controller == 0
@@ -2681,6 +2687,23 @@ fn tempted_by_the_oriq_destroys_low_mv_creature_and_makes_inkling() {
         "Inkling should have flying");
     assert_eq!(inkling.power(), 1);
     assert_eq!(inkling.toughness(), 1);
+}
+
+/// Tempted by the Oriq's MV cap: a 4-MV creature is not a legal target.
+#[test]
+fn tempted_by_the_oriq_rejects_high_mv_creature() {
+    let mut g = two_player_game();
+    let big = g.add_card_to_battlefield(1, catalog::serra_angel()); // {3}{W}{W}
+    g.clear_sickness(big);
+    let id = g.add_card_to_hand(0, catalog::tempted_by_the_oriq());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let result = g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(big)), mode: None, x_value: None,
+    });
+    assert!(result.is_err(),
+        "Tempted by the Oriq should reject a 5-MV target");
 }
 
 
@@ -3373,14 +3396,14 @@ fn mascot_interception_control_reverts_at_end_of_turn() {
 
 #[test]
 fn hofri_ghostforge_anthem_pumps_other_creatures() {
-    // Hofri Ghostforge — anthem pumps other creatures you control
-    // +1/+1. Engine static-layer doesn't yet support
-    // `Not(HasSupertype(Legendary))` filters, so we ship the wider
-    // "Other creatures you control" anthem (printed: "Other
-    // *nonlegendary* creatures") — see the card's doc comment.
-    // Reads via `computed_permanent` so static-layer modifications
-    // are applied (vs `battlefield.iter()...power()` which reads
-    // raw definition + counters only).
+    // Push XXXVIII: Hofri's printed "Other *nonlegendary* creatures
+    // you control get +1/+1" now wires faithfully via the new
+    // `excluded_supertypes` field on `AffectedPermanents::All`.
+    // Decomposed at static-layer translation time from
+    // `Not(HasSupertype(Legendary))`. Reads via `computed_permanent`
+    // so static-layer modifications are applied (vs
+    // `battlefield.iter()...power()` which reads raw definition
+    // + counters only).
     let mut g = two_player_game();
     let _hofri = g.add_card_to_battlefield(0, catalog::hofri_ghostforge());
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
@@ -3388,6 +3411,34 @@ fn hofri_ghostforge_anthem_pumps_other_creatures() {
     let bear_cp = g.computed_permanent(bear).expect("bear is on the battlefield");
     assert_eq!(bear_cp.power, 3, "bear should be pumped to 3 by Hofri's anthem");
     assert_eq!(bear_cp.toughness, 3, "bear should be pumped to 3 toughness by Hofri's anthem");
+}
+
+/// Push XXXVIII: Hofri's anthem skips legendary creatures you control
+/// — printed "Other *nonlegendary* creatures." A friendly legendary
+/// like Killian (2/3) stays at 2/3, while a nonlegendary bear bumps
+/// to 3/3.
+#[test]
+fn hofri_ghostforge_anthem_skips_legendary_creatures() {
+    let mut g = two_player_game();
+    let _hofri = g.add_card_to_battlefield(0, catalog::hofri_ghostforge());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let killian = g.add_card_to_battlefield(0, catalog::killian_ink_duelist());
+    let bear_cp = g.computed_permanent(bear).expect("bear");
+    let killian_cp = g.computed_permanent(killian).expect("killian");
+    assert_eq!(bear_cp.power, 3, "Nonlegendary bear should bump to 3/3");
+    assert_eq!(killian_cp.power, 2, "Legendary Killian should NOT receive the anthem");
+    assert_eq!(killian_cp.toughness, 3);
+}
+
+/// Hofri's anthem doesn't pump opponent creatures (static is
+/// controller-scoped via `ControlledByYou`).
+#[test]
+fn hofri_ghostforge_anthem_skips_opponent_creatures() {
+    let mut g = two_player_game();
+    let _hofri = g.add_card_to_battlefield(0, catalog::hofri_ghostforge());
+    let opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let opp_cp = g.computed_permanent(opp_bear).expect("opp bear");
+    assert_eq!(opp_cp.power, 2, "Opponent's bear should not receive the anthem");
 }
 
 #[test]
@@ -4253,4 +4304,247 @@ fn augmenter_pugilist_does_not_tax_noncreature_activations() {
     // Sol Ring adds {C}{C} — pool gains 2.
     assert_eq!(g.players[0].mana_pool.colorless_amount(), pool_before + 2,
         "Sol Ring should produce 2 colorless without Pugilist's tax");
+}
+
+// ── Killian, Ink Duelist (push XXXVIII) ─────────────────────────────────────
+// Static "Spells you cast that target a creature cost {2} less to cast."
+// Wired via the new `StaticEffect::CostReductionTargeting` primitive in
+// `effect.rs` + `cost_reduction_for_spell` in `game/actions.rs`.
+
+/// Wander Off ({3}{B}, exile target creature) is castable for {1}{B}
+/// when Killian is on the battlefield. With only 1 generic + 1 black
+/// floated, the cast resolves via the discount.
+#[test]
+fn killian_discounts_creature_targeting_spell_by_two() {
+    let mut g = two_player_game();
+    let _killian = g.add_card_to_battlefield(0, catalog::killian_ink_duelist());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let wander = g.add_card_to_hand(0, catalog::wander_off());
+    // Float exactly the discounted cost: {1}{B}.
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: wander, target: Some(Target::Permanent(bear)),
+        mode: None, x_value: None,
+    })
+    .expect("Wander Off should be castable for {1}{B} under Killian's discount");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == bear),
+        "Wander Off should exile its target after the discounted cast resolves");
+    // All mana consumed — discount doesn't refund.
+    assert_eq!(g.players[0].mana_pool.amount(Color::Black), 0);
+    assert_eq!(g.players[0].mana_pool.colorless_amount(), 0);
+}
+
+/// Without Killian on the battlefield, Wander Off costs full {3}{B}.
+/// With only {1}{B} floated, the cast must be rejected.
+#[test]
+fn killian_discount_does_not_apply_without_killian() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let wander = g.add_card_to_hand(0, catalog::wander_off());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let result = g.perform_action(GameAction::CastSpell {
+        card_id: wander, target: Some(Target::Permanent(bear)),
+        mode: None, x_value: None,
+    });
+    assert!(result.is_err(),
+        "Without Killian's discount, Wander Off should reject for insufficient mana");
+}
+
+/// Killian's discount is target-aware: a non-creature-targeting spell
+/// (Heated Argument's gy-exile follow-up doesn't count — pick a hand
+/// cast with no target) sees no reduction. We use Brilliant Plan
+/// ({3}{U}, scry 3 + draw 3 — no target) which is targetless.
+#[test]
+fn killian_discount_does_not_apply_to_targetless_spell() {
+    let mut g = two_player_game();
+    let _killian = g.add_card_to_battlefield(0, catalog::killian_ink_duelist());
+    let bp = g.add_card_to_hand(0, catalog::brilliant_plan());
+    // Float discounted cost: {1}{U}. Original cost is {3}{U}; if discount
+    // applied (it should NOT — targetless spell), this would resolve.
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let result = g.perform_action(GameAction::CastSpell {
+        card_id: bp, target: None, mode: None, x_value: None,
+    });
+    assert!(result.is_err(),
+        "Killian's discount only applies when the spell targets a creature");
+}
+
+/// Killian's discount only reduces generic mana — colored requirements
+/// stay intact. Two Killians on the bf grant {4} less; if a creature-
+/// targeting spell only has {3} of generic mana ({3}{B} = Wander Off),
+/// the second {1} of discount is wasted (no negative generic).
+#[test]
+fn killian_discount_caps_at_zero_generic() {
+    let mut g = two_player_game();
+    let _k1 = g.add_card_to_battlefield(0, catalog::killian_ink_duelist());
+    let _k2 = g.add_card_to_battlefield(0, catalog::killian_ink_duelist());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let wander = g.add_card_to_hand(0, catalog::wander_off());
+    // Float just {B} — both Killians' discount drains all 3 generic.
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: wander, target: Some(Target::Permanent(bear)),
+        mode: None, x_value: None,
+    })
+    .expect("Two Killians should reduce {3}{B} to {B}");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == bear));
+}
+
+/// Killian's discount is controller-scoped: an *opponent's* Killian
+/// does not reduce *your* spells. Only your own Killians shrink your
+/// creature-targeting spells.
+#[test]
+fn killian_discount_only_applies_to_controllers_spells() {
+    let mut g = two_player_game();
+    let _opp_killian = g.add_card_to_battlefield(1, catalog::killian_ink_duelist());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let wander = g.add_card_to_hand(0, catalog::wander_off());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let result = g.perform_action(GameAction::CastSpell {
+        card_id: wander, target: Some(Target::Permanent(bear)),
+        mode: None, x_value: None,
+    });
+    assert!(result.is_err(),
+        "An opponent's Killian must not discount your spells");
+}
+
+// ── Devastating Mastery alt cost (push XXXVIII) ────────────────────────────
+// `AlternativeCost.mode_on_alt: Some(idx)` auto-selects mode `idx` when
+// the spell is cast via the alternative cost path. Devastating Mastery
+// uses this to ship the printed Mastery rider: alt cost {7}{W}{W}
+// implies mode 1 (Wrath + reanimate) while regular {4}{W}{W} resolves
+// mode 0 (Wrath only).
+
+#[test]
+fn devastating_mastery_regular_cast_only_wraths() {
+    let mut g = two_player_game();
+    let _land0 = g.add_card_to_battlefield(0, catalog::forest());
+    let _land1 = g.add_card_to_battlefield(1, catalog::forest());
+    let bear0 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let bear1 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    // Seed graveyard with a creature card — the regular cast at mode 0
+    // should NOT reanimate it.
+    let in_gy = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let dm = g.add_card_to_hand(0, catalog::devastating_mastery());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: dm, target: None, mode: None, x_value: None,
+    })
+    .expect("Devastating Mastery castable for {4}{W}{W}");
+    drain_stack(&mut g);
+    // Wrath landed: nonland permanents destroyed.
+    assert!(!g.battlefield.iter().any(|c| c.id == bear0));
+    assert!(!g.battlefield.iter().any(|c| c.id == bear1));
+    // Reanimate did NOT trigger (regular cast = mode 0).
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == in_gy),
+        "Regular cast should not reanimate the gy creature");
+}
+
+#[test]
+fn devastating_mastery_alt_cost_wraths_and_reanimates() {
+    let mut g = two_player_game();
+    let _land0 = g.add_card_to_battlefield(0, catalog::forest());
+    let _land1 = g.add_card_to_battlefield(1, catalog::forest());
+    let bear0 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let bear1 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let in_gy = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let dm = g.add_card_to_hand(0, catalog::devastating_mastery());
+    // Float alt cost: {7}{W}{W}.
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(7);
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: dm, pitch_card: None, target: None, mode: None, x_value: None,
+    })
+    .expect("Devastating Mastery castable via alt cost {7}{W}{W}");
+    drain_stack(&mut g);
+    // Wrath landed.
+    assert!(!g.battlefield.iter().any(|c| c.id == bear0));
+    assert!(!g.battlefield.iter().any(|c| c.id == bear1));
+    // Reanimate triggered: gy creature returns to bf.
+    assert!(g.battlefield.iter().any(|c| c.id == in_gy),
+        "Alt cost cast should reanimate via mode_on_alt: Some(1)");
+    assert!(!g.players[0].graveyard.iter().any(|c| c.id == in_gy));
+}
+
+// ── Spectacle Mage / Prowess (push XXXVIII) ────────────────────────────────
+// `fire_spell_cast_triggers` now sweeps every battlefield permanent
+// with `Keyword::Prowess` controlled by the caster and pumps them
+// +1/+1 EOT on noncreature spell casts.
+
+/// Spectacle Mage gets +1/+1 EOT when its controller casts a noncreature
+/// spell. Lightning Bolt at {R} → Mage becomes 2/3 EOT.
+#[test]
+fn spectacle_mage_prowess_pumps_on_noncreature_cast() {
+    let mut g = two_player_game();
+    let mage = g.add_card_to_battlefield(0, catalog::spectacle_mage());
+    g.clear_sickness(mage);
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)), mode: None, x_value: None,
+    })
+    .expect("Bolt castable for {R}");
+    drain_stack(&mut g);
+    let mage_after = g.battlefield_find(mage).unwrap();
+    assert_eq!(mage_after.power(), 2,
+        "Spectacle Mage should be 2/3 after Prowess pump from Bolt");
+    assert_eq!(mage_after.toughness(), 3);
+}
+
+/// Prowess does NOT trigger on creature-spell casts (the printed text
+/// says "noncreature spell"). Casting Grizzly Bears doesn't pump
+/// Spectacle Mage.
+#[test]
+fn spectacle_mage_prowess_skips_creature_cast() {
+    let mut g = two_player_game();
+    let mage = g.add_card_to_battlefield(0, catalog::spectacle_mage());
+    g.clear_sickness(mage);
+    let bears = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bears, target: None, mode: None, x_value: None,
+    })
+    .expect("Grizzly Bears castable for {1}{G}");
+    drain_stack(&mut g);
+    let mage_after = g.battlefield_find(mage).unwrap();
+    assert_eq!(mage_after.power(), 1,
+        "Prowess must skip creature-spell casts");
+}
+
+/// Spectacle Mage's hybrid {U/R}{U/R} cost is payable from either two
+/// blue, two red, or one of each — verify the all-red path resolves.
+#[test]
+fn spectacle_mage_hybrid_cost_pays_from_red() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::spectacle_mage());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Spectacle Mage castable from 2 red mana via hybrid pips");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == id),
+        "Spectacle Mage should be on battlefield");
+}
+
+/// Spectacle Mage's hybrid {U/R}{U/R} also resolves from two blue mana.
+#[test]
+fn spectacle_mage_hybrid_cost_pays_from_blue() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::spectacle_mage());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Spectacle Mage castable from 2 blue mana via hybrid pips");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == id));
 }

@@ -430,6 +430,14 @@ pub struct AlternativeCost {
     /// When `Some`, `cast_spell_alternative` validates the chosen target
     /// against this filter on top of the spell's normal target filter.
     pub target_filter: Option<SelectionRequirement>,
+    /// When `Some(idx)`, casting via this alt cost auto-selects mode
+    /// `idx` of a modal spell, overriding any caller-supplied mode.
+    /// Used by spells whose alternative cost *is* the mode selector —
+    /// e.g. Devastating Mastery's mastery alt cost ({7}{W}{W}) implies
+    /// mode 1 (Wrath + reanimate), while the regular cast ({4}{W}{W})
+    /// resolves mode 0 (Wrath only). Defaults to None for back-compat.
+    #[serde(default)]
+    pub mode_on_alt: Option<usize>,
 }
 
 impl CardDefinition {

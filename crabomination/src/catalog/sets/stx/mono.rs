@@ -1904,21 +1904,21 @@ pub fn enthusiastic_study() -> CardDefinition {
 
 // ── Tempted by the Oriq ─────────────────────────────────────────────────────
 
-/// Tempted by the Oriq — {1}{W}{B} Sorcery. "Destroy target creature with
-/// mana value 3 or less. Create a 1/1 white and black Inkling creature
-/// token with flying."
+/// Tempted by the Oriq — {1}{W}{B} Sorcery. Printed Oracle:
+/// "Gain control of target creature with mana value 3 or less. Create
+/// a 1/1 white and black Inkling creature token with flying."
 ///
-/// 🟡 Approximation of the printed card's "gain control of target
-/// creature with mana value 3 or less" using `Effect::Destroy` instead
-/// (the engine has no Effect::GainControl primitive yet — same gap as
-/// Bribery / Mind Control). The Inkling token rider is wired faithfully
-/// via the SOS catalog's `inkling_token()` helper (1/1 W/B Inkling with
-/// flying — matches every other Inkling source in the catalog). Net
-/// swing is similar (a 3-MV creature off the board + a flier you
-/// control), but the printed card is strictly stronger when stealing a
-/// high-value blocker.
+/// ✅ Push XXXVIII: 🟡 → ✅. The "gain control" half now wires
+/// faithfully via `Effect::GainControl { duration: Duration::Permanent }`
+/// (Push XXXIV graduated `Effect::GainControl` from a permanent-control
+/// stub to a Layer-2 continuous effect with selectable duration —
+/// `Permanent` here for the indefinite-control flavor of Bribery /
+/// Mind Control / Tempted by the Oriq, distinct from Mascot
+/// Interception's `EndOfTurn` Threaten flavor). The Inkling token
+/// rider is wired via the SOS catalog's `inkling_token()` helper.
 pub fn tempted_by_the_oriq() -> CardDefinition {
     use crate::catalog::sets::sos::inkling_token;
+    use crate::effect::Duration;
     CardDefinition {
         name: "Tempted by the Oriq",
         cost: cost(&[generic(1), w(), b()]),
@@ -1929,11 +1929,12 @@ pub fn tempted_by_the_oriq() -> CardDefinition {
         toughness: 0,
         keywords: vec![],
         effect: Effect::Seq(vec![
-            Effect::Destroy {
+            Effect::GainControl {
                 what: target_filtered(
                     SelectionRequirement::Creature
                         .and(SelectionRequirement::ManaValueAtMost(3)),
                 ),
+                duration: Duration::Permanent,
             },
             Effect::CreateToken {
                 who: PlayerRef::You,

@@ -186,13 +186,22 @@ pub fn vanishing_verse() -> CardDefinition {
 
 // ── Killian, Ink Duelist ────────────────────────────────────────────────────
 
-/// Killian, Ink Duelist — {W}{B}, 2/3 Legendary Human Warlock with Lifelink.
+/// Killian, Ink Duelist — {W}{B}, 2/3 Legendary Human Warrior with Lifelink.
 ///
-/// 🟡 The static "spells you cast that target a creature cost {2} less" is
-/// not yet implemented. It needs a target-aware variant of
-/// `StaticEffect::CostReduction`; today's CostReduction filters on the cast
-/// spell only, not on its targets. Tracked in `STRIXHAVEN2.md` and `TODO.md`.
+/// ✅ Push XXXVIII: 🟡 → ✅. The static "spells you cast that target a
+/// creature cost {2} less" is now wired via the new
+/// `StaticEffect::CostReductionTargeting { spell_filter: Any,
+/// target_filter: Creature, amount: 2 }`. The discount is applied to
+/// generic mana only at cast time by `cost_reduction_for_spell` in
+/// `game/actions.rs` (cannot reduce colored requirements). All three
+/// cast paths (regular hand cast, alt cost, flashback) consult the
+/// reduction.
+///
+/// Two Killians stack: a {3}{B} creature-targeting spell becomes free
+/// (3 - 2 - 2 = saturated to 0 generic, plus the {B}). Killian himself
+/// (cost {W}{B}) is fully colored so the discount no-ops on him.
 pub fn killian_ink_duelist() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
     CardDefinition {
         name: "Killian, Ink Duelist",
         cost: cost(&[w(), b()]),
@@ -208,7 +217,14 @@ pub fn killian_ink_duelist() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
+        static_abilities: vec![StaticAbility {
+            description: "Spells you cast that target a creature cost {2} less to cast",
+            effect: StaticEffect::CostReductionTargeting {
+                spell_filter: SelectionRequirement::Any,
+                target_filter: SelectionRequirement::Creature,
+                amount: 2,
+            },
+        }],
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
@@ -219,14 +235,48 @@ pub fn killian_ink_duelist() -> CardDefinition {
 
 // ── Devastating Mastery ─────────────────────────────────────────────────────
 
-/// Devastating Mastery — {4}{W}{W} Sorcery. "Destroy all nonland permanents."
+/// Devastating Mastery — {4}{W}{W} Sorcery. Printed Oracle:
+/// "Destroy all nonland permanents.
+///  Mastery — {7}{W}{W}: ...and return up to two target nonland
+///  permanent cards from your graveyard to the battlefield under your
+///  control."
 ///
-/// 🟡 The alt cost {7}{W}{W} adds "...if this spell was cast for its
-/// alternative cost, return up to two target nonland permanents from a
-/// graveyard to the battlefield under their owners' control." Wiring the
-/// alt cost requires a "alt-cost-implies-mode" primitive (see TODO.md);
-/// for now we ship the destroy half only.
+/// ✅ Push XXXVIII: 🟡 → ✅. Wired as a 2-mode `Effect::ChooseMode`
+/// where mode 0 is the printed Wrath and mode 1 is Wrath + reanimate.
+/// The Mastery alt cost ({7}{W}{W}) wires via the new
+/// `AlternativeCost.mode_on_alt: Some(1)` field — paying the alt cost
+/// auto-selects mode 1 at cast time, so the user can't pay alt cost
+/// then "skip" the reanimate. Regular cast at {4}{W}{W} resolves
+/// mode 0. The reanimate target slot picks the oldest nonland card
+/// in the caster's graveyard (auto-decider chooses index 0); a future
+/// multi-target prompt would let the user pick exactly two.
 pub fn devastating_mastery() -> CardDefinition {
+    use crate::card::AlternativeCost;
+    use crate::effect::{PlayerRef, ZoneDest};
+    use crate::mana::ManaCost;
+    let wrath = Effect::ForEach {
+        selector: Selector::EachPermanent(SelectionRequirement::Nonland),
+        body: Box::new(Effect::Destroy {
+            what: Selector::TriggerSource,
+        }),
+    };
+    // Mastery rider: return one nonland permanent card from your
+    // graveyard. Single-pick today (multi-target prompt gap); future
+    // engine work would extend this to "up to two."
+    let reanimate = Effect::Move {
+        what: Selector::take(
+            Selector::CardsInZone {
+                who: PlayerRef::You,
+                zone: crate::card::Zone::Graveyard,
+                filter: SelectionRequirement::Nonland.and(SelectionRequirement::Permanent),
+            },
+            crate::effect::Value::Const(1),
+        ),
+        to: ZoneDest::Battlefield {
+            controller: PlayerRef::You,
+            tapped: false,
+        },
+    };
     CardDefinition {
         name: "Devastating Mastery",
         cost: cost(&[generic(4), w(), w()]),
@@ -236,18 +286,28 @@ pub fn devastating_mastery() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![],
-        effect: Effect::ForEach {
-            selector: Selector::EachPermanent(SelectionRequirement::Nonland),
-            body: Box::new(Effect::Destroy {
-                what: Selector::TriggerSource,
-            }),
-        },
+        effect: Effect::ChooseMode(vec![
+            wrath.clone(),
+            Effect::Seq(vec![wrath, reanimate]),
+        ]),
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
-        alternative_cost: None,
+        alternative_cost: Some(AlternativeCost {
+            mana_cost: ManaCost::new(vec![
+                crate::mana::generic(7),
+                crate::mana::w(),
+                crate::mana::w(),
+            ]),
+            life_cost: 0,
+            exile_filter: None,
+            evoke_sacrifice: false,
+            not_your_turn_only: false,
+            target_filter: None,
+            mode_on_alt: Some(1),
+        }),
         back_face: None,
         opening_hand: None,
     }

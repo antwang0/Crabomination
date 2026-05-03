@@ -1555,6 +1555,24 @@ pub enum StaticEffect {
         filter: SelectionRequirement,
         amount: u32,
     },
+    /// Killian, Ink Duelist-style "spells you cast that target [target_filter]
+    /// cost {amount} less to cast." The reduction only applies when the
+    /// cast spell:
+    /// 1. Is controlled by the source's controller (printed: "you cast"),
+    /// 2. Matches `spell_filter` (typically `Any`),
+    /// 3. Has a chosen target slot 0 that matches `target_filter`.
+    ///
+    /// The discount is applied to generic mana only — it cannot reduce
+    /// colored mana requirements. Multiple discounts sum (e.g. two
+    /// Killians = {4} less).
+    ///
+    /// Read at cast time by `cost_reduction_for_spell` in
+    /// `game/actions.rs`.
+    CostReductionTargeting {
+        spell_filter: SelectionRequirement,
+        target_filter: SelectionRequirement,
+        amount: u32,
+    },
 }
 
 // ── Triggered / activated / loyalty ability shells ───────────────────────────

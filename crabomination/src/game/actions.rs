@@ -93,6 +93,63 @@ pub(crate) fn consume_first_spell_tax(state: &mut crate::game::GameState, caster
     }
 }
 
+/// Walk the battlefield's cost-reduction statics and return the
+/// cumulative generic-mana discount the caster is entitled to for
+/// the given cast.
+///
+/// Recognizes:
+///   * `StaticEffect::CostReduction { filter, amount }` — a flat
+///     discount on every spell matching `filter`. Source's controller
+///     must be the caster (printed text always says "spells *you*
+///     cast").
+///   * `StaticEffect::CostReductionTargeting { spell_filter,
+///     target_filter, amount }` — a target-aware discount. The cast
+///     must additionally have a chosen target slot 0 that satisfies
+///     `target_filter`. Used by Killian, Ink Duelist's "spells you
+///     cast that target a creature cost {2} less."
+///
+/// Multiple distinct sources sum (e.g. two Killians = {4} less).
+/// The caller is responsible for clamping the discount against the
+/// cost's actual generic component via `ManaCost::reduce_generic`.
+pub(crate) fn cost_reduction_for_spell(
+    state: &crate::game::GameState,
+    caster: usize,
+    card: &crate::card::CardInstance,
+    target: Option<&crate::game::types::Target>,
+) -> u32 {
+    use crate::effect::StaticEffect;
+    let mut discount = 0u32;
+    for src in &state.battlefield {
+        if src.controller != caster {
+            continue;
+        }
+        for sa in &src.definition.static_abilities {
+            match &sa.effect {
+                StaticEffect::CostReduction { filter, amount } => {
+                    if state.evaluate_requirement_on_card(filter, card, caster) {
+                        discount += amount;
+                    }
+                }
+                StaticEffect::CostReductionTargeting {
+                    spell_filter,
+                    target_filter,
+                    amount,
+                } => {
+                    if !state.evaluate_requirement_on_card(spell_filter, card, caster) {
+                        continue;
+                    }
+                    let Some(t) = target else { continue };
+                    if state.evaluate_requirement_static(target_filter, t, caster) {
+                        discount += amount;
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+    discount
+}
+
 /// Walk the battlefield's `StaticEffect::TaxActivatedAbilities` statics
 /// and return the cumulative generic-mana surcharge owed to activate
 /// `source`'s ability. Multiple distinct taxes (e.g. two Augmenter
@@ -530,15 +587,20 @@ impl GameState {
             return Err(GameError::SelectionRequirementViolated);
         }
 
-        // Pay the cost (substitute X if present, then add any
-        // static-ability tax such as Damping Sphere's "{1} more after the
-        // first spell each turn").
+        // Pay the cost (substitute X if present, then apply any
+        // static-ability discounts (Killian's "{2} less if targeting a
+        // creature") and surcharges (Damping Sphere's "{1} more after
+        // the first spell each turn")).
         let base_cost = card.definition.cost.clone();
         let mut cost = if base_cost.has_x() {
             base_cost.with_x_value(x_value.unwrap_or(0))
         } else {
             base_cost
         };
+        let discount = cost_reduction_for_spell(self, p, &card, target.as_ref());
+        if discount > 0 {
+            cost.reduce_generic(discount);
+        }
         let tax = extra_cost_for_spell(self, p, &card);
         if tax > 0 {
             cost.symbols.push(crate::mana::ManaSymbol::Generic(tax));
@@ -742,12 +804,16 @@ impl GameState {
             self.check_target_legality(tgt, p)?;
         }
 
-        // Pay the flashback cost.
-        let cost = if flashback_cost.has_x() {
+        // Pay the flashback cost (with cost-reduction statics applied).
+        let mut cost = if flashback_cost.has_x() {
             flashback_cost.with_x_value(x_value.unwrap_or(0))
         } else {
             flashback_cost
         };
+        let discount = cost_reduction_for_spell(self, p, &card, target.as_ref());
+        if discount > 0 {
+            cost.reduce_generic(discount);
+        }
         let receipt = self.try_pay_with_auto_tap(p, &cost)?;
         if receipt.side_effects.life_lost > 0 {
             self.players[p].life -= receipt.side_effects.life_lost as i32;
@@ -881,12 +947,17 @@ impl GameState {
             return Err(GameError::SelectionRequirementViolated);
         }
 
-        // Pay the alt mana cost (with X substitution + static-ability tax).
+        // Pay the alt mana cost (with X substitution + static-ability
+        // discounts + static-ability tax).
         let mut mana_cost = if alt.mana_cost.has_x() {
             alt.mana_cost.with_x_value(x_value.unwrap_or(0))
         } else {
             alt.mana_cost.clone()
         };
+        let discount = cost_reduction_for_spell(self, p, &card, target.as_ref());
+        if discount > 0 {
+            mana_cost.reduce_generic(discount);
+        }
         let tax = extra_cost_for_spell(self, p, &card);
         if tax > 0 {
             mana_cost.symbols.push(crate::mana::ManaSymbol::Generic(tax));
@@ -928,7 +999,10 @@ impl GameState {
             face: CastFace::Front,
         });
         let events = auto_events;
-        self.finalize_cast(p, card, target, mode, x_value.unwrap_or(0), 0);
+        // Devastating Mastery-style alt cost that *is* the mode selector:
+        // override the caller-supplied mode with the alt's `mode_on_alt`.
+        let resolved_mode = alt.mode_on_alt.or(mode);
+        self.finalize_cast(p, card, target, resolved_mode, x_value.unwrap_or(0), 0);
         Ok(events)
     }
 
@@ -1002,9 +1076,47 @@ impl GameState {
         &mut self,
         caster: usize,
         cast_card: CardId,
-        _is_noncreature: bool,
+        is_noncreature: bool,
     ) {
         use crate::effect::{EventKind, EventScope};
+        // Prowess: "Whenever you cast a noncreature spell, this creature
+        // gets +1/+1 until end of turn." Treated as a synthetic trigger
+        // shared by every battlefield permanent controlled by the
+        // caster that has `Keyword::Prowess`. Fires only on noncreature
+        // casts (creature spells skip the pump per the printed text).
+        // The trigger pushes a `Trigger` stack item whose body is
+        // `PumpPT(This, +1/+1, EOT)` — `Selector::This` resolves to
+        // each Prowess creature individually so multiple Prowess bodies
+        // each receive their own pump.
+        if is_noncreature {
+            use crate::card::Keyword;
+            use crate::effect::{Duration, Selector, Value};
+            let prowess: Vec<(CardId, usize)> = self
+                .battlefield
+                .iter()
+                .filter(|c| c.controller == caster
+                    && c.definition.keywords.contains(&Keyword::Prowess)
+                    && c.definition.is_creature())
+                .map(|c| (c.id, c.controller))
+                .collect();
+            for (source, source_ctrl) in prowess {
+                self.stack.push(StackItem::Trigger {
+                    source,
+                    controller: source_ctrl,
+                    effect: Box::new(Effect::PumpPT {
+                        what: Selector::This,
+                        power: Value::Const(1),
+                        toughness: Value::Const(1),
+                        duration: Duration::EndOfTurn,
+                    }),
+                    target: None,
+                    mode: None,
+                    x_value: 0,
+                    converged_value: 0,
+                    subject: Some(crate::game::effects::EntityRef::Card(cast_card)),
+                });
+            }
+        }
         // Walk every permanent on the battlefield whose SpellCast trigger
         // matches the cast event's scope. `YourControl` / `AnyPlayer` fire
         // for triggers controlled by the caster; `OpponentControl` fires

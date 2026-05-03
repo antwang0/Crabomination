@@ -35,7 +35,7 @@ pub mod types;
 
 pub use types::*;
 
-use crate::card::{CardDefinition, CardId, CardInstance, CardType, Keyword, SelectionRequirement};
+use crate::card::{CardDefinition, CardId, CardInstance, CardType, Keyword, SelectionRequirement, Supertype};
 use crate::decision::{AutoDecider, Decider, DeciderKind, Decision, DecisionAnswer};
 use crate::effect::Effect;
 use crate::game::effects::EffectContext;
@@ -1710,7 +1710,11 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             // TaxActivatedAbilities is not a layer-applied continuous
             // effect; it's read at activation time by `extra_cost_for_
             // activation` to surcharge the activator's mana cost.
-            | StaticEffect::TaxActivatedAbilities { .. } => vec![],
+            | StaticEffect::TaxActivatedAbilities { .. }
+            // CostReductionTargeting is read at cast time by
+            // `cost_reduction_for_spell` (Killian, Ink Duelist's
+            // target-aware discount) — not a continuous-layer effect.
+            | StaticEffect::CostReductionTargeting { .. } => vec![],
         })
         .collect()
 }
@@ -1750,6 +1754,7 @@ fn affected_from_requirement(
     let mut types: Vec<CardType> = vec![];
     let mut creature_type: Option<crate::card::CreatureType> = None;
     let mut counter_filter: Option<crate::card::CounterType> = None;
+    let mut excluded_supertypes: Vec<Supertype> = vec![];
     let mut walk = vec![req];
     while let Some(r) = walk.pop() {
         match r {
@@ -1773,6 +1778,19 @@ fn affected_from_requirement(
             R::HasCreatureType(ct) => creature_type = Some(*ct),
             R::WithCounter(ct) => counter_filter = Some(*ct),
             R::Any | R::Permanent => {}
+            // `Not(HasSupertype(_))` is a printed "non-legendary" /
+            // "non-snow" filter — represented as an exclusion set on
+            // the resulting `AffectedPermanents::All` variant. Hofri
+            // Ghostforge's "Other nonlegendary creatures you control"
+            // decomposes to `Creature ∧ ControlledByYou ∧
+            // Not(HasSupertype(Legendary))`.
+            R::Not(inner) => {
+                if let R::HasSupertype(st) = inner.as_ref() {
+                    excluded_supertypes.push(st.clone());
+                } else {
+                    return None;
+                }
+            }
             _ => return None,
         }
     }
@@ -1790,6 +1808,8 @@ fn affected_from_requirement(
     Some(AffectedPermanents::All {
         controller: ctrl.unwrap_or(None),
         card_types: types,
+        excluded_supertypes,
+        exclude_source: false,
     })
 }
 

@@ -722,20 +722,19 @@ pub fn lorehold_command() -> CardDefinition {
 /// pumped by the anthem itself).
 pub fn hofri_ghostforge() -> CardDefinition {
     use crate::card::{StaticAbility, StaticEffect};
-    // "Other creatures you control" anthem (printed: "Other
-    // nonlegendary creatures you control"). Static-layer filter
-    // decomposition (`affected_from_requirement` in
-    // `game/mod.rs`) doesn't yet handle `Not(HasSupertype(_))`, so we
-    // ship the wider "other creatures" anthem — net result: Hofri
-    // pumps friendly nonlegendary creatures (matching printed text)
-    // *and* friendly legendary creatures (slight false-positive).
-    // The "Other" qualifier collapses naturally because Hofri is
-    // Legendary, so `Selector::EachPermanent(Creature ∧
-    // ControlledByYou)` includes Hofri herself; we use
-    // `card_types = [Creature]` and rely on the layer layer not
-    // double-counting the source's own +1/+1.
-    let other_creatures = SelectionRequirement::Creature
-        .and(SelectionRequirement::ControlledByYou);
+    // Push XXXVIII: "Other nonlegendary creatures you control get +1/+1"
+    // now wires faithfully via the new `excluded_supertypes` field on
+    // `AffectedPermanents::All` (legendary creatures filter out) plus
+    // the new `exclude_source` flag at the layer layer (Hofri herself
+    // doesn't pump herself, even though she's legendary so the
+    // supertype filter would already drop her). Decomposed at static-
+    // layer translation time from `Not(HasSupertype(Legendary))` in
+    // `affected_from_requirement` (`game/mod.rs`).
+    let other_nonleg_creatures = SelectionRequirement::Creature
+        .and(SelectionRequirement::ControlledByYou)
+        .and(SelectionRequirement::Not(Box::new(
+            SelectionRequirement::HasSupertype(crate::card::Supertype::Legendary),
+        )));
     CardDefinition {
         name: "Hofri Ghostforge",
         cost: cost(&[generic(2), r(), w()]),
@@ -752,9 +751,9 @@ pub fn hofri_ghostforge() -> CardDefinition {
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![StaticAbility {
-            description: "Other creatures you control get +1/+1",
+            description: "Other nonlegendary creatures you control get +1/+1",
             effect: StaticEffect::PumpPT {
-                applies_to: Selector::EachPermanent(other_creatures),
+                applies_to: Selector::EachPermanent(other_nonleg_creatures),
                 power: 1,
                 toughness: 1,
             },

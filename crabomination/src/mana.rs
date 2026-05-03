@@ -112,6 +112,34 @@ impl ManaCost {
         seen.iter().filter(|b| **b).count() as u32
     }
 
+    /// Reduce the generic-mana component of this cost by up to `amount`,
+    /// capped at 0 (you can't go below colored requirements). Returns
+    /// the actual amount removed.
+    ///
+    /// Used by `StaticEffect::CostReduction` /
+    /// `StaticEffect::CostReductionTargeting` at cast time. Generic
+    /// pips are processed in declaration order; if multiple `Generic(_)`
+    /// pips exist, the discount drains them left-to-right.
+    pub fn reduce_generic(&mut self, amount: u32) -> u32 {
+        let mut remaining = amount;
+        for sym in self.symbols.iter_mut() {
+            if remaining == 0 {
+                break;
+            }
+            if let ManaSymbol::Generic(n) = sym {
+                let take = remaining.min(*n);
+                *n -= take;
+                remaining -= take;
+            }
+        }
+        // Drop any Generic(0) pips so payment doesn't see an empty
+        // requirement (cosmetic only — `pay` skips zero-amount pips
+        // already, but cleaner for `cmc()` and serde round-trip).
+        self.symbols
+            .retain(|s| !matches!(s, ManaSymbol::Generic(0)));
+        amount - remaining
+    }
+
     /// Return a copy of this cost with X symbols replaced by Generic(x_value).
     pub fn with_x_value(&self, x_value: u32) -> ManaCost {
         ManaCost {
