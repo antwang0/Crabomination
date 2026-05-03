@@ -2005,6 +2005,42 @@ fn daemogoth_titan_attack_trigger_sacrifices_another_creature() {
         "titan should remain on the battlefield");
 }
 
+// Push XXXI: Daemogoth Titan now also fires its sacrifice rider when it
+// blocks (the printed "or blocks" half), via the new EventKind::Blocks.
+#[test]
+fn daemogoth_titan_block_trigger_sacrifices_another_creature() {
+    let mut g = two_player_game();
+    // Opponent attacks us with a creature.
+    let opp_atk = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(opp_atk);
+    // We control the titan + a sac-fodder creature.
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    let titan = g.add_card_to_battlefield(0, catalog::daemogoth_titan());
+    g.clear_sickness(titan);
+    // Opponent declares attack.
+    g.step = TurnStep::DeclareAttackers;
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: opp_atk,
+        target: AttackTarget::Player(0),
+    }]))
+    .expect("opp can attack");
+    drain_stack(&mut g);
+    // Move to declare blockers — we block with the titan.
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareBlockers(vec![(titan, opp_atk)]))
+        .expect("titan can block");
+    drain_stack(&mut g);
+    // The block trigger should sacrifice another creature (the bear).
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == bear),
+        "bear should be sacrificed when titan blocks");
+    assert!(g.battlefield.iter().any(|c| c.id == titan),
+        "titan should still be on the battlefield");
+}
+
 #[test]
 fn daemogoth_titan_is_an_eleven_eleven_demon_horror() {
     let t = catalog::daemogoth_titan();
@@ -2911,6 +2947,31 @@ fn karok_wrangler_etb_taps_and_stuns_opponent_creature() {
     assert!(bear_card.tapped, "opp's bear should be tapped");
     assert_eq!(bear_card.counter_count(CounterType::Stun), 1,
         "opp's bear should have a stun counter");
+}
+
+// Push XXXI: Karok Wrangler now adds a *second* stun counter when the
+// caster controls ≥2 Wizards — Karok itself is a Wizard, so a single
+// other Wizard pushes the count over the threshold.
+#[test]
+fn karok_wrangler_double_stuns_when_two_wizards() {
+    let mut g = two_player_game();
+    let opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(opp_bear);
+    // Pre-existing Wizard on the battlefield: Hall Monitor.
+    let _hm = g.add_card_to_battlefield(0, catalog::hall_monitor());
+    let id = g.add_card_to_hand(0, catalog::karok_wrangler());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(opp_bear)), mode: None, x_value: None,
+    })
+    .expect("Karok Wrangler castable for {2}{W}");
+    drain_stack(&mut g);
+
+    let bear_card = g.battlefield.iter().find(|c| c.id == opp_bear).unwrap();
+    assert!(bear_card.tapped, "opp's bear should be tapped");
+    assert_eq!(bear_card.counter_count(CounterType::Stun), 2,
+        "with two Wizards on board (Karok + Hall Monitor), opp's bear should have 2 stun counters");
 }
 
 #[test]

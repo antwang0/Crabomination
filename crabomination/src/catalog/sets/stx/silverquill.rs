@@ -758,18 +758,21 @@ pub fn clever_lumimancer() -> CardDefinition {
 
 /// Karok Wrangler — {2}{W}, 3/3 Human Wizard. Printed Oracle:
 /// "When this creature enters, tap target creature an opponent controls,
-///  then put a stun counter on it."
+///  then put a stun counter on it. If you control two or more Wizards,
+///  put an additional stun counter on it instead."
 ///
-/// Push XXX: 🟡. Body + ETB tap-and-stun wired faithfully — same shape
-/// as Frost Trickster ({1}{U}, 2/2 Flash + Flying with the same ETB) on
-/// a meatier {2}{W} 3/3 frame without flash. The "if you control two or
-/// more Wizards, put an additional stun counter on it" rider is
-/// **omitted** (engine has no SelectorCount-keyed branching inside
-/// triggered abilities yet — same gap as Augusta's "two-or-more-attackers"
-/// gate). Net: a single stun counter lands either way; the additional
-/// rider would only matter against a target that already had an untap
-/// step queued, so the gameplay impact of the omission is limited.
+/// Push XXXI: ✅. The Wizard-count rider now wires via `Effect::If`
+/// gated on `Predicate::ValueAtLeast(CountOf(EachPermanent(Creature ∧
+/// Wizard ∧ ControlledByYou)), 2)`. The "instead" wording is
+/// approximated as additive (1 base stun counter → 2 stun counters
+/// when ≥2 Wizards) rather than a strict swap, but stun counters
+/// stack 1-for-1 against future untap steps so combat-correct against
+/// the printed semantic. Karok itself counts toward the Wizard
+/// threshold, so a solo Karok lands 1 stun, but Karok next to any
+/// other Wizard (e.g., Hall Monitor, Combat Professor, Codespell
+/// Cleric) lands 2.
 pub fn karok_wrangler() -> CardDefinition {
+    use crate::card::Predicate;
     CardDefinition {
         name: "Karok Wrangler",
         cost: cost(&[generic(2), w()]),
@@ -797,6 +800,26 @@ pub fn karok_wrangler() -> CardDefinition {
                     what: Selector::Target(0),
                     kind: CounterType::Stun,
                     amount: Value::Const(1),
+                },
+                // Wizard-count rider: +1 additional stun counter when
+                // you control ≥2 Wizards (Karok itself counts).
+                Effect::If {
+                    cond: Predicate::ValueAtLeast(
+                        Value::CountOf(Box::new(Selector::EachPermanent(
+                            SelectionRequirement::Creature
+                                .and(SelectionRequirement::HasCreatureType(
+                                    CreatureType::Wizard,
+                                ))
+                                .and(SelectionRequirement::ControlledByYou),
+                        ))),
+                        Value::Const(2),
+                    ),
+                    then: Box::new(Effect::AddCounter {
+                        what: Selector::Target(0),
+                        kind: CounterType::Stun,
+                        amount: Value::Const(1),
+                    }),
+                    else_: Box::new(Effect::Noop),
                 },
             ]),
         }],

@@ -1831,6 +1831,24 @@ impl GameState {
                 .unwrap_or(0),
             Value::CardsDiscardedThisResolution => self.cards_discarded_this_resolution as i32,
             Value::AttackersThisCombat => self.attacking.len() as i32,
+            Value::ManaSpentToCast => {
+                // Locate the trigger-source spell on the stack. Magecraft /
+                // SpellCast triggers stash the cast spell's `CardId` in
+                // `ctx.trigger_source` (push XXVIII), so we walk the stack
+                // for a matching `StackItem::Spell` and read its post-X CMC.
+                let Some(EntityRef::Card(cid)) = ctx.trigger_source else {
+                    return 0;
+                };
+                self.stack
+                    .iter()
+                    .find_map(|si| match si {
+                        StackItem::Spell { card, x_value, .. } if card.id == cid => {
+                            Some((card.definition.cost.cmc() + *x_value) as i32)
+                        }
+                        _ => None,
+                    })
+                    .unwrap_or(0)
+            }
         }
     }
 
@@ -2544,6 +2562,10 @@ pub(crate) fn event_matches_spec(
         (EventKind::SpellCast, GameEvent::SpellCast { .. }) => true,
         (EventKind::Attacks, GameEvent::AttackerDeclared(_)) => true,
         (EventKind::BecomesBlocked, GameEvent::BlockerDeclared { .. }) => true,
+        // Push XXXI: blocker-side event. `BlockerDeclared` carries both
+        // attacker and blocker; `BecomesBlocked` keys the SelfSource scope
+        // off the attacker, while `Blocks` keys it off the blocker.
+        (EventKind::Blocks, GameEvent::BlockerDeclared { .. }) => true,
         (EventKind::LifeGained, GameEvent::LifeGained { .. }) => true,
         (EventKind::LifeLost, GameEvent::LifeLost { .. }) => true,
         (EventKind::StepBegins(s), GameEvent::StepChanged(got)) => s == got,
@@ -2567,9 +2589,24 @@ pub(crate) fn event_matches_spec(
         ) || matches!(
             event,
             GameEvent::CreatureDied { card_id } if *card_id == source.id
-        ) || matches!(
-            event,
-            GameEvent::BlockerDeclared { attacker, .. } if *attacker == source.id
+        ) || (
+            // Two SelfSource bindings of `BlockerDeclared`:
+            //   * `BecomesBlocked` reads the **attacker** side
+            //     (printed: "When this creature becomes blocked, ...").
+            //   * `Blocks` reads the **blocker** side (printed: "When
+            //     this creature blocks, ..." or the "blocks" half of
+            //     "attacks or blocks").
+            matches!(spec.kind, EventKind::Blocks)
+                && matches!(
+                    event,
+                    GameEvent::BlockerDeclared { blocker, .. } if *blocker == source.id
+                )
+        ) || (
+            !matches!(spec.kind, EventKind::Blocks)
+                && matches!(
+                    event,
+                    GameEvent::BlockerDeclared { attacker, .. } if *attacker == source.id
+                )
         ) || matches!(
             event,
             GameEvent::CounterAdded { card_id, .. } if *card_id == source.id

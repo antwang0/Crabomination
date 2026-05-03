@@ -7,6 +7,59 @@ See `CUBE_FEATURES.md` (cube-card implementation status) and
 
 ## Recent additions
 
+- ✅ **Push XXXI (2026-05-03)**: Mana-spent-to-cast introspection lands
+  + 15 SOS / STX 2021 promotions + new `EventKind::Blocks` event + UI
+  label coverage. Tests at 1261 (was 1246, +15 net).
+  - **New `Value::ManaSpentToCast`** — reads `cost.cmc() + x_value`
+    of the spell on the stack matched by `ctx.trigger_source =
+    Card(cid)`. Returns 0 outside a spell context. Implementation
+    parallels push XXVII's `Predicate::CastSpellHasX` but exposes the
+    actual mana figure rather than a "has X" boolean. Used by the SOS
+    Opus + Increment payoff cycle.
+  - **New `effect::shortcut::opus(at_least, big, always)`** —
+    short-form constructor for the SOS Opus pattern (magecraft
+    trigger + ManaSpentToCast gate + always-fires + extra). Used by
+    Tackle Artist, Spectacular Skywhale, Muse Seeker, Deluge
+    Virtuoso, Exhibition Tidecaller.
+  - **New `effect::shortcut::increment()`** — short-form
+    constructor for the SOS Increment pattern (any spell cast where
+    mana_spent > min(P, T) drops a +1/+1 counter). Used by Berta,
+    Cuboid Colony, Fractal Tender, Hungry Graffalon, Pensive
+    Professor, Tester of the Tangential, Textbook Tabulator.
+  - **New `EventKind::Blocks`** — symmetric to `BecomesBlocked` but
+    fires from the *blocker* side of `GameEvent::BlockerDeclared`.
+    The dispatcher splits SelfSource scope by event kind: `Blocks`
+    reads `blocker == source.id`, `BecomesBlocked` reads `attacker
+    == source.id`. Unblocks Daemogoth Titan's "or blocks" rider and
+    any future "whenever ~ blocks" trigger.
+  - **15 promotions to ✅**: Tackle Artist, Aberrant Manawurm,
+    Spectacular Skywhale, Muse Seeker, Deluge Virtuoso, Exhibition
+    Tidecaller, Cuboid Colony, Hungry Graffalon, Textbook Tabulator
+    (all SOS); Daemogoth Titan, Karok Wrangler (STX 2021). Three
+    further promotions to 🟡 with note updates: Pensive Professor,
+    Tester of the Tangential, Fractal Tender, Berta (Increment
+    half wired, other rider stays gated).
+  - **UI improvement**: `predicate_short_label` (server/view.rs)
+    gained an arm for `Value::ManaSpentToCast` — formats as "if N+
+    mana spent" / "if ≤N mana spent". Same shape as push XXX's
+    `AttackersThisCombat` predicate label.
+  - **15 new / updated tests**: 9 in `tests::sos::*`
+    (`aberrant_manawurm_pumps_by_mana_spent_on_is_cast` +
+    `_scales_with_big_spells`, `tackle_artist_opus_small_cast_pumps_eot_only` +
+    `_big_cast_adds_counter`, `spectacular_skywhale_opus_big_cast_adds_three_counters`,
+    `cuboid_colony_increment_fires_on_two_drop` +
+    `_does_not_fire_on_equal_cmc`, `pensive_professor_increment_fires_on_any_cast`,
+    `tester_of_tangential_increment_skips_one_mana_cast` + `_fires_on_two_mana_cast`,
+    `berta_increment_then_mana_ramp_chains`,
+    `mana_spent_to_cast_is_zero_outside_spell_context`); 2 in
+    `tests::stx::*` (`daemogoth_titan_block_trigger_sacrifices_another_creature`,
+    `karok_wrangler_double_stuns_when_two_wizards`); 1 in
+    `server::view::tests::*`
+    (`predicate_short_label_covers_mana_spent_to_cast`); 1 signature
+    update in `tests::sos::*`
+    (`berta_wise_extrapolator_def_is_one_four_legendary_frog_druid` —
+    triggered abilities now count 2 rather than 1).
+
 - ✅ **Push XXX (2026-05-02)**: 8 new STX 2021 cards + 2 promotions
   + new `Value::AttackersThisCombat` primitive + filter evaluation
   on broadcast Attack triggers + UI labels for AttackersThisCombat
@@ -2766,3 +2819,56 @@ These items came up while implementing the 10-card Lorehold + STX
   deckbuilding, accessible only via Learn) would close all of
   those at once. Plumbing: a new `PlayerData.lesson_sideboard:
   Vec<CardId>` slot + a Learn-aware `Decision::ChooseLesson` answer.
+
+## New suggestions (added 2026-05-03 push XXXI)
+
+These came up while implementing `Value::ManaSpentToCast` + the Opus +
+Increment payoff cycle.
+
+### Engine
+
+- **`Value::ManaSpentToCast` for activated abilities**. The new
+  primitive reads off `StackItem::Spell`, so an *activated* ability
+  fired from a stack item that isn't a spell (e.g., "Whenever you
+  activate an ability with mana value X or greater") returns 0. A
+  parallel `Value::ManaSpentToActivate` (reading
+  `StackItem::Trigger.activation_cost` on a fresh field) would unblock
+  ability-cost-aware payoffs. Same shape as the current ManaSpentToCast
+  primitive, just on a different stack-item variant.
+
+- **Strict "instead" semantics for Opus / Increment**. Today the
+  `opus()` shortcut runs both halves on big casts (cheap + extra);
+  printed Oracle says "this creature gets +X/+0 instead". A new
+  `Effect::Branch { gate: Predicate, then: Effect, else_: Effect }`
+  would let cards substitute one half for the other — same primitive
+  could replace the bespoke `Effect::If` arms scattered around.
+  Combat-correct today (the bigger payoff dominates), but a strict
+  "instead" fixes some corner-case interactions (e.g., a +1/+1 EOT
+  pump that would also trigger a "whenever this gets a counter"
+  rider — currently both fire on big casts).
+
+- **`EventKind::Blocks` symmetry pass**. Push XXXI added the event
+  but only Daemogoth Titan uses it today. Sweep the catalog for
+  cards with a "blocks" rider that might benefit:
+  Mardu Heart-Piercer (block trigger ping), Daemogoth Inquisitor
+  (printed: "or blocks"), and any future block-side payoff. Right
+  now those still get the omitted-rider fallback.
+
+### UI
+
+- **Opus / Increment hover hint**. Cards with the new shortcuts
+  should surface a "magecraft" / "increment" badge in the keyword
+  bar so players see the trigger family at a glance. Same pattern
+  as push XXIV's life-cost ability indicator. Today the trigger is
+  only visible by hovering the trigger source.
+
+### Bot / AI
+
+- **Big-spell prioritisation around Opus payoffs**. The bot's
+  spell-priority scoring doesn't yet know that casting a 5+-mana
+  spell when an Opus body is on the field unlocks the bigger
+  payoff. A small heuristic — "+5 score if you control a body with
+  an Opus trigger and the candidate spell costs ≥5" — would cluster
+  Wisdom of Ages / Pox Plague / X-cost spells around the Opus
+  finishers. Same shape as the existing magecraft-aware scoring
+  for cheap IS spells.

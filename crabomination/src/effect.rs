@@ -265,6 +265,20 @@ pub enum Value {
     /// 2)`) and any future "for each attacker" payoff (Adriana, Captain
     /// of the Guard's "+1/+1 for each other attacking creature" pump).
     AttackersThisCombat,
+    /// Total mana spent to cast the trigger-source spell (the spell that
+    /// just-cast / fired the trigger). Reads `cost.cmc() + x_value` of the
+    /// `StackItem::Spell` matched by `ctx.trigger_source = Card(cid)`.
+    /// Defaults to 0 if the source is not a spell on the stack (e.g., the
+    /// trigger fires on a non-cast event, or the spell already resolved
+    /// out from under the trigger). Used by SOS / STX "Opus — if 5 or more
+    /// mana was spent to cast that spell" payoffs (Aberrant Manawurm,
+    /// Tackle Artist, Spectacular Skywhale, Magmablood Archaic, Muse Seeker,
+    /// Exhibition Tidecaller, Deluge Virtuoso, Colorstorm Stallion, Elemental
+    /// Mascot) and any future "amount of mana spent to cast that spell"
+    /// scaling. The {X} portion is faithfully covered — the engine reads
+    /// the post-X cmc off the stack item, so a {X}{R} bolt cast for X=3
+    /// returns 4.
+    ManaSpentToCast,
 }
 
 impl Value {
@@ -439,6 +453,15 @@ pub enum EventKind {
     Attacks,
     /// A creature became blocked.
     BecomesBlocked,
+    /// A creature was declared as a blocker. Symmetric counterpart to
+    /// `Attacks` / `BecomesBlocked`. Used by Daemogoth Titan's printed
+    /// "Whenever this creature attacks **or blocks**, sacrifice another
+    /// creature" rider — pre-XXXI the "or blocks" half was omitted (no
+    /// blocker-side event existed). Now this event fires at
+    /// declare-blockers time for each declared blocker. Pairs with
+    /// `EventScope::SelfSource` (the dispatcher matches the blocker side
+    /// of `GameEvent::BlockerDeclared`).
+    Blocks,
     /// Combat damage was dealt to a player by a creature.
     DealsCombatDamageToPlayer,
     /// Combat damage was dealt to a creature by a creature.
@@ -1625,5 +1648,62 @@ pub mod shortcut {
                 .with_filter(Predicate::CastSpellHasX),
             effect,
         }
+    }
+
+    /// SOS "Increment" trigger: "Whenever you cast a spell, if the amount
+    /// of mana you spent is greater than this creature's power or
+    /// toughness, put a +1/+1 counter on this creature." Backed by
+    /// `Value::ManaSpentToCast` (push XXXI) compared against
+    /// `Min(PowerOf(This), ToughnessOf(This)) + 1` — "greater than P
+    /// or T" reduces to "greater than min(P, T)" which is "≥ min(P, T)
+    /// + 1". Used by Berta, Cuboid Colony, Fractal Tender, Pensive
+    /// Professor, Tester of the Tangential, Textbook Tabulator.
+    ///
+    /// The trigger fires on every spell cast (not just instant/sorcery).
+    pub fn increment() -> TriggeredAbility {
+        TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(Predicate::ValueAtLeast(
+                    Value::ManaSpentToCast,
+                    Value::Sum(vec![
+                        Value::Min(
+                            Box::new(Value::PowerOf(Box::new(Selector::This))),
+                            Box::new(Value::ToughnessOf(Box::new(Selector::This))),
+                        ),
+                        Value::Const(1),
+                    ]),
+                )),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: crate::card::CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        }
+    }
+
+    /// SOS "Opus" trigger: "Whenever you cast an instant or sorcery spell,
+    /// `bonus_effect` if five or more mana was spent to cast that spell."
+    /// Bundles the magecraft IS-cast trigger with an `Effect::If` gate
+    /// against the new `Value::ManaSpentToCast` primitive (push XXXI).
+    /// Used by Tackle Artist (+1/+1 counter on five+), Aberrant Manawurm,
+    /// Spectacular Skywhale (3 +1/+1 counters), Muse Seeker (skip discard),
+    /// Exhibition Tidecaller (mill 10 vs 3), Deluge Virtuoso, Colorstorm
+    /// Stallion (token rider — gated separately via copy primitive),
+    /// Elemental Mascot, and any future "if N or more mana was spent"
+    /// rider. The `else_` branch covers the always-on half (the printed
+    /// "Opus — Whenever you cast … `always_effect`" part), which fires on
+    /// every IS cast regardless of mana spent.
+    pub fn opus(at_least: i32, big: Effect, always: Effect) -> TriggeredAbility {
+        magecraft(Effect::Seq(vec![
+            always,
+            Effect::If {
+                cond: Predicate::ValueAtLeast(
+                    Value::ManaSpentToCast,
+                    Value::Const(at_least),
+                ),
+                then: Box::new(big),
+                else_: Box::new(Effect::Noop),
+            },
+        ]))
     }
 }

@@ -5250,9 +5250,13 @@ fn berta_wise_extrapolator_def_is_one_four_legendary_frog_druid() {
         "Berta should have at least one activated ability");
     assert!(card.activated_abilities[0].tap_cost,
         "Berta's activation should be a tap ability");
-    // Has the counter-add → mana trigger (one entry).
-    assert_eq!(card.triggered_abilities.len(), 1,
-        "Berta should have a single counter-add → AnyOneColor mana trigger");
+    // Push XXXI: Berta now also carries the Increment trigger (the
+    // shared `effect::shortcut::increment()` SpellCast/YourControl
+    // trigger backed by `Value::ManaSpentToCast`). So we expect two
+    // triggered abilities: counter-add → mana, and Increment →
+    // +1/+1 counter on this creature.
+    assert_eq!(card.triggered_abilities.len(), 2,
+        "Berta should have two triggered abilities (counter-add → mana + Increment)");
 }
 
 #[test]
@@ -8113,6 +8117,251 @@ fn quandrix_the_proof_is_6_6_flying_trample_dragon() {
     assert!(card.has_creature_type(crate::card::CreatureType::Dragon));
     assert!(card.keywords.contains(&Keyword::Flying));
     assert!(card.keywords.contains(&Keyword::Trample));
+}
+
+// ── Push XXXI — Value::ManaSpentToCast + Opus + Increment ──────────────────
+
+// Aberrant Manawurm — Whenever you cast an IS spell, +X/+0 EOT where X is
+// the mana spent. Cast a {R} Lightning Bolt → +1/+0 EOT (2 → 3 power).
+#[test]
+fn aberrant_manawurm_pumps_by_mana_spent_on_is_cast() {
+    let mut g = two_player_game();
+    let manawurm = g.add_card_to_battlefield(0, catalog::aberrant_manawurm());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        mode: None, x_value: None,
+    })
+    .expect("Bolt castable");
+    drain_stack(&mut g);
+
+    let card = g.battlefield_find(manawurm).unwrap();
+    // Bolt is {R} = CMC 1; printed Manawurm is 2/5 → +1 power = 3/5.
+    assert_eq!(card.power(), 3, "Aberrant Manawurm should pump by 1 (Bolt's CMC)");
+    assert_eq!(card.toughness(), 5);
+}
+
+// Aberrant Manawurm — Cast Wisdom of Ages ({4}{U}{U}{U}, CMC 7). The +X/+0
+// pump is +7. 2/5 → 9/5.
+#[test]
+fn aberrant_manawurm_scales_with_big_spells() {
+    let mut g = two_player_game();
+    // Pre-load library so Wisdom of Ages doesn't deck-out the caster.
+    for _ in 0..10 {
+        g.add_card_to_library(0, catalog::lightning_bolt());
+    }
+    let manawurm = g.add_card_to_battlefield(0, catalog::aberrant_manawurm());
+    let big = g.add_card_to_hand(0, catalog::wisdom_of_ages());
+    g.players[0].mana_pool.add(Color::Blue, 3);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: big, target: None, mode: None, x_value: None,
+    })
+    .expect("Wisdom of Ages castable for {4}{U}{U}{U}");
+    drain_stack(&mut g);
+
+    let card = g.battlefield_find(manawurm).unwrap();
+    // Wisdom of Ages CMC is 7 → +7/+0 EOT, base 2/5 = 9/5.
+    assert_eq!(card.power(), 9);
+    assert_eq!(card.toughness(), 5);
+}
+
+// Tackle Artist — Opus rider: small cast pumps +1/+1 EOT only; no
+// permanent counter.
+#[test]
+fn tackle_artist_opus_small_cast_pumps_eot_only() {
+    let mut g = two_player_game();
+    let ta = g.add_card_to_battlefield(0, catalog::tackle_artist());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        mode: None, x_value: None,
+    })
+    .expect("Bolt castable");
+    drain_stack(&mut g);
+
+    let card = g.battlefield_find(ta).unwrap();
+    // Cheap-cast: +1/+1 EOT pump only, no permanent counter.
+    assert_eq!(card.power(), 5, "+1/+1 EOT pump on a 4/3 = 5/4");
+    assert_eq!(card.toughness(), 4);
+    assert_eq!(card.counter_count(CounterType::PlusOnePlusOne), 0,
+        "Cheap-cast Opus shouldn't add a +1/+1 counter");
+}
+
+// Tackle Artist — Opus rider: 5+ mana spent = additional +1/+1 counter.
+#[test]
+fn tackle_artist_opus_big_cast_adds_counter() {
+    let mut g = two_player_game();
+    for _ in 0..10 {
+        g.add_card_to_library(0, catalog::lightning_bolt());
+    }
+    let ta = g.add_card_to_battlefield(0, catalog::tackle_artist());
+    let big = g.add_card_to_hand(0, catalog::wisdom_of_ages());
+    g.players[0].mana_pool.add(Color::Blue, 3);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: big, target: None, mode: None, x_value: None,
+    })
+    .expect("Wisdom of Ages castable");
+    drain_stack(&mut g);
+
+    let card = g.battlefield_find(ta).unwrap();
+    // CMC 7 ≥ 5 → +1/+1 counter added (+ EOT pump too).
+    assert_eq!(card.counter_count(CounterType::PlusOnePlusOne), 1,
+        "Big-cast Opus should add a +1/+1 counter on Tackle Artist");
+}
+
+// Spectacular Skywhale — Opus +3/+0 EOT cheap-cast, +3 +1/+1 counters big.
+#[test]
+fn spectacular_skywhale_opus_big_cast_adds_three_counters() {
+    let mut g = two_player_game();
+    for _ in 0..10 {
+        g.add_card_to_library(0, catalog::lightning_bolt());
+    }
+    let sw = g.add_card_to_battlefield(0, catalog::spectacular_skywhale());
+    let big = g.add_card_to_hand(0, catalog::wisdom_of_ages());
+    g.players[0].mana_pool.add(Color::Blue, 3);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: big, target: None, mode: None, x_value: None,
+    })
+    .expect("Wisdom of Ages castable");
+    drain_stack(&mut g);
+
+    let card = g.battlefield_find(sw).unwrap();
+    assert_eq!(card.counter_count(CounterType::PlusOnePlusOne), 3,
+        "Big-cast Skywhale should put 3 +1/+1 counters");
+}
+
+// Cuboid Colony — Increment: any cast where mana_spent > min(P,T)=1 adds
+// a +1/+1 counter. Bolt ({R}, CMC 1) doesn't trigger (1 not > 1); Bear
+// ({1}{G}, CMC 2) does trigger (2 > 1).
+#[test]
+fn cuboid_colony_increment_fires_on_two_drop() {
+    let mut g = two_player_game();
+    let cube = g.add_card_to_battlefield(0, catalog::cuboid_colony());
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear, target: None, mode: None, x_value: None,
+    })
+    .expect("Grizzly Bears castable");
+    drain_stack(&mut g);
+    let card = g.battlefield_find(cube).unwrap();
+    assert_eq!(card.counter_count(CounterType::PlusOnePlusOne), 1,
+        "Bears (CMC 2) > Colony's min(P, T)=1 should fire Increment");
+}
+
+// Cuboid Colony — Increment: Bolt at CMC 1 doesn't fire (1 not > 1).
+#[test]
+fn cuboid_colony_increment_does_not_fire_on_equal_cmc() {
+    let mut g = two_player_game();
+    let cube = g.add_card_to_battlefield(0, catalog::cuboid_colony());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        mode: None, x_value: None,
+    })
+    .expect("Bolt castable");
+    drain_stack(&mut g);
+    let card = g.battlefield_find(cube).unwrap();
+    assert_eq!(card.counter_count(CounterType::PlusOnePlusOne), 0,
+        "Bolt (CMC 1) not greater than min(P, T)=1; Increment should NOT fire");
+}
+
+// Pensive Professor — Increment fires on any cast (min(P, T)=0).
+#[test]
+fn pensive_professor_increment_fires_on_any_cast() {
+    let mut g = two_player_game();
+    let pp = g.add_card_to_battlefield(0, catalog::pensive_professor());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        mode: None, x_value: None,
+    })
+    .expect("Bolt castable");
+    drain_stack(&mut g);
+    let card = g.battlefield_find(pp).unwrap();
+    assert_eq!(card.counter_count(CounterType::PlusOnePlusOne), 1,
+        "Pensive Professor at min(P, T)=0 fires on any 1+ mana spell");
+}
+
+// Tester of the Tangential — Increment on a 1/1 means cast must spend ≥ 2
+// to fire.
+#[test]
+fn tester_of_tangential_increment_skips_one_mana_cast() {
+    let mut g = two_player_game();
+    let tt = g.add_card_to_battlefield(0, catalog::tester_of_the_tangential());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        mode: None, x_value: None,
+    })
+    .expect("Bolt castable");
+    drain_stack(&mut g);
+    let card = g.battlefield_find(tt).unwrap();
+    assert_eq!(card.counter_count(CounterType::PlusOnePlusOne), 0,
+        "Bolt CMC 1 not > 1 → Increment does NOT fire");
+}
+
+#[test]
+fn tester_of_tangential_increment_fires_on_two_mana_cast() {
+    let mut g = two_player_game();
+    let tt = g.add_card_to_battlefield(0, catalog::tester_of_the_tangential());
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear, target: None, mode: None, x_value: None,
+    })
+    .expect("Bears castable");
+    drain_stack(&mut g);
+    let card = g.battlefield_find(tt).unwrap();
+    assert_eq!(card.counter_count(CounterType::PlusOnePlusOne), 1,
+        "Bears CMC 2 > 1 → Increment fires");
+}
+
+// Berta — Increment trigger now wires; +1/+1 counter on Berta also fires
+// the existing AnyOneColor mana ramp trigger.
+#[test]
+fn berta_increment_then_mana_ramp_chains() {
+    let mut g = two_player_game();
+    let berta = g.add_card_to_battlefield(0, catalog::berta_wise_extrapolator());
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear, target: None, mode: None, x_value: None,
+    })
+    .expect("Bears castable");
+    drain_stack(&mut g);
+
+    let card = g.battlefield_find(berta).unwrap();
+    // Bears CMC 2 > min(1, 4) = 1 → Increment fires → +1/+1 counter.
+    assert_eq!(card.counter_count(CounterType::PlusOnePlusOne), 1,
+        "Berta should gain a +1/+1 counter from Increment");
+    // ... and the counter triggers AnyOneColor mana add.
+    assert!(g.players[0].mana_pool.total() > 0,
+        "Berta's CounterAdded → AnyOneColor mana trigger should fire");
+}
+
+// Value::ManaSpentToCast outside a spell context returns 0 (the trigger
+// source isn't a spell on the stack).
+#[test]
+fn mana_spent_to_cast_is_zero_outside_spell_context() {
+    use crate::effect::Value;
+    use crate::game::effects::EffectContext;
+    let g = two_player_game();
+    // No trigger source → returns 0.
+    let ctx = EffectContext::for_spell(0, None, 0, 0);
+    assert_eq!(g.evaluate_value(&Value::ManaSpentToCast, &ctx), 0);
 }
 
 // Prismari, the Inspiration — {5}{U}{R} 7/7 Flying Elder Dragon with

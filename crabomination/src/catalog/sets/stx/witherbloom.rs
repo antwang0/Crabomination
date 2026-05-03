@@ -387,19 +387,23 @@ pub fn dina_soul_steeper() -> CardDefinition {
 
 // ── Daemogoth Titan ─────────────────────────────────────────────────────────
 
-/// Daemogoth Titan — {3}{B}{G}, 11/11 Demon Horror.
+/// Daemogoth Titan — {3}{B}{G}, 11/11 Demon Horror. Printed Oracle:
 /// "Whenever this creature attacks or blocks, sacrifice another creature."
 ///
-/// Push XXIV: 11/11 mythic finisher. Attack-side trigger wired faithfully
-/// (`EventKind::Attacks`/`SelfSource` → `Effect::Sacrifice` filtered to
-/// creatures-you-control, count 1; the auto-target/sac picker rejects the
-/// titan itself courtesy of the standard "another" filter on the controller's
-/// own creatures). 🟡 The "or blocks" rider is omitted — engine has no
-/// `EventKind::Blocks` (we have `BecomesBlocked` for the opposite role)
-/// so blocking is a defender-side no-op for the moment. Net combat math
-/// is correct any time the titan swings (matches the printed-attack pattern,
-/// which is the dominant mode in real play).
+/// Push XXXI: ✅. The "or blocks" rider is now wired via the new
+/// `EventKind::Blocks` event (push XXXI) — declare-blockers emits a
+/// `BlockerDeclared` event and the Blocks/SelfSource trigger reads its
+/// blocker side (filtered to *this* permanent), parallel to the existing
+/// Attacks/SelfSource. Both halves run the same body — sacrifice a
+/// non-titan creature you control. Combat-correct in every defender
+/// scenario, not just attack-only swings.
 pub fn daemogoth_titan() -> CardDefinition {
+    let sac_another = Effect::Sacrifice {
+        who: Selector::You,
+        count: Value::Const(1),
+        filter: SelectionRequirement::Creature
+            .and(SelectionRequirement::ControlledByYou),
+    };
     CardDefinition {
         name: "Daemogoth Titan",
         cost: cost(&[generic(3), b(), g()]),
@@ -414,15 +418,16 @@ pub fn daemogoth_titan() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
-            effect: Effect::Sacrifice {
-                who: Selector::You,
-                count: Value::Const(1),
-                filter: SelectionRequirement::Creature
-                    .and(SelectionRequirement::ControlledByYou),
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+                effect: sac_another.clone(),
             },
-        }],
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Blocks, EventScope::SelfSource),
+                effect: sac_another,
+            },
+        ],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],

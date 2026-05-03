@@ -272,6 +272,16 @@ fn predicate_short_label(p: &crate::card::Predicate) -> String {
         Predicate::ValueAtMost(Value::AttackersThisCombat, Value::Const(n)) => {
             format!("if ≤{n} attackers")
         }
+        // Push XXXI: ManaSpentToCast-keyed gates. Used by SOS Opus
+        // payoffs (Tackle Artist, Spectacular Skywhale, Muse Seeker,
+        // Deluge Virtuoso, Exhibition Tidecaller) — "if 5+ mana was
+        // spent to cast that spell". Renders as a short readable hint.
+        Predicate::ValueAtLeast(Value::ManaSpentToCast, Value::Const(n)) => {
+            format!("if {n}+ mana spent")
+        }
+        Predicate::ValueAtMost(Value::ManaSpentToCast, Value::Const(n)) => {
+            format!("if ≤{n} mana spent")
+        }
         // EntityMatches {what, filter}: predicate over a specific entity
         // (the trigger source, target, or source-of-cast spell). The
         // Repartee filter ("trigger source matches Creature") is the
@@ -1233,6 +1243,22 @@ mod tests {
         assert_eq!(predicate_short_label(&p), "if attacking");
         let p = Predicate::ValueAtMost(Value::AttackersThisCombat, Value::Const(3));
         assert_eq!(predicate_short_label(&p), "if ≤3 attackers");
+    }
+
+    /// Push XXXI: `predicate_short_label` formats the new
+    /// `Value::ManaSpentToCast` primitive in
+    /// `Predicate::ValueAtLeast(_, Const(n))` / `ValueAtMost` shape so
+    /// Opus payoffs (Tackle Artist, Spectacular Skywhale, Muse Seeker,
+    /// Deluge Virtuoso, Exhibition Tidecaller) show their 5+-mana gate
+    /// as "if 5+ mana spent" rather than the catch-all "conditional".
+    #[test]
+    fn predicate_short_label_covers_mana_spent_to_cast() {
+        use crate::card::Predicate;
+        use crate::effect::Value;
+        let p = Predicate::ValueAtLeast(Value::ManaSpentToCast, Value::Const(5));
+        assert_eq!(predicate_short_label(&p), "if 5+ mana spent");
+        let p = Predicate::ValueAtMost(Value::ManaSpentToCast, Value::Const(4));
+        assert_eq!(predicate_short_label(&p), "if ≤4 mana spent");
     }
 
     /// Planeswalkers' loyalty abilities should surface in the wire view so
