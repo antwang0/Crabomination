@@ -186,10 +186,24 @@ pub fn tanazir_quandrix() -> CardDefinition {
 // ── Shadrix Silverquill (W/B) ──────────────────────────────────────────────
 
 /// Shadrix Silverquill — {2}{W}{B}, 4/4 Legendary Dragon. Flying, double
-/// strike. Real Oracle attack-trigger: choose two among three modes (you
-/// or target opp), each granting flavor-specific effects. Body wired with
-/// flying + double strike; choose-2-of-3 mode picker is 🟡.
+/// strike. Printed Oracle attack-trigger:
+///   "Whenever Shadrix Silverquill attacks, choose two different modes —
+///    • You draw a card.
+///    • Target opponent loses 2 life.
+///    • Put a +1/+1 counter on target creature."
+///
+/// Push XXXVII: ✅ — the choose-2-of-3 attack trigger now wires faithfully
+/// via `Effect::ChooseModes { count: 2 }` re-used at trigger resolution
+/// time. AutoDecider picks modes 0+1 (draw + drain — the canonical "value"
+/// pair, no targeting friction). ScriptedDecider drives mode pairs that
+/// involve targeting (mode 1 needs an opp; mode 2 needs a creature).
 pub fn shadrix_silverquill() -> CardDefinition {
+    use crate::card::{
+        CounterType, EventKind, EventScope, EventSpec, Selector, SelectionRequirement,
+        TriggeredAbility, Value,
+    };
+    use crate::effect::shortcut::target_filtered;
+    use crate::effect::PlayerRef;
     CardDefinition {
         name: "Shadrix Silverquill",
         cost: cost(&[generic(2), w(), b()]),
@@ -204,7 +218,32 @@ pub fn shadrix_silverquill() -> CardDefinition {
         keywords: vec![Keyword::Flying, Keyword::DoubleStrike],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::ChooseModes {
+                count: 2,
+                up_to: false,
+                allow_duplicates: false,
+                modes: vec![
+                    // Mode 0: You draw a card.
+                    Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::Const(1),
+                    },
+                    // Mode 1: Target opponent loses 2 life.
+                    Effect::LoseLife {
+                        who: Selector::Player(PlayerRef::EachOpponent),
+                        amount: Value::Const(2),
+                    },
+                    // Mode 2: Put a +1/+1 counter on target creature.
+                    Effect::AddCounter {
+                        what: target_filtered(SelectionRequirement::Creature),
+                        kind: CounterType::PlusOnePlusOne,
+                        amount: Value::Const(1),
+                    },
+                ],
+            },
+        }],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],

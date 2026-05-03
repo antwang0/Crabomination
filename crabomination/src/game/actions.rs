@@ -93,6 +93,37 @@ pub(crate) fn consume_first_spell_tax(state: &mut crate::game::GameState, caster
     }
 }
 
+/// Walk the battlefield's `StaticEffect::TaxActivatedAbilities` statics
+/// and return the cumulative generic-mana surcharge owed to activate
+/// `source`'s ability. Multiple distinct taxes (e.g. two Augmenter
+/// Pugilists, an Augmenter Pugilist + Trinisphere) sum.
+///
+/// The tax is read against the activating permanent (`source`), not the
+/// activator: Augmenter Pugilist's "activated abilities of *creatures*"
+/// applies to every creature on the battlefield — friend or foe. Mana
+/// abilities are *not* exempt at the rules level (Augmenter Pugilist
+/// taxes Llanowar Elves's mana ability too); we mirror that here.
+pub(crate) fn extra_cost_for_activation(
+    state: &crate::game::GameState,
+    source: &crate::card::CardInstance,
+) -> u32 {
+    use crate::effect::StaticEffect;
+    let mut tax = 0u32;
+    for src in &state.battlefield {
+        for sa in &src.definition.static_abilities {
+            if let StaticEffect::TaxActivatedAbilities { filter, amount } = &sa.effect {
+                // Evaluate the static's filter against the activating
+                // permanent — Augmenter Pugilist's `Creature` filter
+                // taxes every creature (friend or foe) per printed Oracle.
+                if state.evaluate_requirement_on_card(filter, source, source.controller) {
+                    tax += amount;
+                }
+            }
+        }
+    }
+    tax
+}
+
 /// True if any battlefield permanent has `StaticEffect::LandsTapColorlessOnly`
 /// (Damping Sphere). Used by `play_land` to decide whether to downgrade
 /// multi-color/multi-mana lands to "{T}: Add {C}".
@@ -1340,10 +1371,26 @@ impl GameState {
             return Err(GameError::InsufficientGraveyard);
         }
 
+        // Compute battlefield-wide activation tax (Augmenter Pugilist
+        // family). The tax is folded into the mana cost via additional
+        // generic pips before payment — same shape as Damping Sphere's
+        // first-spell-tax for casts.
+        let activation_tax = {
+            let source_card = &self.battlefield[pos];
+            extra_cost_for_activation(self, source_card)
+        };
+        let effective_mana_cost = if activation_tax == 0 {
+            ability.mana_cost.clone()
+        } else {
+            let mut c = ability.mana_cost.clone();
+            c.symbols.push(crate::mana::generic(activation_tax));
+            c
+        };
+
         // Snapshot pristine state before applying tap-cost so a failed mana
         // payment rolls back both the auto-tap of mana sources AND the
         // tap-cost on the source itself.
-        let needs_payment = !ability.mana_cost.symbols.is_empty();
+        let needs_payment = !effective_mana_cost.symbols.is_empty();
         let pre_snapshot = needs_payment.then(|| self.snapshot_payment_state(p));
 
         // Pay tap cost
@@ -1356,7 +1403,7 @@ impl GameState {
 
         let mut auto_mana_events = Vec::new();
         if let Some(snapshot) = pre_snapshot {
-            let receipt = self.try_pay_after_snapshot(p, &ability.mana_cost, snapshot)?;
+            let receipt = self.try_pay_after_snapshot(p, &effective_mana_cost, snapshot)?;
             if receipt.side_effects.life_lost > 0 {
                 self.players[p].life -= receipt.side_effects.life_lost as i32;
             }

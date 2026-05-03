@@ -219,6 +219,32 @@ impl GameState {
                 }
             }
 
+            Effect::PickModeAtResolution(modes) => {
+                use crate::decision::{Decision, DecisionAnswer};
+                if modes.is_empty() {
+                    return Ok(());
+                }
+                // Prompt the controller for a fresh mode pick at resolution
+                // time (separate from the spell-level `ctx.mode` populated at
+                // cast time). AutoDecider picks mode 0; ScriptedDecider can
+                // override via `Mode(N)`.
+                let source = ctx.source.unwrap_or(crate::card::CardId(0));
+                let answer = self.decider.decide(&Decision::ChooseMode {
+                    source,
+                    num_modes: modes.len(),
+                });
+                let idx = match answer {
+                    DecisionAnswer::Mode(n) => n,
+                    _ => 0,
+                };
+                let picked = modes
+                    .get(idx)
+                    .ok_or(GameError::ModeOutOfBounds(idx))?;
+                let mut sub_ctx = ctx.clone();
+                sub_ctx.mode = idx;
+                self.run_effect(picked, &sub_ctx, events)
+            }
+
             Effect::ChooseModes {
                 modes,
                 count,

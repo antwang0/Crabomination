@@ -642,6 +642,11 @@ fn ability_effect_label(effect: &Effect) -> &'static str {
             .map(ability_effect_label)
             .find(|l| *l != "Activate")
             .unwrap_or("Activate"),
+        Effect::PickModeAtResolution(modes) => modes
+            .iter()
+            .map(ability_effect_label)
+            .find(|l| *l != "Activate")
+            .unwrap_or("Activate"),
         Effect::ForEach { body, .. } | Effect::Repeat { body, .. } => ability_effect_label(body),
         // MayDo / MayPay wrap an inner effect — surface the inner label
         // so the UI shows what the player gets to do (the "may"
@@ -1441,6 +1446,33 @@ mod tests {
             duration: Duration::EndOfTurn,
         };
         assert_eq!(ability_effect_label(&dyn_pump), "Pump");
+    }
+
+    /// Push XXXVII: `Effect::PickModeAtResolution` should label using the
+    /// first non-trivial inner mode's label (same shape as ChooseMode /
+    /// ChooseModes). Prismari Apprentice's magecraft "Scry 1 or +1/+0
+    /// EOT" should surface as "Pump" (the inner Scry's "Activate"
+    /// fallback gets skipped) — actually scry comes first so it's
+    /// "Scry/Surveil".
+    #[test]
+    fn ability_effect_label_handles_pick_mode_at_resolution() {
+        use crate::card::Selector;
+        use crate::effect::{Duration, PlayerRef, Value};
+        let pmr = Effect::PickModeAtResolution(vec![
+            Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
+            Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(1),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+        ]);
+        // First non-fallback label wins. Scry → "Scry/Surveil" or similar.
+        // We assert it's NOT "Activate" (the catch-all fallback) — proving
+        // the new arm is exercising the inner modes.
+        let label = ability_effect_label(&pmr);
+        assert_ne!(label, "Activate",
+            "PickModeAtResolution should surface inner mode label, not the fallback");
     }
 
     /// Planeswalkers' loyalty abilities should surface in the wire view so

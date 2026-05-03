@@ -36,19 +36,109 @@ This file tracks two adjacent Strixhaven catalogs:
 Counts reflect the regenerated tables below (audited via
 `scripts/audit_strixhaven2.py` against `catalog::sets::sos`).
 
-- ✅ done: **130** (+3 from push XXXVI: Conciliator's Duelist (rider),
-  Borrowed Knowledge (doc-only), and one prior tally fix). Push XXXVI
-  also promotes 5 STX Commands (Lorehold/Witherbloom/Prismari/Silverquill/
-  Quandrix) + Mentor's Guidance + Multiple Choice in the STX 2021
-  table (those cards live in `catalog::sets::stx`, separate from the
-  SOS counts above).
-- 🟡 partial: **117** (-3 from push XXXVI promotions).
+- ✅ done: **130** (unchanged this push — XXXVII's promotions land in
+  STX 2021, not SOS).
+- 🟡 partial: **117** (unchanged).
 - ⏳ todo: **8** (unchanged).
+
+Push XXXVII (2026-05-03) promotes 4 STX 2021 cards: **Shadrix
+Silverquill** (choose-2-of-3 attack trigger via `Effect::ChooseModes`),
+**Prismari Apprentice** (Scry-1-or-+1/+0 magecraft via the new
+`Effect::PickModeAtResolution`), **Augmenter Pugilist** (activated-
+ability tax static via the new `StaticEffect::TaxActivatedAbilities`),
+and **Silverquill Apprentice** (+1/+1-or-(-1/-1) Magecraft via
+`Effect::PickModeAtResolution`). Plus 2 doc fixes: Potioner's Trove
+and Ennis Debate Moderator (both already wired with their gates,
+status notes were stale).
 
 All 247 cards marked ✅ or 🟡 have a corresponding factory in
 `crabomination/src/catalog/sets/sos/`; the audit script reports 0 false
 positives and 0 stale ⏳ rows. STX 2021 progress is tracked in the
 "Strixhaven base set (STX)" section near the bottom of this file.
+
+## 2026-05-03 push XXXVII: Effect::PickModeAtResolution + StaticEffect::TaxActivatedAbilities + 4 STX 2021 promotions
+
+Two new engine primitives + 4 STX 2021 🟡 → ✅ promotions + 2 doc fixes
+on already-wired SOS cards. Tests at 1336 (was 1325, +11 net).
+
+### Engine primitives
+
+- ✅ **`Effect::PickModeAtResolution(Vec<Effect>)`** — sibling to
+  `Effect::ChooseMode` that prompts the controller for a mode pick at
+  *resolution* time rather than cast time. Used by triggered abilities
+  whose printed text reads "your choice of X or Y" — the surrounding
+  spell's `ctx.mode` is already pinned to the cast-time pick (so re-
+  using `ChooseMode` would incorrectly read the spell-level mode index).
+  AutoDecider picks mode 0 (the universal safe default — usually
+  Scry/+1/+1/draw); ScriptedDecider can flip via `Mode(N)`. The
+  decision surfaces as `Decision::ChooseMode { source, num_modes }`,
+  reusing the existing decision plumbing (no new wire-format type).
+
+- ✅ **`StaticEffect::TaxActivatedAbilities { filter, amount }`** —
+  Augmenter Pugilist-style "activated abilities of [filter] cost {N}
+  more to activate." Walks all battlefield permanents at activation
+  time via the new `extra_cost_for_activation` helper and surcharges
+  the activator's mana cost when the activating permanent matches the
+  filter. Multiple distinct sources (two Pugilists, Pugilist + tax
+  artifact) sum. Mana abilities aren't exempt at the rules level —
+  Llanowar Elves's `{T}: Add {G}` becomes `{2}, {T}: Add {G}` while
+  Pugilist is on the battlefield. The static is *not* a layer-applied
+  continuous effect (`game/mod.rs` skips it in the layers builder); it
+  reads at activation time.
+
+### STX 2021 promotions (4)
+
+| Card | Cost | Status | Notes |
+|---|---|---|---|
+| Shadrix Silverquill | {2}{W}{B} | ✅ ← 🟡 | Choose-2-of-3 attack trigger now wires via `Effect::ChooseModes { count: 2 }` re-used at trigger resolution. AutoDecider picks modes 0+1 (draw + drain — the canonical value pair). ScriptedDecider drives mode pairs that involve targeting (mode 1 needs an opp; mode 2 needs a creature). |
+| Prismari Apprentice | {U}{R} | ✅ ← 🟡 | Magecraft "Scry 1 or +1/+0 EOT" now wires faithfully via the new `Effect::PickModeAtResolution`. AutoDecider picks mode 0 (Scry — universal safe pick). ScriptedDecider can flip mode 1 for the +1/+0 self-pump combat trick. |
+| Augmenter Pugilist | {3}{G}{G} | ✅ ← 🟡 | Static "Activated abilities of creatures cost {2} more to activate" now wires via the new `StaticEffect::TaxActivatedAbilities { filter: Creature, amount: 2 }`. Augmenter Pugilist taxes every creature on the battlefield (friend + foe). Mana abilities are NOT exempt per the rules — Llanowar Elves `{T}: {G}` becomes `{2}, {T}: {G}` while Pugilist is in play. |
+| Silverquill Apprentice | {W}{B} | ✅ ← 🟡 | Magecraft "+1/+1 or -1/-1" now wires faithfully via `Effect::PickModeAtResolution([+1/+1 EOT, -1/-1 EOT])`. AutoDecider picks mode 0 (pump — safe combat-trick default). ScriptedDecider flips mode 1 for the printed "shrink an opp creature" line. |
+
+### SOS doc-only fixes (2)
+
+| Card | Status | Notes |
+|---|---|---|
+| Potioner's Trove | ✅ (was 🟡 stale) | The "{T}: gain 2 life. Activate only if you've cast an IS spell this turn" gate has been wired since push XIII via `Predicate::InstantsOrSorceriesCastThisTurnAtLeast` + `Player.instants_or_sorceries_cast_this_turn`. Doc string updated to reflect the wired state (was claiming "engine has no per-turn-cast-tracking gate yet"). |
+| Ennis, Debate Moderator | 🟡 (doc fix) | The end-step counter trigger uses the exact-printed `Predicate::CardsExiledThisTurnAtLeast` (push IX), backed by `Player.cards_exiled_this_turn`. Doc string previously claimed it was approximated via gy-leave proxy — now reflects the exact tally. |
+
+### Tests (+11 net, 1325 → 1336)
+
+- 7 STX 2021 promotion tests:
+  `prismari_apprentice_auto_picks_scry_mode_on_magecraft`,
+  `prismari_apprentice_scripted_picks_pump_mode`,
+  `shadrix_silverquill_attack_trigger_draws_and_drains_via_auto_decider`,
+  `shadrix_silverquill_attack_trigger_pumps_via_scripted`,
+  `augmenter_pugilist_taxes_creature_activated_abilities`,
+  `augmenter_pugilist_tax_satisfied_by_extra_generic`,
+  `augmenter_pugilist_does_not_tax_noncreature_activations`,
+  `silverquill_apprentice_magecraft_can_shrink_via_scripted_mode_one`.
+- 2 snapshot serde round-trip tests:
+  `pick_mode_at_resolution_effect_serde_round_trip`,
+  `tax_activated_abilities_static_effect_serde_round_trip`.
+- 1 view-label test:
+  `ability_effect_label_handles_pick_mode_at_resolution`.
+
+### Engine + UI integration
+
+- `extra_cost_for_activation(state, source) -> u32` helper in
+  `game/actions.rs` walks the battlefield's `TaxActivatedAbilities`
+  statics and sums the surcharge for the activating permanent. Folded
+  into `activate_ability` as additional generic mana before the
+  pre-flight payment snapshot — failures roll back tap + mana cleanly.
+- `ability_effect_label` (`server/view.rs`) gains an arm for
+  `Effect::PickModeAtResolution`, surfacing the first non-fallback
+  inner-mode label (Prismari Apprentice's "Scry/Surveil" instead of
+  the catch-all "Activate").
+- `effect.rs` introspection methods (`requires_target`,
+  `primary_target_filter`, `accepts_player_target`,
+  `prefers_friendly_target`, `target_filter_for_slot`) all gained
+  `PickModeAtResolution` arms that walk the inner mode list — same
+  shape as the existing `ChooseMode` / `ChooseModes` arms.
+- `server/bot.rs::effect_uses_x` recurses into PickModeAtResolution
+  so X-cost inner modes still feed the bot's affordability check.
+- Snapshot wire format unchanged — both new primitives serialize via
+  serde derives without dedicated wire types.
 
 ## 2026-05-03 push XXXVI: Effect::ChooseModes + 5 STX Commands + 3 SOS promotions
 
@@ -2464,7 +2554,7 @@ parity is a matter of porting card factories one at a time.
 
 | Card | Cost | Status | Notes |
 |---|---|---|---|
-| Silverquill Apprentice | {W}{B} | 🟡 | Push XXVI: 2/2 Human Cleric. Magecraft +1/+1 EOT to a creature. The W/B-mode pip choice (your creature +1/+1 vs opp creature -1/-1) collapses to +1/+1 (`magecraft()` shortcut + `Effect::PumpPT` on a creature target). |
+| Silverquill Apprentice | {W}{B} | ✅ | Push XXXVII: 🟡 → ✅. Magecraft "+1/+1 or -1/-1" now wires faithfully via the new `Effect::PickModeAtResolution([+1/+1 EOT, -1/-1 EOT])` primitive. AutoDecider picks mode 0 (pump — combat-trick safe default); ScriptedDecider flips mode 1 for the printed shrink line. |
 | Spirited Companion | {1}{W} | ✅ | 1/2 Dog Spirit. ETB: draw a card. |
 | Eyetwitch | {B} | ✅ | 1/1 Pest. When dies: "learn" approximated as `Draw 1` (no Lesson sideboard yet). |
 | Closing Statement | {X}{W}{W} | ✅ | Sorcery. Exile target nonland permanent. You gain X life (`Value::XFromCost`). |
@@ -2531,14 +2621,14 @@ parity is a matter of porting card factories one at a time.
 | Snow Day | {1}{G}{U} | ✅ | Push XXIII: Instant. Create a 0/0 Fractal token + put X +1/+1 counters on it where X = `Value::HandSizeOf(You)`. With a 7-card hand the Fractal lands as a 7/7. |
 | Mentor's Guidance | {2}{G}{U} | ✅ | Push XXXVI: doc-only promotion. Sorcery. Draw 2 + put hand-size +1/+1 counters on a target creature you control. The printed Oracle is single-target, so the existing wire matches printed exactly — the prior 🟡 was a stale annotation that misread "for each card in your hand" as multi-target fan-out. |
 | Quandrix Command | {1}{G}{U} | ✅ | Push XXXVI: "choose two" now wires faithfully via the new `Effect::ChooseModes { count: 2 }` primitive. Auto-decider picks modes 0+1 (counter ability + +1/+1 ×2). ScriptedDecider drives modes [2, 3] for tests. |
-| Augmenter Pugilist | {3}{G}{G} | 🟡 | Push XXX: 6/6 Trample Human Warrior. Body + Trample only. The "activated abilities of creatures cost {2} more" static is omitted (no `StaticEffect::TaxActivatedAbilities` primitive yet — same gap as Trinisphere's "minimum cost" flavor in CUBE_FEATURES.md). |
+| Augmenter Pugilist | {3}{G}{G} | ✅ | Push XXXVII: 🟡 → ✅. Static "Activated abilities of creatures cost {2} more to activate" now wires via the new `StaticEffect::TaxActivatedAbilities { filter: Creature, amount: 2 }`. `extra_cost_for_activation` walks every battlefield permanent's static abilities at activation time and surcharges the activator's mana cost when the activating permanent matches the filter. Mana abilities are NOT exempt per the rules — Llanowar Elves's `{T}: Add {G}` becomes `{2}, {T}: Add {G}` while Pugilist is in play. |
 
 ### Prismari (U/R)
 
 | Card | Cost | Status | Notes |
 |---|---|---|---|
 | Prismari Pledgemage | {1}{U}{R} | ✅ | 2/3 Elemental with Trample + Haste. |
-| Prismari Apprentice | {U}{R} | 🟡 | 2/2 Human Wizard. Magecraft: Scry 1. The "+1/+0 EOT" alt-mode is ⏳ pending a let-the-controller-pick hook on triggered ChooseMode. |
+| Prismari Apprentice | {U}{R} | ✅ | Push XXXVII: 🟡 → ✅. Magecraft "Scry 1 or +1/+0 EOT" now wires faithfully via the new `Effect::PickModeAtResolution`. AutoDecider picks mode 0 (Scry 1 — universal safe default); ScriptedDecider flips mode 1 for the +1/+0 self-pump combat trick. |
 | Symmetry Sage | {U} | ✅ | 1/2 Human Wizard. Magecraft: this creature gets +1/+0 and gains flying until end of turn. |
 | Creative Outburst | {3}{U}{U}{R}{R} | ✅ | Push XXIII: Sorcery. Discard your hand (`Discard { amount: HandSizeOf(You) }`), draw 5. Prismari spellslinger refill that fuels later magecraft / flashback payoffs. |
 | Prismari Command | {1}{U}{R} | ✅ | Push XXXVI: "choose two" now wires faithfully via the new `Effect::ChooseModes { count: 2 }` primitive. Auto-decider picks modes 0+1 (2 dmg + discard 2/draw 2). ScriptedDecider drives modes [2, 3] for tests. |
@@ -2606,7 +2696,7 @@ each college's flagship Dragon, plus a few cross-college staples.
 | Beledros Witherbloom | {3}{B}{B}{G}{G} | ✅ | Push XX: 6/6 Legendary Demon, Flying + Trample + Lifelink. "Pay 10 life: Untap each land you control. Activate only as a sorcery." now wired via push XV's `ActivatedAbility.life_cost: u32` gate (rejects with `InsufficientLife` < 10) + `Effect::Untap` over `Selector::EachPermanent(Land & ControlledByYou)`. Sorcery-speed flag set true to match printed restriction. |
 | Velomachus Lorehold | {3}{R}{R}{W} | 🟡 | 5/5 Legendary Dragon, Flying + Vigilance + Haste. Attack-trigger reveal-and-cast is ⏳ (cast-from-exile-without-paying primitive). |
 | Tanazir Quandrix | {2}{G}{G}{U}{U} | 🟡 | 5/5 Legendary Dragon, Flying + Trample. ETB +1/+1-counter doubling is ⏳ (no counter-multiplier primitive). |
-| Shadrix Silverquill | {2}{W}{B} | 🟡 | 4/4 Legendary Dragon, Flying + Double Strike. Choose-2-of-3 attack-trigger is ⏳ (no multi-mode-pick primitive). |
+| Shadrix Silverquill | {2}{W}{B} | ✅ | Push XXXVII: 🟡 → ✅. 4/4 Legendary Dragon Flying + Double Strike. Choose-2-of-3 attack trigger now wires faithfully via `Effect::ChooseModes { count: 2 }` re-used at trigger resolution. AutoDecider picks modes 0+1 (draw + drain — canonical value pair). ScriptedDecider drives mode pairs that involve targeting (mode 1 needs an opp; mode 2 needs a creature). |
 
 ### Engine pieces driven by STX
 

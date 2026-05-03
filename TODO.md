@@ -7,6 +7,61 @@ See `CUBE_FEATURES.md` (cube-card implementation status) and
 
 ## Recent additions
 
+- ✅ **Push XXXVII (2026-05-03)**: 2 engine primitives + 4 STX 2021
+  promotions + 2 SOS doc fixes. Tests at 1336 (was 1325; +11 net).
+  - **Engine: `Effect::PickModeAtResolution(Vec<Effect>)`** —
+    sibling to `Effect::ChooseMode` that prompts at *resolution*
+    time rather than cast time. Used by triggered abilities whose
+    printed text reads "your choice of X or Y" (the surrounding
+    spell's `ctx.mode` is already pinned to the cast-time pick).
+    AutoDecider picks mode 0; ScriptedDecider can flip via `Mode(N)`.
+    Decision surfaces via the existing `Decision::ChooseMode` (no
+    new wire-format type). Snapshot serde round-trip tested.
+  - **Engine: `StaticEffect::TaxActivatedAbilities { filter, amount }`**
+    — Augmenter Pugilist-style "activated abilities of [filter] cost
+    {N} more to activate." `extra_cost_for_activation(state, source)`
+    helper in `game/actions.rs` walks the battlefield's
+    `TaxActivatedAbilities` statics and sums the surcharge when the
+    activating permanent matches `filter`. Folded into
+    `activate_ability` as additional generic mana before the pre-
+    flight payment snapshot — failures roll back tap + mana cleanly.
+    Mana abilities are NOT exempt per the rules. Snapshot serde
+    round-trip tested.
+  - **4 STX 2021 promotions to ✅** (`catalog::sets::stx::*`):
+    - **Shadrix Silverquill** (legends.rs) — choose-2-of-3 attack
+      trigger now wires via `Effect::ChooseModes { count: 2 }` re-
+      used at trigger resolution. AutoDecider picks modes 0+1
+      (draw + drain).
+    - **Prismari Apprentice** (prismari.rs) — Magecraft "Scry 1 or
+      +1/+0 EOT" now wires via the new `PickModeAtResolution`.
+      AutoDecider picks Scry 1; ScriptedDecider can flip the +1/+0
+      combat-trick mode.
+    - **Augmenter Pugilist** (quandrix.rs) — static "activated
+      abilities of creatures cost {2} more" now wires via the new
+      `TaxActivatedAbilities`.
+    - **Silverquill Apprentice** (decks/modern.rs) — Magecraft
+      "+1/+1 or -1/-1" now wires via `PickModeAtResolution`.
+      AutoDecider picks +1/+1 (combat-trick safe default).
+  - **2 SOS doc fixes** (cards already wired with their gates;
+    status notes were stale):
+    - **Potioner's Trove** (sos/artifacts.rs) — `{T}: gain 2 life,
+      activate only if you've cast an IS spell this turn` was
+      already wired since push XIII via
+      `Predicate::InstantsOrSorceriesCastThisTurnAtLeast`.
+    - **Ennis, Debate Moderator** (sos/creatures.rs) — end-step
+      counter trigger has been using exact-printed
+      `Predicate::CardsExiledThisTurnAtLeast` since push IX (not
+      the gy-leave proxy the doc claimed).
+  - **11 new tests**: 7 STX 2021 promotion tests (Prismari Apprentice
+    × 2, Shadrix × 2, Augmenter Pugilist × 3) + 1 mode-1 shrink
+    Silverquill Apprentice test + 2 snapshot serde round-trip tests
+    + 1 view-label test for the new `PickModeAtResolution` arm.
+  - **`prefers_friendly_target` extended to `PickModeAtResolution`**
+    so any inner mode preferring friendly bubbles up — covers the
+    "+1/+1 or -1/-1" Silverquill Apprentice shape where the pump
+    mode's friendly preference drives auto-target while the shrink
+    mode is opt-in via ScriptedDecider.
+
 - ✅ **Push XXXVI (2026-05-03)**: `Effect::ChooseModes` primitive +
   `Effect::DelayUntil.capture` field + 10 card promotions across SOS
   and STX 2021. Tests at 1325 (was 1315; +10 net).
@@ -151,6 +206,53 @@ See `CUBE_FEATURES.md` (cube-card implementation status) and
     reject / Mascot steal + revert), 9 cube-card tests (one per new
     card + body sanity for vanilla bodies), 1 view test
     (`ability_cost_label_renders_exile_gy_cost`).
+
+## Future work — engine/UI suggestions surfaced by push XXXVII
+
+- **`StaticEffect::TaxActivatedAbilities` excluding mana abilities** —
+  the current implementation taxes ALL activated abilities including
+  mana abilities (per Augmenter Pugilist's exact printed text). A
+  variant `TaxActivatedAbilities { exclude_mana: bool }` would model
+  cards like Damping Engine that explicitly exempt mana abilities.
+  Read at `extra_cost_for_activation` time by classifying the
+  ability's effect tree (any `Effect::AddMana` direct child = mana
+  ability per MTG rules 605.1a).
+
+- **`StaticEffect::TaxSpellCost` / spell-side activation tax** —
+  Trinisphere ({3} Artifact: "While ~ is untapped, each spell that
+  would cost less than three to cast costs three to cast.") needs
+  a different shape — it's a *minimum cost*, not an *additive*
+  surcharge. A new `StaticEffect::SpellMinimumCost { amount }` would
+  model it: every spell cast checks the static, and any spell whose
+  natural cost is less than `amount` gets bumped up to exactly
+  `amount`. Damping Sphere's `AdditionalCostAfterFirstSpell` is the
+  closest existing shape (additive, not minimum), so this needs a
+  fresh primitive. Tracked separately from `TaxActivatedAbilities`
+  since the spell-side path lives in `extra_cost_for_spell`.
+
+- **`Effect::PickModeAtResolution` + per-mode target prompts** — the
+  current shape shares `Target(0)` across all modes (matching
+  ChooseMode's behavior). For "your choice of X creature gets +1/+1,
+  or Y creature gets -1/-1" cards where the modes pick *different*
+  targets (e.g. Silverquill Apprentice's printed "your creature
+  gets +1/+1 OR opponent's creature gets -1/-1"), a per-mode target
+  filter prompt would unblock fully-printed semantics. Same engine
+  work as the SOS Commands' multi-target prompt gap.
+
+- **Bot tax-aware activation pre-filter** — the bot's `pick_action`
+  currently uses `state.would_accept` to dry-run candidate
+  activations, which correctly rejects when an opponent's Pugilist
+  raises the cost beyond what the bot has floated. A pre-filter
+  that *includes* the activation tax in `can_afford_with_extra`
+  would skip dry-run noise on Pugilist boards. Low priority — the
+  dry-run is the source of truth and correctly catches all cases.
+
+- **`Effect::PickModeAtResolution` UI display** — the auto-decider
+  picks mode 0 silently, which masks the "your choice" text from
+  the user. A future "modal trigger panel" UI surface (sibling to
+  the existing OptionalTrigger panel) would let humans see "Choose
+  one — Scry 1 / +1/+0 EOT" and tap to flip. Today only
+  ScriptedDecider can drive the alt mode.
 
 ## Future work — engine/UI suggestions surfaced by push XXXVI
 

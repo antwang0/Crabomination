@@ -9958,6 +9958,36 @@ fn silverquill_apprentice_magecraft_pumps_target_creature() {
     assert_eq!(bear_card.toughness(), 3, "Bear pumped to 3 toughness via Magecraft");
 }
 
+/// Push XXXVII: Silverquill Apprentice's Magecraft now offers both modes
+/// via `Effect::PickModeAtResolution`. ScriptedDecider can flip mode 1
+/// (-1/-1 EOT) for the printed "shrink an opp creature" combat trick.
+/// Target is auto-picked (opp creature for negative pump per
+/// `prefers_friendly_target`); the only scripted answer needed is the
+/// mode index for resolution.
+#[test]
+fn silverquill_apprentice_magecraft_can_shrink_via_scripted_mode_one() {
+    let mut g = two_player_game();
+    let _ = g.add_card_to_battlefield(0, catalog::silverquill_apprentice());
+    // Opp's bear (auto-target for the shrink — no friendly creature
+    // controlled, so the picker walks opp creatures).
+    let opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    // ScriptedDecider answers Mode(1) for the trigger's PickMode.
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Mode(1),
+    ]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        mode: None, x_value: None,
+    })
+    .expect("Bolt castable for {R}");
+    drain_stack(&mut g);
+    let bear = g.battlefield.iter().find(|c| c.id == opp_bear).unwrap();
+    assert_eq!(bear.power(), 1, "opp bear shrunk by -1/-1 EOT (mode 1)");
+    assert_eq!(bear.toughness(), 1, "opp bear shrunk to 1 toughness");
+}
+
 // Push XXXII: hostile damage auto-target prefers lethal kills over a
 // first-match weak target. Uses Heated Debate ({2}{R}, 4 damage to a
 // target creature) — its `target_filtered(Creature)` filter routes

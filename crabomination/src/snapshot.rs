@@ -518,6 +518,59 @@ mod tests {
     }
 
     #[test]
+    fn pick_mode_at_resolution_effect_serde_round_trip() {
+        // Push XXXVII: `Effect::PickModeAtResolution(Vec<Effect>)` round-
+        // trips through serde without dropping its inner mode list.
+        // Critical for Prismari Apprentice's magecraft + any future
+        // resolution-time mode-pick card.
+        use crate::card::Effect;
+        let original = Effect::PickModeAtResolution(vec![
+            Effect::Scry {
+                who: crate::effect::PlayerRef::You,
+                amount: crate::card::Value::Const(1),
+            },
+            Effect::PumpPT {
+                what: crate::card::Selector::This,
+                power: crate::card::Value::Const(1),
+                toughness: crate::card::Value::Const(0),
+                duration: crate::effect::Duration::EndOfTurn,
+            },
+        ]);
+        let json = serde_json::to_string(&original).expect("serialize");
+        let parsed: Effect = serde_json::from_str(&json).expect("deserialize");
+        match parsed {
+            Effect::PickModeAtResolution(modes) => {
+                assert_eq!(modes.len(), 2, "two modes round-trip");
+                assert!(matches!(modes[0], Effect::Scry { .. }), "mode 0 is Scry");
+                assert!(matches!(modes[1], Effect::PumpPT { .. }), "mode 1 is PumpPT");
+            }
+            other => panic!("expected Effect::PickModeAtResolution, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn tax_activated_abilities_static_effect_serde_round_trip() {
+        // Push XXXVII: `StaticEffect::TaxActivatedAbilities { filter,
+        // amount }` round-trips through serde. Used by Augmenter Pugilist
+        // and any future "activations cost N more" static.
+        use crate::card::SelectionRequirement;
+        use crate::effect::StaticEffect;
+        let original = StaticEffect::TaxActivatedAbilities {
+            filter: SelectionRequirement::Creature,
+            amount: 2,
+        };
+        let json = serde_json::to_string(&original).expect("serialize");
+        let parsed: StaticEffect = serde_json::from_str(&json).expect("deserialize");
+        match parsed {
+            StaticEffect::TaxActivatedAbilities { filter, amount } => {
+                assert_eq!(amount, 2);
+                assert!(matches!(filter, SelectionRequirement::Creature));
+            }
+            other => panic!("expected StaticEffect::TaxActivatedAbilities, got {:?}", other),
+        }
+    }
+
+    #[test]
     fn maypay_effect_serde_round_trip() {
         // Push XVI: `Effect::MayPay { description, mana_cost, body }`
         // round-trips through serde without dropping fields. Important

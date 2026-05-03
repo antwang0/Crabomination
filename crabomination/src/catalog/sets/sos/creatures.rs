@@ -4367,20 +4367,16 @@ pub fn mage_tower_referee() -> CardDefinition {
 /// if one or more cards were put into exile this turn, put a +1/+1
 /// counter on Ennis."
 ///
-/// Both abilities partially wired:
+/// Both abilities now fully wired (push XXXVII doc fix):
 /// - ETB flicker: exiles a target creature (auto-picker prefers a
 ///   friendly utility creature with a useful ETB) and schedules a
 ///   delayed return at next end step. Uses the same
 ///   `Exile + DelayUntil(NextEndStep, Move(Target → Battlefield(OwnerOf)))`
 ///   pattern as Restoration Angel-style flickers.
-/// - End-step counter: gated on "any card was exiled this turn". The
-///   engine doesn't yet track per-turn exile count as a `Value`, so we
-///   approximate this by using `CardsLeftGraveyardThisTurnAtLeast` as a
-///   proxy (most sources of "card put into exile" pass through gy first
-///   in our engine — flicker exiles, exile-from-gy effects, etc.). The
-///   approximation under-counts pure hand-exile and bounce-to-exile
-///   effects but covers the common case (Ennis's own ETB exile triggers
-///   the predicate via the gy-leave fired by the delayed return).
+/// - End-step counter: gated on "any card was exiled this turn" via
+///   `Predicate::CardsExiledThisTurnAtLeast` (push IX) backed by
+///   `Player.cards_exiled_this_turn`. Pre-IX this used a gy-leave
+///   proxy; the per-turn exile tally is now exact.
 pub fn ennis_debate_moderator() -> CardDefinition {
     use crate::card::{CounterType, Predicate, Supertype};
     use crate::effect::{DelayedTriggerKind, ZoneDest};

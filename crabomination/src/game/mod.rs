@@ -1706,7 +1706,11 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             // (`player_locked_to_sorcery_timing` etc.); not modeled as
             // continuous-layer modifications here.
             | StaticEffect::OpponentsSorceryTimingOnly
-            | StaticEffect::ControllerSorceriesAsFlash => vec![],
+            | StaticEffect::ControllerSorceriesAsFlash
+            // TaxActivatedAbilities is not a layer-applied continuous
+            // effect; it's read at activation time by `extra_cost_for_
+            // activation` to surcharge the activator's mana cost.
+            | StaticEffect::TaxActivatedAbilities { .. } => vec![],
         })
         .collect()
 }

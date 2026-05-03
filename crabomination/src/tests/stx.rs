@@ -4085,3 +4085,172 @@ fn decisive_denial_mode_one_uses_target_creature_power() {
     assert_eq!(tyrant_card.damage, 0,
         "friendly Tyrant takes no return damage (Decisive Denial is one-sided)");
 }
+
+// ── Push XXXVII: Effect::PickModeAtResolution + ChooseModes triggered ──────
+
+/// Push XXXVII: Prismari Apprentice's printed magecraft "choose one — Scry 1
+/// or +1/+0 EOT" now wires faithfully via `Effect::PickModeAtResolution`.
+/// AutoDecider picks mode 0 (Scry 1) — it's the universal safe default.
+#[test]
+fn prismari_apprentice_auto_picks_scry_mode_on_magecraft() {
+    let mut g = two_player_game();
+    let app = g.add_card_to_battlefield(0, catalog::prismari_apprentice());
+    let p_before = g.battlefield_find(app).unwrap().power();
+    // Seed library so scry has cards to look at.
+    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
+    let lib_before = g.players[0].library.len();
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)), mode: None, x_value: None,
+    })
+    .expect("Bolt castable for {R}");
+    drain_stack(&mut g);
+    // AutoDecider picked mode 0: Scry 1 (no library size change).
+    assert_eq!(g.players[0].library.len(), lib_before,
+        "AutoDecider should pick Scry mode — library size unchanged");
+    // No pump applied (mode 1 path not taken).
+    assert_eq!(g.battlefield_find(app).unwrap().power(), p_before,
+        "AutoDecider should pick Scry, not pump");
+}
+
+/// Push XXXVII: scripted-decider override drives Prismari Apprentice's
+/// +1/+0 EOT mode for combat-trick lines.
+#[test]
+fn prismari_apprentice_scripted_picks_pump_mode() {
+    let mut g = two_player_game();
+    let app = g.add_card_to_battlefield(0, catalog::prismari_apprentice());
+    g.clear_sickness(app);
+    let p_before = g.battlefield_find(app).unwrap().power();
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    // Mode 1 = +1/+0 EOT.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Mode(1)]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)), mode: None, x_value: None,
+    })
+    .expect("Bolt castable");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(app).unwrap().power(), p_before + 1,
+        "ScriptedDecider mode-1 should grant +1/+0 EOT");
+}
+
+/// Push XXXVII: Shadrix Silverquill's printed attack trigger "choose two
+/// different modes" now wires via `Effect::ChooseModes { count: 2 }` at
+/// trigger resolution. AutoDecider picks modes 0+1 (draw + drain — the
+/// canonical value pair, no targeting friction).
+#[test]
+fn shadrix_silverquill_attack_trigger_draws_and_drains_via_auto_decider() {
+    let mut g = two_player_game();
+    let shadrix = g.add_card_to_battlefield(0, catalog::shadrix_silverquill());
+    g.clear_sickness(shadrix);
+    g.add_card_to_library(0, catalog::island());
+    let lib_before = g.players[0].library.len();
+    let opp_life_before = g.players[1].life;
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: shadrix,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("Shadrix can attack");
+    drain_stack(&mut g);
+    // Mode 0: draw 1.
+    assert_eq!(g.players[0].library.len(), lib_before - 1,
+        "Mode 0 (draw 1) should reduce library by 1");
+    // Mode 1: target opp loses 2 life.
+    assert_eq!(g.players[1].life, opp_life_before - 2,
+        "Mode 1 (drain 2) should reduce opp life by 2");
+}
+
+/// Push XXXVII: Shadrix Silverquill's mode 2 (+1/+1 counter on creature)
+/// is selectable via ScriptedDecider for board-pump combat lines.
+#[test]
+fn shadrix_silverquill_attack_trigger_pumps_via_scripted() {
+    let mut g = two_player_game();
+    let shadrix = g.add_card_to_battlefield(0, catalog::shadrix_silverquill());
+    g.clear_sickness(shadrix);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let bear_p_before = g.battlefield_find(bear).unwrap().power();
+    g.add_card_to_library(0, catalog::island());
+    let lib_before = g.players[0].library.len();
+    // Modes [0, 2] = draw + counter on bear.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Modes(vec![0, 2])]));
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: shadrix,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("Shadrix can attack");
+    drain_stack(&mut g);
+    // Mode 0: draw 1.
+    assert_eq!(g.players[0].library.len(), lib_before - 1, "drew 1");
+    // Mode 2: bear gains a +1/+1 counter (auto-target on a friendly creature).
+    let bear_after = g.battlefield_find(bear).unwrap();
+    assert!(bear_after.power() > bear_p_before,
+        "bear should gain +1/+1 counter from mode 2");
+}
+
+// ── Push XXXVII: StaticEffect::TaxActivatedAbilities ───────────────────────
+
+/// Push XXXVII: Augmenter Pugilist's printed static "Activated abilities of
+/// creatures cost {2} more to activate" now taxes every creature's
+/// activated ability. Without Pugilist, Quandrix Pledgemage's `{1}{G}{U}`
+/// pump activates with 1 generic + green + blue. With Pugilist on the
+/// battlefield, the cost is `{3}{G}{U}` (2 extra generic).
+#[test]
+fn augmenter_pugilist_taxes_creature_activated_abilities() {
+    let mut g = two_player_game();
+    let _pug = g.add_card_to_battlefield(0, catalog::augmenter_pugilist());
+    let pm = g.add_card_to_battlefield(0, catalog::quandrix_pledgemage());
+    g.clear_sickness(pm);
+    // Float only the printed cost {1}{G}{U} — Pugilist's tax should reject.
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let res = g.perform_action(GameAction::ActivateAbility {
+        card_id: pm, ability_index: 0, target: None,
+    });
+    assert!(res.is_err(),
+        "Pledgemage activation should fail under Pugilist's +2 tax with only printed cost floated");
+}
+
+/// Push XXXVII: with the tax + sufficient extra generic floated, the
+/// activation succeeds (mana paid is printed cost + 2).
+#[test]
+fn augmenter_pugilist_tax_satisfied_by_extra_generic() {
+    let mut g = two_player_game();
+    let _pug = g.add_card_to_battlefield(0, catalog::augmenter_pugilist());
+    let pm = g.add_card_to_battlefield(0, catalog::quandrix_pledgemage());
+    g.clear_sickness(pm);
+    // Float printed cost + 2 extra generic.
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: pm, ability_index: 0, target: None,
+    })
+    .expect("Pledgemage activation should succeed when tax is paid");
+    drain_stack(&mut g);
+    let pm_after = g.battlefield_find(pm).unwrap();
+    assert!(pm_after.counter_count(CounterType::PlusOnePlusOne) >= 1,
+        "Pledgemage should have at least one +1/+1 counter after activation");
+}
+
+/// Push XXXVII: Pugilist's tax does NOT apply to non-creature activations.
+/// Sol Ring (artifact) is not a creature, so its `{T}: Add {C}{C}` mana
+/// ability is uncharged.
+#[test]
+fn augmenter_pugilist_does_not_tax_noncreature_activations() {
+    let mut g = two_player_game();
+    let _pug = g.add_card_to_battlefield(0, catalog::augmenter_pugilist());
+    let ring = g.add_card_to_battlefield(0, catalog::sol_ring());
+    let pool_before = g.players[0].mana_pool.colorless_amount();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: ring, ability_index: 0, target: None,
+    })
+    .expect("Sol Ring tap should not be taxed by Pugilist (artifact, not creature)");
+    drain_stack(&mut g);
+    // Sol Ring adds {C}{C} — pool gains 2.
+    assert_eq!(g.players[0].mana_pool.colorless_amount(), pool_before + 2,
+        "Sol Ring should produce 2 colorless without Pugilist's tax");
+}

@@ -7983,12 +7983,11 @@ pub fn brilliant_plan() -> CardDefinition {
 /// target creature gets -1/-1 until end of turn or +1/+1 until end of
 /// turn (controller's choice).
 ///
-/// 🟡 The W/B-mode pip choice collapses to a single +1/+1 EOT pump on
-/// any creature target — same approximation as Eager First-Year /
-/// Combat Professor (collapsed to "your" creature for safety; engine's
-/// auto-target framework picks whatever's available). The "your creature
-/// vs opp creature" branching would need a per-trigger ChooseMode
-/// primitive — tracked in TODO.md.
+/// Push XXXVII: 🟡 → ✅. Both modes now wire faithfully via
+/// `Effect::PickModeAtResolution([+1/+1 EOT, -1/-1 EOT])`. AutoDecider
+/// picks mode 0 (pump — the "safe" combat-trick default for our own
+/// creatures). ScriptedDecider can flip mode 1 (-1/-1) for tests / for
+/// the printed "shrink an opp creature" combat line.
 pub fn silverquill_apprentice() -> CardDefinition {
     use crate::effect::shortcut::magecraft;
     CardDefinition {
@@ -8002,12 +8001,22 @@ pub fn silverquill_apprentice() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![],
-        triggered_abilities: vec![magecraft(Effect::PumpPT {
-            what: target_filtered(SelectionRequirement::Creature),
-            power: Value::Const(1),
-            toughness: Value::Const(1),
-            duration: Duration::EndOfTurn,
-        })],
+        triggered_abilities: vec![magecraft(Effect::PickModeAtResolution(vec![
+            // Mode 0: target creature gets +1/+1 EOT.
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(1),
+                toughness: Value::Const(1),
+                duration: Duration::EndOfTurn,
+            },
+            // Mode 1: target creature gets -1/-1 EOT.
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(-1),
+                toughness: Value::Const(-1),
+                duration: Duration::EndOfTurn,
+            },
+        ]))],
         ..Default::default()
     }
 }

@@ -378,14 +378,19 @@ pub fn quandrix_command() -> CardDefinition {
 /// Printed Oracle: "Trample. Activated abilities of creatures cost {2}
 /// more to activate."
 ///
-/// Push XXX: 🟡. Big-body Quandrix beater — six power, six toughness,
-/// trample, all on a {3}{G}{G} curve. The static "activated abilities of
-/// creatures cost {2} more" is omitted (no `StaticEffect::TaxActivated
-/// Abilities` primitive yet — same gap as Trinisphere's "minimum cost"
-/// flavor in CUBE_FEATURES.md). The body alone is still a respectable
-/// 5-mana finisher; the static would round it up to a hate piece against
-/// equipment / Walking Ballista / +X infinite combos.
+/// Push XXXVII: 🟡 → ✅. The static "activated abilities of creatures
+/// cost {2} more" now wires faithfully via the new
+/// `StaticEffect::TaxActivatedAbilities { filter: Creature, amount: 2 }`
+/// primitive. `extra_cost_for_activation` walks every battlefield
+/// permanent's static abilities at activation time and surcharges the
+/// activator's mana cost when the activating permanent matches the
+/// filter. Multiple Pugilists stack additively (two Pugilists → +4 each
+/// activation). Mana abilities aren't exempt at the rules level —
+/// Llanowar Elves's `{T}: Add {G}` becomes `{2}, {T}: Add {G}` while
+/// Pugilist is on the battlefield.
 pub fn augmenter_pugilist() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
     CardDefinition {
         name: "Augmenter Pugilist",
         cost: cost(&[generic(3), g(), g()]),
@@ -401,7 +406,13 @@ pub fn augmenter_pugilist() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
+        static_abilities: vec![StaticAbility {
+            description: "Activated abilities of creatures cost {2} more to activate.",
+            effect: StaticEffect::TaxActivatedAbilities {
+                filter: SelectionRequirement::Creature,
+                amount: 2,
+            },
+        }],
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,

@@ -212,12 +212,12 @@ pub fn tablet_of_discovery() -> CardDefinition {
 /// "{T}: Add one mana of any color. / {T}: You gain 2 life. Activate
 /// only if you've cast an instant or sorcery spell this turn."
 ///
-/// Approximation: the conditional "activate only if you've cast an
-/// instant or sorcery spell this turn" gate is omitted (the engine
-/// has no per-turn-cast-tracking gate on activated abilities yet). The
-/// mana ability is fully wired, and the lifegain ability is unconditional
-/// in practice. Tracked under TODO.md "Activated-Ability Per-Turn-Cast
-/// Gate".
+/// Push XXXVII: ✅ — both abilities now fully wired. The mana ability
+/// is unconditional. The lifegain ability gates on the new
+/// `Predicate::InstantsOrSorceriesCastThisTurnAtLeast` predicate
+/// (push XIII), backed by `Player.instants_or_sorceries_cast_this_turn`,
+/// so the activation is rejected with `AbilityConditionNotMet` until
+/// the controller has cast at least one IS spell that turn.
 pub fn potioners_trove() -> CardDefinition {
     use crate::effect::ManaPayload;
     CardDefinition {

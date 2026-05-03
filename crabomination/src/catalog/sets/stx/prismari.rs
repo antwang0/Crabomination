@@ -56,11 +56,12 @@ pub fn prismari_pledgemage() -> CardDefinition {
 /// choose one — / • Scry 1. / • Prismari Apprentice gets +1/+0 until
 /// end of turn."
 ///
-/// 🟡 Currently picks mode 0 (Scry 1) only — `magecraft` produces a
-/// single trigger, and the auto-decider for `Effect::ChooseMode` inside
-/// a triggered ability defaults to mode 0. A "let the controller pick"
-/// hook for triggered-ability ChooseMode would unblock the +1/+0 mode.
-/// Tracked under TODO.md "May Optionality / mode-pick on triggers".
+/// Push XXXVII: ✅ — both modes now wire faithfully via the new
+/// `Effect::PickModeAtResolution([Scry 1, PumpPT(+1/+0, EOT)])` primitive.
+/// AutoDecider picks mode 0 (Scry 1, the universal default — it's strictly
+/// card-selection without depending on board state). ScriptedDecider can
+/// flip mode 1 for the self-pump path (relevant when Prismari Apprentice
+/// is already attacking and a +1/+0 turns combat math).
 pub fn prismari_apprentice() -> CardDefinition {
     CardDefinition {
         name: "Prismari Apprentice",
@@ -76,10 +77,18 @@ pub fn prismari_apprentice() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![magecraft(Effect::Scry {
-            who: PlayerRef::You,
-            amount: Value::Const(1),
-        })],
+        triggered_abilities: vec![magecraft(Effect::PickModeAtResolution(vec![
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
+            Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(1),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+        ]))],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],

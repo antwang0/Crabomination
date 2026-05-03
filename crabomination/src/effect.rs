@@ -592,6 +592,19 @@ pub enum Effect {
         /// Reckoning); false for the standard Strixhaven Command shape.
         allow_duplicates: bool,
     },
+    /// Sibling to `Effect::ChooseMode` that prompts the controller to pick a
+    /// mode at *resolution* time rather than cast time. Used by triggered-
+    /// ability "your choice of X or Y" embedded modal effects where the
+    /// surrounding spell's `ctx.mode` is already pinned to the cast-time
+    /// pick (so re-using `ChooseMode` would incorrectly read the spell-
+    /// level mode rather than asking a fresh question).
+    ///
+    /// Concretely: Prismari Apprentice's magecraft "Scry 1 or +1/+0 EOT"
+    /// embeds a `PickModeAtResolution([Scry 1, PumpPT(+1/+0, EOT)])`.
+    /// Other "your choice of X or Y" magecraft riders fit the same shape.
+    /// The decision surfaces as `Decision::ChooseMode`; AutoDecider picks
+    /// mode 0; tests can override with `ScriptedDecider::new([Mode(N)])`.
+    PickModeAtResolution(Vec<Effect>),
     /// "You may [body]" — emit a yes/no decision via
     /// `Decision::OptionalTrigger`. Run `body` only on `Bool(true)`. The
     /// `description` string is shown to the player (and serialized into
@@ -979,6 +992,7 @@ impl Effect {
             Effect::Repeat { count, body } => value_has_target(count) || body.requires_target(),
             Effect::ChooseMode(modes) => modes.iter().any(|e| e.requires_target()),
             Effect::ChooseModes { modes, .. } => modes.iter().any(|e| e.requires_target()),
+            Effect::PickModeAtResolution(modes) => modes.iter().any(|e| e.requires_target()),
             Effect::MayDo { body, .. } => body.requires_target(),
             Effect::MayPay { body, .. } => body.requires_target(),
             Effect::DealDamage { to, amount } => sel_has_target(to) || value_has_target(amount),
@@ -1134,6 +1148,10 @@ impl Effect {
             Effect::ChooseModes { modes, .. } => modes
                 .iter()
                 .find_map(|e| e.primary_target_filter()),
+            // PickModeAtResolution: same shape — surface first mode's filter.
+            Effect::PickModeAtResolution(modes) => modes
+                .iter()
+                .find_map(|e| e.primary_target_filter()),
             // MayDo wraps an inner effect — surface its filter so the
             // cast prompt narrows correctly when the inner effect needs
             // a target (e.g. "you may sacrifice [target permanent]").
@@ -1176,6 +1194,14 @@ impl Effect {
                 ZoneDest::Hand(PlayerRef::You)
                     | ZoneDest::Battlefield { controller: PlayerRef::You, .. }
             ),
+            // Modal: any inner mode preferring friendly bubbles up. The
+            // first-mode bias for PickModeAtResolution covers the typical
+            // "+1/+1 or -1/-1" cards (Silverquill Apprentice) where the
+            // pump mode's friendly preference should drive auto-target —
+            // the shrink mode is opt-in via ScriptedDecider Mode(1).
+            Effect::PickModeAtResolution(modes) => {
+                modes.iter().any(|m| m.prefers_friendly_target())
+            }
             _ => false,
         }
     }
@@ -1331,6 +1357,9 @@ impl Effect {
             | Effect::ForEach { body, .. } => body.accepts_player_target(),
             Effect::ChooseMode(modes) => modes.iter().any(|e| e.accepts_player_target()),
             Effect::ChooseModes { modes, .. } => modes.iter().any(|e| e.accepts_player_target()),
+            Effect::PickModeAtResolution(modes) => {
+                modes.iter().any(|e| e.accepts_player_target())
+            }
             // Conservative default: anything we don't classify is permitted.
             // The legality gate (filter + check_target_legality) still rejects
             // mismatched types, this just changes the heuristic's preference
@@ -1402,6 +1431,10 @@ impl Effect {
                 // path — first match across all modes. The runtime picker
                 // re-validates target legality per resolved mode.
                 Effect::ChooseModes { modes, .. } => {
+                    modes.iter().find_map(|m| eff_find(m, slot, None))
+                }
+                // PickModeAtResolution: same as ChooseMode's legacy path.
+                Effect::PickModeAtResolution(modes) => {
                     modes.iter().find_map(|m| eff_find(m, slot, None))
                 }
                 Effect::MayDo { body, .. } | Effect::MayPay { body, .. } => {
@@ -1508,6 +1541,20 @@ pub enum StaticEffect {
     /// spells as though they had flash. Tracked via `Player.sorceries_as_flash`
     /// (set/cleared by the loyalty ability + `do_untap`).
     ControllerSorceriesAsFlash,
+    /// Augmenter Pugilist-style "activated abilities of [filter] cost
+    /// {N} more to activate." Walks all battlefield permanents at
+    /// activation time and adds `amount` generic mana to the activation
+    /// cost when the activating permanent matches `filter`. Multiple
+    /// distinct sources (two Pugilists, Pugilist + tax artifact) sum.
+    ///
+    /// Used by:
+    /// - **Augmenter Pugilist** ({3}{G}{G}, 6/6 Trample) — filter:
+    ///   Creature; amount: 2.
+    /// - Any future "tax activations of [type]" effect.
+    TaxActivatedAbilities {
+        filter: SelectionRequirement,
+        amount: u32,
+    },
 }
 
 // ── Triggered / activated / loyalty ability shells ───────────────────────────

@@ -610,6 +610,7 @@ fn effect_uses_x(eff: &Effect) -> bool {
         }
         Effect::ChooseMode(modes) => modes.iter().any(effect_uses_x),
         Effect::ChooseModes { modes, .. } => modes.iter().any(effect_uses_x),
+        Effect::PickModeAtResolution(modes) => modes.iter().any(effect_uses_x),
         Effect::ForEach { body, .. }
         | Effect::Repeat { body, .. }
         | Effect::DelayUntil { body, .. } => effect_uses_x(body),
