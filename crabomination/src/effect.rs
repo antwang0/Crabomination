@@ -1167,6 +1167,50 @@ impl Effect {
     }
 
     /// True if a `Target::Player(_)` is a meaningful primary target for this
+    /// If this effect is a constant-amount hostile damage effect (e.g.
+    /// Lightning Bolt's `DealDamage 3`, Crackle with Power's `5X`
+    /// folded out at cast time, or a Seq leading with one), returns
+    /// `Some(amount)` so the auto-target picker can prefer enemy
+    /// creatures whose toughness ≤ amount (lethal kills first), then
+    /// fall back to the highest-power lethal pick. Returns `None` for
+    /// non-damage effects, non-targeted damage (each-opponent-collapsed
+    /// drain, mass damage), or damage with a dynamic amount that we
+    /// can't pre-compute statically (X-cost values without a payment
+    /// snapshot, `CountOf` selectors).
+    ///
+    /// Pre-fix the auto-target picker walked the battlefield in `Vec`
+    /// order and returned the first legal opp creature. Post-fix
+    /// damage spells preferentially target the largest-power creature
+    /// the spell can lethally kill, then fall through to the prior
+    /// "first-match" path for non-lethal targets. Powers smarter
+    /// auto-play of Bolt / Shock / Lash of Malice / Sundering Stroke
+    /// in the bot's hostile-removal pipeline.
+    pub fn hostile_damage_amount(&self) -> Option<i32> {
+        match self {
+            Effect::DealDamage { amount: Value::Const(n), .. } if *n > 0 => Some(*n),
+            Effect::DealDamage {
+                amount: Value::Times(a, b), ..
+            } => {
+                // Hand-cast Crackle ({X}{R}{R}{R}) compiles to
+                // `Times(XFromCost, 5)` — at cast time X resolves but the
+                // `Effect` is shared across all casts, so the static
+                // analysis can't pre-bake the X. Only fold the
+                // `Times(Const, Const)` case (rare in the catalog) so
+                // the picker stays predictable.
+                if let (Value::Const(x), Value::Const(y)) = (a.as_ref(), b.as_ref()) {
+                    let prod = x * y;
+                    if prod > 0 { Some(prod) } else { None }
+                } else { None }
+            }
+            // Sequences of effects: if the leading effect is hostile
+            // damage with a constant amount, take that. (Subsequent
+            // effects in the Seq don't contribute to the auto-target
+            // legality of the slot 0 target.)
+            Effect::Seq(steps) => steps.iter().find_map(|e| e.hostile_damage_amount()),
+            _ => None,
+        }
+    }
+
     /// effect. The auto-target heuristic uses this to skip player candidates
     /// when the effect actually operates on permanents — without it, an
     /// `Any`-filtered Move (Regrowth) auto-targets the caster as a player and

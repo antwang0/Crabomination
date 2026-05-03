@@ -282,6 +282,34 @@ fn predicate_short_label(p: &crate::card::Predicate) -> String {
         Predicate::ValueAtMost(Value::ManaSpentToCast, Value::Const(n)) => {
             format!("if ≤{n} mana spent")
         }
+        // Push XXXII: CardsDrawnThisTurn-keyed gates. Reflects the
+        // "if you've drawn N cards this turn" pattern (Niv-Mizzet,
+        // Parun's "first card draw" check, Sphinx's Tutelage's
+        // post-draw mill). Surface a short hint so UIs can preview
+        // the count threshold.
+        Predicate::ValueAtLeast(Value::CardsDrawnThisTurn(_), Value::Const(1)) => {
+            "after drawing".into()
+        }
+        Predicate::ValueAtLeast(Value::CardsDrawnThisTurn(_), Value::Const(n)) => {
+            format!("if drew ≥{n}")
+        }
+        Predicate::ValueAtMost(Value::CardsDrawnThisTurn(_), Value::Const(n)) => {
+            format!("if drew ≤{n}")
+        }
+        // Push XXXII: PermanentCountControlledBy-keyed gates. Reflects
+        // the "X permanents you control" or "opponent controls Y
+        // permanents" patterns (Possibility Storm-style). Pairs with
+        // the existing `CountOf` arm, but reads off the player count
+        // tally rather than a selector walk.
+        Predicate::ValueAtLeast(Value::PermanentCountControlledBy(_), Value::Const(1)) => {
+            "if has permanents".into()
+        }
+        Predicate::ValueAtLeast(Value::PermanentCountControlledBy(_), Value::Const(n)) => {
+            format!("if ≥{n} permanents")
+        }
+        Predicate::ValueAtMost(Value::PermanentCountControlledBy(_), Value::Const(n)) => {
+            format!("if ≤{n} permanents")
+        }
         // EntityMatches {what, filter}: predicate over a specific entity
         // (the trigger source, target, or source-of-cast spell). The
         // Repartee filter ("trigger source matches Creature") is the
@@ -1259,6 +1287,33 @@ mod tests {
         assert_eq!(predicate_short_label(&p), "if 5+ mana spent");
         let p = Predicate::ValueAtMost(Value::ManaSpentToCast, Value::Const(4));
         assert_eq!(predicate_short_label(&p), "if ≤4 mana spent");
+    }
+
+    /// Push XXXII: `predicate_short_label` covers
+    /// `Value::CardsDrawnThisTurn` and `Value::PermanentCountControlledBy`
+    /// in the `ValueAtLeast`/`ValueAtMost` shapes — used by lifegain /
+    /// permanent-count gates that don't go through `CountOf` selector
+    /// walks.
+    #[test]
+    fn predicate_short_label_covers_cards_drawn_and_permanent_count() {
+        use crate::card::Predicate;
+        use crate::effect::{PlayerRef, Value};
+        let p = Predicate::ValueAtLeast(Value::CardsDrawnThisTurn(PlayerRef::You), Value::Const(1));
+        assert_eq!(predicate_short_label(&p), "after drawing");
+        let p = Predicate::ValueAtLeast(Value::CardsDrawnThisTurn(PlayerRef::You), Value::Const(3));
+        assert_eq!(predicate_short_label(&p), "if drew ≥3");
+        let p = Predicate::ValueAtMost(Value::CardsDrawnThisTurn(PlayerRef::You), Value::Const(2));
+        assert_eq!(predicate_short_label(&p), "if drew ≤2");
+
+        let p = Predicate::ValueAtLeast(
+            Value::PermanentCountControlledBy(PlayerRef::You), Value::Const(1));
+        assert_eq!(predicate_short_label(&p), "if has permanents");
+        let p = Predicate::ValueAtLeast(
+            Value::PermanentCountControlledBy(PlayerRef::You), Value::Const(4));
+        assert_eq!(predicate_short_label(&p), "if ≥4 permanents");
+        let p = Predicate::ValueAtMost(
+            Value::PermanentCountControlledBy(PlayerRef::You), Value::Const(2));
+        assert_eq!(predicate_short_label(&p), "if ≤2 permanents");
     }
 
     /// Planeswalkers' loyalty abilities should surface in the wire view so

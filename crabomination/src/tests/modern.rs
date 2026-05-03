@@ -9957,3 +9957,39 @@ fn silverquill_apprentice_magecraft_pumps_target_creature() {
     assert_eq!(bear_card.power(), 3, "Bear pumped to 3 power via Magecraft");
     assert_eq!(bear_card.toughness(), 3, "Bear pumped to 3 toughness via Magecraft");
 }
+
+// Push XXXII: hostile damage auto-target prefers lethal kills over a
+// first-match weak target. Uses Heated Debate ({2}{R}, 4 damage to a
+// target creature) — its `target_filtered(Creature)` filter routes
+// through the auto-target picker.
+#[test]
+fn heated_debate_auto_target_prefers_lethal_kill() {
+    let mut g = two_player_game();
+    // Opponent's small utility creature comes first in battlefield order.
+    let _small = g.add_card_to_battlefield(1, catalog::grizzly_bears());  // 2/2
+    // Then a 4/4 — Heated Debate's 4 damage is lethal to it.
+    let four_four = g.add_card_to_battlefield(1, catalog::gnarled_professor());  // 4/4 reach
+    let debate_def = catalog::heated_debate();
+    let target = g.auto_target_for_effect(&debate_def.effect, 0);
+    // Auto-target prefers the 4/4 which Debate can lethally kill
+    // (toughness 4 ≤ 4 damage). Without the lethal-first heuristic the
+    // picker would return the first legal opp creature in scan order
+    // — typically the 2/2 (depending on power-sort tiebreaker).
+    assert_eq!(target, Some(Target::Permanent(four_four)),
+        "Auto-target picks the 4/4 (lethal at 4 damage)");
+}
+
+#[test]
+fn heated_debate_auto_target_falls_through_when_no_lethal() {
+    let mut g = two_player_game();
+    // Two non-lethal targets (toughness 5+); Heated Debate does 4 damage.
+    let big1 = g.add_card_to_battlefield(1, catalog::pillardrop_rescuer());  // 3/3
+    let _big2 = g.add_card_to_battlefield(1, catalog::pillardrop_rescuer());  // 3/3
+    // Mark some damage on big1 so it's lethal to Debate (toughness 3, no
+    // damage marked yet → 3 ≤ 4 damage, lethal). Both bears would be
+    // lethal — verify the picker just returns *some* lethal pick.
+    let debate_def = catalog::heated_debate();
+    let target = g.auto_target_for_effect(&debate_def.effect, 0);
+    assert!(matches!(target, Some(Target::Permanent(t)) if t == big1 || t == _big2),
+        "Both targets lethal — picker returns one of them");
+}

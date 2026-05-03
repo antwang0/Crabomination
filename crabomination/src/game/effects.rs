@@ -2245,6 +2245,35 @@ impl GameState {
             // Sort by descending power so the strongest creature wins.
             primary_candidates.sort_by(|a, b| b.1.cmp(&a.1));
         }
+        // Hostile damage spells: prefer creatures the spell can lethally
+        // kill (toughness ≤ damage minus already-marked damage), then
+        // fall back to the highest-power non-lethal target. Without
+        // this, a Lightning Bolt aimed at a 1/1 utility creature would
+        // miss the chance to kill an opp's 3/3 standing on 0 marked
+        // damage. Push XXXII improvement: lethal-first auto-target
+        // picker for hostile burn.
+        if !prefer_friendly && !primary_candidates.is_empty() {
+            if let Some(damage) = eff.hostile_damage_amount() {
+                let toughness_with_damage =
+                    |cid: crate::card::CardId| -> Option<(i32, i32)> {
+                        let cp = self.computed_permanent(cid)?;
+                        let c = self.battlefield_find(cid)?;
+                        Some((cp.toughness, c.damage as i32))
+                    };
+                // Score each candidate: prefer (lethal, then highest
+                // power, then highest toughness).
+                primary_candidates.sort_by(|a, b| {
+                    let aa = toughness_with_damage(a.0);
+                    let bb = toughness_with_damage(b.0);
+                    let lethal_a = aa.is_some_and(|(t, d)| t - d <= damage);
+                    let lethal_b = bb.is_some_and(|(t, d)| t - d <= damage);
+                    // Lethal targets first, then by descending power.
+                    lethal_b
+                        .cmp(&lethal_a)
+                        .then(b.1.cmp(&a.1))
+                });
+            }
+        }
         if let Some(&(cid, _)) = primary_candidates.first() {
             return Some(Target::Permanent(cid));
         }
