@@ -543,14 +543,9 @@ impl GameState {
                 .unwrap_or(0);
             if plus > 0 && minus > 0 {
                 let cancel = plus.min(minus);
-                *card
-                    .counters
-                    .entry(crate::card::CounterType::PlusOnePlusOne)
-                    .or_insert(0) -= cancel;
-                *card
-                    .counters
-                    .entry(crate::card::CounterType::MinusOneMinusOne)
-                    .or_insert(0) -= cancel;
+                if let Some(v) = card.counters.get_mut(&crate::card::CounterType::PlusOnePlusOne) { *v -= cancel; }
+                if let Some(v) = card.counters.get_mut(&crate::card::CounterType::MinusOneMinusOne) { *v -= cancel; }
+                card.counters.retain(|_, n| *n > 0);
             }
         }
 
@@ -578,7 +573,16 @@ impl GameState {
             victims
         };
         for id in legend_victims {
-            events.push(GameEvent::CreatureDied { card_id: id });
+            let (is_creature, is_planeswalker) = self.battlefield
+                .iter()
+                .find(|c| c.id == id)
+                .map(|c| (c.definition.is_creature(), c.definition.is_planeswalker()))
+                .unwrap_or((false, false));
+            if is_creature {
+                events.push(GameEvent::CreatureDied { card_id: id });
+            } else if is_planeswalker {
+                events.push(GameEvent::PlaneswalkerDied { card_id: id });
+            }
             self.remove_from_battlefield_to_graveyard(id);
         }
 

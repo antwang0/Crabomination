@@ -79,10 +79,10 @@ pub fn export_full(
     write_export(view, message, snapshot, full_state)
 }
 
-/// Backward-compatible wrapper that exports just the seat-projected view
-/// (no full engine snapshot). Used by network-game exports where the
-/// client doesn't have direct access to the authoritative state.
-#[allow(dead_code)]
+/// Test-only wrapper that exports just the seat-projected view (no full
+/// engine snapshot). Production exports always go through `export_full`;
+/// this exists so the round-trip tests below don't need a `GameState`.
+#[cfg(test)]
 pub fn export_client_view(view: &ClientView, message: &str) -> Result<PathBuf, String> {
     write_export(view, message, None, None)
 }

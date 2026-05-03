@@ -255,39 +255,19 @@ fn mox_ruby_casts_for_free_and_taps_for_red() {
 }
 
 #[test]
-fn mox_pearl_taps_for_white() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::mox_pearl());
-    g.perform_action(GameAction::ActivateAbility { card_id: id, ability_index: 0, target: None })
-        .unwrap();
-    assert_eq!(g.players[0].mana_pool.amount(Color::White), 1);
-}
-
-#[test]
-fn mox_sapphire_taps_for_blue() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::mox_sapphire());
-    g.perform_action(GameAction::ActivateAbility { card_id: id, ability_index: 0, target: None })
-        .unwrap();
-    assert_eq!(g.players[0].mana_pool.amount(Color::Blue), 1);
-}
-
-#[test]
-fn mox_jet_taps_for_black() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::mox_jet());
-    g.perform_action(GameAction::ActivateAbility { card_id: id, ability_index: 0, target: None })
-        .unwrap();
-    assert_eq!(g.players[0].mana_pool.amount(Color::Black), 1);
-}
-
-#[test]
-fn mox_emerald_taps_for_green() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::mox_emerald());
-    g.perform_action(GameAction::ActivateAbility { card_id: id, ability_index: 0, target: None })
-        .unwrap();
-    assert_eq!(g.players[0].mana_pool.amount(Color::Green), 1);
+fn each_mox_taps_for_its_color() {
+    for (factory, color) in [
+        (catalog::mox_pearl()   as crate::card::CardDefinition, Color::White),
+        (catalog::mox_sapphire(), Color::Blue),
+        (catalog::mox_jet(),      Color::Black),
+        (catalog::mox_emerald(),  Color::Green),
+    ] {
+        let mut g = two_player_game();
+        let id = g.add_card_to_battlefield(0, factory);
+        g.perform_action(GameAction::ActivateAbility { card_id: id, ability_index: 0, target: None })
+            .unwrap_or_else(|e| panic!("{color:?} mox failed to tap: {e}"));
+        assert_eq!(g.players[0].mana_pool.amount(color), 1, "{color:?} mox should produce 1 {color:?}");
+    }
 }
 
 #[test]
@@ -2436,52 +2416,6 @@ fn leyline_of_sanctity_starts_in_play_and_grants_player_hexproof() {
 }
 
 #[test]
-fn leyline_of_sanctity_hexproof_does_not_apply_to_self() {
-    // Casting your own spell on yourself is fine — hexproof from Leyline
-    // only blocks opponents.
-    let mut g = two_player_game();
-    g.add_card_to_battlefield(0, catalog::leyline_of_sanctity());
-    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
-    g.players[0].mana_pool.add(Color::Red, 1);
-    g.perform_action(GameAction::CastSpell {
-        card_id: bolt,
-        target: Some(Target::Player(0)),
-        mode: None,
-        x_value: None,
-    })
-    .expect("Self-targeting bypasses Leyline's hexproof");
-}
-
-#[test]
-fn chancellor_of_the_tangle_grants_one_green_at_start_of_game() {
-    // Reveal queues a YourNextMainPhase delayed trigger; the {G} hits the
-    // pool when P0's first main step fires.
-    let mut g = two_player_game();
-    g.step = TurnStep::Untap; // reset so we can step into PreCombatMain
-    g.add_card_to_hand(0, catalog::chancellor_of_the_tangle());
-    g.fire_start_of_game_effects();
-    assert_eq!(g.delayed_triggers.len(), 1,
-        "Tangle should queue one YourNextMainPhase trigger");
-    // Walk priority through the early steps until PreCombatMain fires
-    // the delayed trigger.
-    for _ in 0..30 {
-        if g.players[0].mana_pool.amount(Color::Green) > 0 { break; }
-        let _ = g.perform_action(GameAction::PassPriority);
-    }
-    assert_eq!(g.players[0].mana_pool.amount(Color::Green), 1,
-        "Chancellor of the Tangle should add {{G}} to its owner's pool by PreCombatMain");
-}
-
-#[test]
-fn gemstone_caverns_starts_in_play() {
-    let mut g = two_player_game();
-    let cave = g.add_card_to_hand(0, catalog::gemstone_caverns());
-    g.fire_start_of_game_effects();
-    assert!(g.battlefield.iter().any(|c| c.id == cave),
-        "Gemstone Caverns should begin the game on the battlefield");
-}
-
-#[test]
 fn inquisition_suspends_for_caster_ui_and_applies_chosen_discard() {
     // P0 wants UI → Inquisition should suspend with a Decision::Discard
     // pointing at P0 (the picker), showing P1's filtered hand. Submitting
@@ -2528,50 +2462,6 @@ fn inquisition_suspends_for_caster_ui_and_applies_chosen_discard() {
         "Targeted Bolt should hit P1's graveyard");
     assert!(g.players[1].hand.iter().any(|c| c.id == other),
         "Other matching card stays in hand — Inquisition only takes one");
-}
-
-#[test]
-fn chancellor_of_the_annex_taxes_opponents_first_spell() {
-    // Stock Chancellor in P0's opening hand. Start-of-game pass queues a
-    // YourNextUpkeep delayed trigger; the trigger resolution stamps a {1}
-    // tax on P1's first spell.
-    let mut g = two_player_game();
-    g.step = TurnStep::Untap;
-    g.add_card_to_hand(0, catalog::chancellor_of_the_annex());
-    g.fire_start_of_game_effects();
-    // Step into Upkeep so the delayed trigger fires + resolves.
-    for _ in 0..30 {
-        if g.players[1].first_spell_tax_charges > 0 { break; }
-        let _ = g.perform_action(GameAction::PassPriority);
-    }
-    assert_eq!(g.players[1].first_spell_tax_charges, 1);
-
-    let bolt1 = g.add_card_to_hand(1, catalog::lightning_bolt());
-    g.players[1].mana_pool.add(Color::Red, 1);
-    g.active_player_idx = 1;
-    g.priority.player_with_priority = 1;
-    let err = g.perform_action(GameAction::CastSpell {
-        card_id: bolt1, target: Some(Target::Player(0)), mode: None, x_value: None,
-    });
-    assert!(err.is_err(),
-        "First Bolt should require an extra {{1}} due to the Annex tax");
-
-    g.players[1].mana_pool.add_colorless(1);
-    g.perform_action(GameAction::CastSpell {
-        card_id: bolt1, target: Some(Target::Player(0)), mode: None, x_value: None,
-    })
-    .expect("First Bolt castable for {1}{R} under the tax");
-    drain_stack(&mut g);
-    assert_eq!(g.players[1].first_spell_tax_charges, 0,
-        "Tax should clear after the first cast");
-
-    // Second spell pays the regular {R} again.
-    let bolt2 = g.add_card_to_hand(1, catalog::lightning_bolt());
-    g.players[1].mana_pool.add(Color::Red, 1);
-    g.perform_action(GameAction::CastSpell {
-        card_id: bolt2, target: Some(Target::Player(0)), mode: None, x_value: None,
-    })
-    .expect("Second Bolt should cast for {R} (no further tax)");
 }
 
 #[test]
@@ -3137,10 +3027,18 @@ fn chancellor_of_the_annex_taxes_first_opponent_spell() {
     g.perform_action(GameAction::CastSpell {
         card_id: bolt, target: Some(Target::Player(1)), mode: None, x_value: None,
     }).expect("Bolt castable with the {1} extra");
+    drain_stack(&mut g);
     assert_eq!(
         g.players[0].first_spell_tax_charges, 0,
         "Tax should be consumed by the cast"
     );
+
+    // Second spell costs the regular {R} again — no further tax.
+    let bolt2 = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt2, target: Some(Target::Player(1)), mode: None, x_value: None,
+    }).expect("Second spell should cast for the normal cost");
 }
 
 #[test]

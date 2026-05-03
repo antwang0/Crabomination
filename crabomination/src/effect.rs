@@ -1875,9 +1875,9 @@ pub mod shortcut {
     /// toughness, put a +1/+1 counter on this creature." Backed by
     /// `Value::ManaSpentToCast` (push XXXI) compared against
     /// `Min(PowerOf(This), ToughnessOf(This)) + 1` — "greater than P
-    /// or T" reduces to "greater than min(P, T)" which is "≥ min(P, T)
-    /// + 1". Used by Berta, Cuboid Colony, Fractal Tender, Pensive
-    ///   Professor, Tester of the Tangential, Textbook Tabulator.
+    /// or T" reduces to "greater than min(P, T)" which is "≥ min(P, T) + 1".
+    /// Used by Berta, Cuboid Colony, Fractal Tender, Pensive Professor,
+    /// Tester of the Tangential, Textbook Tabulator.
     ///
     /// The trigger fires on every spell cast (not just instant/sorcery).
     pub fn increment() -> TriggeredAbility {

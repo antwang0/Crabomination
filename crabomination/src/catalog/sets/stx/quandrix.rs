@@ -206,10 +206,10 @@ fn quandrix_fractal_token() -> TokenDefinition {
 /// creature token. Put X +1/+1 counters on it, where X is the number of
 /// cards in your hand."
 ///
-/// Wired faithfully via the new `Selector::LastCreatedToken` (push II)
-/// + `Value::HandSizeOf(You)` — the Fractal enters at 0/0, then receives
-///   hand-size-many +1/+1 counters in a single resolution. With a 7-card
-///   hand the Fractal lands as a 7/7 — a respectable on-curve threat.
+/// Wired faithfully via the new `Selector::LastCreatedToken` (push II) +
+/// `Value::HandSizeOf(You)` — the Fractal enters at 0/0, then receives
+/// hand-size-many +1/+1 counters in a single resolution. With a 7-card
+/// hand the Fractal lands as a 7/7 — a respectable on-curve threat.
 pub fn snow_day() -> CardDefinition {
     CardDefinition {
         name: "Snow Day",

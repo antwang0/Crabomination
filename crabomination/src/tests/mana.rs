@@ -1,20 +1,10 @@
 use super::*;
 
 #[test]
-fn cmc_of_lightning_bolt_is_1() {
-    let c = cost(&[r()]);
-    assert_eq!(c.cmc(), 1);
-}
-
-#[test]
-fn cmc_of_serra_angel_is_5() {
-    let c = cost(&[generic(3), w(), w()]);
-    assert_eq!(c.cmc(), 5);
-}
-
-#[test]
-fn cmc_of_free_card_is_0() {
-    assert_eq!(ManaCost::default().cmc(), 0);
+fn cmc_calculations() {
+    assert_eq!(cost(&[r()]).cmc(), 1);               // {R}
+    assert_eq!(cost(&[generic(3), w(), w()]).cmc(), 5); // {3}{W}{W}
+    assert_eq!(ManaCost::default().cmc(), 0);         // free spell
 }
 
 #[test]
@@ -91,19 +81,20 @@ fn pay_does_not_partially_drain_on_failure() {
 }
 
 #[test]
-fn color_short_name_matches_mtg_abbreviations() {
-    assert_eq!(Color::White.short_name(), 'W');
-    assert_eq!(Color::Blue.short_name(),  'U');
-    assert_eq!(Color::Black.short_name(), 'B');
-    assert_eq!(Color::Red.short_name(),   'R');
-    assert_eq!(Color::Green.short_name(), 'G');
-}
-
-#[test]
-fn color_display_matches_short_name() {
-    assert_eq!(format!("{}", Color::Blue), "U");
+fn color_short_name_and_display() {
+    let cases = [
+        (Color::White, 'W'),
+        (Color::Blue,  'U'),
+        (Color::Black, 'B'),
+        (Color::Red,   'R'),
+        (Color::Green, 'G'),
+    ];
+    for (color, letter) in cases {
+        assert_eq!(color.short_name(), letter);
+        assert_eq!(format!("{color}"), letter.to_string());
+    }
     assert_eq!(format!("{{{}}}", Color::Red), "{R}",
-        "Color::Display can be inlined into format!() to render mana pips");
+        "Color::Display inlines into format! to render mana pips");
 }
 
 #[test]

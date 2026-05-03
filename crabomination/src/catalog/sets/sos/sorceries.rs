@@ -173,12 +173,12 @@ pub fn dig_site_inventory() -> CardDefinition {
 /// "Exile target creature you control, then return that card to the
 /// battlefield under its owner's control with a +1/+1 counter on it."
 ///
-/// Wired with the Restoration-Angel-style flicker pattern: `Exile(target)
-/// + Move(target → Battlefield) + AddCounter(target, +1/+1)`. The
-/// `Selector::Target(0)` slot persists across the exile so the engine's
+/// Wired with the Restoration-Angel-style flicker pattern:
+/// `Exile(target) + Move(target → Battlefield) + AddCounter(target, +1/+1)`.
+/// The `Selector::Target(0)` slot persists across the exile so the engine's
 /// `Move`/`AddCounter` resolves against the same card after it lands
-///   back on the battlefield (zone-stable lookup falls back through exile,
-///   which is where the target lives between Exile and Move).
+/// back on the battlefield (zone-stable lookup falls back through exile,
+/// which is where the target lives between Exile and Move).
 ///
 /// The Flashback {2}{W} clause is wired via `Keyword::Flashback`; the
 /// engine's existing `cast_flashback` path replays the body identically.
@@ -235,13 +235,13 @@ pub fn daydream() -> CardDefinition {
 ///
 /// Push: ✅ (was 🟡, "DS-or-Lifelink mode pick collapsed to DS"). The
 /// printed mode pick is now wired as a top-level `Effect::ChooseMode`:
-/// mode 0 = +1/+1 fan-out + double strike grant; mode 1 = +1/+1 fan-out
-/// + lifelink grant. Cast-time `mode` argument (`Some(0)` / `Some(1)`)
-///   flips between the two; `mode: None` defaults to mode 0 (DS, the
-///   strictly more aggressive pick). Player-target slot still collapses
-///   to "you" (the +1/+1 fan-out lands on every creature you control —
-///   engine has no multi-target prompt for "any player" + "any
-///   creature"). Flashback {1}{W} unchanged.
+/// mode 0 = +1/+1 fan-out + double strike grant; mode 1 = +1/+1 fan-out +
+/// lifelink grant. Cast-time `mode` argument (`Some(0)` / `Some(1)`)
+/// flips between the two; `mode: None` defaults to mode 0 (DS, the
+/// strictly more aggressive pick). Player-target slot still collapses
+/// to "you" (the +1/+1 fan-out lands on every creature you control —
+/// engine has no multi-target prompt for "any player" + "any
+/// creature"). Flashback {1}{W} unchanged.
 pub fn practiced_offense() -> CardDefinition {
     use crate::card::{CounterType, Keyword};
     use crate::mana::{ManaCost, ManaSymbol};
@@ -1536,11 +1536,11 @@ pub fn cost_of_brilliance() -> CardDefinition {
 /// this way onto the battlefield tapped under your control."
 ///
 /// The "land card discarded this way → battlefield" rider is now wired
-/// via the new `Selector::DiscardedThisResolution(IsLand)` primitive
-/// + `Selector::one_of(...)` to clamp to one land. The discard half
-///   uses `EachOpponent` so the caster never targets themselves — keeps
-///   the spell aligned with its hand-disruption role even though the
-///   printed card lets the caster target any player.
+/// via the new `Selector::DiscardedThisResolution(IsLand)` primitive +
+/// `Selector::one_of(...)` to clamp to one land. The discard half
+/// uses `EachOpponent` so the caster never targets themselves — keeps
+/// the spell aligned with its hand-disruption role even though the
+/// printed card lets the caster target any player.
 pub fn mind_roots() -> CardDefinition {
     use crate::effect::ZoneDest;
     use crate::mana::g;

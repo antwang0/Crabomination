@@ -97,10 +97,9 @@ pub fn handle_export_prompt_input(
             Key::Backspace => {
                 state.message.pop();
             }
-            Key::Space
-                if state.message.len() < MAX_MESSAGE_LEN => {
-                    state.message.push(' ');
-                }
+            Key::Space if state.message.len() < MAX_MESSAGE_LEN => {
+                state.message.push(' ');
+            }
             Key::Character(s) => {
                 for ch in s.chars() {
                     if state.message.len() >= MAX_MESSAGE_LEN {

@@ -535,7 +535,21 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::Scry { who, amount } | Effect::Surveil { who, amount } | Effect::LookAtTop { who, amount } => {
+            Effect::LookAtTop { who, amount } => {
+                // Pure peek — reveal without rearranging. No decision required.
+                let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
+                let n = self.evaluate_value(amount, ctx).max(0) as usize;
+                for card in self.players[p].library.iter().take(n) {
+                    events.push(GameEvent::TopCardRevealed {
+                        player: p,
+                        card_name: card.definition.name,
+                        is_land: card.definition.is_land(),
+                    });
+                }
+                Ok(())
+            }
+
+            Effect::Scry { who, amount } | Effect::Surveil { who, amount } => {
                 use crate::decision::Decision;
                 let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
                 let n = self.evaluate_value(amount, ctx).max(0) as usize;
@@ -669,20 +683,18 @@ impl GameState {
             Effect::Destroy { what } => {
                 let entities = self.resolve_selector(what, ctx);
                 for ent in entities {
-                    if let EntityRef::Permanent(cid) = ent {
-                        let indestructible = self.battlefield_find(cid)
-                            .map(|c| c.has_keyword(&Keyword::Indestructible))
-                            .unwrap_or(true);
-                        if !indestructible {
-                            let is_creature = self.battlefield_find(cid)
-                                .map(|c| c.definition.is_creature())
-                                .unwrap_or(false);
-                            if is_creature {
-                                events.push(GameEvent::CreatureDied { card_id: cid });
-                            }
-                            let mut dies = self.remove_to_graveyard_with_triggers(cid);
-                            events.append(&mut dies);
+                    let EntityRef::Permanent(cid) = ent else { continue };
+                    let Some(card) = self.battlefield_find(cid) else { continue };
+                    let (indestructible, is_creature) = (
+                        card.has_keyword(&Keyword::Indestructible),
+                        card.definition.is_creature(),
+                    );
+                    if !indestructible {
+                        if is_creature {
+                            events.push(GameEvent::CreatureDied { card_id: cid });
                         }
+                        let mut dies = self.remove_to_graveyard_with_triggers(cid);
+                        events.append(&mut dies);
                     }
                 }
                 let mut sba = self.check_state_based_actions();
@@ -944,15 +956,16 @@ impl GameState {
                     }
                 }
                 to_remove.sort_unstable_by(|a, b| b.cmp(a));
+                // Copies cease to exist on counter — drop without
+                // zoning. Per MTG rule 707.10, a countered copy
+                // disappears from the stack as if it had resolved, so
+                // only non-copy casts get sent to the graveyard.
                 for pos in to_remove {
-                    if let StackItem::Spell { card, caster, is_copy, .. } =
-                        self.stack.remove(pos)
-                        && !is_copy {
-                            self.players[caster].send_to_graveyard(*card);
-                        }
-                        // Copies cease to exist on counter — drop without
-                        // zoning. Per MTG rule 707.10, a countered copy
-                        // disappears from the stack as if it had resolved.
+                    if let StackItem::Spell { card, caster, is_copy, .. } = self.stack.remove(pos)
+                        && !is_copy
+                    {
+                        self.players[caster].send_to_graveyard(*card);
+                    }
                 }
                 Ok(())
             }
@@ -987,11 +1000,11 @@ impl GameState {
                 self.priority.player_with_priority = saved_priority;
 
                 if !paid
-                    && let StackItem::Spell { card, caster, is_copy, .. } =
-                        self.stack.remove(pos)
-                    && !is_copy {
-                        self.players[caster].send_to_graveyard(*card);
-                    }
+                    && let StackItem::Spell { card, caster, is_copy, .. } = self.stack.remove(pos)
+                    && !is_copy
+                {
+                    self.players[caster].send_to_graveyard(*card);
+                }
                 Ok(())
             }
 
@@ -2383,27 +2396,26 @@ impl GameState {
         // miss the chance to kill an opp's 3/3 standing on 0 marked
         // damage. Push XXXII improvement: lethal-first auto-target
         // picker for hostile burn.
-        if !prefer_friendly && !primary_candidates.is_empty()
-            && let Some(damage) = eff.hostile_damage_amount() {
-                let toughness_with_damage =
-                    |cid: crate::card::CardId| -> Option<(i32, i32)> {
-                        let cp = self.computed_permanent(cid)?;
-                        let c = self.battlefield_find(cid)?;
-                        Some((cp.toughness, c.damage as i32))
-                    };
-                // Score each candidate: prefer (lethal, then highest
-                // power, then highest toughness).
-                primary_candidates.sort_by(|a, b| {
-                    let aa = toughness_with_damage(a.0);
-                    let bb = toughness_with_damage(b.0);
-                    let lethal_a = aa.is_some_and(|(t, d)| t - d <= damage);
-                    let lethal_b = bb.is_some_and(|(t, d)| t - d <= damage);
-                    // Lethal targets first, then by descending power.
-                    lethal_b
-                        .cmp(&lethal_a)
-                        .then(b.1.cmp(&a.1))
-                });
-            }
+        if !prefer_friendly
+            && !primary_candidates.is_empty()
+            && let Some(damage) = eff.hostile_damage_amount()
+        {
+            let toughness_with_damage = |cid: crate::card::CardId| -> Option<(i32, i32)> {
+                let cp = self.computed_permanent(cid)?;
+                let c = self.battlefield_find(cid)?;
+                Some((cp.toughness, c.damage as i32))
+            };
+            // Score each candidate: prefer (lethal, then highest
+            // power, then highest toughness).
+            primary_candidates.sort_by(|a, b| {
+                let aa = toughness_with_damage(a.0);
+                let bb = toughness_with_damage(b.0);
+                let lethal_a = aa.is_some_and(|(t, d)| t - d <= damage);
+                let lethal_b = bb.is_some_and(|(t, d)| t - d <= damage);
+                // Lethal targets first, then by descending power.
+                lethal_b.cmp(&lethal_a).then(b.1.cmp(&a.1))
+            });
+        }
         if let Some(&(cid, _)) = primary_candidates.first() {
             return Some(Target::Permanent(cid));
         }

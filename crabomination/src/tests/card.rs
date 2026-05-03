@@ -38,26 +38,17 @@ fn tapped_creature_cannot_block() {
 }
 
 #[test]
-fn creature_dies_at_lethal_damage() {
+fn lethality_checks() {
     let mut c = CardInstance::new(CardId(0), catalog::grizzly_bears(), 0);
     c.damage = 2;
-    assert!(c.is_dead());
-}
+    assert!(c.is_dead(), "lethal damage kills");
 
-#[test]
-fn indestructible_creature_does_not_die_from_damage() {
-    let mut c = CardInstance::new(CardId(0), catalog::grizzly_bears(), 0);
+    c.toughness_bonus = 3; // 2/5 now — damage no longer lethal
+    assert!(!c.is_dead(), "pump prevents death at equal damage");
+
     c.definition.keywords.push(Keyword::Indestructible);
     c.damage = 99;
-    assert!(!c.is_dead());
-}
-
-#[test]
-fn pump_keeps_creature_alive_through_damage() {
-    let mut c = CardInstance::new(CardId(0), catalog::grizzly_bears(), 0);
-    c.damage = 2;
-    c.toughness_bonus = 3; // now 5 toughness
-    assert!(!c.is_dead());
+    assert!(!c.is_dead(), "indestructible ignores damage");
 }
 
 #[test]
