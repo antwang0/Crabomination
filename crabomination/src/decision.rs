@@ -31,6 +31,21 @@ pub enum Decision {
     /// Pick a mode index from a modal spell (e.g. Command suite).
     ChooseMode { source: CardId, num_modes: usize },
 
+    /// Pick `pick_count` distinct modes from a multi-modal spell. Used by
+    /// Strixhaven Commands ("choose two") and Moment of Reckoning's
+    /// "choose up to four. May choose the same mode more than once".
+    /// `up_to = true` allows fewer than `pick_count`. `allow_duplicates =
+    /// true` permits the same mode index more than once. The decider's
+    /// `Modes(_)` answer must obey these constraints; otherwise the
+    /// effect resolver falls back to "first `pick_count` modes".
+    ChooseModes {
+        source: CardId,
+        modes_count: usize,
+        pick_count: usize,
+        up_to: bool,
+        allow_duplicates: bool,
+    },
+
     /// Pick a color (Birds of Paradise, Gilded Lotus, Prismatic Lens).
     ChooseColor { source: CardId, legal: Vec<Color> },
 
@@ -93,6 +108,8 @@ pub enum Decision {
 pub enum DecisionAnswer {
     Target(Target),
     Mode(usize),
+    /// Ordered mode indices for an `Effect::ChooseModes` resolution.
+    Modes(Vec<usize>),
     Color(Color),
     /// `kept_top` goes on top in listed order; `bottom` goes to the bottom in
     /// listed order. Cards appearing in neither list default to top.
@@ -172,6 +189,20 @@ impl Decider for AutoDecider {
                 DecisionAnswer::Target(legal.first().cloned().expect("no legal target"))
             }
             Decision::ChooseMode { .. } => DecisionAnswer::Mode(0),
+            Decision::ChooseModes {
+                modes_count,
+                pick_count,
+                ..
+            } => {
+                // Default heuristic: pick the first `pick_count` modes.
+                // For the Strixhaven Commands this produces sensible
+                // baseline behavior — modes 0+1 of each Command tend
+                // toward target-less resource modes (drain, draw, token,
+                // gy → hand). Tests can override with ScriptedDecider's
+                // `Modes(vec![…])`.
+                let n = (*pick_count).min(*modes_count);
+                DecisionAnswer::Modes((0..n).collect())
+            }
             Decision::ChooseColor { legal, .. } => {
                 DecisionAnswer::Color(*legal.first().unwrap_or(&Color::Green))
             }

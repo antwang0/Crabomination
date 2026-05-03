@@ -245,15 +245,18 @@ pub fn snow_day() -> CardDefinition {
 
 // ── Mentor's Guidance ───────────────────────────────────────────────────────
 
-/// Mentor's Guidance — {2}{G}{U} Sorcery. "Draw two cards. Then put a
+/// Mentor's Guidance — {2}{G}{U} Sorcery. "Draw two cards, then put a
 /// +1/+1 counter on target creature you control for each card in your
 /// hand."
 ///
-/// Wired faithfully via `Value::HandSizeOf(You)` for the counter scaling
-/// — after drawing 2, the post-draw hand size powers the counter
-/// distribution onto a single target creature you control. Multi-target
-/// + "for each" iteration are collapsed onto a single creature target
-/// (printed: "target creature" — single target, not fan-out).
+/// Push XXXVI: 🟡 → ✅. Wired faithfully via `Value::HandSizeOf(You)`
+/// for the counter scaling — after drawing 2, the post-draw hand size
+/// powers the counter distribution onto a single target creature you
+/// control. The printed effect is single-target (no fan-out / "for each
+/// creature you control" rider) so the existing wire matches the printed
+/// Oracle exactly. Status was previously 🟡 due to a stale doc comment
+/// that misread the printed wording as multi-target — now ✅ since the
+/// implementation already covers the printed clause.
 pub fn mentors_guidance() -> CardDefinition {
     CardDefinition {
         name: "Mentor's Guidance",
@@ -297,10 +300,15 @@ pub fn mentors_guidance() -> CardDefinition {
 /// • Put target card from a graveyard on the bottom of its owner's library.
 /// • Draw a card."
 ///
-/// Push XXIV: 🟡 — printed "choose two" collapses to "choose one" via
-/// `Effect::ChooseMode` (same approximation as Moment of Reckoning,
-/// Witherbloom / Lorehold / Prismari Commands). Each mode wired
-/// faithfully against existing primitives.
+/// Push XXXVI: ✅ — "choose two" now wires faithfully via the new
+/// `Effect::ChooseModes { count: 2, up_to: false, allow_duplicates:
+/// false }` primitive. Auto-decider picks modes 0+1 (counter activated
+/// ability + +1/+1 ×2 on creature). Both share `Target(0)` so the
+/// chosen Permanent gets both effects. For pure-value pair (gy →
+/// library + draw 1, modes 2+3) use `ScriptedDecider::new([Modes(
+/// vec![2, 3])])`. The multi-target uniqueness caveat (modes 0 and 1
+/// both reading Target(0)) is the same engine gap noted on the other
+/// Commands.
 pub fn quandrix_command() -> CardDefinition {
     use crate::card::Zone;
     use crate::effect::ZoneDest;
@@ -313,40 +321,45 @@ pub fn quandrix_command() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![],
-        effect: Effect::ChooseMode(vec![
-            // Mode 0: counter target activated ability.
-            Effect::CounterAbility {
-                what: target_filtered(SelectionRequirement::Permanent),
-            },
-            // Mode 1: put two +1/+1 counters on target creature.
-            Effect::AddCounter {
-                what: target_filtered(SelectionRequirement::Creature),
-                kind: CounterType::PlusOnePlusOne,
-                amount: Value::Const(2),
-            },
-            // Mode 2: gy → bottom of owner's library on a target card.
-            // Picked from an opponent's graveyard for the auto-target
-            // framework (the printed mode targets any graveyard).
-            Effect::Move {
-                what: Selector::take(
-                    Selector::CardsInZone {
-                        who: PlayerRef::EachOpponent,
-                        zone: Zone::Graveyard,
-                        filter: SelectionRequirement::Any,
-                    },
-                    Value::Const(1),
-                ),
-                to: ZoneDest::Library {
-                    who: PlayerRef::OwnerOf(Box::new(Selector::Target(0))),
-                    pos: crate::effect::LibraryPosition::Bottom,
+        effect: Effect::ChooseModes {
+            count: 2,
+            up_to: false,
+            allow_duplicates: false,
+            modes: vec![
+                // Mode 0: counter target activated ability.
+                Effect::CounterAbility {
+                    what: target_filtered(SelectionRequirement::Permanent),
                 },
-            },
-            // Mode 3: draw a card.
-            Effect::Draw {
-                who: Selector::You,
-                amount: Value::Const(1),
-            },
-        ]),
+                // Mode 1: put two +1/+1 counters on target creature.
+                Effect::AddCounter {
+                    what: target_filtered(SelectionRequirement::Creature),
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(2),
+                },
+                // Mode 2: gy → bottom of owner's library on a target card.
+                // Picked from an opponent's graveyard for the auto-target
+                // framework (the printed mode targets any graveyard).
+                Effect::Move {
+                    what: Selector::take(
+                        Selector::CardsInZone {
+                            who: PlayerRef::EachOpponent,
+                            zone: Zone::Graveyard,
+                            filter: SelectionRequirement::Any,
+                        },
+                        Value::Const(1),
+                    ),
+                    to: ZoneDest::Library {
+                        who: PlayerRef::OwnerOf(Box::new(Selector::Target(0))),
+                        pos: crate::effect::LibraryPosition::Bottom,
+                    },
+                },
+                // Mode 3: draw a card.
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
+            ],
+        },
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],

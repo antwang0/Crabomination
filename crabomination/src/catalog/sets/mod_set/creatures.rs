@@ -231,6 +231,7 @@ pub fn flickerwisp() -> CardDefinition {
                             tapped: false,
                         },
                     }),
+                    capture: None,
                 },
             ]),
         }],
@@ -1263,6 +1264,7 @@ pub fn ichorid() -> CardDefinition {
                 Effect::DelayUntil {
                     kind: DelayedTriggerKind::NextEndStep,
                     body: Box::new(Effect::Exile { what: Selector::This }),
+                    capture: None,
                 },
             ]),
         }],

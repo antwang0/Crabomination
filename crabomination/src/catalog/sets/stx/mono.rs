@@ -445,16 +445,23 @@ pub fn test_of_talents() -> CardDefinition {
 
 // ── Multiple Choice ─────────────────────────────────────────────────────────
 
-/// Multiple Choice — {1}{U}{U} Sorcery. "Choose one or more — • Scry 2.
-/// • Create a 1/1 blue Pest creature token. (We use a Bird with flying
-/// since the printed card is a 'Pest'? No — Multiple Choice creates a
-/// 1/1 blue Pest. We use a generic Pest token.) • Target creature gets
-/// +1/+0 and gains hexproof until end of turn. • If you chose all of
-/// the above, ..."
+/// Multiple Choice — {1}{U}{U} Sorcery (Strixhaven Quandrix-flavoured
+/// flexible spell). Printed Oracle:
+/// "Choose one or more —
+///  • Scry 2.
+///  • Target creature gets +1/+0 and gains hexproof until end of turn.
+///  • Create a 1/1 blue Pest creature token.
+///  • If you chose all of the above, …" (mega-mode rider).
 ///
-/// 🟡 Single-mode `ChooseMode` instead of Magic's "choose one or more" —
-/// we surface only the first three modes (mode 0/1/2). Mode 3 (all four
-/// at once) needs a multi-mode primitive.
+/// Push XXXVI: 🟡 → ✅ (modes 0–2). Now wires the "choose one or more"
+/// shape via `Effect::ChooseModes { count: 3, up_to: true,
+/// allow_duplicates: false }`. Auto-decider picks all 3 modes
+/// (Scry 2 + pump+hexproof + Pest token). `ScriptedDecider::new([
+/// Modes(vec![0, 2])])` lets tests verify the Scry-2 + Pest pair.
+/// The "if you chose all of the above" mega-mode rider is omitted (no
+/// "modes-picked count" introspection primitive yet — would need to
+/// expose the chosen-mode list in `EffectContext` for an `Effect::If`
+/// gate). Mode 0/1/2 fidelity now matches printed "choose one or more".
 pub fn multiple_choice() -> CardDefinition {
     let pest = TokenDefinition {
         name: "Pest".to_string(),
@@ -480,30 +487,35 @@ pub fn multiple_choice() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![],
-        effect: Effect::ChooseMode(vec![
-            // Mode 0: Scry 2.
-            Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
-            // Mode 1: 1/1 blue Pest token.
-            Effect::CreateToken {
-                who: PlayerRef::You,
-                count: Value::Const(1),
-                definition: pest,
-            },
-            // Mode 2: target creature +1/+0 and hexproof EOT.
-            Effect::Seq(vec![
-                Effect::PumpPT {
-                    what: target_filtered(SelectionRequirement::Creature),
-                    power: Value::Const(1),
-                    toughness: Value::Const(0),
-                    duration: Duration::EndOfTurn,
+        effect: Effect::ChooseModes {
+            count: 3,
+            up_to: true,
+            allow_duplicates: false,
+            modes: vec![
+                // Mode 0: Scry 2.
+                Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
+                // Mode 1: target creature +1/+0 and hexproof EOT.
+                Effect::Seq(vec![
+                    Effect::PumpPT {
+                        what: target_filtered(SelectionRequirement::Creature),
+                        power: Value::Const(1),
+                        toughness: Value::Const(0),
+                        duration: Duration::EndOfTurn,
+                    },
+                    Effect::GrantKeyword {
+                        what: Selector::Target(0),
+                        keyword: Keyword::Hexproof,
+                        duration: Duration::EndOfTurn,
+                    },
+                ]),
+                // Mode 2: 1/1 blue Pest token.
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: pest,
                 },
-                Effect::GrantKeyword {
-                    what: Selector::Target(0),
-                    keyword: Keyword::Hexproof,
-                    duration: Duration::EndOfTurn,
-                },
-            ]),
-        ]),
+            ],
+        },
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],

@@ -348,6 +348,17 @@ pub enum DecisionWire {
         source: CardId,
         num_modes: usize,
     },
+    /// Multi-modal mode pick (Strixhaven Commands, Moment of Reckoning).
+    /// Client renders a `pick_count`-of-`modes_count` checkbox group with
+    /// the printed mode labels (the labels are surfaced separately via the
+    /// existing `view::ability_effect_label`).
+    ChooseModes {
+        source: CardId,
+        modes_count: usize,
+        pick_count: usize,
+        up_to: bool,
+        allow_duplicates: bool,
+    },
     ChooseColor {
         source: CardId,
         legal: Vec<Color>,
@@ -399,6 +410,19 @@ impl From<&Decision> for DecisionWire {
             Decision::ChooseMode { source, num_modes } => DecisionWire::ChooseMode {
                 source: *source,
                 num_modes: *num_modes,
+            },
+            Decision::ChooseModes {
+                source,
+                modes_count,
+                pick_count,
+                up_to,
+                allow_duplicates,
+            } => DecisionWire::ChooseModes {
+                source: *source,
+                modes_count: *modes_count,
+                pick_count: *pick_count,
+                up_to: *up_to,
+                allow_duplicates: *allow_duplicates,
             },
             Decision::ChooseColor { source, legal } => DecisionWire::ChooseColor {
                 source: *source,

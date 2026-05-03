@@ -563,6 +563,35 @@ pub enum Effect {
     /// Modal — controller picks one of `modes` at cast time; the chosen index
     /// is stored in the stack item's `mode` field.
     ChooseMode(Vec<Effect>),
+    /// Multi-modal — controller picks `count` (or up to `count` if `up_to`)
+    /// distinct modes from `modes` at *resolution time*. Used by Strixhaven
+    /// "Choose two —" Commands (Lorehold/Witherbloom/Silverquill/Quandrix/
+    /// Prismari Command, all printed `{X}` cost with four modal halves and
+    /// the printed "choose two" rider) and Moment of Reckoning's "choose
+    /// up to four. You may choose the same mode more than once."
+    ///
+    /// The decision is surfaced via `Decision::ChooseModes`; the
+    /// `AutoDecider` picks the first `count` modes (deterministic, useful
+    /// for the Command's typical 0+1 pair). `ScriptedDecider::new([
+    /// DecisionAnswer::Modes(vec![2, 3])])` lets tests exercise other
+    /// pairs.
+    ///
+    /// Each picked mode runs with `ctx.mode = picked_idx`, reusing
+    /// `Effect::ChooseMode`'s mode-aware target / value resolution.
+    /// Modes share the cast-time `Target(0)` slot — modes that need a
+    /// distinct target from another picked mode collapse to the same
+    /// target. (Multi-target multi-mode prompts need separate engine work
+    /// — see TODO.md.)
+    ChooseModes {
+        modes: Vec<Effect>,
+        /// The "K" in "Choose K modes" (or "Choose up to K modes").
+        count: u32,
+        /// True for "up to K", false for "exactly K".
+        up_to: bool,
+        /// True for "may choose the same mode more than once" (Moment of
+        /// Reckoning); false for the standard Strixhaven Command shape.
+        allow_duplicates: bool,
+    },
     /// "You may [body]" — emit a yes/no decision via
     /// `Decision::OptionalTrigger`. Run `body` only on `Bool(true)`. The
     /// `description` string is shown to the player (and serialized into
@@ -747,9 +776,20 @@ pub enum Effect {
     /// the future event (your next upkeep, next end step, …); `body` is the
     /// effect that resolves when the trigger fires. Captures the current
     /// `ctx.targets[0]` so the body can reference it via `Selector::Target(0)`.
+    ///
+    /// `capture` (push XXXVI): an optional selector evaluated at delay-
+    /// registration time. When provided, the first entity it resolves to
+    /// is bound to the delayed body's `Selector::Target(0)`, overriding
+    /// the `ctx.targets[0]` capture path. Used by Conciliator's Duelist
+    /// (Repartee → exile target creature → return at next end step) where
+    /// the captured entity comes from `Selector::CastSpellTarget(0)`,
+    /// not from the trigger's own target slot (Repartee triggers have no
+    /// target slot of their own).
     DelayUntil {
         kind: DelayedTriggerKind,
         body: Box<Effect>,
+        #[serde(default)]
+        capture: Option<Selector>,
     },
 
     /// "Pay {cost} or you lose the game." Used for pact upkeep payments
@@ -938,6 +978,7 @@ impl Effect {
             }
             Effect::Repeat { count, body } => value_has_target(count) || body.requires_target(),
             Effect::ChooseMode(modes) => modes.iter().any(|e| e.requires_target()),
+            Effect::ChooseModes { modes, .. } => modes.iter().any(|e| e.requires_target()),
             Effect::MayDo { body, .. } => body.requires_target(),
             Effect::MayPay { body, .. } => body.requires_target(),
             Effect::DealDamage { to, amount } => sel_has_target(to) || value_has_target(amount),
@@ -1084,6 +1125,13 @@ impl Effect {
             // in `target_filter_for_slot_in_mode`, which the cast paths
             // consult once the user/bot has picked a mode.
             Effect::ChooseMode(modes) => modes
+                .iter()
+                .find_map(|e| e.primary_target_filter()),
+            // Multi-modal: surface the first mode's filter that has a
+            // target requirement — same shape as ChooseMode. The
+            // resolution-time picker decides which K modes actually run;
+            // the cast-time prompt only knows it needs *some* target slot.
+            Effect::ChooseModes { modes, .. } => modes
                 .iter()
                 .find_map(|e| e.primary_target_filter()),
             // MayDo wraps an inner effect — surface its filter so the
@@ -1282,6 +1330,7 @@ impl Effect {
             | Effect::Repeat { body, .. }
             | Effect::ForEach { body, .. } => body.accepts_player_target(),
             Effect::ChooseMode(modes) => modes.iter().any(|e| e.accepts_player_target()),
+            Effect::ChooseModes { modes, .. } => modes.iter().any(|e| e.accepts_player_target()),
             // Conservative default: anything we don't classify is permitted.
             // The legality gate (filter + check_target_legality) still rejects
             // mismatched types, this just changes the heuristic's preference
@@ -1348,6 +1397,13 @@ impl Effect {
                     // Legacy path: first hit across all modes.
                     _ => modes.iter().find_map(|m| eff_find(m, slot, None)),
                 },
+                // Multi-modal: at cast time we don't yet know which K
+                // modes will be picked, so we mirror ChooseMode's legacy
+                // path — first match across all modes. The runtime picker
+                // re-validates target legality per resolved mode.
+                Effect::ChooseModes { modes, .. } => {
+                    modes.iter().find_map(|m| eff_find(m, slot, None))
+                }
                 Effect::MayDo { body, .. } | Effect::MayPay { body, .. } => {
                     eff_find(body, slot, mode)
                 }

@@ -1020,19 +1020,21 @@ pub fn stirring_honormancer() -> CardDefinition {
 /// Conciliator's Duelist — {W}{W}{B}{B}, 4/3 Kor Warlock.
 /// "When this creature enters, draw a card. Each player loses 1 life."
 ///
-/// Approximation: the **Repartee** rider ("Whenever you cast an instant
-/// or sorcery spell that targets a creature, exile up to one target
-/// creature. Return that card to the battlefield under its owner's
-/// control at the beginning of the next end step.") is partially
-/// wired — the Repartee trigger now exiles the cast spell's targeted
-/// creature via the new `Selector::CastSpellTarget(0)` primitive, but
-/// the "return at next end step" delayed trigger remains stubbed
-/// because `Effect::DelayUntil` captures targets from `ctx.targets`,
-/// which are empty inside a triggered ability's resolution context.
-/// A future "capture-as-target from selector" engine primitive would
-/// promote this to ✅. Tracked in TODO.md.
+/// Push XXXVI: 🟡 → ✅. The **Repartee** rider ("Whenever you cast an
+/// instant or sorcery spell that targets a creature, exile up to one
+/// target creature. Return that card to the battlefield under its
+/// owner's control at the beginning of the next end step.") now
+/// wires the "return at next end step" delayed trigger via the new
+/// `Effect::DelayUntil { capture: Some(_) }` field — at trigger-fire
+/// time the engine evaluates `Selector::CastSpellTarget(0)` (the
+/// just-cast spell's targeted creature), captures the resulting
+/// permanent into the delayed body's `Selector::Target(0)` slot, and
+/// the body's `Move(target → battlefield under owner)` resolves
+/// against that captured target on the next end step. ETB body
+/// (draw 1 + each player loses 1) unchanged.
 pub fn conciliators_duelist() -> CardDefinition {
     use crate::effect::shortcut::repartee;
+    use crate::effect::{DelayedTriggerKind, ZoneDest};
     CardDefinition {
         name: "Conciliator's Duelist",
         cost: cost(&[w(), w(), b(), b()]),
@@ -1067,11 +1069,26 @@ pub fn conciliators_duelist() -> CardDefinition {
                     },
                 ]),
             },
-            // Repartee — exile the targeted creature. The "return at
-            // next end step" rider is omitted (see card-level docs).
-            repartee(Effect::Exile {
-                what: Selector::CastSpellTarget(0),
-            }),
+            // Repartee — exile the targeted creature, then schedule a
+            // return-at-next-end-step delayed trigger. `capture:
+            // Some(Selector::CastSpellTarget(0))` binds the cast
+            // spell's target into the delayed body's Target(0).
+            repartee(Effect::Seq(vec![
+                Effect::Exile {
+                    what: Selector::CastSpellTarget(0),
+                },
+                Effect::DelayUntil {
+                    kind: DelayedTriggerKind::NextEndStep,
+                    body: Box::new(Effect::Move {
+                        what: Selector::Target(0),
+                        to: ZoneDest::Battlefield {
+                            controller: PlayerRef::OwnerOf(Box::new(Selector::Target(0))),
+                            tapped: false,
+                        },
+                    }),
+                    capture: Some(Selector::CastSpellTarget(0)),
+                },
+            ])),
         ],
         static_abilities: vec![],
         base_loyalty: 0,
@@ -4092,18 +4109,24 @@ pub fn zaffai_and_the_tempests() -> CardDefinition {
 }
 
 /// Lorehold, the Historian — {3}{R}{W} Legendary Creature — Elder Dragon.
-/// 5/5 Flying, haste. Miracle grant + opp-upkeep loot omitted.
+/// 5/5 Flying + Haste.
 ///
-/// Body-only wire (5/5 Flying+Haste Legendary Elder Dragon). The "instant
-/// and sorcery cards in your hand have miracle {2}" static is omitted (no
-/// alt-cost-on-draw / miracle primitive), and the per-opp-upkeep
-/// `discard a card → draw a card` loot trigger is omitted (no
-/// AnotherPlayerUpkeep scope yet — `EventScope::OpponentControl` +
-/// `StepBegins(Upkeep)` would route, but `StepBegins` triggers fire only
-/// for the active player today). The vanilla finisher is the most
-/// impactful printed clause; both omitted clauses are tracked in TODO.md.
+/// Push XXXVI: 🟡 fidelity bump. The per-opp-upkeep `you may discard a
+/// card → draw a card` loot trigger is now wired via
+/// `EventKind::StepBegins(Upkeep) + EventScope::OpponentControl` —
+/// `fire_step_triggers` routes step events to permanents whose
+/// controller is *not* the active player when the scope is
+/// OpponentControl, so each opp's upkeep fires the Historian's loot
+/// trigger. The body uses `Effect::MayDo` so the auto-decider's "no"
+/// default skips on-bot turns; a `ScriptedDecider::new([Bool(true)])`
+/// in tests verifies the loot path. The "instant and sorcery cards in
+/// your hand have miracle {2}" static is still omitted (no alt-cost-
+/// on-draw / miracle primitive — same gap as Velomachus Lorehold).
+/// Status stays 🟡 because the miracle grant is the more impactful
+/// half; the loot trigger is the smaller of the two.
 pub fn lorehold_the_historian() -> CardDefinition {
     use crate::card::Supertype;
+    use crate::game::types::TurnStep;
     use crate::mana::{r, w};
     CardDefinition {
         name: "Lorehold, the Historian",
@@ -4119,7 +4142,27 @@ pub fn lorehold_the_historian() -> CardDefinition {
         keywords: vec![Keyword::Flying, Keyword::Haste],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::Upkeep),
+                EventScope::OpponentControl,
+            ),
+            effect: Effect::MayDo {
+                description: "Discard a card; if you do, draw a card."
+                    .into(),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::Discard {
+                        who: Selector::You,
+                        amount: Value::Const(1),
+                        random: false,
+                    },
+                    Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::Const(1),
+                    },
+                ])),
+            },
+        }],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -4378,6 +4421,7 @@ pub fn ennis_debate_moderator() -> CardDefinition {
                                 tapped: false,
                             },
                         }),
+                        capture: None,
                     },
                 ]),
             },

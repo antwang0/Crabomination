@@ -184,10 +184,12 @@ pub fn creative_outburst() -> CardDefinition {
 /// • Create a Treasure token.
 /// • Destroy target artifact."
 ///
-/// Push XXIV: 🟡 — printed "choose two" collapses to "choose one" via
-/// `Effect::ChooseMode` (same approximation as Moment of Reckoning,
-/// Witherbloom Command, Lorehold Command). Each individual mode is wired
-/// faithfully against existing primitives.
+/// Push XXXVI: ✅ — "choose two" now wires faithfully via the new
+/// `Effect::ChooseModes { count: 2, up_to: false, allow_duplicates:
+/// false }` primitive. Auto-decider picks modes 0+1 (2 damage +
+/// discard/draw). `ScriptedDecider::new([Modes(vec![2, 3])])` picks
+/// Treasure + destroy artifact for tests. Each individual mode is
+/// wired faithfully against existing primitives.
 pub fn prismari_command() -> CardDefinition {
     use crate::card::SelectionRequirement;
     use crate::effect::shortcut::target_filtered;
@@ -201,39 +203,44 @@ pub fn prismari_command() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![],
-        effect: Effect::ChooseMode(vec![
-            // Mode 0: 2 damage to creature/PW (auto-target collapse to
-            // creature for the auto-target framework — same shape as
-            // Igneous Inspiration's "creature or planeswalker" pick).
-            Effect::DealDamage {
-                to: target_filtered(
-                    SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
-                ),
-                amount: Value::Const(2),
-            },
-            // Mode 1: discard 2, draw 2.
-            Effect::Seq(vec![
-                Effect::Discard {
-                    who: Selector::You,
-                    amount: Value::Const(2),
-                    random: false,
-                },
-                Effect::Draw {
-                    who: Selector::You,
+        effect: Effect::ChooseModes {
+            count: 2,
+            up_to: false,
+            allow_duplicates: false,
+            modes: vec![
+                // Mode 0: 2 damage to creature/PW (auto-target collapse to
+                // creature for the auto-target framework — same shape as
+                // Igneous Inspiration's "creature or planeswalker" pick).
+                Effect::DealDamage {
+                    to: target_filtered(
+                        SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+                    ),
                     amount: Value::Const(2),
                 },
-            ]),
-            // Mode 2: create a Treasure token.
-            Effect::CreateToken {
-                who: PlayerRef::You,
-                count: Value::Const(1),
-                definition: treasure_token(),
-            },
-            // Mode 3: destroy target artifact.
-            Effect::Destroy {
-                what: target_filtered(SelectionRequirement::HasCardType(CardType::Artifact)),
-            },
-        ]),
+                // Mode 1: discard 2, draw 2.
+                Effect::Seq(vec![
+                    Effect::Discard {
+                        who: Selector::You,
+                        amount: Value::Const(2),
+                        random: false,
+                    },
+                    Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::Const(2),
+                    },
+                ]),
+                // Mode 2: create a Treasure token.
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: treasure_token(),
+                },
+                // Mode 3: destroy target artifact.
+                Effect::Destroy {
+                    what: target_filtered(SelectionRequirement::HasCardType(CardType::Artifact)),
+                },
+            ],
+        },
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],

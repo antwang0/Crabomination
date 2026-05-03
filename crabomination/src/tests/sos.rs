@@ -4135,6 +4135,49 @@ fn conciliators_duelist_repartee_exiles_target() {
     assert!(!g.battlefield.iter().any(|c| c.id == bear));
 }
 
+/// Push XXXVI: Conciliator's Duelist's "return at next end step" rider now
+/// wired via `Effect::DelayUntil { capture: Some(_) }` — the cast spell's
+/// target is captured into the delayed body's Target(0) at trigger-fire
+/// time. Verify the Repartee trigger exiles the bear, then advances to
+/// next end step and the bear returns to battlefield under owner.
+#[test]
+fn conciliators_duelist_repartee_returns_target_at_next_end_step() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::conciliators_duelist());
+    // Use a target creature that won't die from the trigger spell, so
+    // we can verify the exile + return cycle. Glorious Anthem is an
+    // enchantment but we need a creature target for Repartee. Use a
+    // Pestbrood Sloth (4/4) — a vanilla beater.
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    // Cast a creature-targeting Giant Growth-style spell so the bear
+    // isn't killed but the Repartee trigger fires.
+    let pump = g.add_card_to_hand(0, catalog::interjection());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: pump,
+        target: Some(Target::Permanent(bear)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Interjection (W) castable");
+    drain_stack(&mut g);
+
+    // Bear should now be in exile (Repartee's Exile half).
+    let bear_in_exile = g.exile.iter().any(|c| c.id == bear);
+    assert!(bear_in_exile, "bear should be in exile after Repartee");
+
+    // Advance to the active player's end step. The delayed trigger
+    // fires "at the beginning of the next end step" — the next end
+    // step from the active player's perspective.
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+
+    // Bear should now be back on the battlefield under its owner's
+    // control.
+    let bear_back = g.battlefield.iter().any(|c| c.id == bear && c.controller == 1);
+    assert!(bear_back, "bear should return to opp battlefield at end step");
+}
+
 // ── Push V: CardLeftGraveyard event + new SOS cards ────────────────────────
 
 #[test]
@@ -4984,6 +5027,37 @@ fn lorehold_the_historian_is_five_five_flyer_haste() {
     assert!(def.keywords.contains(&Keyword::Flying));
     assert!(def.keywords.contains(&Keyword::Haste));
     assert_eq!(def.cost.cmc(), 5);
+}
+
+/// Push XXXVI: Lorehold, the Historian's per-opp-upkeep loot trigger
+/// now wired via `EventScope::OpponentControl + StepBegins(Upkeep)`.
+/// Verify that on the opponent's upkeep, the Historian's controller
+/// gets a may-loot prompt — `ScriptedDecider` answers yes, sees a
+/// discard + draw chain.
+#[test]
+fn lorehold_the_historian_loots_on_each_opp_upkeep() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::lorehold_the_historian());
+    // Seed library to give p0 cards to draw.
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_library(0, catalog::island());
+    // Seed a card in p0's hand to discard.
+    g.add_card_to_hand(0, catalog::island());
+    // Pre-script "yes, discard then draw" via the MayDo prompt.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let hand_before = g.players[0].hand.len();
+    let lib_before = g.players[0].library.len();
+    let gy_before = g.players[0].graveyard.len();
+    // Switch active player to opp (p1) and fire upkeep step triggers.
+    g.active_player_idx = 1;
+    g.fire_step_triggers(crate::game::types::TurnStep::Upkeep);
+    drain_stack(&mut g);
+    // Net: +1 discard (gy), -1 hand-card, +1 draw → hand size same,
+    // library -1, gy +1 (the discarded card).
+    assert_eq!(g.players[0].hand.len(), hand_before, "hand size unchanged (discard 1, draw 1)");
+    assert_eq!(g.players[0].library.len(), lib_before - 1, "drew 1");
+    assert_eq!(g.players[0].graveyard.len(), gy_before + 1, "discarded 1");
 }
 
 #[test]

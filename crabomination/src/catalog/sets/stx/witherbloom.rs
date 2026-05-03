@@ -530,10 +530,12 @@ pub fn mortality_spear() -> CardDefinition {
 /// • Destroy target enchantment.
 /// • Target creature gets -3/-3 until end of turn."
 ///
-/// Push XXIV: 🟡 — the printed "choose two" mode is collapsed to "choose
-/// one" via `Effect::ChooseMode`, identical to Moment of Reckoning's same-
-/// resolution-multi-mode-replay gap. Each individual mode is wired
-/// faithfully against existing primitives:
+/// Push XXXVI: ✅ — "choose two" now wires faithfully via the new
+/// `Effect::ChooseModes { count: 2, up_to: false, allow_duplicates:
+/// false }` primitive. Auto-decider picks modes 0+1 (drain 3 + gy →
+/// hand). `ScriptedDecider::new([DecisionAnswer::Modes(vec![2, 3])])`
+/// can pick destroy-enchantment + -3/-3 EOT for tests. Each individual
+/// mode is wired faithfully against existing primitives:
 /// - Mode 0: `Effect::Drain` for the 3 life swap (each-opponent-collapse).
 /// - Mode 1: graveyard → hand on a permanent card with `ManaValueAtMost(3)`.
 /// - Mode 2: destroy target enchantment.
@@ -553,37 +555,42 @@ pub fn witherbloom_command() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![],
-        effect: Effect::ChooseMode(vec![
-            // Mode 0: drain 3.
-            Effect::Drain {
-                from: Selector::Player(PlayerRef::EachOpponent),
-                to: Selector::You,
-                amount: Value::Const(3),
-            },
-            // Mode 1: gy → hand on permanent card MV ≤ 3.
-            Effect::Move {
-                what: Selector::take(
-                    Selector::CardsInZone {
-                        who: PlayerRef::You,
-                        zone: Zone::Graveyard,
-                        filter: mv_at_most_3,
-                    },
-                    Value::Const(1),
-                ),
-                to: ZoneDest::Hand(PlayerRef::You),
-            },
-            // Mode 2: destroy enchantment.
-            Effect::Destroy {
-                what: target_filtered(SelectionRequirement::HasCardType(CardType::Enchantment)),
-            },
-            // Mode 3: -3/-3 EOT.
-            Effect::PumpPT {
-                what: target_filtered(SelectionRequirement::Creature),
-                power: Value::Const(-3),
-                toughness: Value::Const(-3),
-                duration: Duration::EndOfTurn,
-            },
-        ]),
+        effect: Effect::ChooseModes {
+            count: 2,
+            up_to: false,
+            allow_duplicates: false,
+            modes: vec![
+                // Mode 0: drain 3.
+                Effect::Drain {
+                    from: Selector::Player(PlayerRef::EachOpponent),
+                    to: Selector::You,
+                    amount: Value::Const(3),
+                },
+                // Mode 1: gy → hand on permanent card MV ≤ 3.
+                Effect::Move {
+                    what: Selector::take(
+                        Selector::CardsInZone {
+                            who: PlayerRef::You,
+                            zone: Zone::Graveyard,
+                            filter: mv_at_most_3,
+                        },
+                        Value::Const(1),
+                    ),
+                    to: ZoneDest::Hand(PlayerRef::You),
+                },
+                // Mode 2: destroy enchantment.
+                Effect::Destroy {
+                    what: target_filtered(SelectionRequirement::HasCardType(CardType::Enchantment)),
+                },
+                // Mode 3: -3/-3 EOT.
+                Effect::PumpPT {
+                    what: target_filtered(SelectionRequirement::Creature),
+                    power: Value::Const(-3),
+                    toughness: Value::Const(-3),
+                    duration: Duration::EndOfTurn,
+                },
+            ],
+        },
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],

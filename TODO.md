@@ -7,6 +7,52 @@ See `CUBE_FEATURES.md` (cube-card implementation status) and
 
 ## Recent additions
 
+- ✅ **Push XXXVI (2026-05-03)**: `Effect::ChooseModes` primitive +
+  `Effect::DelayUntil.capture` field + 10 card promotions across SOS
+  and STX 2021. Tests at 1325 (was 1315; +10 net).
+  - **Engine: `Effect::ChooseModes { modes, count, up_to,
+    allow_duplicates }`** — resolution-time "choose K modes from N"
+    primitive, sibling to `Effect::ChooseMode`. Backed by the new
+    `Decision::ChooseModes` and `DecisionAnswer::Modes(Vec<usize>)`.
+    AutoDecider returns first `count` modes; ScriptedDecider picks any
+    combination. Backwards-compat: cast with `mode: Some(N)` runs
+    *only* mode N, preserving existing test casts that target a
+    specific mode of a Command.
+  - **Engine: `Effect::DelayUntil.capture: Option<Selector>`** —
+    extends the delayed-trigger primitive with an optional selector
+    evaluated at delay-registration time. The first entity it resolves
+    to is bound to the delayed body's `Selector::Target(0)`,
+    overriding the legacy `ctx.targets[0]` capture path. Used by
+    Conciliator's Duelist's Repartee — trigger has no target slot of
+    its own, so `Selector::CastSpellTarget(0)` captures the cast
+    spell's target into the delayed return.
+  - **5 STX Command promotions to ✅** (`catalog::sets::stx::*`):
+    Lorehold Command, Witherbloom Command, Prismari Command,
+    Silverquill Command, Quandrix Command — all use the new
+    `Effect::ChooseModes { count: 2 }` shape. Auto-decider picks
+    modes 0+1 (the most-typical play pattern for each Command);
+    ScriptedDecider drives other mode pairs for tests.
+  - **5 individual promotions**:
+    - **Conciliator's Duelist** (SOS Silverquill) — Repartee's exile +
+      return-at-next-end-step rider now both wired via the new
+      `Effect::DelayUntil { capture: ... }`.
+    - **Borrowed Knowledge** (SOS Lorehold) — doc-only promotion.
+      Both modes were already wired; status was a stale annotation.
+    - **Mentor's Guidance** (STX Quandrix) — doc-only promotion.
+      Printed Oracle is single-target so the existing wire matches
+      printed exactly.
+    - **Multiple Choice** (STX mono-blue) — "Choose one or more"
+      now wires faithfully via `Effect::ChooseModes { count: 3,
+      up_to: true }`. Auto-decider picks all 3 modes. The "if you
+      chose all of the above" mega-mode rider stays gap.
+    - **Lorehold, the Historian** (SOS Lorehold) — fidelity bump
+      (still 🟡 since miracle grant remains gap). Per-opp-upkeep
+      loot trigger now wired via `EventScope::OpponentControl +
+      StepBegins(Upkeep)`.
+  - **10 new tests** covering ChooseModes auto-decider behavior,
+    ScriptedDecider mode-pair overrides, MOR regression check, and
+    Conciliator's Duelist + Lorehold the Historian.
+
 - ✅ **Push XXXV (2026-05-03)**: 6 SOS 🟡 → ✅ promotions + 3 fidelity
   bumps using the existing `Selector::one_of` and `Effect::ChooseMode`
   primitives — no new engine work. Tests at 1315 (was 1306; +9 net).
@@ -105,6 +151,59 @@ See `CUBE_FEATURES.md` (cube-card implementation status) and
     reject / Mascot steal + revert), 9 cube-card tests (one per new
     card + body sanity for vanilla bodies), 1 view test
     (`ability_cost_label_renders_exile_gy_cost`).
+
+## Future work — engine/UI suggestions surfaced by push XXXVI
+
+- **`Effect::ChooseModes` smart auto-decider** — current AutoDecider
+  picks the first `count` modes deterministically. Works fine for
+  Lorehold/Witherbloom/Prismari Commands (target-less modes 0+1) but
+  produces target-collision plays for Silverquill/Quandrix Commands
+  whose modes 0+1 want different target filters (counter ability +
+  -3/-3 creature). A smarter decider could:
+  - Skip modes whose target filter is incompatible with the chosen
+    Target(0).
+  - Prefer modes that produce immediate value (drain, draw) over
+    modes that need a board state (counter ability needs a stack
+    item).
+  - Fall back to first-K only when no smarter pick is available.
+  Tracked separately because it's an AutoDecider heuristic, not a
+  primitive change.
+
+- **`Effect::ChooseModes` distinct Target slots per mode** — the
+  current shape has all picked modes share `Target(0)` from cast time.
+  For Commands with target-collision-prone mode pairs (Silverquill
+  modes 0+1 = ability vs creature), this is a fidelity gap. A
+  follow-up `Decision::ChooseTargetsForModes` would prompt for K
+  distinct Target(slot) values, one per picked mode, at cast time.
+  Same engine work as the long-tracked "multi-target prompt for
+  sorceries/instants" gap (Together as One, Cost of Brilliance).
+
+- **Modes-picked introspection** — new `Predicate::AllModesPicked`
+  / `Value::CountOfModesPicked` would unlock the "if you chose all
+  of the above" rider on Multiple Choice (the printed mega-mode
+  fires only when all 3 modes are picked). Same shape needed for
+  Strixhaven's "if you control creatures, do X" or "for each mode
+  chosen" patterns.
+
+- **`Effect::DelayUntil` capture for selectors that target multiple
+  entities** — push XXXVI's `capture: Option<Selector>` field
+  picks the first entity from the resolved selector. For multi-
+  capture (e.g. "exile up to 3 cards, return them all at next end
+  step") we'd need `capture: Vec<Selector>` or a selector that
+  returns multiple captured slots. Tracked for future "may
+  exile any number" cards.
+
+- **`EventScope::OpponentControl` step-trigger fidelity** —
+  push XXXVI wired Lorehold the Historian's "at the beginning of
+  each opponent's upkeep" via this scope. The same shape could
+  unlock several other cards:
+  - **Smothering Tithe** ({3}{W}) — "Whenever an opponent draws a
+    card …" needs an opp-control event filter, not the step
+    variant.
+  - **Approach of the Second Sun** ({6}{W}) — fires on "your
+    upkeep", uses ActivePlayer scope already.
+  - **Ichorid** — graveyard-resident upkeep trigger uses
+    `FromYourGraveyard`, already wired.
 
 ## Future work — engine/UI suggestions surfaced by push XXXV
 

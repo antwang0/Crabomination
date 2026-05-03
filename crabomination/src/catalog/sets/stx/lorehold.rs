@@ -609,9 +609,12 @@ pub fn augusta_dean_of_order() -> CardDefinition {
 ///   graveyard to your hand.
 /// • Exile target card from a graveyard."
 ///
-/// Push XXIV: 🟡 — printed "choose two" collapses to "choose one" via
-/// `Effect::ChooseMode` (same approximation as Moment of Reckoning,
-/// Witherbloom Command). Each individual mode is wired faithfully.
+/// Push XXXVI: ✅ — "choose two" now wires faithfully via the new
+/// `Effect::ChooseModes { count: 2, up_to: false, allow_duplicates:
+/// false }` primitive. Auto-decider picks modes 0+1 (drain 4 + spirit
+/// tokens). `ScriptedDecider::new([DecisionAnswer::Modes(vec![2, 3])])`
+/// can pick gy → hand + exile-from-gy for tests. Each individual mode
+/// is wired faithfully.
 /// The flying-Spirit-token mode mints a single 1/1 white Spirit with
 /// flying via a fresh `TokenDefinition` (separate from the 2/2 R/W
 /// `lorehold_spirit_token()` used by Sparring Regimen — different P/T
@@ -646,40 +649,45 @@ pub fn lorehold_command() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![],
-        effect: Effect::ChooseMode(vec![
-            // Mode 0: target opponent loses 4 life (collapse to each opp).
-            Effect::LoseLife {
-                who: Selector::Player(PlayerRef::EachOpponent),
-                amount: Value::Const(4),
-            },
-            // Mode 1: create two 1/1 white Spirit tokens with flying.
-            // Printed: "Target player creates …"; we collapse to You,
-            // matching the auto-target framework's typical own-side bias
-            // (the printed mode is hardly ever used to give an opponent
-            // tokens — same approximation as similar "target player"
-            // modes elsewhere).
-            Effect::CreateToken {
-                who: PlayerRef::You,
-                count: Value::Const(2),
-                definition: flying_spirit,
-            },
-            // Mode 2: gy → hand on permanent card with MV ≤ 2.
-            Effect::Move {
-                what: Selector::take(
-                    Selector::CardsInZone {
-                        who: PlayerRef::You,
-                        zone: Zone::Graveyard,
-                        filter: mv_at_most_2,
-                    },
-                    Value::Const(1),
-                ),
-                to: ZoneDest::Hand(PlayerRef::You),
-            },
-            // Mode 3: exile target card from a graveyard.
-            Effect::Exile {
-                what: target_filtered(SelectionRequirement::Any),
-            },
-        ]),
+        effect: Effect::ChooseModes {
+            count: 2,
+            up_to: false,
+            allow_duplicates: false,
+            modes: vec![
+                // Mode 0: target opponent loses 4 life (collapse to each opp).
+                Effect::LoseLife {
+                    who: Selector::Player(PlayerRef::EachOpponent),
+                    amount: Value::Const(4),
+                },
+                // Mode 1: create two 1/1 white Spirit tokens with flying.
+                // Printed: "Target player creates …"; we collapse to You,
+                // matching the auto-target framework's typical own-side bias
+                // (the printed mode is hardly ever used to give an opponent
+                // tokens — same approximation as similar "target player"
+                // modes elsewhere).
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(2),
+                    definition: flying_spirit,
+                },
+                // Mode 2: gy → hand on permanent card with MV ≤ 2.
+                Effect::Move {
+                    what: Selector::take(
+                        Selector::CardsInZone {
+                            who: PlayerRef::You,
+                            zone: Zone::Graveyard,
+                            filter: mv_at_most_2,
+                        },
+                        Value::Const(1),
+                    ),
+                    to: ZoneDest::Hand(PlayerRef::You),
+                },
+                // Mode 3: exile target card from a graveyard.
+                Effect::Exile {
+                    what: target_filtered(SelectionRequirement::Any),
+                },
+            ],
+        },
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],

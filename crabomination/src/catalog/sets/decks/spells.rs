@@ -37,6 +37,7 @@ pub fn pact_of_negation() -> CardDefinition {
                     mana_cost: cost(&[generic(3), u_mana(), u_mana()]),
                     life_cost: 0,
                 }),
+                capture: None,
             },
         ]),
         activated_abilities: no_abilities(),
@@ -229,6 +230,7 @@ pub fn summoners_pact() -> CardDefinition {
                     mana_cost: cost(&[generic(2), g_mana(), g_mana()]),
                     life_cost: 0,
                 }),
+                capture: None,
             },
         ]),
         activated_abilities: no_abilities(),
@@ -542,6 +544,7 @@ pub fn goryos_vengeance() -> CardDefinition {
                 body: Box::new(Effect::Exile {
                     what: Selector::Target(0),
                 }),
+                capture: None,
             },
         ]),
         activated_abilities: no_abilities(),

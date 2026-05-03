@@ -1091,6 +1091,12 @@ pub fn render_speechless() -> CardDefinition {
 /// returns a nonland permanent card from your graveyard. Net play: the
 /// card swings the board exactly the way a 1×destroy / 1×return play
 /// would in a real game, just without the optional 3rd/4th invocation.
+///
+/// Stays 🟡 because Moment of Reckoning's printed "up to four with
+/// duplicates" + "different targets per mode" combo needs both
+/// `Effect::ChooseModes { count: 4, allow_duplicates: true }` (push
+/// XXXVI) AND a multi-slot per-mode target-binding prompt (still
+/// missing — same gap as Together as One, Cost of Brilliance).
 pub fn moment_of_reckoning() -> CardDefinition {
     use crate::effect::ZoneDest;
     CardDefinition {

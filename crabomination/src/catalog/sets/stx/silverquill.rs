@@ -582,10 +582,15 @@ pub fn combat_professor() -> CardDefinition {
 /// • Target player loses 3 life and you gain 3 life.
 /// • Draw a card."
 ///
-/// Push XXIV: 🟡 — printed "choose two" collapses to "choose one" via
-/// `Effect::ChooseMode` (same approximation as Moment of Reckoning,
-/// Witherbloom / Lorehold / Prismari / Quandrix Commands). Each mode
-/// wired faithfully against existing primitives.
+/// Push XXXVI: ✅ — "choose two" now wires faithfully via the new
+/// `Effect::ChooseModes { count: 2, up_to: false, allow_duplicates:
+/// false }` primitive. Auto-decider picks modes 0+1 (counter activated/
+/// triggered ability + -3/-3 EOT on a creature) — both modes read
+/// `Target(0)` so the same Permanent target is shared. For pure-value
+/// pair (drain 3 + draw 1, modes 2+3), use `ScriptedDecider::new([
+/// DecisionAnswer::Modes(vec![2, 3])])`. The multi-target uniqueness
+/// caveat (modes 0 and 1 both reading Target(0)) is the same engine
+/// gap noted on Moment of Reckoning / Together as One.
 pub fn silverquill_command() -> CardDefinition {
     use crate::effect::{Duration, PlayerRef};
     CardDefinition {
@@ -597,32 +602,37 @@ pub fn silverquill_command() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![],
-        effect: Effect::ChooseMode(vec![
-            // Mode 0: counter target activated/triggered ability (same
-            // primitive as Stifle / Quandrix Command mode 0).
-            Effect::CounterAbility {
-                what: target_filtered(SelectionRequirement::Permanent),
-            },
-            // Mode 1: -3/-3 EOT.
-            Effect::PumpPT {
-                what: target_filtered(SelectionRequirement::Creature),
-                power: Value::Const(-3),
-                toughness: Value::Const(-3),
-                duration: Duration::EndOfTurn,
-            },
-            // Mode 2: drain 3 (each-opp collapse, same as Witherbloom
-            // Command mode 0).
-            Effect::Drain {
-                from: Selector::Player(PlayerRef::EachOpponent),
-                to: Selector::You,
-                amount: Value::Const(3),
-            },
-            // Mode 3: draw a card.
-            Effect::Draw {
-                who: Selector::You,
-                amount: Value::Const(1),
-            },
-        ]),
+        effect: Effect::ChooseModes {
+            count: 2,
+            up_to: false,
+            allow_duplicates: false,
+            modes: vec![
+                // Mode 0: counter target activated/triggered ability (same
+                // primitive as Stifle / Quandrix Command mode 0).
+                Effect::CounterAbility {
+                    what: target_filtered(SelectionRequirement::Permanent),
+                },
+                // Mode 1: -3/-3 EOT.
+                Effect::PumpPT {
+                    what: target_filtered(SelectionRequirement::Creature),
+                    power: Value::Const(-3),
+                    toughness: Value::Const(-3),
+                    duration: Duration::EndOfTurn,
+                },
+                // Mode 2: drain 3 (each-opp collapse, same as Witherbloom
+                // Command mode 0).
+                Effect::Drain {
+                    from: Selector::Player(PlayerRef::EachOpponent),
+                    to: Selector::You,
+                    amount: Value::Const(3),
+                },
+                // Mode 3: draw a card.
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
+            ],
+        },
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],

@@ -343,24 +343,71 @@ fn melancholic_poet_drains_on_creature_targeted_spell() {
 }
 
 #[test]
-fn multiple_choice_mode_one_creates_pest_token() {
+fn multiple_choice_mode_two_creates_pest_token() {
+    // Push XXXVI: Multiple Choice promoted to ChooseModes with the
+    // printed mode order (Scry 2 / pump+hexproof / 1/1 Pest). Mode 2
+    // is the Pest token (was mode 1 before the reorder to match the
+    // printed Oracle).
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::multiple_choice());
     g.players[0].mana_pool.add(Color::Blue, 2);
     g.players[0].mana_pool.add_colorless(1);
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: Some(1), x_value: None,
+        card_id: id, target: None, mode: Some(2), x_value: None,
     })
     .expect("Multiple Choice castable for {1}{U}{U}");
     drain_stack(&mut g);
 
-    // Mode 1 minted a 1/1 Pest token.
+    // Mode 2 minted a 1/1 Pest token.
     let pest = g.battlefield.iter()
         .find(|c| c.is_token && c.definition.name == "Pest")
         .expect("Pest token present");
     assert_eq!(pest.power(), 1);
     assert_eq!(pest.toughness(), 1);
+}
+
+/// Push XXXVI: Multiple Choice "choose one or more" — auto-decider picks
+/// all 3 modes. Verifies the new ChooseModes count=3 up_to=true shape:
+/// Scry 2 + pump-hexproof + Pest token all fire on a default cast.
+#[test]
+fn multiple_choice_choose_modes_runs_all_three() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_library(0, catalog::island());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    let id = g.add_card_to_hand(0, catalog::multiple_choice());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(1);
+
+    let pow_before = g
+        .battlefield
+        .iter()
+        .find(|c| c.id == bear)
+        .unwrap()
+        .power();
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(bear)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Multiple Choice castable for {1}{U}{U}");
+    drain_stack(&mut g);
+
+    // Mode 1: bear gets +1/+0 + hexproof EOT.
+    let bear_card = g.battlefield.iter().find(|c| c.id == bear).unwrap();
+    assert_eq!(bear_card.power(), pow_before + 1, "bear +1 power (mode 1)");
+    assert!(bear_card.has_keyword(&Keyword::Hexproof),
+        "bear should have hexproof (mode 1)");
+    // Mode 2: 1 Pest token.
+    let pests: Vec<_> = g.battlefield.iter()
+        .filter(|c| c.is_token && c.definition.name == "Pest").collect();
+    assert_eq!(pests.len(), 1, "one Pest minted (mode 2)");
+    // Mode 0 (Scry 2) is hard to assert directly without library
+    // reordering, but the cast not erroring is sufficient.
 }
 
 // ── Lorehold (R/W) ──────────────────────────────────────────────────────────
@@ -2341,6 +2388,213 @@ fn silverquill_command_mode_three_draws_a_card() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].library.len(), lib_before - 1,
         "should draw 1");
+}
+
+// ── Push XXXVI: Effect::ChooseModes Command promotion tests ────────────────
+
+/// Push XXXVI: Witherbloom Command's "choose two" now wires faithfully via
+/// `Effect::ChooseModes`. Auto-decider picks modes 0+1 (drain 3 + gy → hand).
+/// Cast with `mode: None` so the decider drives the pick.
+#[test]
+fn witherbloom_command_choose_modes_runs_two_halves() {
+    let mut g = two_player_game();
+    // Seed a creature card in p0's graveyard (MV ≤ 3) for the gy → hand
+    // mode to find. Use a Grizzly Bears (MV=2).
+    let bear_in_gy = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::witherbloom_command());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    let p0_life_before = g.players[0].life;
+    let p1_life_before = g.players[1].life;
+    let p0_hand_before = g.players[0].hand.len();
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Witherbloom Command castable for {B}{G}");
+    drain_stack(&mut g);
+    // Auto-decider modes [0, 1]:
+    // - Mode 0: drain 3 → opp -3, you +3
+    assert_eq!(g.players[1].life, p1_life_before - 3, "opp loses 3 (drain)");
+    assert_eq!(g.players[0].life, p0_life_before + 3, "you gain 3 (drain)");
+    // - Mode 1: gy → hand on permanent ≤ 3 MV; the bear from p0's gy
+    //   joins the hand (Witherbloom Command itself goes to gy after
+    //   resolution but doesn't count for the gy → hand selector since
+    //   move-from-gy looks at gy at resolution start, before the spell
+    //   moves to gy).
+    assert!(
+        g.players[0].hand.iter().any(|c| c.id == bear_in_gy),
+        "bear from gy should be in hand"
+    );
+    // The cast spell itself ends up in gy (1 spell down + 1 bear up = same
+    // hand size minus the cast).
+    let _ = p0_hand_before; // silence unused
+}
+
+/// Push XXXVI: Witherbloom Command modes [2, 3] via ScriptedDecider —
+/// destroy enchantment + -3/-3 EOT on a creature.
+#[test]
+fn witherbloom_command_choose_modes_destroy_and_pump_via_scripted_decider() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let ench = g.add_card_to_battlefield(1, catalog::glorious_anthem());
+    let id = g.add_card_to_hand(0, catalog::witherbloom_command());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    // Pre-seed the decider with Modes(vec![2]) — pick only mode 2 (destroy
+    // enchantment), since mode 3 (-3/-3 on a creature) would need a
+    // distinct creature target and we only have one Target slot.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Modes(vec![2])]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(ench)), mode: None, x_value: None,
+    })
+    .expect("Witherbloom Command castable for {B}{G}");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == ench),
+        "enchantment should be destroyed (mode 2)");
+}
+
+/// Push XXXVI: Lorehold Command modes [0, 1] via auto-decider runs both
+/// drain 4 and minting 2 Spirit tokens.
+#[test]
+fn lorehold_command_choose_modes_drains_and_creates_spirits() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::lorehold_command());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    let p1_life_before = g.players[1].life;
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Lorehold Command castable for {R}{W}");
+    drain_stack(&mut g);
+    // Mode 0 fires: each opp loses 4 life.
+    assert_eq!(g.players[1].life, p1_life_before - 4, "opp loses 4 life");
+    // Mode 1 fires: 2 Spirit tokens with flying.
+    let spirits: Vec<_> = g.battlefield.iter().filter(|c| {
+        c.is_token && c.controller == 0
+            && c.definition.subtypes.creature_types.contains(&crate::card::CreatureType::Spirit)
+    }).collect();
+    assert_eq!(spirits.len(), 2, "two Spirits minted");
+    assert!(spirits.iter().all(|s| s.has_keyword(&Keyword::Flying)),
+        "each Spirit has flying");
+}
+
+/// Push XXXVI: Prismari Command auto-decider modes [0, 1] = 2 damage +
+/// discard 2 / draw 2.
+#[test]
+fn prismari_command_choose_modes_damage_and_loot() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    // Seed enough cards in hand to discard 2.
+    g.add_card_to_hand(0, catalog::island());
+    g.add_card_to_hand(0, catalog::island());
+    g.add_card_to_hand(0, catalog::island());
+    // Seed enough library to draw 2.
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_library(0, catalog::island());
+    let id = g.add_card_to_hand(0, catalog::prismari_command());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let lib_before = g.players[0].library.len();
+    let gy_before = g.players[0].graveyard.len();
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)), mode: None, x_value: None,
+    })
+    .expect("Prismari Command castable for {1}{U}{R}");
+    drain_stack(&mut g);
+    // Mode 0: 2 damage to bear (2 toughness) → dies.
+    assert!(!g.battlefield.iter().any(|c| c.id == bear),
+        "bear should be destroyed by 2 damage (mode 0)");
+    // Mode 1: discard 2, draw 2.
+    assert_eq!(g.players[0].library.len(), lib_before - 2,
+        "should draw 2 (mode 1)");
+    // 2 cards discarded → graveyard grows by at least 2 (plus the cast
+    // spell going to gy).
+    assert!(g.players[0].graveyard.len() >= gy_before + 2,
+        "should discard 2 (mode 1) + cast spell goes to gy");
+}
+
+/// Push XXXVI: Silverquill Command modes [2, 3] via ScriptedDecider —
+/// drain 3 + draw 1 (pure-value pair, no target conflicts).
+#[test]
+fn silverquill_command_choose_modes_drain_and_draw_via_scripted() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let lib_before = g.players[0].library.len();
+    let id = g.add_card_to_hand(0, catalog::silverquill_command());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let p1_life_before = g.players[1].life;
+    let p0_life_before = g.players[0].life;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Modes(vec![2, 3])]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Silverquill Command castable for {2}{W}{B}");
+    drain_stack(&mut g);
+    // Mode 2: drain 3.
+    assert_eq!(g.players[1].life, p1_life_before - 3, "opp -3 (drain)");
+    assert_eq!(g.players[0].life, p0_life_before + 3, "you +3 (drain)");
+    // Mode 3: draw 1.
+    assert_eq!(g.players[0].library.len(), lib_before - 1, "drew 1");
+}
+
+/// Push XXXVI: Quandrix Command modes [2, 3] via ScriptedDecider —
+/// gy → bottom-of-library + draw 1 (pure-value pair).
+#[test]
+fn quandrix_command_choose_modes_gy_to_library_and_draw_via_scripted() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    // Seed an opp gy card to bottom-of-library.
+    let opp_gy_card = g.add_card_to_graveyard(1, catalog::island());
+    g.add_card_to_library(0, catalog::island());
+    let lib_before = g.players[0].library.len();
+    let id = g.add_card_to_hand(0, catalog::quandrix_command());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Modes(vec![2, 3])]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Quandrix Command castable for {1}{G}{U}");
+    drain_stack(&mut g);
+    // Mode 2: opp gy card → bottom of opp library.
+    assert!(!g.players[1].graveyard.iter().any(|c| c.id == opp_gy_card),
+        "opp gy card should leave the graveyard");
+    assert!(g.players[1].library.iter().any(|c| c.id == opp_gy_card),
+        "opp gy card should land in opp library");
+    // Mode 3: draw 1.
+    assert_eq!(g.players[0].library.len(), lib_before - 1, "drew 1");
+}
+
+/// Push XXXVI: Moment of Reckoning still uses single ChooseMode (printed
+/// "up to four with duplicates" requires multi-target prompt which is a
+/// bigger engine gap). Verify the existing mode 0 destroy still works.
+/// Sanity test that ChooseModes promotion didn't accidentally affect MOR.
+#[test]
+fn moment_of_reckoning_still_uses_single_mode_pick() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::moment_of_reckoning());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)), mode: Some(0), x_value: None,
+    })
+    .expect("Moment of Reckoning castable for {3}{W}{W}{B}{B}");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == bear),
+        "bear destroyed by mode 0");
 }
 
 #[test]

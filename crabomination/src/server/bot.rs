@@ -609,6 +609,7 @@ fn effect_uses_x(eff: &Effect) -> bool {
             predicate_uses_x(cond) || effect_uses_x(then) || effect_uses_x(else_)
         }
         Effect::ChooseMode(modes) => modes.iter().any(effect_uses_x),
+        Effect::ChooseModes { modes, .. } => modes.iter().any(effect_uses_x),
         Effect::ForEach { body, .. }
         | Effect::Repeat { body, .. }
         | Effect::DelayUntil { body, .. } => effect_uses_x(body),
@@ -647,6 +648,10 @@ fn effect_uses_x(eff: &Effect) -> bool {
 fn modal_mode_count(eff: &Effect) -> Option<usize> {
     match eff {
         Effect::ChooseMode(modes) => Some(modes.len()),
+        // ChooseModes also supports a single-mode `mode: Some(N)`
+        // override at cast time (push XXXVI), so the bot's "enumerate
+        // each mode" path applies here too.
+        Effect::ChooseModes { modes, .. } => Some(modes.len()),
         Effect::Seq(steps) => steps.iter().find_map(modal_mode_count),
         _ => None,
     }
@@ -659,9 +664,10 @@ fn modal_mode_count(eff: &Effect) -> Option<usize> {
 fn mode_branch(eff: &Effect, mode: Option<usize>) -> &Effect {
     match (eff, mode) {
         (Effect::ChooseMode(modes), Some(m)) if m < modes.len() => &modes[m],
+        (Effect::ChooseModes { modes, .. }, Some(m)) if m < modes.len() => &modes[m],
         (Effect::Seq(steps), Some(_)) => steps
             .iter()
-            .find(|s| matches!(s, Effect::ChooseMode(_)))
+            .find(|s| matches!(s, Effect::ChooseMode(_) | Effect::ChooseModes { .. }))
             .map(|s| mode_branch(s, mode))
             .unwrap_or(eff),
         _ => eff,

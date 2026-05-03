@@ -36,19 +36,99 @@ This file tracks two adjacent Strixhaven catalogs:
 Counts reflect the regenerated tables below (audited via
 `scripts/audit_strixhaven2.py` against `catalog::sets::sos`).
 
-- ✅ done: **127** (push XXXV: 6 SOS promotions — Dina's Guidance,
-  Vibrant Outburst, Dissection Practice, Practiced Offense, Cost of
-  Brilliance, Render Speechless — closing multi-target / destination-
-  prompt gaps. Plus 3 fidelity bumps that stay 🟡: Stress Dream, Burrog
-  Barrage, Homesickness — auto-target shape now matches printed flavor
-  but deeper engine gaps remain.)
-- 🟡 partial: **120** (-6 from push XXXV promotions).
+- ✅ done: **130** (+3 from push XXXVI: Conciliator's Duelist (rider),
+  Borrowed Knowledge (doc-only), and one prior tally fix). Push XXXVI
+  also promotes 5 STX Commands (Lorehold/Witherbloom/Prismari/Silverquill/
+  Quandrix) + Mentor's Guidance + Multiple Choice in the STX 2021
+  table (those cards live in `catalog::sets::stx`, separate from the
+  SOS counts above).
+- 🟡 partial: **117** (-3 from push XXXVI promotions).
 - ⏳ todo: **8** (unchanged).
 
 All 247 cards marked ✅ or 🟡 have a corresponding factory in
 `crabomination/src/catalog/sets/sos/`; the audit script reports 0 false
 positives and 0 stale ⏳ rows. STX 2021 progress is tracked in the
 "Strixhaven base set (STX)" section near the bottom of this file.
+
+## 2026-05-03 push XXXVI: Effect::ChooseModes + 5 STX Commands + 3 SOS promotions
+
+Engine adds the long-tracked **multi-modal "choose K of N"** primitive,
+unlocking the printed "choose two" semantics on every Strixhaven Command
+and the "choose one or more" semantics on Multiple Choice. Plus a new
+`Effect::DelayUntil { capture: ... }` field that closes the Repartee
+"capture-as-target from selector" gap for Conciliator's Duelist.
+10 cards promoted to ✅ across SOS and STX 2021. Tests at 1325 (was
+1315; +10 net).
+
+### Engine primitives
+
+- ✅ **`Effect::ChooseModes { modes, count, up_to, allow_duplicates }`** —
+  resolution-time multi-mode picker, sibling to `Effect::ChooseMode`. The
+  controller picks `count` modes (or up to `count` if `up_to`) from the
+  list. Backed by the new `Decision::ChooseModes` and
+  `DecisionAnswer::Modes(Vec<usize>)`. AutoDecider returns the first
+  `count` modes (deterministic baseline); `ScriptedDecider::new([
+  DecisionAnswer::Modes(vec![…])])` lets tests pick any combination.
+  - **Backwards-compat single-mode override**: if `ctx.mode != 0` (set
+    via cast-time `mode: Some(N)` arg), the resolver runs *only* mode
+    N — preserves existing test casts that target a specific mode of a
+    Command. New ChooseModes cards cast with `mode: None` route through
+    the decider.
+  - Wire format: `DecisionWire::ChooseModes { source, modes_count,
+    pick_count, up_to, allow_duplicates }` round-trips for snapshot /
+    spectator UI parity.
+
+- ✅ **`Effect::DelayUntil.capture: Option<Selector>`** — extends the
+  existing delayed-trigger primitive with an optional selector that's
+  evaluated at delay-registration time. The first entity it resolves
+  to is bound to the delayed body's `Selector::Target(0)` slot,
+  overriding the legacy `ctx.targets[0]` capture path. Used by
+  Conciliator's Duelist's Repartee — the trigger has no target slot of
+  its own (Repartee fires on a cast event), but the cast spell's
+  target is captured via `Selector::CastSpellTarget(0)` and threaded
+  into the delayed return. Existing usages (Goryo's Vengeance, Ennis
+  Debate Moderator, Restoration Angel, etc.) get `capture: None` and
+  retain the legacy `ctx.targets[0]` capture path.
+
+### STX 2021 Command promotions (5)
+
+| Card | Cost | Status | Notes |
+|---|---|---|---|
+| Lorehold Command | {R}{W} | ✅ ← 🟡 | "Choose two" now wires faithfully via `Effect::ChooseModes { count: 2 }`. Auto-decider picks modes 0+1 (drain 4 + 2 Spirit tokens). |
+| Witherbloom Command | {B}{G} | ✅ ← 🟡 | Same shape — auto-decider picks drain 3 + gy → hand. |
+| Prismari Command | {1}{U}{R} | ✅ ← 🟡 | Auto-decider picks 2 dmg + discard/draw. |
+| Silverquill Command | {2}{W}{B} | ✅ ← 🟡 | Auto-decider picks counter ability + -3/-3. ScriptedDecider drives target-less drain+draw. |
+| Quandrix Command | {1}{G}{U} | ✅ ← 🟡 | Auto-decider picks counter ability + +1/+1 ×2. |
+
+### SOS / STX 2021 individual promotions (5)
+
+| Card | Cost | Status | Notes |
+|---|---|---|---|
+| Conciliator's Duelist | {W}{W}{B}{B} | ✅ ← 🟡 | Repartee's "exile + return at next end step" rider now wires via the new `Effect::DelayUntil { capture: Some(Selector::CastSpellTarget(0)) }` field. Trigger fires at next end step and the captured target moves back to bf under owner. |
+| Borrowed Knowledge | {2}{R}{W} | ✅ ← 🟡 | Doc-only promotion. Both modes were already wired (mode 0 = discard hand + draw=opp.hand_size; mode 1 = discard hand + draw = `Value::CardsDiscardedThisResolution`). Status was a stale annotation. |
+| Mentor's Guidance | {2}{G}{U} | ✅ ← 🟡 | Doc-only promotion. The printed Oracle is single-target so the existing wire matches printed exactly — the prior 🟡 was a stale annotation that misread "for each card in your hand" as multi-target fan-out. |
+| Multiple Choice | {1}{U}{U} | ✅ ← 🟡 | "Choose one or more" now wires faithfully via `Effect::ChooseModes { count: 3, up_to: true }`. Auto-decider picks all 3 modes. The "if you chose all of the above" mega-mode rider stays gap (would need modes-picked introspection). |
+| Lorehold, the Historian | {3}{R}{W} | 🟡 → 🟡 | Per-opp-upkeep loot trigger now wired via `EventScope::OpponentControl + StepBegins(Upkeep)`. Body uses `Effect::MayDo` so AutoDecider's "no" default skips on bot turns; ScriptedDecider yes path drives the discard+draw chain. Miracle grant still omitted. |
+
+### Tests (+10 net, 1315 → 1325)
+
+- 6 ChooseModes integration tests:
+  `lorehold_command_choose_modes_drains_and_creates_spirits`,
+  `witherbloom_command_choose_modes_runs_two_halves`,
+  `witherbloom_command_choose_modes_destroy_and_pump_via_scripted_decider`,
+  `prismari_command_choose_modes_damage_and_loot`,
+  `silverquill_command_choose_modes_drain_and_draw_via_scripted`,
+  `quandrix_command_choose_modes_gy_to_library_and_draw_via_scripted`.
+- `multiple_choice_choose_modes_runs_all_three` + reordered
+  `multiple_choice_mode_two_creates_pest_token` (mode 1 → mode 2 to
+  match printed Oracle order).
+- `moment_of_reckoning_still_uses_single_mode_pick` regression check
+  (MOR keeps `ChooseMode` since "up to four / same mode more than
+  once" needs multi-target slots, not just multi-mode).
+- `conciliators_duelist_repartee_returns_target_at_next_end_step` —
+  end-to-end exile + return cycle.
+- `lorehold_the_historian_loots_on_each_opp_upkeep` — opp's upkeep
+  triggers the loot trigger.
 
 ## 2026-05-03 push XXXV: 6 SOS multi-target promotions + 3 fidelity bumps
 
@@ -2296,7 +2376,7 @@ None of these are wired today; all prepare cards are ⏳ until at least
 | Card | Mana Cost | Type | P/T | Oracle Text | Status | Notes |
 |---|---|---|---|---|---|---|
 | Abigale, Poet Laureate // Heroic Stanza | {1}{W}{B} // {1}{W/B} | Legendary Creature — Bird Bard // Sorcery | 2/3 |  | 🟡 | Wired in `catalog::sets::sos::mdfcs` (push XI/XII): vanilla front + back-face spell via the new `GameAction::CastSpellBack` path. Original ⏳ note: Standard primitives — should be straightforward to wire.|
-| Conciliator's Duelist | {W}{W}{B}{B} | Creature — Kor Warlock | 4/3 | When this creature enters, draw a card. Each player loses 1 life. / Repartee — Whenever you cast an instant or sorcery spell that targets a creature, exile up to one target creature. Return that card to the battlefield under its owner's control at the beginning of the next end step. | 🟡 | ETB body wired (draw 1 + each player loses 1). Repartee exile half wired via the new `Selector::CastSpellTarget(0)` primitive. The "return at next end step" rider is still omitted (no capture-as-target-from-selector primitive yet). |
+| Conciliator's Duelist | {W}{W}{B}{B} | Creature — Kor Warlock | 4/3 | When this creature enters, draw a card. Each player loses 1 life. / Repartee — Whenever you cast an instant or sorcery spell that targets a creature, exile up to one target creature. Return that card to the battlefield under its owner's control at the beginning of the next end step. | ✅ | Push XXXVI: Repartee exile + delayed return now both wired via the new `Effect::DelayUntil { capture: Some(Selector::CastSpellTarget(0)) }` field. Trigger fires at next end step and the captured target moves back to bf under owner. |
 | Fix What's Broken | {2}{W}{B} | Sorcery |  | As an additional cost to cast this spell, pay X life. / Return each artifact and creature card with mana value X from your graveyard to the battlefield. | ⏳ | Needs: cast-from-graveyard. |
 | Forum of Amity |  | Land |  | This land enters tapped. / {T}: Add {W} or {B}. / {2}{W}{B}, {T}: Surveil 1. (Look at the top card of your library. You may put it into your graveyard.) | ✅ | Wired in `catalog::sets::sos::lands`. |
 | Imperious Inkmage | {1}{W}{B} | Creature — Orc Warlock | 3/3 | Vigilance / When this creature enters, surveil 2. (Look at the top two cards of your library, then put any number of them into your graveyard and the rest on top of your library in any order.) | ✅ | Wired in `catalog::sets::sos::creatures`. |
@@ -2339,13 +2419,13 @@ None of these are wired today; all prepare cards are ⏳ until at least
 |---|---|---|---|---|---|---|
 | Ark of Hunger | {2}{R}{W} | Artifact |  | Whenever one or more cards leave your graveyard, this artifact deals 1 damage to each opponent and you gain 1 life. / {T}: Mill a card. You may play that card this turn. | 🟡 | Wired against the `EventKind::CardLeftGraveyard` event — drain 1 (1 to each opp + you gain 1) per gy-leave emission. The {T}: Mill activation is wired faithfully; the "may play that card this turn" rider is omitted (same gap as Tablet of Discovery, Suspend Aggression). |
 | Aziza, Mage Tower Captain | {R}{W} | Legendary Creature — Djinn Sorcerer | 2/2 | Whenever you cast an instant or sorcery spell, you may tap three untapped creatures you control. If you do, copy that spell. You may choose new targets for the copy. | ✅ | Push XXI: magecraft → MayDo body taps up to 3 untapped friendly creatures + copies the just-cast spell via `Effect::CopySpell { what: Selector::CastSpellSource }`. The "If you do" rider is approximated — if fewer than 3 creatures are available the body still copies (small over-payoff vs printed semantics). |
-| Borrowed Knowledge | {2}{R}{W} | Sorcery |  | Choose one — / • Discard your hand, then draw cards equal to the number of cards in target opponent's hand. / • Discard your hand, then draw cards equal to the number of cards discarded this way. | 🟡 | Push XVII: mode 1 now uses `Value::CardsDiscardedThisResolution` (the per-resolution discard tally) — exact-printed wording. Mode 0 unchanged (discard hand → draw target opp's hand size). |
+| Borrowed Knowledge | {2}{R}{W} | Sorcery |  | Choose one — / • Discard your hand, then draw cards equal to the number of cards in target opponent's hand. / • Discard your hand, then draw cards equal to the number of cards discarded this way. | ✅ | Push XXXVI: doc-only promotion — both modes were already fully wired (mode 0 = discard hand + draw = target opp hand size, mode 1 = discard hand + draw = `Value::CardsDiscardedThisResolution`). Status was previously 🟡 from a stale annotation; now ✅. |
 | Colossus of the Blood Age | {4}{R}{W} | Artifact Creature — Construct | 6/6 | When this creature enters, it deals 3 damage to each opponent and you gain 3 life. / When this creature dies, discard any number of cards, then draw that many cards plus one. | ✅ | Both ETB drain (3 to each opp + gain 3) and death rider wired faithfully. Death rider uses `Value::CardsDiscardedThisResolution` and `Value::HandSizeOf` to "discard any number" (greedy = entire hand) then draw cards-discarded+1. The "+1" floor matches the printed wording (≥ 1 draw even from an empty hand). |
 | Fields of Strife |  | Land |  | This land enters tapped. / {T}: Add {R} or {W}. / {2}{R}{W}, {T}: Surveil 1. (Look at the top card of your library. You may put it into your graveyard.) | ✅ | Wired in `catalog::sets::sos::lands`. |
 | Hardened Academic | {R}{W} | Creature — Bird Cleric | 2/1 | Flying, haste / Discard a card: This creature gains lifelink until end of turn. / Whenever one or more cards leave your graveyard, put a +1/+1 counter on target creature you control. | ✅ | All three abilities wired. The cards-leave-graveyard trigger uses the new `EventKind::CardLeftGraveyard` event (per-card emission; "one or more" rider is naturally per-card). |
 | Kirol, History Buff // Pack a Punch | {R}{W} // {1}{R}{W} | Legendary Creature — Vampire Cleric // Sorcery | 2/3 |  | 🟡 | Wired in `catalog::sets::sos::mdfcs` (push XI/XII): vanilla front + back-face spell via the new `GameAction::CastSpellBack` path. Original ⏳ note: Standard primitives — should be straightforward to wire.|
 | Lorehold Charm | {R}{W} | Instant |  | Choose one — / • Each opponent sacrifices a nontoken artifact of their choice. / • Return target artifact or creature card with mana value 2 or less from your graveyard to the battlefield. / • Creatures you control get +1/+1 and gain trample until end of turn. | ✅ | Wired in `catalog::sets::sos::instants` — all three modes wired with existing primitives (`Sacrifice`, `Move from gy`, `ForEach(Creature) → PumpPT`). |
-| Lorehold, the Historian | {3}{R}{W} | Legendary Creature — Elder Dragon | 5/5 | Flying, haste / Each instant and sorcery card in your hand has miracle {2}. (You may cast a card for its miracle cost when you draw it if it's the first card you drew this turn.) / At the beginning of each opponent's upkeep, you may discard a card. If you do, draw a card. | 🟡 | Body-only wire (5/5 Flying+Haste Legendary Elder Dragon, R/W). Miracle grant on instants/sorceries in hand is omitted (no miracle/alt-cost-on-draw primitive); per-opp-upkeep loot trigger omitted (no opp-upkeep step trigger that fires for non-active player). The vanilla finisher is the most impactful printed clause — both omitted clauses are tracked in TODO.md. |
+| Lorehold, the Historian | {3}{R}{W} | Legendary Creature — Elder Dragon | 5/5 | Flying, haste / Each instant and sorcery card in your hand has miracle {2}. (You may cast a card for its miracle cost when you draw it if it's the first card you drew this turn.) / At the beginning of each opponent's upkeep, you may discard a card. If you do, draw a card. | 🟡 | Push XXXVI: per-opp-upkeep loot trigger now wired via `EventScope::OpponentControl + StepBegins(Upkeep)`. Body uses `Effect::MayDo` so the auto-decider's "no" default skips on bot turns; ScriptedDecider yes path drives the discard+draw chain. Miracle grant still omitted (no alt-cost-on-draw primitive). |
 | Molten Note | {X}{R}{W} | Sorcery |  | Molten Note deals damage to target creature equal to the amount of mana spent to cast this spell. Untap all creatures you control. / Flashback {6}{R}{W} (You may cast this card from your graveyard for its flashback cost. Then exile it.) | ✅ | Push XIX: full wire — closes Lorehold's last ⏳ row. Damage half branches on `Predicate::CastFromGraveyard` (push XVIII): hand cast deals `XFromCost + 2` (the X plus the {R}{W} portion); flashback cast deals 8 (the fixed {6}{R}{W} mana spent). Untap-all-your-creatures via `Effect::Untap` on `EachPermanent(Creature & ControlledByYou)`. Flashback {6}{R}{W} wired via `Keyword::Flashback`. |
 | Practiced Scrollsmith | {R}{R/W}{W} | Creature — Dwarf Cleric | 3/2 | First strike / When this creature enters, exile target noncreature, nonland card from your graveyard. Until the end of your next turn, you may cast that card. | 🟡 | Wired in `catalog::sets::sos::creatures`. ETB now exiles **exactly one** matching noncreature/nonland card in the controller's graveyard via the new `Selector::Take(_, 1)` primitive (push X) — closer to the printed "target one card" semantics; the prior implementation exiled every matching card. The hybrid `{R/W}` pip is approximated as `{R}` (cost: `{R}{R}{W}`). The "may cast until next turn" rider is omitted (no cast-from-exile-with-time-limit primitive). |
 | Pursue the Past | {R}{W} | Sorcery |  | You gain 2 life. You may discard a card. If you do, draw two cards. / Flashback {2}{R}{W} (You may cast this card from your graveyard for its flashback cost. Then exile it.) | ✅ | All three clauses wired. Gain 2 life + `Effect::MayDo` discard+draw chain (push XV) + `Keyword::Flashback({2}{R}{W})`. The lifegain half always resolves; the loot half is opt-in. |
@@ -2395,7 +2475,7 @@ parity is a matter of porting card factories one at a time.
 | Mavinda, Students' Advocate | {1}{W}{W} | 🟡 | 1/3 Legendary Human Cleric, Flying + Vigilance. Cast-from-graveyard activated ability is ⏳. |
 | Eager First-Year | {W} | ✅ | 2/1 Human Student. Magecraft: target creature gets +1/+1 EOT. Uses the new `effect::shortcut::magecraft()` helper. |
 | Hunt for Specimens | {3}{B} | ✅ | Push XXIV: promoted from 🟡 to ✅. Creates a 1/1 black Pest token whose on-die +1-life trigger rides on `TokenDefinition.triggered_abilities` (SOS push VI), then Learn → Draw 1 (same Lesson approximation as Eyetwitch / Igneous Inspiration). |
-| Silverquill Command | {2}{W}{B} | 🟡 | Push XXIV: 4-mode `ChooseMode` (counter activated/triggered ability / -3/-3 EOT / drain 3 / draw a card). Printed "choose two" collapses to "choose one" — same approximation as Moment of Reckoning, Witherbloom / Lorehold / Prismari / Quandrix Commands. |
+| Silverquill Command | {2}{W}{B} | ✅ | Push XXXVI: "choose two" now wires faithfully via the new `Effect::ChooseModes { count: 2 }` primitive. Auto-decider picks modes 0+1 (counter ability + -3/-3 EOT). ScriptedDecider drives modes [2, 3] (drain + draw) for tests. |
 | Star Pupil | {B} | 🟡 | Push XXV: 0/0 Spirit. Approximated as base 1/1 + ETB AddCounter +1/+1 ×1 (engine has no "enters with N counters" replacement primitive — same approximation as Reckless Amplimancer / Body of Research). Net effective body is 2/2 with one counter, matching the printed two-counters-on-a-0/0. The dies trigger is faithful — `EventKind::CreatureDied/SelfSource` → +1/+1 counter on a targeted creature. |
 | Codespell Cleric | {W} | ✅ | Push XXV: 1/1 Human Cleric, Lifelink. ETB Scry 1. All three pieces are first-class engine primitives. |
 | Combat Professor | {3}{W} | ✅ | Push XXV: 2/3 Cat Cleric with Flying. Magecraft +1/+1 EOT on target creature (same shape as Eager First-Year, just on a 2/3 flier body). |
@@ -2413,7 +2493,7 @@ parity is a matter of porting card factories one at a time.
 | Witherbloom Pledgemage | {1}{B}{G} | ✅ | Push XXIV: promoted from 🟡 to ✅. `{T}, Pay 1 life: Add {B}` now uses `ActivatedAbility.life_cost: 1` (push XV primitive) — the activation rejects pre-pay with `InsufficientLife` when life < 1, mirroring the mana-cost pre-pay check. The "{B} or {G}" mode pick collapses to {B} (modal-mana primitive ⏳). |
 | Daemogoth Titan | {3}{B}{G} | ✅ | Push XXXI: "or blocks" rider now wired via the new `EventKind::Blocks` event. Both attack-side and block-side triggers run the same body — sacrifice a non-titan creature you control. Combat-correct in every defender scenario, not just attack-only swings. |
 | Pest Infestation | {X}{B}{G} | ✅ | Push XXIV: Sorcery. Create X 1/1 black-green Pest tokens with on-die +1-life trigger (X = `Value::XFromCost`). Each Pest carries its death trigger via `TokenDefinition.triggered_abilities`. |
-| Witherbloom Command | {B}{G} | 🟡 | Push XXIV: 4-mode `ChooseMode` instant (drain 3 / gy → hand on permanent MV ≤ 3 / destroy enchantment / -3/-3 EOT). Printed "choose two" collapses to "choose one" — same approximation as Moment of Reckoning. |
+| Witherbloom Command | {B}{G} | ✅ | Push XXXVI: "choose two" now wires faithfully via the new `Effect::ChooseModes { count: 2 }` primitive. Auto-decider picks modes 0+1 (drain 3 + gy → hand). ScriptedDecider drives modes [2, 3] for tests. |
 | Bayou Groff | {2}{B}{G} | ✅ | 5/4 Beast. Push XVI: "may pay {1} on death to return to hand" rider now wired via the new `Effect::MayPay` primitive (sibling to push XV's `Effect::MayDo`). On the death trigger, the controller is asked yes/no; on yes + sufficient mana, the engine pays {1} and `Move(SelfSource → Hand(OwnerOf(Self)))`. |
 | Daemogoth Woe-Eater | {2}{B}{G} | 🟡 | Push XXIII: 9/9 Demon body + `{T}: gain 4 life` activated ability + ETB sacrifice (approximation of "as additional cost: sacrifice a creature" — sac fires at ETB rather than at cast time). Sad-sack mythic finisher. |
 | Eyeblight Cullers | {1}{B}{B} | 🟡 | Push XXIII: 4/4 Elf Warrior with ETB sac (additional-cost approximation) + drain 2. Tempo creature with built-in burn. |
@@ -2433,7 +2513,7 @@ parity is a matter of porting card factories one at a time.
 | Sparring Regimen | {2}{R}{W} | ✅ | Push XVII: both abilities wired. ETB creates a 2/2 R/W Spirit token; "whenever you attack, +1/+1 on each attacker" now fires per-attacker via the new combat-side broadcast in `declare_attackers` — the trigger source is Sparring Regimen, the target is pre-bound to the just-declared attacker as `Target(0)`. Net result: each declared attacker ends up with one new counter, matching the printed mass pump. |
 | Reconstruct History | {1}{R}{W} | ✅ | Push XXIII: return up to 2 artifact cards from your gy → hand via `Selector::take(_, 2)` over `CardsInZone(Graveyard, Artifact)` + draw 1. |
 | Igneous Inspiration | {2}{R} | ✅ | Push XXIII: 3 dmg to creature/PW + Learn (collapsed to draw 1). |
-| Lorehold Command | {R}{W} | 🟡 | Push XXIV: 4-mode `ChooseMode` instant (drain 4 / two 1/1 white Spirit tokens with flying / gy → hand on permanent MV ≤ 2 / exile target gy card). Printed "choose two" collapses to "choose one" — same approximation as the other Commands. |
+| Lorehold Command | {R}{W} | ✅ | Push XXXVI: "choose two" now wires faithfully via the new `Effect::ChooseModes { count: 2 }` primitive. Auto-decider picks modes 0+1 (drain 4 + 2 Spirit tokens). ScriptedDecider drives modes [2, 3] for tests. |
 | Rip Apart | {R}{W} | ✅ | Push XXIX: Sorcery. Choose one — 3 damage to target creature/planeswalker, or destroy target artifact/enchantment. Wired with `Effect::ChooseMode` (same shape as Boros Charm) and Or-composite filters on each mode's target. Modal pick is "choose one" (printed) so it ships at full fidelity. |
 | Plargg, Dean of Chaos | {1}{R} | 🟡 | Push XXIX: 1/3 Legendary Human Wizard. `{T}: Discard a card, then draw a card` rummage activation wired faithfully via `Effect::Seq([Discard, Draw])`. The {2}{R} top-3-exile activation is omitted (no exile-from-top primitive — same gap as Outpost Siege). The DFC pairing with Augusta, Dean of Order is split into two separate front-face card definitions (engine MDFC pipeline currently lacks an "always-flippable, both faces equally" mode). |
 | Augusta, Dean of Order | {1}{W} | ✅ | Push XXX: promoted from 🟡 to ✅ via the new `Value::AttackersThisCombat` primitive. The per-attacker pump trigger is now gated by `Predicate::ValueAtLeast(AttackersThisCombat, 2)` — single-attacker swings no longer false-positive. Two-or-more attacker swings: each attacker passes the gate and ends up with +1/+1 + double strike EOT (matches printed). `combat.rs` was extended to evaluate broadcast Attack-trigger filters in a second pass, so the `attacking.len()` reading is uniform across all attackers. |
@@ -2449,8 +2529,8 @@ parity is a matter of porting card factories one at a time.
 | Quandrix Pledgemage | {1}{G}{U} | ✅ | 2/2 Fractal Wizard. Activated `{1}{G}{U}: +1/+1 counter on this creature`. |
 | Decisive Denial | {G}{U} | 🟡 | Push XXXIII: Mode 0 (counter target noncreature spell unless its controller pays {2}) + mode 1 (one-sided "deal damage equal to your creature's power to an opp creature") both wired. Mode 1 collapses the printed two-target prompt to "user picks slot 0 friendly + opp creature auto-picked" via `Selector::one_of(EachPermanent(opp creature))` (same shape as Chelonian Tackle). The damage is one-sided unlike `Effect::Fight` — friendly creature takes no return damage. Status stays 🟡 because the slot 0 friendly-creature filter lives inside the `Value::PowerOf(target_filtered)` arg of `amount`, not in `to`, so the cast-time legality check doesn't reject opp-creature targets — a small fidelity gap pending engine work on multi-slot target filter introspection. |
 | Snow Day | {1}{G}{U} | ✅ | Push XXIII: Instant. Create a 0/0 Fractal token + put X +1/+1 counters on it where X = `Value::HandSizeOf(You)`. With a 7-card hand the Fractal lands as a 7/7. |
-| Mentor's Guidance | {2}{G}{U} | 🟡 | Push XXIII: Sorcery. Draw 2 + put hand-size +1/+1 counters on a target creature you control. Multi-target "for each" iteration collapsed to single target. |
-| Quandrix Command | {1}{G}{U} | 🟡 | Push XXIV: 4-mode `ChooseMode` instant (counter target activated ability / +1/+1 ×2 on creature / gy → bottom of owner's library / draw a card). Printed "choose two" collapses to "choose one" — same approximation as the other Commands. |
+| Mentor's Guidance | {2}{G}{U} | ✅ | Push XXXVI: doc-only promotion. Sorcery. Draw 2 + put hand-size +1/+1 counters on a target creature you control. The printed Oracle is single-target, so the existing wire matches printed exactly — the prior 🟡 was a stale annotation that misread "for each card in your hand" as multi-target fan-out. |
+| Quandrix Command | {1}{G}{U} | ✅ | Push XXXVI: "choose two" now wires faithfully via the new `Effect::ChooseModes { count: 2 }` primitive. Auto-decider picks modes 0+1 (counter ability + +1/+1 ×2). ScriptedDecider drives modes [2, 3] for tests. |
 | Augmenter Pugilist | {3}{G}{G} | 🟡 | Push XXX: 6/6 Trample Human Warrior. Body + Trample only. The "activated abilities of creatures cost {2} more" static is omitted (no `StaticEffect::TaxActivatedAbilities` primitive yet — same gap as Trinisphere's "minimum cost" flavor in CUBE_FEATURES.md). |
 
 ### Prismari (U/R)
@@ -2461,7 +2541,7 @@ parity is a matter of porting card factories one at a time.
 | Prismari Apprentice | {U}{R} | 🟡 | 2/2 Human Wizard. Magecraft: Scry 1. The "+1/+0 EOT" alt-mode is ⏳ pending a let-the-controller-pick hook on triggered ChooseMode. |
 | Symmetry Sage | {U} | ✅ | 1/2 Human Wizard. Magecraft: this creature gets +1/+0 and gains flying until end of turn. |
 | Creative Outburst | {3}{U}{U}{R}{R} | ✅ | Push XXIII: Sorcery. Discard your hand (`Discard { amount: HandSizeOf(You) }`), draw 5. Prismari spellslinger refill that fuels later magecraft / flashback payoffs. |
-| Prismari Command | {1}{U}{R} | 🟡 | Push XXIV: 4-mode `ChooseMode` instant (2 dmg to creature/PW / discard 2 + draw 2 / Treasure / destroy artifact). Printed "choose two" collapses to "choose one" — same approximation as the other Commands. |
+| Prismari Command | {1}{U}{R} | ✅ | Push XXXVI: "choose two" now wires faithfully via the new `Effect::ChooseModes { count: 2 }` primitive. Auto-decider picks modes 0+1 (2 dmg + discard 2/draw 2). ScriptedDecider drives modes [2, 3] for tests. |
 | Magma Opus | {7}{U}{R} | 🟡 | Push XXIX: Sorcery finisher. Wired body: 4 damage to creature/PW, mint a 4/4 Elemental token, draw 2. The "4 damage divided" + "tap two target permanents" both collapse to single-target picks. The discard-for-Treasure alt cost ({U}{R}, Discard) is omitted (no alt-cost-by-discard primitive yet — same gap as Bonecrusher Giant's Adventure). |
 | Expressive Iteration | {U}{R} | 🟡 | Push XXIX: Sorcery — collapsed to Scry 2 + Draw 1 cantrip approximation. The "exile top 3 + you may play a land + cast a spell from among them" rider is omitted (cast-from-exile + play-land-from-exile primitive gap, same family as Augur of Bolas / Outpost Siege). |
 
@@ -2478,7 +2558,7 @@ parity is a matter of porting card factories one at a time.
 | Show of Confidence | {1}{W} | ✅ | Instant. Adds `StormCount + 1` +1/+1 counters on target creature you control. |
 | Bury in Books | {3}{U} | ✅ | Sorcery. Put target creature on top of its owner's library. |
 | Test of Talents | {1}{U}{U} | 🟡 | Counter target instant or sorcery; the search-and-exile-by-name follow-up is ⏳. |
-| Multiple Choice | {1}{U}{U} | 🟡 | Modal sorcery with three modes wired (Scry 2 / 1/1 Pest / +1/+0 hexproof EOT). The "all four" mega-mode is ⏳. |
+| Multiple Choice | {1}{U}{U} | ✅ | Push XXXVI: "choose one or more" now wires faithfully via the new `Effect::ChooseModes { count: 3, up_to: true, allow_duplicates: false }` primitive. Auto-decider picks all 3 modes (Scry 2 + pump+hexproof + Pest token). The "if you chose all of the above" mega-mode rider stays gap (would need modes-picked introspection). |
 | Solve the Equation | {2}{U} | ✅ | Push XXIII: Sorcery. Search library for an instant or sorcery, put it into your hand, then scry 1. |
 | Enthusiastic Study | {1}{G} | ✅ | Push XXIII: Instant. Target creature gets +2/+2 and gains trample EOT, then learn (collapses to draw 1). |
 | Tempted by the Oriq | {1}{W}{B} | 🟡 | Push XXIII: Sorcery. Approximation of "gain control" as Destroy ≤3-MV creature + create a 1/1 Inkling token (no `Effect::GainControl` static prompt yet). |

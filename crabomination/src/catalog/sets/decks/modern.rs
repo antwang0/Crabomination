@@ -1095,6 +1095,7 @@ pub fn mishras_bauble() -> CardDefinition {
                         who: Selector::You,
                         amount: Value::Const(1),
                     }),
+                    capture: None,
                 },
             ]),
             once_per_turn: false,

@@ -219,6 +219,49 @@ impl GameState {
                 }
             }
 
+            Effect::ChooseModes {
+                modes,
+                count,
+                up_to,
+                allow_duplicates,
+            } => {
+                use crate::decision::{Decision, DecisionAnswer};
+                // Legacy single-mode override: if a caller (test or
+                // pre-ChooseModes cast path) supplied a non-zero
+                // `ctx.mode`, treat it as a "pick this single mode"
+                // hint. Lets existing `mode: Some(N)` cast-time tests
+                // keep working when their card is promoted from
+                // ChooseMode → ChooseModes. New ChooseModes cards cast
+                // with `mode: None` get `ctx.mode = 0` and route
+                // through the decider as designed.
+                let picks: Vec<usize> = if ctx.mode != 0 && ctx.mode < modes.len() {
+                    vec![ctx.mode]
+                } else {
+                    let source = ctx.source.unwrap_or(crate::card::CardId(0));
+                    let answer = self.decider.decide(&Decision::ChooseModes {
+                        source,
+                        modes_count: modes.len(),
+                        pick_count: *count as usize,
+                        up_to: *up_to,
+                        allow_duplicates: *allow_duplicates,
+                    });
+                    match answer {
+                        DecisionAnswer::Modes(v) => v,
+                        // Fallback: pick first `count` modes.
+                        _ => (0..(*count as usize).min(modes.len())).collect(),
+                    }
+                };
+                for picked in picks {
+                    if picked >= modes.len() {
+                        return Err(GameError::ModeOutOfBounds(picked));
+                    }
+                    let mut sub_ctx = ctx.clone();
+                    sub_ctx.mode = picked;
+                    self.run_effect(&modes[picked], &sub_ctx, events)?;
+                }
+                Ok(())
+            }
+
             Effect::MayDo { description, body } => {
                 // Yes/no decision via `Decision::OptionalTrigger`. The
                 // installed `Decider` answers — `AutoDecider` defaults to
@@ -1208,11 +1251,28 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::DelayUntil { kind, body } => {
+            Effect::DelayUntil { kind, body, capture } => {
                 // Capture the current target slot so the delayed body can
                 // reference it via `Selector::Target(0)` later (e.g. Goryo's
                 // wants to exile the same creature it reanimated).
-                let target = ctx.targets.first().cloned();
+                //
+                // When `capture` is provided, evaluate it now and store
+                // the first matching entity as the delayed body's
+                // Target(0). This is the path Conciliator's Duelist uses
+                // — the trigger has no target slot, but the cast spell's
+                // target is captured via `Selector::CastSpellTarget(0)`
+                // and threaded into the delayed return.
+                let target = if let Some(sel) = capture {
+                    self.resolve_selector(sel, ctx)
+                        .into_iter()
+                        .find_map(|e| match e {
+                            EntityRef::Permanent(c) => Some(crate::game::Target::Permanent(c)),
+                            EntityRef::Player(p) => Some(crate::game::Target::Player(p)),
+                            _ => None,
+                        })
+                } else {
+                    ctx.targets.first().cloned()
+                };
                 let source = ctx.source.unwrap_or(crate::card::CardId(0));
                 self.delayed_triggers.push(DelayedTrigger {
                     controller: ctx.controller,
