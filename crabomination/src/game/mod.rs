@@ -508,7 +508,16 @@ impl GameState {
         else {
             return 0;
         };
-        crate::game::actions::extra_cost_for_spell(self, caster, card)
+        let tax = crate::game::actions::extra_cost_for_spell(self, caster, card);
+        // Subtract any target-independent cost reduction (e.g. Witherbloom's
+        // Affinity for creatures, Dawning Archaic's per-IS-card-in-gy
+        // discount). Target-dependent reductions (Killian's "if targets
+        // a creature") are evaluated at would_accept time when the bot
+        // has a concrete target picked.
+        let discount = crate::game::actions::cost_reduction_for_spell(
+            self, caster, card, None,
+        );
+        tax.saturating_sub(discount)
     }
     pub fn blockers_declared(&self) -> bool {
         self.blockers_declared

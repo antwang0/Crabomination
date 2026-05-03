@@ -7,6 +7,45 @@ See `CUBE_FEATURES.md` (cube-card implementation status) and
 
 ## Recent additions
 
+- ✅ **Push XXXVIII (2026-05-03)**: 4 engine primitives + 10 card
+  promotions across STX 2021 + SOS. Tests at 1363 (was 1336; +27 net).
+  - **Engine: `StaticEffect::CostReductionTargeting`** — Killian's
+    target-aware discount. `cost_reduction_for_spell` walks both
+    battlefield static abilities (controller-scoped to caster) and the
+    cast card's own static abilities, summing matching discounts.
+    `ManaCost::reduce_generic` drains generic pips left-to-right, capped
+    at 0. All three cast paths (regular, alt cost, flashback) consult
+    the reduction.
+  - **Engine: `StaticEffect::CostReductionScaled`** — Affinity-style
+    Value-typed discount (Witherbloom's Affinity for creatures; Dawning
+    Archaic's per-IS-card-in-gy discount).
+  - **Engine: `AffectedPermanents::All { excluded_supertypes,
+    exclude_source }`** — Hofri Ghostforge's "Other *nonlegendary*
+    creatures" anthem now decomposes faithfully via the new
+    `excluded_supertypes` field at static-layer translation time.
+  - **Engine: `AlternativeCost.mode_on_alt: Option<usize>`** —
+    Devastating Mastery's Mastery alt cost auto-selects mode 1
+    (Wrath + reanimate) at cast time.
+  - **Engine: Prowess wired** as a synthetic SpellCast trigger that
+    sweeps every battlefield Keyword::Prowess permanent on each
+    noncreature spell cast.
+  - **5 STX 2021 promotions**: Killian Ink Duelist, Spectacle Mage,
+    Tempted by the Oriq, Devastating Mastery (all 🟡 → ✅); Hofri
+    Ghostforge (anthem fix only).
+  - **5 SOS promotions**: Ajani's Response, Inkshape Demonstrator,
+    Ennis Debate Moderator (all 🟡 → ✅); Witherbloom Balancer (first
+    Affinity clause wired); Dawning Archaic (⏳ → 🟡, body added).
+  - **UI: `PermanentView.static_abilities`** — `Vec<String>` field
+    populated from each `StaticAbility.description`. Lets clients
+    render printed rules-text without rebuilding from the static-effect
+    tree.
+  - **Bot: discount-aware affordability prefilter** —
+    `extra_cost_for_card_in_hand` now subtracts target-independent cost
+    reductions before returning net excess.
+  - **27 new tests**: 5 Killian + 4 Spectacle Mage + 3 Hofri +
+    2 Tempted + 2 Devastating Mastery + 2 Ajani + 3 Witherbloom +
+    3 Dawning Archaic + 2 view + 3 snapshot serde + 1 doc fix.
+
 - ✅ **Push XXXVII (2026-05-03)**: 2 engine primitives + 4 STX 2021
   promotions + 2 SOS doc fixes. Tests at 1336 (was 1325; +11 net).
   - **Engine: `Effect::PickModeAtResolution(Vec<Effect>)`** —
@@ -206,6 +245,65 @@ See `CUBE_FEATURES.md` (cube-card implementation status) and
     reject / Mascot steal + revert), 9 cube-card tests (one per new
     card + body sanity for vanilla bodies), 1 view test
     (`ability_cost_label_renders_exile_gy_cost`).
+
+## Future work — engine/UI suggestions surfaced by push XXXVIII
+
+- **`StaticEffect::CostReductionScaled` for "spells you cast" (cross-
+  spell affinity)** — Witherbloom Balancer's second clause ("IS spells
+  you cast have affinity for creatures") needs a static that *grants*
+  a CostReductionScaled to each IS spell cast by the controller.
+  Distinct from the self-static used today: requires a "modify another
+  spell's discount" primitive, registered at cast time per IS spell.
+  The shape would mirror `CostReductionTargeting` but with the discount
+  attached per-cast rather than per-permanent-in-play.
+
+- **Cross-spell affinity-grant primitive — "Affinity for creatures"
+  bestow chain.** Same family as Witherbloom Balancer's second clause.
+  Could also unlock Mishra's Bauble's "{T}: Sacrifice this artifact:
+  Look at top card of your library" gate (artifact affinity), Storm
+  payoffs ("Storm spells you cast have storm")…
+
+- **Cast-from-graveyard pipeline.** Outstanding gap blocking 7 SOS ⏳
+  cards: Echocasting Symposium, Archaic's Agony, Flashback (the
+  card!), Improvisation Capstone, Fix What's Broken, Nita Forum
+  Conciliator, Applied Geometry. The Dawning Archaic's attack trigger
+  also waits on this. Same shape as Velomachus Lorehold's reveal-and-
+  cast, Practiced Scrollsmith's "may cast that card", Conspiracy
+  Theorist's "may cast from exile."
+
+- **Token-copy-of-permanent primitive.** Hofri Ghostforge's dies-as-
+  Spirit-copy rider, Phantasmal Image, Mockingbird, Choreographed
+  Sparks's creature-copy mode all gate on this. Engine would need a
+  `Effect::CreateTokenCopy { source: Selector, modifications: Vec<…> }`
+  that snapshots the source's CardDefinition and overlays modifications
+  (e.g. "becomes a 1/1 R/W Spirit with flying").
+
+- **Multi-target prompt + multi-mode replay.** Moment of Reckoning's
+  "Choose up to four (same mode allowed)" + multi-target combo needs:
+  (1) `Effect::ChooseModes { allow_duplicates: true }` (already
+  available since push XXXVI) AND (2) per-mode-invocation distinct
+  target slots. Currently each ChooseModes iteration shares
+  `Target(0)` from cast time, so 4× mode 0 destroys the same target
+  4×. Same gap as Together as One, Cost of Brilliance.
+
+- **Self-counter-gated static (Comforting Counsel).** "As long as
+  there are five or more growth counters on this enchantment, creatures
+  you control get +3/+3" needs a runtime gate on the source's counter
+  count. New shape: a `condition: Option<Predicate>` field on
+  `ContinuousEffect` (or a new variant) checked at apply time.
+
+- **Replacement-effect primitive (Strict Proctor, Owlin Shieldmage,
+  Wilt in the Heat's "would die → exile instead").** Long-tracked gap,
+  surfaced again by Strict Proctor's ETB-trigger replacement and
+  Wilt's damage-replacement.
+
+- **`AdditionalCost { sacrifice_filter, count }` on cast.** Daemogoth
+  Woe-Eater and Eyeblight Cullers approximate "as additional cost,
+  sacrifice a creature" with an ETB sacrifice trigger — at cast time
+  the user should commit to the sacrifice (and the spell becomes
+  illegal if no creature is available). Same family as Force of
+  Negation's pitch cost; needs a sacrifice-flavor of `AlternativeCost`
+  (or a regular cost with extra fields).
 
 ## Future work — engine/UI suggestions surfaced by push XXXVII
 

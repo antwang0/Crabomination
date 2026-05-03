@@ -279,6 +279,15 @@ pub struct PermanentView {
     /// Loyalty abilities (only populated for planeswalkers).
     #[serde(default)]
     pub loyalty_abilities: Vec<LoyaltyAbilityView>,
+    /// Short descriptions of static abilities (anthem effects, cost
+    /// reductions, taxes, etc.) — one entry per `StaticAbility` on the
+    /// underlying card definition. Populated from
+    /// `StaticAbility.description` so the UI can render the printed
+    /// rules text without rebuilding it from the static-effect
+    /// structure. Defaulted to empty for back-compat with older
+    /// serialized views.
+    #[serde(default)]
+    pub static_abilities: Vec<String>,
 }
 
 impl PermanentView {

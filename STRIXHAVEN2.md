@@ -36,25 +36,154 @@ This file tracks two adjacent Strixhaven catalogs:
 Counts reflect the regenerated tables below (audited via
 `scripts/audit_strixhaven2.py` against `catalog::sets::sos`).
 
-- ✅ done: **130** (unchanged this push — XXXVII's promotions land in
-  STX 2021, not SOS).
-- 🟡 partial: **117** (unchanged).
-- ⏳ todo: **8** (unchanged).
+- ✅ done: **133** (push XXXVIII: +3 SOS — Ajani's Response (target-
+  aware cost reduction self-static), Inkshape Demonstrator (doc-only),
+  Ennis Debate Moderator (doc-only)).
+- 🟡 partial: **115** (push XXXVIII: +1 from Dawning Archaic ⏳ → 🟡;
+  -3 from the SOS promotions above; net 0 change).
+- ⏳ todo: **7** (push XXXVIII: -1 from Dawning Archaic getting a body).
 
-Push XXXVII (2026-05-03) promotes 4 STX 2021 cards: **Shadrix
-Silverquill** (choose-2-of-3 attack trigger via `Effect::ChooseModes`),
-**Prismari Apprentice** (Scry-1-or-+1/+0 magecraft via the new
-`Effect::PickModeAtResolution`), **Augmenter Pugilist** (activated-
-ability tax static via the new `StaticEffect::TaxActivatedAbilities`),
-and **Silverquill Apprentice** (+1/+1-or-(-1/-1) Magecraft via
-`Effect::PickModeAtResolution`). Plus 2 doc fixes: Potioner's Trove
-and Ennis Debate Moderator (both already wired with their gates,
-status notes were stale).
+Push XXXVIII (2026-05-03) introduces 4 engine primitives and promotes
+10 cards across STX 2021 + SOS:
 
-All 247 cards marked ✅ or 🟡 have a corresponding factory in
+**Engine primitives:**
+- `StaticEffect::CostReductionTargeting` — target-aware cost reduction
+  (Killian, Ajani's Response).
+- `StaticEffect::CostReductionScaled` — Affinity-style cost reduction
+  whose discount evaluates a `Value` at cast time (Witherbloom Balancer,
+  Dawning Archaic).
+- `AffectedPermanents::All { excluded_supertypes, exclude_source }` —
+  layer-layer support for `Not(HasSupertype(_))` filters (Hofri's
+  "Other nonlegendary creatures").
+- `AlternativeCost.mode_on_alt: Option<usize>` — alt-cost-implies-mode
+  (Devastating Mastery's Mastery alt cost).
+- Prowess wired as a synthetic SpellCast trigger (Spectacle Mage).
+
+**STX 2021 promotions (5):** Killian, Ink Duelist; Spectacle Mage;
+Tempted by the Oriq; Devastating Mastery; Hofri Ghostforge (anthem
+fix only — dies-as-Spirit still gap, stays 🟡).
+
+**SOS promotions (5):** Ajani's Response; Witherbloom, the Balancer
+(first Affinity clause only — second still gap, stays 🟡); The
+Dawning Archaic (⏳ → 🟡, body wired); Inkshape Demonstrator (doc-
+only); Ennis Debate Moderator (doc-only).
+
+All 248 cards marked ✅ or 🟡 have a corresponding factory in
 `crabomination/src/catalog/sets/sos/`; the audit script reports 0 false
 positives and 0 stale ⏳ rows. STX 2021 progress is tracked in the
 "Strixhaven base set (STX)" section near the bottom of this file.
+
+## 2026-05-03 push XXXVIII: Cost reduction primitives + 10 promotions
+
+Four engine primitives + 10 card promotions across STX 2021 and SOS.
+Tests at 1363 (was 1336, +27 net).
+
+### Engine primitives
+
+- **`StaticEffect::CostReductionTargeting { spell_filter, target_filter,
+  amount }`** — Killian, Ink Duelist's "spells you cast that target a
+  creature cost {2} less to cast." `cost_reduction_for_spell` walks
+  every battlefield permanent's static abilities (controller-scoped to
+  the caster) plus the cast card's own static abilities, summing
+  matching discounts. The discount is applied to generic mana only via
+  the new `ManaCost::reduce_generic` method, which drains `Generic(N)`
+  pips left-to-right and caps at 0 (colored requirements always
+  remain). All three cast paths (regular, alt cost, flashback)
+  consult the reduction.
+
+- **`StaticEffect::CostReductionScaled { filter, amount: Value }`** —
+  Affinity-style cost reduction whose discount evaluates a `Value` at
+  cast time. Used by Witherbloom, the Balancer (Affinity for creatures
+  → `CountOf(EachPermanent(Creature ∧ ControlledByYou))`) and The
+  Dawning Archaic (`{1} less per IS card in your graveyard`).
+
+- **`AffectedPermanents::All.excluded_supertypes`** + `.exclude_source`
+  — adds two serde-default fields to the `All` layer-affected variant.
+  `excluded_supertypes` filters out permanents bearing any of the
+  listed supertypes (Hofri's "Other *nonlegendary* creatures"); the
+  decomposer in `affected_from_requirement` detects
+  `Not(HasSupertype(_))` and emits the new field. `exclude_source`
+  is a future-proofing flag for "Other …" qualifiers on lord cards
+  whose source isn't otherwise filtered (defaulted to false; not
+  currently used since Hofri herself is Legendary).
+
+- **`AlternativeCost.mode_on_alt: Option<usize>`** — when `Some(idx)`,
+  casting via the alt cost path auto-selects mode `idx` of a modal
+  spell, overriding any caller-supplied mode. Used by Devastating
+  Mastery's Mastery alt cost ({7}{W}{W}) which auto-selects mode 1
+  (Wrath + reanimate); regular cast at {4}{W}{W} resolves mode 0
+  (Wrath only).
+
+- **Prowess wired as a synthetic SpellCast trigger.** New code in
+  `fire_spell_cast_triggers` sweeps every battlefield permanent with
+  `Keyword::Prowess` controlled by the caster on each *noncreature*
+  spell cast and pushes a synthetic +1/+1 EOT pump trigger sourced at
+  the Prowess permanent. Spectacle Mage, Monastery Swiftspear, and
+  any future Prowess body all share the same trigger path.
+
+### Card promotions (10)
+
+**STX 2021 (5):**
+- **Killian, Ink Duelist** ({W}{B}, 2/3 Lifelink) — 🟡 → ✅. Static
+  cost reduction via `CostReductionTargeting`.
+- **Spectacle Mage** ({U/R}{U/R}, 1/2 Prowess) — 🟡 → ✅. Hybrid mana
+  via `ManaSymbol::Hybrid(Blue, Red)` + Prowess wired.
+- **Tempted by the Oriq** ({1}{W}{B} Sorcery) — 🟡 → ✅. Permanent-
+  duration `Effect::GainControl` on a ≤3-MV creature + Inkling token.
+- **Devastating Mastery** ({4}{W}{W} Sorcery) — 🟡 → ✅. 2-mode
+  `ChooseMode` + alt cost via `mode_on_alt: Some(1)`.
+- **Hofri Ghostforge** ({2}{R}{W}, 3/4 Legendary) — anthem fix
+  via `excluded_supertypes`. Stays 🟡 because the dies-as-Spirit-copy
+  rider still needs a token-copy-of-permanent primitive.
+
+**SOS (5):**
+- **Ajani's Response** ({4}{W} Instant) — 🟡 → ✅. Self-static
+  cost reduction (no permanent in play needed).
+- **Witherbloom, the Balancer** ({6}{B}{G} Elder Dragon) — first
+  Affinity clause now wires via `CostReductionScaled`. Stays 🟡 because
+  the second clause ("IS spells you cast have affinity") needs a
+  cross-spell discount-grant primitive.
+- **The Dawning Archaic** ({10} Avatar, 7/7 Reach) — ⏳ → 🟡. New
+  body factory + cost discount per IS card in graveyard.
+- **Inkshape Demonstrator** ({3}{W}, 3/4 Ward(2)) — 🟡 → ✅. Doc-only
+  promotion (Ward keyword + Repartee body wired since first add).
+- **Ennis, Debate Moderator** ({1}{W}, 1/1 Legendary) — 🟡 → ✅.
+  Doc-only promotion (exact-tally gate has been wired since push IX).
+
+### UI improvement: PermanentView.static_abilities
+
+`net::PermanentView` gains a `static_abilities: Vec<String>` field
+populated from each `StaticAbility.description`. Lets clients render
+the printed rules-text without rebuilding it from the static-effect
+tree. Defaulted to empty for back-compat.
+
+### Bot improvement: discount-aware affordability prefilter
+
+`extra_cost_for_card_in_hand` now subtracts target-independent cost
+reductions (Witherbloom's Affinity, Dawning Archaic's gy-scaled
+discount) before returning the net excess. Target-dependent reductions
+(Killian's targeting filter) still resolve at would_accept time.
+
+### Tests (+27 net, 1336 → 1363)
+
+- Killian: 5 (discount lands on tapped creature target; no-discount
+  without Killian; targetless spells skip discount; two Killians cap
+  at zero generic; opponent's Killian doesn't discount your spells).
+- Spectacle Mage: 4 (Prowess pump on noncreature cast; Prowess skips
+  creature-spell cast; hybrid pays from blue or red).
+- Hofri: 3 (anthem pumps nonleg creatures; skips Legendary; skips opp).
+- Tempted by the Oriq: 2 (gain control + Inkling; rejects ≥4 MV).
+- Devastating Mastery: 2 (regular cast Wraths only; alt cost Wraths +
+  reanimates).
+- Ajani's Response: 2 (discount on tapped creature; no discount on
+  untapped).
+- Witherbloom Balancer: 3 (Affinity discount; no discount with 0
+  creatures; caps at 0 generic).
+- Dawning Archaic: 3 (body; discount per IS card; no discount with
+  empty gy).
+- View: 2 (static_abilities populates; empty for vanilla creatures).
+- Snapshot serde: 3 (CostReductionTargeting; CostReductionScaled;
+  AlternativeCost.mode_on_alt incl. legacy back-compat).
 
 ## 2026-05-03 push XXXVII: Effect::PickModeAtResolution + StaticEffect::TaxActivatedAbilities + 4 STX 2021 promotions
 
@@ -2237,7 +2366,7 @@ None of these are wired today; all prepare cards are ⏳ until at least
 
 | Card | Mana Cost | Type | P/T | Oracle Text | Status | Notes |
 |---|---|---|---|---|---|---|
-| Ajani's Response | {4}{W} | Instant |  | This spell costs {3} less to cast if it targets a tapped creature. / Destroy target creature. | 🟡 | Wired in `catalog::sets::sos::instants` as a {4}{W} hard destroy. The "costs {3} less if target is tapped" cost-reduction rider is omitted (no target-aware cost reduction primitive). |
+| Ajani's Response | {4}{W} | Instant |  | This spell costs {3} less to cast if it targets a tapped creature. / Destroy target creature. | ✅ | Push XXXVIII: 🟡 → ✅. Self-static cost reduction via the new `StaticEffect::CostReductionTargeting` primitive: `target_filter: Creature ∧ Tapped, amount: 3`. `cost_reduction_for_spell` walks the cast card's own static abilities (in addition to the battlefield), so self-discount spells close the cost-reduction gap without needing a permanent in play. |
 | Antiquities on the Loose | {1}{W}{W} | Sorcery |  | Create two 2/2 red and white Spirit creature tokens. Then if this spell was cast from anywhere other than your hand, put a +1/+1 counter on each Spirit you control. / Flashback {4}{W}{W} (You may cast this card from your graveyard for its flashback cost. Then exile it.) | ✅ | All three clauses wired. Creates 2× 2/2 R/W Spirit tokens + `Keyword::Flashback({4}{W}{W})`. The cast-from-elsewhere rider uses the new `Predicate::CastFromGraveyard` (reads `EffectContext.cast_face` — `CastFace::Flashback` triggers the rider). On flashback cast, each Spirit you control gets a +1/+1 counter (per `ForEach Spirit & ControlledByYou → AddCounter(+1/+1)`). |
 | Ascendant Dustspeaker | {4}{W} | Creature — Orc Cleric | 3/4 | Flying / When this creature enters, put a +1/+1 counter on another target creature you control. / At the beginning of combat on your turn, exile up to one target card from a graveyard. | ✅ | Wired in `catalog::sets::sos::creatures` with both ETB pump + combat-step exile triggers. |
 | Daydream | {W} | Sorcery |  | Exile target creature you control, then return that card to the battlefield under its owner's control with a +1/+1 counter on it. / Flashback {2}{W} (You may cast this card from your graveyard for its flashback cost. Then exile it.) | ✅ | Wired in `catalog::sets::sos::sorceries` as the standard Restoration-Angel-style flicker pattern (`Exile + Move(target → battlefield) + AddCounter`). Flashback {2}{W} now wired via `Keyword::Flashback` (push X) — graveyard replay reuses the engine's existing `cast_flashback` path. The library traversal in `move_card_to` was extended to handle library-source moves so the flicker round-trip resolves end-to-end. |
@@ -2459,7 +2588,7 @@ None of these are wired today; all prepare cards are ⏳ until at least
 | Titan's Grave |  | Land |  | This land enters tapped. / {T}: Add {B} or {G}. / {2}{B}{G}, {T}: Surveil 1. (Look at the top card of your library. You may put it into your graveyard.) | ✅ | Wired in `catalog::sets::sos::lands`. |
 | Vicious Rivalry | {2}{B}{G} | Sorcery |  | As an additional cost to cast this spell, pay X life. / Destroy all artifacts and creatures with mana value X or less. | ✅ | Wired in `catalog::sets::sos::sorceries` — `LoseLife X` (approximating the additional cost) + `ForEach(Creature ∨ Artifact).If(ManaValueOf ≤ X) → Destroy`. |
 | Witherbloom Charm | {B}{G} | Instant |  | Choose one — / • You may sacrifice a permanent. If you do, draw two cards. / • You gain 5 life. / • Destroy target nonland permanent with mana value 2 or less. | ✅ | All three modes wired faithfully. Mode 0: `Effect::MayDo` sacrifice → draw 2 (push XV). Mode 1: gain 5 life. Mode 2: destroy nonland with mana value ≤ 2. |
-| Witherbloom, the Balancer | {6}{B}{G} | Legendary Creature — Elder Dragon | 5/5 | Affinity for creatures (This spell costs {1} less to cast for each creature you control.) / Flying, deathtouch / Instant and sorcery spells you cast have affinity for creatures. | 🟡 | Body wired in `catalog::sets::sos::creatures` with the new `CreatureType::Elder` subtype. Both Affinity-for-creatures cost-reduction clauses are omitted (no per-cast cost reduction whose discount scales off caster's permanent count — tracked in TODO.md). |
+| Witherbloom, the Balancer | {6}{B}{G} | Legendary Creature — Elder Dragon | 5/5 | Affinity for creatures (This spell costs {1} less to cast for each creature you control.) / Flying, deathtouch / Instant and sorcery spells you cast have affinity for creatures. | 🟡 | Push XXXVIII: first clause now wires faithfully via the new `StaticEffect::CostReductionScaled { amount: CountOf(EachPermanent(Creature ∧ ControlledByYou)) }` primitive — at 4 friendly creatures, the printed {6}{B}{G} drops to {2}{B}{G}. The second clause ("IS spells you cast have affinity for creatures") still 🟡 — would need a "modify another spell's cost reduction" primitive (a static that adds CostReductionScaled to other casts). |
 
 ## Silverquill (White-Black)
 
@@ -2539,7 +2668,7 @@ None of these are wired today; all prepare cards are ⏳ until at least
 | Skycoach Waypoint |  | Land |  | {T}: Add {C}. / {3}, {T}: Target creature becomes prepared. (Only creatures with prepare spells can become prepared.) | 🟡 | Push XIX: `{T}: Add {C}` mana ability wired via the shared `tap_add_colorless()` helper. The `{3},{T}: prepare a creature` activation is omitted (Prepare keyword pending — same gate as Biblioplex Tomekeeper). |
 | Strixhaven Skycoach | {3} | Artifact — Vehicle | 3/2 | Flying / When this Vehicle enters, you may search your library for a basic land card, reveal it, put it into your hand, then shuffle. / Crew 2 (Tap any number of creatures you control with total power 2 or more: This Vehicle becomes an artifact creature until end of turn.) | 🟡 | Push XIX: 3/2 Flying artifact-creature body wired + ETB tutor (`Effect::MayDo` + `Effect::Search { filter: IsBasicLand, to: Hand }`). The Vehicle subtype + Crew keyword are not yet engine concepts (no Vehicle/Crew primitive); the card enters as a plain artifact creature directly — a small over-statement in vacuum, but the ETB tutor + 3/2 Flying body still slot into colorless ramp. |
 | Sundering Archaic | {6} | Creature — Avatar | 3/3 | Converge — When this creature enters, exile target nonland permanent an opponent controls with mana value less than or equal to the number of colors of mana spent to cast this creature. / {2}: Put target card from a graveyard on the bottom of its owner's library. | 🟡 | Push XVI: `{2}: gy → bottom of owner's library` activated ability now wired via `Effect::Move { what: Target(0), to: ZoneDest::Library { who: OwnerOf(Target(0)), pos: Bottom } }`. ETB Converge exile is wired against `Nonland & ControlledByOpponent`; the mana-value cap against `ConvergedValue` is still approximated to "any nonland opp permanent" (no `Value`-keyed `ManaValueAtMost` predicate yet — tracked in TODO.md). |
-| The Dawning Archaic | {10} | Legendary Creature — Avatar | 7/7 | This spell costs {1} less to cast for each instant and sorcery card in your graveyard. / Reach / Whenever The Dawning Archaic attacks, you may cast target instant or sorcery card from your graveyard without paying its mana cost. If that spell would be put into your graveyard, exile it instead. | ⏳ | 🔍 needs review (oracle previously truncated). Needs: cast-from-exile pipeline; cast-from-graveyard. |
+| The Dawning Archaic | {10} | Legendary Creature — Avatar | 7/7 | This spell costs {1} less to cast for each instant and sorcery card in your graveyard. / Reach / Whenever The Dawning Archaic attacks, you may cast target instant or sorcery card from your graveyard without paying its mana cost. If that spell would be put into your graveyard, exile it instead. | 🟡 | Push XXXVIII: ⏳ → 🟡. New `catalog::sets::sos::creatures::the_dawning_archaic` factory wires the 7/7 Reach Avatar at {10} with the printed self-discount via the new `StaticEffect::CostReductionScaled { amount: CountOf(CardsInZone(Graveyard, IS-cards)) }`. With 5 IS cards in your graveyard, the printed {10} drops to {5}. The attack-trigger cast-from-graveyard rider stays gap pending the cast-from-exile/graveyard pipeline (same family as Velomachus Lorehold, Conspiracy Theorist). |
 | Together as One | {6} | Sorcery |  | Converge — Target player draws X cards, Together as One deals X damage to any target, and you gain X life, where X is the number of colors of mana spent to cast this spell. | 🟡 | Damage and life-gain halves wired in `catalog::sets::sos::sorceries`; the "target player draws X" half collapses to "you draw X" (multi-target prompt gap). |
 | Transcendent Archaic | {7} | Creature — Avatar | 6/6 | Vigilance / Converge — When this creature enters, you may draw X cards, where X is the number of colors of mana spent to cast this spell. If you draw one or more cards this way, discard two cards. | 🟡 | Body wired (6/6 Vigilance Avatar). ETB Converge draw is wired via `Value::ConvergedValue`; the conditional discard 2 is gated on `ConvergedValue ≥ 1`. The "you may" optionality is collapsed to always-draw-when-X-≥-1 (no may-do primitive yet). |
 
@@ -2559,8 +2688,8 @@ parity is a matter of porting card factories one at a time.
 | Eyetwitch | {B} | ✅ | 1/1 Pest. When dies: "learn" approximated as `Draw 1` (no Lesson sideboard yet). |
 | Closing Statement | {X}{W}{W} | ✅ | Sorcery. Exile target nonland permanent. You gain X life (`Value::XFromCost`). |
 | Vanishing Verse | {W}{B} | ✅ | Push XX: target filter is now `Permanent ∧ Nonland ∧ Monocolored` via the new `SelectionRequirement::Monocolored` predicate. Two-color and colorless permanents reject as invalid targets at cast time. |
-| Killian, Ink Duelist | {W}{B} | 🟡 | 2/3 Legendary Human Warlock. Lifelink wired. "Spells you cast that target a creature cost {2} less" static still ⏳ (target-aware cost reduction primitive). |
-| Devastating Mastery | {4}{W}{W} | 🟡 | Sorcery. Destroy each nonland permanent ("Wrath of God + lands"). Alt cost {7}{W}{W} reanimate clause is ⏳ (alt-cost-implies-mode primitive). |
+| Killian, Ink Duelist | {W}{B} | ✅ | Push XXXVIII: 🟡 → ✅. 2/3 Legendary Human Warrior with Lifelink. "Spells you cast that target a creature cost {2} less" now wires faithfully via the new `StaticEffect::CostReductionTargeting { spell_filter: Any, target_filter: Creature, amount: 2 }` primitive. `cost_reduction_for_spell` walks each battlefield permanent's static abilities (controller-scoped) plus the cast card's own static abilities at cast time. Multiple Killians stack ({4} less); colored requirements always remain. |
+| Devastating Mastery | {4}{W}{W} | ✅ | Push XXXVIII: 🟡 → ✅. Sorcery. Wired as a 2-mode `Effect::ChooseMode` where mode 0 is the printed Wrath and mode 1 is Wrath + reanimate. The Mastery alt cost ({7}{W}{W}) now wires the printed reanimate via the new `AlternativeCost.mode_on_alt: Some(1)` field — paying the alt cost auto-selects mode 1. |
 | Felisa, Fang of Silverquill | {2}{W}{B} | ✅ | 4/3 Legendary Cat Cleric, Flying + Lifelink. Push XVI: counter-bearing-creature-dies → Inkling trigger now wired via `EventKind::CreatureDied/AnotherOfYours` filtered by `EntityMatches { what: TriggerSource, filter: WithCounter(+1/+1) }`. Counters persist on a card after move-to-graveyard (only `damage`/`tapped`/`attached_to` are cleared on zone-out), so the post-die graveyard-resident card still reports its `+1/+1` counters via `evaluate_requirement_static`. |
 | Mavinda, Students' Advocate | {1}{W}{W} | 🟡 | 1/3 Legendary Human Cleric, Flying + Vigilance. Cast-from-graveyard activated ability is ⏳. |
 | Eager First-Year | {W} | ✅ | 2/1 Human Student. Magecraft: target creature gets +1/+1 EOT. Uses the new `effect::shortcut::magecraft()` helper. |
@@ -2607,7 +2736,7 @@ parity is a matter of porting card factories one at a time.
 | Rip Apart | {R}{W} | ✅ | Push XXIX: Sorcery. Choose one — 3 damage to target creature/planeswalker, or destroy target artifact/enchantment. Wired with `Effect::ChooseMode` (same shape as Boros Charm) and Or-composite filters on each mode's target. Modal pick is "choose one" (printed) so it ships at full fidelity. |
 | Plargg, Dean of Chaos | {1}{R} | 🟡 | Push XXIX: 1/3 Legendary Human Wizard. `{T}: Discard a card, then draw a card` rummage activation wired faithfully via `Effect::Seq([Discard, Draw])`. The {2}{R} top-3-exile activation is omitted (no exile-from-top primitive — same gap as Outpost Siege). The DFC pairing with Augusta, Dean of Order is split into two separate front-face card definitions (engine MDFC pipeline currently lacks an "always-flippable, both faces equally" mode). |
 | Augusta, Dean of Order | {1}{W} | ✅ | Push XXX: promoted from 🟡 to ✅ via the new `Value::AttackersThisCombat` primitive. The per-attacker pump trigger is now gated by `Predicate::ValueAtLeast(AttackersThisCombat, 2)` — single-attacker swings no longer false-positive. Two-or-more attacker swings: each attacker passes the gate and ends up with +1/+1 + double strike EOT (matches printed). `combat.rs` was extended to evaluate broadcast Attack-trigger filters in a second pass, so the `attacking.len()` reading is uniform across all attackers. |
-| Hofri Ghostforge | {2}{R}{W} | 🟡 | Push XXX: 3/4 Legendary Human Cleric. Static anthem on other creatures you control (printed: "Other *nonlegendary* creatures") — engine static-layer doesn't yet support `Not(HasSupertype(Legendary))` so the wider "Other creatures" anthem ships (minor false-positive on legendary friendly creatures). The dies-as-Spirit-copy rider is omitted (token-copy-of-permanent primitive gap, same as Phantasmal Image / Mockingbird in CUBE_FEATURES.md). |
+| Hofri Ghostforge | {2}{R}{W} | 🟡 | Push XXXVIII: anthem now exact via the new `excluded_supertypes: Vec<Supertype>` field on `AffectedPermanents::All` — `Not(HasSupertype(Legendary))` decomposes at static-layer translation time so legendary friendly creatures are correctly skipped. The dies-as-Spirit-copy rider stays omitted (token-copy-of-permanent primitive gap, same as Phantasmal Image / Mockingbird in CUBE_FEATURES.md), keeping the card 🟡 overall. |
 | Mascot Interception | {2}{R}{W} | ✅ | Push XXXIV: Instant. Printed "gain control of opp's creature + untap + haste" now wires faithfully — `Effect::GainControl` graduated from a permanent-control-flip stub to a Layer-2 continuous effect with `EffectDuration::UntilEndOfTurn`, so the steal reverts at Cleanup. Body is `Seq([GainControl, Untap, GrantKeyword(Haste)])` — control change first so the untap and haste land on the freshly-stolen creature. (Haste-grant-expiration is tracked separately — `Effect::GrantKeyword` still mutates `card.definition.keywords` directly without honoring its `duration` field; see TODO.md push XXXIV.) |
 | Approach of the Lorehold | {1}{R}{W} | ✅ | Push XXX: Sorcery. 2 damage to each opponent (auto-target collapse — printed "any target") + creates a 1/1 white Spirit creature token with flying. Lorehold's flexible utility sorcery; same Spirit token shape as Lorehold Command's mode 1. |
 
@@ -2651,7 +2780,7 @@ parity is a matter of porting card factories one at a time.
 | Multiple Choice | {1}{U}{U} | ✅ | Push XXXVI: "choose one or more" now wires faithfully via the new `Effect::ChooseModes { count: 3, up_to: true, allow_duplicates: false }` primitive. Auto-decider picks all 3 modes (Scry 2 + pump+hexproof + Pest token). The "if you chose all of the above" mega-mode rider stays gap (would need modes-picked introspection). |
 | Solve the Equation | {2}{U} | ✅ | Push XXIII: Sorcery. Search library for an instant or sorcery, put it into your hand, then scry 1. |
 | Enthusiastic Study | {1}{G} | ✅ | Push XXIII: Instant. Target creature gets +2/+2 and gains trample EOT, then learn (collapses to draw 1). |
-| Tempted by the Oriq | {1}{W}{B} | 🟡 | Push XXIII: Sorcery. Approximation of "gain control" as Destroy ≤3-MV creature + create a 1/1 Inkling token (no `Effect::GainControl` static prompt yet). |
+| Tempted by the Oriq | {1}{W}{B} | ✅ | Push XXXVIII: 🟡 → ✅. Sorcery. The printed "gain control of target creature with mana value 3 or less" now wires faithfully via `Effect::GainControl { duration: Duration::Permanent }` (Push XXXIV pioneered EOT-bounded GainControl on Mascot Interception; this is the indefinite flavor for Bribery / Mind Control / Tempted). The Inkling token rider is wired via the SOS catalog's `inkling_token()` helper. |
 | Brilliant Plan | {3}{U} | ✅ | Push XXVI: Sorcery. Scry 3 + Draw 3 — pure card-selection sorcery (STX 2021 mono-blue). Wired via `Effect::Seq([Scry(3), Draw(3)])`. |
 | Saw It Coming | {1}{U}{U} | 🟡 | Push XXIV: Instant. Counter target spell (Cancel-equivalent at the {1}{U}{U} rate). Foretell {1}{U} alt-cost is omitted (no Foretell primitive: would need alt-cost-on-exile + cast-from-exile-with-time-limit, same gap as Velomachus Lorehold's reveal-and-cast). |
 | Environmental Sciences | {2} | ✅ | Push XXIX: colorless Sorcery (Lesson). `Effect::Search(IsBasicLand → Hand) + GainLife 2`. Universal Lesson at every color — every Strixhaven Mystical Archive deck plays this regardless of pip requirements. |
@@ -2690,7 +2819,7 @@ each college's flagship Dragon, plus a few cross-college staples.
 |---|---|---|---|
 | Strict Proctor | {1}{W} | 🟡 | 1/3 Spirit Cleric, Flying. ETB-tax replacement is omitted (no replacement-effect primitive). |
 | Sedgemoor Witch | {2}{B}{B} | ✅ | 3/2 Human Warlock, Menace + Ward(1) keyword. Magecraft creates a Pest token. Ward enforcement still pending — keyword tag is correct. Test: `sedgemoor_witch_magecraft_creates_pest_token`. |
-| Spectacle Mage | {U}{R} | 🟡 | 1/2 Human Wizard with Prowess. Hybrid {U/R}{U/R} approximated as {U}{R}. Prowess keyword tag is correct (engine-side wiring still pending). |
+| Spectacle Mage | {U/R}{U/R} | ✅ | Push XXXVIII: 🟡 → ✅. 1/2 Human Wizard. Hybrid {U/R}{U/R} cost now wired exactly via two `ManaSymbol::Hybrid(Blue, Red)` pips (the engine's mana payment path already supports hybrid pips). Prowess is now first-class — `fire_spell_cast_triggers` sweeps every Keyword::Prowess permanent controlled by the caster on each noncreature spell cast and pushes a synthetic +1/+1 EOT pump. |
 | Mage Hunters' Onslaught | {2}{B}{B} | ✅ | Sorcery. Destroy target creature; draw a card. Test: `mage_hunters_onslaught_destroys_creature_and_draws_card`. |
 | Galazeth Prismari | {2}{U}{R} | 🟡 | 3/4 Legendary Dragon Wizard, Flying. ETB creates a Treasure token (full real-card behaviour). The "artifacts you control are mana sources" static is still ⏳ (no `GrantActivatedAbility(applies_to)` primitive). Test: `galazeth_prismari_is_three_four_flying_dragon_with_etb_treasure`. |
 | Beledros Witherbloom | {3}{B}{B}{G}{G} | ✅ | Push XX: 6/6 Legendary Demon, Flying + Trample + Lifelink. "Pay 10 life: Untap each land you control. Activate only as a sorcery." now wired via push XV's `ActivatedAbility.life_cost: u32` gate (rejects with `InsufficientLife` < 10) + `Effect::Untap` over `Selector::EachPermanent(Land & ControlledByYou)`. Sorcery-speed flag set true to match printed restriction. |

@@ -157,6 +157,12 @@ fn project_permanent(
         attacking: attacking.contains(&card.id),
         abilities: project_abilities(card),
         loyalty_abilities: project_loyalty_abilities(card),
+        static_abilities: card
+            .definition
+            .static_abilities
+            .iter()
+            .map(|sa| sa.description.to_string())
+            .collect(),
     }
 }
 
@@ -1490,6 +1496,45 @@ mod tests {
         assert_eq!(costs, vec![1, -1, -2]);
         // The -2 ability creates a token; pre-rendered label should reflect that.
         assert_eq!(perm.loyalty_abilities[2].effect_label, "Create token");
+    }
+
+    /// Push XXXVIII: PermanentView gains a `static_abilities`
+    /// `Vec<String>` populated from each `StaticAbility.description`.
+    /// Lets clients render the printed rules-text without rebuilding it
+    /// from the static-effect tree. Verifies both Killian (single
+    /// CostReductionTargeting static) and Hofri (single PumpPT
+    /// static).
+    #[test]
+    fn static_abilities_descriptions_appear_in_permanent_view() {
+        let mut state = two_player_game();
+        let killian = state.add_card_to_battlefield(0, catalog::killian_ink_duelist());
+        let hofri = state.add_card_to_battlefield(0, catalog::hofri_ghostforge());
+        let view = project(&state, 0);
+
+        let killian_view = view.battlefield.iter().find(|p| p.id == killian).unwrap();
+        assert_eq!(killian_view.static_abilities.len(), 1);
+        assert!(killian_view.static_abilities[0].contains("less"),
+            "Killian should advertise its cost-reduction static: got `{}`",
+            killian_view.static_abilities[0]);
+
+        let hofri_view = view.battlefield.iter().find(|p| p.id == hofri).unwrap();
+        assert_eq!(hofri_view.static_abilities.len(), 1);
+        assert!(hofri_view.static_abilities[0].contains("+1/+1"),
+            "Hofri should advertise its anthem static: got `{}`",
+            hofri_view.static_abilities[0]);
+    }
+
+    /// Permanents with no static abilities surface an empty vec — back-
+    /// compat with the prior `serde(default)` for older snapshots and
+    /// non-static cards (Grizzly Bears, etc.).
+    #[test]
+    fn static_abilities_empty_for_vanilla_creature() {
+        let mut state = two_player_game();
+        let bear = state.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let view = project(&state, 0);
+        let bear_view = view.battlefield.iter().find(|p| p.id == bear).unwrap();
+        assert!(bear_view.static_abilities.is_empty(),
+            "Vanilla bear should have empty static_abilities");
     }
 
     /// Push XXXIV: graveyard-exile-cost activations (Lorehold Pledgemage)

@@ -735,6 +735,86 @@ mod tests {
         assert_eq!(snap.stack[0].card.name, "Lightning Bolt");
     }
 
+    /// Push XXXVIII: round-trip the new
+    /// `StaticEffect::CostReductionTargeting` variant directly through
+    /// serde_json. The CardInstance serde path indirects through the
+    /// card-name registry; static-effect variants themselves are full
+    /// derive(Serialize/Deserialize) so we exercise them in isolation
+    /// here. (Cards like Killian aren't in the cube/SOS registry, so a
+    /// GameState round-trip would fail to look them up.)
+    #[test]
+    fn cost_reduction_targeting_serde_round_trips() {
+        use crate::card::{SelectionRequirement, StaticEffect};
+        let original = StaticEffect::CostReductionTargeting {
+            spell_filter: SelectionRequirement::Any,
+            target_filter: SelectionRequirement::Creature
+                .and(SelectionRequirement::Tapped),
+            amount: 3,
+        };
+        let json = serde_json::to_string(&original).expect("serialize");
+        let restored: StaticEffect = serde_json::from_str(&json).expect("deserialize");
+        match restored {
+            StaticEffect::CostReductionTargeting { amount, .. } => {
+                assert_eq!(amount, 3);
+            }
+            other => panic!("Expected CostReductionTargeting, got {other:?}"),
+        }
+    }
+
+    /// Push XXXVIII: round-trip the new
+    /// `StaticEffect::CostReductionScaled` variant directly through
+    /// serde_json (same rationale as the CostReductionTargeting test).
+    #[test]
+    fn cost_reduction_scaled_serde_round_trips() {
+        use crate::card::{SelectionRequirement, StaticEffect};
+        use crate::effect::{PlayerRef, Selector, Value};
+        let original = StaticEffect::CostReductionScaled {
+            filter: SelectionRequirement::Any,
+            amount: Value::CountOf(Box::new(Selector::EachPermanent(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::ControlledByYou),
+            ))),
+        };
+        let json = serde_json::to_string(&original).expect("serialize");
+        let restored: StaticEffect = serde_json::from_str(&json).expect("deserialize");
+        assert!(matches!(restored, StaticEffect::CostReductionScaled { .. }));
+        // Older snapshots without the new variant would fail the match.
+        let _ = PlayerRef::You; // silence unused if removed
+    }
+
+    /// Push XXXVIII: AlternativeCost.mode_on_alt round-trips. The new
+    /// field is `#[serde(default)]` so older snapshots without it
+    /// deserialize to `None`; explicit values round-trip.
+    #[test]
+    fn alt_cost_mode_on_alt_serde_round_trips() {
+        use crate::card::AlternativeCost;
+        use crate::mana::ManaCost;
+        let original = AlternativeCost {
+            mana_cost: ManaCost::default(),
+            life_cost: 0,
+            exile_filter: None,
+            evoke_sacrifice: false,
+            not_your_turn_only: false,
+            target_filter: None,
+            mode_on_alt: Some(1),
+        };
+        let json = serde_json::to_string(&original).expect("serialize");
+        let restored: AlternativeCost = serde_json::from_str(&json).expect("deserialize");
+        assert_eq!(restored.mode_on_alt, Some(1));
+        // Backward compat: AlternativeCost without mode_on_alt deserializes to None.
+        let legacy = r#"{
+            "mana_cost": { "symbols": [] },
+            "life_cost": 0,
+            "exile_filter": null,
+            "evoke_sacrifice": false,
+            "not_your_turn_only": false,
+            "target_filter": null
+        }"#;
+        let legacy_restored: AlternativeCost = serde_json::from_str(legacy)
+            .expect("legacy AlternativeCost (no mode_on_alt) should deserialize via #[serde(default)]");
+        assert_eq!(legacy_restored.mode_on_alt, None);
+    }
+
     /// Full GameState now derives `Serialize`/`Deserialize` directly.
     /// Round-trip via serde_json including a Trigger on the stack
     /// (which the snapshot path drops but the direct serde path keeps).
