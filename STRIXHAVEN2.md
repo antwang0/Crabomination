@@ -36,13 +36,16 @@ This file tracks two adjacent Strixhaven catalogs:
 Counts reflect the regenerated tables below (audited via
 `scripts/audit_strixhaven2.py` against `catalog::sets::sos`).
 
-- ✅ done: **136** (push XL: +2 SOS — Lluwen, Exchange Student //
-  Pest Friend (hybrid `{B/G}` pip wired faithfully) and Pterafractyl
-  (printed 1/0 body via the new `enters_with_counters` replacement)).
-- 🟡 partial: **112** (push XL: -2 from Lluwen + Pterafractyl
-  promotions).
+- ✅ done: **136** (SOS unchanged in push XLI; STX 2021 catalog grew
+  by 1 ✅ — Biomathematician, plus Owlin Shieldmage 🟡 → ✅).
+- 🟡 partial: **112** (SOS unchanged).
 - ⏳ todo: **7** (unchanged — all blocked by cast-from-exile / copy-
   permanent pipelines).
+
+Push XLI (2026-05-04) STX 2021 totals (per `scripts/audit_stx_base.py`):
+**95 ✅ / 16 🟡 / 0 ⏳ across 111 rows.** Quandrix (G/U) is now
+fully closed at 8 ✅ / 0 🟡 — first STX 2021 college with no
+remaining partials.
 
 Push XXXVIII (2026-05-03) introduces 4 engine primitives and promotes
 10 cards across STX 2021 + SOS:
@@ -73,6 +76,115 @@ All 248 cards marked ✅ or 🟡 have a corresponding factory in
 `crabomination/src/catalog/sets/sos/`; the audit script reports 0 false
 positives and 0 stale ⏳ rows. STX 2021 progress is tracked in the
 "Strixhaven base set (STX)" section near the bottom of this file.
+
+## 2026-05-04 push XLI: Effect::PreventCombatDamageThisTurn + 6 cards/promotions
+
+Adds 1 engine primitive (combat-damage prevention shield), 1 new STX
+2021 card (Quandrix Biomathematician), 5 promotions/new fog-style
+cards (Owlin Shieldmage, Holy Day, Spore Frog, Monastery Swiftspear,
+Stormchaser Mage, Faerie Mastermind), and the new STX-base audit
+script.
+
+### Engine primitive
+
+- **`Effect::PreventCombatDamageThisTurn`** — "Prevent all combat
+  damage that would be dealt this turn" (Holy Day / fog-style
+  shield). Sets a `GameState.combat_damage_prevented_this_turn`
+  flag, sticky for the rest of the turn. Cleared in `do_cleanup`
+  (CR 615 — prevention only applies to *this* turn). Implementation
+  is faithful to printed "prevent" semantics: `resolve_combat_damage_
+  with_filter` short-circuits the per-attacker damage step when the
+  flag is set, so no damage events fire (lifelink, infect, and
+  trample-trigger riders all skip too — same shape as a real
+  prevention shield, not "deal then zero out"). New
+  `GameEvent::CombatDamagePreventedThisTurn` (+ wire mirror) so
+  spectator UIs can render the shield activation. Defaulted via
+  `#[serde(default)]` for back-compat with older snapshots.
+
+### STX 2021 promotions (1) + new card (1)
+
+- **Owlin Shieldmage** ({3}{W} 2/3 Bird Wizard with Flash + Flying)
+  🟡 → ✅. ETB now triggers `Effect::PreventCombatDamageThisTurn`,
+  closing the printed "When this creature enters, prevent all combat
+  damage that would be dealt this turn" rider end-to-end.
+- **Biomathematician** ({1}{G}{U}, 2/2 Vedalken Druid, NEW Quandrix
+  uncommon). Death-trigger creates a 0/0 green-and-blue Fractal
+  token + ×2 +1/+1 counter stamp via the existing `Selector::Last
+  CreatedToken` pattern. Same shape as Pestbrood Sloth's death-
+  trigger token-mint, with the counter stamp on top. Closes Quandrix
+  (G/U) at 8 ✅ / 0 🟡 — first STX 2021 college with no remaining
+  partials.
+
+### Modern catalog cards (4 new + promotions)
+
+- **Holy Day** ({W} Instant) — NEW. Classic Alpha-era fog wired via
+  `Effect::PreventCombatDamageThisTurn`.
+- **Spore Frog** ({G} 1/1 Frog) — NEW. Sacrifice-as-cost activation
+  on a body that puts up the same shield. Validates the primitive
+  works through the existing `sac_cost: true` activation path.
+- **Monastery Swiftspear** ({R} 1/2 Human Monk, Haste + Prowess) —
+  doc-only promotion. Push XXXVIII wired Prowess as a synthetic
+  SpellCast trigger; Swiftspear's per-noncreature-cast +1/+1 EOT
+  pump now fires correctly. Same wiring shape as Spectacle Mage
+  (✅ since push XXXVIII).
+- **Stormchaser Mage** ({1}{U}{R} 1/3 Flying + Haste + Prowess) —
+  same Prowess promotion.
+- **Faerie Mastermind** ({1}{U} 2/1 Faerie Rogue, Flash + Flying)
+  🟡 → ✅. The "except the first card they draw each turn" gate
+  now wires faithfully via `Predicate::ValueAtLeast(CardsDrawnThis
+  Turn(Triggerer), 2)`. Trigger source is bound to the opp who drew;
+  the gate resolves on that opp's per-turn draw tally, so a 2nd, 3rd,
+  … draw fires the trigger and the 1st draw skips.
+
+### Tooling
+
+- **`scripts/audit_stx_base.py`** — NEW. Sibling to the SOS audit
+  script. Walks the "Strixhaven base set (STX)" table at the bottom
+  of STRIXHAVEN2.md, cross-references against `catalog::sets::stx/`
+  + `decks/modern.rs`, reports false positives (doc says ✅/🟡, no
+  catalog string) and false negatives (catalog string but doc says
+  ⏳), with a per-section breakdown. Closes the audit-script
+  suggestion from TODO.md push XXIX.
+
+### CR 615 audit (Prevention Effects)
+
+The new primitive implements:
+- **CR 615.1 / 615.1a** — continuous prevention effects watching for
+  damage events with the word "prevent". The flag is checked at
+  damage-deal time, not pre-locked.
+- **CR 615.4 / 615.6** — prevention exists before damage event;
+  prevented damage never happens (no damage event fires, no
+  triggers).
+
+Still ⏳:
+- **CR 615.7** — specific-amount shields ("Prevent the next 3
+  damage that would be dealt to any target this turn"). Needs a
+  per-source / per-amount replacement primitive.
+- **CR 615.8** — next-instance-from-source shields.
+- **CR 615.9** — prevention with property-recheck on the source.
+- **CR 615.13** — triggered abilities that fire when damage is
+  prevented.
+
+### Tests (+9 net, 1379 → 1389)
+
+- biomathematician_death_creates_fractal_with_two_counters
+- biomathematician_is_two_two_vedalken_druid
+- owlin_shieldmage_prevents_combat_damage_on_etb
+- prevent_combat_damage_clears_on_cleanup
+- owlin_shieldmage_full_cast_to_prevention_flow
+- monastery_swiftspear_prowess_pumps_on_noncreature_cast
+- stormchaser_mage_prowess_pumps_on_noncreature_cast
+- faerie_mastermind_skips_first_opp_draw_each_turn (+ updated old
+  test to bump cards_drawn_this_turn so Ponder is the 2nd draw)
+- holy_day_prevents_combat_damage_this_turn
+- spore_frog_sacrifice_prevents_combat_damage
+
+### Cleanup
+
+- 2× `extend(drain(..))` → `append()` in `game/mod.rs` scry/surveil
+  zone-redistribution (clippy::extend_with_drain).
+- Swarm Shambler doc-string rewrap (clippy::doc_lazy_continuation —
+  the wrap on "+ counters" tripped the markdown-list lint).
 
 ## 2026-05-04 push XL: Hybrid pip fidelity + `enters_with_counters` primitive
 
@@ -3063,7 +3175,7 @@ parity is a matter of porting card factories one at a time.
 | Pop Quiz | {1}{W} | ✅ | Sorcery (Lesson). Draw 2, then put a card from your hand on top of your library. |
 | Mascot Exhibition | {5}{W}{W} | ✅ | Sorcery. Creates a 3/3 Elephant, 2/2 lifelink Cat, and 1/1 flying Bird. |
 | Plumb the Forbidden | {X}{B}{B} | ✅ | Instant. Sacrifice X creatures, draw X cards, lose X life. |
-| Owlin Shieldmage | {3}{W} | 🟡 | 2/3 Bird Wizard, Flash + Flying. Combat-damage prevention ETB is ⏳ (replacement primitive). |
+| Owlin Shieldmage | {3}{W} | ✅ ← 🟡 | Push XLI: 2/3 Bird Wizard, Flash + Flying. ETB now triggers the new `Effect::PreventCombatDamageThisTurn` primitive — sets the `GameState.combat_damage_prevented_this_turn` flag (CR 615 sticky shield), which `resolve_combat_damage_with_filter` short-circuits per attacker so no damage events fire. Cleared on cleanup. Same primitive powers Holy Day + Spore Frog in the modern catalog. |
 | Frost Trickster | {1}{U} | ✅ | 2/2 Spirit Wizard, Flash + Flying. ETB taps + stuns target opponent's creature. |
 | Body of Research | {4}{G}{U} | ✅ | Push XVI: now uses the new `Value::LibrarySizeOf(You)` primitive — Fractal token enters with one +1/+1 counter per library card, matching the printed Oracle exactly (was approximating via `GraveyardSizeOf` since `LibrarySize` wasn't a primitive). |
 | Show of Confidence | {1}{W} | ✅ | Instant. Adds `StormCount + 1` +1/+1 counters on target creature you control. |

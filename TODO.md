@@ -7,6 +7,51 @@ See `CUBE_FEATURES.md` (cube-card implementation status) and
 
 ## Recent additions
 
+- ✅ **Push XLI (2026-05-04)**: 1 engine primitive
+  (`Effect::PreventCombatDamageThisTurn`) + 1 new STX card
+  (Biomathematician) + 6 promotions/new fog cards (Owlin Shieldmage
+  🟡 → ✅; Holy Day, Spore Frog NEW; Monastery Swiftspear,
+  Stormchaser Mage Prowess promotions; Faerie Mastermind 🟡 → ✅
+  via skip-first-opp-draw gate) + new audit script
+  (`scripts/audit_stx_base.py`). Tests at 1389 (was 1379, +10 net).
+  - **Engine: `Effect::PreventCombatDamageThisTurn`** —
+    `GameState.combat_damage_prevented_this_turn: bool` flag, set
+    by the new effect, sticky for the rest of the turn (cleared in
+    `do_cleanup` per CR 615). `resolve_combat_damage_with_filter`
+    short-circuits per attacker when the flag is on, so no damage
+    events fire (lifelink, infect, trample-trigger riders all skip
+    too). New `GameEvent::CombatDamagePreventedThisTurn` (+ wire
+    mirror) for spectator UI rendering. Defaulted via
+    `#[serde(default)]` for older snapshots.
+  - **NEW STX 2021**: Biomathematician ({1}{G}{U}, 2/2 Vedalken
+    Druid) — death-trigger creates a 0/0 Fractal token + ×2 +1/+1
+    counter stamp. Closes Quandrix (G/U) at 8 ✅ / 0 🟡 — first STX
+    college with no remaining partials.
+  - **STX 2021 promotion**: Owlin Shieldmage ({3}{W} 2/3 Bird
+    Wizard, Flash + Flying) 🟡 → ✅. ETB triggers the new prevention
+    primitive.
+  - **NEW Modern**: Holy Day ({W} Instant — Alpha-era fog) and
+    Spore Frog ({G} 1/1 Frog — sac-as-cost activation) both wired
+    on the same prevention primitive. Validates the primitive works
+    through both instant-speed cast and sacrifice activation paths.
+  - **Modern promotions**: Monastery Swiftspear + Stormchaser Mage
+    Prowess doc/test promotions (push XXXVIII Prowess wiring works
+    for these too — they had stale "engine work pending" comments).
+    Faerie Mastermind 🟡 → ✅: skip-first-opp-draw gate now wired
+    via `Predicate::ValueAtLeast(CardsDrawnThisTurn(Triggerer), 2)`
+    — opp's 1st draw skips, 2nd+ fires.
+  - **Tooling**: New `scripts/audit_stx_base.py` (sibling to SOS
+    audit). 0 false positives, 0 false negatives across 111 STX
+    rows. 96 ✅ / 15 🟡 / 0 ⏳ totals.
+  - **Cleanup**: 2× clippy `extend(drain)` → `append`, 1× doc
+    rewrap to dodge `doc_lazy_continuation`.
+  - **CR 615 audit** (Prevention Effects): the new primitive
+    implements 615.1/615.1a (continuous prevention), 615.4
+    (pre-event check), 615.6 (no event when prevented). Still ⏳:
+    615.7 (specific-amount shields like "prevent the next 3
+    damage"), 615.8 (next-instance-from-source), 615.9
+    (property-recheck shields), 615.13 (triggers on prevention).
+
 - ✅ **Push XL (2026-05-04)**: 1 engine primitive + 2 SOS 🟡 → ✅
   promotions + 4 hybrid pip fidelity bumps + 1 STX 2021 fidelity
   bump. Tests at 1376 (was 1368, +8 net).
@@ -3710,13 +3755,14 @@ These items came up while implementing the 10-card Lorehold + STX
   HasCardType(Sorcery)`. A small recursion that rebuilds the label
   from the inner Or would close that gap.
 
-- **Audit script for STX 2021 cards**. The existing
-  `scripts/audit_strixhaven2.py` audits SOS only. A sibling script
-  that walks `catalog::sets::stx::*` and cross-references against
-  the STX 2021 table at the bottom of STRIXHAVEN2.md would catch
-  status-row drift (a card added to the catalog without a row in
-  the table, or vice versa). Today the STX 2021 status table is
-  hand-maintained.
+- ~~**Audit script for STX 2021 cards**~~. ✅ Done in push XLI.
+  `scripts/audit_stx_base.py` walks the "Strixhaven base set (STX)"
+  table at the bottom of STRIXHAVEN2.md and cross-references against
+  `catalog::sets::stx/` plus `decks/modern.rs` (where some STX cards
+  spilled over). Reports false positives (doc says ✅/🟡, no catalog
+  string), false negatives (catalog string but doc says ⏳), and a
+  per-section breakdown. Mixed-status statuses like "✅ ← 🟡"
+  count as ✅ — same convention as the SOS audit script.
 
 ### Bot / AI
 
@@ -3788,3 +3834,62 @@ Increment payoff cycle.
   Wisdom of Ages / Pox Plague / X-cost spells around the Opus
   finishers. Same shape as the existing magecraft-aware scoring
   for cheap IS spells.
+
+## New suggestions (added 2026-05-04 push XLI)
+
+These came up while implementing the combat-damage prevention
+shield + Owlin Shieldmage promotion + Quandrix Biomathematician.
+
+### Engine
+
+- **`Effect::PreventDamageFromSource { source, amount }`** — CR
+  615.7-style "prevent the next N damage from `source`" shield
+  primitive. Closes Healing Salve mode 2 ("prevent the next 3
+  damage to any target this turn") + various per-source prevention
+  riders. Plumbing: a per-game-state `damage_prevention_shields:
+  Vec<DamageShield>` list, each shield tracking source / target /
+  remaining amount; checked at damage-deal time. Decrements until
+  empty, then expires. Distinct from the new
+  `combat_damage_prevented_this_turn` blanket flag — that one
+  short-circuits all combat damage events; this one would prevent
+  per-event damage amounts.
+
+- **`Predicate::CardsDrawnThisTurnAtLeast { who, at_least }`** —
+  syntactic sugar for `ValueAtLeast(CardsDrawnThisTurn(who), at_least)`.
+  The Faerie Mastermind promotion just used `ValueAtLeast` directly
+  but a dedicated predicate would mirror the existing
+  `LifeGainedThisTurnAtLeast` / `CardsLeftGraveyardThisTurnAtLeast`
+  family for grep-ability and consistent shape. Same evaluation
+  logic, just a cleaner card-side spelling.
+
+- **Counter-multiplier static** (Tanazir Quandrix). The "+1/+1
+  counters put on permanents you control are doubled" static is
+  blocked by the absence of a multiplier hook in `add_counters`. A
+  `StaticEffect::CounterPlacementMultiplier { filter, kind, factor }`
+  would let `Effect::AddCounter` query the source's controller's
+  battlefield for matching statics and multiply the counter count
+  before placement. Same shape as Doubling Season, Hardened
+  Scales, Pir, Imaginative Rascal.
+
+### UI
+
+- **Prevention shield indicator in combat HUD**. When
+  `combat_damage_prevented_this_turn` is true, the combat banner
+  should render a shield icon ("FOG" badge) so players see the
+  prevention is active before declaring blockers. Today the flag is
+  invisible to the UI — only the resolved-damage step reveals "no
+  damage was dealt".
+
+- **Hover hint for prevention-source permanents**. Owlin Shieldmage
+  / Spore Frog in play should hover-hint "shield up this turn" when
+  the prevention flag is set, so players can identify which source
+  triggered it.
+
+### Bot / AI
+
+- **Reactive prevention shields**. Bot doesn't yet know to
+  activate Spore Frog / cast Holy Day in response to lethal combat
+  damage. A small heuristic — "if incoming combat damage ≥ life
+  total, activate any prevention source available" — would prevent
+  game-loss in mirror matches with Spore Frog or Holy Day in
+  hand/play.
