@@ -43,6 +43,13 @@ Counts reflect the regenerated tables below (audited via
 - ⏳ todo: **7** (unchanged — all blocked by cast-from-exile / copy-
   permanent pipelines).
 
+Push XLVII (2026-05-04) targets the `decks::modern` package rather
+than the SOS catalog: 4 modern promotions (Unholy Heat, Dragon's Rage
+Channeler, Vendetta, Kolaghan's Command, all 🟡 → ✅) + 1 new engine
+primitive (`Value::DistinctCardTypesInGraveyard`) + 1 server view
+field (`PlayerView.distinct_card_types_in_graveyard`). SOS totals
+unchanged.
+
 Push XLV (2026-05-04) STX 2021 totals (per `scripts/audit_stx_base.py`):
 **106 ✅ / 17 🟡 / 0 ⏳ across 123 rows.** Push XLV's contribution
 to STX 2021 is zero new factories — the push focuses on the
@@ -78,6 +85,150 @@ All 248 cards marked ✅ or 🟡 have a corresponding factory in
 `crabomination/src/catalog/sets/sos/`; the audit script reports 0 false
 positives and 0 stale ⏳ rows. STX 2021 progress is tracked in the
 "Strixhaven base set (STX)" section near the bottom of this file.
+
+## 2026-05-04 push XLVII: 4 modern promotions + Delirium primitive + CR 121 audit
+
+Adds the new `Value::DistinctCardTypesInGraveyard(PlayerRef)` engine
+primitive (Modern Horizons 2 Delirium) and uses it to promote two
+Delirium cards (Unholy Heat, Dragon's Rage Channeler) from 🟡 to ✅.
+Also promotes Vendetta (life loss now scales with target's actual
+toughness via `Value::ToughnessOf` reordered before Destroy) and
+Kolaghan's Command (now uses `Effect::ChooseModes { count: 2 }`,
+matching printed "choose two"). New `PlayerView.distinct_card_types_
+in_graveyard` server-view field surfaces the Delirium count for UI
+hint rendering. Tests at 1474 (was 1468; +6 net).
+
+### New engine primitive: `Value::DistinctCardTypesInGraveyard(PlayerRef)`
+
+A new arm of the `Value` enum that returns the count of distinct
+card types across cards in the resolved player's graveyard. Same
+shape as `Value::DistinctTypesInTopOfLibrary`, but sourced from the
+graveyard rather than the library. Evaluated in `evaluate_value`
+via a fresh `HashSet<CardType>` walk over the resolved player's
+graveyard. Backs the printed "if there are four or more card types
+among cards in your graveyard" gate that anchors Modern Horizons 2's
+Delirium cycle.
+
+The primitive composes with the existing `Predicate::ValueAtLeast`
+and `Value::IfPredicate` arms — Unholy Heat's "deals 6 damage
+instead if Delirium is on" body becomes:
+
+```
+Value::IfPredicate {
+  cond: Predicate::ValueAtLeast(
+    Value::DistinctCardTypesInGraveyard(PlayerRef::You),
+    Value::Const(4),
+  ),
+  then: Box::new(Value::Const(6)),
+  else_: Box::new(Value::Const(3)),
+}
+```
+
+For "static while Delirium is on" body buffs (Dragon's Rage
+Channeler's "+2/+2 and flying"), the primitive isn't directly usable
+— Layer 7 / Layer 6 modifications need pre-computed integer values,
+not Value-typed expressions. So the DRC hookup uses the same compute-
+time injection pattern as Tarmogoyf / Cruel Somnophage in
+`compute_battlefield`: read the controller's distinct-card-types
+count, and if ≥ 4, push a `ModifyPowerToughness(2, 2)` continuous
+effect plus an `AddKeyword(Flying)` continuous effect.
+
+### Promotions (4: 🟡 → ✅)
+
+| Card | Status | Notes |
+|---|---|---|
+| Unholy Heat | ✅ ← 🟡 | Delirium upgrade now wires faithfully via `Value::IfPredicate { cond: Predicate::ValueAtLeast(DistinctCardTypesInGraveyard(You), 4), then: 6, else_: 3 }`. |
+| Dragon's Rage Channeler | ✅ ← 🟡 | "+2/+2 and flying as long as ≥4 distinct card types in your graveyard" now wires via compute-time injection in `compute_battlefield` (same path as Tarmogoyf / Cruel Somnophage). |
+| Vendetta | ✅ ← 🟡 | "Lose life equal to its toughness" now reads the actual toughness via `Value::ToughnessOf(Target(0))` — `LoseLife` resolves *first* in the Seq so the target is still on bf when its toughness is read; then `Destroy` fires. Same pattern Swords to Plowshares uses for `PowerOf(Target)`. |
+| Kolaghan's Command | ✅ ← 🟡 | "Choose two" now wires via `Effect::ChooseModes { count: 2, up_to: false, allow_duplicates: false }` — same primitive the STX Commands use (push XXXVI). AutoDecider picks modes 0+1 (gy-recursion + opp-discard). |
+
+### Server view: `PlayerView.distinct_card_types_in_graveyard`
+
+`u32` field that mirrors the new
+`distinct_card_types_in_graveyard(seat)` engine helper. Surfaced so
+clients can render "Delirium active" hints (for DRC, Unholy Heat,
+future MH2 Delirium payoffs) and display the current count out of 4.
+Defaulted via `#[serde(default)]` for back-compat with older
+serialized views.
+
+### CR 121 audit (Drawing a Card)
+
+Rule-by-rule status, per `MagicCompRules_20260417.txt` lines 1132-1166:
+
+- **121.1** (draw = top of library to hand) ✅ — `Effect::Draw` and the
+  turn-based draw step in `stack.rs::TurnStep::Draw` both call
+  `Player::draw_top` which removes from `library[0]` (top) and pushes
+  onto `hand`.
+- **121.2** (cards drawn one at a time) ✅ — `Effect::Draw` evaluates
+  `amount` then loops `for _ in 0..n` issuing `draw_top` per
+  iteration. Each draw emits a separate `GameEvent::CardDrawn`.
+- **121.2a** (replacement effects modify the count before draw) 🟡 —
+  the engine has no draw-replacement primitive yet (no Dredge, no
+  Sylvan Library, no "draw N → mill instead"). The `amount` is fixed
+  at evaluation time.
+- **121.2b** ("can't draw more than one card each turn" applies per
+  individual draw) ⏳ — no per-turn-draw-cap static yet (Dauthi
+  Voidwalker's downside, Underworld Dreams sibling).
+- **121.2c** (multi-player draws: AP first, then NAP) 🟡 — partial.
+  Single-target draws (`Selector::You`) trivially APNAP-correct; multi-
+  player draws over `EachPlayer` resolve in seat-index order which
+  matches APNAP when the active player is seat 0 but breaks down on
+  later turns. No per-effect APNAP re-ordering primitive.
+- **121.2d** (Two-Headed Giant team-draws) — N/A: engine is
+  duel-only; no team-turn option.
+- **121.3** (empty-library draw still happens if "may") 🟡 — the
+  "may" optionality is wired via `Effect::MayDo`, but the empty-
+  library check in `Effect::Draw` causes elimination on the first
+  draw (per CR 121.4) regardless of "may". The "you can choose to
+  draw 0 from an empty library" subtlety isn't tracked.
+- **121.4** (deck-out → loss) ✅ — `Effect::Draw` sets
+  `players[p].eliminated = true` on empty-library draw. The SBA pass
+  in `check_state_based_actions` handles the actual game-over (CR
+  704 cross-reference is faithful).
+- **121.5** (zone moves without "draw" don't trigger draw triggers) ✅
+  — `Effect::Move { to: Hand(_) }` emits `GameEvent::CardEntersHand`
+  (or similar), distinct from `GameEvent::CardDrawn`. Sheoldred's
+  CardDrawn trigger only fires from `Effect::Draw` paths. Stitcher's
+  Supplier and similar mill effects use `Effect::Mill` or
+  `Effect::Move`, also distinct. `Effect::Search { to: Hand }` and
+  reveal-then-take-to-hand effects (RevealUntilFind, Telling Time,
+  Sleight of Hand approximations) likewise emit CardDrawn-distinct
+  events.
+- **121.6** (replacement effects on draws) ⏳ — see 121.2a; no
+  draw-replacement primitive yet.
+- **121.6a-c** (replacement details, replacements interrupting
+  sequences, replacement-then-additional-action) ⏳ — same gap.
+- **121.7** (replacement/prevention causing further draws) ⏳ — same
+  gap as 121.6.
+- **121.8** (draw mid-cast → face-down until cast) ⏳ — no face-down
+  in-hand state. Spell casts that draw cards (Manamorphose-style
+  cantrips) all draw at resolution, not mid-cast — so this rule's
+  edge case isn't observable in the catalog today.
+- **121.9** (look-then-reveal optionality) ⏳ — no per-card "may
+  reveal as drawn" prompt; no cards in the catalog use this.
+
+### 6 new tests
+
+- 4 Delirium tests:
+  - `unholy_heat_delirium_off_deals_three` — gy with 1 type, deal 3.
+  - `unholy_heat_delirium_on_deals_six` — gy with 4 types, deal 6.
+  - `dragons_rage_channeler_no_delirium_stays_one_one` — empty gy,
+    body stays 1/1 no flying.
+  - `dragons_rage_channeler_delirium_three_three_flying` — gy with 4
+    types, body becomes 3/3 with flying.
+- 1 Vendetta scaling test:
+  - `vendetta_loses_six_life_on_six_toughness_target` — 6/6 target
+    drains 6 life (vs the prior flat 2).
+- 1 server view test:
+  - `player_view_surfaces_distinct_card_types_in_graveyard` —
+    `PlayerView.distinct_card_types_in_graveyard` reflects gy
+    distinct-type count.
+
+The Kolaghan's Command promotion was an in-place rename of the
+existing `kolaghans_command_has_four_modes_chooses_one` test to
+`..._chooses_two`, with the body upgraded to assert the
+`ChooseModes { count: 2, up_to: false, allow_duplicates: false }`
+shape rather than the old `ChooseMode(modes)` shape.
 
 ## 2026-05-04 push XLVI: 16 new modern cards + AnotherOfYours ETB de-dup + CR 605 audit
 

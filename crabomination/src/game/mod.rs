@@ -344,6 +344,36 @@ impl GameState {
                     modification: Modification::SetPowerToughness(n, n),
                 });
             }
+            // Dragon's Rage Channeler — Delirium static: "+2/+2 and has
+            // flying as long as there are four or more card types among
+            // cards in your graveyard." Compute-time injection: when the
+            // controller's graveyard has ≥4 distinct card types, push a
+            // layer-7c PumpPT(+2/+2) and a layer-6 GrantKeyword(Flying).
+            // Otherwise the body resolves to its printed 1/1 with no
+            // flying. Read against the controller's gy (printed wording).
+            if name == "Dragon's Rage Channeler" {
+                let n = self.distinct_card_types_in_graveyard(card.controller);
+                if n >= 4 {
+                    all_effects.push(ContinuousEffect {
+                        timestamp: card.id.0 as u64,
+                        source: card.id,
+                        affected: AffectedPermanents::Source,
+                        layer: Layer::L7PowerTough,
+                        sublayer: Some(PtSublayer::Modify),
+                        duration: EffectDuration::WhileSourceOnBattlefield,
+                        modification: Modification::ModifyPowerToughness(2, 2),
+                    });
+                    all_effects.push(ContinuousEffect {
+                        timestamp: card.id.0 as u64,
+                        source: card.id,
+                        affected: AffectedPermanents::Source,
+                        layer: Layer::L6Ability,
+                        sublayer: None,
+                        duration: EffectDuration::WhileSourceOnBattlefield,
+                        modification: Modification::AddKeyword(crate::card::Keyword::Flying),
+                    });
+                }
+            }
         }
         apply_layers(&self.battlefield, &all_effects)
     }
@@ -361,6 +391,22 @@ impl GameState {
             }
         }
         seen.len()
+    }
+
+    /// Count of distinct card types in a single player's graveyard.
+    /// Used by Modern Horizons 2 Delirium payoffs (Dragon's Rage
+    /// Channeler's "+2/+2 and flying" body buff, Unholy Heat's
+    /// 3 → 6 damage scale-up). Same shape as
+    /// `distinct_card_types_in_all_graveyards`, just narrowed to one
+    /// graveyard.
+    pub fn distinct_card_types_in_graveyard(&self, seat: usize) -> i32 {
+        let mut seen: std::collections::HashSet<CardType> = std::collections::HashSet::new();
+        for card in &self.players[seat].graveyard {
+            for ct in &card.definition.card_types {
+                seen.insert(ct.clone());
+            }
+        }
+        seen.len() as i32
     }
 
     /// Get the computed state of a single permanent (or None if not on battlefield).

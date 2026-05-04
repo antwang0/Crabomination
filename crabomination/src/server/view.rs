@@ -93,6 +93,15 @@ fn project_player(player: &Player, player_seat: usize, viewer_seat: usize) -> Pl
         cards_exiled_this_turn: player.cards_exiled_this_turn,
         instants_or_sorceries_cast_this_turn: player.instants_or_sorceries_cast_this_turn,
         creatures_cast_this_turn: player.creatures_cast_this_turn,
+        distinct_card_types_in_graveyard: {
+            let mut seen = std::collections::HashSet::new();
+            for card in &player.graveyard {
+                for ct in &card.definition.card_types {
+                    seen.insert(ct.clone());
+                }
+            }
+            seen.len() as u32
+        },
     }
 }
 

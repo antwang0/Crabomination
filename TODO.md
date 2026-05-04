@@ -7,6 +7,44 @@ See `CUBE_FEATURES.md` (cube-card implementation status) and
 
 ## Recent additions
 
+- ✅ **Push XLVII (2026-05-04)**: 4 modern promotions + Delirium primitive
+  + CR 121 audit. Tests at 1474 (was 1468; +6 net), all green.
+  - **New engine primitive: `Value::DistinctCardTypesInGraveyard(
+    PlayerRef)`** — counts distinct card types across cards in the
+    resolved player's graveyard. Composes with `Value::IfPredicate`
+    and `Predicate::ValueAtLeast` for "if Delirium, then X else Y"
+    bodies. Backs the Modern Horizons 2 Delirium cycle.
+  - **4 promotions (🟡 → ✅)**:
+    - **Unholy Heat** — Delirium "deals 6 instead if ≥4 distinct
+      card types in your graveyard" now wires faithfully via
+      `Value::IfPredicate` over the new primitive.
+    - **Dragon's Rage Channeler** — "+2/+2 and flying when Delirium"
+      body buff now wires via compute-time injection in
+      `compute_battlefield` (same path as Tarmogoyf / Cruel
+      Somnophage). 1/1 → 3/3 Flying once gy hits 4 types.
+    - **Vendetta** — "lose life equal to its toughness" now reads
+      target's actual toughness via `Value::ToughnessOf(Target(0))`,
+      with `LoseLife` resolved before `Destroy` in the Seq so the
+      target is still on bf. 6/6 target drains 6 life (was flat 2).
+    - **Kolaghan's Command** — "choose two" now uses
+      `Effect::ChooseModes { count: 2 }` (was `Effect::ChooseMode`
+      single-pick collapse). AutoDecider picks modes 0+1.
+  - **Server view enrichment**:
+    `PlayerView.distinct_card_types_in_graveyard: u32` — reflects
+    the new engine helper. Lets clients render "Delirium active"
+    hints on DRC, Unholy Heat, future MH2 Delirium payoffs.
+    Defaulted via `#[serde(default)]` for back-compat.
+  - **CR 121 audit (Drawing a Card)**: rule-by-rule status in
+    STRIXHAVEN2.md push XLVII. Highlights: 121.1 (top of library
+    → hand) ✅, 121.2 (one at a time) ✅, 121.4 (deck-out → loss)
+    ✅, 121.5 (zone moves ≠ draws) ✅. Still 🟡: 121.2a, 121.2c
+    (APNAP for multi-player draws), 121.3 (empty-library "may"
+    nuance). Still ⏳: 121.2b (per-turn-draw-cap), 121.6/7 (draw
+    replacement primitive), 121.8 (face-down-until-cast for
+    mid-cast draws), 121.9 (look-then-reveal).
+  - **6 new tests**: 4 Delirium (Unholy Heat off / on, DRC off /
+    on), 1 Vendetta toughness-scaling, 1 PlayerView surface test.
+
 - ✅ **Push XLVI (2026-05-04)**: 16 new modern cards + AnotherOfYours
   ETB de-dup + CR 605 (Mana Abilities) audit. Tests at 1468 (was
   1445; +23 net), all green.
@@ -673,6 +711,60 @@ See `CUBE_FEATURES.md` (cube-card implementation status) and
     reject / Mascot steal + revert), 9 cube-card tests (one per new
     card + body sanity for vanilla bodies), 1 view test
     (`ability_cost_label_renders_exile_gy_cost`).
+
+## Future work — engine/UI suggestions surfaced by push XLVII
+
+Push XLVII adds the `Value::DistinctCardTypesInGraveyard` primitive
+and uses compute-time injection for Dragon's Rage Channeler. The
+following remain open:
+
+- **Static-effect-with-Predicate-gate primitive** — DRC's body buff
+  works because we hardcoded it in `compute_battlefield`. Generalizing
+  this to a `StaticEffect::PumpPTGated { applies_to, power, toughness,
+  cond: Predicate }` would let cards like Pelt Collector
+  (counter-count-gated trample), Tenured Concocter (Infusion +2/+0),
+  Thornfist Striker (Infusion +1/+0 trample), and other "as long as
+  X holds, [self|other] gets +N/+M" cards wire faithfully without per-
+  card hardcoding. Same shape gates a `StaticEffect::GrantKeywordGated`
+  for keyword grants under the same condition.
+- **Per-turn draw cap (CR 121.2b)** — "can't draw more than one card
+  each turn" lock (Underworld Dreams, Dauthi Voidwalker downsides).
+  Currently no static that gates `Effect::Draw` invocations; would
+  need a per-player turn counter + a `Player.cards_drawn_this_turn`-
+  aware cap check in the Draw effect handler.
+- **Draw-replacement primitive (CR 121.6 / 121.7)** — Dredge,
+  Sylvan Library "look at top 3 take 1 + may pay 4 to keep all 3",
+  Frantic Search, Brainstorm-style "draw + put back" — these all
+  replace the basic draw. Would need a replacement-effect chain
+  with `EventKind::DrawingCard` that fires *before* `Player::draw_top`
+  resolves, with the replacement effect's body running instead.
+- **Power-comparison Predicate** — Pelt Collector / Avatar of the
+  Resolute / Dragonlord Ojutai / etc. need a "trigger source has
+  greater [power|toughness] than self" predicate. Today we have
+  `Value::PowerOf` and `Predicate::ValueAtLeast`, so the shape is
+  already expressible via `Predicate::ValueAtLeast(PowerOf(
+  TriggerSource), Sum([PowerOf(SelfSource), Const(1)]))` — the
+  recipe just needs to be wired into a card factory and proven. No
+  new primitive required.
+- **Damage-then-exile-if-dies-this-turn replacement** — Pillar of
+  Flame, Magma Spray, Lava Coil, Wilt in the Heat all want this.
+  Today the engine has a `Effect::Exile` and a damage-prevention
+  shield (push XLI), but no "would-die → exile instead" replacement
+  for damage-dealt cards. Would need `Effect::DealDamageThenExileIfDies`
+  or a per-card `until_eot_exile_replacement` flag stamped on the
+  damaged permanent.
+- **Lifegain-prevention static (Roiling Vortex, Erebos)** — "Players
+  can't gain life" continuous lock. Would need `StaticEffect::
+  LifegainCantHappen { applies_to: PlayerRef }` checked inside
+  `Effect::GainLife` before the life delta is applied. Lifelink
+  resolution should also respect this. Same gap blocks Skullcrack's
+  "can't gain life this turn" rider.
+- **Server view enrichment**: surface `PlayerView.delirium_active:
+  bool` (== `distinct_card_types_in_graveyard >= 4`) directly so
+  clients don't need to recompute the threshold. Same shape as
+  `infusion_ready` (life_gained_this_turn ≥ 1) which clients
+  currently derive from `life_gained_this_turn`. Either add the
+  derived bool, or document that clients should derive it.
 
 ## Future work — engine/UI suggestions surfaced by push XL
 

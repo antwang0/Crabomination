@@ -279,6 +279,18 @@ pub enum Value {
     /// the post-X cmc off the stack item, so a {X}{R} bolt cast for X=3
     /// returns 4.
     ManaSpentToCast,
+    /// Number of distinct card types across cards in `who`'s graveyard.
+    /// "Card types" here is the printed-card-type set (Creature,
+    /// Sorcery, Instant, Artifact, Enchantment, Planeswalker, Land,
+    /// Battle, Tribal/Kindred). Modal-double-faced cards count both
+    /// faces' card-type sets only on whichever face is in the graveyard.
+    ///
+    /// Used by the Modern Horizons 2 "Delirium" cycle (Dragon's Rage
+    /// Channeler, Unholy Heat, Tarmogoyf-style scaling) — the printed
+    /// "if there are four or more card types among cards in your
+    /// graveyard" gate combines with `Predicate::ValueAtLeast(
+    /// DistinctCardTypesInGraveyard(You), 4)`.
+    DistinctCardTypesInGraveyard(PlayerRef),
     /// Conditional value: evaluates `then` if `cond` holds, else `else_`.
     /// Lets a `Value` branch on a `Predicate` evaluated against the same
     /// `EffectContext`. Used by Wilt in the Heat's cost-reduction-when-

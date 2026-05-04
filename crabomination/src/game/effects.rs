@@ -1996,6 +1996,17 @@ impl GameState {
                 .unwrap_or(0),
             Value::CardsDiscardedThisResolution => self.cards_discarded_this_resolution as i32,
             Value::AttackersThisCombat => self.attacking.len() as i32,
+            Value::DistinctCardTypesInGraveyard(p) => {
+                let Some(seat) = self.resolve_player(p, ctx) else { return 0; };
+                let mut seen: std::collections::HashSet<CardType> =
+                    std::collections::HashSet::new();
+                for card in self.players[seat].graveyard.iter() {
+                    for t in &card.definition.card_types {
+                        seen.insert(t.clone());
+                    }
+                }
+                seen.len() as i32
+            }
             Value::IfPredicate { cond, then, else_ } => {
                 if self.evaluate_predicate(cond, ctx) {
                     self.evaluate_value(then, ctx)

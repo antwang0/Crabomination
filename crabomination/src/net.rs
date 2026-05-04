@@ -134,6 +134,16 @@ pub struct PlayerView {
     /// turn, …" payoffs.
     #[serde(default)]
     pub creatures_cast_this_turn: u32,
+    /// Number of distinct card types across cards in this player's
+    /// graveyard. Surfaced so UIs can show "Delirium active" hints on
+    /// MH2 Delirium payoffs (Dragon's Rage Channeler's body buff,
+    /// Unholy Heat's 3 → 6 damage scale-up, future cards). The
+    /// threshold is 4; clients can render the full count or
+    /// `min(count, 4)` as preferred. Push XLVII addition; defaulted
+    /// via `#[serde(default)]` for back-compat with older serialized
+    /// views.
+    #[serde(default)]
+    pub distinct_card_types_in_graveyard: u32,
 }
 
 /// A single hand-slot entry. `Hidden` for cards the viewer isn't entitled to

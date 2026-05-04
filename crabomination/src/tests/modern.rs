@@ -9407,13 +9407,16 @@ fn pelt_collector_is_a_1_1_elf_warrior() {
 // ── Push XXV cube additions ─────────────────────────────────────────────────
 
 #[test]
-fn kolaghans_command_has_four_modes_chooses_one() {
+fn kolaghans_command_has_four_modes_chooses_two() {
     let kc = catalog::kolaghans_command();
     assert_eq!(kc.name, "Kolaghan's Command");
-    if let crate::card::Effect::ChooseMode(modes) = &kc.effect {
+    if let crate::card::Effect::ChooseModes { modes, count, up_to, allow_duplicates } = &kc.effect {
         assert_eq!(modes.len(), 4, "Kolaghan's Command should have 4 modes");
+        assert_eq!(*count, 2, "should choose 2 modes (push XLVII)");
+        assert!(!*up_to, "exactly 2, not up-to");
+        assert!(!*allow_duplicates, "no duplicate-mode picks");
     } else {
-        panic!("Kolaghan's Command should be a ChooseMode effect");
+        panic!("Kolaghan's Command should be a ChooseModes effect");
     }
 }
 
@@ -9487,9 +9490,9 @@ fn twincast_copies_target_instant_spell() {
 }
 
 #[test]
-fn vendetta_destroys_nonblack_creature_and_loses_two_life() {
+fn vendetta_destroys_nonblack_creature_and_loses_life_equal_to_toughness() {
     let mut g = two_player_game();
-    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
     g.clear_sickness(bear);
     let life_before = g.players[0].life;
 
@@ -9505,7 +9508,30 @@ fn vendetta_destroys_nonblack_creature_and_loses_two_life() {
     assert!(!g.battlefield.iter().any(|c| c.id == bear),
         "bear should be destroyed");
     assert_eq!(g.players[0].life, life_before - 2,
-        "Vendetta caster should lose 2 life");
+        "Vendetta caster should lose life equal to bear's toughness (2)");
+}
+
+/// Vendetta — life loss scales with target's actual toughness
+/// (not flat 2). A 6-toughness target should drain 6 life.
+#[test]
+fn vendetta_loses_six_life_on_six_toughness_target() {
+    let mut g = two_player_game();
+    let big = g.add_card_to_battlefield(1, catalog::lumra_bellow_of_the_woods()); // 6/6
+    g.clear_sickness(big);
+    let life_before = g.players[0].life;
+
+    let id = g.add_card_to_hand(0, catalog::vendetta());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(big)),
+        mode: None, x_value: None,
+    }).expect("Vendetta castable for {B}");
+    drain_stack(&mut g);
+
+    assert!(!g.battlefield.iter().any(|c| c.id == big),
+        "6/6 should be destroyed");
+    assert_eq!(g.players[0].life, life_before - 6,
+        "Vendetta caster should lose 6 life on 6/6 target");
 }
 
 #[test]
@@ -11405,5 +11431,121 @@ fn soul_warden_does_not_trigger_on_self_etb() {
     // No life change — Soul Warden doesn't trigger off its own ETB.
     assert_eq!(g.players[0].life, life_before,
         "Soul Warden's 'another creature' rider excludes self ETB");
+}
+
+// ── Push XLVII: Delirium fidelity (Unholy Heat / DRC) ───────────────────────
+
+/// Unholy Heat — Delirium upgrade fires when ≥4 distinct card types
+/// are in your graveyard. With only 1 distinct type (creatures), the
+/// damage stays at 3.
+#[test]
+fn unholy_heat_delirium_off_deals_three() {
+    let mut g = two_player_game();
+    // Stuff opp's bf with a 6-toughness creature so the 3-damage half
+    // doesn't kill it but the 6-damage half would.
+    let big = g.add_card_to_battlefield(1, catalog::lumra_bellow_of_the_woods()); // 6/6
+    g.clear_sickness(big);
+
+    // Caster's graveyard has only 1 card type (creature). Stage one
+    // bear in gy so the gate eval has *something* to read.
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+
+    let id = g.add_card_to_hand(0, catalog::unholy_heat());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(big)), mode: None, x_value: None,
+    }).expect("Unholy Heat castable for {R}");
+    drain_stack(&mut g);
+
+    // 7/6 hit for 3 — survives.
+    assert!(g.battlefield.iter().any(|c| c.id == big),
+        "6/6 survives 3 damage from non-Delirium Unholy Heat");
+}
+
+/// Unholy Heat — Delirium ON: ≥4 distinct card types means 6 damage,
+/// which kills a 7/6 Carnage Tyrant.
+#[test]
+fn unholy_heat_delirium_on_deals_six() {
+    let mut g = two_player_game();
+    let big = g.add_card_to_battlefield(1, catalog::lumra_bellow_of_the_woods()); // 6/6
+    g.clear_sickness(big);
+
+    // Stage 4 distinct card types in caster's graveyard:
+    // Creature (Bear), Sorcery (Cathartic Reunion), Instant (Lightning Bolt),
+    // Land (Island).
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.add_card_to_graveyard(0, catalog::cathartic_reunion());
+    g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    g.add_card_to_graveyard(0, catalog::island());
+
+    let id = g.add_card_to_hand(0, catalog::unholy_heat());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(big)), mode: None, x_value: None,
+    }).expect("Unholy Heat castable for {R}");
+    drain_stack(&mut g);
+
+    // Toughness-6 body hit for 6 → dies via SBA.
+    assert!(!g.battlefield.iter().any(|c| c.id == big),
+        "6/6 dies to 6 damage from Delirium Unholy Heat");
+}
+
+/// Dragon's Rage Channeler — body buff fires only when Delirium is
+/// active. With <4 distinct card types in your graveyard the body
+/// stays a 1/1 with no flying.
+#[test]
+fn dragons_rage_channeler_no_delirium_stays_one_one() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let drc = g.add_card_to_battlefield(0, catalog::dragons_rage_channeler());
+    g.clear_sickness(drc);
+
+    let computed = g.computed_permanent(drc).expect("DRC on bf");
+    assert_eq!(computed.power, 1, "DRC stays 1 power without Delirium");
+    assert_eq!(computed.toughness, 1, "DRC stays 1 toughness without Delirium");
+    assert!(!computed.keywords.contains(&Keyword::Flying),
+        "DRC has no flying without Delirium");
+}
+
+/// Server view enrichment — `PlayerView.distinct_card_types_in_graveyard`
+/// reflects the graveyard's distinct card-type count for Delirium UIs.
+#[test]
+fn player_view_surfaces_distinct_card_types_in_graveyard() {
+    use crate::server::view::project;
+    let mut g = two_player_game();
+    // Stage 4 distinct types in caster's graveyard.
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());     // Creature
+    g.add_card_to_graveyard(0, catalog::cathartic_reunion()); // Sorcery
+    g.add_card_to_graveyard(0, catalog::lightning_bolt());    // Instant
+    g.add_card_to_graveyard(0, catalog::island());            // Land
+
+    let view = project(&g, 0);
+    assert_eq!(view.players[0].distinct_card_types_in_graveyard, 4,
+        "view should report 4 distinct types");
+    assert_eq!(view.players[1].distinct_card_types_in_graveyard, 0,
+        "opp view should report 0 (empty graveyard)");
+}
+
+/// Dragon's Rage Channeler — body buff fires when Delirium is active
+/// (≥4 distinct card types in your graveyard). Body becomes 3/3 with
+/// flying.
+#[test]
+fn dragons_rage_channeler_delirium_three_three_flying() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    // Stage 4 distinct card types in caster's graveyard.
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.add_card_to_graveyard(0, catalog::cathartic_reunion());
+    g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    g.add_card_to_graveyard(0, catalog::island());
+
+    let drc = g.add_card_to_battlefield(0, catalog::dragons_rage_channeler());
+    g.clear_sickness(drc);
+
+    let computed = g.computed_permanent(drc).expect("DRC on bf");
+    assert_eq!(computed.power, 3, "DRC becomes 3 power with Delirium");
+    assert_eq!(computed.toughness, 3, "DRC becomes 3 toughness with Delirium");
+    assert!(computed.keywords.contains(&Keyword::Flying),
+        "DRC gains Flying with Delirium");
 }
 

@@ -7742,13 +7742,14 @@ pub fn boros_charm() -> CardDefinition {
 /// and has flying as long as there are four or more card types among
 /// cards in your graveyard."
 ///
-/// 🟡 Body wired (1/1 Human Shaman, red). Surveil-on-noncreature-cast
-/// trigger wired faithfully — uses `EventScope::YourControl` filtered
-/// to `¬HasCardType(Creature)` against the just-cast spell. Delirium
-/// static (+2/+2 + flying based on graveyard card-type diversity) is
-/// omitted (no "card types in graveyard" Value primitive yet — same
-/// gap as Tarmogoyf's P/T scaling, which we approximate with a flat
-/// 4/5).
+/// ✅ Push XLVII: 🟡 → ✅. Surveil-on-noncreature-cast trigger wired
+/// (`EventScope::YourControl` filtered to `¬HasCardType(Creature)`).
+/// Delirium static (+2/+2 + flying when ≥4 distinct card types in
+/// your graveyard) now wires faithfully via the new compute-time
+/// injection in `compute_battlefield` — same hardcoded path as
+/// Tarmogoyf / Cruel Somnophage, gated on
+/// `distinct_card_types_in_graveyard(controller)`. Lands a 3/3
+/// Flying body when the graveyard has 4 distinct card types.
 pub fn dragons_rage_channeler() -> CardDefinition {
     CardDefinition {
         name: "Dragon's Rage Channeler",
@@ -7783,12 +7784,13 @@ pub fn dragons_rage_channeler() -> CardDefinition {
 /// that permanent instead if there are four or more card types among
 /// cards in your graveyard."
 ///
-/// 🟡 Mainline 3-damage half wired faithfully. The Delirium upgrade to
-/// 6 damage is omitted (no "card types in graveyard" Value primitive
-/// yet — same gap as Dragon's Rage Channeler's body buff). The 3-
-/// damage version is still one of the best removal spells in red at
-/// 1 mana.
+/// ✅ Push XLVII: 🟡 → ✅. The Delirium upgrade now wires faithfully via
+/// the new `Value::DistinctCardTypesInGraveyard(You)` primitive plus
+/// `Value::IfPredicate` — at ≥4 distinct card types in your graveyard
+/// the damage jumps from 3 to 6, otherwise stays at 3. Same shape
+/// powers Dragon's Rage Channeler's body buff.
 pub fn unholy_heat() -> CardDefinition {
+    use crate::card::Predicate;
     CardDefinition {
         name: "Unholy Heat",
         cost: cost(&[r()]),
@@ -7797,7 +7799,14 @@ pub fn unholy_heat() -> CardDefinition {
             to: target_filtered(
                 SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
             ),
-            amount: Value::Const(3),
+            amount: Value::IfPredicate {
+                cond: Box::new(Predicate::ValueAtLeast(
+                    Value::DistinctCardTypesInGraveyard(PlayerRef::You),
+                    Value::Const(4),
+                )),
+                then: Box::new(Value::Const(6)),
+                else_: Box::new(Value::Const(3)),
+            },
         },
         ..Default::default()
     }
@@ -7914,53 +7923,57 @@ pub fn pegasus_stampede() -> CardDefinition {
 ///  • Kolaghan's Command deals 2 damage to target creature or planeswalker.
 ///  • Destroy target artifact."
 ///
-/// 🟡 Same approximation as Boros Charm and the STX Commands: printed
-/// "choose two" collapses to "choose one" via `Effect::ChooseMode` (no
-/// multi-pick primitive). Each individual mode is wired faithfully —
-/// gy-recursion via `Selector::take` over creatures-in-gy, opp-discard
-/// via `Effect::Discard { random: true }` collapsed to caster-picks
-/// (we use random discard since no opp-side hand picker), 2 dmg via
-/// `target_filtered(Creature ∨ Planeswalker)`, and `Effect::Destroy`
-/// against an artifact target. BR midrange staple.
+/// ✅ Push XLVII: 🟡 → ✅. "Choose two" now wires faithfully via
+/// `Effect::ChooseModes { count: 2 }` (same primitive the STX
+/// Commands use, push XXXVI). AutoDecider picks modes 0+1 (gy-
+/// recursion + opp-discard — the canonical value pair for BR
+/// midrange tempo). ScriptedDecider drives target-bearing pairs in
+/// tests. Each individual mode is wired faithfully — gy-recursion
+/// via `Selector::take` over creatures-in-gy, opp-discard via
+/// `Effect::Discard { random: true }`, 2 dmg via
+/// `target_filtered(Creature ∨ Planeswalker)`, destroy artifact.
 pub fn kolaghans_command() -> CardDefinition {
     use crate::card::Zone;
     CardDefinition {
         name: "Kolaghan's Command",
         cost: cost(&[b(), r()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::ChooseMode(vec![
-            // Mode 0: return creature card from your gy → hand.
-            Effect::Move {
-                what: Selector::take(
-                    Selector::CardsInZone {
-                        who: PlayerRef::You,
-                        zone: Zone::Graveyard,
-                        filter: SelectionRequirement::Creature,
-                    },
-                    Value::Const(1),
-                ),
-                to: ZoneDest::Hand(PlayerRef::You),
-            },
-            // Mode 1: target opp discards a card (random — we have no
-            // multi-step "opp picks" prompt for triggered Discard, so the
-            // random flag is a faithful approximation of "they choose").
-            Effect::Discard {
-                who: Selector::Player(PlayerRef::EachOpponent),
-                amount: Value::Const(1),
-                random: true,
-            },
-            // Mode 2: 2 damage to creature or planeswalker.
-            Effect::DealDamage {
-                to: target_filtered(
-                    SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
-                ),
-                amount: Value::Const(2),
-            },
-            // Mode 3: destroy target artifact.
-            Effect::Destroy {
-                what: target_filtered(SelectionRequirement::HasCardType(CardType::Artifact)),
-            },
-        ]),
+        effect: Effect::ChooseModes {
+            count: 2,
+            up_to: false,
+            allow_duplicates: false,
+            modes: vec![
+                // Mode 0: return creature card from your gy → hand.
+                Effect::Move {
+                    what: Selector::take(
+                        Selector::CardsInZone {
+                            who: PlayerRef::You,
+                            zone: Zone::Graveyard,
+                            filter: SelectionRequirement::Creature,
+                        },
+                        Value::Const(1),
+                    ),
+                    to: ZoneDest::Hand(PlayerRef::You),
+                },
+                // Mode 1: target opp discards a card (random).
+                Effect::Discard {
+                    who: Selector::Player(PlayerRef::EachOpponent),
+                    amount: Value::Const(1),
+                    random: true,
+                },
+                // Mode 2: 2 damage to creature or planeswalker.
+                Effect::DealDamage {
+                    to: target_filtered(
+                        SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+                    ),
+                    amount: Value::Const(2),
+                },
+                // Mode 3: destroy target artifact.
+                Effect::Destroy {
+                    what: target_filtered(SelectionRequirement::HasCardType(CardType::Artifact)),
+                },
+            ],
+        },
         ..Default::default()
     }
 }
@@ -8028,29 +8041,30 @@ pub fn reverberate() -> CardDefinition {
 /// Vendetta — {B} Instant. "Destroy target nonblack creature. You lose
 /// life equal to its toughness."
 ///
-/// 🟡 Mainline destroy half wired faithfully (target filter = Creature ∧
-/// ¬Black via `SelectionRequirement::HasColor(Black).negate()`). The
-/// "lose life equal to its toughness" rider collapses to a flat 2-life
-/// payment — `Value` doesn't yet have a "toughness of pre-destroy
-/// target" reader (the target is in the graveyard by the time the
-/// life-loss step would resolve, and `Value::ToughnessOf` reads from
-/// the battlefield). Same gap as Bone Splinters' generic-cost
-/// approximation; tracked in TODO.md.
+/// ✅ Push XLVII: 🟡 → ✅. The "lose life equal to its toughness" rider
+/// now wires faithfully — `Effect::LoseLife` resolves *first* in the
+/// `Seq` so the target is still on the battlefield when
+/// `Value::ToughnessOf(Target(0))` reads its toughness. Then
+/// `Effect::Destroy` fires. Same target-still-on-bf-pattern that
+/// Swords to Plowshares uses for `Value::PowerOf(Target)` — life
+/// payment slots in before the kill, mirroring the printed Oracle's
+/// "destroy. You lose life equal to its toughness" timing where the
+/// life-loss is computed off the still-resolving creature.
 pub fn vendetta() -> CardDefinition {
     CardDefinition {
         name: "Vendetta",
         cost: cost(&[b()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
+            Effect::LoseLife {
+                who: Selector::You,
+                amount: Value::ToughnessOf(Box::new(Selector::Target(0))),
+            },
             Effect::Destroy {
                 what: target_filtered(
                     SelectionRequirement::Creature
                         .and(SelectionRequirement::HasColor(Color::Black).negate()),
                 ),
-            },
-            Effect::LoseLife {
-                who: Selector::You,
-                amount: Value::Const(2),
             },
         ]),
         ..Default::default()
@@ -10217,5 +10231,4 @@ pub fn persist() -> CardDefinition {
         ..Default::default()
     }
 }
-
 
