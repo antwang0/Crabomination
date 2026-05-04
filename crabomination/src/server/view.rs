@@ -117,16 +117,29 @@ fn known_card(card: &CardInstance) -> KnownCard {
             .back_face
             .as_ref()
             .map(|b| b.name.to_string()),
-        // Additional cast cost label: today only "sacrifice a creature"
-        // is supported (Daemogoth Woe-Eater, Eyeblight Cullers); a
-        // future filter could surface "sacrifice an artifact",
-        // "sacrifice a land", etc. Maps the SelectionRequirement to a
-        // human-readable phrase via a tiny ad-hoc renderer.
-        additional_cost_label: card
-            .definition
-            .additional_sac_cost
-            .as_ref()
-            .map(additional_sac_cost_label),
+        // Additional cast cost label: combines `additional_sac_cost`
+        // (Daemogoth Woe-Eater, Eyeblight Cullers; push XXXIX) and
+        // `additional_discard_cost` (Thrilling Discovery, Cathartic
+        // Reunion; push XLIII). When both are present, joins them with
+        // " and ". Maps each cast-time additional cost to a human-
+        // readable phrase via tiny ad-hoc renderers.
+        additional_cost_label: {
+            let sac = card
+                .definition
+                .additional_sac_cost
+                .as_ref()
+                .map(additional_sac_cost_label);
+            let discard = card
+                .definition
+                .additional_discard_cost
+                .map(additional_discard_cost_label);
+            match (sac, discard) {
+                (Some(s), Some(d)) => Some(format!("{} and {}", s, d.to_lowercase())),
+                (Some(s), None) => Some(s),
+                (None, Some(d)) => Some(d),
+                (None, None) => None,
+            }
+        },
         // Push XL: surface the printed `enters_with_counters` field
         // as a one-line tooltip phrase so the client can show the
         // body modification before casting. "Enters with 2 +1/+1
@@ -196,6 +209,20 @@ fn additional_sac_cost_label(filter: &crate::card::SelectionRequirement) -> Stri
         "Sacrifice a land".to_string()
     } else {
         "Sacrifice a permanent".to_string()
+    }
+}
+
+/// Render an `additional_discard_cost` count as a one-line human label.
+/// Push XLIII: pluralises "card(s)" based on the count and returns a
+/// "Discard N card(s)" phrase. Used by Thrilling Discovery (1) and
+/// Cathartic Reunion (2). Distinct from the resolution-time discard so
+/// that the client can warn pre-cast when the controller's hand size is
+/// too small to pay the cost.
+fn additional_discard_cost_label(n: u32) -> String {
+    if n == 1 {
+        "Discard a card".to_string()
+    } else {
+        format!("Discard {} cards", n)
     }
 }
 
@@ -1041,6 +1068,31 @@ mod tests {
         let kc = known_card(&instance);
         assert!(kc.additional_cost_label.is_none(),
             "vanilla creatures should not surface a cost label");
+    }
+
+    /// Push XLIII: KnownCard surfaces an `additional_cost_label` for
+    /// cards with `additional_discard_cost` set. Thrilling Discovery's
+    /// printed "Discard a card" rider should render in the singular.
+    #[test]
+    fn known_card_surfaces_additional_discard_cost_label_singular() {
+        let td = catalog::thrilling_discovery();
+        let id = crate::card::CardId(0);
+        let instance = crate::card::CardInstance::new(id, td, 0);
+        let kc = known_card(&instance);
+        assert_eq!(kc.additional_cost_label.as_deref(), Some("Discard a card"),
+            "Thrilling Discovery's discard-1 cost should render in the singular");
+    }
+
+    /// Cathartic Reunion's discard-2 cost should render in the plural
+    /// ("Discard 2 cards" — multi-card cast costs use a numeric prefix).
+    #[test]
+    fn known_card_surfaces_additional_discard_cost_label_plural() {
+        let cr = catalog::cathartic_reunion();
+        let id = crate::card::CardId(0);
+        let instance = crate::card::CardInstance::new(id, cr, 0);
+        let kc = known_card(&instance);
+        assert_eq!(kc.additional_cost_label.as_deref(), Some("Discard 2 cards"),
+            "Cathartic Reunion's discard-2 cost should render in the plural");
     }
 
     /// Push XL: KnownCard surfaces an `enters_with_counters_label`

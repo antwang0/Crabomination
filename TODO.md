@@ -7,6 +7,48 @@ See `CUBE_FEATURES.md` (cube-card implementation status) and
 
 ## Recent additions
 
+- ✅ **Push XLIII (2026-05-04)**: cast-time additional-cost primitive
+  trio + 10 promotions + bot/view ergonomics + CR 118.8 audit. Tests
+  at 1415 (was 1405; +10 net).
+  - **Two new engine primitives** (sister fields to push XXXIX's
+    `additional_sac_cost`):
+    - **`CardDefinition.additional_discard_cost: Option<u32>`** —
+      number of cards to discard at cast time. Pre-flight rejects
+      with `SelectionRequirementViolated` when hand is too small;
+      auto-pick is the first N cards in hand. Each discard emits a
+      `CardDiscarded` event so madness / discard-trigger listeners
+      fire pre-resolution.
+    - **`CardDefinition.additional_life_cost: Option<Value>`** — life
+      to pay at cast time. The `Value` is evaluated against the
+      cast-time `EffectContext` (X is read from the spell's `{X}`
+      pip), then debited; emits a `LifeLost` event so loss-of-life
+      listeners fire pre-resolution. Loss-of-game from crossing zero
+      life is left to the next SBA pass per CR 119.4.
+  - **10 cards promoted** (7 🟡 → ✅, 3 fidelity bumps; full list in
+    STRIXHAVEN2.md push XLIII):
+    Thrilling Discovery, Cathartic Reunion, Necrotic Fumes,
+    Tormenting Voice, Wild Guess, Thrill of Possibility, Big Score,
+    Crop Rotation, Mine Collapse, Vicious Rivalry.
+  - **Bot ergonomics**: `can_afford_in_state` now pre-flight-rejects
+    spells whose `additional_discard_cost` exceeds the controller's
+    non-spell hand count. Mirrors the existing
+    `additional_sac_cost` rejection path.
+  - **Server view ergonomics**: `KnownCard.additional_cost_label`
+    now combines sac + discard labels with " and " when both are
+    present. Singular ("Discard a card") vs. plural ("Discard 2
+    cards") via bare-count formatting. New `additional_discard_cost_
+    label(n)` renderer mirrors the `additional_sac_cost_label(filter)`
+    shape from push XXXIX.
+  - **CR 118.8 audit (additional costs)**: rule-by-rule status; full
+    breakdown in STRIXHAVEN2.md. The big wins: 118.8 (additional
+    cost listed on a spell) ✅, 118.8d (mana cost unchanged) ✅,
+    601.2f (total cost determination) ✅, 601.2h (pay all costs in
+    any order) ✅. Stacked additional costs (118.8a) and optional
+    additional costs (118.8b — kicker / buyback) stay 🟡.
+  - **10 new tests**: 6 STX (Thrilling Discovery / Cathartic Reunion
+    / Necrotic Fumes accept + reject paths) + 2 bot pre-flight gate
+    tests + 2 view label tests.
+
 - ✅ **Push XLII (2026-05-04)**: 9 new STX cards + Plargg fidelity
   bump + 1 server-view enrichment (`PermanentView.loyalty`) + CR 306
   audit. Tests at 1405 (was 1389, +16 net).
@@ -4054,3 +4096,72 @@ shield + Owlin Shieldmage promotion + Quandrix Biomathematician.
   cards on Scryfall; adding the remaining 155 would close the
   catalog. Most are commons / uncommons with simple Magecraft /
   Lesson / fight / pump primitives — just hand-coding work.
+
+## New suggestions (added 2026-05-04 push XLIII)
+
+### Engine
+
+- **Stacked-additional-cost decision picker**. Push XLIII added the
+  `additional_sac_cost` / `additional_discard_cost` /
+  `additional_life_cost` triplet. Today they pay in a fixed order
+  (sac, then discard, then life) — but CR 601.2h says costs that
+  don't involve random elements may be paid in *any order* the
+  controller chooses. A real picker would surface a
+  `Decision::CostOrdering` so the human player can pick which
+  additional cost to pay first (relevant when one cost triggers
+  another — e.g. a sac → mass-draw effect chain).
+
+- **Optional additional costs (kicker / buyback / overload)**. CR
+  118.8b: "Some additional costs are optional." The new
+  `additional_*_cost` fields are mandatory only — kicker, buyback,
+  and overload all fail today. A real model is `Vec<OptionalCost>`
+  with a per-cast announcement (CR 601.2b's "the player announces
+  their intentions to pay any or all of those costs"). Same family
+  as the engine's existing `AlternativeCost` (Force of Will, Force
+  of Negation) but for *additional* costs rather than *replacement*
+  costs.
+
+- **Player-chosen discard for `additional_discard_cost`**. Today the
+  cast-time discard auto-picks the first N cards in hand. The
+  in-resolution `Effect::Discard` flow surfaces a
+  `Decision::Discard` when `wants_ui` is set; the cast-time path
+  could thread the same decision so human players pick which cards
+  to feed to Cathartic Reunion / Thrilling Discovery. Same effort
+  as suspending mid-cast — the cast pipeline currently doesn't
+  suspend, so threading a suspension-resume path is the lift.
+
+- **Stacked discount + cost-tax + additional-cost interaction**. CR
+  601.2f says additional costs apply *after* mana discounts and
+  surcharges, then the total cost is "locked in." Today the order
+  in `cast_spell` is: pay mana (with discounts/taxes), pay sac, pay
+  discard, pay life. That matches the CR — but if a future card has
+  a static "spells with additional costs cost {1} less" reduction
+  (CR 601.2f mentions cost reductions can apply to alternative
+  costs), the engine would need a pre-pay hook to apply that
+  reduction before mana is paid.
+
+### UI / Server
+
+- **Cost-shape badge for cast-time additional costs**. The combined
+  `additional_cost_label` is now displayed on the client tooltip,
+  but a tighter visual cue (red icon for sac, blue for discard,
+  green for life) on the card frame would let players see at a
+  glance which additional cost a spell carries without hovering.
+
+- **Pre-cast hand-size warning**. When the controller's hand is too
+  small to pay an `additional_discard_cost`, the client could
+  refuse to start the cast prompt entirely (rather than letting
+  the engine reject it post-mana-pay). Mirrors the existing pre-
+  cast filter on `additional_sac_cost`.
+
+### Bot / AI
+
+- **Discard-cost heuristic improvement**. The bot today rejects a
+  spell with `additional_discard_cost` only when the hand is too
+  small to pay it. It doesn't *value* the trade-off — discarding 2
+  random cards to draw 3 is +1 net hand size, but the discarded
+  cards might be high-value (planeswalkers, finishers) while the
+  drawn ones are random. A heuristic that values the discard
+  against the draw (ratio + late-game / early-game weighting)
+  would make Cathartic Reunion / Thrilling Discovery picks
+  smarter than the current "always cast if mana + hand permit."

@@ -61,6 +61,8 @@ fn fetch_land(
         loyalty_abilities: vec![],
         alternative_cost: None,
         additional_sac_cost: None,
+        additional_discard_cost: None,
+        additional_life_cost: None,
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,

@@ -81,6 +81,125 @@ All 248 cards marked ✅ or 🟡 have a corresponding factory in
 positives and 0 stale ⏳ rows. STX 2021 progress is tracked in the
 "Strixhaven base set (STX)" section near the bottom of this file.
 
+## 2026-05-04 push XLIII: cast-time additional-cost primitives + 10 promotions
+
+Adds two new sister cast-time additional-cost primitives —
+`additional_discard_cost: Option<u32>` and `additional_life_cost:
+Option<Value>` — to round out the cast-time additional-cost trio
+started by push XXXIX's `additional_sac_cost`. Net: ten 🟡 cards
+across the catalog promote to ✅, with cast-time deductions paid
+*before* the spell goes on the stack (matching CR 118.8 / 601.2f
+"additional costs are paid at cast time, before the spell hits the
+stack"). Tests at 1415 (was 1405; +10 net), all green.
+
+### Engine primitives
+
+- **`CardDefinition.additional_discard_cost: Option<u32>`** — number
+  of cards the controller must discard as an additional cast-time
+  cost. Sister to `additional_sac_cost` (push XXXIX). The pre-flight
+  check rejects with `SelectionRequirementViolated` when the
+  controller has fewer than N cards in hand at cast time. The
+  discard happens after mana is paid but before the spell goes on
+  the stack — so madness / discard-trigger listeners (Putrid Imp,
+  Faithless Looting derivatives) fire pre-resolution. Auto-pick is
+  the first N cards in hand (matches the random-discard branch in
+  `Effect::Discard`).
+- **`CardDefinition.additional_life_cost: Option<Value>`** — life
+  cost the controller pays as an additional cast-time cost. The
+  `Value` is evaluated against the cast-time `EffectContext` (X is
+  read from the spell's `{X}` pip), then the controller's life is
+  debited. The deduction emits a `LifeLost` event so "whenever you
+  lose life" listeners (Lifelink-payoff, pain-land derivatives)
+  fire pre-resolution. Loss-of-game from crossing zero life is left
+  to the next SBA pass per CR 119.4.
+- Both fields default to `None` via `#[serde(default)]` for snapshot
+  back-compat with older serialized states.
+- Cast-pipeline integration: the bot's `can_afford_in_state`
+  `would_accept` walker pre-flight-rejects unaffordable casts (no
+  card to discard / no creature to sac) so the same gate that fires
+  in `cast_spell` is mirrored on the heuristic side.
+- View-side rendering: `KnownCard.additional_cost_label` now
+  combines sac + discard labels with " and " when both are present.
+  "Discard a card" / "Discard 2 cards" pluralisation uses the bare
+  count.
+
+### Promotions (10 cards: 7 🟡 → ✅, 3 fidelity bumps)
+
+- **Thrilling Discovery** ({1}{U}{R}, Strixhaven instant) 🟡 → ✅ —
+  printed "additional cost: discard a card" now paid at cast time
+  via `additional_discard_cost: Some(1)`. Body is just the gain-2 +
+  draw-2 halves.
+- **Cathartic Reunion** ({1}{R}, modern sorcery) → ✅ — printed
+  "additional cost: discard two cards" via
+  `additional_discard_cost: Some(2)`. Body is the draw-3.
+- **Necrotic Fumes** ({1}{B}{B}, Strixhaven sorcery) 🟡 → ✅ — moves
+  the printed sacrifice from in-resolution to cast-time via the
+  existing `additional_sac_cost` (push XXXIX). Body is the targeted
+  exile.
+- **Tormenting Voice / Wild Guess / Thrill of Possibility** (modern
+  red rummagers) → ✅ — printed "additional cost: discard a card"
+  → `additional_discard_cost: Some(1)`. Bodies are the draw-2.
+- **Big Score** ({3}{R}, modern instant) → ✅ — printed "additional
+  cost: discard a card" → `additional_discard_cost: Some(1)`. Body
+  is the 2-Treasure mint + draw-2.
+- **Crop Rotation** ({G}, modern instant) → ✅ — printed "additional
+  cost: sacrifice a land" → `additional_sac_cost: Some(Land &
+  ControlledByYou)`. Body is the land tutor.
+- **Mine Collapse** ({2}{R}, modern sorcery) → ✅ — printed
+  "additional cost: sacrifice a Mountain" → `additional_sac_cost:
+  Some(Land & HasLandType(Mountain))`. Body is the targeted 4-damage.
+- **Vicious Rivalry** ({X}{2}{B}{G}, SOS sorcery) 🟡 → ✅ — printed
+  "additional cost: pay X life" → `additional_life_cost:
+  Some(Value::XFromCost)`. Body is the destroy-X-or-less mass
+  removal.
+
+### CR 118.8 / 601.2f audit (Additional Costs)
+
+Push XLIII closes the two largest gaps in the additional-cost
+primitive family:
+
+- 118.8 (additional cost listed on a spell) ✅ — three sister fields
+  `additional_sac_cost` (push XXXIX) / `additional_discard_cost`
+  (XLIII) / `additional_life_cost` (XLIII) cover the most common
+  shapes (sacrifice / discard / pay life).
+- 118.8a (any number of additional costs) 🟡 — the engine fields are
+  three independent `Option<...>`s so multiple shapes can stack
+  on the same spell, but the cost-payment path doesn't yet thread
+  a "pay all of them in any order" decision picker. Today every
+  card with a stacked additional cost (e.g. some hypothetical
+  "sacrifice a creature and discard a card") would just have all
+  three fields populated; the engine pays them in the listed order
+  (sac, discard, life).
+- 118.8b (optional additional costs) 🟡 — kicker / buyback /
+  optional escalation aren't modeled today (no `Option<Cost>` on
+  optional vs. mandatory). All catalog `additional_*_cost` are
+  mandatory.
+- 118.8c ("if able" + hidden zone) — N/A (no opponent-cast-spell
+  effects yet).
+- 118.8d (mana cost unchanged) ✅ — `additional_*_cost` payments
+  don't mutate `card.definition.cost`. `cost_label`-style readers
+  still see the printed mana cost.
+- 601.2f (total cost determination) ✅ — additional costs are
+  applied after mana cost discounts (Killian, hybrid pip choice)
+  and surcharges (Damping Sphere). The order matches printed
+  semantics.
+- 601.2h (pay all costs in any order) ✅ — `cast_spell` pays mana
+  first, then sacrifice, then discard, then life. Each step is
+  atomic and emits its own event before the spell goes on the
+  stack.
+
+### Tests (+10 net, 1405 → 1415)
+
+- 6 new STX tests covering Thrilling Discovery / Cathartic Reunion /
+  Necrotic Fumes (cast accept + cast reject paths for each).
+- 2 new bot tests: `bot_skips_thrilling_discovery_with_only_one_card`,
+  `bot_accepts_thrilling_discovery_with_extra_card`.
+- 2 new view tests: discard-1 singular / discard-2 plural label
+  rendering.
+- Existing `vicious_rivalry_destroys_creatures_at_or_below_x` already
+  asserted the post-cast life delta — naturally updated by the new
+  primitive without a test edit.
+
 ## 2026-05-04 push XLII: 9 STX cards + Plargg fidelity bump
 
 Adds 9 new STX 2021 mono-color cards and brings Plargg's second
@@ -2703,7 +2822,7 @@ tests in `tests::sos::*`.
 | Dissection Practice | Black mono | 🟡 | Drain 1 + creature -1/-1; +1/+1 mode collapsed (multi-target gap). |
 | Heated Argument | Red mono | 🟡 | 6 to creature + 2 to controller; "may exile" optionality dropped. |
 | End of the Hunt | Black mono | 🟡 | Exile opponent's creature/PW; "greatest mana value" picker not enforced. |
-| Vicious Rivalry | Witherbloom | ✅ | X-life cost approximation via `LoseLife` + `ForEach.If(ManaValueAtMost X)` destroy. |
+| Vicious Rivalry | Witherbloom | ✅ | Push XLIII: now uses cast-time `additional_life_cost: Some(Value::XFromCost)` primitive — life is debited before the spell goes on the stack. Body is the `ForEach.If(ManaValueAtMost X)` mass destroy. |
 | Proctor's Gaze | Quandrix | ✅ | Bounce nonland + Search basic to bf tapped. |
 | Lorehold Charm | Lorehold | ✅ | All three modes (sac-artifact / return ≤2-mv / +2/+1). |
 | Borrowed Knowledge | Lorehold | 🟡 | Mode 0 wired faithfully; mode 1 collapsed to "draw 7" (no track-discarded primitive). |
@@ -3054,7 +3173,7 @@ the back-face spell body is in place.
 | Root Manipulation | {3}{B}{G} | Sorcery |  | Until end of turn, creatures you control get +2/+2 and gain menace and "Whenever this creature attacks, you gain 1 life." (A creature with menace can't be blocked except by two or more creatures.) | 🟡 | `ForEach(Creature & ControlledByYou) → PumpPT(+2/+2 EOT) + GrantKeyword(Menace EOT)`. The "whenever this creature attacks → gain 1 life" rider is omitted (no transient-trigger-grant primitive yet). |
 | Teacher's Pest | {B}{G} | Creature — Skeleton Pest | 1/1 | Menace (This creature can't be blocked except by two or more creatures.) / Whenever this creature attacks, you gain 1 life. / {B}{G}: Return this card from your graveyard to the battlefield tapped. | 🟡 | Menace + attacks-gain-1 trigger wired; graveyard-recursion activated ability omitted. |
 | Titan's Grave |  | Land |  | This land enters tapped. / {T}: Add {B} or {G}. / {2}{B}{G}, {T}: Surveil 1. (Look at the top card of your library. You may put it into your graveyard.) | ✅ | Wired in `catalog::sets::sos::lands`. |
-| Vicious Rivalry | {2}{B}{G} | Sorcery |  | As an additional cost to cast this spell, pay X life. / Destroy all artifacts and creatures with mana value X or less. | ✅ | Wired in `catalog::sets::sos::sorceries` — `LoseLife X` (approximating the additional cost) + `ForEach(Creature ∨ Artifact).If(ManaValueOf ≤ X) → Destroy`. |
+| Vicious Rivalry | {2}{B}{G} | Sorcery |  | As an additional cost to cast this spell, pay X life. / Destroy all artifacts and creatures with mana value X or less. | ✅ | Push XLIII: now uses the new cast-time `additional_life_cost: Some(Value::XFromCost)` primitive (life is debited before the spell goes on the stack). Body is `ForEach(Creature ∨ Artifact).If(ManaValueOf ≤ X) → Destroy`. |
 | Witherbloom Charm | {B}{G} | Instant |  | Choose one — / • You may sacrifice a permanent. If you do, draw two cards. / • You gain 5 life. / • Destroy target nonland permanent with mana value 2 or less. | ✅ | All three modes wired faithfully. Mode 0: `Effect::MayDo` sacrifice → draw 2 (push XV). Mode 1: gain 5 life. Mode 2: destroy nonland with mana value ≤ 2. |
 | Witherbloom, the Balancer | {6}{B}{G} | Legendary Creature — Elder Dragon | 5/5 | Affinity for creatures (This spell costs {1} less to cast for each creature you control.) / Flying, deathtouch / Instant and sorcery spells you cast have affinity for creatures. | 🟡 | Push XXXVIII: first clause now wires faithfully via the new `StaticEffect::CostReductionScaled { amount: CountOf(EachPermanent(Creature ∧ ControlledByYou)) }` primitive — at 4 friendly creatures, the printed {6}{B}{G} drops to {2}{B}{G}. The second clause ("IS spells you cast have affinity for creatures") still 🟡 — would need a "modify another spell's cost reduction" primitive (a static that adds CostReductionScaled to other casts). |
 

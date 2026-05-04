@@ -560,6 +560,18 @@ pub fn can_afford_in_state(
             return false;
         }
     }
+    // Push XLIII: cards with an additional cast-time discard cost
+    // (Thrilling Discovery, Cathartic Reunion) are unaffordable when
+    // the controller has fewer than N other cards in hand. Same shape
+    // as `additional_sac_cost` above — pre-flight rejection.
+    if let Some(n) = card.definition.additional_discard_cost {
+        // The card itself is currently in hand; subtract one to get the
+        // count of cards available to discard.
+        let other_hand = state.players[seat].hand.len().saturating_sub(1);
+        if (other_hand as u32) < n {
+            return false;
+        }
+    }
     true
 }
 
@@ -1344,6 +1356,48 @@ mod tests {
         // additional safety net even for unfavorable trades.
         assert!(!blocks.is_empty(),
             "should block when life is at 2 and attacker would deal 2 (lethal)");
+    }
+
+    /// Push XLIII: bot's `would_accept` rejects spells with an
+    /// `additional_discard_cost` when the controller has fewer than N
+    /// non-spell cards in hand. Same shape as the existing
+    /// `additional_sac_cost` gate (Daemogoth Woe-Eater family).
+    #[test]
+    fn bot_skips_thrilling_discovery_with_only_one_card() {
+        let mut g = two_player_game();
+        // Only Thrilling Discovery in hand — no cards available to
+        // discard. The bot should refuse to enqueue the cast.
+        let id = g.add_card_to_hand(0, catalog::thrilling_discovery());
+        // Pool full of UR mana so cost itself isn't the gate.
+        g.players[0].mana_pool.add_colorless(1);
+        g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
+        g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+        g.priority.player_with_priority = 0;
+        g.active_player_idx = 0;
+
+        let card = g.players[0].hand.iter().find(|c| c.id == id).unwrap();
+        let accepted = can_afford_in_state(&g, 0, card);
+        assert!(!accepted,
+            "bot rejects Thrilling Discovery when hand has nothing else to discard");
+    }
+
+    /// Bot's `would_accept` accepts the same spell once the discard
+    /// cost is payable (a second card in hand).
+    #[test]
+    fn bot_accepts_thrilling_discovery_with_extra_card() {
+        let mut g = two_player_game();
+        let id = g.add_card_to_hand(0, catalog::thrilling_discovery());
+        let _filler = g.add_card_to_hand(0, catalog::island());
+        g.players[0].mana_pool.add_colorless(1);
+        g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
+        g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+        g.priority.player_with_priority = 0;
+        g.active_player_idx = 0;
+
+        let card = g.players[0].hand.iter().find(|c| c.id == id).unwrap();
+        let accepted = can_afford_in_state(&g, 0, card);
+        assert!(accepted,
+            "bot accepts Thrilling Discovery once a second card is in hand");
     }
 
     /// When no planeswalker is on board, the bot still attacks the

@@ -5391,3 +5391,157 @@ fn mage_duel_rejects_friendly_creature_target() {
     assert!(result.is_err(),
         "Mage Duel rejects friendly-creature target via the ControlledByOpponent filter");
 }
+
+// ── Push XLIII: additional_discard_cost cast-time primitive ────────────────
+
+/// Thrilling Discovery — {1}{U}{R}, additional cost discard 1, gain 2
+/// life + draw 2. Push XLIII promoted 🟡 → ✅ via the new
+/// `additional_discard_cost: Some(1)` field.
+#[test]
+fn thrilling_discovery_pays_discard_at_cast_time() {
+    let mut g = two_player_game();
+    // Seed library to support the draw 2.
+    for _ in 0..4 { g.add_card_to_library(0, catalog::island()); }
+    // Hand needs Thrilling Discovery + at least 1 other card to discard.
+    let id = g.add_card_to_hand(0, catalog::thrilling_discovery());
+    let _other = g.add_card_to_hand(0, catalog::island());
+    let hand_before = g.players[0].hand.len();
+    let life_before = g.players[0].life;
+    let gy_before = g.players[0].graveyard.len();
+
+    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Thrilling Discovery castable for {1}{U}{R} with 1 discard");
+    drain_stack(&mut g);
+
+    // Hand: -1 (cast) -1 (additional discard) +2 (draw) = 0 net.
+    assert_eq!(g.players[0].hand.len(), hand_before, "hand size unchanged");
+    // Graveyard: +1 (the discarded card; the cast spell goes to graveyard
+    // post-resolution but `Thrilling Discovery` is an instant whose
+    // resolution moves it to gy too — so net +2).
+    assert_eq!(g.players[0].graveyard.len(), gy_before + 2,
+        "discarded card + resolved spell in graveyard");
+    // Life: +2.
+    assert_eq!(g.players[0].life, life_before + 2);
+}
+
+/// Thrilling Discovery is illegal to cast with an empty hand (no cards
+/// to discard). The cast-time primitive rejects with
+/// `SelectionRequirementViolated`, mirroring `additional_sac_cost` /
+/// Daemogoth Woe-Eater's empty-board rejection.
+#[test]
+fn thrilling_discovery_rejects_with_empty_hand() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::thrilling_discovery());
+    // Don't add another card — Thrilling Discovery is the only card in hand.
+    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+
+    let result = g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    });
+    assert!(result.is_err(),
+        "Thrilling Discovery rejects with insufficient cards in hand");
+    // Spell goes back to hand (cast-time primitive doesn't burn the spell
+    // on rejection).
+    assert!(g.players[0].hand.iter().any(|c| c.id == id));
+}
+
+/// Cathartic Reunion — {1}{R}, additional cost discard 2, draw 3.
+/// Push XLIII promoted 🟡 → ✅ via `additional_discard_cost: Some(2)`.
+#[test]
+fn cathartic_reunion_pays_two_discards_at_cast_time() {
+    let mut g = two_player_game();
+    for _ in 0..5 { g.add_card_to_library(0, catalog::island()); }
+    let id = g.add_card_to_hand(0, catalog::cathartic_reunion());
+    let _o1 = g.add_card_to_hand(0, catalog::island());
+    let _o2 = g.add_card_to_hand(0, catalog::island());
+    let hand_before = g.players[0].hand.len();
+
+    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Cathartic Reunion castable for {1}{R} with 2 discards");
+    drain_stack(&mut g);
+
+    // Hand: -1 (cast) -2 (additional discard) +3 (draw) = 0 net.
+    assert_eq!(g.players[0].hand.len(), hand_before);
+}
+
+/// Cathartic Reunion is illegal to cast with only 1 other card in hand
+/// (need 2 to discard).
+#[test]
+fn cathartic_reunion_rejects_with_only_one_other_card() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::cathartic_reunion());
+    let _o1 = g.add_card_to_hand(0, catalog::island());
+    // Only 1 other card — not enough for the discard-2 cost.
+
+    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let result = g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    });
+    assert!(result.is_err(),
+        "Cathartic Reunion rejects when hand has fewer than 2 other cards");
+}
+
+/// Necrotic Fumes — {1}{B}{B} Sorcery. Push XLIII promoted 🟡 → ✅
+/// via existing `additional_sac_cost` (engine push XXXIX). Cast-time
+/// sacrifice is now paid before the spell goes on the stack.
+#[test]
+fn necrotic_fumes_sacrifices_at_cast_time_and_exiles_target() {
+    let mut g = two_player_game();
+    let chump = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let opp_creature = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::necrotic_fumes());
+    let bf_before = g.battlefield.iter().filter(|c| c.controller == 0).count();
+    let opp_gy_before = g.players[1].graveyard.len();
+
+    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(opp_creature)),
+        mode: None, x_value: None,
+    })
+    .expect("Necrotic Fumes castable for {1}{B}{B} with a creature to sac");
+    drain_stack(&mut g);
+
+    // Friendly creature was sacrificed at cast time (now in graveyard,
+    // not battlefield).
+    assert!(!g.battlefield.iter().any(|c| c.id == chump),
+        "friendly creature sacrificed at cast time");
+    let bf_after = g.battlefield.iter().filter(|c| c.controller == 0).count();
+    assert_eq!(bf_after, bf_before - 1);
+    // Opponent creature was exiled (no longer on bf, no longer in opp's gy).
+    assert!(!g.battlefield.iter().any(|c| c.id == opp_creature));
+    assert_eq!(g.players[1].graveyard.len(), opp_gy_before, "exile, not destroy");
+}
+
+/// Necrotic Fumes is illegal to cast when the controller has no
+/// creature to sacrifice — additional_sac_cost rejects pre-flight.
+#[test]
+fn necrotic_fumes_rejects_with_no_creature_to_sacrifice() {
+    let mut g = two_player_game();
+    // No friendly creatures — only the spell card in hand.
+    let id = g.add_card_to_hand(0, catalog::necrotic_fumes());
+    let _opp = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+
+    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(Color::Black, 2);
+    let result = g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    });
+    assert!(result.is_err(),
+        "Necrotic Fumes rejects when controller has no creature to sacrifice");
+    // Spell card goes back to hand on rejection.
+    assert!(g.players[0].hand.iter().any(|c| c.id == id));
+}

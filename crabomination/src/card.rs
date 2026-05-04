@@ -410,6 +410,45 @@ pub struct CardDefinition {
     /// before the cast spell does.
     #[serde(default)]
     pub additional_sac_cost: Option<crate::card::SelectionRequirement>,
+    /// "As an additional cost to cast this spell, discard N cards."
+    /// When `Some(n)`, casting this spell requires the controller to
+    /// discard exactly `n` cards from hand *as part of the cast*, in
+    /// addition to mana. The cast is illegal if the controller has fewer
+    /// than `n` cards in hand (excluding the spell card itself, which is
+    /// already in the stack-pending state at this point). The discard
+    /// happens before the spell goes on the stack — so madness / discard-
+    /// trigger interactions resolve before the cast spell does.
+    ///
+    /// Used by Strixhaven's "as an additional cost: discard a card"
+    /// design (Thrilling Discovery's discard-1 rider, Cathartic Reunion's
+    /// discard-2 rider) and the broader rummager / madness family.
+    ///
+    /// Distinct from a regular `Effect::Discard` rider in resolution: the
+    /// cast-time path makes the spell *illegal* without sufficient cards
+    /// in hand, while in-resolution discard silently no-ops or partially
+    /// resolves when hand is short. Sister field to `additional_sac_cost`.
+    #[serde(default)]
+    pub additional_discard_cost: Option<u32>,
+    /// "As an additional cost to cast this spell, pay X life." When
+    /// `Some(value)`, casting this spell deducts the evaluated `Value`
+    /// life from the controller as part of the cast, in addition to
+    /// mana. The deduction happens before the spell goes on the stack
+    /// — so it's reflected in mana-spent introspection effects, and
+    /// "whenever you lose life" triggers fire pre-resolution.
+    ///
+    /// Used by Strixhaven's "as an additional cost: pay X life" design
+    /// (Vicious Rivalry's `pay X life`). Sister field to
+    /// `additional_sac_cost` (push XXXIX) and `additional_discard_cost`
+    /// (push XLIII). Distinguished from `Effect::LoseLife` in resolution
+    /// because the cast-time deduction lands before the spell goes on
+    /// the stack, not after.
+    ///
+    /// Note: unlike `additional_sac_cost`, this *does not* make the
+    /// spell illegal at zero life — paying life to negative life
+    /// triggers loss-of-game on the next SBA pass per CR 119.4
+    /// (a rule the engine already enforces during resolve_stack).
+    #[serde(default)]
+    pub additional_life_cost: Option<crate::effect::Value>,
     /// Modal-double-faced-card back face. When `Some`, the player can play
     /// the card via its back face (e.g. `GameAction::PlayLandBack`); the
     /// resulting `CardInstance` adopts this definition wholesale, so all

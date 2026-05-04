@@ -633,6 +633,19 @@ impl GameState {
             }
         }
 
+        // Pre-flight check for additional discard cost ("As an additional
+        // cost to cast this spell, discard N cards"). Same shape as
+        // `additional_sac_cost`: require enough cards in hand or reject
+        // the cast. The spell card itself is already pulled out of hand
+        // at this point (see `take_from_hand` above) so the bare hand
+        // count is the candidate pool.
+        if let Some(n) = card.definition.additional_discard_cost
+            && (self.players[p].hand.len() as u32) < n
+        {
+            self.players[p].hand.push(card);
+            return Err(GameError::SelectionRequirementViolated);
+        }
+
         // Pay the cost (substitute X if present, then apply any
         // static-ability discounts (Killian's "{2} less if targeting a
         // creature") and surcharges (Damping Sphere's "{1} more after
@@ -724,6 +737,51 @@ impl GameState {
                 }
                 let mut die_evs = self.remove_to_graveyard_with_triggers(picked);
                 auto_events.append(&mut die_evs);
+            }
+        }
+
+        // Pay the additional discard cost (after mana, before going on
+        // stack). Auto-pick the first N cards in hand — same heuristic as
+        // the random-discard branch in `Effect::Discard`. Each discarded
+        // card emits a `CardDiscarded` event so madness / discard-trigger
+        // listeners (Putrid Imp, Faithless Looting derivatives) can fire
+        // before the cast spell resolves. The pre-flight gate above
+        // guarantees the controller has at least N cards in hand.
+        if let Some(n) = card.definition.additional_discard_cost {
+            for _ in 0..n {
+                if self.players[p].hand.is_empty() { break; }
+                let discarded = self.players[p].hand.remove(0);
+                let cid = discarded.id;
+                self.players[p].graveyard.push(discarded);
+                auto_events.push(GameEvent::CardDiscarded { player: p, card_id: cid });
+                self.cards_discarded_this_resolution =
+                    self.cards_discarded_this_resolution.saturating_add(1);
+                self.cards_discarded_this_resolution_ids.push(cid);
+            }
+        }
+
+        // Pay the additional life cost (after mana, after discard, before
+        // going on stack). Push XLIII: evaluates the `Value` against the
+        // cast-time `EffectContext` (so X-cost spells like Vicious Rivalry
+        // pay X life off the {X} pip), then deducts it from the
+        // controller's life. The deduction emits a `LifeLost` event so
+        // "whenever you lose life" listeners (Lifelink-payoff cards,
+        // pain-land derivatives) fire pre-resolution. Loss-of-game from
+        // crossing zero life is left to the next SBA pass per CR 119.4.
+        if let Some(value) = card.definition.additional_life_cost.clone() {
+            let ctx = crate::game::effects::EffectContext::for_spell(
+                p,
+                target.clone(),
+                mode.unwrap_or(0),
+                x_value.unwrap_or(0),
+            );
+            let amount = self.evaluate_value(&value, &ctx).max(0);
+            if amount > 0 {
+                self.players[p].life -= amount;
+                auto_events.push(GameEvent::LifeLost {
+                    player: p,
+                    amount: amount as u32,
+                });
             }
         }
 
