@@ -2,7 +2,12 @@ use super::no_abilities;
 use crate::card::{CardDefinition, CardType, CreatureType, Effect, Keyword, Subtypes};
 use crate::mana::{cost, generic, r, u};
 
-/// Stormchaser Mage — {1}{U}{R} 1/3 Flying Haste Prowess
+/// Stormchaser Mage — {1}{U}{R} 1/3 Flying Haste Prowess.
+///
+/// Push XXXVIII wired Prowess as a synthetic SpellCast trigger so
+/// this evasive U/R 2-drop now pumps +1/+1 EOT on every noncreature
+/// IS spell cast in the same turn. Stacks with Magecraft / Opus
+/// payoffs that key off the same SpellCast event.
 pub fn stormchaser_mage() -> CardDefinition {
     CardDefinition {
         name: "Stormchaser Mage",

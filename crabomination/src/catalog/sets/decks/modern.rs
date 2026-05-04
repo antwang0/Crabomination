@@ -8500,11 +8500,14 @@ pub fn subtlety() -> CardDefinition {
 
 /// Monastery Swiftspear — {R}, 1/2 Human Monk with Haste and Prowess.
 ///
-/// Push XXXIV: simple body — Haste + Prowess keywords on a 1-drop. The
-/// engine's Prowess wiring is not yet first-class (no per-IS-cast +1/+0
-/// trigger primitive specific to Prowess), so the keyword is recorded
-/// for tooltip / future wiring but doesn't yet pump per cast. Body
-/// alone slots into UR Prowess shells / aggressive RDW.
+/// Push XXXVIII wired Prowess as a synthetic SpellCast trigger
+/// (`fire_spell_cast_triggers` in `game/actions.rs` sweeps every
+/// battlefield Keyword::Prowess permanent on each noncreature spell
+/// cast and pushes a `PumpPT(This, +1/+1, EOT)` trigger). So this
+/// 1-drop now ramps from 1/2 → 2/3 → 3/4 → … on every cantrip cast
+/// in the same turn, matching the printed Oracle exactly. Same wiring
+/// shape as Spectacle Mage's hybrid {U/R}{U/R} Prowess body in
+/// `catalog::sets::stx::iconic`.
 pub fn monastery_swiftspear() -> CardDefinition {
     CardDefinition {
         name: "Monastery Swiftspear",

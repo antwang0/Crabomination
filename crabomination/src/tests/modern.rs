@@ -10070,6 +10070,60 @@ fn monastery_swiftspear_is_a_one_drop_with_haste_and_prowess() {
     assert_eq!(s.cost.symbols.len(), 1, "Swiftspear is a one-drop");
 }
 
+/// Push: Stormchaser Mage's Prowess fires on a noncreature spell cast.
+/// Uses the same synthetic Prowess trigger pipeline as Monastery
+/// Swiftspear / Spectacle Mage (push XXXVIII Prowess wiring).
+#[test]
+fn stormchaser_mage_prowess_pumps_on_noncreature_cast() {
+    let mut g = two_player_game();
+    let storm = g.add_card_to_battlefield(0, catalog::stormchaser_mage());
+    g.clear_sickness(storm);
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)), mode: None, x_value: None,
+    })
+    .expect("Bolt castable for {R}");
+    drain_stack(&mut g);
+    let s = g.battlefield_find(storm).unwrap();
+    assert_eq!(s.power(), 2, "Stormchaser Mage should be 2/4 after Bolt cast");
+    assert_eq!(s.toughness(), 4);
+}
+
+/// Push: Monastery Swiftspear's Prowess fires on a noncreature spell
+/// cast — pumps from 1/2 to 2/3 EOT after one Bolt, then 3/4 after a
+/// second cantrip. Validates the synthetic SpellCast trigger wired in
+/// `fire_spell_cast_triggers` (push XXXVIII Prowess wiring).
+#[test]
+fn monastery_swiftspear_prowess_pumps_on_noncreature_cast() {
+    let mut g = two_player_game();
+    let swift = g.add_card_to_battlefield(0, catalog::monastery_swiftspear());
+    g.clear_sickness(swift);
+    // Cast a Bolt to fire the Prowess trigger.
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)), mode: None, x_value: None,
+    })
+    .expect("Bolt castable for {R}");
+    drain_stack(&mut g);
+    let s = g.battlefield_find(swift).unwrap();
+    assert_eq!(s.power(), 2, "Swiftspear should be 2/3 after Bolt cast (Prowess +1/+1 EOT)");
+    assert_eq!(s.toughness(), 3);
+
+    // Cast another noncreature spell and the pump stacks.
+    let bolt2 = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt2, target: Some(Target::Player(1)), mode: None, x_value: None,
+    })
+    .expect("Bolt 2 castable for {R}");
+    drain_stack(&mut g);
+    let s2 = g.battlefield_find(swift).unwrap();
+    assert_eq!(s2.power(), 3, "Swiftspear should be 3/4 after a second noncreature cast");
+    assert_eq!(s2.toughness(), 4);
+}
+
 #[test]
 fn wild_nacatl_ships_as_one_one_green() {
     let n = catalog::wild_nacatl();
