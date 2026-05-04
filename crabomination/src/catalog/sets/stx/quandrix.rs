@@ -10,8 +10,9 @@
 
 use super::no_abilities;
 use crate::card::{
-    ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, Effect, Keyword,
-    Selector, SelectionRequirement, Subtypes, TokenDefinition, Value,
+    ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, Effect, EventKind,
+    EventScope, EventSpec, Keyword, Selector, SelectionRequirement, Subtypes, TokenDefinition,
+    TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{magecraft, target_filtered};
 use crate::effect::{Duration, PlayerRef};
@@ -185,9 +186,9 @@ pub fn decisive_denial() -> CardDefinition {
 /// 0/0 green-and-blue Fractal creature token. Mirrors the SOS catalog's
 /// `fractal_token()` (the Strixhaven 2021 set predates the SOS catalog
 /// but uses the same token definition). Pulled out into a helper so STX
-/// 2021 Quandrix cards (Tend the Pests, Snow Day) can reuse it without
-/// each card carrying its own copy of the token shape.
-fn quandrix_fractal_token() -> TokenDefinition {
+/// 2021 Quandrix cards (Tend the Pests, Snow Day, Biomathematician) can
+/// reuse it without each card carrying its own copy of the token shape.
+pub(super) fn quandrix_fractal_token() -> TokenDefinition {
     TokenDefinition {
         name: "Fractal".into(),
         power: 0,
@@ -202,6 +203,60 @@ fn quandrix_fractal_token() -> TokenDefinition {
         },
         activated_abilities: vec![],
         triggered_abilities: vec![],
+    }
+}
+
+// ── Biomathematician ────────────────────────────────────────────────────────
+
+/// Biomathematician — {1}{G}{U}, 2/2 Vedalken Druid (Strixhaven Quandrix
+/// uncommon). Printed Oracle: "When this creature dies, create a 0/0
+/// green and blue Fractal creature token. Put two +1/+1 counters on it."
+///
+/// Wired faithfully via `EventKind::CreatureDied/SelfSource` →
+/// `Effect::Seq([CreateToken(Fractal), AddCounter(LastCreatedToken,
+/// +1/+1, ×2)])`. The Fractal lands as a 2/2 because the two counters
+/// resolve in the same effect Seq; without the counters the 0/0 body
+/// would die to SBA before the second resolution step. Same shape as
+/// Pestbrood Sloth's death-trigger token-mint, but with the
+/// `LastCreatedToken` counter stamp on top.
+pub fn biomathematician() -> CardDefinition {
+    CardDefinition {
+        name: "Biomathematician",
+        cost: cost(&[generic(1), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vedalken, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: quandrix_fractal_token(),
+                },
+                Effect::AddCounter {
+                    what: Selector::LastCreatedToken,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(2),
+                },
+            ]),
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        additional_sac_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
     }
 }
 

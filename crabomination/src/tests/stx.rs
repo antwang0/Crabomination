@@ -4905,3 +4905,74 @@ fn swarm_shambler_activation_untaps_and_adds_counter() {
     // 1/1 base + 1 counter from activation = 2/2 (no ETB counter since added_to_battlefield in this test path).
     assert!(card.counter_count(CounterType::PlusOnePlusOne) >= 1);
 }
+
+// ── Push: Biomathematician (Quandrix) ───────────────────────────────────────
+
+/// Push: Biomathematician's death-trigger creates a Fractal token with
+/// two +1/+1 counters on it. Validates that the dying 2/2 leaves a 2/2
+/// Fractal (0/0 base + ×2 counter stamp) on the board, mirroring the
+/// printed "create a 0/0 green and blue Fractal creature token. Put two
+/// +1/+1 counters on it." Same shape as Pestbrood Sloth's death rider
+/// but with the LastCreatedToken counter stamp on top.
+#[test]
+fn biomathematician_death_creates_fractal_with_two_counters() {
+    let mut g = two_player_game();
+    let bio = g.add_card_to_battlefield(0, catalog::biomathematician());
+    g.clear_sickness(bio);
+    let bf_before = g.battlefield.len();
+
+    // Kill via Lightning Bolt (3 damage > 2 toughness). Switch to P1's
+    // priority to cast at instant speed — same pattern as
+    // `test_of_talents_counters_target_instant`.
+    g.priority.player_with_priority = 1;
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Permanent(bio)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Lightning Bolt castable for {R}");
+    drain_stack(&mut g);
+
+    assert!(
+        !g.battlefield.iter().any(|c| c.id == bio),
+        "Biomathematician should be in graveyard after lethal damage"
+    );
+    let fractal = g.battlefield
+        .iter()
+        .find(|c| c.is_token && c.definition.name == "Fractal")
+        .expect("Death trigger should mint a Fractal token");
+    assert_eq!(
+        fractal.counter_count(CounterType::PlusOnePlusOne),
+        2,
+        "Fractal should enter with two +1/+1 counters"
+    );
+    assert_eq!(fractal.power(), 2);
+    assert_eq!(fractal.toughness(), 2);
+    // Net battlefield: -1 bio + 1 fractal = 0.
+    assert_eq!(g.battlefield.len(), bf_before);
+}
+
+/// Push: Biomathematician's body is a vanilla 2/2 Vedalken Druid before
+/// the death trigger fires.
+#[test]
+fn biomathematician_is_two_two_vedalken_druid() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::biomathematician());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Biomathematician castable for {1}{G}{U}");
+    drain_stack(&mut g);
+    let bio = g.battlefield.iter().find(|c| c.id == id).unwrap();
+    assert_eq!(bio.power(), 2);
+    assert_eq!(bio.toughness(), 2);
+    use crate::card::CreatureType;
+    assert!(bio.definition.subtypes.creature_types.contains(&CreatureType::Vedalken));
+    assert!(bio.definition.subtypes.creature_types.contains(&CreatureType::Druid));
+}
