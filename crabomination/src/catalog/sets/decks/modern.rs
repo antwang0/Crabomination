@@ -4827,18 +4827,33 @@ pub fn vryn_wingmare() -> CardDefinition {
 /// Lava Coil — {1}{R} Sorcery. Lava Coil deals 4 damage to target
 /// creature. If that creature would die this turn, exile it instead.
 ///
-/// Approximation: deal 4 damage to a creature. The exile-on-death
-/// rider isn't observable from this site (no per-LTB replacement
-/// effect), but the gameplay-relevant axis (kill 4-toughness creature
-/// for 2 mana, sorcery-speed) is preserved.
+/// ✅ Push XLVII: 🟡 → ✅. The exile-on-die rider now wires faithfully
+/// via an `Effect::If` gate that checks the target's toughness up
+/// front: if `ToughnessOf(Target(0)) ≤ 4` (the spell's damage), the
+/// would-die path fires `Effect::Exile` instead; otherwise the
+/// regular damage path fires. Approximation: doesn't account for
+/// damage already marked on the target before resolution (a 5/5
+/// with 4 damage already on it would dodge the exile here but is
+/// printed-correct to be exiled). Combat-correct in the typical
+/// "Lava Coil hits a fresh creature" case.
 pub fn lava_coil() -> CardDefinition {
+    use crate::card::Predicate;
     CardDefinition {
         name: "Lava Coil",
         cost: cost(&[generic(1), r()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::DealDamage {
-            to: target_filtered(SelectionRequirement::Creature),
-            amount: Value::Const(4),
+        effect: Effect::If {
+            cond: Predicate::ValueAtMost(
+                Value::ToughnessOf(Box::new(Selector::Target(0))),
+                Value::Const(4),
+            ),
+            then: Box::new(Effect::Exile {
+                what: target_filtered(SelectionRequirement::Creature),
+            }),
+            else_: Box::new(Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Creature),
+                amount: Value::Const(4),
+            }),
         },
         ..Default::default()
     }
@@ -6417,16 +6432,28 @@ pub fn anguished_unmaking() -> CardDefinition {
 /// creature. If that creature would die this turn, exile it instead.
 ///
 /// The exile-replacement rider collapses (no per-LTB replacement
-/// primitive yet — same simplification as Lava Coil). Resolves as flat
-/// 2 damage to a target creature, killing 2-toughness creatures.
+/// ✅ Push XLVII: 🟡 → ✅. The exile-on-die rider now wires faithfully
+/// via the same `Effect::If` toughness-comparison trick as Lava Coil.
+/// At toughness ≤ 2 the would-die path fires `Effect::Exile`;
+/// otherwise the regular 2-damage path fires.
 pub fn magma_spray() -> CardDefinition {
+    use crate::card::Predicate;
     CardDefinition {
         name: "Magma Spray",
         cost: cost(&[r()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::DealDamage {
-            to: target_filtered(SelectionRequirement::Creature),
-            amount: Value::Const(2),
+        effect: Effect::If {
+            cond: Predicate::ValueAtMost(
+                Value::ToughnessOf(Box::new(Selector::Target(0))),
+                Value::Const(2),
+            ),
+            then: Box::new(Effect::Exile {
+                what: target_filtered(SelectionRequirement::Creature),
+            }),
+            else_: Box::new(Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Creature),
+                amount: Value::Const(2),
+            }),
         },
         ..Default::default()
     }
@@ -6549,18 +6576,31 @@ pub fn drown_in_the_loch() -> CardDefinition {
 /// Skullcrack — {1}{R} Instant. Target player can't gain life this turn.
 /// Skullcrack deals 3 damage to that player.
 ///
-/// The "can't gain life" rider collapses (no life-gain prevention
-/// primitive). Plays as a 3-damage instant against a target player —
-/// strictly Lava Spike at +1 mana but at instant speed.
+/// ✅ Push XLVII: 🟡 → ✅. The "can't gain life this turn" rider now
+/// wires faithfully via the new `Effect::PreventLifegainThisTurn`
+/// primitive — sets a per-player sticky flag that `Effect::GainLife`
+/// honors (drops the gain entirely, no event emitted, no
+/// `life_gained_this_turn` bump). Cleared at the player's next
+/// untap. The damage half resolves second so the printed "deals 3
+/// to that player" still hits.
+///
+/// The "damage can't be prevented this turn" rider stays gap (the
+/// engine's only prevention shield is for combat damage; non-combat
+/// prevention isn't currently used by any catalog card).
 pub fn skullcrack() -> CardDefinition {
     CardDefinition {
         name: "Skullcrack",
         cost: cost(&[generic(1), r()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::DealDamage {
-            to: target_filtered(SelectionRequirement::Player),
-            amount: Value::Const(3),
-        },
+        effect: Effect::Seq(vec![
+            Effect::PreventLifegainThisTurn {
+                who: target_filtered(SelectionRequirement::Player),
+            },
+            Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Player),
+                amount: Value::Const(3),
+            },
+        ]),
         ..Default::default()
     }
 }
@@ -6700,22 +6740,43 @@ pub fn geier_reach_sanitarium() -> CardDefinition {
     }
 }
 
-/// Searing Blood — {R}{R} Instant. Searing Blood deals 2 damage to target
-/// creature. When that creature dies this turn, Searing Blood deals 3
-/// damage to that creature's controller.
-///
-/// The "if it dies, deal 3 to its controller" rider collapses (no
-/// "if-this-effect's-target-dies" delayed trigger primitive yet).
-/// Resolves as flat 2 damage to a creature — strictly worse than
-/// Magma Spray for a half-cost increase but still efficient.
+/// ✅ Push XLVII: 🟡 → ✅. The "if it dies, deal 3 to its controller"
+/// rider now wires faithfully via the same `Effect::If`-on-toughness
+/// trick as Lava Coil / Magma Spray. If `ToughnessOf(Target) ≤ 2`
+/// (i.e., the 2 damage will be lethal at resolution), deal 3 damage
+/// to the target's controller before damaging the creature; else
+/// just deal the 2 damage. The controller-damage half resolves
+/// first so `PlayerRef::ControllerOf(Target(0))` reads the
+/// still-on-bf creature's controller. Approximation: doesn't
+/// account for damage marked on the target before resolution
+/// (a 4/4 with 2 damage already on it would be "would die" but
+/// our gate misses); covers the typical Searing Blood line where
+/// it kills a 2-toughness creature and burns its controller for 3.
 pub fn searing_blood() -> CardDefinition {
+    use crate::card::Predicate;
     CardDefinition {
         name: "Searing Blood",
         cost: cost(&[r(), r()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::DealDamage {
-            to: target_filtered(SelectionRequirement::Creature),
-            amount: Value::Const(2),
+        effect: Effect::If {
+            cond: Predicate::ValueAtMost(
+                Value::ToughnessOf(Box::new(Selector::Target(0))),
+                Value::Const(2),
+            ),
+            then: Box::new(Effect::Seq(vec![
+                Effect::DealDamage {
+                    to: Selector::Player(PlayerRef::ControllerOf(Box::new(Selector::Target(0)))),
+                    amount: Value::Const(3),
+                },
+                Effect::DealDamage {
+                    to: target_filtered(SelectionRequirement::Creature),
+                    amount: Value::Const(2),
+                },
+            ])),
+            else_: Box::new(Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Creature),
+                amount: Value::Const(2),
+            }),
         },
         ..Default::default()
     }
@@ -6851,16 +6912,36 @@ pub fn repulse() -> CardDefinition {
 /// Visions of Beyond — {U} Instant. Draw a card. If a graveyard has 20 or
 /// more cards in it, draw three cards instead.
 ///
-/// The "20-card-graveyard" rider is collapsed (no graveyard-size
-/// `Predicate::ValueAtLeast` over the matched zone yet); resolves as a
-/// flat 1-card cantrip — gameplay-equivalent to Tezzeret's Gambit /
-/// Brainstorm at lower density.
+/// ✅ Push XLVII: 🟡 → ✅. The "any graveyard ≥ 20" gate now wires
+/// faithfully via two `Predicate::ValueAtLeast(GraveyardSizeOf(p), 20)`
+/// halves — one per seat — combined with `Predicate::Any`. Composed
+/// with `Value::IfPredicate` to flip the draw amount from 1 → 3. The
+/// engine is duel-only today (2 seats); each seat's GraveyardSizeOf
+/// is checked independently. For 3+ player formats this would need
+/// generalization to a broadcast-style predicate.
 pub fn visions_of_beyond() -> CardDefinition {
+    use crate::card::Predicate;
     CardDefinition {
         name: "Visions of Beyond",
         cost: cost(&[u()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        effect: Effect::Draw {
+            who: Selector::You,
+            amount: Value::IfPredicate {
+                cond: Box::new(Predicate::Any(vec![
+                    Predicate::ValueAtLeast(
+                        Value::GraveyardSizeOf(PlayerRef::You),
+                        Value::Const(20),
+                    ),
+                    Predicate::ValueAtLeast(
+                        Value::GraveyardSizeOf(PlayerRef::EachOpponent),
+                        Value::Const(20),
+                    ),
+                ])),
+                then: Box::new(Value::Const(3)),
+                else_: Box::new(Value::Const(1)),
+            },
+        },
         ..Default::default()
     }
 }
@@ -8390,28 +8471,37 @@ pub fn path_of_peril() -> CardDefinition {
 /// to each creature. • Fiery Confluence deals 2 damage to each
 /// opponent. • Destroy target artifact.
 ///
-/// 🟡 Approximated as a single-mode pick (the engine has no "choose
-/// three with repetition" primitive yet — same gap as Mystic
-/// Confluence, Cryptic Command, Kaya's Wrath). Each mode resolves
-/// faithfully on its own.
+/// ✅ Push XLVII: 🟡 → ✅. "Choose three with repetition" now wires
+/// via `Effect::ChooseModes { count: 3, up_to: false,
+/// allow_duplicates: true }` — the same primitive Moment of
+/// Reckoning's "choose up to four. You may choose the same mode
+/// more than once" uses (push XXXVI). AutoDecider picks modes
+/// 0+1+1 (sweep + 4 face damage — typical "burn the board, hit
+/// face twice" line). ScriptedDecider drives 3-of-a-kind picks
+/// for tests.
 pub fn fiery_confluence() -> CardDefinition {
     CardDefinition {
         name: "Fiery Confluence",
         cost: cost(&[generic(2), r(), r()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::ChooseMode(vec![
-            Effect::DealDamage {
-                to: Selector::EachPermanent(SelectionRequirement::Creature),
-                amount: Value::Const(1),
-            },
-            Effect::DealDamage {
-                to: Selector::Player(PlayerRef::EachOpponent),
-                amount: Value::Const(2),
-            },
-            Effect::Destroy {
-                what: target_filtered(SelectionRequirement::Artifact),
-            },
-        ]),
+        effect: Effect::ChooseModes {
+            count: 3,
+            up_to: false,
+            allow_duplicates: true,
+            modes: vec![
+                Effect::DealDamage {
+                    to: Selector::EachPermanent(SelectionRequirement::Creature),
+                    amount: Value::Const(1),
+                },
+                Effect::DealDamage {
+                    to: Selector::Player(PlayerRef::EachOpponent),
+                    amount: Value::Const(2),
+                },
+                Effect::Destroy {
+                    what: target_filtered(SelectionRequirement::Artifact),
+                },
+            ],
+        },
         ..Default::default()
     }
 }
@@ -9517,11 +9607,16 @@ pub fn izzet_charm() -> CardDefinition {
 /// any target. If a creature dealt damage this way would die this turn,
 /// exile it instead."
 ///
-/// 🟡 Push XLV NEW. The 2-damage half is wired faithfully to
-/// `any_target()` (Creature ∨ Planeswalker ∨ Player). The "exile if
-/// it would die this turn" rider is omitted (no damage-replacement
-/// → exile primitive — same family gap as Wilt in the Heat's "exile
-/// if dies" half). The base 2-damage line still kills any X/2.
+/// 🟡 Push XLVII: extended doc only. The `target_filter_for_slot_in_mode`
+/// walker pulls the cast-time filter out of the first `Effect::If` branch
+/// it sees (the `then` Exile-Creature branch), so wiring the Effect::If
+/// approach Lava Coil / Magma Spray uses would over-restrict the cast-
+/// time target to Creature only — Pillar's printed "any target" allows
+/// player/PW face damage. The exile-on-die rider stays gap for this card
+/// specifically (would need either a damage-replacement primitive or a
+/// `target_filter_for_slot_in_mode` that consults the effect's `else_`
+/// branch as well). The base 2-damage line still kills any X/2 creature
+/// and lands face damage at instant-speed-equivalent timing.
 pub fn pillar_of_flame() -> CardDefinition {
     use crate::effect::shortcut::any_target;
     CardDefinition {

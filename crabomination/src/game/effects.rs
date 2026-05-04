@@ -400,6 +400,15 @@ impl GameState {
                 if amt == 0 { return Ok(()); }
                 for ent in self.resolve_selector(who, ctx) {
                     if let EntityRef::Player(p) = ent {
+                        // Skullcrack-style "target player can't gain life
+                        // this turn" lock — drop the gain entirely (CR 615
+                        // prevention shape: no event emitted, no
+                        // `life_gained_this_turn` bump, so Infusion / Soul
+                        // Warden style payoffs that key off lifegain
+                        // don't fire).
+                        if self.players[p].lifegain_prevented_this_turn {
+                            continue;
+                        }
                         self.players[p].life += amt as i32;
                         self.players[p].life_gained_this_turn =
                             self.players[p].life_gained_this_turn.saturating_add(amt);
@@ -838,6 +847,20 @@ impl GameState {
                 // infect / trample-trigger riders fire.
                 self.combat_damage_prevented_this_turn = true;
                 events.push(GameEvent::CombatDamagePreventedThisTurn);
+                Ok(())
+            }
+
+            Effect::PreventLifegainThisTurn { who } => {
+                // Skullcrack: target player can't gain life this turn.
+                // Sets a per-player sticky flag that `Effect::GainLife`
+                // reads before applying any life delta. Cleared in
+                // `do_untap` so the lock expires at the start of the
+                // affected player's next turn (CR 615 sticky-shield).
+                for ent in self.resolve_selector(who, ctx) {
+                    if let EntityRef::Player(p) = ent {
+                        self.players[p].lifegain_prevented_this_turn = true;
+                    }
+                }
                 Ok(())
             }
 

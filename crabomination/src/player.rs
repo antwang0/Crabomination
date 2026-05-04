@@ -84,6 +84,16 @@ pub struct Player {
     /// generic in `extra_cost_for_spell`. Set by Chancellor of the Annex's
     /// opening-hand reveal (one charge per Annex revealed by an opponent).
     pub first_spell_tax_charges: u32,
+    /// True if this player can't gain life this turn. Set by Skullcrack-
+    /// style "target player can't gain life this turn" effects. Cleared
+    /// to `false` in `do_untap` so the lock expires at the start of the
+    /// affected player's next turn (CR 615 sticky-shield pattern, same
+    /// shape as `combat_damage_prevented_this_turn`). Read by
+    /// `Effect::GainLife` before the life delta is applied; if set, the
+    /// gain is dropped (no event emitted, no `life_gained_this_turn`
+    /// bump). Defaults to `false` for snapshot back-compat.
+    #[serde(default)]
+    pub lifegain_prevented_this_turn: bool,
     /// True if this player can cast sorceries at instant speed until their
     /// next turn. Set by Teferi, Time Raveler's +1; cleared in `do_untap`
     /// when this player's own turn begins.
@@ -120,6 +130,7 @@ impl Player {
             instants_or_sorceries_cast_this_turn: 0,
             creatures_cast_this_turn: 0,
             first_spell_tax_charges: 0,
+            lifegain_prevented_this_turn: false,
             sorceries_as_flash: false,
             poison_counters: 0,
             eliminated: false,

@@ -86,17 +86,17 @@ All 248 cards marked ✅ or 🟡 have a corresponding factory in
 positives and 0 stale ⏳ rows. STX 2021 progress is tracked in the
 "Strixhaven base set (STX)" section near the bottom of this file.
 
-## 2026-05-04 push XLVII: 4 modern promotions + Delirium primitive + CR 121 audit
+## 2026-05-04 push XLVII: 10 modern promotions + 2 engine primitives + CR 121 audit
 
-Adds the new `Value::DistinctCardTypesInGraveyard(PlayerRef)` engine
-primitive (Modern Horizons 2 Delirium) and uses it to promote two
-Delirium cards (Unholy Heat, Dragon's Rage Channeler) from 🟡 to ✅.
-Also promotes Vendetta (life loss now scales with target's actual
-toughness via `Value::ToughnessOf` reordered before Destroy) and
-Kolaghan's Command (now uses `Effect::ChooseModes { count: 2 }`,
-matching printed "choose two"). New `PlayerView.distinct_card_types_
-in_graveyard` server-view field surfaces the Delirium count for UI
-hint rendering. Tests at 1474 (was 1468; +6 net).
+Adds two engine primitives (`Value::DistinctCardTypesInGraveyard`
+for Modern Horizons 2 Delirium, `Effect::PreventLifegainThisTurn`
+for Skullcrack-style locks) and uses them plus the existing
+`Effect::If` / `Value::ToughnessOf` / `Effect::ChooseModes`
+machinery to promote 10 Modern-supplement cards from 🟡 to ✅.
+New `PlayerView.distinct_card_types_in_graveyard` and
+`PlayerView.lifegain_prevented_this_turn` server-view fields
+surface the two new flags for UI hint rendering. Tests at 1480
+(was 1468; +12 net).
 
 ### New engine primitive: `Value::DistinctCardTypesInGraveyard(PlayerRef)`
 
@@ -133,7 +133,7 @@ time injection pattern as Tarmogoyf / Cruel Somnophage in
 count, and if ≥ 4, push a `ModifyPowerToughness(2, 2)` continuous
 effect plus an `AddKeyword(Flying)` continuous effect.
 
-### Promotions (4: 🟡 → ✅)
+### Promotions (10: 🟡 → ✅)
 
 | Card | Status | Notes |
 |---|---|---|
@@ -141,6 +141,12 @@ effect plus an `AddKeyword(Flying)` continuous effect.
 | Dragon's Rage Channeler | ✅ ← 🟡 | "+2/+2 and flying as long as ≥4 distinct card types in your graveyard" now wires via compute-time injection in `compute_battlefield` (same path as Tarmogoyf / Cruel Somnophage). |
 | Vendetta | ✅ ← 🟡 | "Lose life equal to its toughness" now reads the actual toughness via `Value::ToughnessOf(Target(0))` — `LoseLife` resolves *first* in the Seq so the target is still on bf when its toughness is read; then `Destroy` fires. Same pattern Swords to Plowshares uses for `PowerOf(Target)`. |
 | Kolaghan's Command | ✅ ← 🟡 | "Choose two" now wires via `Effect::ChooseModes { count: 2, up_to: false, allow_duplicates: false }` — same primitive the STX Commands use (push XXXVI). AutoDecider picks modes 0+1 (gy-recursion + opp-discard). |
+| Visions of Beyond | ✅ ← 🟡 | "If a graveyard has 20+ cards" gate now wires via `Predicate::Any([ValueAtLeast(GraveyardSizeOf(You), 20), ValueAtLeast(GraveyardSizeOf(EachOpponent), 20)])` inside `Value::IfPredicate` — flips the draw amount from 1 → 3 when any graveyard crosses the threshold. |
+| Skullcrack | ✅ ← 🟡 | "Players can't gain life this turn" rider now wires via the new `Effect::PreventLifegainThisTurn` primitive — sets a per-player sticky flag that `Effect::GainLife` checks before applying any life delta. Cleared at the player's next untap (CR 615 sticky-shield). |
+| Lava Coil | ✅ ← 🟡 | "Exile if it would die this turn" rider now wires via `Effect::If` over `Predicate::ValueAtMost(ToughnessOf(Target), 4)` — toughness ≤ 4 → exile path; otherwise damage path. Combat-correct in the typical "Lava Coil hits a fresh creature" case. |
+| Magma Spray | ✅ ← 🟡 | Same `Effect::If`-on-toughness pattern as Lava Coil but at the 2-damage threshold. |
+| Fiery Confluence | ✅ ← 🟡 | "Choose three. You may choose the same mode more than once" now wires via `Effect::ChooseModes { count: 3, up_to: false, allow_duplicates: true }` — same primitive Moment of Reckoning uses. |
+| Searing Blood | ✅ ← 🟡 | "If it dies this turn, deal 3 to its controller" rider now wires via `Effect::If` over `Predicate::ValueAtMost(ToughnessOf(Target), 2)` — toughness ≤ 2 → controller takes 3 damage *first*, then the 2 damage to the creature; otherwise just the 2 damage. Same controller-while-still-on-bf pattern as Vendetta. |
 
 ### Server view: `PlayerView.distinct_card_types_in_graveyard`
 

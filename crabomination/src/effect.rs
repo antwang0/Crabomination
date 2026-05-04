@@ -757,6 +757,18 @@ pub enum Effect {
     /// Shieldmage's ETB; Holy Day / Ethereal Haze / Healing Salve's
     /// Holy-Day-mode would all fold onto the same primitive.
     PreventCombatDamageThisTurn,
+    /// "Target player can't gain life this turn." Sets the
+    /// per-player `lifegain_prevented_this_turn` flag, which
+    /// `Effect::GainLife` checks before applying any life delta.
+    /// Cleared in `do_untap` so the lock expires at the start of the
+    /// affected player's next turn (CR 615 sticky-shield pattern,
+    /// same shape as `combat_damage_prevented_this_turn`).
+    /// Used by Skullcrack ("Skullcrack deals 3 damage to target
+    /// player. Damage can't be prevented this turn. Players can't
+    /// gain life this turn.") — the printed wording is "all players"
+    /// but the engine's player-targeted form is gameplay-equivalent
+    /// for the duel format.
+    PreventLifegainThisTurn { who: Selector },
     GainControl { what: Selector, duration: Duration },
     /// Create `count` copies of the given token under `who`'s control.
     CreateToken { who: PlayerRef, count: Value, definition: TokenDefinition },
@@ -1113,6 +1125,7 @@ impl Effect {
             }
             Effect::NameCreatureType { what } => sel_has_target(what),
             Effect::PreventCombatDamageThisTurn => false,
+            Effect::PreventLifegainThisTurn { who } => sel_has_target(who),
         }
     }
 

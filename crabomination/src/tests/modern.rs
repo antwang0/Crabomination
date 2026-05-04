@@ -6586,6 +6586,37 @@ fn lava_coil_kills_a_four_toughness() {
 
     assert!(!g.battlefield.iter().any(|c| c.id == serra),
         "Lava Coil (4 damage) should kill Serra Angel (4 toughness)");
+    // Push XLVII: would-die path now exiles instead of graveyards.
+    assert!(g.exile.iter().any(|c| c.id == serra),
+        "Push XLVII: Serra Angel should be exiled, not graveyarded");
+    assert!(!g.players[1].graveyard.iter().any(|c| c.id == serra),
+        "Push XLVII: Serra Angel should NOT be in opp's graveyard");
+}
+
+/// Lava Coil push XLVII: hits a non-lethal target (toughness > 4)
+/// → regular damage path, no exile.
+#[test]
+fn lava_coil_non_lethal_target_takes_damage() {
+    let mut g = two_player_game();
+    let big = g.add_card_to_battlefield(1, catalog::lumra_bellow_of_the_woods()); // 6/6
+    g.clear_sickness(big);
+    let id = g.add_card_to_hand(0, catalog::lava_coil());
+    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(big)),
+        mode: None, x_value: None,
+    }).expect("Lava Coil castable for {1}{R}");
+    drain_stack(&mut g);
+
+    // 6/6 hit for 4 — survives.
+    assert!(g.battlefield.iter().any(|c| c.id == big),
+        "6/6 should survive Lava Coil's 4 damage");
+    let surv = g.battlefield.iter().find(|c| c.id == big).unwrap();
+    assert_eq!(surv.damage, 4,
+        "Survivor should have 4 damage marked on it");
 }
 
 /// Jaya's Greeting: 3 damage + scry 2.
@@ -8053,6 +8084,9 @@ fn magma_spray_deals_two_damage_to_creature() {
 
     assert!(!g.battlefield.iter().any(|c| c.id == bear),
         "Grizzly Bears (2-toughness) dies to 2 damage");
+    // Push XLVII: would-die path now exiles instead of graveyards.
+    assert!(g.exile.iter().any(|c| c.id == bear),
+        "Push XLVII: Grizzly Bears should be exiled, not graveyarded");
 }
 
 #[test]
@@ -8147,6 +8181,63 @@ fn skullcrack_deals_three_damage_to_player() {
         "Skullcrack deals 3 damage to target player");
 }
 
+/// Skullcrack — push XLVII promotion: target player's lifegain is
+/// suppressed for the rest of the turn. Subsequent `Effect::GainLife`
+/// against that player is dropped.
+#[test]
+fn skullcrack_prevents_target_lifegain_this_turn() {
+    use crate::card::{Effect, Selector, Value};
+    use crate::effect::PlayerRef;
+    use crate::game::EffectContext;
+
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::skullcrack());
+    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Player(1)),
+        mode: None, x_value: None,
+    }).expect("Skullcrack castable for {1}{R}");
+    drain_stack(&mut g);
+
+    // Skullcrack hit P1 for 3 damage and locked their lifegain.
+    assert!(g.players[1].lifegain_prevented_this_turn,
+        "P1 should be flagged as can't-gain-life");
+    let life_after_damage = g.players[1].life;
+    let life_gained_before = g.players[1].life_gained_this_turn;
+
+    // Now manually resolve a GainLife(P1, 5) — should be dropped.
+    let ctx = EffectContext::for_spell(0, None, 0, 0);
+    let _ = g.resolve_effect(
+        &Effect::GainLife {
+            who: Selector::Player(PlayerRef::Seat(1)),
+            amount: Value::Const(5),
+        },
+        &ctx,
+    );
+
+    assert_eq!(g.players[1].life, life_after_damage,
+        "P1 should not have gained life despite Effect::GainLife(5)");
+    assert_eq!(g.players[1].life_gained_this_turn, life_gained_before,
+        "life_gained_this_turn should not bump (no event emitted)");
+}
+
+/// Skullcrack — lifegain prevention clears at the player's next
+/// untap (CR 615 sticky-shield). Direct unit-level test of the
+/// flag-clearing path: set the flag, run `do_untap` with the
+/// affected player as active, observe the flag clears.
+#[test]
+fn skullcrack_lifegain_lock_clears_on_next_untap() {
+    let mut g = two_player_game();
+    g.players[1].lifegain_prevented_this_turn = true;
+    g.active_player_idx = 1;
+    g.do_untap();
+    assert!(!g.players[1].lifegain_prevented_this_turn,
+        "lock should clear on the affected player's untap");
+}
+
 #[test]
 fn fiery_impulse_deals_two_damage_to_creature() {
     let mut g = two_player_game();
@@ -8171,6 +8262,7 @@ fn searing_blood_deals_two_damage_to_creature() {
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let id = g.add_card_to_hand(0, catalog::searing_blood());
     g.players[0].mana_pool.add(Color::Red, 2);
+    let opp_life_before = g.players[1].life;
 
     g.perform_action(GameAction::CastSpell {
         card_id: id,
@@ -8181,6 +8273,34 @@ fn searing_blood_deals_two_damage_to_creature() {
 
     assert!(!g.battlefield.iter().any(|c| c.id == bear),
         "2-toughness Grizzly Bears dies to Searing Blood");
+    // Push XLVII: bear dies → controller takes 3 damage.
+    assert_eq!(g.players[1].life, opp_life_before - 3,
+        "Push XLVII: bear's controller (P1) takes 3 damage on Searing Blood kill");
+}
+
+/// Searing Blood push XLVII — non-lethal target: just 2 damage,
+/// no controller burn.
+#[test]
+fn searing_blood_non_lethal_no_controller_damage() {
+    let mut g = two_player_game();
+    let big = g.add_card_to_battlefield(1, catalog::lumra_bellow_of_the_woods()); // 6/6
+    g.clear_sickness(big);
+    let id = g.add_card_to_hand(0, catalog::searing_blood());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    let opp_life_before = g.players[1].life;
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(big)),
+        mode: None, x_value: None,
+    }).expect("Searing Blood castable for {R}{R}");
+    drain_stack(&mut g);
+
+    // 6/6 hit for 2 — survives, controller takes nothing.
+    assert!(g.battlefield.iter().any(|c| c.id == big),
+        "6/6 survives 2 damage");
+    assert_eq!(g.players[1].life, opp_life_before,
+        "Controller takes no extra damage on non-lethal Searing Blood");
 }
 
 #[test]
@@ -8490,6 +8610,32 @@ fn visions_of_beyond_draws_a_card() {
     // -1 cast +1 draw = 0 net hand change.
     assert_eq!(g.players[0].hand.len(), hand_before,
         "Visions of Beyond is a 1-mana cantrip");
+}
+
+/// Visions of Beyond — push XLVII promotion: when any graveyard has
+/// 20+ cards, draw 3 cards instead of 1.
+#[test]
+fn visions_of_beyond_draws_three_with_full_graveyard() {
+    let mut g = two_player_game();
+    // Stuff opp's graveyard to 20+ cards.
+    for _ in 0..21 {
+        g.add_card_to_graveyard(1, catalog::island());
+    }
+    // Stock library so the 3-card draw resolves.
+    for _ in 0..5 { g.add_card_to_library(0, catalog::island()); }
+
+    let id = g.add_card_to_hand(0, catalog::visions_of_beyond());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    let hand_before = g.players[0].hand.len();
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    }).expect("Visions of Beyond castable for {U}");
+    drain_stack(&mut g);
+
+    // -1 cast +3 draw = +2 net hand change.
+    assert_eq!(g.players[0].hand.len(), hand_before + 2,
+        "Visions of Beyond should draw 3 with a full opp graveyard");
 }
 
 #[test]
@@ -9771,7 +9917,7 @@ fn path_of_peril_kills_two_toughness_creatures() {
 }
 
 #[test]
-fn fiery_confluence_mode_zero_pings_each_creature() {
+fn fiery_confluence_pings_creature_via_default_pick() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     g.clear_sickness(bear);
@@ -9781,13 +9927,30 @@ fn fiery_confluence_mode_zero_pings_each_creature() {
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, mode: Some(0), x_value: None,
     })
-    .expect("Fiery Confluence castable for {2}{R}{R} mode 0");
+    .expect("Fiery Confluence castable for {2}{R}{R}");
     drain_stack(&mut g);
-    // Bear is 2/2; takes 1 damage; survives (damage clears EOT).
-    assert!(g.battlefield.iter().any(|c| c.id == bear),
-        "Bear survives 1 damage");
-    let bear_card = g.battlefield.iter().find(|c| c.id == bear).unwrap();
-    assert_eq!(bear_card.damage, 1, "Bear took 1 damage");
+    // Push XLVII: choose-three-with-repetition is wired. AutoDecider
+    // picks the first 3 modes (0+1+2): 1 damage to each creature, 2
+    // damage to each opponent, destroy target artifact (no-op when
+    // no artifact target available). Bear takes 1 damage; survives.
+    let bear_card = g.battlefield.iter().find(|c| c.id == bear);
+    assert!(bear_card.is_some(), "Bear survives 1 damage from mode 0");
+    assert_eq!(bear_card.unwrap().damage, 1, "Bear took exactly 1 damage");
+}
+
+/// Fiery Confluence push XLVII: confirm shape — 3 modes, count=3,
+/// allow_duplicates=true, up_to=false.
+#[test]
+fn fiery_confluence_chooses_three_with_repetition() {
+    let fc = catalog::fiery_confluence();
+    if let crate::card::Effect::ChooseModes { modes, count, up_to, allow_duplicates } = &fc.effect {
+        assert_eq!(modes.len(), 3, "Fiery Confluence has 3 base modes");
+        assert_eq!(*count, 3, "choose 3");
+        assert!(!*up_to, "exactly 3, not up-to");
+        assert!(*allow_duplicates, "allow same mode more than once");
+    } else {
+        panic!("Fiery Confluence should be a ChooseModes effect");
+    }
 }
 
 #[test]

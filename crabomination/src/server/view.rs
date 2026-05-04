@@ -102,6 +102,7 @@ fn project_player(player: &Player, player_seat: usize, viewer_seat: usize) -> Pl
             }
             seen.len() as u32
         },
+        lifegain_prevented_this_turn: player.lifegain_prevented_this_turn,
     }
 }
 

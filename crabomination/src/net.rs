@@ -144,6 +144,14 @@ pub struct PlayerView {
     /// views.
     #[serde(default)]
     pub distinct_card_types_in_graveyard: u32,
+    /// True if this player can't gain life this turn (Skullcrack-
+    /// style lock). Cleared at the player's next untap. Surfaced so
+    /// UIs can show a "no lifegain" badge on the player frame and
+    /// suppress lifegain-payoff hints (Soul Warden, Bayou Groff,
+    /// Sheoldred lifelink) for the rest of the turn. Push XLVII
+    /// addition; defaulted via `#[serde(default)]` for back-compat.
+    #[serde(default)]
+    pub lifegain_prevented_this_turn: bool,
 }
 
 /// A single hand-slot entry. `Hidden` for cards the viewer isn't entitled to

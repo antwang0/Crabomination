@@ -551,6 +551,11 @@ impl GameState {
         // Clear Teferi, Time Raveler's "you may cast sorceries as though they
         // had flash" flag — it expires on the start of your next turn.
         self.players[p].sorceries_as_flash = false;
+        // Clear Skullcrack-style "can't gain life this turn" lock — it
+        // expires at the start of the affected player's next turn (CR 615
+        // sticky-shield, same as the existing
+        // `combat_damage_prevented_this_turn` cleanup pattern).
+        self.players[p].lifegain_prevented_this_turn = false;
     }
 
     pub(crate) fn do_cleanup(&mut self) {
