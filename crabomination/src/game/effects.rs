@@ -828,6 +828,19 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::PreventCombatDamageThisTurn => {
+                // Owlin Shieldmage / Holy Day / Ethereal Haze: prevent
+                // all combat damage that would be dealt this turn.
+                // Sticky flag — `do_cleanup` clears it (CR 615); the
+                // attacker damage step in
+                // `resolve_combat_damage_with_filter` short-circuits
+                // when the flag is set so no damage events / lifelink /
+                // infect / trample-trigger riders fire.
+                self.combat_damage_prevented_this_turn = true;
+                events.push(GameEvent::CombatDamagePreventedThisTurn);
+                Ok(())
+            }
+
             Effect::Proliferate => {
                 // Add one counter of each existing type on any permanent/player.
                 // Simplified: only handles permanents, each counter type present.

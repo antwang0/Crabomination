@@ -568,6 +568,10 @@ impl GameState {
         for player in &mut self.players {
             player.mana_pool.empty();
         }
+        // Clear "prevent all combat damage this turn" (Owlin Shieldmage,
+        // Holy Day, Ethereal Haze) — the prevention only applies to
+        // combat damage *this* turn (CR 615), so it expires at cleanup.
+        self.combat_damage_prevented_this_turn = false;
         // Advance to the next non-eliminated player's turn (TurnStarted
         // fires on Untap entry).
         self.active_player_idx = self.next_alive_seat(self.active_player_idx);

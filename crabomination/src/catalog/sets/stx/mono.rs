@@ -205,9 +205,18 @@ pub fn plumb_the_forbidden() -> CardDefinition {
 // ── Owlin Shieldmage ────────────────────────────────────────────────────────
 
 /// Owlin Shieldmage — {3}{W} Creature — Bird Wizard. Flash, flying, 2/3.
-/// "When this enters, prevent all combat damage that would be dealt this
-/// turn." We ship the flash flyer body; damage prevention requires a
-/// replacement primitive the engine doesn't yet have.
+/// "When this creature enters, prevent all combat damage that would be
+/// dealt this turn."
+///
+/// Push: 🟡 → ✅ via the new `Effect::PreventCombatDamageThisTurn`
+/// primitive (sets `GameState.combat_damage_prevented_this_turn` until
+/// cleanup; `resolve_combat_damage_with_filter` short-circuits per
+/// attacker when the flag is on, so no damage events fire — lifelink,
+/// infect, trample-trigger riders all skip too, matching the printed
+/// "prevent" semantics from CR 615). Cleared in `do_cleanup` so the
+/// shield only covers the turn it's activated. Same shape as Holy Day
+/// / Ethereal Haze if we add them later — the body just calls the new
+/// primitive at ETB.
 pub fn owlin_shieldmage() -> CardDefinition {
     CardDefinition {
         name: "Owlin Shieldmage",
@@ -223,7 +232,10 @@ pub fn owlin_shieldmage() -> CardDefinition {
         keywords: vec![Keyword::Flash, Keyword::Flying],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::PreventCombatDamageThisTurn,
+        }],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],

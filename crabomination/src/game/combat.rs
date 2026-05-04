@@ -389,6 +389,16 @@ impl GameState {
             if !atk.should_deal {
                 continue;
             }
+            // CR 615 prevention shield (Owlin Shieldmage, Holy Day,
+            // Ethereal Haze): if any active "prevent all combat damage
+            // this turn" effect is in play, every attacker's damage is
+            // replaced with 0. We short-circuit here rather than zeroing
+            // `atk.power` so that lifelink, infect, and trample-trigger
+            // riders that key off "damage dealt" never fire — matching
+            // the printed "prevent" semantics (no damage event at all).
+            if self.combat_damage_prevented_this_turn {
+                continue;
+            }
 
             let blocker_ids: Vec<CardId> = self
                 .block_map

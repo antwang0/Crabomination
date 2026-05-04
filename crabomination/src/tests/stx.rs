@@ -122,6 +122,101 @@ fn owlin_shieldmage_is_a_flash_flyer() {
     assert_eq!(owlin.toughness, 3);
 }
 
+/// Push: Owlin Shieldmage's ETB activates the new
+/// `Effect::PreventCombatDamageThisTurn` primitive — the prevention
+/// shield short-circuits per-attacker damage in
+/// `resolve_combat_damage_with_filter`. P0 attacks with a Bears, but
+/// Owlin (in play under P0) is irrelevant — the prevention shield
+/// affects all attackers. P1's life total stays at 20.
+#[test]
+fn owlin_shieldmage_prevents_combat_damage_on_etb() {
+    let mut g = two_player_game();
+    // P0 attacks with a Bears; P1 plays Owlin Shieldmage at flash speed
+    // (well, in this synthetic test we just put the prevention shield
+    // up via direct ETB before declaring attackers). Either way, when
+    // damage resolves the attacker's 2 power should be prevented.
+    let attacker = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(attacker);
+
+    // Cast Owlin Shieldmage at flash speed under P1 — it has Flash so
+    // P1 can drop it on P0's combat phase. To exercise the prevention
+    // shield we just trigger it directly via a battlefield drop.
+    let owlin = g.add_card_to_battlefield(1, catalog::owlin_shieldmage());
+    g.clear_sickness(owlin);
+    // Manually fire the ETB trigger so the prevention shield is up
+    // before damage resolves.
+    g.combat_damage_prevented_this_turn = true;
+
+    g.step = TurnStep::DeclareAttackers;
+    g.active_player_idx = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker, target: AttackTarget::Player(1) },
+    ])).expect("declare attacker");
+    // Pass through DeclareBlockers (no blocks), FirstStrike, then
+    // CombatDamage where the prevention shield gates damage.
+    while g.step != TurnStep::EndCombat {
+        g.perform_action(GameAction::PassPriority).unwrap();
+        g.perform_action(GameAction::PassPriority).unwrap();
+    }
+
+    // P1's life unchanged — combat damage was prevented.
+    assert_eq!(g.players[1].life, 20,
+        "Owlin Shieldmage's prevention shield should zero out the 2 combat damage");
+}
+
+/// Push: the prevention shield clears on cleanup, so on the *next* turn
+/// combat damage flows normally again.
+#[test]
+fn prevent_combat_damage_clears_on_cleanup() {
+    let mut g = two_player_game();
+    // Activate the shield, run cleanup, expect the flag to be cleared.
+    g.combat_damage_prevented_this_turn = true;
+    g.step = TurnStep::Cleanup;
+    g.do_cleanup();
+    assert!(!g.combat_damage_prevented_this_turn,
+        "do_cleanup should clear the prevention shield (CR 615 — only this turn)");
+}
+
+/// Push: the full Owlin Shieldmage cast flow — cast at flash speed
+/// during the opponent's combat, ETB triggers
+/// `Effect::PreventCombatDamageThisTurn`, then damage resolves with
+/// the shield up.
+#[test]
+fn owlin_shieldmage_full_cast_to_prevention_flow() {
+    let mut g = two_player_game();
+    let attacker = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(attacker);
+    g.step = TurnStep::DeclareAttackers;
+    g.active_player_idx = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker, target: AttackTarget::Player(1) },
+    ])).expect("declare attacker");
+
+    // Now P1's turn to react. P1 casts Owlin Shieldmage at flash speed.
+    g.priority.player_with_priority = 1;
+    let owlin = g.add_card_to_hand(1, catalog::owlin_shieldmage());
+    g.players[1].mana_pool.add(Color::White, 1);
+    g.players[1].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: owlin, target: None, mode: None, x_value: None,
+    })
+    .expect("Owlin Shieldmage castable for {3}{W} at flash speed");
+    drain_stack(&mut g);
+
+    // Sanity: the prevention shield is up.
+    assert!(g.combat_damage_prevented_this_turn,
+        "Owlin Shieldmage's ETB should activate the prevention shield");
+
+    // Pass through DeclareBlockers, FirstStrike, then CombatDamage.
+    while g.step != TurnStep::EndCombat {
+        g.perform_action(GameAction::PassPriority).unwrap();
+        g.perform_action(GameAction::PassPriority).unwrap();
+    }
+
+    assert_eq!(g.players[1].life, 20,
+        "the 2 combat damage from Bears should be prevented");
+}
+
 #[test]
 fn frost_trickster_taps_and_stuns_target_on_etb() {
     let mut g = two_player_game();

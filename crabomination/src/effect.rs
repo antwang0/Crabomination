@@ -737,6 +737,14 @@ pub enum Effect {
     AddCounter    { what: Selector, kind: CounterType, amount: Value },
     RemoveCounter { what: Selector, kind: CounterType, amount: Value },
     Proliferate,
+    /// "Prevent all combat damage that would be dealt this turn." Sets
+    /// the game-state-level `combat_damage_prevented_this_turn` flag,
+    /// which `resolve_combat_damage_with_filter` checks before each
+    /// attacker's damage step. Cleared in `do_cleanup` (CR 615 — the
+    /// prevention only applies to *this* turn). Used by Owlin
+    /// Shieldmage's ETB; Holy Day / Ethereal Haze / Healing Salve's
+    /// Holy-Day-mode would all fold onto the same primitive.
+    PreventCombatDamageThisTurn,
     GainControl { what: Selector, duration: Duration },
     /// Create `count` copies of the given token under `who`'s control.
     CreateToken { who: PlayerRef, count: Value, definition: TokenDefinition },
@@ -1092,6 +1100,7 @@ impl Effect {
                 sel_has_target(from) || value_has_target(count)
             }
             Effect::NameCreatureType { what } => sel_has_target(what),
+            Effect::PreventCombatDamageThisTurn => false,
         }
     }
 

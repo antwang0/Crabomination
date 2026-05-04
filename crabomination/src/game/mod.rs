@@ -140,6 +140,15 @@ pub struct GameState {
     /// as `cards_discarded_this_resolution`.
     #[serde(skip, default)]
     pub(crate) cards_discarded_this_resolution_ids: Vec<CardId>,
+    /// Set when an effect like Owlin Shieldmage's ETB or Holy Day-style
+    /// fog has triggered "prevent all combat damage that would be dealt
+    /// this turn". `resolve_combat_damage_with_filter` short-circuits
+    /// the per-attacker damage step when this is true (CR 615 — damage
+    /// prevention happens before damage is dealt). Cleared in
+    /// `do_cleanup` (cleanup step). Defaulted via `#[serde(default)]`
+    /// so older snapshots without the field deserialize to false.
+    #[serde(default)]
+    pub(crate) combat_damage_prevented_this_turn: bool,
     /// Transient: which face / cast path the in-progress cast is using.
     /// Set by `cast_spell_back_face` (`Back`) and `cast_flashback`
     /// (`Flashback`); reset to `Front` after each emitted SpellCast
@@ -198,6 +207,7 @@ impl Clone for GameState {
             last_created_token: self.last_created_token,
             cards_discarded_this_resolution: self.cards_discarded_this_resolution,
             cards_discarded_this_resolution_ids: self.cards_discarded_this_resolution_ids.clone(),
+            combat_damage_prevented_this_turn: self.combat_damage_prevented_this_turn,
             pending_cast_face: self.pending_cast_face,
             decider: self.decider.kind().into_boxed(),
             pending_decision: self.pending_decision.clone(),
@@ -238,6 +248,7 @@ impl GameState {
             last_created_token: None,
             cards_discarded_this_resolution: 0,
             cards_discarded_this_resolution_ids: Vec::new(),
+            combat_damage_prevented_this_turn: false,
             pending_cast_face: CastFace::Front,
             decider: Box::new(AutoDecider),
             pending_decision: None,

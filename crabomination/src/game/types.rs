@@ -342,6 +342,12 @@ pub enum GameEvent {
     /// exiled from there). Fires per card removed. Used by Strixhaven
     /// "cards leave your graveyard" payoffs.
     CardLeftGraveyard { player: usize, card_id: CardId },
+    /// "Prevent all combat damage that would be dealt this turn" was
+    /// activated. The flag is sticky until cleanup; subsequent
+    /// `resolve_combat_damage_with_filter` calls short-circuit.
+    /// Used by Owlin Shieldmage's ETB; replays render the prevention
+    /// shield's activation event.
+    CombatDamagePreventedThisTurn,
     GameOver { winner: Option<usize> },
 }
 

@@ -547,6 +547,10 @@ pub enum GameEventWire {
     /// can animate "card returned from graveyard" or highlight Lorehold
     /// "cards left graveyard this turn" payoffs.
     CardLeftGraveyard { player: usize, card_id: CardId },
+    /// Wire mirror of `GameEvent::CombatDamagePreventedThisTurn`.
+    /// Surfaced so spectator UIs can render the prevention shield
+    /// (Owlin Shieldmage / Holy Day-style fog).
+    CombatDamagePreventedThisTurn,
     GameOver { winner: Option<usize> },
 }
 
@@ -702,6 +706,7 @@ impl From<&GameEvent> for GameEventWire {
                     card_id: *card_id,
                 }
             }
+            GameEvent::CombatDamagePreventedThisTurn => GameEventWire::CombatDamagePreventedThisTurn,
             GameEvent::GameOver { winner } => GameEventWire::GameOver { winner: *winner },
         }
     }
