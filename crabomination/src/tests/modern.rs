@@ -10070,6 +10070,42 @@ fn monastery_swiftspear_is_a_one_drop_with_haste_and_prowess() {
     assert_eq!(s.cost.symbols.len(), 1, "Swiftspear is a one-drop");
 }
 
+/// Push: Holy Day {W} Instant — fog-style combat damage shield.
+/// Cast at flash speed during opp's combat → all combat damage
+/// prevented this turn → P0's life unchanged.
+#[test]
+fn holy_day_prevents_combat_damage_this_turn() {
+    let mut g = two_player_game();
+    let attacker = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(attacker);
+    g.step = TurnStep::DeclareAttackers;
+    g.active_player_idx = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker, target: AttackTarget::Player(1) },
+    ])).expect("declare attacker");
+
+    // P1 reacts with Holy Day at instant speed.
+    g.priority.player_with_priority = 1;
+    let holy = g.add_card_to_hand(1, catalog::holy_day());
+    g.players[1].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: holy, target: None, mode: None, x_value: None,
+    })
+    .expect("Holy Day castable for {W} at instant speed");
+    drain_stack(&mut g);
+
+    assert!(g.combat_damage_prevented_this_turn,
+        "Holy Day should activate the prevention shield");
+
+    while g.step != TurnStep::EndCombat {
+        g.perform_action(GameAction::PassPriority).unwrap();
+        g.perform_action(GameAction::PassPriority).unwrap();
+    }
+
+    assert_eq!(g.players[1].life, 20,
+        "Holy Day should prevent the 2 combat damage from Bears");
+}
+
 /// Push: Stormchaser Mage's Prowess fires on a noncreature spell cast.
 /// Uses the same synthetic Prowess trigger pipeline as Monastery
 /// Swiftspear / Spectacle Mage (push XXXVIII Prowess wiring).

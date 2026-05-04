@@ -3241,6 +3241,39 @@ pub fn healing_salve() -> CardDefinition {
     }
 }
 
+/// Holy Day — {W} Instant. "Prevent all combat damage that would be
+/// dealt this turn." Classic Alpha-era fog-style combat-damage shield.
+///
+/// Wired via the new `Effect::PreventCombatDamageThisTurn` primitive
+/// (push: same primitive that powers Owlin Shieldmage's ETB).
+/// `resolve_combat_damage_with_filter` short-circuits per attacker
+/// when the flag is set, so no combat damage events fire — lifelink,
+/// infect, trample-trigger riders all skip too. Cleared on cleanup
+/// (CR 615 — prevention only applies to *this* turn).
+pub fn holy_day() -> CardDefinition {
+    CardDefinition {
+        name: "Holy Day",
+        cost: cost(&[w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::PreventCombatDamageThisTurn,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        additional_sac_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+    }
+}
+
 /// Raise the Alarm — {1}{W} Instant. Create two 1/1 white Soldier creature
 /// tokens.
 ///
