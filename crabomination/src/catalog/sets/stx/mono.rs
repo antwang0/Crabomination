@@ -3221,11 +3221,12 @@ pub fn solid_footing() -> CardDefinition {
 /// enters, put a +1/+1 counter on it. / {2}{G}: Untap this creature.
 /// Put a +1/+1 counter on it."
 ///
-/// Push XXXIX: NEW. Mono-green growth tribal — each activation untaps
-/// + counters, so the body scales with available mana. Squirrel
-/// creature-type bridges through Beast (no Squirrel creature type
-/// yet); the Squirrel-tribal payoff Professor of Zoomancy still
-/// triggers via the Beast subtype + a future Squirrel addition.
+/// Push XXXIX: NEW. Mono-green growth tribal — each activation
+/// untaps and counters, so the body scales with available mana.
+/// Squirrel creature-type bridges through Beast (no Squirrel
+/// creature type yet); the Squirrel-tribal payoff Professor of
+/// Zoomancy still triggers via the Beast subtype until a future
+/// Squirrel addition.
 pub fn swarm_shambler() -> CardDefinition {
     use crate::card::ActivatedAbility;
     CardDefinition {

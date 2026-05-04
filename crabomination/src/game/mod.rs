@@ -1216,7 +1216,7 @@ impl GameState {
                     lib.push(c);
                 }
                 // Prepend top_cards in O(n) by moving the remaining library after them.
-                top_cards.extend(lib.drain(..));
+                top_cards.append(lib);
                 *lib = top_cards;
                 Ok(vec![GameEvent::ScryPerformed {
                     player,
@@ -1253,7 +1253,7 @@ impl GameState {
                     self.players[player].graveyard.push(c);
                 }
                 let lib = &mut self.players[player].library;
-                top_cards.extend(lib.drain(..));
+                top_cards.append(lib);
                 *lib = top_cards;
                 Ok(vec![GameEvent::SurveilPerformed {
                     player,
