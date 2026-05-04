@@ -3241,6 +3241,53 @@ pub fn healing_salve() -> CardDefinition {
     }
 }
 
+/// Spore Frog — {G} Creature — Frog 1/1. "Sacrifice this creature:
+/// Prevent all combat damage that would be dealt this turn."
+///
+/// Classic Lorwyn-era Frog with sacrifice-as-cost activation that
+/// activates the same prevention shield as Holy Day / Owlin
+/// Shieldmage. Wired via `ActivatedAbility { sac_cost: true, effect:
+/// Effect::PreventCombatDamageThisTurn, … }` — the engine's existing
+/// sac-cost path handles the sacrifice + the new
+/// `PreventCombatDamageThisTurn` primitive activates the shield.
+pub fn spore_frog() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Spore Frog",
+        cost: cost(&[g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Frog],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: false,
+            mana_cost: cost(&[]),
+            effect: Effect::PreventCombatDamageThisTurn,
+            once_per_turn: false,
+            sorcery_speed: false,
+            sac_cost: true,
+            condition: None,
+            life_cost: 0,
+            exile_gy_cost: 0,
+        }],
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        additional_sac_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+    }
+}
+
 /// Holy Day — {W} Instant. "Prevent all combat damage that would be
 /// dealt this turn." Classic Alpha-era fog-style combat-damage shield.
 ///

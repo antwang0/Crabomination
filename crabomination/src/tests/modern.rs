@@ -10070,6 +10070,45 @@ fn monastery_swiftspear_is_a_one_drop_with_haste_and_prowess() {
     assert_eq!(s.cost.symbols.len(), 1, "Swiftspear is a one-drop");
 }
 
+/// Push: Spore Frog {G} 1/1 — sac-as-cost activation puts up the
+/// prevention shield. Validates the same primitive used by Holy Day
+/// + Owlin Shieldmage routes through a `sac_cost` activated ability.
+#[test]
+fn spore_frog_sacrifice_prevents_combat_damage() {
+    let mut g = two_player_game();
+    let attacker = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(attacker);
+    g.step = TurnStep::DeclareAttackers;
+    g.active_player_idx = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker, target: AttackTarget::Player(1) },
+    ])).expect("declare attacker");
+
+    // P1 has a Spore Frog and activates it at instant speed.
+    g.priority.player_with_priority = 1;
+    let frog = g.add_card_to_battlefield(1, catalog::spore_frog());
+    g.clear_sickness(frog);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: frog, ability_index: 0, target: None,
+    })
+    .expect("Spore Frog activatable for sacrifice");
+    drain_stack(&mut g);
+
+    // Frog is sacrificed; shield is up.
+    assert!(g.battlefield.iter().all(|c| c.id != frog),
+        "Spore Frog should be sacrificed");
+    assert!(g.combat_damage_prevented_this_turn,
+        "Spore Frog activation should activate the shield");
+
+    while g.step != TurnStep::EndCombat {
+        g.perform_action(GameAction::PassPriority).unwrap();
+        g.perform_action(GameAction::PassPriority).unwrap();
+    }
+
+    assert_eq!(g.players[1].life, 20,
+        "Spore Frog should prevent the 2 combat damage from Bears");
+}
+
 /// Push: Holy Day {W} Instant — fog-style combat damage shield.
 /// Cast at flash speed during opp's combat → all combat damage
 /// prevented this turn → P0's life unchanged.
