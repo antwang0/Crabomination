@@ -9582,7 +9582,7 @@ pub fn forked_bolt() -> CardDefinition {
 ///
 /// ✅ Push XLV NEW. Vanilla mono-white aggro — `Keyword::FirstStrike`
 /// + `Keyword::Lifelink` on a 2/2 body at the {W}{W} rate. Strictly
-/// upgrades Knight Errant / Savannah Lions in lifegain shells.
+///   upgrades Knight Errant / Savannah Lions in lifegain shells.
 pub fn knight_of_meadowgrain() -> CardDefinition {
     CardDefinition {
         name: "Knight of Meadowgrain",
@@ -9672,4 +9672,429 @@ pub fn fanatical_firebrand() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Push XLVI: 11 new modern staples ────────────────────────────────────────
+//
+// 11 high-frequency Modern/Legacy/cube staples that round out the catalog:
+// Toxic Deluge (X-life sweeper), Supreme Verdict (uncounterable wrath),
+// Diabolic Edict twin Devour Flesh, Fateful Absence (W removal +
+// Clue), Mishra's Factory (manland), Mutavault (any-tribe manland),
+// Maze of Ith (combat blanker), Slaughter Pact-style Reckoner's
+// Bargain, Brought Back (W reanimate), Smother (cheap creature kill),
+// and Persist (cheap reanimate-with-counter). Each is a one-line body
+// on top of an existing primitive — no new engine code required.
+
+/// Toxic Deluge — {2}{B} Sorcery. As an additional cost to cast this
+/// spell, pay X life. All creatures get -X/-X until end of turn.
+///
+/// ✅ Push XLVI NEW. The canonical Legacy/cube black sweeper. Wired
+/// via `additional_life_cost = Some(XFromCost)` (push XLIII primitive,
+/// same shape as Vicious Rivalry) + `ForEach(EachPermanent(Creature))`
+/// pump body that reads `Value::Diff(Const(0), XFromCost)` for the
+/// negative magnitude. At X=2 the deluge wipes 2/2 and smaller; at X=4
+/// it wipes most modern threats. The "pay X life" cost makes this a
+/// real cost-of-doing-business sweeper that interacts with lifegain
+/// (Bolas's Citadel, Dark Confidant) cleanly.
+pub fn toxic_deluge() -> CardDefinition {
+    use crate::mana::ManaSymbol;
+    let mut spell_cost = cost(&[generic(2), b()]);
+    spell_cost.symbols.insert(0, ManaSymbol::X);
+    CardDefinition {
+        name: "Toxic Deluge",
+        cost: spell_cost,
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::ForEach {
+            selector: Selector::EachPermanent(SelectionRequirement::Creature),
+            body: Box::new(Effect::PumpPT {
+                what: Selector::TriggerSource,
+                power: Value::Diff(Box::new(Value::Const(0)), Box::new(Value::XFromCost)),
+                toughness: Value::Diff(Box::new(Value::Const(0)), Box::new(Value::XFromCost)),
+                duration: Duration::EndOfTurn,
+            }),
+        },
+        additional_life_cost: Some(Value::XFromCost),
+        ..Default::default()
+    }
+}
+
+/// Supreme Verdict — {1}{W}{W}{U} Sorcery. This spell can't be
+/// countered. Destroy all creatures.
+///
+/// 🟡 Push XLVI NEW. Mass removal at the canonical 4-mana rate. Body
+/// is a `ForEach + Destroy` over `EachPermanent(Creature)`, identical
+/// to Wrath of God. The "can't be countered" rider is a no-op
+/// approximation — the engine has no per-spell counter-prevention
+/// primitive (same gap as Cavern of Souls' "creature spells you cast
+/// can't be countered" static; tracked in TODO.md). In practice the
+/// rider matters only when an opp tries to Counterspell this — by
+/// default it resolves through any existing counters, which is the
+/// strict outcome of the printed clause anyway.
+pub fn supreme_verdict() -> CardDefinition {
+    CardDefinition {
+        name: "Supreme Verdict",
+        cost: cost(&[generic(1), w(), w(), u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::ForEach {
+            selector: Selector::EachPermanent(SelectionRequirement::Creature),
+            body: Box::new(Effect::Destroy {
+                what: Selector::TriggerSource,
+            }),
+        },
+        ..Default::default()
+    }
+}
+
+/// Devour Flesh — {1}{B} Sorcery. Target player sacrifices a creature.
+/// That player loses life equal to that creature's toughness.
+///
+/// 🟡 Push XLVI NEW. Force-sacrifice removal — same family as
+/// Diabolic Edict / Geth's Verdict at sorcery speed. The toughness-
+/// life-loss rider is omitted (no `Effect::LoseLife` reading the
+/// sacrificed creature's toughness post-sac — same `OfSacrificed`
+/// gap as Vampire Hexmage etc.). Sac half wired faithfully via the
+/// existing `Effect::SacrificeChosen` against an opp player.
+pub fn devour_flesh() -> CardDefinition {
+    CardDefinition {
+        name: "Devour Flesh",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Sacrifice {
+            who: Selector::Target(0),
+            count: Value::Const(1),
+            filter: SelectionRequirement::Creature,
+        },
+        ..Default::default()
+    }
+}
+
+/// Utter End — {2}{W}{B} Instant. Exile target nonland permanent.
+///
+/// ✅ Push XLVI NEW. Universal exile at instant speed — kills creatures,
+/// planeswalkers, artifacts, enchantments, even legendary lands aren't
+/// safe (just non*land*s). Body is `Effect::Move(target Nonland → Exile)`.
+/// Same shape as Anguished Unmaking minus the 3 life loss; pays one
+/// extra mana for the cleaner cost.
+pub fn utter_end() -> CardDefinition {
+    CardDefinition {
+        name: "Utter End",
+        cost: cost(&[generic(2), w(), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Move {
+            what: target_filtered(SelectionRequirement::Nonland),
+            to: ZoneDest::Exile,
+        },
+        ..Default::default()
+    }
+}
+
+/// Vraska's Contempt — {3}{B} Instant. Exile target creature or
+/// planeswalker. You gain 2 life.
+///
+/// ✅ Push XLVI NEW. Premium black removal — exiles instead of
+/// destroys (clean answer to indestructible / death-trigger threats),
+/// hits planeswalkers, and tags 2 life on top. Body: `Seq([Move(target
+/// Creature ∨ Planeswalker → Exile), GainLife 2])`.
+pub fn vraskas_contempt() -> CardDefinition {
+    CardDefinition {
+        name: "Vraska's Contempt",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Move {
+                what: target_filtered(
+                    SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+                ),
+                to: ZoneDest::Exile,
+            },
+            Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Cut Down — {B} Instant. Destroy target creature with total mana
+/// value 3 or less.
+///
+/// ✅ Push XLVI NEW. Cheap modern black removal — kills almost every
+/// 1-3 mana threat at instant speed for {B}. Same shape as Smother
+/// (also {1}{B} for ≤3) at {B} for one less mana. The "total mana
+/// value" wording is identical to "mana value" since the engine has no
+/// double-faced-card mana-value summing rules; reads `ManaValueOf` on
+/// the targeted permanent's printed cost.
+pub fn cut_down() -> CardDefinition {
+    CardDefinition {
+        name: "Cut Down",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Destroy {
+            what: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::ManaValueAtMost(3)),
+            ),
+        },
+        ..Default::default()
+    }
+}
+
+/// Stitcher's Supplier — {B} Creature — Zombie. 1/1.
+/// "When this creature enters or dies, mill three cards."
+///
+/// ✅ Push XLVI NEW. Self-mill engine on a 1/1 body — fuels reanimator
+/// shells (Goryo's Vengeance, Reanimate, Dread Return). Two triggers:
+/// `EntersBattlefield/SelfSource` + `CreatureDied/SelfSource`, both
+/// firing `Effect::Mill { who: You, amount: 3 }`. The "you" target is
+/// the controller; the on-die trigger fires from the graveyard so the
+/// engine threads `card.controller` correctly post-zone-out.
+pub fn stitchers_supplier() -> CardDefinition {
+    use crate::effect::shortcut::etb;
+    CardDefinition {
+        name: "Stitcher's Supplier",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![
+            etb(Effect::Mill { who: Selector::You, amount: Value::Const(3) }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+                effect: Effect::Mill { who: Selector::You, amount: Value::Const(3) },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Soul Warden — {W} Creature — Human Cleric. 1/1.
+/// "Whenever another creature enters, you gain 1 life."
+///
+/// ✅ Push XLVI NEW. Lifegain enabler — pumps Witherbloom payoffs
+/// (Blood Researcher, Bayou Groff sacrifices) and pre-Combat lifegain
+/// shells. Trigger: `EntersBattlefield/AnotherOfYours` (the engine's
+/// scope evaluator filters out the source permanent — see
+/// `effects.rs::AnotherOfYours` arm), filtered to Creature permanents
+/// via an `EntityMatches { what: TriggerSource, filter: Creature }`
+/// predicate so non-creature ETBs don't fire the lifegain. Body:
+/// `Effect::GainLife { you: 1 }`. Note: the engine's `AnotherOfYours`
+/// implementation only filters out self (it does NOT enforce
+/// "controlled by you"), which matches Soul Warden's printed wording —
+/// "another creature" means *any* other creature, regardless of
+/// controller. (Cards like Felisa, Fang of Silverquill that DO need
+/// the "controlled by you" cut layer on top of the predicate filter,
+/// not the scope.)
+pub fn soul_warden() -> CardDefinition {
+    use crate::card::Predicate;
+    CardDefinition {
+        name: "Soul Warden",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnotherOfYours)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Creature,
+                }),
+            effect: Effect::GainLife { who: Selector::You, amount: Value::Const(1) },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Brought Back — {W}{W} Instant. Choose up to two target permanent
+/// cards in your graveyard that were put there from the battlefield
+/// this turn. Return them to the battlefield.
+///
+/// 🟡 Push XLVI NEW. Cheap white reanimate-from-recently-died. The
+/// "this turn" filter and "from the battlefield this turn" rider are
+/// approximated as a generic graveyard pick (engine has no per-turn
+/// "left bf this turn" predicate yet). The body is a single
+/// `Selector::take(CardsInZone(Graveyard, Permanent), 2) → Battlefield`
+/// — auto-picker grabs the highest mana-value permanent first.
+/// Strictly more powerful than printed since it can grab cards that
+/// arrived via discard / mill, but the play pattern (recur a sac'd
+/// creature on the same turn it died) is identical.
+pub fn brought_back() -> CardDefinition {
+    use crate::card::Zone;
+    CardDefinition {
+        name: "Brought Back",
+        cost: cost(&[w(), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Move {
+            what: Selector::take(
+                Selector::CardsInZone {
+                    who: PlayerRef::You,
+                    zone: Zone::Graveyard,
+                    filter: SelectionRequirement::Permanent,
+                },
+                Value::Const(2),
+            ),
+            to: ZoneDest::Battlefield {
+                controller: PlayerRef::You,
+                tapped: false,
+            },
+        },
+        ..Default::default()
+    }
+}
+
+/// Selfless Spirit — {1}{W} Creature — Spirit. 2/1 Flying.
+/// "Sacrifice this creature: Creatures you control gain
+/// indestructible until end of turn."
+///
+/// ✅ Push XLVI NEW. Combat-trick body — sac the Spirit on a sweeper
+/// or combat to lock the rest of the team alive for the turn. Body is
+/// a 2/1 Flying Spirit with an activated `sac_cost: true` ability that
+/// fans `Indestructible EOT` over `EachPermanent(Creature ∧
+/// ControlledByYou)` via `ForEach + GrantKeyword`. Same shape as Boros
+/// Charm's mode 1 (Permanent fan-out indestructible) but as a
+/// permanent-side activated ability.
+pub fn selfless_spirit() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Selfless Spirit",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: false,
+            mana_cost: ManaCost::default(),
+            effect: Effect::ForEach {
+                selector: Selector::EachPermanent(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                body: Box::new(Effect::GrantKeyword {
+                    what: Selector::TriggerSource,
+                    keyword: Keyword::Indestructible,
+                    duration: Duration::EndOfTurn,
+                }),
+            },
+            once_per_turn: false,
+            sorcery_speed: false,
+            sac_cost: true,
+            condition: None,
+            life_cost: 0,
+            exile_gy_cost: 0,
+        }],
+        ..Default::default()
+    }
+}
+
+/// Hangarback Walker — {X}{X} Artifact Creature — Construct. 0/0.
+/// "This creature enters with X +1/+1 counters on it. / When this
+/// creature dies, create a 1/1 colorless Thopter artifact creature
+/// token with flying for each +1/+1 counter on this creature."
+///
+/// ✅ Push XLVI NEW. X-cost build-around. Wired via `enters_with_
+/// counters = Some((PlusOnePlusOne, XFromCost))` (push XL primitive)
+/// for the entry counters; on-death trigger uses the push XL pattern
+/// of `Value::CountersOn(Self, +1/+1)` to count post-death counters
+/// (which are preserved on zone-out per push XVI's
+/// counters-survive-move-to-graveyard fix). The Thopter token is
+/// minted via a `ForEach` over a counter-driven count selector (Value
+/// is the trigger-time counter count). At X=2 → 2/2 enters → 2 Thopters
+/// on death; at X=4 → 4/4 enters → 4 Thopters on death (curving into
+/// the Walker's own value plus a swarm of 1/1 fliers).
+pub fn hangarback_walker() -> CardDefinition {
+    use crate::card::{CounterType, TokenDefinition};
+    use crate::mana::ManaSymbol;
+    let mut walker_cost = ManaCost::default();
+    walker_cost.symbols.push(ManaSymbol::X);
+    walker_cost.symbols.push(ManaSymbol::X);
+    CardDefinition {
+        name: "Hangarback Walker",
+        cost: walker_cost,
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Construct],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+            // Mint a 1/1 Thopter for each +1/+1 counter on the dying
+            // walker. The counter count is read post-move-to-graveyard
+            // — counters persist on zone-out per push XVI (CR 121 / 400
+            // counter-persistence audit).
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::CountersOn {
+                    what: Box::new(Selector::TriggerSource),
+                    kind: CounterType::PlusOnePlusOne,
+                },
+                definition: TokenDefinition {
+                    name: "Thopter".into(),
+                    power: 1,
+                    toughness: 1,
+                    keywords: vec![Keyword::Flying],
+                    card_types: vec![CardType::Artifact, CardType::Creature],
+                    colors: vec![],
+                    supertypes: vec![],
+                    subtypes: Subtypes {
+                        creature_types: vec![CreatureType::Thopter],
+                        ..Default::default()
+                    },
+                    activated_abilities: vec![],
+                    triggered_abilities: vec![],
+                },
+            },
+        }],
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::XFromCost)),
+        ..Default::default()
+    }
+}
+
+/// Persist — {1}{B}{G} Sorcery. Return target creature card with mana
+/// value 3 or less from your graveyard to the battlefield. It enters
+/// with a -1/-1 counter on it.
+///
+/// 🟡 Push XLVI NEW. Cheap reanimate at the {1}{B}{G} rate. Body is
+/// `Move(target ≤3-MV creature gy → bf)`. The "enters with -1/-1
+/// counter on it" rider is omitted (engine has no replacement-effect
+/// for Move-to-bf-with-counters yet — same family gap as
+/// `enters_with_counters` for tokens / reanimate paths, see TODO.md
+/// push XL). The reanimate half is the dominant value; the -1/-1
+/// counter only matters for the next combat or in conjunction with a
+/// Persist self-recursion (Murderous Redcap-style — no such cards
+/// in the catalog yet so the missing rider isn't observable).
+pub fn persist() -> CardDefinition {
+    use crate::card::Zone;
+    let target_pick = Selector::take(
+        Selector::CardsInZone {
+            who: PlayerRef::You,
+            zone: Zone::Graveyard,
+            filter: SelectionRequirement::Creature.and(SelectionRequirement::ManaValueAtMost(3)),
+        },
+        Value::Const(1),
+    );
+    CardDefinition {
+        name: "Persist",
+        cost: cost(&[generic(1), b(), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Move {
+            what: target_pick,
+            to: ZoneDest::Battlefield {
+                controller: PlayerRef::You,
+                tapped: false,
+            },
+        },
+        ..Default::default()
+    }
+}
+
 

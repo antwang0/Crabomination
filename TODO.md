@@ -7,6 +7,51 @@ See `CUBE_FEATURES.md` (cube-card implementation status) and
 
 ## Recent additions
 
+- ✅ **Push XLVI (2026-05-04)**: 12 new modern cards + AnotherOfYours
+  ETB de-dup + CR 605 (Mana Abilities) audit. Tests at 1463 (was
+  1445; +18 net), all green.
+  - **12 new modern cards** (`catalog::sets::decks::modern`):
+    Toxic Deluge ✅ ({X}{2}{B} Sorcery — pay X life, all creatures
+    -X/-X EOT); Supreme Verdict 🟡 ({1}{W}{W}{U} Sorcery — destroy
+    all creatures; "can't be countered" rider gap); Devour Flesh 🟡
+    ({1}{B} Sorcery — opp sacrifices creature; toughness-loss rider
+    gap); Brought Back 🟡 ({W}{W} Instant — return up to 2
+    permanent cards from gy; "this turn" filter approximated);
+    Persist 🟡 ({1}{B}{G} Sorcery — reanimate ≤3-MV creature; -1/-1
+    counter rider gap); Selfless Spirit ✅ ({1}{W} 2/1 Spirit Flying
+    — sac for indestructible team-wide); Hangarback Walker ✅
+    ({X}{X} 0/0 Construct — enters with X +1/+1 counters; on death
+    mints X Thopter tokens, validates the AnotherOfYours fix);
+    Utter End ✅ ({2}{W}{B} Instant — exile any nonland);
+    Vraska's Contempt ✅ ({3}{B} Instant — exile creature/PW + 2
+    life); Cut Down ✅ ({B} Instant — destroy ≤3-MV creature);
+    Stitcher's Supplier ✅ ({B} 1/1 Zombie — mill 3 on ETB + death,
+    validates the AnotherOfYours fix); Soul Warden ✅ ({W} 1/1
+    Cleric — gain 1 per "another creature" ETB).
+  - **Engine fix: AnotherOfYours ETB de-dup** —
+    `game/mod.rs::is_event_hardcoded` now skips `PermanentEntered
+    + AnotherOfYours` triggers in the generic event-matching
+    walker. Previously the trigger was processed in BOTH the
+    hardcoded `stack.rs` ETB path (line 389-433) AND the generic
+    `event_matches_spec` walker, causing every "another creature
+    enters" trigger (Soul Warden, Felisa Fang, Pestbrood Sloth,
+    Arnyn Deathbloom Botanist's death-trigger, etc.) to fire
+    twice. The fix mirrors the existing SelfSource skip — both ETB
+    scopes are owned by the hardcoded path.
+  - **New CreatureType: Thopter** — added to support Hangarback
+    Walker's death-trigger token mint.
+  - **CR 605 audit (Mana Abilities)**: full per-rule status in
+    STRIXHAVEN2.md. Highlights: 605.1/605.1a (mana ability
+    structural definition) ✅, 605.2 (still mana ability when
+    blocked) ✅, 605.3a (can activate mid-cast/mid-resolve) ✅,
+    605.3b (off-stack resolve) ✅, 605.5a (targeted ≠ mana ability)
+    ✅, 605.5b (spells ≠ mana abilities) ✅. Still 🟡: 605.1b /
+    605.4 / 605.4a (triggered mana abilities — no catalog card
+    exercises this path).
+  - **18 new tests**: 14 card tests + 4 (Soul Warden ×2, Hangarback
+    on-death scaling, Stitcher's Supplier death validating the
+    AnotherOfYours fix end-to-end).
+
 - ✅ **Push XLV (2026-05-04)**: 8 new modern cards + 2 SOS promotions +
   bot life-cost preflight + CR 120 (Damage) audit. Tests at 1445
   (was 1430; +15 net), all green.

@@ -53,7 +53,7 @@ pub enum CreatureType {
     Elephant, Rhino, Hippo, Mammoth, Whale, Leviathan, Kraken, Elk,
     Lion, Kavu, Lhurgoyf, Atog, Noggle, Vedalken, Kor, Ally,
     Avatar, Phyrexian, Praetor, Incarnation, Mercenary,
-    Construct, Golem,
+    Construct, Golem, Thopter,
     Ooze, Plant,
     // Strixhaven-era subtypes.
     Inkling, Pest, Fractal,

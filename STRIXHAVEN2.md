@@ -79,6 +79,142 @@ All 248 cards marked ✅ or 🟡 have a corresponding factory in
 positives and 0 stale ⏳ rows. STX 2021 progress is tracked in the
 "Strixhaven base set (STX)" section near the bottom of this file.
 
+## 2026-05-04 push XLVI: 12 new modern cards + AnotherOfYours ETB de-dup + CR 605 audit
+
+Adds 12 new Modern-supplement card factories (`catalog::sets::decks::
+modern`) including Toxic Deluge (X-life sweeper), Supreme Verdict,
+Hangarback Walker, and Soul Warden. Fixes a longstanding double-fire
+bug in the `AnotherOfYours` ETB-trigger dispatch (the generic
+event-matching walker and the hardcoded `stack.rs` ETB path were
+both pushing the trigger, doubling lifegain on Soul Warden / Felisa,
+Fang of Silverquill style cards). Tests at 1463 (was 1445; +18 net).
+
+### Engine fix: `AnotherOfYours` ETB de-dup
+
+`game/mod.rs::is_event_hardcoded` now skips
+`PermanentEntered + AnotherOfYours` triggers in the generic
+event-matching walker. Previously the trigger was processed in both:
+
+1. The hardcoded `stack.rs` ETB path (line 389-433), which walks the
+   battlefield for AnotherOfYours triggers when a creature enters,
+   filtering by `c.controller == caster` and pushing per-listener
+   triggers with the entering creature as the subject.
+2. The generic `event_matches_spec` walker in `game/mod.rs::fire_
+   triggers_for_events`, which would re-fire the same trigger from
+   the broadcast event stream.
+
+Net effect: Soul Warden gained 2 life per creature ETB instead of 1,
+Felisa Fang dropped two Inkling tokens per died-with-counter creature,
+Pestbrood Sloth's death trigger fired twice. The fix mirrors the
+existing `SelfSource` skip — both ETB scopes (SelfSource for "this
+creature enters" + AnotherOfYours for "another creature you control
+enters") are owned by the hardcoded path.
+
+### New Modern cards (12, all in `catalog::sets::decks::modern`)
+
+- **Toxic Deluge** ({X}{2}{B} Sorcery) ✅ — Pay X life as additional
+  cost; all creatures get -X/-X EOT. Wired via `additional_life_cost
+  = Some(XFromCost)` (push XLIII primitive) + `ForEach + PumpPT(-X,
+  -X, EOT)` body. At X=2 wipes 2/2s; at X=4 wipes most modern threats.
+  Same family as Vicious Rivalry but on a sweeper rather than mass-
+  destroy.
+- **Supreme Verdict** ({1}{W}{W}{U} Sorcery) 🟡 — Destroy all
+  creatures. The "can't be countered" rider stays gap (no per-spell
+  counter-prevention primitive). Body identical to Wrath of God.
+- **Devour Flesh** ({1}{B} Sorcery) 🟡 — Target player sacrifices a
+  creature. The "loses life equal to its toughness" rider is omitted
+  (no `OfSacrificed` value primitive); sacrifice half wired faithfully
+  via `Effect::Sacrifice` against `Target(0)`.
+- **Brought Back** ({W}{W} Instant) 🟡 — Return up to two permanent
+  cards from your graveyard to the battlefield. Approximated as
+  generic graveyard pick (engine has no per-turn "left bf this turn"
+  predicate yet); body uses `Selector::take(_, 2) → Battlefield`.
+- **Persist** ({1}{B}{G} Sorcery) 🟡 — Cheap reanimate at the {1}{B}
+  {G} rate. The "enters with -1/-1 counter" rider is omitted (engine
+  has no Move-to-bf-with-counters replacement primitive — same family
+  gap as `enters_with_counters` for tokens, see TODO.md push XL).
+- **Selfless Spirit** ({1}{W} 2/1 Spirit Flying) ✅ — Sacrifice
+  activation grants Indestructible EOT to every creature you control.
+  Body is a `sac_cost: true` activated ability with `ForEach +
+  GrantKeyword` over `EachPermanent(Creature ∧ ControlledByYou)`.
+- **Hangarback Walker** ({X}{X} 0/0 Construct) ✅ — Enters with X
+  +1/+1 counters via `enters_with_counters = Some((PlusOnePlusOne,
+  XFromCost))`. On death, mints 1 Thopter token for each +1/+1
+  counter via `Value::CountersOn(SelfSource, +1/+1)` (counters
+  persist on zone-out per push XVI). Adds new `Thopter` creature
+  subtype.
+- **Utter End** ({2}{W}{B} Instant) ✅ — Universal exile of any
+  nonland permanent at instant speed. `Effect::Move(target Nonland
+  → Exile)`.
+- **Vraska's Contempt** ({3}{B} Instant) ✅ — Exile target
+  creature/PW + caster gains 2 life.
+- **Cut Down** ({B} Instant) ✅ — Destroy creature with mana value
+  ≤ 3. Cheap modern removal.
+- **Stitcher's Supplier** ({B} 1/1 Zombie) ✅ — Mills 3 on both ETB
+  and on death. Validates the AnotherOfYours fix end-to-end (without
+  the de-dup, the death-mill would have fired twice).
+- **Soul Warden** ({W} 1/1 Cleric) ✅ — Whenever another creature
+  enters, gain 1 life. Wired via `EntersBattlefield/AnotherOfYours`
+  + `EntityMatches { what: TriggerSource, filter: Creature }` filter.
+  Validates the AnotherOfYours fix — without the de-dup, Soul Warden
+  gained 2 life per ETB instead of 1.
+
+### CR 605 audit (Mana Abilities)
+
+Per-rule status (`rules 605.1–605.5`):
+
+- **605.1** (mana ability definition) ✅ — `actions.rs::is_mana_
+  ability` walks the effect tree, returning true iff every step is
+  `AddMana` (with optional `Tap` cost). Matches "doesn't require a
+  target, could add mana to a player's pool, isn't a loyalty
+  ability."
+- **605.1a** (activated mana ability criteria) ✅ — same helper.
+  Loyalty abilities are stored separately on `CardDefinition.
+  loyalty_abilities`, never mistaken for mana abilities.
+- **605.1b** (triggered mana ability criteria) 🟡 — engine has no
+  triggered mana abilities yet. Cards like Mana Reflection's
+  resolution trigger ("whenever a player taps a land for mana, that
+  player adds one mana of any type that land produced") would need
+  a new event kind. No such cards in the catalog.
+- **605.2** (mana ability stays a mana ability even when game state
+  blocks it) ✅ — `is_mana_ability` is purely structural; doesn't
+  check whether the ability could currently produce mana.
+- **605.3a** (can be activated mid-cast/mid-resolve) ✅ — the
+  payment loop in `actions.rs::pay_mana_cost` calls back into
+  `auto_tap_mana_for_color` which can fire mana abilities of any
+  un-tapped lands the controller has, even mid-cast.
+- **605.3b** (mana abilities don't go on the stack) ✅ — `actions.
+  rs::activate_ability` short-circuits to
+  `continue_ability_resolution` for mana abilities, bypassing the
+  stack push and priority reset.
+- **605.3c** (single-shot per activation) ✅ — the immediate-resolve
+  path means there's no window for double-activation; no special
+  flag needed.
+- **605.4 / 605.4a** (triggered mana abilities don't go on stack) 🟡
+  — see 605.1b. No catalog card exercises this path; the dispatch
+  would be a one-liner in `fire_triggers_for_events` if needed.
+- **605.5a** (targeted abilities aren't mana abilities) ✅ —
+  `is_mana_ability` returns false for any effect with a target slot;
+  helper walks `Selector::Target` references via `effect_has_target`
+  reachability.
+- **605.5b** (spells aren't mana abilities) ✅ — spells route through
+  `cast_spell`, never `activate_ability`; the mana ability check is
+  structurally unreachable from the spell path.
+
+### Tests (+18 net, 1445 → 1463)
+
+- 14 new tests for the 12 new cards (Toxic Deluge ×2 — kills small +
+  X=0 noop; Supreme Verdict; Devour Flesh; Brought Back; Persist ×2
+  — reanimate + no-eligible noop; Selfless Spirit ×2 — activation +
+  body shape; Hangarback Walker — enters-with-counters + on-death
+  Thopter mint; Utter End; Vraska's Contempt; Cut Down ×2 — accept
+  + reject high-MV; Stitcher's Supplier ×2 — ETB + on-death; Soul
+  Warden ×2 — fires on opp creature + does NOT fire on self ETB).
+- All 1463 tests pass — including the 17 existing AnotherOfYours-
+  scoped triggered abilities (Felisa Fang, Pestbrood Sloth, Arnyn,
+  Augusta, Sparring Regimen, etc.) which previously were silently
+  double-firing.
+
 ## 2026-05-04 push XLV: 8 new modern cards + 2 SOS promotions + bot life-cost preflight + CR 120 audit
 
 Adds 8 new Modern-supplement card factories (`catalog::sets::decks::

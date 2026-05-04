@@ -1669,7 +1669,18 @@ impl GameState {
 fn is_event_hardcoded(ev: &GameEvent, spec: &crate::effect::EventSpec) -> bool {
     use crate::effect::EventScope;
     match ev {
-        GameEvent::PermanentEntered { .. } => matches!(spec.scope, EventScope::SelfSource),
+        // PermanentEntered fires through stack.rs's hardcoded ETB
+        // paths for both SelfSource (the entering permanent's own
+        // ETB triggers) and AnotherOfYours (every controller-matched
+        // creature's ETB-react triggers). Push XLVI added the
+        // AnotherOfYours skip here to prevent double-firing — the
+        // generic event_matches_spec walker would otherwise re-fire
+        // Soul Warden / Felisa Fang / Pestbrood Sloth-style triggers
+        // already pushed by the hardcoded path in stack.rs.
+        GameEvent::PermanentEntered { .. } => matches!(
+            spec.scope,
+            EventScope::SelfSource | EventScope::AnotherOfYours
+        ),
         GameEvent::AttackerDeclared(_) => matches!(spec.scope, EventScope::SelfSource),
         GameEvent::CreatureDied { .. } => matches!(spec.scope, EventScope::SelfSource),
         GameEvent::SpellCast { .. } => true,

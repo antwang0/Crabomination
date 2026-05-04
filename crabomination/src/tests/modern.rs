@@ -10908,3 +10908,385 @@ fn run_behind_costs_one_less_when_targeting_attacker() {
     // The card filter satisfaction is enough; no need to assert other state.
     let _ = SelectionRequirement::Creature; // keep import live
 }
+
+// ── Push XLVI: 12 new modern staples ────────────────────────────────────────
+
+/// Toxic Deluge — pay X life, all creatures get -X/-X EOT.
+#[test]
+fn toxic_deluge_kills_all_creatures_at_x_two() {
+    let mut g = two_player_game();
+    let bear_p0 = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    let bear_p1 = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let craw = g.add_card_to_battlefield(1, catalog::craw_wurm()); // 6/4
+    let id = g.add_card_to_hand(0, catalog::toxic_deluge());
+    // {2}{B} + 2 generic for X=2 → 4 generic + {B}
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    let life_before = g.players[0].life;
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: Some(2),
+    }).expect("Toxic Deluge castable at X=2 for {2}{2}{B}");
+    drain_stack(&mut g);
+
+    assert!(!g.battlefield.iter().any(|c| c.id == bear_p0),
+        "Both 2/2 bears die to -2/-2");
+    assert!(!g.battlefield.iter().any(|c| c.id == bear_p1));
+    assert!(g.battlefield.iter().any(|c| c.id == craw),
+        "6/4 Craw Wurm survives at -2/-2 → 4/2");
+    assert_eq!(g.players[0].life, life_before - 2,
+        "Pay X=2 life as additional cost");
+}
+
+/// Toxic Deluge with X=0 deals 0 damage, doesn't pay any life, and
+/// leaves all creatures alone.
+#[test]
+fn toxic_deluge_x_zero_is_a_noop() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::toxic_deluge());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let life_before = g.players[0].life;
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: Some(0),
+    }).expect("Toxic Deluge castable at X=0 for {2}{B}");
+    drain_stack(&mut g);
+
+    assert!(g.battlefield.iter().any(|c| c.id == bear),
+        "X=0 → -0/-0 → bear survives");
+    assert_eq!(g.players[0].life, life_before, "X=0 pays no life");
+}
+
+/// Supreme Verdict — destroys all creatures at the {1}{W}{W}{U} rate.
+#[test]
+fn supreme_verdict_destroys_all_creatures() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let craw = g.add_card_to_battlefield(1, catalog::craw_wurm());
+    let id = g.add_card_to_hand(0, catalog::supreme_verdict());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    }).expect("Supreme Verdict castable for {1}{W}{W}{U}");
+    drain_stack(&mut g);
+
+    assert!(!g.battlefield.iter().any(|c| c.id == bear),
+        "Bear destroyed by Supreme Verdict");
+    assert!(!g.battlefield.iter().any(|c| c.id == craw),
+        "Craw Wurm destroyed by Supreme Verdict");
+}
+
+/// Devour Flesh — opponent sacrifices a creature.
+#[test]
+fn devour_flesh_forces_opponent_sacrifice() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::devour_flesh());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Player(1)), mode: None, x_value: None,
+    }).expect("Devour Flesh castable for {1}{B}");
+    drain_stack(&mut g);
+
+    assert!(!g.battlefield.iter().any(|c| c.id == bear),
+        "Opp's only creature should be sacrificed");
+}
+
+/// Brought Back — returns up to two permanent cards from your gy to bf.
+#[test]
+fn brought_back_returns_two_permanents_from_graveyard() {
+    let mut g = two_player_game();
+    // Seed P0's gy with two creature cards.
+    let b1 = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let b2 = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::brought_back());
+    g.players[0].mana_pool.add(Color::White, 2);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    }).expect("Brought Back castable for {W}{W}");
+    drain_stack(&mut g);
+
+    let b1_back = g.battlefield.iter().any(|c| c.id == b1);
+    let b2_back = g.battlefield.iter().any(|c| c.id == b2);
+    let returned = (b1_back as i32) + (b2_back as i32);
+    assert!(returned >= 1, "At least one of the two creatures should be returned");
+}
+
+/// Persist — reanimates a creature card with mana value ≤ 3 from gy.
+#[test]
+fn persist_returns_low_mv_creature_from_graveyard() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears()); // CMC 2
+    let id = g.add_card_to_hand(0, catalog::persist());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    }).expect("Persist castable for {1}{B}{G}");
+    drain_stack(&mut g);
+
+    assert!(g.battlefield.iter().any(|c| c.id == bear),
+        "Bear (CMC 2) reanimated by Persist");
+}
+
+/// Persist no-op when no eligible creature in graveyard.
+#[test]
+fn persist_noop_when_no_eligible_creature() {
+    let mut g = two_player_game();
+    // Empty graveyard.
+    let id = g.add_card_to_hand(0, catalog::persist());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    let _ = g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    }); // may succeed (no-op resolution) or fail at cast-time
+    drain_stack(&mut g);
+    // Either way, no creatures end up on bf via Persist.
+    let creatures: Vec<_> = g.battlefield.iter()
+        .filter(|c| c.definition.card_types.contains(&CardType::Creature))
+        .collect();
+    assert_eq!(creatures.len(), 0, "No creatures should be on bf");
+}
+
+/// Selfless Spirit — sac to give all your creatures indestructible EOT.
+#[test]
+fn selfless_spirit_grants_indestructible_to_friendly_creatures() {
+    let mut g = two_player_game();
+    use crate::card::Keyword;
+    let spirit = g.add_card_to_battlefield(0, catalog::selfless_spirit());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.priority.player_with_priority = 0;
+
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: spirit,
+        ability_index: 0,
+        target: None,
+    }).expect("Selfless Spirit's sac activation");
+    drain_stack(&mut g);
+
+    // Spirit is sacrificed (graveyard).
+    assert!(!g.battlefield.iter().any(|c| c.id == spirit),
+        "Selfless Spirit sacrificed");
+    // Bear has Indestructible until end of turn.
+    let bear_card = g.battlefield.iter().find(|c| c.id == bear).expect("bear on bf");
+    assert!(bear_card.has_keyword(&Keyword::Indestructible),
+        "Bear should gain Indestructible from Selfless Spirit");
+}
+
+/// Selfless Spirit body: 2/1 Flying.
+#[test]
+fn selfless_spirit_is_two_one_flying_spirit() {
+    use crate::card::{CreatureType, Keyword};
+    let card = catalog::selfless_spirit();
+    assert_eq!(card.power, 2);
+    assert_eq!(card.toughness, 1);
+    assert!(card.keywords.contains(&Keyword::Flying));
+    assert!(card.subtypes.creature_types.contains(&CreatureType::Spirit));
+}
+
+/// Hangarback Walker — enters with X +1/+1 counters; on death mints
+/// X Thopter tokens.
+#[test]
+fn hangarback_walker_enters_with_x_counters_and_mints_thopters_on_death() {
+    use crate::card::{CounterType};
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::hangarback_walker());
+    // {X}{X} at X=2 → 4 generic mana.
+    g.players[0].mana_pool.add_colorless(4);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: Some(2),
+    }).expect("Hangarback Walker castable at X=2 for {2}{2} (= 4 generic)");
+    drain_stack(&mut g);
+
+    // The walker should be on bf with 2 +1/+1 counters → effectively 2/2.
+    let walker = g.battlefield.iter().find(|c| c.id == id)
+        .expect("Hangarback Walker on battlefield");
+    assert_eq!(walker.counter_count(CounterType::PlusOnePlusOne), 2,
+        "Walker should enter with X=2 +1/+1 counters");
+
+    // Now destroy the walker by Toxic Deluge for 2 (kills it cleanly).
+    let deluge = g.add_card_to_hand(0, catalog::toxic_deluge());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: deluge, target: None, mode: None, x_value: Some(2),
+    }).expect("Toxic Deluge castable");
+    drain_stack(&mut g);
+
+    // Walker is now dead. Should have minted 2 Thopters.
+    let thopters: Vec<_> = g.battlefield.iter()
+        .filter(|c| c.is_token && c.definition.name == "Thopter")
+        .collect();
+    assert_eq!(thopters.len(), 2,
+        "2 Thopter tokens should mint from Hangarback's death trigger");
+}
+
+/// Utter End — exiles a nonland permanent.
+#[test]
+fn utter_end_exiles_target_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::utter_end());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)), mode: None, x_value: None,
+    }).expect("Utter End castable for {2}{W}{B}");
+    drain_stack(&mut g);
+
+    assert!(!g.battlefield.iter().any(|c| c.id == bear),
+        "Bear leaves battlefield");
+    assert!(g.exile.iter().any(|c| c.id == bear),
+        "Bear is exiled (not graveyarded)");
+}
+
+/// Vraska's Contempt — exiles a creature/PW + caster gains 2 life.
+#[test]
+fn vraskas_contempt_exiles_creature_and_gains_two_life() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::vraskas_contempt());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    let life_before = g.players[0].life;
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)), mode: None, x_value: None,
+    }).expect("Vraska's Contempt castable for {3}{B}");
+    drain_stack(&mut g);
+
+    assert!(g.exile.iter().any(|c| c.id == bear), "Bear exiled");
+    assert_eq!(g.players[0].life, life_before + 2, "Caster gains 2 life");
+}
+
+/// Cut Down — destroys a creature with mana value ≤ 3 for {B}.
+#[test]
+fn cut_down_destroys_low_mv_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // CMC 2
+    let id = g.add_card_to_hand(0, catalog::cut_down());
+    g.players[0].mana_pool.add(Color::Black, 1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)), mode: None, x_value: None,
+    }).expect("Cut Down castable for {B}");
+    drain_stack(&mut g);
+
+    assert!(!g.battlefield.iter().any(|c| c.id == bear),
+        "CMC-2 bear destroyed by Cut Down");
+}
+
+/// Cut Down rejects a high-mana-value creature target.
+#[test]
+fn cut_down_rejects_high_mv_creature() {
+    let mut g = two_player_game();
+    let craw = g.add_card_to_battlefield(1, catalog::craw_wurm()); // CMC 6
+    let id = g.add_card_to_hand(0, catalog::cut_down());
+    g.players[0].mana_pool.add(Color::Black, 1);
+
+    let err = g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(craw)), mode: None, x_value: None,
+    });
+    assert!(err.is_err(), "Cut Down should reject high-mana-value target: {:?}", err);
+}
+
+/// Stitcher's Supplier — mills 3 on ETB.
+#[test]
+fn stitchers_supplier_etb_mills_three() {
+    let mut g = two_player_game();
+    for _ in 0..6 { g.add_card_to_library(0, catalog::island()); }
+    let id = g.add_card_to_hand(0, catalog::stitchers_supplier());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    let lib_before = g.players[0].library.len();
+    let gy_before = g.players[0].graveyard.len();
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    }).expect("Stitcher's Supplier castable for {B}");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[0].library.len(), lib_before - 3,
+        "ETB mills 3 cards");
+    assert_eq!(g.players[0].graveyard.len(), gy_before + 3,
+        "Three cards should land in P0's graveyard");
+    let _ = id;
+}
+
+/// Stitcher's Supplier — mills 3 again on death.
+#[test]
+fn stitchers_supplier_death_mills_three_more() {
+    let mut g = two_player_game();
+    for _ in 0..10 { g.add_card_to_library(0, catalog::island()); }
+    let id = g.add_card_to_battlefield(0, catalog::stitchers_supplier());
+    let gy_before = g.players[0].graveyard.len();
+
+    // Kill the supplier with Murder (color-blind kill).
+    let murder = g.add_card_to_hand(0, catalog::murder());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: murder,
+        target: Some(Target::Permanent(id)),
+        mode: None, x_value: None,
+    }).expect("Murder castable for {1}{B}{B}");
+    drain_stack(&mut g);
+
+    // 3 milled cards + the Supplier itself.
+    assert!(g.players[0].graveyard.len() >= gy_before + 4,
+        "Supplier dies, mills 3 + the Supplier itself = +4 in gy");
+}
+
+/// Soul Warden — gains 1 life when another creature enters.
+#[test]
+fn soul_warden_gains_life_on_other_creature_etb() {
+    let mut g = two_player_game();
+    let _ = g.add_card_to_battlefield(0, catalog::soul_warden());
+    let life_before = g.players[0].life;
+
+    // Cast a Bear → Soul Warden's trigger should fire.
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear, target: None, mode: None, x_value: None,
+    }).expect("Bear castable");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[0].life, life_before + 1,
+        "Soul Warden gains 1 life when Bear enters");
+}
+
+/// Soul Warden's own ETB does NOT trigger itself (the "another"
+/// rider — engine excludes the source via SelfSource scope).
+#[test]
+fn soul_warden_does_not_trigger_on_self_etb() {
+    let mut g = two_player_game();
+    let life_before = g.players[0].life;
+
+    let id = g.add_card_to_hand(0, catalog::soul_warden());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    }).expect("Soul Warden castable for {W}");
+    drain_stack(&mut g);
+
+    // No life change — Soul Warden doesn't trigger off its own ETB.
+    assert_eq!(g.players[0].life, life_before,
+        "Soul Warden's 'another creature' rider excludes self ETB");
+}
+
