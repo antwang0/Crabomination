@@ -133,13 +133,17 @@ fn build_tooltip_body(p: &crabomination::net::PermanentView) -> String {
     }
 
     // Loyalty for planeswalkers (separate from counters list since it's
-    // the headline number on every walker).
+    // the headline number on every walker). Push XLII: prefer the new
+    // top-level `PermanentView.loyalty: Option<i32>` (CR 306.5c), fall
+    // back to scanning `counters` for back-compat with views serialized
+    // before the field was added.
     if p.card_types.contains(&CardType::Planeswalker) {
-        let loyalty = p
-            .counters
-            .iter()
-            .find_map(|(k, v)| matches!(k, CounterType::Loyalty).then_some(*v))
-            .unwrap_or(0);
+        let loyalty = p.loyalty.unwrap_or_else(|| {
+            p.counters
+                .iter()
+                .find_map(|(k, v)| matches!(k, CounterType::Loyalty).then_some(*v as i32))
+                .unwrap_or(0)
+        });
         lines.push(format!("Loyalty: {loyalty}"));
     }
 

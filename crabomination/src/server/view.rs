@@ -236,6 +236,17 @@ fn project_permanent(
         attacking: attacking.contains(&card.id),
         abilities: project_abilities(card),
         loyalty_abilities: project_loyalty_abilities(card),
+        loyalty: if card.definition.is_planeswalker() {
+            // CR 306.5c: PW loyalty is the count of loyalty counters.
+            // Cast to i32 for symmetry with the loyalty arithmetic in
+            // game/mod.rs (loyalty_cost: i32, can go negative on a -X
+            // ability before SBAs ground it back to 0).
+            Some(
+                card.counter_count(crate::card::CounterType::Loyalty) as i32,
+            )
+        } else {
+            None
+        },
         static_abilities: card
             .definition
             .static_abilities
@@ -966,6 +977,34 @@ mod tests {
         let view = project(&state, 1);
         assert_eq!(view.players[0].graveyard.len(), 1);
         assert_eq!(view.players[0].graveyard[0].name, "Grizzly Bears");
+    }
+
+    /// Push XLII (CR 306.5c audit): planeswalker permanents surface
+    /// their current loyalty as `PermanentView.loyalty: Option<i32>`.
+    /// Non-planeswalker permanents leave the field `None`. This is a
+    /// view-layer affordance — clients no longer need to scan the
+    /// `counters` vec for the loyalty entry to render "Liliana 3".
+    #[test]
+    fn permanent_view_surfaces_planeswalker_loyalty() {
+        let mut state = two_player_game();
+        let liliana = state.add_card_to_battlefield(0, catalog::liliana_of_the_veil());
+        let view = project(&state, 0);
+        let perm = view.battlefield.iter().find(|p| p.id == liliana).unwrap();
+        assert_eq!(perm.loyalty, Some(3),
+            "Liliana of the Veil enters with 3 loyalty (printed)");
+    }
+
+    /// Non-planeswalker permanents leave `loyalty: None`. Back-compat:
+    /// `#[serde(default)]` on the field means older serialized views
+    /// continue to deserialize.
+    #[test]
+    fn permanent_view_leaves_loyalty_none_for_non_planeswalker() {
+        let mut state = two_player_game();
+        let bears = state.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let view = project(&state, 0);
+        let perm = view.battlefield.iter().find(|p| p.id == bears).unwrap();
+        assert_eq!(perm.loyalty, None,
+            "Grizzly Bears (a creature) should not have a loyalty value");
     }
 
     #[test]

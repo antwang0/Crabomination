@@ -7,6 +7,81 @@ See `CUBE_FEATURES.md` (cube-card implementation status) and
 
 ## Recent additions
 
+- ✅ **Push XLII (2026-05-04)**: 9 new STX cards + Plargg fidelity
+  bump + 1 server-view enrichment (`PermanentView.loyalty`) + CR 306
+  audit. Tests at 1405 (was 1389, +16 net).
+  - **9 new STX 2021 cards** (`catalog::sets::stx::mono`):
+    - **Quick Study** ({1}{U} Sorcery — Lesson) — `Effect::Draw(2)`.
+      Functional twin of Divination at the printed common rate.
+    - **Introduction to Prophecy** ({3}{U} Sorcery — Lesson) — `Scry 4
+      + Draw 1`. Mono-blue card-selection rare.
+    - **Introduction to Annihilation** ({3}{R} Sorcery — Lesson) —
+      Universal exile + the *target's controller* draws 1. Wired via
+      `Selector::Player(ControllerOf(Target(0)))` reading the cast-time
+      target's `controller` field (preserved post-exile).
+    - **Soothsayer Adept** ({1}{U}, 1/2 Merfolk Wizard) — `{U}: Scry 1`
+      repeatable card-selection.
+    - **Drainpipe Vermin** ({B}, 1/1 Rat) — Death-trigger
+      `EachOpponent → Mill 2`. Witherbloom self-sacrifice enabler.
+    - **Make Your Move** ({B}{G} Instant) — "Choose one or both"
+      destroy-tapped-creature / destroy-enchantment via
+      `Effect::ChooseModes { count: 2, up_to: true }`.
+    - **Returned Pastcaller** ({4}{B}, 4/3 Zombie Wizard) — ETB returns
+      a MV ≤ 3 IS card from gy → hand via `Selector::take(CardsInZone(
+      Graveyard, IS ∧ MV ≤ 3), 1)`.
+    - **Field Research** ({1}{W} Sorcery — Lesson) — `+1/+1 counter
+      on target creature, then gain 2 life`.
+    - **Mage Duel** ({R} Instant) 🟡 — 2 damage to opp creature. The
+      Magecraft "may pay {R}{R} on this spell, copy it" rider stays
+      gap (would need a self-spell magecraft trigger that fires
+      *during* the same cast — same family as Devastating Mastery's
+      Mastery alt-cost-on-the-spell-itself).
+  - **Plargg, Dean of Chaos** ({1}{R}, 1/3 Legendary Human Wizard) —
+    second activation `{2}{R}: Look at top 3, exile top 1` now wires
+    via `Effect::Seq([LookAtTop(3), Move(TopOfLibrary{1} → Exile)])`.
+    Auto-decider always exiles the topmost (closest fidelity without
+    an interactive "may exile one of three" picker). The "may play
+    that exiled card until EOT" rider stays gap (same family as
+    Suspend Aggression / Tablet of Discovery / Outpost Siege /
+    Conspiracy Theorist). Stays 🟡 overall.
+  - **Server view**: `PermanentView.loyalty: Option<i32>` — top-level
+    field showing current loyalty for planeswalkers (CR 306.5c).
+    Non-planeswalkers leave the field `None`. Defaulted via
+    `#[serde(default)]` for back-compat with older serialized views.
+    Client (`counter_tooltip.rs`) prefers the new field, falling back
+    to scanning `counters` for older views.
+  - **Doc-only fix**: Practiced Scrollsmith's note now reflects the
+    wired `{R/W}` hybrid pip (push XL); the prior note still claimed
+    the hybrid was approximated as `{R}` (cost: `{R}{R}{W}`) when in
+    fact `cost(&[r(), hybrid(Red, White), w()])` has been on the
+    factory since push XL.
+  - **CR 306 audit (Planeswalkers)**: rule-by-rule:
+    - 306.1 (cast as a spell) ✅ — PWs go through `cast_spell`.
+    - 306.2 (puts onto bf) ✅ — standard spell-resolution path.
+    - 306.3 (subtypes) ✅ — `PlaneswalkerSubtype` enum with per-PW
+      tags (Liliana, Tibalt, Dellian, Ral).
+    - 306.4 (legend rule applies) ✅ — `Supertype::Legendary` SBA.
+    - 306.5a (loyalty off-bf = printed) ✅ — `base_loyalty` field.
+    - 306.5b ("enters with N loyalty" replacement effect) 🟡 —
+      hardcoded in `CardInstance::new` rather than threaded through
+      the `enters_with_counters` replacement-effect primitive (push
+      XL). Means counter-multiplier effects (Doubling Season-style)
+      won't multiply loyalty. Future work: align loyalty placement
+      with the `enters_with_counters` cast-time hook.
+    - 306.5c (loyalty = # loyalty counters) ✅ — `counter_count(
+      CounterType::Loyalty)`. Push XLII surfaces this in
+      `PermanentView.loyalty`.
+    - 306.5d (one loyalty ability per turn) ✅ —
+      `used_loyalty_ability_this_turn` flag, reset at cleanup.
+    - 306.6 (PW can be attacked) ✅ — `AttackTarget::Planeswalker`.
+    - 306.7 (no redirect; direct damage) ✅ — `target_filtered`
+      filters allow PW targets directly; no implicit redirect.
+    - 306.8 (combat damage = loyalty counter removal) ✅ —
+      `combat.rs` `AttackTarget::Planeswalker(pw_id)` branch.
+    - 306.9 (0 loyalty → graveyard SBA) ✅ — `stack.rs` SBA pass.
+  - **16 new tests**: 14 STX card tests (Plargg ×2 + 12 cards) +
+    2 view tests (PermanentView.loyalty for PW + None for non-PW).
+
 - ✅ **Push XLI (2026-05-04)**: 1 engine primitive
   (`Effect::PreventCombatDamageThisTurn`) + 1 new STX card
   (Biomathematician) + 6 promotions/new fog cards (Owlin Shieldmage
@@ -3893,3 +3968,89 @@ shield + Owlin Shieldmage promotion + Quandrix Biomathematician.
   total, activate any prevention source available" — would prevent
   game-loss in mirror matches with Spore Frog or Holy Day in
   hand/play.
+
+## New suggestions (added 2026-05-04 push XLII)
+
+### Engine
+
+- **CR 306.5b alignment**: thread planeswalker loyalty placement
+  through the `enters_with_counters` replacement-effect primitive
+  (push XL) rather than hardcoding it in `CardInstance::new`. Today
+  loyalty counters are inserted at construction time, before the
+  cast-time spell-resolution path reaches `stack.rs`. The
+  consequence: counter-multiplier effects (Doubling Season-style
+  "if a permanent would enter with counters, it enters with twice
+  that many"; Pir / Hardened Scales for +1/+1 counters) don't
+  multiply loyalty. The fix is to migrate the per-PW loyalty
+  placement to a synthetic `enters_with_counters: Some((Loyalty,
+  Const(base_loyalty)))` field that the cast-time replacement-effect
+  walker honors. Adds zero behavior for cards without multipliers
+  but unlocks the multiplier path for the future.
+
+- **"Look at top N, may exile one of them, bottom rest in random
+  order" primitive**. Plargg's second activation (push XLII), Outpost
+  Siege, Conspiracy Theorist, Tablet of Discovery all have variants
+  of this shape. Today push XLII approximates as `LookAtTop(N) +
+  Move(TopOfLibrary{1} → Exile)` — auto-decider always exiles the
+  top card. A real `Effect::LookAtTopAndExile { reveal_filter:
+  SelectionRequirement, count: Value, may_exile: bool, exiled_to:
+  ZoneDest }` shape would let the player pick which of the revealed
+  cards to exile (interactive prompt) and put the rest in random
+  order on bottom of library. Same family as Brainstorm's "look at
+  top 3, take 1, bottom 2" (instant-speed scry-equivalent).
+
+- **"May play exiled card until end of turn" primitive**. Plargg /
+  Outpost Siege / Tablet of Discovery / Suspend Aggression /
+  Conspiracy Theorist all have an "exile card with right to cast it
+  this turn (or until next turn)" rider. Engine has no per-card
+  may-play-from-exile-until-EOT flag yet. A `CardInstance.
+  may_play_until: Option<u32>` field (turn number when the right
+  expires) plus a `cast_spell` pre-check that allows casting from
+  exile when the flag matches the current turn would unblock all of
+  these.
+
+### UI / Server
+
+- **`PermanentView.loyalty` rendering**. Push XLII surfaces current
+  loyalty as a top-level field; the client tooltip already prefers
+  the field over scanning counters. Future UI work: render a
+  loyalty pip (golden coin) on the planeswalker card art when
+  `loyalty.is_some()`, showing the number prominently. Today the
+  loyalty number is buried in the tooltip's stat line.
+
+- **Loyalty event log enrichment**. `LoyaltyAbilityActivated`
+  emits the loyalty change but not the resulting loyalty value;
+  `LoyaltyChanged` emits the new value but not the change. A
+  client-side combiner that pairs `Activated` + `Changed` events
+  per PW (or a single richer event with both fields) would make
+  the spectator log easier to read.
+
+### Bot / AI
+
+- **Activate Plargg's exile activation when shields are up**. Bot
+  doesn't yet activate Plargg's `{2}{R}: exile top 1` — the
+  expected value is small (low-probability hit on a useful card)
+  but in graveyard-aware shells (Wilt in the Heat cost reduction,
+  Ark of Hunger drain) the activation is direct value. A heuristic
+  "in late game, activate the exile if mana is open" would push
+  Plargg from a vanilla 1/3 rummager to a card-advantage engine.
+
+### Format / Card coverage
+
+- **Lesson sideboard model**. Push XLII added 4 more Lesson cards
+  (Quick Study, Intro to Prophecy, Intro to Annihilation, Field
+  Research) bringing the Lesson cycle to 17 cards. The "Learn"
+  payoff (Eyetwitch, Hunt for Specimens, Igneous Inspiration,
+  Containment Breach, Pillardrop Warden's etb scry, Mascot
+  Exhibition's "search your sideboard for a Lesson") still
+  collapses to `Draw 1`. A real Lesson sideboard model would
+  expose `Player.sideboard: Vec<CardInstance>` plus an `Effect::
+  LearnLesson` primitive that prompts the controller to (a) reveal
+  a Lesson from sideboard + put it in hand, (b) discard then draw,
+  or (c) decline.
+
+- **STX 2021 mono-color section growth**. Push XLII brought the
+  doc tally to 120 rows (was 111). The STX 2021 set has 275 total
+  cards on Scryfall; adding the remaining 155 would close the
+  catalog. Most are commons / uncommons with simple Magecraft /
+  Lesson / fight / pump primitives — just hand-coding work.

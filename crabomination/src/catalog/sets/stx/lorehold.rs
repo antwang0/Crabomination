@@ -485,24 +485,28 @@ pub fn rip_apart() -> CardDefinition {
 
 // ── Plargg, Dean of Chaos ───────────────────────────────────────────────────
 
-/// Plargg, Dean of Chaos — {1}{R}, 1/3 Legendary Human Wizard. "{T}:
-/// Discard a card, then draw a card."
+/// Plargg, Dean of Chaos — {1}{R}, 1/3 Legendary Human Wizard.
 ///
-/// 🟡 Push XXIX: front face only. Plargg is the front of the
-/// Plargg / Augusta paired-DFC legend; the back face Augusta, Dean of
-/// Order ({1}{W}, 2/2 Vigilance with the "two-or-more attackers" rider)
-/// is omitted since (a) the engine's MDFC cycle is keyed off
-/// `back_face: Some(_)` for cast-other-side, and (b) the "two or more
-/// creatures attacked" rider needs a count-of-attackers-this-combat
-/// `Value` that doesn't exist yet (same gap as Adriana, Captain of the
-/// Guard's "for each other attacking" pump).
+/// "{T}: Discard a card, then draw a card.
+///  {2}{R}: Look at the top three cards of your library. You may exile
+///  one of them. Put the rest on the bottom of your library in a random
+///  order. Until end of turn, you may play that card."
 ///
-/// Front-face activation is straightforward: tap to rummage. We also
-/// ship the second Plargg ability — "{2}{R}: Look at the top three
-/// cards of your library; you may exile one. Put the rest on the
-/// bottom of your library in a random order" — as a flat scry-3 +
-/// exile-bottom approximation deferred (no exile-from-top primitive),
-/// so only the {T} rummage activates today.
+/// 🟡 Push XLII: second activation now wired as
+/// `LookAtTop(3) + Move(TopOfLibrary{1} → Exile)`. The auto-decider
+/// always exiles the topmost (closest fidelity without an interactive
+/// "may exile one of three" picker — the value of the activation is
+/// the exile, not the abstain). The "may play that card until end of
+/// turn" rider stays gap (no per-card may-play-from-exile-with-time-
+/// limit primitive — same family as Suspend Aggression, Tablet of
+/// Discovery, Outpost Siege, Conspiracy Theorist).
+///
+/// Plargg / Augusta pair note: the back face Augusta, Dean of Order
+/// ({1}{W}, 2/2 Vigilance + the "two-or-more attackers" trigger) ships
+/// as a separate front-face card (`augusta_dean_of_order`). The
+/// engine's MDFC cycle is keyed off `back_face: Some(_)` for cast-
+/// other-side, but Plargg / Augusta's printed pairing is "always
+/// flippable, both faces equally" which the cycle doesn't model today.
 pub fn plargg_dean_of_chaos() -> CardDefinition {
     CardDefinition {
         name: "Plargg, Dean of Chaos",
@@ -517,27 +521,54 @@ pub fn plargg_dean_of_chaos() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: vec![ActivatedAbility {
-            tap_cost: true,
-            mana_cost: cost(&[]),
-            effect: Effect::Seq(vec![
-                Effect::Discard {
-                    who: Selector::You,
-                    amount: Value::Const(1),
-                    random: false,
-                },
-                Effect::Draw {
-                    who: Selector::You,
-                    amount: Value::Const(1),
-                },
-            ]),
-            once_per_turn: false,
-            sorcery_speed: false,
-            sac_cost: false,
-            condition: None,
-            life_cost: 0,
-            exile_gy_cost: 0,
-        }],
+        activated_abilities: vec![
+            // {T}: Discard a card, then draw a card. (rummage)
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: cost(&[]),
+                effect: Effect::Seq(vec![
+                    Effect::Discard {
+                        who: Selector::You,
+                        amount: Value::Const(1),
+                        random: false,
+                    },
+                    Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::Const(1),
+                    },
+                ]),
+                once_per_turn: false,
+                sorcery_speed: false,
+                sac_cost: false,
+                condition: None,
+                life_cost: 0,
+                exile_gy_cost: 0,
+            },
+            // {2}{R}: Look at top 3, exile top 1. (May-play rider gap.)
+            ActivatedAbility {
+                tap_cost: false,
+                mana_cost: cost(&[generic(2), r()]),
+                effect: Effect::Seq(vec![
+                    Effect::LookAtTop {
+                        who: PlayerRef::You,
+                        amount: Value::Const(3),
+                    },
+                    Effect::Move {
+                        what: Selector::TopOfLibrary {
+                            who: PlayerRef::You,
+                            count: Value::Const(1),
+                        },
+                        to: ZoneDest::Exile,
+                    },
+                ]),
+                once_per_turn: false,
+                sorcery_speed: false,
+                sac_cost: false,
+                condition: None,
+                life_cost: 0,
+                exile_gy_cost: 0,
+            },
+        ],
         triggered_abilities: vec![],
         static_abilities: vec![],
         base_loyalty: 0,

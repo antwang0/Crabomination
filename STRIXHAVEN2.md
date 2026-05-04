@@ -36,16 +36,20 @@ This file tracks two adjacent Strixhaven catalogs:
 Counts reflect the regenerated tables below (audited via
 `scripts/audit_strixhaven2.py` against `catalog::sets::sos`).
 
-- ✅ done: **136** (SOS unchanged in push XLI; STX 2021 catalog grew
-  by 1 ✅ — Biomathematician, plus Owlin Shieldmage 🟡 → ✅).
-- 🟡 partial: **112** (SOS unchanged).
+- ✅ done: **144** (SOS unchanged in push XLII; STX 2021 catalog grew
+  by 8 ✅ — Quick Study, Introduction to Prophecy, Introduction to
+  Annihilation, Soothsayer Adept, Drainpipe Vermin, Make Your Move,
+  Returned Pastcaller, Field Research).
+- 🟡 partial: **113** (SOS unchanged; STX 2021 +1 — Mage Duel NEW 🟡;
+  Plargg's second activation now wired, stays 🟡 due to may-play rider).
 - ⏳ todo: **7** (unchanged — all blocked by cast-from-exile / copy-
   permanent pipelines).
 
-Push XLI (2026-05-04) STX 2021 totals (per `scripts/audit_stx_base.py`):
-**95 ✅ / 16 🟡 / 0 ⏳ across 111 rows.** Quandrix (G/U) is now
-fully closed at 8 ✅ / 0 🟡 — first STX 2021 college with no
-remaining partials.
+Push XLII (2026-05-04) STX 2021 totals (per `scripts/audit_stx_base.py`):
+**103 ✅ / 17 🟡 / 0 ⏳ across 120 rows.** Quandrix (G/U) is still
+the only fully closed college (8 ✅ / 0 🟡); Push XLII added 9 new
+cards to the mono-color section (8 ✅ + 1 🟡) and brought Plargg's
+second activation online (still 🟡 due to may-play rider).
 
 Push XXXVIII (2026-05-03) introduces 4 engine primitives and promotes
 10 cards across STX 2021 + SOS:
@@ -76,6 +80,67 @@ All 248 cards marked ✅ or 🟡 have a corresponding factory in
 `crabomination/src/catalog/sets/sos/`; the audit script reports 0 false
 positives and 0 stale ⏳ rows. STX 2021 progress is tracked in the
 "Strixhaven base set (STX)" section near the bottom of this file.
+
+## 2026-05-04 push XLII: 9 STX cards + Plargg fidelity bump
+
+Adds 9 new STX 2021 mono-color cards and brings Plargg's second
+activation online — closes one of the long-standing "look-at-top +
+exile" gaps in the Lorehold catalog. Tests at 1403 (was 1389; +14
+net), all green.
+
+**New STX 2021 cards (8 ✅ + 1 🟡):**
+
+- **Quick Study** ({1}{U}, Sorcery — Lesson) — `Effect::Draw(2)`.
+  Mono-blue Lesson cantrip (functional twin of Divination) at the
+  printed common rate.
+- **Introduction to Prophecy** ({3}{U}, Sorcery — Lesson) — `Scry 4 +
+  Draw 1`. Blue Lesson card-selection rare.
+- **Introduction to Annihilation** ({3}{R}, Sorcery — Lesson) —
+  Universal exile (any permanent) + the *target's controller* draws 1.
+  Wired via `Selector::Player(ControllerOf(Target(0)))` reading the
+  cast-time target's `controller` field, which is preserved post-exile
+  by `move_card_to`.
+- **Soothsayer Adept** ({1}{U}, 1/2 Merfolk Wizard) — `{U}: Scry 1`
+  repeatable card-selection. Same shape as Hedron Crab's repeatable
+  mill body.
+- **Drainpipe Vermin** ({B}, 1/1 Rat) — Death-trigger
+  `EachOpponent → Mill 2`. Witherbloom self-sacrifice / "leaves
+  graveyard" enabler at the printed common rate.
+- **Make Your Move** ({B}{G}, Instant) — "Choose one or both"
+  destroy-tapped-creature / destroy-enchantment, wired faithfully via
+  `Effect::ChooseModes { count: 2, up_to: true }`. AutoDecider picks
+  both modes when both targets exist; ScriptedDecider can flip to
+  either single-mode pick.
+- **Returned Pastcaller** ({4}{B}, 4/3 Zombie Wizard) — ETB returns a
+  MV ≤ 3 IS card from your graveyard to hand via
+  `Selector::take(CardsInZone(Graveyard, IS ∧ MV ≤ 3), 1)`.
+- **Field Research** ({1}{W}, Sorcery — Lesson) — `+1/+1 counter on
+  target creature, then gain 2 life`. White Lesson card.
+- **Mage Duel** ({R}, Instant) 🟡 — 2 damage to an opp creature. The
+  Magecraft "may pay {R}{R} on the spell itself, copy it" rider stays
+  gap (would need a self-spell magecraft trigger that fires *during*
+  the same cast — same family gap as Devastating Mastery's Mastery
+  alt-cost-on-the-spell-itself).
+
+**Plargg's second activation** ({2}{R}: Look at top 3, exile top 1) —
+now wired as `Effect::Seq([LookAtTop(3), Move(TopOfLibrary{1} →
+Exile)])`. The auto-decider always exiles the topmost (closest
+fidelity without an interactive "may exile one of three" picker — the
+value of the activation is the exile, not the abstain). The "may play
+that exiled card until end of turn" rider stays gap (same family as
+Suspend Aggression / Tablet of Discovery / Outpost Siege /
+Conspiracy Theorist). Plargg stays 🟡 overall.
+
+**Doc-only fix**: Practiced Scrollsmith's note now reflects the wired
+`{R/W}` hybrid pip (push XL); the prior note still claimed the
+hybrid was approximated as `{R}`.
+
+**14 new tests:** Plargg (×2 — exile success, exile no-op on empty
+library), Quick Study, Intro to Prophecy, Intro to Annihilation,
+Soothsayer Adept, Drainpipe Vermin, Make Your Move (×2 — mode 0
+success + reject untapped), Returned Pastcaller (×2 — returns IS
+card + no-op on empty gy), Field Research, Mage Duel (×2 — kills
+2-toughness opp + rejects friendly target).
 
 ## 2026-05-04 push XLI: Effect::PreventCombatDamageThisTurn + 6 cards/promotions
 
@@ -3049,7 +3114,7 @@ the back-face spell body is in place.
 | Lorehold Charm | {R}{W} | Instant |  | Choose one — / • Each opponent sacrifices a nontoken artifact of their choice. / • Return target artifact or creature card with mana value 2 or less from your graveyard to the battlefield. / • Creatures you control get +1/+1 and gain trample until end of turn. | ✅ | Wired in `catalog::sets::sos::instants` — all three modes wired with existing primitives (`Sacrifice`, `Move from gy`, `ForEach(Creature) → PumpPT`). |
 | Lorehold, the Historian | {3}{R}{W} | Legendary Creature — Elder Dragon | 5/5 | Flying, haste / Each instant and sorcery card in your hand has miracle {2}. (You may cast a card for its miracle cost when you draw it if it's the first card you drew this turn.) / At the beginning of each opponent's upkeep, you may discard a card. If you do, draw a card. | 🟡 | Push XXXVI: per-opp-upkeep loot trigger now wired via `EventScope::OpponentControl + StepBegins(Upkeep)`. Body uses `Effect::MayDo` so the auto-decider's "no" default skips on bot turns; ScriptedDecider yes path drives the discard+draw chain. Miracle grant still omitted (no alt-cost-on-draw primitive). |
 | Molten Note | {X}{R}{W} | Sorcery |  | Molten Note deals damage to target creature equal to the amount of mana spent to cast this spell. Untap all creatures you control. / Flashback {6}{R}{W} (You may cast this card from your graveyard for its flashback cost. Then exile it.) | ✅ | Push XIX: full wire — closes Lorehold's last ⏳ row. Damage half branches on `Predicate::CastFromGraveyard` (push XVIII): hand cast deals `XFromCost + 2` (the X plus the {R}{W} portion); flashback cast deals 8 (the fixed {6}{R}{W} mana spent). Untap-all-your-creatures via `Effect::Untap` on `EachPermanent(Creature & ControlledByYou)`. Flashback {6}{R}{W} wired via `Keyword::Flashback`. |
-| Practiced Scrollsmith | {R}{R/W}{W} | Creature — Dwarf Cleric | 3/2 | First strike / When this creature enters, exile target noncreature, nonland card from your graveyard. Until the end of your next turn, you may cast that card. | 🟡 | Wired in `catalog::sets::sos::creatures`. ETB now exiles **exactly one** matching noncreature/nonland card in the controller's graveyard via the new `Selector::Take(_, 1)` primitive (push X) — closer to the printed "target one card" semantics; the prior implementation exiled every matching card. The hybrid `{R/W}` pip is approximated as `{R}` (cost: `{R}{R}{W}`). The "may cast until next turn" rider is omitted (no cast-from-exile-with-time-limit primitive). |
+| Practiced Scrollsmith | {R}{R/W}{W} | Creature — Dwarf Cleric | 3/2 | First strike / When this creature enters, exile target noncreature, nonland card from your graveyard. Until the end of your next turn, you may cast that card. | 🟡 | Wired in `catalog::sets::sos::creatures`. ETB now exiles **exactly one** matching noncreature/nonland card in the controller's graveyard via `Selector::Take(_, 1)` (push X) — closer to the printed "target one card" semantics. Push XL: hybrid `{R/W}` pip now wired faithfully via `ManaSymbol::Hybrid(Red, White)` — payable from R+W, R+R, or W+W pools (matching printed legality). The "may cast until next turn" rider is omitted (no cast-from-exile-with-time-limit primitive). |
 | Pursue the Past | {R}{W} | Sorcery |  | You gain 2 life. You may discard a card. If you do, draw two cards. / Flashback {2}{R}{W} (You may cast this card from your graveyard for its flashback cost. Then exile it.) | ✅ | All three clauses wired. Gain 2 life + `Effect::MayDo` discard+draw chain (push XV) + `Keyword::Flashback({2}{R}{W})`. The lifegain half always resolves; the loot half is opt-in. |
 | Spirit Mascot | {R}{W} | Creature — Spirit Ox | 2/2 | Whenever one or more cards leave your graveyard, put a +1/+1 counter on this creature. | ✅ | Wired against the new `EventKind::CardLeftGraveyard` event. Trigger fires per-card emission (the printed "one or more" wording is approximated per-card). |
 | Startled Relic Sloth | {2}{R}{W} | Creature — Sloth Beast | 4/4 | Trample, lifelink / At the beginning of combat on your turn, exile up to one target card from a graveyard. | ✅ | Wired in `catalog::sets::sos::creatures` (trample + lifelink + begin-combat exile-from-GY trigger; same shape as Ascendant Dustspeaker's combat trigger). Sloth subtype bridged through Beast (no Sloth creature type yet). |
@@ -3137,7 +3202,7 @@ parity is a matter of porting card factories one at a time.
 | Igneous Inspiration | {2}{R} | ✅ | Push XXIII: 3 dmg to creature/PW + Learn (collapsed to draw 1). |
 | Lorehold Command | {R}{W} | ✅ | Push XXXVI: "choose two" now wires faithfully via the new `Effect::ChooseModes { count: 2 }` primitive. Auto-decider picks modes 0+1 (drain 4 + 2 Spirit tokens). ScriptedDecider drives modes [2, 3] for tests. |
 | Rip Apart | {R}{W} | ✅ | Push XXIX: Sorcery. Choose one — 3 damage to target creature/planeswalker, or destroy target artifact/enchantment. Wired with `Effect::ChooseMode` (same shape as Boros Charm) and Or-composite filters on each mode's target. Modal pick is "choose one" (printed) so it ships at full fidelity. |
-| Plargg, Dean of Chaos | {1}{R} | 🟡 | Push XXIX: 1/3 Legendary Human Wizard. `{T}: Discard a card, then draw a card` rummage activation wired faithfully via `Effect::Seq([Discard, Draw])`. The {2}{R} top-3-exile activation is omitted (no exile-from-top primitive — same gap as Outpost Siege). The DFC pairing with Augusta, Dean of Order is split into two separate front-face card definitions (engine MDFC pipeline currently lacks an "always-flippable, both faces equally" mode). |
+| Plargg, Dean of Chaos | {1}{R} | 🟡 | Push XLII: 1/3 Legendary Human Wizard. {T}-rummage activation unchanged. The {2}{R} second activation now wires faithfully via `Effect::Seq([LookAtTop(3), Move(TopOfLibrary{1} → Exile)])` — looks at top 3, exiles top 1 (auto-decider always exiles; the printed "may exile one of three" interactive picker collapses to greedy-exile since the value of the activation is the exile, not the abstain). The "may play that exiled card until end of turn" rider stays gap (no per-card may-play-from-exile-with-time-limit primitive — same family as Suspend Aggression / Tablet of Discovery / Outpost Siege / Conspiracy Theorist). The DFC pairing with Augusta, Dean of Order is still split into two separate front-face card definitions. |
 | Augusta, Dean of Order | {1}{W} | ✅ | Push XXX: promoted from 🟡 to ✅ via the new `Value::AttackersThisCombat` primitive. The per-attacker pump trigger is now gated by `Predicate::ValueAtLeast(AttackersThisCombat, 2)` — single-attacker swings no longer false-positive. Two-or-more attacker swings: each attacker passes the gate and ends up with +1/+1 + double strike EOT (matches printed). `combat.rs` was extended to evaluate broadcast Attack-trigger filters in a second pass, so the `attacking.len()` reading is uniform across all attackers. |
 | Hofri Ghostforge | {2}{R}{W} | 🟡 | Push XXXVIII: anthem now exact via the new `excluded_supertypes: Vec<Supertype>` field on `AffectedPermanents::All` — `Not(HasSupertype(Legendary))` decomposes at static-layer translation time so legendary friendly creatures are correctly skipped. The dies-as-Spirit-copy rider stays omitted (token-copy-of-permanent primitive gap, same as Phantasmal Image / Mockingbird in CUBE_FEATURES.md), keeping the card 🟡 overall. |
 | Mascot Interception | {2}{R}{W} | ✅ | Push XXXIV: Instant. Printed "gain control of opp's creature + untap + haste" now wires faithfully — `Effect::GainControl` graduated from a permanent-control-flip stub to a Layer-2 continuous effect with `EffectDuration::UntilEndOfTurn`, so the steal reverts at Cleanup. Body is `Seq([GainControl, Untap, GrantKeyword(Haste)])` — control change first so the untap and haste land on the freshly-stolen creature. (Haste-grant-expiration is tracked separately — `Effect::GrantKeyword` still mutates `card.definition.keywords` directly without honoring its `duration` field; see TODO.md push XXXIV.) |
@@ -3210,6 +3275,15 @@ parity is a matter of porting card factories one at a time.
 | Swarm Shambler | {G} | ✅ NEW | Push XXXIX: 1/1 Beast (Squirrel approximated through Beast). ETB +1/+1 counter; `{2}{G}: untap + add a +1/+1 counter`. Mono-green growth body that scales with available mana. |
 | Containment Breach | {1}{W} | ✅ NEW | Push XXXIX: Instant. Destroy target enchantment + Learn (collapses to Draw 1, same approximation as Eyetwitch / Hunt for Specimens). |
 | Unwilling Ingredient | {B} | ✅ NEW | Push XXXIX: 1/1 Insect Pest. When this creature dies, may pay {B}: draw a card. Death-trigger uses `Effect::MayPay`. AutoDecider declines by default; ScriptedDecider yes path drives the cantrip. |
+| Quick Study | {1}{U} | ✅ NEW | Push XLII: Sorcery — Lesson. Trivial mono-blue cantrip wired as `Effect::Draw(Const(2))`. Functional twin of Divination at the same printed rate; the Lesson sub-type tag opens future Lesson-aware effects. |
+| Introduction to Prophecy | {3}{U} | ✅ NEW | Push XLII: Sorcery — Lesson. `Effect::Seq([Scry 4, Draw 1])` — mono-blue card-selection rare. Slots into Strixhaven mystic-arcane shells alongside Brilliant Plan (Scry 3 + Draw 3). |
+| Introduction to Annihilation | {3}{R} | ✅ NEW | Push XLII: Sorcery — Lesson. Universal exile (any permanent) + the *target's controller* draws 1. Wired via `Selector::Player(ControllerOf(Target(0)))` reading the cast-time target's `controller` field (preserved post-exile). |
+| Soothsayer Adept | {1}{U} | ✅ NEW | Push XLII: 1/2 Merfolk Wizard. `{U}: Scry 1` activated ability — repeatable card-selection on any free blue pip. Same shape as Hedron Crab's repeatable mill body. |
+| Drainpipe Vermin | {B} | ✅ NEW | Push XLII: 1/1 Rat. Death-trigger `EachOpponent → Mill 2` — Witherbloom self-sacrifice / "leaves graveyard" enabler at the printed common rate. |
+| Make Your Move | {B}{G} | ✅ NEW | Push XLII: Instant. "Choose one or both" wired faithfully via `Effect::ChooseModes { count: 2, up_to: true }` — mode 0 destroys a tapped creature (`Creature ∧ Tapped` filter), mode 1 destroys an enchantment. AutoDecider picks both modes when both targets exist. |
+| Returned Pastcaller | {4}{B} | ✅ NEW | Push XLII: 4/3 Zombie Wizard. ETB returns a MV ≤ 3 IS card from your graveyard to hand via `Selector::take(CardsInZone(Graveyard, IS ∧ MV ≤ 3), 1)`. Pure recursion body — no double-counted ETB drain. |
+| Field Research | {1}{W} | ✅ NEW | Push XLII: Sorcery — Lesson. `Effect::Seq([AddCounter(target Creature, +1/+1, ×1), GainLife(2)])` — printed Oracle exact. White Lesson card-selection at the {1}{W} rate. |
+| Mage Duel | {R} | 🟡 NEW | Push XLII: Instant. 2 damage to an opp creature (via the existing `Creature ∧ ControlledByOpponent` filter). The Magecraft "may pay {R}{R} on the spell itself, copy it" rider stays gap (would need a self-spell magecraft trigger that fires *during* the same cast — same family gap as Devastating Mastery's Mastery alt-cost-on-the-spell-itself). |
 
 ### Shared / multi-college
 

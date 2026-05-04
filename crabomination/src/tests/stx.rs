@@ -3272,6 +3272,61 @@ fn plargg_dean_of_chaos_rummages() {
     let _ = dummy;
 }
 
+/// Push XLII: Plargg's second activation `{2}{R}: Look at top 3, exile
+/// top 1`. The auto-decider takes the topmost card, leaving 2 in the
+/// library and 1 in exile. The "may play that card until EOT" rider is
+/// still gap.
+#[test]
+fn plargg_dean_of_chaos_exile_top_activation() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_library(0, catalog::plains());
+    g.add_card_to_library(0, catalog::mountain());
+    g.add_card_to_library(0, catalog::forest());
+    let plargg = g.add_card_to_battlefield(0, catalog::plargg_dean_of_chaos());
+    g.clear_sickness(plargg);
+    let lib_before = g.players[0].library.len();
+    let exile_before = g.exile.len();
+
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: plargg, ability_index: 1, target: None,
+    })
+    .expect("Plargg's {2}{R} activation legal");
+    drain_stack(&mut g);
+
+    // Library shrinks by exactly 1 (the topmost moves to exile).
+    assert_eq!(g.players[0].library.len(), lib_before - 1,
+        "library shrinks by exactly 1");
+    assert_eq!(g.exile.len(), exile_before + 1,
+        "exile gains exactly 1 card");
+}
+
+/// Push XLII: Plargg's second activation no-ops cleanly when the
+/// library is empty (no panic). The exile half resolves over zero
+/// candidates.
+#[test]
+fn plargg_dean_of_chaos_exile_top_no_op_on_empty_library() {
+    let mut g = two_player_game();
+    let plargg = g.add_card_to_battlefield(0, catalog::plargg_dean_of_chaos());
+    g.clear_sickness(plargg);
+    // Library is empty by default for a fresh two_player_game().
+    g.players[0].library.clear();
+    let exile_before = g.exile.len();
+
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: plargg, ability_index: 1, target: None,
+    })
+    .expect("Plargg's {2}{R} activation legal even with empty library");
+    drain_stack(&mut g);
+
+    assert_eq!(g.exile.len(), exile_before,
+        "no card to exile from an empty library");
+}
+
 #[test]
 fn augusta_dean_of_order_pumps_when_two_attackers() {
     // Push XXX promotion: Augusta now requires *two or more* attackers
@@ -5070,4 +5125,269 @@ fn biomathematician_is_two_two_vedalken_druid() {
     use crate::card::CreatureType;
     assert!(bio.definition.subtypes.creature_types.contains(&CreatureType::Vedalken));
     assert!(bio.definition.subtypes.creature_types.contains(&CreatureType::Druid));
+}
+
+// ── Push XLII NEW: STX 2021 additions ───────────────────────────────────────
+
+/// Quick Study — {1}{U} Sorcery — Lesson. Draw 2.
+#[test]
+fn quick_study_draws_two_cards() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_library(0, catalog::plains());
+    g.add_card_to_library(0, catalog::mountain());
+    let id = g.add_card_to_hand(0, catalog::quick_study());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Quick Study castable for {1}{U}");
+    drain_stack(&mut g);
+    // Net: -1 hand (Quick Study leaves the hand) + 2 (draw) = +1.
+    assert_eq!(g.players[0].hand.len(), hand_before + 1);
+}
+
+/// Introduction to Prophecy — {3}{U} Sorcery — Lesson. Scry 4 + draw 1.
+#[test]
+fn introduction_to_prophecy_scries_four_and_draws_one() {
+    let mut g = two_player_game();
+    for _ in 0..6 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let id = g.add_card_to_hand(0, catalog::introduction_to_prophecy());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    let hand_before = g.players[0].hand.len();
+    let lib_before = g.players[0].library.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Introduction to Prophecy castable for {3}{U}");
+    drain_stack(&mut g);
+    // Net hand: -1 (cast) + 1 (draw) = 0.
+    assert_eq!(g.players[0].hand.len(), hand_before);
+    // Library shrinks by exactly 1 (the draw — scry doesn't change library size).
+    assert_eq!(g.players[0].library.len(), lib_before - 1);
+}
+
+/// Introduction to Annihilation — {3}{R} Sorcery — Lesson. Exile permanent
+/// + that permanent's controller draws 1.
+#[test]
+fn introduction_to_annihilation_exiles_and_target_controller_draws() {
+    let mut g = two_player_game();
+    // Seed opponent's library so the draw lands.
+    g.add_card_to_library(1, catalog::plains());
+    g.add_card_to_library(1, catalog::mountain());
+    let opp_creature = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::introduction_to_annihilation());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    let opp_hand_before = g.players[1].hand.len();
+    let opp_lib_before = g.players[1].library.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(opp_creature)),
+        mode: None, x_value: None,
+    })
+    .expect("Intro castable for {3}{R}");
+    drain_stack(&mut g);
+    // The opp creature is exiled, its controller (opp) draws a card.
+    assert!(!g.battlefield.iter().any(|c| c.id == opp_creature),
+        "target permanent should leave the battlefield");
+    assert_eq!(g.players[1].hand.len(), opp_hand_before + 1);
+    assert_eq!(g.players[1].library.len(), opp_lib_before - 1);
+}
+
+/// Soothsayer Adept — {1}{U} 1/2 Merfolk Wizard, {U}: Scry 1.
+#[test]
+fn soothsayer_adept_scries_one_per_activation() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_library(0, catalog::plains());
+    let adept = g.add_card_to_battlefield(0, catalog::soothsayer_adept());
+    g.clear_sickness(adept);
+    let lib_before = g.players[0].library.len();
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: adept, ability_index: 0, target: None,
+    })
+    .expect("Soothsayer's {U} scry activation legal");
+    drain_stack(&mut g);
+    // Library size unchanged by scry (look-and-reorder).
+    assert_eq!(g.players[0].library.len(), lib_before);
+}
+
+/// Drainpipe Vermin — {B} 1/1 Rat. Death-trigger: target opp mills 2.
+#[test]
+fn drainpipe_vermin_death_triggers_opp_mill_two() {
+    let mut g = two_player_game();
+    g.add_card_to_library(1, catalog::island());
+    g.add_card_to_library(1, catalog::plains());
+    g.add_card_to_library(1, catalog::mountain());
+    let vermin = g.add_card_to_battlefield(0, catalog::drainpipe_vermin());
+    let opp_lib_before = g.players[1].library.len();
+    let opp_gy_before = g.players[1].graveyard.len();
+    // Kill the rat: deal 2 damage via a Lightning Bolt from opp.
+    g.priority.player_with_priority = 1;
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Permanent(vermin)),
+        mode: None, x_value: None,
+    })
+    .expect("Bolt castable");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == vermin), "vermin should die");
+    // Opp library shrinks by 2 + opp graveyard gains 2.
+    assert_eq!(g.players[1].library.len(), opp_lib_before - 2);
+    assert!(g.players[1].graveyard.len() >= opp_gy_before + 2,
+        "opp gy should gain >= 2 from mill");
+}
+
+/// Make Your Move — {B}{G} Instant. Choose one or both: destroy tapped
+/// creature; destroy enchantment.
+#[test]
+fn make_your_move_destroys_tapped_creature_via_mode_zero() {
+    let mut g = two_player_game();
+    let bears = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    {
+        let b = g.battlefield.iter_mut().find(|c| c.id == bears).unwrap();
+        b.tapped = true;
+    }
+    let id = g.add_card_to_hand(0, catalog::make_your_move());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    // Only mode 0 — script the modes pick to destroy creature.
+    g.decider = Box::new(ScriptedDecider::new(vec![
+        DecisionAnswer::Modes(vec![0]),
+    ]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(bears)),
+        mode: None, x_value: None,
+    })
+    .expect("Make Your Move castable for {B}{G}");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == bears),
+        "tapped creature should be destroyed");
+}
+
+/// Make Your Move's mode 0 rejects an *untapped* creature target — the
+/// Tapped predicate gates entry to the destroy.
+#[test]
+fn make_your_move_rejects_untapped_creature_target() {
+    let mut g = two_player_game();
+    let bears = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::make_your_move());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.decider = Box::new(ScriptedDecider::new(vec![
+        DecisionAnswer::Modes(vec![0]),
+    ]));
+    let result = g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(bears)),
+        mode: None, x_value: None,
+    });
+    assert!(result.is_err(),
+        "Make Your Move mode 0 with untapped target should reject");
+}
+
+/// Returned Pastcaller — {4}{B} 4/3 Zombie Wizard. ETB returns an
+/// IS card with MV ≤ 3 from your gy → hand.
+#[test]
+fn returned_pastcaller_etb_returns_low_mv_is_card() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::returned_pastcaller());
+    let bolt_id = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Pastcaller castable for {4}{B}");
+    drain_stack(&mut g);
+    // Pastcaller in play, bolt back in hand. Net hand: -1 + 1 = 0.
+    assert!(g.battlefield.iter().any(|c| c.id == id), "Pastcaller on bf");
+    assert!(g.players[0].hand.iter().any(|c| c.id == bolt_id),
+        "Bolt should be back in hand");
+    assert_eq!(g.players[0].hand.len(), hand_before);
+}
+
+/// Returned Pastcaller does nothing if there's no ≤3 MV IS card in
+/// the graveyard (just a 4/3 body with a no-op ETB).
+#[test]
+fn returned_pastcaller_etb_no_op_with_empty_graveyard() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::returned_pastcaller());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Pastcaller castable even with empty gy");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == id),
+        "Pastcaller hits the bf even with no recursion target");
+}
+
+/// Field Research — {1}{W} Lesson. +1/+1 counter on creature + gain 2.
+#[test]
+fn field_research_pumps_creature_and_gains_two() {
+    let mut g = two_player_game();
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::field_research());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let life_before = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(bears)),
+        mode: None, x_value: None,
+    })
+    .expect("Field Research castable for {1}{W}");
+    drain_stack(&mut g);
+    let bear_view = g.battlefield.iter().find(|c| c.id == bears).unwrap();
+    assert_eq!(bear_view.counter_count(CounterType::PlusOnePlusOne), 1);
+    assert_eq!(g.players[0].life, life_before + 2);
+}
+
+/// Mage Duel — {R} Instant. 2 damage to an opp creature.
+#[test]
+fn mage_duel_deals_two_to_opp_creature() {
+    let mut g = two_player_game();
+    let bears = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::mage_duel());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(bears)),
+        mode: None, x_value: None,
+    })
+    .expect("Mage Duel castable for {R}");
+    drain_stack(&mut g);
+    // Bears (2/2) takes 2 damage = lethal.
+    assert!(!g.battlefield.iter().any(|c| c.id == bears),
+        "bears should die to Mage Duel's 2 damage");
+}
+
+/// Mage Duel rejects a friendly-creature target — the printed filter
+/// is "creature an opponent controls".
+#[test]
+fn mage_duel_rejects_friendly_creature_target() {
+    let mut g = two_player_game();
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::mage_duel());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let result = g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(bears)),
+        mode: None, x_value: None,
+    });
+    assert!(result.is_err(),
+        "Mage Duel rejects friendly-creature target via the ControlledByOpponent filter");
 }

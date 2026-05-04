@@ -297,6 +297,14 @@ pub struct PermanentView {
     /// Loyalty abilities (only populated for planeswalkers).
     #[serde(default)]
     pub loyalty_abilities: Vec<LoyaltyAbilityView>,
+    /// Current loyalty (= count of `CounterType::Loyalty` counters on
+    /// the permanent). `Some(N)` only for planeswalkers, `None` for
+    /// non-planeswalkers. Lets clients render "Liliana 3" without
+    /// scanning `counters` for the loyalty entry. Per CR 306.5c. Push
+    /// XLII addition; defaulted via `#[serde(default)]` so older
+    /// serialized views continue to deserialize.
+    #[serde(default)]
+    pub loyalty: Option<i32>,
     /// Short descriptions of static abilities (anthem effects, cost
     /// reductions, taxes, etc.) — one entry per `StaticAbility` on the
     /// underlying card definition. Populated from

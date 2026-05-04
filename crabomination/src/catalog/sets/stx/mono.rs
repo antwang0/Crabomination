@@ -3291,3 +3291,437 @@ pub fn swarm_shambler() -> CardDefinition {
     }
 }
 
+// ── Quick Study ─────────────────────────────────────────────────────────────
+
+/// Quick Study — {1}{U} Sorcery — Lesson. "Draw two cards." (STX uncommon.)
+///
+/// ✅ Push XLII NEW: trivial mono-blue Lesson cantrip wired as
+/// `Effect::Draw { who: You, amount: 2 }`. Same Lesson sub-type as Pop
+/// Quiz / Brilliant Plan so future Lesson-aware effects (Mascot
+/// Exhibition's "your sideboard", Learn payoffs) can filter on it.
+/// Functional twin of Divination at the same printed rate; Strixhaven
+/// flavor is the Lesson tag.
+pub fn quick_study() -> CardDefinition {
+    CardDefinition {
+        name: "Quick Study",
+        cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes {
+            spell_subtypes: vec![crate::card::SpellSubtype::Lesson],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Draw {
+            who: Selector::You,
+            amount: Value::Const(2),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        additional_sac_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+    }
+}
+
+// ── Introduction to Prophecy ────────────────────────────────────────────────
+
+/// Introduction to Prophecy — {3}{U} Sorcery — Lesson.
+/// "Scry 4, then draw a card." (STX rare.)
+///
+/// ✅ Push XLII NEW: blue Lesson card-selection. Wired as
+/// `Effect::Seq([Scry 4, Draw 1])`. Faithful to the printed Oracle.
+/// Slots into Strixhaven mystic-arcane-rummage shells alongside
+/// Brilliant Plan (Scry 3 + Draw 3) and Solve the Equation (tutor).
+pub fn introduction_to_prophecy() -> CardDefinition {
+    CardDefinition {
+        name: "Introduction to Prophecy",
+        cost: cost(&[generic(3), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes {
+            spell_subtypes: vec![crate::card::SpellSubtype::Lesson],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Scry { who: PlayerRef::You, amount: Value::Const(4) },
+            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        additional_sac_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+    }
+}
+
+// ── Introduction to Annihilation ────────────────────────────────────────────
+
+/// Introduction to Annihilation — {3}{R} Sorcery — Lesson.
+/// "Exile target permanent. Its controller draws a card." (STX rare.)
+///
+/// ✅ Push XLII NEW: universal exile (no nonland restriction — really
+/// hits any permanent). The controller-draws rider is a hard offset
+/// to the otherwise-unconditional exile.
+///
+/// Wired as `Effect::Seq([Exile(any Permanent), Draw(controller of
+/// just-targeted permanent)])`. The exile resolves first; our
+/// `ControllerOf(Target(0))` reads the cast-time `EffectContext.targets[0]`
+/// (the chosen card-id), and a card retains its `controller` field
+/// even after `move_card_to(... ZoneDest::Exile)`, so the second-step
+/// draw routes to the right player.
+pub fn introduction_to_annihilation() -> CardDefinition {
+    CardDefinition {
+        name: "Introduction to Annihilation",
+        cost: cost(&[generic(3), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes {
+            spell_subtypes: vec![crate::card::SpellSubtype::Lesson],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Exile {
+                what: target_filtered(SelectionRequirement::Permanent),
+            },
+            Effect::Draw {
+                who: Selector::Player(PlayerRef::ControllerOf(Box::new(Selector::Target(0)))),
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        additional_sac_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+    }
+}
+
+// ── Soothsayer Adept ────────────────────────────────────────────────────────
+
+/// Soothsayer Adept — {1}{U} Creature — Merfolk Wizard, 1/2.
+/// "{U}: Scry 1." (STX common.)
+///
+/// ✅ Push XLII NEW: 1/2 Merfolk Wizard with a repeatable {U} scry.
+/// The scry-on-tap-of-mana shape lets a Soothsayer fix the next-turn
+/// draw at instant speed. Same shape as Hedron Crab's "{T}: mill 3 (or
+/// 5 if you played a land)" — a body that runs an ability every turn
+/// the controller has a free pip.
+///
+/// Implementation: a single activated ability with `mana_cost: {U}`
+/// (no tap), `Effect::Scry { who: You, amount: 1 }`. Repeatable
+/// activation (no `once_per_turn`).
+pub fn soothsayer_adept() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Soothsayer Adept",
+        cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: false,
+            mana_cost: cost(&[u()]),
+            effect: Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
+            once_per_turn: false,
+            sorcery_speed: false,
+            sac_cost: false,
+            condition: None,
+            life_cost: 0,
+            exile_gy_cost: 0,
+        }],
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        additional_sac_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+    }
+}
+
+// ── Drainpipe Vermin ────────────────────────────────────────────────────────
+
+/// Drainpipe Vermin — {B} Creature — Rat, 1/1.
+/// "When this creature dies, target opponent puts the top two cards of
+/// their library into their graveyard." (STX common.)
+///
+/// ✅ Push XLII NEW: 1/1 mono-black Rat with a death-trigger mill 2 on
+/// an opp. Fits Witherbloom self-sacrifice / "leaves graveyard"
+/// payoffs (Spirit Mascot, Hardened Academic, Ark of Hunger). The mill
+/// half uses `Selector::Player(PlayerRef::EachOpponent)` to target
+/// each opp (auto-target collapse for 1v1; the SOS pattern of "target
+/// opponent" defaults to "each opp" since multi-opp 1v1 doesn't exist
+/// in the engine's two-seater pool).
+pub fn drainpipe_vermin() -> CardDefinition {
+    CardDefinition {
+        name: "Drainpipe Vermin",
+        cost: cost(&[b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Rat],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+            effect: Effect::Mill {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(2),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        additional_sac_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+    }
+}
+
+// ── Make Your Move ──────────────────────────────────────────────────────────
+
+/// Make Your Move — {B}{G} Instant — STX common.
+/// "Choose one or both —
+///   • Destroy target tapped creature.
+///   • Destroy target enchantment."
+///
+/// ✅ Push XLII NEW: dual-removal modal at the {B}{G} rate. Wired
+/// faithfully via the `Effect::ChooseModes { count: 2, up_to: true,
+/// allow_duplicates: false }` primitive (push XXXVI). AutoDecider
+/// picks both modes when both targets exist; ScriptedDecider can flip
+/// to either single-mode pick.
+///
+/// Mode 0: `Destroy(Creature ∧ Tapped)` — same shape as Foul Play's
+/// "destroy target tapped creature" half.
+/// Mode 1: `Destroy(Enchantment)` — same shape as the Disenchant /
+/// Naturalize family.
+pub fn make_your_move() -> CardDefinition {
+    CardDefinition {
+        name: "Make Your Move",
+        cost: cost(&[b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::ChooseModes {
+            modes: vec![
+                Effect::Destroy {
+                    what: target_filtered(
+                        SelectionRequirement::Creature.and(SelectionRequirement::Tapped),
+                    ),
+                },
+                Effect::Destroy {
+                    what: target_filtered(SelectionRequirement::Enchantment),
+                },
+            ],
+            count: 2,
+            up_to: true,
+            allow_duplicates: false,
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        additional_sac_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+    }
+}
+
+// ── Returned Pastcaller ─────────────────────────────────────────────────────
+
+/// Returned Pastcaller — {4}{B} Creature — Zombie Wizard, 4/3.
+/// "When this creature enters, return target instant or sorcery card
+///  with mana value 3 or less from your graveyard to your hand." (STX
+///  uncommon.)
+///
+/// ✅ Push XLII NEW: 4/3 Zombie Wizard recursion body. ETB returns a
+/// MV ≤ 3 IS card from your graveyard to hand. The mana-value gate
+/// uses the existing `ManaValueAtMost` predicate-shape via
+/// `SelectionRequirement::ManaValueAtMost(3)` — same gate Prismatic
+/// Ending and Resculpt use.
+///
+/// Filter: `(Instant OR Sorcery) AND ManaValueAtMost(3) AND in your gy`
+/// via `Selector::CardsInZone { who: You, zone: Graveyard, filter:
+/// ... }`. The exact target-prompt UI is collapsed to "first matching
+/// card" via `Selector::take(_, 1)` when there are multiple legal
+/// candidates (engine pattern shared with Practiced Scrollsmith,
+/// Reconstruct History).
+pub fn returned_pastcaller() -> CardDefinition {
+    CardDefinition {
+        name: "Returned Pastcaller",
+        cost: cost(&[generic(4), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Move {
+                what: Selector::take(
+                    Selector::CardsInZone {
+                        who: PlayerRef::You,
+                        zone: crate::card::Zone::Graveyard,
+                        filter: SelectionRequirement::ManaValueAtMost(3).and(
+                            SelectionRequirement::HasCardType(CardType::Instant)
+                                .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+                        ),
+                    },
+                    Value::Const(1),
+                ),
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        additional_sac_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+    }
+}
+
+// ── Field Research ──────────────────────────────────────────────────────────
+
+/// Field Research — {1}{W} Sorcery — Lesson.
+/// "Put a +1/+1 counter on target creature, then you gain 2 life." (STX
+/// common.)
+///
+/// ✅ Push XLII NEW: white Lesson card. Wired faithfully as
+/// `Effect::Seq([AddCounter(target Creature, +1/+1, ×1),
+/// GainLife(You, 2)])`. The "then" timing matches printed text — the
+/// counter lands first; `Selector::Target(0)` pins the same creature
+/// for the gain-life half. (The lifegain doesn't read the target,
+/// but the counter does.)
+pub fn field_research() -> CardDefinition {
+    CardDefinition {
+        name: "Field Research",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes {
+            spell_subtypes: vec![crate::card::SpellSubtype::Lesson],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::AddCounter {
+                what: target_filtered(SelectionRequirement::Creature),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+            Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        additional_sac_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+    }
+}
+
+// ── Mage Duel ───────────────────────────────────────────────────────────────
+
+/// Mage Duel — {R} Instant — STX common.
+/// "Mage Duel deals 2 damage to target creature an opponent controls.
+///  Magecraft — Whenever you cast or copy an instant or sorcery spell,
+///  you may pay {R}{R}. If you do, copy this spell. You may choose new
+///  targets for the copy."
+///
+/// ✅ Push XLII NEW (partial): the front-half 2-damage half is wired
+/// faithfully (`Effect::DealDamage(Const(2))` on `EachPermanent(opp
+/// creature)` filtered target). The Magecraft-of-the-spell-itself "you
+/// may pay {R}{R}, copy this" rider stays gap (would need a self-spell
+/// magecraft trigger that fires *during* the same cast — same family
+/// gap as Devastating Mastery's Mastery alt-cost-on-the-spell-itself).
+/// 🟡 status reflects the missing copy rider.
+pub fn mage_duel() -> CardDefinition {
+    CardDefinition {
+        name: "Mage Duel",
+        cost: cost(&[r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::DealDamage {
+            to: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+            ),
+            amount: Value::Const(2),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        additional_sac_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+    }
+}
+
