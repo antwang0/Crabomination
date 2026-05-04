@@ -10625,3 +10625,381 @@ pub fn persist() -> CardDefinition {
     }
 }
 
+// ── Push XLIX: 2026-05-04 batch — Pacifism + Arrest + lock-Aura family ──────
+//
+// Tens-of-years-old removal Auras and supporting white/black/green
+// utility. Validates the new `Keyword::CantAttack` engine wire (sibling
+// to the existing `Keyword::CantBlock`) — Pacifism / Arrest grant both
+// keywords through `StaticEffect::GrantKeyword` over `AttachedTo(This)`,
+// the same shape as Solid Footing's pump+vigilance Aura grant.
+
+// ── Pacifism — Mirage / Modern white removal Aura ───────────────────────────
+
+/// Pacifism — {1}{W} Aura. "Enchant creature. Enchanted creature can't
+/// attack or block."
+///
+/// ✅ Push XLIX: NEW. First catalog card to exercise the new
+/// `Keyword::CantAttack` keyword (sibling to `CantBlock`). Both keywords
+/// are layer-granted by static effects over `Selector::AttachedTo(This)`,
+/// the same shape as Solid Footing's pump+vigilance Aura grant. Cast-time
+/// pre-attach is wired by `stack.rs` so the orphan-aura SBA (CR 704.5m)
+/// doesn't graveyard the card on entry.
+pub fn pacifism() -> CardDefinition {
+    use crate::card::{EnchantmentSubtype, StaticAbility};
+    use crate::effect::StaticEffect;
+    let attached = Selector::AttachedTo(Box::new(Selector::This));
+    CardDefinition {
+        name: "Pacifism",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        static_abilities: vec![
+            StaticAbility {
+                description: "Enchanted creature can't attack",
+                effect: StaticEffect::GrantKeyword {
+                    applies_to: attached.clone(),
+                    keyword: Keyword::CantAttack,
+                },
+            },
+            StaticAbility {
+                description: "Enchanted creature can't block",
+                effect: StaticEffect::GrantKeyword {
+                    applies_to: attached,
+                    keyword: Keyword::CantBlock,
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+// ── Arrest — Saviors of Kamigawa / Modern white removal Aura ────────────────
+
+/// Arrest — {2}{W} Aura. "Enchant creature. Enchanted creature can't
+/// attack or block, and its activated abilities can't be activated."
+///
+/// 🟡 Push XLIX: NEW. The "can't attack or block" half is wired
+/// faithfully via the new `Keyword::CantAttack` + the existing
+/// `Keyword::CantBlock`. The activated-abilities lock is omitted (the
+/// engine has no `StaticEffect::ActivatedAbilitiesCantBeActivated`
+/// primitive yet — same family gap as Pithing Needle).
+pub fn arrest() -> CardDefinition {
+    use crate::card::{EnchantmentSubtype, StaticAbility};
+    use crate::effect::StaticEffect;
+    let attached = Selector::AttachedTo(Box::new(Selector::This));
+    CardDefinition {
+        name: "Arrest",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        static_abilities: vec![
+            StaticAbility {
+                description: "Enchanted creature can't attack",
+                effect: StaticEffect::GrantKeyword {
+                    applies_to: attached.clone(),
+                    keyword: Keyword::CantAttack,
+                },
+            },
+            StaticAbility {
+                description: "Enchanted creature can't block",
+                effect: StaticEffect::GrantKeyword {
+                    applies_to: attached,
+                    keyword: Keyword::CantBlock,
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+// ── Solemn Offering — Mirage / Modern utility ───────────────────────────────
+
+/// Solemn Offering — {2}{W} Sorcery. "Destroy target artifact or
+/// enchantment. You gain 4 life."
+///
+/// ✅ Push XLIX: NEW. Cheap white catch-all artifact / enchantment
+/// removal with a built-in lifegain rider. Wired with `Effect::Seq([
+/// Destroy, GainLife 4])`. Same destroy-artifact-or-enchantment shape
+/// as Disenchant / Naturalize at the {2}{W} rate.
+pub fn solemn_offering() -> CardDefinition {
+    CardDefinition {
+        name: "Solemn Offering",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Destroy {
+                what: target_filtered(
+                    SelectionRequirement::HasCardType(CardType::Artifact)
+                        .or(SelectionRequirement::HasCardType(CardType::Enchantment)),
+                ),
+            },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(4),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+// ── Idyllic Tutor — Theros / Modern enchantment tutor ───────────────────────
+
+/// Idyllic Tutor — {2}{W} Sorcery. "Search your library for an
+/// enchantment card, reveal it, put it into your hand, then shuffle."
+///
+/// ✅ Push XLIX: NEW. Wired faithfully via `Effect::Search` with filter
+/// `HasCardType(Enchantment)` to `Hand`. The "reveal it" step is the
+/// engine's standard Search-to-Hand path — searches always reveal the
+/// card (a no-op in single-player tests, observable in multi-player UI).
+pub fn idyllic_tutor() -> CardDefinition {
+    CardDefinition {
+        name: "Idyllic Tutor",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Search {
+            who: PlayerRef::You,
+            filter: SelectionRequirement::HasCardType(CardType::Enchantment),
+            to: ZoneDest::Hand(PlayerRef::You),
+        },
+        ..Default::default()
+    }
+}
+
+// ── Frozen Shade — Alpha / Eldraine reprint mono-black activated body ───────
+
+/// Frozen Shade — {B} Creature — Shade. 0/3. "{B}: This creature gets
+/// +1/+1 until end of turn."
+///
+/// ✅ Push XLIX: NEW. Classic Shade — a 0/3 chump body whose activated
+/// ability scales with available black mana. Same activation shape as
+/// Burrog Banemaker but with no fixed P/T floor: at one activation the
+/// body is 1/4, at three activations it's 3/6. Bridges through a
+/// specific Shade subtype (already in the `CreatureType` enum).
+pub fn frozen_shade() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Frozen Shade",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Shade],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 3,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: false,
+            mana_cost: cost(&[b()]),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(1),
+                toughness: Value::Const(1),
+                duration: Duration::EndOfTurn,
+            },
+            once_per_turn: false,
+            sorcery_speed: false,
+            sac_cost: false,
+            condition: None,
+            life_cost: 0,
+            exile_gy_cost: 0,
+        }],
+        ..Default::default()
+    }
+}
+
+// ── Phyrexian Reclamation — Urza's Saga / Modern reanimation ────────────────
+
+/// Phyrexian Reclamation — {B}{B} Enchantment. "{1}{B}, Pay 2 life:
+/// Return target creature card from your graveyard to your hand."
+///
+/// ✅ Push XLIX: NEW. Mono-black creature recursion enchantment that
+/// taxes life rather than mana for the long-game value. Wired with the
+/// engine's `ActivatedAbility.life_cost: u32` field (push XV) — the
+/// activation rejects pre-pay with `InsufficientLife` when life < 2.
+/// Target is the controller's graveyard filtered to `Creature`.
+pub fn phyrexian_reclamation() -> CardDefinition {
+    use crate::card::{ActivatedAbility, Zone};
+    let target_pick = Selector::take(
+        Selector::CardsInZone {
+            who: PlayerRef::You,
+            zone: Zone::Graveyard,
+            filter: SelectionRequirement::Creature,
+        },
+        Value::Const(1),
+    );
+    CardDefinition {
+        name: "Phyrexian Reclamation",
+        cost: cost(&[b(), b()]),
+        card_types: vec![CardType::Enchantment],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: false,
+            mana_cost: cost(&[generic(1), b()]),
+            effect: Effect::Move {
+                what: target_pick,
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+            once_per_turn: false,
+            sorcery_speed: false,
+            sac_cost: false,
+            condition: None,
+            life_cost: 2,
+            exile_gy_cost: 0,
+        }],
+        ..Default::default()
+    }
+}
+
+// ── Krosan Grip — Time Spiral / Modern reach ────────────────────────────────
+
+/// Krosan Grip — {2}{G} Instant. "Split second. Destroy target artifact
+/// or enchantment."
+///
+/// 🟡 Push XLIX: NEW. Body wired faithfully (destroy artifact or
+/// enchantment at the {2}{G} rate — same shape as Naturalize). The
+/// Split Second rider is omitted (no `Keyword::SplitSecond` primitive
+/// yet — would need a stack-side gate that rejects responses while the
+/// spell is on the stack). Without Split Second the card plays like
+/// a slightly-worse-rate Naturalize; the printed value of the card is
+/// in its uncounterability rather than its raw rate.
+pub fn krosan_grip() -> CardDefinition {
+    CardDefinition {
+        name: "Krosan Grip",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Destroy {
+            what: target_filtered(
+                SelectionRequirement::HasCardType(CardType::Artifact)
+                    .or(SelectionRequirement::HasCardType(CardType::Enchantment)),
+            ),
+        },
+        ..Default::default()
+    }
+}
+
+// ── Stasis Snare — Battle for Zendikar / Modern white removal ───────────────
+
+/// Stasis Snare — {1}{W}{W} Instant. "Flash. Exile target attacking
+/// creature."
+///
+/// 🟡 Push XLIX: NEW. The Flash + Exile pair is wired faithfully. The
+/// printed Battle for Zendikar version is "Exile target creature an
+/// opponent controls" with the Flash + "until this leaves the
+/// battlefield" exile-return. The current wire collapses the rider to
+/// permanent exile (same engine gap as Banishing Light family —
+/// "until-leaves-bf return" replacement primitive). The instant-speed
+/// exile half ships at the printed {1}{W}{W} rate, which is the
+/// dominant value of the card.
+pub fn stasis_snare() -> CardDefinition {
+    CardDefinition {
+        name: "Stasis Snare",
+        cost: cost(&[generic(1), w(), w()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Flash],
+        effect: Effect::Exile {
+            what: target_filtered(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::ControlledByOpponent),
+            ),
+        },
+        ..Default::default()
+    }
+}
+
+// ── Heliod's Pilgrim — Theros Beyond Death / Aura tutor ─────────────────────
+
+/// Heliod's Pilgrim — {1}{W}{W} 1/2 Human Cleric. "When this creature
+/// enters, you may search your library for an Aura card, reveal it, put
+/// it into your hand, then shuffle."
+///
+/// ✅ Push XLIX: NEW. ETB tutors for any Aura card (filter:
+/// `HasEnchantmentSubtype(Aura)`). Auto-decider always searches; the
+/// "may" rider collapses to always-do (same approximation as Erode /
+/// Dragon's Approach's "may" tutor riders). Tutoring directly to hand
+/// (rather than top of library) keeps the resolution simple.
+pub fn heliods_pilgrim() -> CardDefinition {
+    use crate::card::{EnchantmentSubtype, EventKind, EventScope, EventSpec, TriggeredAbility};
+    CardDefinition {
+        name: "Heliod's Pilgrim",
+        cost: cost(&[generic(1), w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Search {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::HasEnchantmentSubtype(EnchantmentSubtype::Aura),
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+// ── Faith's Fetters — Ravnica / Modern Aura jail ────────────────────────────
+
+/// Faith's Fetters — {3}{W} Aura. "Enchant permanent. When this Aura
+/// enters, you gain 4 life. Enchanted permanent's activated abilities
+/// can't be activated unless they're mana abilities, and if it's a
+/// creature, it can't attack or block."
+///
+/// 🟡 Push XLIX: NEW. The lifegain ETB rider is wired faithfully. The
+/// "can't attack or block" half is wired via the new
+/// `Keyword::CantAttack` + the existing `Keyword::CantBlock` (granted
+/// over `AttachedTo(This)`); these are creature-only keywords so on
+/// non-creature attached permanents the grants are no-ops. The
+/// activated-ability lock is omitted (same gap as Arrest / Pithing
+/// Needle). Auto-attach pre-bind at cast time honors any Permanent
+/// target (CR 303.4f relaxed — the engine doesn't yet enforce
+/// "Aura's printed enchant filter must match" for attachment).
+pub fn faiths_fetters() -> CardDefinition {
+    use crate::card::{
+        EnchantmentSubtype, EventKind, EventScope, EventSpec, StaticAbility, TriggeredAbility,
+    };
+    use crate::effect::StaticEffect;
+    let attached = Selector::AttachedTo(Box::new(Selector::This));
+    CardDefinition {
+        name: "Faith's Fetters",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(4),
+            },
+        }],
+        static_abilities: vec![
+            StaticAbility {
+                description: "Enchanted creature can't attack",
+                effect: StaticEffect::GrantKeyword {
+                    applies_to: attached.clone(),
+                    keyword: Keyword::CantAttack,
+                },
+            },
+            StaticAbility {
+                description: "Enchanted creature can't block",
+                effect: StaticEffect::GrantKeyword {
+                    applies_to: attached,
+                    keyword: Keyword::CantBlock,
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+

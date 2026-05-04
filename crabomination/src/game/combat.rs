@@ -87,6 +87,16 @@ impl GameState {
                 }
                 return Err(GameError::SummoningSickness(id));
             }
+            // `Keyword::CantAttack` is enforced from the *computed* keyword
+            // set so transient grants (Pacifism / Arrest Aura buffs, static
+            // restrictions like Frozen Aether) take effect immediately.
+            // Sibling to the existing `CantBlock` enforcement in
+            // `declare_blockers`. This is the engine wire that makes
+            // "Enchanted creature can't attack or block" Auras actually
+            // restrict combat rather than just being a flavor tag.
+            if computed_kw(id).contains(&Keyword::CantAttack) {
+                return Err(GameError::CannotAttack(id));
+            }
             if !computed_kw(id).contains(&Keyword::Vigilance) {
                 card.tapped = true;
             }

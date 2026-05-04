@@ -86,6 +86,168 @@ All 248 cards marked ✅ or 🟡 have a corresponding factory in
 positives and 0 stale ⏳ rows. STX 2021 progress is tracked in the
 "Strixhaven base set (STX)" section near the bottom of this file.
 
+## 2026-05-04 push XLIX: 10 new modern cards + Keyword::CantAttack engine wire + CR 508 audit
+
+Adds 10 new cards to the `decks::modern` catalog (Pacifism / Arrest /
+Faith's Fetters Aura family, Solemn Offering, Idyllic Tutor, Frozen
+Shade, Phyrexian Reclamation, Krosan Grip, Stasis Snare, Heliod's
+Pilgrim), wires up the new `Keyword::CantAttack` keyword as the
+sibling to `Keyword::CantBlock` (validated by Pacifism / Arrest's
+combat lock), surfaces the new keyword in client UI filters
+(`game_ui.rs`), and audits CR 508 (Declare Attackers Step). Tests at
+1520 (was 1508, +12 net), all green.
+
+### New Modern cards (10, all in `catalog::sets::decks::modern`)
+
+**Pacifism family (3 — all use the new `CantAttack` keyword):**
+
+| Card | Cost | Status | Notes |
+|---|---|---|---|
+| Pacifism | {1}{W} | ✅ NEW | Aura. "Enchanted creature can't attack or block." First catalog card to exercise the new `Keyword::CantAttack`; both keywords are layer-granted via `StaticEffect::GrantKeyword` over `Selector::AttachedTo(This)`, the same shape as Solid Footing's pump+vigilance Aura grant. |
+| Arrest | {2}{W} | 🟡 NEW | Aura. "Enchanted creature can't attack or block, and its activated abilities can't be activated." Combat-lock half wired identically to Pacifism. The activated-ability lock is omitted (engine has no `StaticEffect::ActivatedAbilitiesCantBeActivated` primitive yet — same family gap as Pithing Needle). |
+| Faith's Fetters | {3}{W} | 🟡 NEW | Aura. "When this Aura enters, you gain 4 life. Enchanted permanent's activated abilities can't be activated unless they're mana abilities, and if it's a creature, it can't attack or block." ETB lifegain + combat lock wired; activated-ability lock omitted (same gap as Arrest). |
+
+**Removal / utility (4):**
+
+| Card | Cost | Status | Notes |
+|---|---|---|---|
+| Solemn Offering | {2}{W} | ✅ NEW | Sorcery. "Destroy target artifact or enchantment. You gain 4 life." Same destroy-AE-+-life shape as Disenchant + Healing Salve combo. |
+| Idyllic Tutor | {2}{W} | ✅ NEW | Sorcery. "Search your library for an enchantment card, reveal it, put it into your hand, then shuffle." Standard `Effect::Search` with `HasCardType(Enchantment)` filter to `Hand`. |
+| Krosan Grip | {2}{G} | 🟡 NEW | Instant. "Split second. Destroy target artifact or enchantment." Body wired faithfully (same shape as Naturalize at the {2}{G} rate). Split Second rider omitted (no `Keyword::SplitSecond` primitive — would need a stack-side gate that rejects responses while the spell is on the stack). |
+| Stasis Snare | {1}{W}{W} | 🟡 NEW | Instant — Flash. "Exile target creature an opponent controls." Flash + Exile pair wired. The "until this leaves the battlefield" exile-return rider is omitted (collapsed to permanent exile — same family gap as Banishing Light's "until-leaves-bf return" replacement primitive). |
+
+**Creatures + activated abilities (3):**
+
+| Card | Cost | Status | Notes |
+|---|---|---|---|
+| Frozen Shade | {B} | ✅ NEW | 0/3 Shade. "{B}: This creature gets +1/+1 until end of turn." Classic mono-black Shade body — pumps stack for the rest of the turn. |
+| Phyrexian Reclamation | {B}{B} | ✅ NEW | Enchantment. "{1}{B}, Pay 2 life: Return target creature card from your graveyard to your hand." Wired with `ActivatedAbility.life_cost: 2` (push XV primitive); pre-pay rejects with `InsufficientLife` when life < 2. |
+| Heliod's Pilgrim | {1}{W}{W} | ✅ NEW | 1/2 Human Cleric. "When this creature enters, you may search your library for an Aura card, reveal it, put it into your hand, then shuffle." ETB tutors via `Effect::Search` with `HasEnchantmentSubtype(Aura)` filter. |
+
+### Engine improvement: new `Keyword::CantAttack`
+
+Mirrors the existing `Keyword::CantBlock` keyword: a marker keyword
+that the combat resolver consults from the **computed** keyword set
+(not just the printed one) so that transient grants from Auras,
+static effects, or end-of-turn pumps take effect immediately.
+
+- New variant on the `Keyword` enum (`crabomination/src/card.rs`).
+- New `GameError::CannotAttack(CardId)` variant
+  (`crabomination/src/game/types.rs`).
+- New enforcement in `declare_attackers`
+  (`crabomination/src/game/combat.rs`): walks the computed-keyword
+  set for each attacker; rejects with `CannotAttack(id)` if the
+  keyword is present.
+- Bot filter update (`crabomination/src/server/bot.rs`): the bot's
+  attacker-selection loop now skips creatures with a *computed*
+  CantAttack keyword (via a fresh `compute_battlefield()` walk),
+  so it doesn't push attacks that `declare_attackers` would
+  reject. Mirrors the existing CantBlock-aware `pick_blocks`
+  logic.
+- `dump_cards` keyword filter (`crabomination/src/bin/dump_cards.rs`):
+  CantAttack is filtered the same way as CantBlock — it's a card-
+  text restriction, not a Scryfall-tagged keyword.
+- Client UI updates (`crabomination_client/src/systems/game_ui.rs`):
+  the "any attackers available" detection (HUD button enable / fast-
+  forward auto-attack) and the auto-attack action dispatch now both
+  exclude creatures with `Keyword::CantAttack`. Defender-and-CantAttack
+  creatures are filtered identically.
+
+### CR 508 audit (Declare Attackers Step)
+
+Rule-by-rule status for the engine's `declare_attackers` path
+(post-push-XLIX):
+
+- **508.1** (turn-based action — declares attackers off-stack) ✅ —
+  `declare_attackers` runs during `TurnStep::DeclareAttackers`,
+  doesn't touch the stack, and rolls back on illegal declarations
+  via `Result<_, GameError>`.
+- **508.1a** (creatures untapped, not battles, summoning-sickness
+  honors haste) ✅ — `card.can_attack()` checks tapped + summoning-
+  sickness + Defender; the "battles" exclusion is implicit since the
+  engine has no Battle card type yet.
+- **508.1b** (announces target — player / planeswalker / battle) ✅ —
+  `Attack.target: AttackTarget` enum covers Player + Planeswalker.
+  Battle attack targets are ⏳ (no battles yet).
+- **508.1c** (restrictions — "can't attack" effects) 🟡 — Defender
+  hardcoded; **CantAttack just added (push XLIX)** as the generic
+  marker keyword for Pacifism / Arrest / Faith's Fetters family.
+  Conditional restrictions ("can't attack alone", "can't attack
+  unless N creatures attack") are still ⏳ (no
+  `StaticEffect::AttackRestrictionConditional` primitive).
+- **508.1d** (requirements — "attacks if able" effects) ⏳ — no
+  "must attack if able" primitive; the engine treats attacking as
+  optional only.
+- **508.1e** (banding) ⏳ — `Keyword::Banding` exists in the enum but
+  no bands-with logic in combat.
+- **508.1f** (taps when declared, not as a cost) ✅ — `declare_
+  attackers` taps each non-Vigilance attacker right after pushing
+  to `self.attacking`.
+- **508.1g–j** (optional / additional attack costs, mana abilities,
+  payment) ⏳ — no per-attack cost primitives. Hellrider /
+  Goblin General-style "attacks if able" + cost-to-attack riders
+  are blocked by the same gap.
+- **508.1k** (becomes attacking creature) ✅ — `self.attacking.
+  push(atk)` after validation.
+- **508.1m** (declared-attacker triggers fire) ✅ — both
+  `Attacks/SelfSource` and `Attacks/AnotherOfYours` triggers fire,
+  with broadcast triggers gated on the post-declaration
+  `AttackersThisCombat` count (push XXX — Augusta, Dean of Order).
+- **508.2 / 508.2a / 508.2b** (priority after; triggers fire on
+  declaration, not later state changes; APNAP for triggered
+  abilities) ✅ — implicit in the turn-step + stack pipeline.
+- **508.3a–e** (various "attacks" trigger conditions: per-creature,
+  per-player, attacks-{player}, attacks-{another-player}) ✅ —
+  the existing event-spec / scope filters cover all variants. The
+  `Attacks/AnotherOfYours` broadcast covers "Whenever you attack"
+  triggers (Sparring Regimen) and "Whenever a creature you control
+  attacks" triggers (Augusta).
+- **508.3f** (attacks-and-isn't-blocked triggers fire during
+  declare-blockers, not declare-attackers) 🟡 — engine has the
+  `EventKind::Attacks` event but no separate "attacks-unblocked"
+  event. Cards with this trigger (Curiosity-style, certain
+  goblins) would need an extra event from `declare_blockers`
+  per CR 509.3g.
+- **508.4 / 508.4a / 508.4b** (creatures put-into-battlefield-
+  attacking) ⏳ — no `Effect::EnterAttacking` primitive yet.
+  Sundering Titan-style "ETB attacking" wouldn't trigger
+  declare-attackers triggers (per 508.4c) but does need a code
+  path that pushes the creature into `self.attacking` at ETB
+  time. No catalog card exercises this today.
+- **508.4c** (creatures stated to be attacking aren't subject to
+  restrictions / requirements) ⏳ — no path to test (no ETB-
+  attacking effects yet).
+
+### Tests (+12 net, 1508 → 1520)
+
+- `tests::modern::pacifism_grants_cant_attack_and_cant_block_to_
+  enchanted_creature` — Pacifism's two `StaticEffect::GrantKeyword`
+  layers grant both keywords on the targeted creature.
+- `tests::modern::pacifism_rejects_attack_from_enchanted_creature` —
+  declare_attackers rejects the Pacified bear with
+  `GameError::CannotAttack`.
+- `tests::modern::arrest_grants_cant_attack_and_cant_block` — same
+  shape as Pacifism (combat lock validated).
+- `tests::modern::solemn_offering_destroys_enchantment_and_gains_
+  four_life` — full destroy + gain 4 life resolution.
+- `tests::modern::idyllic_tutor_searches_library_for_enchantment` —
+  ScriptedDecider drives the Pacifism pick.
+- `tests::modern::frozen_shade_pumps_for_one_black_per_activation` —
+  two activations for {B}{B} stack to +2/+2 EOT.
+- `tests::modern::phyrexian_reclamation_rejects_activation_at_low_
+  life` — life_cost: 2 gate rejects with InsufficientLife when
+  controller is at 1 life.
+- `tests::modern::phyrexian_reclamation_returns_creature_for_two_
+  life` — happy path: pay 2 life + return creature to hand.
+- `tests::modern::krosan_grip_destroys_target_enchantment` —
+  destroys an enchantment at instant speed.
+- `tests::modern::stasis_snare_exiles_opponent_creature` — Flash +
+  Exile pair against an opp creature.
+- `tests::modern::heliods_pilgrim_etb_tutors_for_aura` — ETB
+  Search for an Aura card via ScriptedDecider.
+- `tests::modern::faiths_fetters_gains_life_and_locks_creature` —
+  ETB +4 life + combat lock on the enchanted creature.
+
 ## 2026-05-04 push XLVIII: 14 modern cards + ExtraLandPerTurn (CR 305.2) + delirium_active view + CR 305 audit
 
 Adds 14 new cards to the `decks::modern` catalog (Talisman cycle

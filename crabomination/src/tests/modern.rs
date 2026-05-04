@@ -12037,3 +12037,309 @@ fn dragons_rage_channeler_delirium_three_three_flying() {
         "DRC gains Flying with Delirium");
 }
 
+// ── Push XLIX: Pacifism / Arrest / Aura lock + utility cards ────────────────
+
+/// Pacifism — Aura grants both `CantAttack` and `CantBlock` to the
+/// enchanted creature via static effects over `AttachedTo(This)`.
+#[test]
+fn pacifism_grants_cant_attack_and_cant_block_to_enchanted_creature() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::pacifism());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(bear)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Pacifism castable for {1}{W}");
+    drain_stack(&mut g);
+
+    let aura = g.battlefield.iter().find(|c| c.id == id)
+        .expect("Pacifism on battlefield");
+    assert_eq!(aura.attached_to, Some(bear),
+        "Pacifism should be attached to the targeted bear");
+
+    let computed = g.computed_permanent(bear)
+        .expect("bear should be on battlefield");
+    assert!(computed.keywords.contains(&Keyword::CantAttack),
+        "enchanted bear gains CantAttack");
+    assert!(computed.keywords.contains(&Keyword::CantBlock),
+        "enchanted bear gains CantBlock");
+}
+
+/// Pacifism rejects an attack from the enchanted creature with
+/// `GameError::CannotAttack`. Validates the new declare_attackers
+/// enforcement of `Keyword::CantAttack` from the computed keyword set.
+#[test]
+fn pacifism_rejects_attack_from_enchanted_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    // Enchant the bear with Pacifism cast by player 0 themselves
+    // (Pacifism is symmetric — works on any creature).
+    let aura = g.add_card_to_hand(0, catalog::pacifism());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura,
+        target: Some(Target::Permanent(bear)),
+        mode: None, x_value: None,
+    })
+    .expect("Pacifism castable");
+    drain_stack(&mut g);
+
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.active_player_idx = 0;
+    let err = g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: bear,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect_err("Pacified bear can't attack");
+    assert!(matches!(err, GameError::CannotAttack(id) if id == bear),
+        "expected CannotAttack({bear:?}), got {err:?}");
+}
+
+/// Arrest — same shape as Pacifism (both keywords). The activated-
+/// abilities lock is omitted (engine gap) but the combat lock fires.
+#[test]
+fn arrest_grants_cant_attack_and_cant_block() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::arrest());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        mode: None, x_value: None,
+    })
+    .expect("Arrest castable for {2}{W}");
+    drain_stack(&mut g);
+
+    let computed = g.computed_permanent(bear).expect("bear on battlefield");
+    assert!(computed.keywords.contains(&Keyword::CantAttack),
+        "Arrested bear has CantAttack");
+    assert!(computed.keywords.contains(&Keyword::CantBlock),
+        "Arrested bear has CantBlock");
+}
+
+/// Solemn Offering — destroys target enchantment + gains 4 life.
+#[test]
+fn solemn_offering_destroys_enchantment_and_gains_four_life() {
+    let mut g = two_player_game();
+    // Drop a junk enchantment on opp's side. Reuse Pacifism as a
+    // generic enchantment target; controller doesn't matter for the
+    // destroy half.
+    let target = g.add_card_to_battlefield(1, catalog::pacifism());
+    let id = g.add_card_to_hand(0, catalog::solemn_offering());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let life_before = g.players[0].life;
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(target)),
+        mode: None, x_value: None,
+    })
+    .expect("Solemn Offering castable for {2}{W}");
+    drain_stack(&mut g);
+
+    assert!(!g.battlefield.iter().any(|c| c.id == target),
+        "target enchantment should be destroyed");
+    assert_eq!(g.players[0].life, life_before + 4,
+        "caster should gain 4 life");
+}
+
+/// Idyllic Tutor — searches library for an enchantment card and puts
+/// it into hand.
+#[test]
+fn idyllic_tutor_searches_library_for_enchantment() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::grizzly_bears());     // Creature
+    g.add_card_to_library(0, catalog::lightning_bolt());    // Instant
+    let pac = g.add_card_to_library(0, catalog::pacifism()); // Enchantment
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(pac))]));
+
+    let id = g.add_card_to_hand(0, catalog::idyllic_tutor());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let hand_before = g.players[0].hand.len();
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Idyllic Tutor castable for {2}{W}");
+    drain_stack(&mut g);
+
+    // Hand: -1 (tutor) + 1 (Pacifism) = 0 net.
+    assert_eq!(g.players[0].hand.len(), hand_before);
+    assert!(g.players[0].hand.iter().any(|c| c.id == pac),
+        "Pacifism should be in hand after the tutor");
+}
+
+/// Frozen Shade — activated `{B}: +1/+1 EOT` accumulates per activation.
+#[test]
+fn frozen_shade_pumps_for_one_black_per_activation() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::frozen_shade());
+    g.clear_sickness(id);
+    g.players[0].mana_pool.add(Color::Black, 3);
+
+    // Two activations stack: +2/+2 EOT.
+    for _ in 0..2 {
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: id, ability_index: 0, target: None,
+        })
+        .expect("Frozen Shade activation");
+        drain_stack(&mut g);
+    }
+
+    let computed = g.computed_permanent(id).expect("Shade on bf");
+    assert_eq!(computed.power, 2, "0 + 2 (×1 each activation) = 2");
+    assert_eq!(computed.toughness, 5, "3 + 2 = 5");
+}
+
+/// Phyrexian Reclamation — `{1}{B}, Pay 2 life: gy creature → hand`
+/// rejects the activation when life would drop below 1.
+#[test]
+fn phyrexian_reclamation_rejects_activation_at_low_life() {
+    let mut g = two_player_game();
+    let recl = g.add_card_to_battlefield(0, catalog::phyrexian_reclamation());
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.players[0].life = 1; // below the 2-life cost
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    let err = g.perform_action(GameAction::ActivateAbility {
+        card_id: recl, ability_index: 0, target: None,
+    })
+    .expect_err("activation should reject at 1 life (cost is 2)");
+    assert!(matches!(err, GameError::InsufficientLife),
+        "expected InsufficientLife, got {err:?}");
+}
+
+/// Phyrexian Reclamation — at 5 life and {1}{B} mana the activation
+/// returns the gy creature to hand and pays 2 life.
+#[test]
+fn phyrexian_reclamation_returns_creature_for_two_life() {
+    let mut g = two_player_game();
+    let recl = g.add_card_to_battlefield(0, catalog::phyrexian_reclamation());
+    let bears_id = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.players[0].life = 5;
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let life_before = g.players[0].life;
+    let hand_before = g.players[0].hand.len();
+
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: recl, ability_index: 0, target: None,
+    })
+    .expect("Reclamation activation");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[0].life, life_before - 2, "2 life paid");
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "creature returned to hand");
+    assert!(g.players[0].hand.iter().any(|c| c.id == bears_id),
+        "the specific Grizzly Bears should be in hand");
+}
+
+/// Krosan Grip — destroys an enchantment at instant speed.
+#[test]
+fn krosan_grip_destroys_target_enchantment() {
+    let mut g = two_player_game();
+    let target = g.add_card_to_battlefield(1, catalog::pacifism());
+    let id = g.add_card_to_hand(0, catalog::krosan_grip());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(target)),
+        mode: None, x_value: None,
+    })
+    .expect("Krosan Grip castable for {2}{G}");
+    drain_stack(&mut g);
+
+    assert!(!g.battlefield.iter().any(|c| c.id == target),
+        "Pacifism should be destroyed by Krosan Grip");
+}
+
+/// Stasis Snare — exiles an opp creature at instant speed via Flash.
+#[test]
+fn stasis_snare_exiles_opponent_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::stasis_snare());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        mode: None, x_value: None,
+    })
+    .expect("Stasis Snare castable for {1}{W}{W}");
+    drain_stack(&mut g);
+
+    assert!(!g.battlefield.iter().any(|c| c.id == bear),
+        "bear should leave the battlefield");
+    assert!(g.exile.iter().any(|c| c.id == bear),
+        "bear should be in exile, not graveyard");
+}
+
+/// Heliod's Pilgrim — ETB tutors for an Aura card.
+#[test]
+fn heliods_pilgrim_etb_tutors_for_aura() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::grizzly_bears());     // Creature
+    g.add_card_to_library(0, catalog::lightning_bolt());    // Instant
+    let pac = g.add_card_to_library(0, catalog::pacifism()); // Aura
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(pac))]));
+
+    let id = g.add_card_to_hand(0, catalog::heliods_pilgrim());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    let hand_before = g.players[0].hand.len();
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Heliod's Pilgrim castable for {1}{W}{W}");
+    drain_stack(&mut g);
+
+    // Hand: -1 (cast Pilgrim) + 1 (Pacifism tutored) = 0 net.
+    assert_eq!(g.players[0].hand.len(), hand_before,
+        "ETB should net zero (cast - 1, tutor +1)");
+    assert!(g.players[0].hand.iter().any(|c| c.id == pac));
+}
+
+/// Faith's Fetters — gains 4 life on ETB and locks the enchanted
+/// creature out of attacking and blocking.
+#[test]
+fn faiths_fetters_gains_life_and_locks_creature() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::faiths_fetters());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    let life_before = g.players[0].life;
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        mode: None, x_value: None,
+    })
+    .expect("Faith's Fetters castable for {3}{W}");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[0].life, life_before + 4,
+        "ETB should gain 4 life");
+    let computed = g.computed_permanent(bear).expect("bear on bf");
+    assert!(computed.keywords.contains(&Keyword::CantAttack),
+        "bear gains CantAttack from Fetters");
+    assert!(computed.keywords.contains(&Keyword::CantBlock),
+        "bear gains CantBlock from Fetters");
+}
+

@@ -218,6 +218,13 @@ pub enum Keyword {
     /// Veteran). Enforced inside `declare_blockers` — any blocker
     /// declaration involving a creature with this keyword is rejected.
     CantBlock,
+    /// "This creature can't attack." Sibling to `CantBlock` — the engine
+    /// reads the *computed* keyword set in `declare_attackers` so transient
+    /// grants (Pacifism / Arrest / Faith's Fetters Aura buffs, Defender-
+    /// flavored static restrictions) take effect immediately. Enforced
+    /// inside `declare_attackers`: any attack declaration involving a
+    /// creature with this keyword is rejected with `CannotAttack`.
+    CantAttack,
     /// "When you cast this spell from your hand, exile it as it resolves.
     /// At the beginning of your next upkeep, you may cast this card from
     /// exile without paying its mana cost." Wired in

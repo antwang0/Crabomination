@@ -7,6 +7,36 @@ See `CUBE_FEATURES.md` (cube-card implementation status) and
 
 ## Recent additions
 
+- ✅ **Push XLIX (2026-05-04)**: 10 new modern cards (Pacifism / Arrest
+  / Faith's Fetters Aura family, Solemn Offering, Idyllic Tutor, Frozen
+  Shade, Phyrexian Reclamation, Krosan Grip, Stasis Snare, Heliod's
+  Pilgrim) + new `Keyword::CantAttack` engine wire + CR 508 audit.
+  Tests at 1520 (was 1508, +12 net), all green.
+  - **Engine: `Keyword::CantAttack`** — sibling to `Keyword::CantBlock`.
+    Marker keyword consulted from the **computed** keyword set in
+    `declare_attackers` so transient grants from Auras / static effects
+    take effect immediately. New `GameError::CannotAttack(CardId)` for
+    rejection, new bot filter to skip CantAttack creatures during
+    attacker selection (mirrors the existing CantBlock-aware
+    `pick_blocks`), `dump_cards` handles it identically to CantBlock.
+  - **Client UI**: `game_ui.rs` "any attackers" detection +
+    auto-attack action dispatch now both exclude
+    `Keyword::CantAttack` creatures (paired with the existing
+    Defender exclusion).
+  - **CR 508 audit (Declare Attackers)**: rule-by-rule status in
+    STRIXHAVEN2.md push XLIX. Highlights: 508.1 (turn-based action) ✅,
+    508.1a (untapped + non-battle + sickness check) ✅, 508.1c
+    (restrictions — Defender + new CantAttack) 🟡, 508.1f (taps when
+    declared) ✅, 508.1k (becomes attacking) ✅, 508.1m (attack
+    triggers fire) ✅, 508.3a–e (per-creature / per-player attacks
+    triggers) ✅. Still 🟡: 508.3f (attacks-unblocked separate event).
+    Still ⏳: 508.1d (attacks if able), 508.1e (banding), 508.1g–j
+    (per-attack costs / mana abilities), 508.4 (put-into-battlefield-
+    attacking).
+  - **12 new tests**: 2 Pacifism, 1 Arrest, 1 Solemn Offering, 1
+    Idyllic Tutor, 1 Frozen Shade, 2 Phyrexian Reclamation, 1 Krosan
+    Grip, 1 Stasis Snare, 1 Heliod's Pilgrim, 1 Faith's Fetters.
+
 - ✅ **Push XLVIII (2026-05-04)**: 14 modern cards (Talisman cycle
   completion + Pristine Talisman + Wayfarer's Bauble + Burnished Hart
   + 5 Painlands + Exploration) + ExtraLandPerTurn wire (CR 305.2) +
@@ -784,6 +814,61 @@ See `CUBE_FEATURES.md` (cube-card implementation status) and
     reject / Mascot steal + revert), 9 cube-card tests (one per new
     card + body sanity for vanilla bodies), 1 view test
     (`ability_cost_label_renders_exile_gy_cost`).
+
+## Future work — engine/UI suggestions surfaced by push XLIX
+
+Push XLIX introduces the `Keyword::CantAttack` keyword and 10 new
+Aura / removal / tutor cards. The following remain open:
+
+- **`StaticEffect::ActivatedAbilitiesCantBeActivated` primitive** —
+  Arrest + Faith's Fetters' "activated abilities can't be activated"
+  rider stays gap. Needs a new `StaticEffect` variant that walks
+  every battlefield permanent's activated abilities at activation
+  time and rejects activations whose source matches the filter
+  (Aura's enchanted permanent for Arrest / Faith's Fetters,
+  named-card filter for Pithing Needle / Phyrexian Revoker, etc.).
+  Mana abilities should bypass the lock (per Faith's Fetters
+  printed text). Same family unblocks: Pithing Needle, Phyrexian
+  Revoker, Sorcerous Spyglass, Damping Sphere (partial).
+- **`Keyword::SplitSecond` primitive** — Krosan Grip's Split Second
+  is omitted. Needs a stack-side gate that rejects responses (any
+  spell or non-mana ability) while a Split Second spell is on the
+  stack (CR 702.62). Mostly affects gameplay against players who
+  would respond with removal / counterspells; in single-player
+  bot games the rider is rarely observable.
+- **"Until-this-leaves-bf" exile-return replacement** — Banishing
+  Light, Stasis Snare, Detention Sphere, Oblivion Ring, Grasp of
+  Fate all want this. Needs a `LeavesBattlefield` self-trigger
+  that returns the previously-exiled card pair to bf (or a
+  delayed-trigger primitive that fires on `EventKind::
+  LeftBattlefield + SelfSource`). Today our Stasis Snare collapses
+  the rider to permanent exile.
+- **Conditional attack restrictions** ("can't attack alone", "can't
+  attack unless N creatures attack") — CR 508.1c covers these.
+  Needs a new `StaticEffect::AttackRestrictionConditional`
+  variant gated on a `Predicate` (e.g.,
+  `Predicate::ValueAtLeast(AttackersThisCombat, 2)`). Conditional
+  restrictions affect Hellrider-style cards that pump cumulative
+  attacker counts and Old-school "doesn't attack alone" creatures
+  (Sengir Vampire variants, Phyrexian Negator).
+- **"Attacks if able" requirement primitive** (CR 508.1d) — Goblin
+  Goon, Marrow Chomper variants, Berserker tribal "must attack"
+  riders. Needs a `Keyword::MustAttack` or `StaticEffect::Attack
+  Requirement` that the engine checks against the maximum-
+  satisfiable subset rule (CR 508.1d's "If the number of
+  requirements that are being obeyed is fewer than the maximum
+  possible..." check).
+- **`Keyword::SetAttachmentFilter` for Auras** (CR 303.4f) — today
+  Auras can attach to any Permanent target; the engine doesn't
+  enforce the printed "enchant creature" / "enchant artifact" /
+  etc. filter at cast time. Pacifism shouldn't legally target a
+  non-creature permanent. New field on `CardDefinition` (or read
+  from text) that the cast-target validator consults.
+- **`AttackTarget::Battle` variant** — CR 508.1b mentions battles as
+  a third attack target type. The enum is currently
+  `Player(usize) | Planeswalker(CardId)`; adding `Battle(CardId)`
+  unblocks Battle attack targets when the Battle card type is
+  added.
 
 ## Future work — engine/UI suggestions surfaced by push XLVIII
 

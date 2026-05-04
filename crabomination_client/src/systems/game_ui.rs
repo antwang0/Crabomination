@@ -612,6 +612,7 @@ pub fn update_attack_all_visibility(
             && !c.tapped
             && (!c.summoning_sick || c.keywords.contains(&Keyword::Haste))
             && !c.keywords.contains(&Keyword::Defender)
+            && !c.keywords.contains(&Keyword::CantAttack)
     });
     node.display = if has_attackers { Display::Flex } else { Display::None };
 }
@@ -2386,6 +2387,7 @@ pub fn handle_game_input(
                         && !c.tapped
                         && (!c.summoning_sick || c.keywords.contains(&Keyword::Haste))
                         && !c.keywords.contains(&Keyword::Defender)
+                        && !c.keywords.contains(&Keyword::CantAttack)
                 })
                 .map(|c| Attack {
                     attacker: c.id,

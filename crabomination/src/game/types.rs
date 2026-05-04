@@ -474,6 +474,8 @@ pub enum GameError {
     SummoningSickness(CardId),
     #[error("Creature {0:?} cannot block (tapped, not a creature, or flying restriction)")]
     CannotBlock(CardId),
+    #[error("Creature {0:?} cannot attack (Pacifism / Arrest / Defender / static restriction)")]
+    CannotAttack(CardId),
     #[error("Attacker {0:?} has Menace and must be blocked by two or more creatures")]
     MenaceRequiresTwoBlockers(CardId),
     #[error("Card {0:?} has Hexproof and cannot be targeted by opponents")]

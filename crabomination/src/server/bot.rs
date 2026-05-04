@@ -119,11 +119,26 @@ impl Bot for RandomBot {
                     // Filter on `controller`, not `owner`: cards that have
                     // changed control (Threaten / Mind Control / etc.) are
                     // attacked WITH by the new controller, not the original
-                    // owner.
+                    // owner. Also filter out creatures with the *computed*
+                    // `CantAttack` keyword (Pacifism / Arrest / Faith's
+                    // Fetters Aura grants — the printed keyword set may
+                    // not yet show it) so the bot doesn't push an attack
+                    // that `declare_attackers` will reject as
+                    // `CannotAttack`.
+                    let computed = state.compute_battlefield();
+                    let cant_attack: std::collections::HashSet<crate::card::CardId> = computed
+                        .iter()
+                        .filter(|cp| cp.keywords.contains(&crate::card::Keyword::CantAttack))
+                        .map(|cp| cp.id)
+                        .collect();
                     let mut available: Vec<&crate::card::CardInstance> = state
                         .battlefield
                         .iter()
-                        .filter(|c| c.controller == seat && c.can_attack())
+                        .filter(|c| {
+                            c.controller == seat
+                                && c.can_attack()
+                                && !cant_attack.contains(&c.id)
+                        })
                         .collect();
                     // Sort attackers by power descending so we apply the
                     // strongest to the cheapest walker first (greedy
