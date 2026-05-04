@@ -1821,7 +1821,24 @@ impl GameState {
                         .battlefield_find(cid)
                         .map(|c| c.controller)
                         .or_else(|| self.find_card_owner(cid)),
-                    _ => None,
+                    // `EntityRef::Card` covers stack-resident spells
+                    // (referenced via `Selector::TriggerSource` from a
+                    // SpellCast trigger). Look up the spell's caster on
+                    // the stack — the caster is the controller while the
+                    // spell remains on the stack. Falls back to owner if
+                    // the spell has already left the stack.
+                    EntityRef::Card(cid) => self
+                        .stack
+                        .iter()
+                        .find_map(|si| match si {
+                            StackItem::Spell { card, caster, .. } if card.id == cid => {
+                                Some(*caster)
+                            }
+                            _ => None,
+                        })
+                        .or_else(|| self.battlefield_find(cid).map(|c| c.controller))
+                        .or_else(|| self.find_card_owner(cid)),
+                    EntityRef::Player(p) => Some(p),
                 }),
         }
     }

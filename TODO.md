@@ -7,6 +7,56 @@ See `CUBE_FEATURES.md` (cube-card implementation status) and
 
 ## Recent additions
 
+- ✅ **Push XLIV (2026-05-04)**: 10 new cards + 2 engine bug fixes +
+  view-side `additional_life_cost` rendering. Tests at 1430 (was
+  1415; +15 net).
+  - **Engine fix #1: AnyPlayer SpellCast trigger** —
+    `fire_spell_cast_triggers` previously folded `EventScope::
+    AnyPlayer` onto `YourControl` (`c.controller == caster`),
+    meaning Eidolon-style "whenever a player casts X, …" triggers
+    *never* fired on opponent casts. The fix accepts the match
+    unconditionally for AnyPlayer scope. Same family of gap
+    blocked Mindbreak Trap, Sanctum Prelate, Ethersworn Canonist
+    sibling triggers from firing symmetrically.
+  - **Engine fix #2: ControllerOf(EntityRef::Card)** —
+    `PlayerRef::ControllerOf(sel)` only handled
+    `EntityRef::Permanent`, returning `None` when the inner
+    selector resolved to `EntityRef::Card` (stack-resident
+    spells via `Selector::TriggerSource`). The fix walks the
+    stack for the matching `StackItem::Spell` and returns the
+    `caster`; falls back to battlefield + owner. Together with
+    the AnyPlayer fix, this lets Eidolon's body
+    `DealDamage { to: Player(ControllerOf(TriggerSource)), … }`
+    resolve to the spell's caster correctly.
+  - **10 new cards**:
+    - **STX 2021 (3 ✅)**: Archmage Emeritus ({2}{U}{U} 3/3 magecraft
+      → draw 1), Fortifying Draught ({2}{W} Instant — Lesson; gain
+      4 + scry 2), Sage of Mysteries ({U} 1/2 magecraft → opp
+      mills 2).
+    - **Modern (7)**: Serum Visions ✅ ({U} draw 1 + scry 2);
+      Burst Lightning 🟡 ({R} 2 damage; kicker omitted); Roiling
+      Vortex 🟡 ({R} Enchantment, upkeep ping + sac activation;
+      "players can't gain life" lock omitted); Murderous Cut 🟡
+      ({4}{B} destroy creature; Delve omitted); Eidolon of the
+      Great Revel ✅ ({R}{R} 2/2, MV-≤-3 ping — validates the
+      AnyPlayer + ControllerOf fixes end-to-end); Wild Slash ✅
+      ({R} 2 damage); Krenko, Mob Boss ✅ ({2}{R}{R} 3/3 Goblin
+      doubler).
+  - **Server view enrichment**: `KnownCard.additional_cost_label`
+    now also surfaces `additional_life_cost` (push XLIII
+    primitive). Vicious Rivalry's `XFromCost` life cost renders
+    as "Pay X life". Combines with sac / discard labels via
+    " and " when multiple are present.
+  - **CR 603 audit (Handling Triggered Abilities)**: full per-
+    rule status in STRIXHAVEN2.md push XLIV. Highlights: 603.1
+    (shape) ✅, 603.2 (auto-trigger) ✅, 603.2c (one trigger
+    per event) ✅, 603.4 (intervening 'if') ✅, 603.5 (may) ✅,
+    603.6 (zone-change) ✅, 603.7 (delayed) ✅. Still 🟡:
+    603.2g (no trigger on prevented events — only combat
+    damage prevention is wired), 603.3b (APNAP ordering),
+    603.8 (state triggers), 603.10 (look-back-in-time
+    triggers — partial).
+
 - ✅ **Push XLIII (2026-05-04)**: cast-time additional-cost primitive
   trio + 10 promotions + bot/view ergonomics + CR 118.8 audit. Tests
   at 1415 (was 1405; +10 net).

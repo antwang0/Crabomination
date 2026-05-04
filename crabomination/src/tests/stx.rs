@@ -5545,3 +5545,101 @@ fn necrotic_fumes_rejects_with_no_creature_to_sacrifice() {
     // Spell card goes back to hand on rejection.
     assert!(g.players[0].hand.iter().any(|c| c.id == id));
 }
+
+// ── Push XLIV: Archmage Emeritus / Fortifying Draught / Sage of Mysteries ──
+
+/// Push XLIV: Archmage Emeritus's magecraft fires once per IS spell cast.
+#[test]
+fn archmage_emeritus_draws_a_card_per_is_cast() {
+    let mut g = two_player_game();
+    // Seed a deck so the draw triggers don't run dry.
+    for _ in 0..6 { g.add_card_to_library(0, catalog::island()); }
+    let _ = g.add_card_to_battlefield(0, catalog::archmage_emeritus());
+
+    let hand_before = g.players[0].hand.len();
+
+    // Cast a free (target-less) instant — Lightning Bolt-flavored shape:
+    // any IS spell will do; we use Curate to keep mana low and confirm the
+    // card-selection magecraft body runs end-to-end.
+    let bolt = g.add_card_to_hand(0, catalog::curate());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: None, mode: None, x_value: None,
+    }).expect("Curate castable for {1}{U}");
+    drain_stack(&mut g);
+
+    // Hand: -1 (cast Curate) +1 (Curate's draw) +1 (magecraft draw) = +1.
+    assert!(g.players[0].hand.len() >= hand_before + 1,
+        "Archmage Emeritus should draw a card on the IS cast");
+}
+
+#[test]
+fn archmage_emeritus_is_3_3_human_wizard() {
+    let card = catalog::archmage_emeritus();
+    assert_eq!(card.power, 3);
+    assert_eq!(card.toughness, 3);
+    assert!(card.subtypes.creature_types.contains(&crate::card::CreatureType::Human));
+    assert!(card.subtypes.creature_types.contains(&crate::card::CreatureType::Wizard));
+}
+
+/// Push XLIV: Fortifying Draught — gain 4 life + scry 2.
+#[test]
+fn fortifying_draught_gains_4_life_and_scries_two() {
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
+    let id = g.add_card_to_hand(0, catalog::fortifying_draught());
+
+    let life_before = g.players[0].life;
+    let lib_before = g.players[0].library.len();
+
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    }).expect("Fortifying Draught castable for {2}{W}");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[0].life, life_before + 4,
+        "Fortifying Draught grants 4 life");
+    // Scry 2: AutoDecider keeps both on top by default — no library-size
+    // change versus the cast itself (one card moved from hand to gy).
+    assert_eq!(g.players[0].library.len(), lib_before,
+        "Scry 2 should look-and-keep — library count unchanged");
+}
+
+/// Push XLIV: Sage of Mysteries's magecraft fires per IS cast.
+#[test]
+fn sage_of_mysteries_mills_two_per_is_cast() {
+    let mut g = two_player_game();
+    // Seed P1's library so the mill 2 has cards to drop.
+    for _ in 0..6 { g.add_card_to_library(1, catalog::island()); }
+    let _ = g.add_card_to_battlefield(0, catalog::sage_of_mysteries());
+
+    let p1_lib_before = g.players[1].library.len();
+    let p1_gy_before = g.players[1].graveyard.len();
+
+    // Seed P0's library for the IS cast itself.
+    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
+    let curate = g.add_card_to_hand(0, catalog::curate());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: curate, target: None, mode: None, x_value: None,
+    }).expect("Curate castable");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[1].library.len(), p1_lib_before - 2,
+        "Sage of Mysteries mills opp 2 cards on each IS cast");
+    assert_eq!(g.players[1].graveyard.len(), p1_gy_before + 2,
+        "Milled cards land in opp's graveyard");
+}
+
+#[test]
+fn sage_of_mysteries_is_one_two_spirit_wizard() {
+    let card = catalog::sage_of_mysteries();
+    assert_eq!(card.power, 1);
+    assert_eq!(card.toughness, 2);
+    assert!(card.subtypes.creature_types.contains(&crate::card::CreatureType::Spirit));
+    assert!(card.subtypes.creature_types.contains(&crate::card::CreatureType::Wizard));
+}

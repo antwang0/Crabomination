@@ -36,20 +36,17 @@ This file tracks two adjacent Strixhaven catalogs:
 Counts reflect the regenerated tables below (audited via
 `scripts/audit_strixhaven2.py` against `catalog::sets::sos`).
 
-- ✅ done: **144** (SOS unchanged in push XLII; STX 2021 catalog grew
-  by 8 ✅ — Quick Study, Introduction to Prophecy, Introduction to
-  Annihilation, Soothsayer Adept, Drainpipe Vermin, Make Your Move,
-  Returned Pastcaller, Field Research).
-- 🟡 partial: **113** (SOS unchanged; STX 2021 +1 — Mage Duel NEW 🟡;
-  Plargg's second activation now wired, stays 🟡 due to may-play rider).
+- ✅ done: **147** (push XLIV adds 3 new STX 2021 mono-color cards:
+  Archmage Emeritus, Fortifying Draught, Sage of Mysteries).
+- 🟡 partial: **113** (unchanged this push).
 - ⏳ todo: **7** (unchanged — all blocked by cast-from-exile / copy-
   permanent pipelines).
 
-Push XLII (2026-05-04) STX 2021 totals (per `scripts/audit_stx_base.py`):
-**103 ✅ / 17 🟡 / 0 ⏳ across 120 rows.** Quandrix (G/U) is still
-the only fully closed college (8 ✅ / 0 🟡); Push XLII added 9 new
-cards to the mono-color section (8 ✅ + 1 🟡) and brought Plargg's
-second activation online (still 🟡 due to may-play rider).
+Push XLIV (2026-05-04) STX 2021 totals (per `scripts/audit_stx_base.py`):
+**106 ✅ / 17 🟡 / 0 ⏳ across 123 rows.** Quandrix (G/U) is still
+the only fully closed college (8 ✅ / 0 🟡); push XLIV grew the
+mono-color section by 3 ✅ (Archmage Emeritus, Fortifying Draught,
+Sage of Mysteries — all new wires that ship at full fidelity).
 
 Push XXXVIII (2026-05-03) introduces 4 engine primitives and promotes
 10 cards across STX 2021 + SOS:
@@ -80,6 +77,151 @@ All 248 cards marked ✅ or 🟡 have a corresponding factory in
 `crabomination/src/catalog/sets/sos/`; the audit script reports 0 false
 positives and 0 stale ⏳ rows. STX 2021 progress is tracked in the
 "Strixhaven base set (STX)" section near the bottom of this file.
+
+## 2026-05-04 push XLIV: 10 new cards + AnyPlayer-spell-cast-trigger fix + ControllerOf(Card) fix
+
+Adds 10 new cards (3 STX 2021 + 7 modern), fixes two engine bugs in
+the trigger dispatch, and surfaces `additional_life_cost` in the
+`KnownCard` view label. Tests at 1430 (was 1415; +15 net), all green.
+
+### Engine fixes
+
+- **`fire_spell_cast_triggers` AnyPlayer arm** — the `EventScope::
+  AnyPlayer` arm of the SpellCast trigger filter previously
+  collapsed onto the `YourControl` arm (`c.controller == caster`),
+  meaning Eidolon-style "whenever a player casts X, …" triggers
+  *never* fired on opponent casts. The fix unconditionally accepts
+  matches when the trigger source's scope is `AnyPlayer` — the
+  controller can be anyone. Pre-fix Eidolon of the Great Revel
+  would only have pinged its own controller's cheap casts; post-
+  fix the symmetric Modern-Burn punisher fires correctly on both
+  players' casts.
+- **`PlayerRef::ControllerOf(Selector)` for `EntityRef::Card`** —
+  the player-resolution path for `ControllerOf(sel)` only handled
+  `EntityRef::Permanent`, returning `None` when the inner selector
+  resolved to `EntityRef::Card` (stack-resident spells, the typical
+  shape for `Selector::TriggerSource` in a SpellCast trigger). The
+  fix walks the stack to find the `StackItem::Spell` matching the
+  card id and returns the `caster` field; falls back to battlefield
+  + owner. Together with the AnyPlayer fix, this lets Eidolon's
+  body `DealDamage { to: Player(ControllerOf(TriggerSource)), ... }`
+  resolve to the spell's caster.
+
+### New cards (10)
+
+**STX 2021 (3 new ✅, all in `catalog::sets::stx::mono`):**
+
+- **Archmage Emeritus** ({2}{U}{U}, 3/3 Human Wizard) — Magecraft:
+  draw a card. Pure draw-engine body wired via `magecraft(Effect::
+  Draw 1)`. Universally good in any spellslinger / Strixhaven
+  shell.
+- **Fortifying Draught** ({2}{W} Instant — Lesson) — Gain 4 life,
+  scry 2. Mono-white Lesson cantrip-style life buffer wired as
+  `Seq([GainLife 4, Scry 2])`.
+- **Sage of Mysteries** ({U}, 1/2 Spirit Wizard) — Magecraft: target
+  opponent mills 2. Wired via `magecraft(Effect::Mill { who: Each
+  Opponent, amount: 2 })`. With one opponent the EachOpponent
+  collapse matches printed; in 2-player it's exact.
+
+**Modern (7 new, in `catalog::sets::decks::modern`):**
+
+- **Serum Visions** ({U} Sorcery) ✅ — Draw a card, then scry 2.
+  Classic Modern blue cantrip; the printed *draw-then-scry* order
+  matters (lets Scry 2 process the freshly drawn card).
+- **Burst Lightning** ({R} Instant) 🟡 — Base mode 2 damage to any
+  target via `Effect::DealDamage` on `any_target()`. Kicker {4}
+  4-damage upgrade omitted (alt-cost-implies-mode primitive gap —
+  same family as Devastating Mastery's Mastery cost).
+- **Roiling Vortex** ({R} Enchantment) 🟡 — Upkeep ping wired via
+  `EventKind::StepBegins(Upkeep) + EventScope::AnyPlayer`. Sac
+  activation `{1}{R}, Sacrifice this: 4 damage to any target`
+  uses `sac_cost: true`. The "players can't gain life" continuous
+  lock is omitted (no global lifegain-replacement static).
+- **Murderous Cut** ({4}{B} Instant) 🟡 — Destroy target creature
+  at full {4}{B}. Delve cost reduction omitted (same gap as
+  Treasure Cruise / Dig Through Time).
+- **Eidolon of the Great Revel** ({R}{R}, 2/2 Spirit) ✅ — Symmetric
+  "Burn punisher" via `EventKind::SpellCast + EventScope::AnyPlayer`
+  + `Predicate::EntityMatches { what: TriggerSource, filter:
+  ManaValueAtMost(3) }`. Damage routes through `Selector::Player(
+  PlayerRef::ControllerOf(TriggerSource))` to find the cast-spell's
+  caster on the stack. Validates the two engine fixes end-to-end —
+  pre-fix Eidolon was completely non-functional (the trigger never
+  fired and its body had no resolution path).
+- **Wild Slash** ({R} Instant) ✅ — 2 damage to any target. The
+  Spell Mastery damage-can't-be-prevented rider is a no-op
+  gameplay-wise (engine has no prevention layer that could fight
+  the rider; the 2-damage half is unconditional anyway).
+- **Krenko, Mob Boss** ({2}{R}{R}, 3/3 Legendary Goblin Warrior) ✅
+  — `{T}: CreateToken(Goblin, X)` with X = your Goblin count.
+  Exponential Goblin tribal blowout (1 → 2 → 4 → 8 → ...).
+
+### Server view: additional_life_cost label
+
+`KnownCard.additional_cost_label` now also surfaces
+`additional_life_cost` (push XLIII primitive). Combines with sac /
+discard labels via " and " when multiple are present. Recognised
+shapes: `Const(N)` → "Pay N life", `XFromCost` → "Pay X life",
+`ConvergedValue` → "Pay life equal to converge". Vicious Rivalry's
+{X}-life cost now renders as "Pay X life" pre-cast — surfacing the
+hidden cost so clients can warn before letting the player into a
+spell that would crash them below 0 life.
+
+### CR 603 audit (Handling Triggered Abilities)
+
+Today's audit references CR 603 (Handling Triggered Abilities), the
+section directly governing the AnyPlayer + ControllerOf fixes:
+
+- 603.1 (trigger condition + effect shape) ✅ — `TriggeredAbility {
+  event: EventSpec, effect: Effect }`.
+- 603.2 (auto-trigger on event) ✅ — `fire_*_triggers` walks
+  battlefield permanents on each event family (SpellCast, ETB,
+  Dies, LifeGained, etc.).
+- 603.2b (step-begin triggers) ✅ — `fire_step_triggers(step)`
+  fires upkeep/draw/end-step trigger families.
+- 603.2c (one trigger per event) ✅.
+- 603.2g (no trigger on prevented events) 🟡 — partial;
+  prevention-shielded combat damage events skip per the new
+  `Effect::PreventCombatDamageThisTurn` primitive (push XLI),
+  but spell prevention layers and replacement effects more
+  generally don't have a unified pre-event check yet.
+- 603.3a (controller is who controlled source at trigger time) ✅
+  — Push XLIV's `c.controller` capture in `fire_spell_cast_
+  triggers` keeps the source-controller binding correct even
+  through control-change effects.
+- 603.3b (APNAP trigger ordering) 🟡 — partial; multi-trigger
+  ordering follows insertion order rather than a true APNAP +
+  re-stage protocol.
+- 603.4 (intervening 'if' clause) ✅ — `EventSpec.filter` is
+  re-evaluated at trigger time; `Predicate::EntityMatches`,
+  `ValueAtLeast`, `CastFromGraveyard` all participate.
+- 603.5 ("may" optionals) ✅ — `Effect::MayDo` / `MayPay`.
+- 603.6 (zone-change triggers) ✅ — `EventKind::CreatureDied`,
+  `EntersBattlefield`, `LeavesBattlefield`, `CardDrawn`, etc.
+- 603.6d ("[This] enters with N counters" as static) ✅ —
+  `enters_with_counters` field (push XL).
+- 603.7 (delayed triggered abilities) ✅ — `Effect::DelayUntil`.
+- 603.8 (state triggers) 🟡 — partial; LifeOf-based "if you have
+  ≤ 0 life" continuous checks fire via SBAs, but the engine
+  doesn't model state triggers as a separate dispatch class.
+- 603.10 (look-back-in-time triggers) 🟡 — partial; LeavesBattle
+  field triggers preserve the source's pre-zone-change state via
+  `EventKind::CreatureDied/SelfSource`, but the more exotic
+  look-back cases (counter-spell triggers, lose-game triggers)
+  aren't all wired.
+
+### Tests (+15 net, 1415 → 1430)
+
+- 9 STX/Modern card tests: Archmage Emeritus draw + body, Fortifying
+  Draught life+scry, Sage of Mysteries mill + body, Serum Visions
+  draw+scry, Burst Lightning damage, Roiling Vortex upkeep ping +
+  sac activation, Murderous Cut destroy, Eidolon symmetric ping +
+  body, Wild Slash damage, Krenko Goblin doubling.
+- 1 view test: Vicious Rivalry's `additional_life_cost` renders as
+  "Pay X life".
+- 5 engine-bug-fix safety nets fall out implicitly via the Eidolon
+  flow (the trigger now fires + the ControllerOf resolution lands
+  on the caster).
 
 ## 2026-05-04 push XLIII: cast-time additional-cost primitives + 10 promotions
 
@@ -3403,6 +3545,9 @@ parity is a matter of porting card factories one at a time.
 | Returned Pastcaller | {4}{B} | ✅ NEW | Push XLII: 4/3 Zombie Wizard. ETB returns a MV ≤ 3 IS card from your graveyard to hand via `Selector::take(CardsInZone(Graveyard, IS ∧ MV ≤ 3), 1)`. Pure recursion body — no double-counted ETB drain. |
 | Field Research | {1}{W} | ✅ NEW | Push XLII: Sorcery — Lesson. `Effect::Seq([AddCounter(target Creature, +1/+1, ×1), GainLife(2)])` — printed Oracle exact. White Lesson card-selection at the {1}{W} rate. |
 | Mage Duel | {R} | 🟡 NEW | Push XLII: Instant. 2 damage to an opp creature (via the existing `Creature ∧ ControlledByOpponent` filter). The Magecraft "may pay {R}{R} on the spell itself, copy it" rider stays gap (would need a self-spell magecraft trigger that fires *during* the same cast — same family gap as Devastating Mastery's Mastery alt-cost-on-the-spell-itself). |
+| Archmage Emeritus | {2}{U}{U} | ✅ NEW | Push XLIV: 3/3 Human Wizard. Magecraft — draw a card. Pure draw-engine body wired via `magecraft(Effect::Draw 1)`; every IS spell the controller casts (or copies) replaces itself. |
+| Fortifying Draught | {2}{W} | ✅ NEW | Push XLIV: Instant — Lesson. `Effect::Seq([GainLife 4, Scry 2])`. Mono-white life-buffer cantrip. The Lesson sub-type tag opens future Lesson-aware effects. |
+| Sage of Mysteries | {U} | ✅ NEW | Push XLIV: 1/2 Spirit Wizard. Magecraft — target opponent mills 2. Wired via `magecraft(Effect::Mill { who: EachOpponent, amount: 2 })`; with one opponent the EachOpponent collapse matches printed exactly. |
 
 ### Shared / multi-college
 

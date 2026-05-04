@@ -1281,10 +1281,16 @@ impl GameState {
                     .iter()
                     .filter(|t| t.event.kind == EventKind::SpellCast)
                     .filter(|t| match t.event.scope {
-                        EventScope::YourControl | EventScope::AnyPlayer => {
-                            c.controller == caster
-                        }
+                        EventScope::YourControl => c.controller == caster,
                         EventScope::OpponentControl => c.controller != caster,
+                        // AnyPlayer ("whenever a player casts...") fires
+                        // regardless of who controls the trigger source —
+                        // Eidolon of the Great Revel pings the caster of
+                        // any cheap spell on the battlefield, not just
+                        // its controller's casts. Pre-fix this arm
+                        // collapsed AnyPlayer onto YourControl so
+                        // opponent-cast spells never fired the trigger.
+                        EventScope::AnyPlayer => true,
                         _ => false,
                     })
                     .map(|t| (c.id, c.controller, t.effect.clone(), t.event.filter.clone()))

@@ -3867,3 +3867,148 @@ pub fn mage_duel() -> CardDefinition {
     }
 }
 
+// ── Archmage Emeritus ───────────────────────────────────────────────────────
+
+/// Archmage Emeritus — {2}{U}{U} Creature — Human Wizard. 3/3.
+/// "Magecraft — Whenever you cast or copy an instant or sorcery spell,
+///  draw a card."
+///
+/// ✅ Push XLIV NEW. Pure draw-engine magecraft body — every IS spell
+/// the controller casts (or copies) replaces itself. Reuses the
+/// `effect::shortcut::magecraft` helper for the SpellCast +
+/// `cast_is_instant_or_sorcery` filter; body is `Effect::Draw(1)`. The
+/// "or copies" half rides on the same SpellCast trigger family that
+/// already fires for `Effect::CopySpell` / Twincast paths (push XXI).
+pub fn archmage_emeritus() -> CardDefinition {
+    use crate::effect::shortcut::magecraft;
+    CardDefinition {
+        name: "Archmage Emeritus",
+        cost: cost(&[generic(2), u(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::Draw {
+            who: Selector::You,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        additional_sac_cost: None,
+        additional_discard_cost: None,
+        additional_life_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+    }
+}
+
+// ── Fortifying Draught ──────────────────────────────────────────────────────
+
+/// Fortifying Draught — {2}{W} Instant — Lesson (STX common).
+/// "You gain 4 life. Scry 2."
+///
+/// ✅ Push XLIV NEW. Mono-white Lesson cantrip-style life buffer.
+/// `Effect::Seq([GainLife 4, Scry 2])`. The Lesson sub-type tag
+/// makes the card discoverable via Mascot Exhibition / Pop-Quiz-
+/// adjacent Lesson filters once the sideboard model lands.
+pub fn fortifying_draught() -> CardDefinition {
+    CardDefinition {
+        name: "Fortifying Draught",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes {
+            spell_subtypes: vec![crate::card::SpellSubtype::Lesson],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(4),
+            },
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(2),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        additional_sac_cost: None,
+        additional_discard_cost: None,
+        additional_life_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+    }
+}
+
+// ── Sage of Mysteries ───────────────────────────────────────────────────────
+
+/// Sage of Mysteries — {U} Creature — Spirit Wizard. 1/2 (STX common).
+/// "Magecraft — Whenever you cast or copy an instant or sorcery spell,
+///  target opponent puts the top two cards of their library into their
+///  graveyard."
+///
+/// ✅ Push XLIV NEW. Mono-blue mill-trigger magecraft body. The
+/// printed target is "an opponent"; the engine routes through the
+/// existing `Effect::Mill` primitive aimed at `Selector::Player(
+/// EachOpponent)`. With one opponent (the demo's two-player default)
+/// this matches the printed Oracle exactly; with multiple opps, the
+/// auto-decider's "each opponent" collapse is a slight overcount but
+/// it stays game-correct in 2-player.
+pub fn sage_of_mysteries() -> CardDefinition {
+    use crate::effect::shortcut::magecraft;
+    CardDefinition {
+        name: "Sage of Mysteries",
+        cost: cost(&[u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::Mill {
+            who: Selector::Player(PlayerRef::EachOpponent),
+            amount: Value::Const(2),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        additional_sac_cost: None,
+        additional_discard_cost: None,
+        additional_life_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+    }
+}
+
+// ── Pestilent Cauldron's little sister: Pilfer the Knowledge ────────────────
+//
+// (placeholder header for the next batch — see push XLIV log in
+//  STRIXHAVEN2.md for the full per-card breakdown)
+
+

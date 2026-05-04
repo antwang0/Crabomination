@@ -118,26 +118,37 @@ fn known_card(card: &CardInstance) -> KnownCard {
             .as_ref()
             .map(|b| b.name.to_string()),
         // Additional cast cost label: combines `additional_sac_cost`
-        // (Daemogoth Woe-Eater, Eyeblight Cullers; push XXXIX) and
+        // (Daemogoth Woe-Eater, Eyeblight Cullers; push XXXIX),
         // `additional_discard_cost` (Thrilling Discovery, Cathartic
-        // Reunion; push XLIII). When both are present, joins them with
-        // " and ". Maps each cast-time additional cost to a human-
-        // readable phrase via tiny ad-hoc renderers.
+        // Reunion; push XLIII), and `additional_life_cost` (Vicious
+        // Rivalry; push XLIV). When multiple are present, joins them
+        // with " and ". Maps each cast-time additional cost to a
+        // human-readable phrase via tiny ad-hoc renderers.
         additional_cost_label: {
-            let sac = card
-                .definition
-                .additional_sac_cost
-                .as_ref()
-                .map(additional_sac_cost_label);
-            let discard = card
-                .definition
-                .additional_discard_cost
-                .map(additional_discard_cost_label);
-            match (sac, discard) {
-                (Some(s), Some(d)) => Some(format!("{} and {}", s, d.to_lowercase())),
-                (Some(s), None) => Some(s),
-                (None, Some(d)) => Some(d),
-                (None, None) => None,
+            let mut parts: Vec<String> = Vec::new();
+            if let Some(filter) = card.definition.additional_sac_cost.as_ref() {
+                parts.push(additional_sac_cost_label(filter));
+            }
+            if let Some(n) = card.definition.additional_discard_cost {
+                let s = additional_discard_cost_label(n);
+                if parts.is_empty() {
+                    parts.push(s);
+                } else {
+                    parts.push(s.to_lowercase());
+                }
+            }
+            if let Some(value) = card.definition.additional_life_cost.as_ref() {
+                let s = additional_life_cost_label(value);
+                if parts.is_empty() {
+                    parts.push(s);
+                } else {
+                    parts.push(s.to_lowercase());
+                }
+            }
+            if parts.is_empty() {
+                None
+            } else {
+                Some(parts.join(" and "))
             }
         },
         // Push XL: surface the printed `enters_with_counters` field
@@ -223,6 +234,21 @@ fn additional_discard_cost_label(n: u32) -> String {
         "Discard a card".to_string()
     } else {
         format!("Discard {} cards", n)
+    }
+}
+
+/// Render an `additional_life_cost` Value as a one-line human label.
+/// Push XLIV: surfaces the cast-time life cost so clients can warn
+/// before letting a player tap into a spell that would crash them
+/// below 0 life. Recognises the common Value shapes (Const, XFromCost,
+/// LifeOf-style); falls back to "Pay X life" for richer shapes.
+fn additional_life_cost_label(value: &crate::effect::Value) -> String {
+    use crate::effect::Value;
+    match value {
+        Value::Const(n) => format!("Pay {} life", n),
+        Value::XFromCost => "Pay X life".to_string(),
+        Value::ConvergedValue => "Pay life equal to converge".to_string(),
+        _ => "Pay life".to_string(),
     }
 }
 
@@ -1093,6 +1119,19 @@ mod tests {
         let kc = known_card(&instance);
         assert_eq!(kc.additional_cost_label.as_deref(), Some("Discard 2 cards"),
             "Cathartic Reunion's discard-2 cost should render in the plural");
+    }
+
+    /// Push XLIV: KnownCard surfaces an `additional_cost_label` for
+    /// cards with `additional_life_cost` set. Vicious Rivalry's printed
+    /// "Pay X life" rider should render with X notation.
+    #[test]
+    fn known_card_surfaces_additional_life_cost_label_xfromcost() {
+        let vr = catalog::vicious_rivalry();
+        let id = crate::card::CardId(0);
+        let instance = crate::card::CardInstance::new(id, vr, 0);
+        let kc = known_card(&instance);
+        assert_eq!(kc.additional_cost_label.as_deref(), Some("Pay X life"),
+            "Vicious Rivalry's life-X cost should render as 'Pay X life'");
     }
 
     /// Push XL: KnownCard surfaces an `enters_with_counters_label`

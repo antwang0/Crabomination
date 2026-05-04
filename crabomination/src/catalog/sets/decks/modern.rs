@@ -9167,3 +9167,263 @@ pub fn fury() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Serum Visions — Fifth Dawn / Modern cantrip ────────────────────────────
+
+/// Serum Visions — {U} Sorcery. "Draw a card. Scry 2."
+///
+/// ✅ Push XLIV NEW. The classic Modern blue cantrip. Note the printed
+/// order is *draw, then scry* (Ponder/Preordain inverted). The order
+/// matters — Scry 2 fed by the freshly drawn card lets the controller
+/// re-deck dead draws or surface a key card for next turn. Wired
+/// faithfully via `Effect::Seq([Draw 1, Scry 2])`.
+pub fn serum_visions() -> CardDefinition {
+    CardDefinition {
+        name: "Serum Visions",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
+        ]),
+        ..Default::default()
+    }
+}
+
+// ── Burst Lightning — Zendikar / Modern burn ───────────────────────────────
+
+/// Burst Lightning — {R} Instant. "Kicker {4}. This spell deals 2 damage
+/// to any target. If this spell was kicked, it deals 4 damage to that
+/// permanent or player instead."
+///
+/// 🟡 Push XLIV NEW. The base 2-damage half is wired faithfully via
+/// `Effect::DealDamage` on `any_target()` (Creature ∨ Planeswalker ∨
+/// Player). The Kicker {4} mode (4-damage upgrade) is omitted — Kicker
+/// is an alt-cost-implies-mode shape (same family as Devastating
+/// Mastery's Mastery cost; would need a sibling
+/// `AlternativeCost.kicker_mode` field to flip a 2nd mode at cast
+/// time). Stays 🟡 until the kicker primitive lands; the base mode is
+/// already game-correct as a Shock proxy.
+pub fn burst_lightning() -> CardDefinition {
+    use crate::effect::shortcut::any_target;
+    CardDefinition {
+        name: "Burst Lightning",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::DealDamage {
+            to: any_target(),
+            amount: Value::Const(2),
+        },
+        ..Default::default()
+    }
+}
+
+// ── Roiling Vortex — Zendikar Rising sideboard pinger ──────────────────────
+
+/// Roiling Vortex — {R} Enchantment. "At the beginning of each player's
+/// upkeep, Roiling Vortex deals 1 damage to that player. Players can't
+/// gain life. {1}{R}, Sacrifice Roiling Vortex: It deals 4 damage to any
+/// target."
+///
+/// 🟡 Push XLIV NEW. The upkeep-pinger trigger is wired via
+/// `EventKind::StepBegins(Upkeep)` + `EventScope::AnyPlayer` →
+/// `Effect::DealDamage(1, Player(ActivePlayer))`. The activated
+/// `{1}{R}, Sacrifice this: 4 damage` is wired with `sac_cost: true`.
+/// The "players can't gain life" continuous lock is omitted (no
+/// global lifegain-replacement static yet — same gap as Erebos, God
+/// of the Dead's lifegain prevention). Stays 🟡 overall.
+pub fn roiling_vortex() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    use crate::effect::shortcut::any_target;
+    use crate::game::types::TurnStep;
+    CardDefinition {
+        name: "Roiling Vortex",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::Upkeep),
+                EventScope::AnyPlayer,
+            ),
+            effect: Effect::DealDamage {
+                to: Selector::Player(PlayerRef::ActivePlayer),
+                amount: Value::Const(1),
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: false,
+            mana_cost: cost(&[generic(1), r()]),
+            effect: Effect::DealDamage {
+                to: any_target(),
+                amount: Value::Const(4),
+            },
+            once_per_turn: false,
+            sorcery_speed: false,
+            sac_cost: true,
+            condition: None,
+            life_cost: 0,
+            exile_gy_cost: 0,
+        }],
+        ..Default::default()
+    }
+}
+
+// ── Murderous Cut — Khans of Tarkir / Modern removal ───────────────────────
+
+/// Murderous Cut — {4}{B} Instant. "Delve. Destroy target creature."
+///
+/// 🟡 Push XLIV NEW. The base body is wired faithfully — destroy
+/// target creature, paid at the printed full {4}{B}. The Delve cost
+/// reduction is omitted (same gap as Treasure Cruise / Lose Focus
+/// / Dig Through Time — Delve is a cast-time alt-cost-discount
+/// primitive that hasn't landed yet, tracked in TODO.md). Stays 🟡
+/// overall; the destroy half is exact.
+pub fn murderous_cut() -> CardDefinition {
+    CardDefinition {
+        name: "Murderous Cut",
+        cost: cost(&[generic(4), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Destroy {
+            what: target_filtered(SelectionRequirement::Creature),
+        },
+        ..Default::default()
+    }
+}
+
+// ── Eidolon of the Great Revel — Journey into Nyx / Modern Burn punisher ───
+
+/// Eidolon of the Great Revel — {R}{R} Creature — Enchantment Creature
+/// — Spirit. 2/2. "Whenever a player casts a spell with mana value 3 or
+/// less, Eidolon of the Great Revel deals 2 damage to that player."
+///
+/// ✅ Push XLIV NEW. Symmetrical "Burn punisher" body wired via
+/// `EventKind::SpellCast` + `EventScope::AnyPlayer` + a
+/// `Predicate::EntityMatches { what: TriggerSource, filter:
+/// ManaValueAtMost(3) }` filter. The damage-dealing target is
+/// `Selector::Player(PlayerRef::ControllerOf(TriggerSource))` —
+/// the controller of the just-cast spell on the stack. Note the
+/// symmetry: Eidolon also damages its own controller when *they*
+/// cast 1- or 2-mana spells, matching printed exact (Modern Burn's
+/// tension between aggression and self-damage from Eidolon is a
+/// defining feature of the archetype).
+pub fn eidolon_of_the_great_revel() -> CardDefinition {
+    use crate::card::Predicate;
+    CardDefinition {
+        name: "Eidolon of the Great Revel",
+        cost: cost(&[r(), r()]),
+        card_types: vec![CardType::Creature, CardType::Enchantment],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::AnyPlayer)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::ManaValueAtMost(3),
+                }),
+            effect: Effect::DealDamage {
+                to: Selector::Player(PlayerRef::ControllerOf(Box::new(
+                    Selector::TriggerSource,
+                ))),
+                amount: Value::Const(2),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+// ── Wild Slash — Fate Reforged / Modern burn ───────────────────────────────
+
+/// Wild Slash — {R} Instant. "Spell mastery — If there are two or more
+/// instant and/or sorcery cards in your graveyard, damage can't be
+/// prevented this turn. Wild Slash deals 2 damage to any target."
+///
+/// ✅ Push XLIV NEW. The base 2-damage half is wired faithfully via
+/// `Effect::DealDamage` on `any_target()`. The Spell Mastery damage-
+/// can't-be-prevented rider is a no-op gameplay-wise — the engine
+/// has no prevention layer that opps can stack against burn (the
+/// `Effect::PreventCombatDamageThisTurn` primitive only gates combat
+/// damage, not direct damage). So the rider has nothing to fight
+/// against; the 2-damage half is unconditional already and matches
+/// printed Oracle for cube/modern board states.
+pub fn wild_slash() -> CardDefinition {
+    use crate::effect::shortcut::any_target;
+    CardDefinition {
+        name: "Wild Slash",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::DealDamage {
+            to: any_target(),
+            amount: Value::Const(2),
+        },
+        ..Default::default()
+    }
+}
+
+// ── Krenko, Mob Boss — Magic 2013 / Goblin tribal ──────────────────────────
+
+/// Krenko, Mob Boss — {2}{R}{R} Legendary Creature — Goblin Warrior.
+/// 3/3. "{T}: Create X 1/1 red Goblin creature tokens, where X is the
+/// number of Goblins you control."
+///
+/// ✅ Push XLIV NEW. Activated `{T}: CreateToken(Goblin, X)` with
+/// `X = CountOf(EachPermanent(Creature ∧ HasCreatureType(Goblin) ∧
+/// ControlledByYou))`. Because the count is read *at activation time
+/// before the new tokens are created*, the activation doubles your
+/// goblins each turn (1 → 2 → 4 → 8 → ...) — matching the printed
+/// exponential blow-out of the Goblin tribal endgame.
+pub fn krenko_mob_boss() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    use crate::card::TokenDefinition;
+    let goblin = TokenDefinition {
+        name: "Goblin".to_string(),
+        power: 1,
+        toughness: 1,
+        keywords: vec![],
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Red],
+        supertypes: vec![],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin],
+            ..Default::default()
+        },
+        activated_abilities: vec![],
+        triggered_abilities: vec![],
+    };
+    CardDefinition {
+        name: "Krenko, Mob Boss",
+        cost: cost(&[generic(2), r(), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: ManaCost::default(),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::count(Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::HasCreatureType(CreatureType::Goblin))
+                        .and(SelectionRequirement::ControlledByYou),
+                )),
+                definition: goblin,
+            },
+            once_per_turn: false,
+            sorcery_speed: false,
+            sac_cost: false,
+            condition: None,
+            life_cost: 0,
+            exile_gy_cost: 0,
+        }],
+        ..Default::default()
+    }
+}
+

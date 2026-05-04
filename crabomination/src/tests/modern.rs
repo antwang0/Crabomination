@@ -10437,3 +10437,183 @@ fn sage_of_the_falls_definition_has_draw_trigger_with_handsize_gate() {
         other => panic!("Sage trigger should be gated on HandSize ≥ 5, got {:?}", other),
     }
 }
+
+// ── Push XLIV: Serum Visions / Burst Lightning / Roiling Vortex ────────────
+// ── Push XLIV: Murderous Cut ───────────────────────────────────────────────
+
+/// Serum Visions — draw a card, then scry 2.
+#[test]
+fn serum_visions_draws_then_scries() {
+    let mut g = two_player_game();
+    for _ in 0..6 { g.add_card_to_library(0, catalog::island()); }
+    let id = g.add_card_to_hand(0, catalog::serum_visions());
+    let hand_before = g.players[0].hand.len();
+    let lib_before = g.players[0].library.len();
+
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    }).expect("Serum Visions castable for {U}");
+    drain_stack(&mut g);
+
+    // Hand: -1 (cast SV) +1 (draw) = same. Library: -1 (drawn). Scry doesn't
+    // touch library count by default.
+    assert_eq!(g.players[0].hand.len(), hand_before);
+    assert_eq!(g.players[0].library.len(), lib_before - 1);
+}
+
+/// Burst Lightning — base mode deals 2 damage.
+#[test]
+fn burst_lightning_deals_2_to_player() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::burst_lightning());
+    let life_before = g.players[1].life;
+
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Player(1)), mode: None, x_value: None,
+    }).expect("Burst Lightning castable for {R}");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[1].life, life_before - 2,
+        "Burst Lightning's base mode pings opp for 2");
+}
+
+/// Roiling Vortex — upkeep ping fires on each player's upkeep.
+#[test]
+fn roiling_vortex_pings_active_player_at_upkeep() {
+    let mut g = two_player_game();
+    let _ = g.add_card_to_battlefield(0, catalog::roiling_vortex());
+
+    // Active player's upkeep — the upkeep trigger fires for whoever's
+    // turn it is. We're using P0 as active player by default.
+    g.step = TurnStep::Upkeep;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    while !g.stack.is_empty() {
+        g.perform_action(GameAction::PassPriority).ok();
+        g.perform_action(GameAction::PassPriority).ok();
+    }
+    assert_eq!(g.players[0].life, 19,
+        "Roiling Vortex pings the active player for 1 at upkeep");
+}
+
+/// Roiling Vortex — sacrifice activation deals 4 to opp.
+#[test]
+fn roiling_vortex_sacrifice_activation_deals_4() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::roiling_vortex());
+    let life_before = g.players[1].life;
+
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: Some(Target::Player(1)),
+    }).expect("Roiling Vortex activatable for {1}{R}, sac");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[1].life, life_before - 4,
+        "Vortex's activation deals 4 damage");
+    // Vortex sacrificed.
+    assert!(!g.battlefield.iter().any(|c| c.id == id),
+        "Vortex sacrificed as part of activation cost");
+}
+
+/// Murderous Cut — destroy target creature at full {4}{B}.
+#[test]
+fn murderous_cut_destroys_creature_at_full_cost() {
+    let mut g = two_player_game();
+    let target = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::murderous_cut());
+
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(target)), mode: None, x_value: None,
+    }).expect("Murderous Cut castable for {4}{B}");
+    drain_stack(&mut g);
+
+    assert!(!g.battlefield.iter().any(|c| c.id == target),
+        "Murderous Cut destroys the target creature");
+}
+
+/// Eidolon of the Great Revel — pings the caster of any spell with
+/// mana value ≤ 3 for 2 damage. Push XLIV: includes a fix to the
+/// `EventScope::AnyPlayer` arm of `fire_spell_cast_triggers` — pre-fix
+/// the arm collapsed AnyPlayer onto YourControl, so Eidolon never
+/// fired on opponent casts.
+#[test]
+fn eidolon_pings_caster_of_own_low_mana_spell() {
+    let mut g = two_player_game();
+    let _ = g.add_card_to_battlefield(0, catalog::eidolon_of_the_great_revel());
+
+    // P0 casts a 1-mana instant — Lightning Bolt's MV=1 ≤ 3 triggers
+    // Eidolon's symmetrical ping — even on the controller's own casts.
+    let spell = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let p0_life_before = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Player(1)), mode: None, x_value: None,
+    }).expect("Bolt castable for {R}");
+    drain_stack(&mut g);
+
+    // P0 took 2 damage from their own Eidolon (Bolt's MV=1 ≤ 3 triggers).
+    assert_eq!(g.players[0].life, p0_life_before - 2,
+        "Eidolon symmetrically pings its controller on their own cheap spells");
+}
+
+#[test]
+fn eidolon_definition_is_2_2_spirit_red_red() {
+    let card = catalog::eidolon_of_the_great_revel();
+    assert_eq!(card.power, 2);
+    assert_eq!(card.toughness, 2);
+    assert!(card.subtypes.creature_types.contains(&crate::card::CreatureType::Spirit));
+    // Two red pips
+    let red_pips = card.cost.symbols.iter()
+        .filter(|s| matches!(s, crate::mana::ManaSymbol::Colored(Color::Red)))
+        .count();
+    assert_eq!(red_pips, 2);
+}
+
+/// Wild Slash deals 2 damage to a player.
+#[test]
+fn wild_slash_deals_2_to_player() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::wild_slash());
+    let life_before = g.players[1].life;
+
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Player(1)), mode: None, x_value: None,
+    }).expect("Wild Slash castable for {R}");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[1].life, life_before - 2,
+        "Wild Slash deals 2 to opp face");
+}
+
+/// Krenko mints Goblins equal to current Goblin count.
+#[test]
+fn krenko_mob_boss_doubles_goblin_population() {
+    let mut g = two_player_game();
+    // Seed two Goblins (Krenko is one) — start with Krenko + 1 other Goblin.
+    let krenko = g.add_card_to_battlefield(0, catalog::krenko_mob_boss());
+    g.clear_sickness(krenko);
+    // Use a vanilla goblin from the catalog if present; else just Krenko alone.
+    // Krenko alone = 1 Goblin → activate creates 1 token → 2 goblins.
+    let before = g.battlefield.iter()
+        .filter(|c| c.controller == 0 && c.definition.subtypes.creature_types
+            .contains(&crate::card::CreatureType::Goblin))
+        .count();
+    assert_eq!(before, 1, "Just Krenko");
+
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: krenko, ability_index: 0, target: None,
+    }).expect("Krenko activatable for {T}");
+    drain_stack(&mut g);
+
+    let after = g.battlefield.iter()
+        .filter(|c| c.controller == 0 && c.definition.subtypes.creature_types
+            .contains(&crate::card::CreatureType::Goblin))
+        .count();
+    assert_eq!(after, 2, "Krenko mints 1 Goblin (since Krenko itself = 1 Goblin)");
+}
