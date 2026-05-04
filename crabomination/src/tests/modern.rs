@@ -10215,6 +10215,13 @@ fn faerie_mastermind_draws_when_opp_draws() {
     g.players[1].mana_pool.add(Color::Blue, 1);
     g.active_player_idx = 1;
     g.priority.player_with_priority = 1;
+    // Push: Faerie Mastermind now correctly skips the *first* draw
+    // each opponent makes per turn. Ponder's draw would otherwise be
+    // the 1st (the per-turn opp draw step usually fires first, but
+    // this test fast-forwards past Untap/Draw). Bump the opp's
+    // per-turn draw tally to 1 manually so Ponder's draw counts as
+    // the 2nd draw (and the trigger fires).
+    g.players[1].cards_drawn_this_turn = 1;
     let our_hand_before = g.players[0].hand.len();
 
     // Opp casts Ponder → resolves with a draw → Mastermind triggers.
@@ -10225,10 +10232,43 @@ fn faerie_mastermind_draws_when_opp_draws() {
     drain_stack(&mut g);
 
     // Our hand should be one larger (Mastermind triggered on opp's
-    // Ponder draw — note the Mastermind doesn't have the "except
-    // first card on their turn" gate yet, so it fires on every draw).
+    // 2nd-or-later draw this turn).
     assert!(g.players[0].hand.len() > our_hand_before,
-        "Faerie Mastermind should draw us a card on opp's Ponder-driven draw");
+        "Faerie Mastermind should draw us a card on opp's 2nd-or-later draw");
+}
+
+/// Push: Faerie Mastermind's "except the first card they draw each
+/// turn" gate now correctly skips the very first opp draw per turn.
+#[test]
+fn faerie_mastermind_skips_first_opp_draw_each_turn() {
+    let mut g = two_player_game();
+    let _fm = g.add_card_to_battlefield(0, catalog::faerie_mastermind());
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    for _ in 0..3 {
+        g.add_card_to_library(1, catalog::island());
+    }
+    let ponder = g.add_card_to_hand(1, catalog::ponder());
+    g.players[1].mana_pool.add(Color::Blue, 1);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    // Opp's first draw of the turn (cards_drawn_this_turn = 0) → Ponder
+    // bumps to 1, which is the 1st draw → trigger filter requires ≥2 →
+    // skip.
+    g.players[1].cards_drawn_this_turn = 0;
+    let our_hand_before = g.players[0].hand.len();
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: ponder, target: None, mode: None, x_value: None,
+    })
+    .expect("Ponder castable for {U}");
+    drain_stack(&mut g);
+
+    // Mastermind should skip the first opp draw (CardsDrawnThisTurn
+    // is 1 after Ponder; the gate needs ≥ 2).
+    assert_eq!(g.players[0].hand.len(), our_hand_before,
+        "Faerie Mastermind should skip the first opp draw each turn");
 }
 
 #[test]

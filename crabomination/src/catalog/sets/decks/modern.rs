@@ -8688,6 +8688,7 @@ pub fn murktide_regent() -> CardDefinition {
 /// blue-x card-advantage shells.
 pub fn faerie_mastermind() -> CardDefinition {
     use crate::card::ActivatedAbility;
+    use crate::effect::Predicate;
     CardDefinition {
         name: "Faerie Mastermind",
         cost: cost(&[generic(1), u()]),
@@ -8700,8 +8701,19 @@ pub fn faerie_mastermind() -> CardDefinition {
         toughness: 1,
         keywords: vec![Keyword::Flying, Keyword::Flash],
         effect: Effect::Noop,
+        // Push: "except the first card they draw each turn" gate now
+        // wired via `Predicate::ValueAtLeast(CardsDrawnThisTurn(
+        // Triggerer), 2)`. The trigger source's draw is observed via
+        // `EventScope::OpponentControl`; the filter resolves on the
+        // opponent's per-turn draw tally — a 2nd, 3rd, … draw fires
+        // the trigger; the 1st draw skips. Faithful to the printed
+        // text (skip-first-draw is per-opponent, per-turn).
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CardDrawn, EventScope::OpponentControl),
+            event: EventSpec::new(EventKind::CardDrawn, EventScope::OpponentControl)
+                .with_filter(Predicate::ValueAtLeast(
+                    Value::CardsDrawnThisTurn(crate::effect::PlayerRef::Triggerer),
+                    Value::Const(2),
+                )),
             effect: Effect::Draw {
                 who: Selector::You,
                 amount: Value::Const(1),
