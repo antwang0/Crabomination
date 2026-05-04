@@ -397,6 +397,14 @@ pub enum Predicate {
     /// false in trigger / activated-ability contexts (those reset
     /// `cast_face` to `Front`).
     CastFromGraveyard,
+    /// SOS Prepare mechanic: true when *every* permanent the selector
+    /// resolves to is currently flagged `prepared`. (Empty selector
+    /// returns true, mirroring `Predicate::EntityMatches`.) Used by
+    /// prepare-payoff cards that gate riders on the flag — e.g. a
+    /// future "Prepare {cost}: …" activated ability whose body should
+    /// run only when this creature has been prepared. Reads
+    /// `CardInstance.prepared` directly.
+    IsPrepared(Selector),
 }
 
 // ── Duration ─────────────────────────────────────────────────────────────────
@@ -906,6 +914,19 @@ pub enum Effect {
     /// `caster_grants_uncounterable` to gate which creature spells the
     /// Cavern protects (only those that share the named type).
     NameCreatureType { what: Selector },
+
+    /// SOS Prepare mechanic: set the `prepared` flag on each permanent
+    /// the selector resolves to. `value: true` corresponds to "becomes
+    /// prepared" (Biblioplex Tomekeeper mode 0, Skycoach Waypoint's
+    /// `{3},{T}` activation); `value: false` to "becomes unprepared"
+    /// (Biblioplex Tomekeeper mode 1). Silently no-ops on permanents
+    /// whose definition isn't a prepare card (`is_prepare_spell`
+    /// returns false) — matches the printed reminder text "Only
+    /// creatures with prepare spells can become prepared." Card
+    /// factories should *also* gate the targeting filter on
+    /// `SelectionRequirement::HasPrepareSpell` so the cast prompt
+    /// surfaces only legal targets.
+    SetPrepared { what: Selector, value: bool },
 }
 
 /// Lightweight mirror of `crate::game::types::DelayedKind` for use inside
@@ -1028,6 +1049,7 @@ impl Effect {
                 }
                 Predicate::IsTurnOf(p) => player_has_target(p),
                 Predicate::EntityMatches { what, .. } => sel_has_target(what),
+                Predicate::IsPrepared(s) => sel_has_target(s),
                 _ => false,
             }
         }
@@ -1126,6 +1148,7 @@ impl Effect {
             Effect::NameCreatureType { what } => sel_has_target(what),
             Effect::PreventCombatDamageThisTurn => false,
             Effect::PreventLifegainThisTurn { who } => sel_has_target(who),
+            Effect::SetPrepared { what, .. } => sel_has_target(what),
         }
     }
 
@@ -1161,6 +1184,7 @@ impl Effect {
             Effect::PumpPT { what, .. } => sel_filter(what),
             Effect::GrantKeyword { what, .. } => sel_filter(what),
             Effect::Move { what, .. } => sel_filter(what),
+            Effect::SetPrepared { what, .. } => sel_filter(what),
             // Player-targeting effects: surface the filter so the bot's
             // auto-target heuristic can find the opp / caster without a
             // manual Target. The filter is typically `Player` (Mind Rot,
@@ -1543,7 +1567,8 @@ impl Effect {
                     sel_find(what, slot)
                 }
                 Effect::BecomeBasicLand { what, .. }
-                | Effect::ResetCreature { what, .. } => sel_find(what, slot),
+                | Effect::ResetCreature { what, .. }
+                | Effect::SetPrepared { what, .. } => sel_find(what, slot),
                 Effect::Attach { what, to } => sel_find(what, slot).or_else(|| sel_find(to, slot)),
                 Effect::CopySpell { what, .. } => sel_find(what, slot),
                 Effect::Sacrifice { who, .. } => sel_find(who, slot),

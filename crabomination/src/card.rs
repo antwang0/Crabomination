@@ -302,6 +302,22 @@ pub enum SelectionRequirement {
     /// on a `&'static str`) works without allocating, and snapshot
     /// restore (which builds owned strings from JSON) avoids leaking.
     HasName(std::borrow::Cow<'static, str>),
+    /// SOS Prepare mechanic: matches creatures whose printed back face is
+    /// a prepare spell (an instant or sorcery sitting in `back_face`).
+    /// Used by Biblioplex Tomekeeper / Skycoach Waypoint to gate their
+    /// "becomes prepared / unprepared" toggles to the legal target set —
+    /// i.e. the printed reminder text "Only creatures with prepare
+    /// spells can become prepared." Evaluated via
+    /// `crate::card::is_prepare_spell` on the candidate's
+    /// `CardDefinition`.
+    HasPrepareSpell,
+    /// SOS Prepare mechanic: matches permanents currently flagged
+    /// `prepared` (see `CardInstance.prepared`). Battlefield-only —
+    /// non-permanent zones return false. Reserved for prepare-payoff
+    /// cards that condition on the flag (none in the catalog yet, but
+    /// the targeting/predicate primitive is wired so future "Prepare
+    /// {cost}: …" abilities can gate on it).
+    IsPrepared,
     And(Box<SelectionRequirement>, Box<SelectionRequirement>),
     Or(Box<SelectionRequirement>, Box<SelectionRequirement>),
     Not(Box<SelectionRequirement>),
@@ -577,6 +593,16 @@ impl CardDefinition {
     pub fn base_power(&self) -> i32 { if self.is_creature() { self.power } else { 0 } }
     pub fn base_toughness(&self) -> i32 { if self.is_creature() { self.toughness } else { 0 } }
 
+    /// SOS Prepare mechanic: true when this definition is a creature whose
+    /// back face is a prepare spell (an instant or sorcery glued to a
+    /// vanilla creature front). Used by `SelectionRequirement::
+    /// HasPrepareSpell` to gate prepare/unprepare toggles to the legal
+    /// target set — matches the reminder text "Only creatures with
+    /// prepare spells can become prepared."
+    pub fn has_prepare_spell(&self) -> bool {
+        is_prepare_spell(self)
+    }
+
     pub fn is_equipment(&self) -> bool {
         self.subtypes.artifact_subtypes.contains(&ArtifactSubtype::Equipment)
     }
@@ -599,6 +625,27 @@ impl CardDefinition {
             if let Keyword::Equip(cost) = kw { Some(cost) } else { None }
         })
     }
+}
+
+/// SOS Prepare mechanic: detect a "prepared card" — a creature whose
+/// printed back face is a prepare spell (an instant or sorcery glued to
+/// the creature front). Mirrors the convention in
+/// `crabomination/src/catalog/sets/sos/mdfcs.rs` where
+/// `vanilla_front(...)` always pairs a creature front with an
+/// instant/sorcery `spell_back(...)`. Returns false for non-creature
+/// fronts and for back faces that are themselves creatures or lands
+/// (Plargg/Augusta-style flips, Sundering Eruption-style sorcery↔land
+/// MDFCs).
+pub fn is_prepare_spell(def: &CardDefinition) -> bool {
+    if !def.is_creature() {
+        return false;
+    }
+    let Some(back) = def.back_face.as_ref() else {
+        return false;
+    };
+    back.card_types
+        .iter()
+        .any(|t| matches!(t, CardType::Instant | CardType::Sorcery))
 }
 
 // ── Runtime card instance ─────────────────────────────────────────────────────
@@ -649,6 +696,12 @@ pub struct CardInstance {
     /// `clean_per_turn_state`. Empty for the common case (most abilities
     /// don't have the flag set).
     pub once_per_turn_used: Vec<usize>,
+    /// SOS Prepare mechanic: per-permanent boolean toggled by
+    /// "becomes prepared" / "becomes unprepared" effects. Sticky across
+    /// turns; cleared only when the permanent leaves the battlefield
+    /// (handled implicitly because `CardInstance::new` defaults to
+    /// `false` on every fresh instantiation).
+    pub prepared: bool,
 }
 
 impl CardInstance {
@@ -680,6 +733,7 @@ impl CardInstance {
             cast_from_hand: false,
             chosen_creature_type: None,
             once_per_turn_used: Vec::new(),
+            prepared: false,
         }
     }
 
@@ -781,6 +835,8 @@ struct CardInstanceWire {
     chosen_creature_type: Option<CreatureType>,
     #[serde(default)]
     once_per_turn_used: Vec<usize>,
+    #[serde(default)]
+    prepared: bool,
 }
 
 impl serde::Serialize for CardInstance {
@@ -805,6 +861,7 @@ impl serde::Serialize for CardInstance {
             cast_from_hand: self.cast_from_hand,
             chosen_creature_type: self.chosen_creature_type,
             once_per_turn_used: self.once_per_turn_used.clone(),
+            prepared: self.prepared,
         };
         wire.serialize(ser)
     }
@@ -833,6 +890,7 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         c.cast_from_hand = wire.cast_from_hand;
         c.chosen_creature_type = wire.chosen_creature_type;
         c.once_per_turn_used = wire.once_per_turn_used;
+        c.prepared = wire.prepared;
         Ok(c)
     }
 }

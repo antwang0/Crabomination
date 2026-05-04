@@ -195,18 +195,35 @@ pub fn great_hall_of_the_biblioplex() -> CardDefinition {
 
 /// Skycoach Waypoint — colorless utility Land.
 /// Real Oracle: "{T}: Add {C}. / {3}, {T}: Target creature becomes
-/// prepared."
+/// prepared. (Only creatures with prepare spells can become
+/// prepared.)"
 ///
-/// Approximation: the Prepare keyword is not yet a first-class engine
-/// concept (see TODO.md "Prepare mechanic" — toggling a creature
-/// `prepared` state requires creatures with their own Prepare-grant
-/// abilities). The `{3},{T}: prepare a creature` activation is omitted;
-/// the colorless tap-for-{C} mana ability is wired faithfully via the
-/// shared `tap_add_colorless` helper.
-///
-/// Push XIX promotes the row from ⏳ to 🟡 on the Colorless table.
+/// Both abilities ship: the colorless tap-for-{C} mana ability via
+/// the shared `tap_add_colorless` helper, and the `{3},{T}: prepare
+/// target creature` activation via `Effect::SetPrepared { value:
+/// true }` gated on `SelectionRequirement::HasPrepareSpell`.
 pub fn skycoach_waypoint() -> CardDefinition {
     use super::super::tap_add_colorless;
+    use crate::card::SelectionRequirement;
+    use crate::effect::Selector;
+    let prepare_target_creature = ActivatedAbility {
+        tap_cost: true,
+        mana_cost: cost(&[generic(3)]),
+        effect: Effect::SetPrepared {
+            what: Selector::TargetFiltered {
+                slot: 0,
+                filter: SelectionRequirement::Creature
+                    .and(SelectionRequirement::HasPrepareSpell),
+            },
+            value: true,
+        },
+        once_per_turn: false,
+        sorcery_speed: false,
+        sac_cost: false,
+        condition: None,
+        life_cost: 0,
+        exile_gy_cost: 0,
+    };
     CardDefinition {
         name: "Skycoach Waypoint",
         cost: ManaCost::default(),
@@ -217,7 +234,7 @@ pub fn skycoach_waypoint() -> CardDefinition {
         toughness: 0,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: vec![tap_add_colorless()],
+        activated_abilities: vec![tap_add_colorless(), prepare_target_creature],
         triggered_abilities: vec![],
         static_abilities: vec![],
         base_loyalty: 0,

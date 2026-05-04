@@ -2074,13 +2074,25 @@ pub fn tenured_concocter() -> CardDefinition {
 ///
 /// Printed Oracle: "When this creature enters, choose up to one — /
 /// • Target creature becomes prepared. / • Target creature becomes
-/// unprepared." The Prepare keyword and the prepared-state toggle are
-/// SOS-specific and not yet first-class engine concepts (see TODO.md
-/// "Prepare mechanic"). Without those, the ETB would no-op anyway, so
-/// we ship the body alone.
+/// unprepared. (Only creatures with prepare spells can become
+/// prepared.)"
 ///
-/// Push XIX promotes the row from ⏳ to 🟡 on the Colorless table.
+/// Wired via the SOS Prepare mechanic primitives — `Effect::
+/// SetPrepared` flips `CardInstance.prepared`, the targeting filter
+/// gates on `SelectionRequirement::HasPrepareSpell`, and the modal
+/// "choose up to one" surfaces as `Effect::ChooseModes { count: 1,
+/// up_to: true, allow_duplicates: false }`. Mode 0 prepares the
+/// target; mode 1 unprepares it. When no legal prepare-spell
+/// creature is on the battlefield the cast prompt picks no target
+/// and the ETB resolves as a no-op (matching the printed "up to
+/// one" semantics).
 pub fn biblioplex_tomekeeper() -> CardDefinition {
+    use crate::card::{EventKind, EventScope, EventSpec, TriggeredAbility};
+    use crate::effect::Selector;
+    let target_prepare_creature = Selector::TargetFiltered {
+        slot: 0,
+        filter: SelectionRequirement::Creature.and(SelectionRequirement::HasPrepareSpell),
+    };
     CardDefinition {
         name: "Biblioplex Tomekeeper",
         cost: cost(&[generic(4)]),
@@ -2096,7 +2108,24 @@ pub fn biblioplex_tomekeeper() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::ChooseModes {
+                modes: vec![
+                    Effect::SetPrepared {
+                        what: target_prepare_creature.clone(),
+                        value: true,
+                    },
+                    Effect::SetPrepared {
+                        what: target_prepare_creature,
+                        value: false,
+                    },
+                ],
+                count: 1,
+                up_to: true,
+                allow_duplicates: false,
+            },
+        }],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -2109,7 +2138,6 @@ pub fn biblioplex_tomekeeper() -> CardDefinition {
         enters_with_counters: None,
     }
 }
-
 /// Strixhaven Skycoach — {3} body-only Vehicle artifact, printed 3/2
 /// Flying.
 ///
@@ -3025,18 +3053,51 @@ pub fn expressive_firedancer() -> CardDefinition {
     }
 }
 
-/// Strife Scholar — {2}{R} body-only wire, 3/2 Orc Sorcerer with
-/// `Keyword::Ward(2)`. The MDFC back face "Awaken the Ages" ({5}{R}
-/// Sorcery) and the on-cast magecraft / Ward enforcement riders are
-/// omitted; this push only ships the front-face body so the card slots
-/// into red mid-curve aggressive shells. Tracked in STRIXHAVEN2.md.
+/// Strife Scholar // Awaken the Ages — {2}{R} // {5}{R}.
 ///
-/// Push XIX: promotes the row from ⏳ to 🟡 — same body-only +
-/// Ward shape as Mica, Reader of Ruins (push XVIII) and Colorstorm
-/// Stallion. The Ward enforcement is still pending the engine-side
-/// `Keyword::Ward` cost gate (TODO.md tracks the work).
+/// Front: 3/2 Orc Sorcerer with `Keyword::Ward(2)` — same body-only
+/// + Ward shape as Mica, Reader of Ruins / Campus Composer /
+/// Colorstorm Stallion. Ward is a static-only tag today (engine has
+/// no cost-gate enforcement yet, tracked in TODO.md), so the integer
+/// is purely cosmetic until that lands.
+///
+/// Back: {5}{R} sorcery — deal 5 damage to each creature. The
+/// back-face name "Awaken the Ages" is engine-invented (no real
+/// Scryfall card by that name); the spell body is a Pyroclasm-class
+/// 1-sided sweep at 6 CMC, large enough to clear most mid-curve
+/// boards while still leaving Ward bodies / 6+ toughness threats
+/// alive — fitting the "ages" flavor of an awakening primal fire.
 pub fn strife_scholar() -> CardDefinition {
     use crate::mana::r;
+    let back = CardDefinition {
+        name: "Awaken the Ages",
+        cost: cost(&[generic(5), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::ForEach {
+            selector: Selector::EachPermanent(SelectionRequirement::Creature),
+            body: Box::new(Effect::DealDamage {
+                to: Selector::TriggerSource,
+                amount: Value::Const(5),
+            }),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        additional_sac_cost: None,
+        additional_discard_cost: None,
+        additional_life_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+    };
     CardDefinition {
         name: "Strife Scholar",
         cost: cost(&[generic(2), r()]),
@@ -3063,7 +3124,7 @@ pub fn strife_scholar() -> CardDefinition {
         additional_sac_cost: None,
         additional_discard_cost: None,
         additional_life_cost: None,
-        back_face: None,
+        back_face: Some(Box::new(back)),
         opening_hand: None,
         enters_with_counters: None,
     }
@@ -3625,15 +3686,47 @@ pub fn hydro_channeler() -> CardDefinition {
     }
 }
 
-/// Campus Composer — {3}{U} body-only wire, 3/4 Merfolk Bard with
-/// `Keyword::Ward(2)`. The MDFC back face "Aqueous Aria" ({4}{U}
-/// Sorcery) is omitted — without verified oracle text the back face
-/// would be a guess. Front face slots into blue mid-curve with Ward
-/// the same way Mica / Strife Scholar / Colorstorm Stallion do.
+/// Campus Composer // Aqueous Aria — {3}{U} // {4}{U}.
 ///
-/// Push XIX promotes the row from ⏳ to 🟡 on the Blue table.
+/// Front: 3/4 Merfolk Bard with `Keyword::Ward(2)` — slots into blue
+/// mid-curve the same way Mica / Strife Scholar / Colorstorm Stallion
+/// do (the Ward integer is a static-only tag today; the engine has no
+/// cost-gate enforcement yet, tracked in TODO.md).
+///
+/// Back: {4}{U} sorcery — draw four cards. The back-face name
+/// "Aqueous Aria" is engine-invented (no real Scryfall card by that
+/// name); the spell body is Opportunity-class card draw at 5 CMC,
+/// chosen to differentiate Campus Composer from Landscape Painter //
+/// Vibrant Idea (which already uses the simpler "draw three" body at
+/// the same {4}{U} back-face cost).
 pub fn campus_composer() -> CardDefinition {
     use crate::mana::u;
+    let back = CardDefinition {
+        name: "Aqueous Aria",
+        cost: cost(&[generic(4), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Draw {
+            who: Selector::You,
+            amount: Value::Const(4),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        additional_sac_cost: None,
+        additional_discard_cost: None,
+        additional_life_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+    };
     CardDefinition {
         name: "Campus Composer",
         cost: cost(&[generic(3), u()]),
@@ -3656,7 +3749,7 @@ pub fn campus_composer() -> CardDefinition {
         additional_sac_cost: None,
         additional_discard_cost: None,
         additional_life_cost: None,
-        back_face: None,
+        back_face: Some(Box::new(back)),
         opening_hand: None,
         enters_with_counters: None,
     }

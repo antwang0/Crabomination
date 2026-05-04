@@ -162,6 +162,14 @@ fn format_event(ev: &crabomination::net::GameEventWire, names: &crate::game::Car
             Some(p) => format!("Game over — P{p} wins"),
             None => "Game over — draw".into(),
         },
+        E::CombatDamagePreventedThisTurn => "Combat damage prevented this turn".into(),
+        E::PreparedChanged { card_id, prepared } => {
+            if *prepared {
+                format!("{} becomes prepared", n(*card_id))
+            } else {
+                format!("{} becomes unprepared", n(*card_id))
+            }
+        }
     }
 }
 

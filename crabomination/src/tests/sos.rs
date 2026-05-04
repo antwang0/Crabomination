@@ -8575,8 +8575,9 @@ fn molten_note_flashback_deals_8_damage_and_untaps() {
 
 // ── Push XIX: Lorehold ⏳ closer + body-only ⏳→🟡 batch ─────────────────────
 
-// Strife Scholar — {2}{R} body-only with Ward(2). MDFC back face
-// Awaken the Ages omitted (oracle unverified). Promotes from ⏳ → 🟡.
+// Strife Scholar // Awaken the Ages — {2}{R} // {5}{R}.
+// Front: 3/2 Orc Sorcerer with Ward(2). Back: deal 5 damage to each
+// creature.
 #[test]
 fn strife_scholar_is_3_2_orc_sorcerer_with_ward() {
     let card = catalog::strife_scholar();
@@ -8589,10 +8590,50 @@ fn strife_scholar_is_3_2_orc_sorcerer_with_ward() {
         card.keywords.iter().any(|k| matches!(k, Keyword::Ward(_))),
         "Strife Scholar should carry Ward"
     );
+    let back = card.back_face.expect("Strife Scholar carries Awaken the Ages");
+    assert_eq!(back.name, "Awaken the Ages");
+    assert_eq!(back.cost.cmc(), 6);
+    assert!(back.card_types.contains(&CardType::Sorcery));
+    assert!(crate::card::is_prepare_spell(&card_with_back("Strife Scholar", &back)));
 }
 
-// Campus Composer — {3}{U} body-only with Ward(2). MDFC back face
-// Aqueous Aria omitted (oracle unverified). Promotes from ⏳ → 🟡.
+// Push XLIX: Awaken the Ages cast from a prepared Strife Scholar
+// front face deals 5 damage to every creature on the board (board
+// wipe at 6 mana). Validates the back-face MDFC cast path + the
+// Pyroclasm-class ForEach DealDamage shape.
+#[test]
+fn awaken_the_ages_back_face_deals_five_to_each_creature() {
+    let mut g = two_player_game();
+    let scholar = g.add_card_to_hand(0, catalog::strife_scholar());
+    // Two opp creatures (one toughness-3, one toughness-6) so we
+    // can confirm the sweep kills the small body and leaves the
+    // big one in play with stacked damage.
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let big = g.add_card_to_battlefield(1, catalog::colossus_of_the_blood_age());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(5);
+
+    g.perform_action(GameAction::CastSpellBack {
+        card_id: scholar,
+        target: None,
+        mode: None,
+        x_value: None,
+    })
+    .expect("Awaken the Ages castable for {5}{R}");
+    drain_stack(&mut g);
+
+    // Grizzly Bears (2/2) is dead.
+    assert!(
+        !g.battlefield.iter().any(|c| c.definition.name == "Grizzly Bears"),
+        "5 damage kills Grizzly Bears"
+    );
+    // The colossus survives (8 toughness > 5 damage); damage stuck.
+    let big_card = g.battlefield.iter().find(|c| c.id == big).unwrap();
+    assert_eq!(big_card.damage, 5, "5 damage stays on the surviving threat");
+}
+
+// Campus Composer // Aqueous Aria — {3}{U} // {4}{U}.
+// Front: 3/4 Merfolk Bard with Ward(2). Back: draw 4 cards.
 #[test]
 fn campus_composer_is_3_4_merfolk_bard_with_ward() {
     let card = catalog::campus_composer();
@@ -8605,6 +8646,74 @@ fn campus_composer_is_3_4_merfolk_bard_with_ward() {
         card.keywords.iter().any(|k| matches!(k, Keyword::Ward(_))),
         "Campus Composer should carry Ward"
     );
+    let back = card.back_face.expect("Campus Composer carries Aqueous Aria");
+    assert_eq!(back.name, "Aqueous Aria");
+    assert_eq!(back.cost.cmc(), 5);
+    assert!(back.card_types.contains(&CardType::Sorcery));
+}
+
+// Push XLIX: Aqueous Aria cast from a prepared Campus Composer front
+// face draws four cards. Validates the back-face MDFC cast path +
+// `Effect::Draw { amount: 4 }`.
+#[test]
+fn aqueous_aria_back_face_draws_four_cards() {
+    let mut g = two_player_game();
+    let composer = g.add_card_to_hand(0, catalog::campus_composer());
+    // Seed enough deck cards to draw four without milling out.
+    for _ in 0..6 {
+        g.add_card_to_library(0, catalog::grizzly_bears());
+    }
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    let hand_before = g.players[0].hand.len();
+
+    g.perform_action(GameAction::CastSpellBack {
+        card_id: composer,
+        target: None,
+        mode: None,
+        x_value: None,
+    })
+    .expect("Aqueous Aria castable for {4}{U}");
+    drain_stack(&mut g);
+
+    // CastSpellBack moves the prepared card from hand to stack
+    // (hand shrinks by 1), then resolution draws 4 (hand grows by 4),
+    // for a net +3 cards in hand.
+    assert_eq!(
+        g.players[0].hand.len(),
+        hand_before - 1 + 4,
+        "Aqueous Aria draws four cards"
+    );
+}
+
+/// Test helper: clone `back` and re-attach it to a fresh front-face
+/// definition with the given name. Lets `is_prepare_spell` see the
+/// front+back relationship after we've moved the original `back_face`
+/// out of the parent definition via `.expect(...)`.
+fn card_with_back(name: &'static str, back: &crate::card::CardDefinition) -> crate::card::CardDefinition {
+    crate::card::CardDefinition {
+        name,
+        cost: crate::mana::ManaCost::default(),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: crate::card::Subtypes::default(),
+        power: 1,
+        toughness: 1,
+        keywords: vec![],
+        effect: crate::card::Effect::Noop,
+        activated_abilities: vec![],
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        additional_sac_cost: None,
+        additional_discard_cost: None,
+        additional_life_cost: None,
+        back_face: Some(Box::new(back.clone())),
+        opening_hand: None,
+        enters_with_counters: None,
+    }
 }
 
 // Elemental Mascot — {1}{U}{R} 1/4 Flying+Vigilance Elemental Bird with
@@ -8646,7 +8755,7 @@ fn elemental_mascot_pumps_self_after_is_cast() {
 }
 
 // Biblioplex Tomekeeper — {4} body-only 3/4 Construct artifact creature.
-// Prepare-state ETB choice omitted (Prepare keyword pending).
+// Now ships the ETB Prepare/Unprepare modal toggle.
 #[test]
 fn biblioplex_tomekeeper_is_3_4_construct_artifact_creature() {
     let card = catalog::biblioplex_tomekeeper();
@@ -8657,6 +8766,8 @@ fn biblioplex_tomekeeper_is_3_4_construct_artifact_creature() {
     assert!(card.card_types.contains(&CardType::Creature));
     assert!(card.has_creature_type(crate::card::CreatureType::Construct));
     assert_eq!(card.cost.cmc(), 4);
+    // ETB Prepare/Unprepare ChooseModes trigger.
+    assert_eq!(card.triggered_abilities.len(), 1);
 }
 
 // Strixhaven Skycoach — {3} body-only 3/2 Flying. ETB land tutor wired
@@ -8705,17 +8816,138 @@ fn strixhaven_skycoach_etb_tutors_basic_land() {
     );
 }
 
-// Skycoach Waypoint — Land with `{T}: Add {C}`. Prepare activation
-// omitted (Prepare keyword pending).
+// Skycoach Waypoint — Land with `{T}: Add {C}` and `{3},{T}: prepare
+// target creature` (SOS Prepare mechanic).
 #[test]
 fn skycoach_waypoint_taps_for_colorless() {
     let card = catalog::skycoach_waypoint();
     assert_eq!(card.name, "Skycoach Waypoint");
     assert!(card.card_types.contains(&CardType::Land));
-    // {T}: Add {C} mana ability is the only activation.
-    assert_eq!(card.activated_abilities.len(), 1);
+    // [0] = {T}: Add {C}; [1] = {3},{T}: prepare target creature.
+    assert_eq!(card.activated_abilities.len(), 2);
     assert!(card.activated_abilities[0].tap_cost);
+    assert!(card.activated_abilities[1].tap_cost);
+    assert_eq!(card.activated_abilities[1].mana_cost.cmc(), 3);
 }
+
+// Push XLIX: SOS Prepare mechanic — `is_prepare_spell` recognises a
+// vanilla creature front + instant/sorcery back as a prepare card,
+// and rejects non-creature fronts / non-spell backs.
+#[test]
+fn is_prepare_spell_recognises_sos_prepared_cards() {
+    use crate::card::is_prepare_spell;
+    // Elite Interceptor // Rejoinder — creature front, sorcery back.
+    assert!(is_prepare_spell(&catalog::elite_interceptor()));
+    // Adventurous Eater // Have a Bite — creature front, instant back.
+    assert!(is_prepare_spell(&catalog::adventurous_eater()));
+    // Plain creature without back face: not a prepare card.
+    assert!(!is_prepare_spell(&catalog::grizzly_bears()));
+    // Land without back face: not a prepare card.
+    assert!(!is_prepare_spell(&catalog::skycoach_waypoint()));
+    // Biblioplex Tomekeeper itself: creature without back face → no.
+    assert!(!is_prepare_spell(&catalog::biblioplex_tomekeeper()));
+}
+
+// Push XLIX: Skycoach Waypoint's `{3},{T}: prepare target creature`
+// flips the prepared flag on a creature with a prepare spell.
+#[test]
+fn skycoach_waypoint_prepares_target_prepare_creature() {
+    let mut g = two_player_game();
+    let waypoint = g.add_card_to_battlefield(0, catalog::skycoach_waypoint());
+    // Elite Interceptor is a prepare card (Rejoinder back face).
+    let target = g.add_card_to_battlefield(0, catalog::elite_interceptor());
+    g.players[0].mana_pool.add_colorless(3);
+
+    // Pre-condition: target is not yet prepared.
+    assert!(!g.battlefield.iter().find(|c| c.id == target).unwrap().prepared);
+
+    // Activate the {3},{T}: prepare ability (index 1).
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: waypoint,
+        ability_index: 1,
+        target: Some(Target::Permanent(target)),
+    })
+    .expect("Skycoach Waypoint's prepare ability is activatable for {3},{T}");
+    drain_stack(&mut g);
+
+    let target_card = g.battlefield.iter().find(|c| c.id == target).unwrap();
+    assert!(target_card.prepared, "target is now prepared");
+    let waypoint_card = g.battlefield.iter().find(|c| c.id == waypoint).unwrap();
+    assert!(waypoint_card.tapped, "Skycoach Waypoint is tapped");
+}
+
+// Push XLIX: Skycoach Waypoint can't target a creature without a prepare
+// spell — `SelectionRequirement::HasPrepareSpell` filters the activation.
+#[test]
+fn skycoach_waypoint_cant_prepare_non_prepare_creature() {
+    let mut g = two_player_game();
+    let waypoint = g.add_card_to_battlefield(0, catalog::skycoach_waypoint());
+    // Grizzly Bears has no back face → not a prepare card.
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_colorless(3);
+
+    let result = g.perform_action(GameAction::ActivateAbility {
+        card_id: waypoint,
+        ability_index: 1,
+        target: Some(Target::Permanent(bear)),
+    });
+    assert!(
+        result.is_err(),
+        "activation must fail — Grizzly Bears has no prepare spell"
+    );
+}
+
+// Push XLIX: Biblioplex Tomekeeper's ETB ChooseModes — mode 0 prepares
+// a target prepare creature (auto-decider picks the first mode +
+// auto-targets the only legal creature on the battlefield).
+#[test]
+fn biblioplex_tomekeeper_etb_prepares_target() {
+    let mut g = two_player_game();
+    // Pre-seed a prepare card so the auto-target picker has a legal pick.
+    let target = g.add_card_to_battlefield(0, catalog::elite_interceptor());
+    let id = g.add_card_to_hand(0, catalog::biblioplex_tomekeeper());
+    g.players[0].mana_pool.add_colorless(4);
+    // AutoDecider picks mode 0 (prepare); the auto-target picker
+    // chooses the only legal Creature with a prepare spell.
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: None,
+        mode: None,
+        x_value: None,
+    })
+    .expect("Biblioplex Tomekeeper castable for {4}");
+    drain_stack(&mut g);
+
+    let target_card = g.battlefield.iter().find(|c| c.id == target).unwrap();
+    assert!(target_card.prepared, "target is now prepared");
+}
+
+// Push XLIX: Biblioplex Tomekeeper's mode 1 unprepares a creature
+// (ScriptedDecider picks Modes(vec![1])). Round-trips a previously-
+// prepared creature back to unprepared.
+#[test]
+fn biblioplex_tomekeeper_etb_unprepares_target() {
+    let mut g = two_player_game();
+    let target = g.add_card_to_battlefield(0, catalog::elite_interceptor());
+    // Pre-flip the target so mode 1 has work to do.
+    g.battlefield.iter_mut().find(|c| c.id == target).unwrap().prepared = true;
+    let id = g.add_card_to_hand(0, catalog::biblioplex_tomekeeper());
+    g.players[0].mana_pool.add_colorless(4);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Modes(vec![1])]));
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: None,
+        mode: None,
+        x_value: None,
+    })
+    .expect("Biblioplex Tomekeeper castable for {4}");
+    drain_stack(&mut g);
+
+    let target_card = g.battlefield.iter().find(|c| c.id == target).unwrap();
+    assert!(!target_card.prepared, "target was unprepared by mode 1");
+}
+
 
 #[test]
 fn social_snub_copy_doubles_drain_when_decider_says_yes() {

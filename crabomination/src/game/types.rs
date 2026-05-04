@@ -323,6 +323,12 @@ pub enum GameEvent {
     CounterRemoved { card_id: CardId, counter_type: CounterType, count: u32 },
     PermanentTapped { card_id: CardId },
     PermanentUntapped { card_id: CardId },
+    /// SOS Prepare mechanic: a permanent's `prepared` flag was toggled.
+    /// Fired by `Effect::SetPrepared` whenever the flag value actually
+    /// changes (the effect is a silent no-op when the flag is already
+    /// at the requested value, and on permanents that aren't prepare
+    /// cards). Lets replays / spectate animate the badge flip.
+    PreparedChanged { card_id: CardId, prepared: bool },
     TokenCreated { card_id: CardId },
     CardMilled { player: usize, card_id: CardId },
     ScryPerformed { player: usize, looked_at: usize, bottomed: usize },

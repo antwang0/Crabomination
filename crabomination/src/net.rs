@@ -343,6 +343,15 @@ pub struct PermanentView {
     /// serialized views.
     #[serde(default)]
     pub static_abilities: Vec<String>,
+    /// SOS Prepare mechanic: this permanent's `prepared` flag (toggled
+    /// by `Effect::SetPrepared`). `true` for creatures with a prepare
+    /// spell back face that have been "prepared" by Biblioplex
+    /// Tomekeeper / Skycoach Waypoint / future Prepare-payoff cards;
+    /// always `false` for permanents whose definition isn't a prepare
+    /// card. Defaulted via `#[serde(default)]` for back-compat with
+    /// older serialized views.
+    #[serde(default)]
+    pub prepared: bool,
 }
 
 impl PermanentView {
@@ -565,6 +574,9 @@ pub enum GameEventWire {
     CounterRemoved { card_id: CardId, counter_type: CounterType, count: u32 },
     PermanentTapped { card_id: CardId },
     PermanentUntapped { card_id: CardId },
+    /// Wire mirror of `GameEvent::PreparedChanged` — SOS Prepare
+    /// mechanic flag flip. Lets spectator UIs animate the badge.
+    PreparedChanged { card_id: CardId, prepared: bool },
     TokenCreated { card_id: CardId },
     CardMilled { player: usize, card_id: CardId },
     ScryPerformed { player: usize, looked_at: usize, bottomed: usize },
@@ -672,6 +684,12 @@ impl From<&GameEvent> for GameEventWire {
             }
             GameEvent::PermanentUntapped { card_id } => {
                 GameEventWire::PermanentUntapped { card_id: *card_id }
+            }
+            GameEvent::PreparedChanged { card_id, prepared } => {
+                GameEventWire::PreparedChanged {
+                    card_id: *card_id,
+                    prepared: *prepared,
+                }
             }
             GameEvent::TokenCreated { card_id } => {
                 GameEventWire::TokenCreated { card_id: *card_id }

@@ -165,6 +165,9 @@ fn build_tooltip_body(p: &crabomination::net::PermanentView) -> String {
     if p.tapped {
         lines.push(String::from("(tapped)"));
     }
+    if p.prepared {
+        lines.push(String::from("(prepared)"));
+    }
 
     lines.join("\n")
 }

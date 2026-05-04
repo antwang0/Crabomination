@@ -325,6 +325,7 @@ fn project_permanent(
             .iter()
             .map(|sa| sa.description.to_string())
             .collect(),
+        prepared: card.prepared,
     }
 }
 

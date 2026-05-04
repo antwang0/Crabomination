@@ -1541,6 +1541,31 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::SetPrepared { what, value } => {
+                // SOS Prepare mechanic: flip the per-permanent `prepared`
+                // flag. Silently no-ops on permanents that aren't prepare
+                // cards (matches the printed reminder text "Only
+                // creatures with prepare spells can become prepared.")
+                // and on permanents whose flag is already at the
+                // requested value.
+                for ent in self.resolve_selector(what, ctx) {
+                    let EntityRef::Permanent(cid) = ent else { continue };
+                    let Some(c) = self.battlefield_find_mut(cid) else { continue };
+                    if !crate::card::is_prepare_spell(&c.definition) {
+                        continue;
+                    }
+                    if c.prepared == *value {
+                        continue;
+                    }
+                    c.prepared = *value;
+                    events.push(GameEvent::PreparedChanged {
+                        card_id: cid,
+                        prepared: *value,
+                    });
+                }
+                Ok(())
+            }
+
             Effect::NameCreatureType { what } => {
                 // Cavern of Souls "as it enters, choose a creature type".
                 // The chooser is the source's controller. Suspend with a
@@ -2157,6 +2182,16 @@ impl GameState {
             Predicate::CastFromGraveyard => {
                 matches!(ctx.cast_face, crate::game::types::CastFace::Flashback)
             }
+            Predicate::IsPrepared(sel) => self
+                .resolve_selector(sel, ctx)
+                .into_iter()
+                .all(|e| match e {
+                    EntityRef::Permanent(cid) | EntityRef::Card(cid) => self
+                        .battlefield_find(cid)
+                        .map(|c| c.prepared)
+                        .unwrap_or(false),
+                    EntityRef::Player(_) => false,
+                }),
         }
     }
 
@@ -2278,6 +2313,11 @@ impl GameState {
                     R::Colorless => card.definition.cost.distinct_colors() == 0,
                     R::HasXInCost => card.definition.cost.has_x(),
                     R::HasName(n) => card.definition.name == n.as_ref(),
+                    R::HasPrepareSpell => crate::card::is_prepare_spell(&card.definition),
+                    R::IsPrepared => self
+                        .battlefield_find(*cid)
+                        .map(|c| c.prepared)
+                        .unwrap_or(false),
                     _ => unreachable!("handled above"),
                 }
             }
@@ -2340,9 +2380,11 @@ impl GameState {
             R::Colorless => card.definition.cost.distinct_colors() == 0,
             R::HasXInCost => card.definition.cost.has_x(),
             R::HasName(n) => card.definition.name == n.as_ref(),
+            R::HasPrepareSpell => crate::card::is_prepare_spell(&card.definition),
             // Battlefield-state predicates can't be evaluated for library cards.
             R::Tapped | R::Untapped | R::WithCounter(_)
-            | R::IsAttacking | R::IsBlocking | R::IsSpellOnStack => false,
+            | R::IsAttacking | R::IsBlocking | R::IsSpellOnStack
+            | R::IsPrepared => false,
         }
     }
 
