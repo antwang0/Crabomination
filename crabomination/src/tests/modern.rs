@@ -10617,3 +10617,294 @@ fn krenko_mob_boss_doubles_goblin_population() {
         .count();
     assert_eq!(after, 2, "Krenko mints 1 Goblin (since Krenko itself = 1 Goblin)");
 }
+
+// ── Push XLV: 2026-05-04 batch ──────────────────────────────────────────────
+
+/// Abrade — mode 0: 3 damage to a creature.
+#[test]
+fn abrade_mode_0_kills_a_three_toughness_creature() {
+    let mut g = two_player_game();
+    // Bob has a 2/3 — Abrade's 3 dmg is exactly lethal.
+    let target = g.add_card_to_battlefield(1, catalog::watchwolf());
+    let id = g.add_card_to_hand(0, catalog::abrade());
+
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(target)), mode: Some(0), x_value: None,
+    }).expect("Abrade castable for {1}{R}");
+    drain_stack(&mut g);
+
+    assert!(!g.battlefield.iter().any(|c| c.id == target),
+        "Abrade mode 0 deals 3 dmg, killing the 2/3");
+}
+
+/// Abrade — mode 1: destroys an artifact.
+#[test]
+fn abrade_mode_1_destroys_artifact() {
+    let mut g = two_player_game();
+    // Bob controls an artifact (use Lotus Petal as a no-effect artifact).
+    let art = g.add_card_to_battlefield(1, catalog::lotus_petal());
+    let id = g.add_card_to_hand(0, catalog::abrade());
+
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(art)), mode: Some(1), x_value: None,
+    }).expect("Abrade mode 1 castable");
+    drain_stack(&mut g);
+
+    assert!(!g.battlefield.iter().any(|c| c.id == art),
+        "Abrade mode 1 destroys the artifact");
+}
+
+/// Izzet Charm mode 1 — 2 damage to a creature.
+#[test]
+fn izzet_charm_mode_1_burns_creature() {
+    let mut g = two_player_game();
+    // Use a 2/2 (Grizzly Bears) — Izzet Charm's 2 dmg is exact lethal.
+    let target = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::izzet_charm());
+
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(target)), mode: Some(1), x_value: None,
+    }).expect("Izzet Charm castable for {U}{R}");
+    drain_stack(&mut g);
+
+    assert!(!g.battlefield.iter().any(|c| c.id == target),
+        "Izzet Charm mode 1 deals 2 dmg, killing the 2/2");
+}
+
+/// Izzet Charm mode 2 — loot 2 (draw 2, discard 2).
+#[test]
+fn izzet_charm_mode_2_loots_two() {
+    let mut g = two_player_game();
+    // Seed library so Draw 2 has inputs.
+    for _ in 0..4 { g.add_card_to_library(0, catalog::island()); }
+    // Seed hand with two extra cards we can discard.
+    let _ = g.add_card_to_hand(0, catalog::island());
+    let _ = g.add_card_to_hand(0, catalog::island());
+
+    let id = g.add_card_to_hand(0, catalog::izzet_charm());
+    let hand_before = g.players[0].hand.len();
+    let lib_before = g.players[0].library.len();
+    let gy_before = g.players[0].graveyard.len();
+
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: Some(2), x_value: None,
+    }).expect("Izzet Charm mode 2 castable");
+    drain_stack(&mut g);
+
+    // Hand: -1 (cast Izzet Charm) +2 (Draw 2) -2 (Discard 2) = -1 net.
+    assert_eq!(g.players[0].hand.len(), hand_before - 1,
+        "Loot 2: -1 cast, +2 draw, -2 discard = -1");
+    // Library: -2 (drawn).
+    assert_eq!(g.players[0].library.len(), lib_before - 2);
+    // Graveyard: +1 (Izzet Charm) +2 (discards) = +3.
+    assert_eq!(g.players[0].graveyard.len(), gy_before + 3);
+}
+
+/// Pillar of Flame — 2 damage to creature.
+#[test]
+fn pillar_of_flame_burns_creature() {
+    let mut g = two_player_game();
+    let target = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::pillar_of_flame());
+
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(target)), mode: None, x_value: None,
+    }).expect("Pillar of Flame castable for {R}");
+    drain_stack(&mut g);
+
+    assert!(!g.battlefield.iter().any(|c| c.id == target),
+        "Pillar of Flame's 2 dmg kills the 2/2");
+}
+
+/// Smash to Smithereens — destroy artifact and deal 3 damage to its
+/// controller.
+#[test]
+fn smash_to_smithereens_destroys_and_damages() {
+    let mut g = two_player_game();
+    let art = g.add_card_to_battlefield(1, catalog::lotus_petal());
+    let id = g.add_card_to_hand(0, catalog::smash_to_smithereens());
+
+    let p1_life_before = g.players[1].life;
+
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(art)), mode: None, x_value: None,
+    }).expect("Smash to Smithereens castable for {1}{R}");
+    drain_stack(&mut g);
+
+    assert!(!g.battlefield.iter().any(|c| c.id == art),
+        "Smash to Smithereens destroys the artifact");
+    assert_eq!(g.players[1].life, p1_life_before - 3,
+        "Smash to Smithereens deals 3 to artifact's controller");
+}
+
+/// Forked Bolt — 2 damage to a target (collapsed; printed Oracle is
+/// "divided as you choose among one or two targets").
+#[test]
+fn forked_bolt_deals_two_to_player() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::forked_bolt());
+    let life_before = g.players[1].life;
+
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Player(1)), mode: None, x_value: None,
+    }).expect("Forked Bolt castable for {R}");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[1].life, life_before - 2,
+        "Forked Bolt deals 2 dmg to opponent");
+}
+
+/// Knight of Meadowgrain — 2/2 with first strike + lifelink.
+#[test]
+fn knight_of_meadowgrain_definition() {
+    let card = catalog::knight_of_meadowgrain();
+    assert_eq!(card.power, 2);
+    assert_eq!(card.toughness, 2);
+    assert!(card.keywords.contains(&crate::card::Keyword::FirstStrike));
+    assert!(card.keywords.contains(&crate::card::Keyword::Lifelink));
+}
+
+/// Defiant Strike — pump and draw a card.
+#[test]
+fn defiant_strike_pumps_and_draws() {
+    let mut g = two_player_game();
+    for _ in 0..2 { g.add_card_to_library(0, catalog::island()); }
+    let creature = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::defiant_strike());
+
+    let hand_before = g.players[0].hand.len();
+    let lib_before = g.players[0].library.len();
+
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(creature)), mode: None, x_value: None,
+    }).expect("Defiant Strike castable for {W}");
+    drain_stack(&mut g);
+
+    // Hand: -1 cast +1 draw = 0 net.
+    assert_eq!(g.players[0].hand.len(), hand_before);
+    assert_eq!(g.players[0].library.len(), lib_before - 1);
+
+    // Power should be 2 (base) + 1 (pump) = 3.
+    let bears = g.battlefield.iter().find(|c| c.id == creature).unwrap();
+    assert_eq!(bears.power(), 3, "Defiant Strike grants +1/+0 EOT");
+}
+
+/// Fanatical Firebrand — 1/1 haste with sac-to-ping ability.
+#[test]
+fn fanatical_firebrand_pings_via_sac_activation() {
+    let mut g = two_player_game();
+    let firebrand = g.add_card_to_battlefield(0, catalog::fanatical_firebrand());
+    g.clear_sickness(firebrand);
+
+    let p1_life_before = g.players[1].life;
+
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: firebrand, ability_index: 0, target: Some(Target::Player(1)),
+    }).expect("Firebrand ping activatable");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[1].life, p1_life_before - 1,
+        "Firebrand sac-pings opponent for 1");
+    assert!(!g.battlefield.iter().any(|c| c.id == firebrand),
+        "Firebrand was sacrificed as a cost");
+}
+
+#[test]
+fn fanatical_firebrand_definition() {
+    let card = catalog::fanatical_firebrand();
+    assert_eq!(card.power, 1);
+    assert_eq!(card.toughness, 1);
+    assert!(card.keywords.contains(&crate::card::Keyword::Haste));
+}
+
+// ── SOS promotions: Brush Off + Run Behind cost-reduction ─────────────────
+
+/// Brush Off costs {U}{U} when targeting an instant/sorcery spell on
+/// the stack (push XLV: cost-reduction-targeting promotion).
+#[test]
+fn brush_off_costs_two_less_when_targeting_is_spell() {
+    let mut g = two_player_game();
+    let _ = g.add_card_to_hand(0, catalog::brush_off());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+
+    // P1 casts Lightning Bolt at P0.
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)), mode: None, x_value: None,
+    }).expect("Lightning Bolt castable for {R}");
+
+    // The Bolt is now on the stack. Brush Off should be castable for
+    // {U}{U} (was {2}{U}{U}; -2 generic discount applies). Hand
+    // priority over to P0 so they can react.
+    g.priority.player_with_priority = 0;
+    let brush = g.players[0].hand.iter()
+        .find(|c| c.definition.name == "Brush Off")
+        .expect("Brush Off in hand")
+        .id;
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    let stack_card_id = if let StackItem::Spell { card, .. } = g.stack.last().unwrap() {
+        card.id
+    } else { panic!("Expected spell on stack") };
+    g.perform_action(GameAction::CastSpell {
+        card_id: brush,
+        target: Some(Target::Permanent(stack_card_id)),
+        mode: None,
+        x_value: None,
+    }).expect("Brush Off should cost {U}{U} (= 2 mana) when targeting an instant");
+    drain_stack(&mut g);
+
+    // Both Bolt and Brush Off resolve: Brush Off counters Bolt; P0 stays at full life.
+    let p0_full_life = 20;
+    assert_eq!(g.players[0].life, p0_full_life,
+        "Brush Off countered the Bolt — P0 takes no damage");
+}
+
+/// Run Behind costs {2}{U} when targeting an attacking creature (push
+/// XLV: cost-reduction-targeting promotion).
+#[test]
+fn run_behind_costs_one_less_when_targeting_attacker() {
+    use crate::card::SelectionRequirement;
+    let mut g = two_player_game();
+
+    // Set up an attacker by manually placing a creature with attacking state.
+    // Cleanly start P1's turn → declare-attackers → declare-blockers paths
+    // would be heavy; we sidestep by adding the creature to the
+    // attacking list directly (test-mode hook).
+    let attacker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.attacking.push(crate::game::types::Attack {
+        attacker,
+        target: crate::game::types::AttackTarget::Player(0),
+    });
+    let id = g.add_card_to_hand(0, catalog::run_behind());
+
+    // Confirm the cost reduction lands. Provide just {2}{U} (= 3 mana)
+    // — the {3}{U} printed cost minus the {1} discount.
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(attacker)),
+        mode: None, x_value: None,
+    }).expect("Run Behind should cost {2}{U} when targeting an attacker");
+    drain_stack(&mut g);
+
+    assert!(!g.battlefield.iter().any(|c| c.id == attacker),
+        "Run Behind moves the attacker to the bottom of its owner's library");
+    // The card filter satisfaction is enough; no need to assert other state.
+    let _ = SelectionRequirement::Creature; // keep import live
+}

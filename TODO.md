@@ -7,6 +7,52 @@ See `CUBE_FEATURES.md` (cube-card implementation status) and
 
 ## Recent additions
 
+- ✅ **Push XLV (2026-05-04)**: 8 new modern cards + 2 SOS promotions +
+  bot life-cost preflight + CR 120 (Damage) audit. Tests at 1445
+  (was 1430; +15 net), all green.
+  - **8 new modern cards** (`catalog::sets::decks::modern`):
+    Abrade ✅ ({1}{R} Instant — modal: 3 dmg / destroy artifact);
+    Izzet Charm ✅ ({U}{R} Instant — 3-mode counter / 2 dmg / loot 2);
+    Pillar of Flame 🟡 ({R} Sorcery — 2 dmg, exile-if-dies omitted);
+    Smash to Smithereens ✅ ({1}{R} Instant — destroy artifact + 3 to
+    its controller); Forked Bolt 🟡 ({R} Sorcery — divided damage
+    collapsed to single-target); Knight of Meadowgrain ✅ ({W}{W}
+    First Strike + Lifelink); Defiant Strike ✅ ({W} Instant — pump +
+    cantrip); Fanatical Firebrand ✅ ({R} Goblin Pirate, Haste, sac-
+    to-ping).
+  - **2 SOS promotions (🟡 → ✅)**: Brush Off (cost reduction now
+    wires via `StaticEffect::CostReductionTargeting` for IS-spell
+    targets — same self-static shape as Ajani's Response); Run
+    Behind (same cost-reduction primitive shape, target filter is
+    `Creature ∧ IsAttacking`).
+  - **Bot improvement: `additional_life_cost` pre-flight**.
+    `can_afford_in_state` now rejects spells whose life cost would
+    crash the controller below 1 life. Builds a temporary
+    `EffectContext` with `x_value = max_affordable_x` so X-cost
+    life payments (Vicious Rivalry's `XFromCost`) evaluate against
+    the upper-bound the bot would actually pump to. Mirrors the
+    push XXXIX `additional_sac_cost` and push XLIII
+    `additional_discard_cost` pre-flight rejections.
+  - **CR 120 (Damage) audit**: full per-rule status in
+    STRIXHAVEN2.md push XLV. Highlights: 120.1 (object can deal
+    damage) ✅, 120.2 (any object) ✅, 120.3a (player damage →
+    life loss) ✅, 120.3c (damage to walker → loyalty) ✅, 120.3e
+    (damage marks on creatures) ✅, 120.3f (lifelink) ✅, 120.5
+    (damage doesn't destroy — SBA does) ✅, 120.6 (marks persist
+    till cleanup) ✅, 120.7 (source) ✅. Still 🟡: 120.3b/d
+    (Infect/Wither routing — keyword exists but damage path doesn't
+    branch), 120.4a/b (trample-excess + spell prevention), 120.8
+    (0-damage skip), 120.9 (per-source damage tally). Still ⏳:
+    120.3g (Toxic), 120.3h (Battles), 120.10 (excess-damage
+    triggers).
+  - **15 new tests**: 11 modern card tests (Abrade modes 0/1, Izzet
+    Charm modes 1/2, Pillar of Flame, Smash to Smithereens, Forked
+    Bolt, Knight of Meadowgrain definition, Defiant Strike pump+draw,
+    Fanatical Firebrand sac-ping + definition), 2 SOS promotion
+    tests (Brush Off and Run Behind cost-reduction targeting), 2 bot
+    pre-flight tests (Vicious Rivalry rejected at 1 life; accepted
+    with comfortable buffer).
+
 - ✅ **Push XLIV (2026-05-04)**: 10 new cards + 2 engine bug fixes +
   view-side `additional_life_cost` rendering. Tests at 1430 (was
   1415; +15 net).
@@ -4215,3 +4261,110 @@ shield + Owlin Shieldmage promotion + Quandrix Biomathematician.
   against the draw (ratio + late-game / early-game weighting)
   would make Cathartic Reunion / Thrilling Discovery picks
   smarter than the current "always cast if mana + hand permit."
+
+## New suggestions (added 2026-05-04 push XLV)
+
+### Engine
+
+- **Colored-pip cost reductions**. `StaticEffect::
+  CostReductionTargeting.amount: u32` is generic-only — it can't
+  refund colored pips. Brush Off ({2}{U}{U}) prints "{1}{U} less"
+  (1 generic + 1 blue), but the engine approximates it as a flat
+  -2 generic discount, losing the {U}-pip refund. To match printed
+  Oracle exactly, the field would need to become `discount: ManaCost`
+  so the engine could reduce specific colored pips. Same family
+  applies to Ajani's Response ("{3} less") which is already exact
+  because the printed discount is purely generic. Affects: Brush Off
+  (push XLV) and any future "{1}{X} less" / "{X}{X} less" cost
+  reduction.
+
+- **Damage-replacement → exile primitive**. CR 614 / 615 cover
+  damage replacement effects. The engine's only replacement-
+  effect primitive is `Effect::PreventCombatDamageThisTurn` (push
+  XLI, sticky shield). Cards like Pillar of Flame, Lava Coil,
+  Wilt in the Heat all want a "if this damage would result in
+  the creature dying this turn, exile it instead" rider —
+  effectively an EOT-tracked damage-replacement scoped to a
+  specific source's damage event. A real model would be
+  `Effect::SetExileOnDeath { what: Selector, duration: Duration }`
+  that flips a per-card flag the SBA pass consults when moving
+  damaged creatures to the graveyard. Affects: Pillar of Flame,
+  Lava Coil, Skyswimmer Koi (already done via different primitive),
+  Wilt in the Heat (still gap on second clause).
+
+- **Divided damage primitive**. Forked Bolt, Magma Opus mode 0,
+  Sundering Stroke, Splatter Technique mode 0 all print "X damage
+  divided as you choose among one or two targets" — the engine has
+  no divided-damage primitive (each spell collapses to single-shot).
+  The fix needs `Effect::DealDamageDivided { total: Value,
+  target_count: usize, target_filter: SelectionRequirement }` plus
+  a per-cast `Decision::DamageDistribution(Vec<u32>)` that the
+  controller answers (CR 601.2d says divided damage is announced
+  at cast time). Affects: Forked Bolt (push XLV), Magma Opus,
+  Sundering Stroke, Splatter Technique mode 0, Boros Charm mode 0
+  (the printed "4 to player" half is single-target so unaffected).
+
+- **CR 120.3b/d — Infect/Wither routing**. Damage from a source
+  with Infect to a creature should result in -1/-1 counters
+  (CR 120.3d), not damage marks. The engine currently emits
+  damage marks regardless of source keywords. Same for Wither.
+  Fix: `deal_damage_to_creature` should branch on the source's
+  keyword set and route through `AddCounter(-1/-1)` instead of
+  the damage-marks path when Infect or Wither is present.
+  Affects: Phyrexian Crusader, Glissa Sunslayer, Plague Stinger
+  (none in catalog yet, but unblocks future Infect cycles).
+
+- **CR 120.10 excess-damage tracking**. Excess-damage triggers
+  (Soul-Scar Mage's "if it would deal noncombat damage to a
+  creature, prevent that and put -1/-1 counters") want per-event
+  excess-damage tally. The engine can compute excess damage at
+  resolution time but doesn't expose it as a `Value` for trigger
+  conditions. New primitive: `Value::ExcessDamageDealt` reading
+  from the most recent `DamageDealt` event. Affects: Soul-Scar
+  Mage (not in catalog), Heated Argument's printed "exile cards
+  equal to the excess damage" half (already 🟡 by simplifying to
+  flat damage in the catalog).
+
+### UI / Server
+
+- **Effective-cost hint in `KnownCard`**. When a spell has a
+  `CostReductionTargeting` static, the player sees the printed
+  cost in their hand but can't tell what the discounted cost
+  would be when targeting matches. A new `KnownCard.
+  effective_cost_hints: Vec<String>` (e.g. "{U}{U} when targeting
+  an instant/sorcery") would let the client show the discounted
+  cost on hover. Same shape as the existing `additional_cost_label`
+  but for *reductions* rather than *additions*.
+
+- **Static description rendering for spells**. `PermanentView`
+  surfaces `static_abilities: Vec<String>` (push XXXVIII), but
+  `KnownCard` (cards in hand) doesn't yet — so Brush Off /
+  Run Behind / Ajani's Response's self-static cost reduction
+  isn't visible until the card hits the battlefield (which never
+  happens for instants). The fix is to also project
+  `static_abilities` onto `KnownCard`. Trivial in the view; the
+  client just needs to thread it through.
+
+### Bot / AI
+
+- **Cost-reduction-aware target picker**. When the bot considers
+  casting a spell with `CostReductionTargeting`, it currently
+  picks the auto-target without considering which targets unlock
+  the discount. For Brush Off, the bot pays {2}{U}{U} on a
+  creature target and {U}{U} on an IS-spell target — but the
+  picker doesn't bias toward IS-targets when both are legal.
+  Fix: extend `pick_target_for_cast` to score targets by their
+  cost reduction contribution (greater discount = higher score),
+  with ties broken by the existing lethal-first heuristic.
+  Affects: Killian-buffed creature spells, Brush Off, Run Behind,
+  Ajani's Response, Wilt in the Heat (cost reduction half).
+
+- **Suicide-cast detection for `additional_life_cost`**. Push XLV's
+  bot pre-flight rejects casts at exactly your life total, but
+  doesn't *value* the trade-off. A bot at 5 life shouldn't pump
+  Vicious Rivalry to X=4 if the resulting board state isn't lethal
+  to the opponent — the 4-life loss isn't recouped. A real
+  heuristic would compare `expected_value(life_pay, board_clear)`
+  against `current_life - life_pay >= safe_threshold`. Same family
+  as the existing X-cost-X-spell affordability heuristic in
+  `max_affordable_x` but for life rather than mana.

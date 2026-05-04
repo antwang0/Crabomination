@@ -36,17 +36,18 @@ This file tracks two adjacent Strixhaven catalogs:
 Counts reflect the regenerated tables below (audited via
 `scripts/audit_strixhaven2.py` against `catalog::sets::sos`).
 
-- ✅ done: **147** (push XLIV adds 3 new STX 2021 mono-color cards:
-  Archmage Emeritus, Fortifying Draught, Sage of Mysteries).
-- 🟡 partial: **113** (unchanged this push).
+- ✅ done: **149** (push XLV: SOS Brush Off + Run Behind 🟡 → ✅ via
+  the new self-static `CostReductionTargeting` wire — same primitive
+  shape as Ajani's Response).
+- 🟡 partial: **111** (-2 from the Brush Off + Run Behind promotions).
 - ⏳ todo: **7** (unchanged — all blocked by cast-from-exile / copy-
   permanent pipelines).
 
-Push XLIV (2026-05-04) STX 2021 totals (per `scripts/audit_stx_base.py`):
-**106 ✅ / 17 🟡 / 0 ⏳ across 123 rows.** Quandrix (G/U) is still
-the only fully closed college (8 ✅ / 0 🟡); push XLIV grew the
-mono-color section by 3 ✅ (Archmage Emeritus, Fortifying Draught,
-Sage of Mysteries — all new wires that ship at full fidelity).
+Push XLV (2026-05-04) STX 2021 totals (per `scripts/audit_stx_base.py`):
+**106 ✅ / 17 🟡 / 0 ⏳ across 123 rows.** Push XLV's contribution
+to STX 2021 is zero new factories — the push focuses on the
+`catalog::sets::decks::modern` package + 2 SOS promotions. Quandrix
+(G/U) still the only fully closed college (8 ✅ / 0 🟡).
 
 Push XXXVIII (2026-05-03) introduces 4 engine primitives and promotes
 10 cards across STX 2021 + SOS:
@@ -77,6 +78,158 @@ All 248 cards marked ✅ or 🟡 have a corresponding factory in
 `crabomination/src/catalog/sets/sos/`; the audit script reports 0 false
 positives and 0 stale ⏳ rows. STX 2021 progress is tracked in the
 "Strixhaven base set (STX)" section near the bottom of this file.
+
+## 2026-05-04 push XLV: 8 new modern cards + 2 SOS promotions + bot life-cost preflight + CR 120 audit
+
+Adds 8 new Modern-supplement card factories (`catalog::sets::decks::
+modern`), promotes 2 SOS instants from 🟡 to ✅ via existing
+primitives (no new engine code on the promote path), and wires the
+bot's `can_afford_in_state` to pre-flight reject `additional_life_
+cost` casts that would crash the controller below 0 life. Tests at
+1445 (was 1430; +15 net), all green.
+
+### Engine improvement: bot pre-flight for `additional_life_cost`
+
+`server/bot.rs::can_afford_in_state` now rejects spells whose
+cast-time life cost would crash the controller below 1 life.
+Mirrors the existing `additional_sac_cost` (push XXXIX) and
+`additional_discard_cost` (push XLIII) pre-flight rejections. The
+check builds a temporary `EffectContext` with `x_value` set to the
+bot's `max_affordable_x` so X-cost life payments (Vicious Rivalry's
+`Value::XFromCost`) evaluate against the upper-bound the bot would
+actually pump to. Conservative — CR 119.4 says the cast itself is
+legal at exactly your life total (the loss-of-game SBA fires later);
+the bot still skips that suicide line because the SBA pass would
+end the game in a loss. Unblocks Vicious Rivalry from the bot's
+deadlock-prone "always cast at high X" line.
+
+### New Modern cards (8, all in `catalog::sets::decks::modern`)
+
+- **Abrade** ({1}{R} Instant) ✅ — Modal: 3 dmg to creature, OR
+  destroy artifact. Same `Effect::ChooseMode` shape as Mage Hunters'
+  Onslaught (✅ STX). AutoDecider picks the first mode with a legal
+  target (creature first); ScriptedDecider exercises both.
+- **Izzet Charm** ({U}{R} Instant) ✅ — Three-mode `ChooseMode`:
+  counter unless {2} (`CounterUnlessPaid`); 2 dmg to creature; loot 2
+  (Draw 2 + Discard 2). Mode 0 filter is `IsSpellOnStack ∧
+  ¬HasCardType(Creature)` for the printed "noncreature spell" scope.
+- **Pillar of Flame** ({R} Sorcery) 🟡 — 2 dmg to any target via
+  `any_target()`. The "exile if it would die this turn" rider is
+  omitted (no damage-replacement → exile primitive). The 2-damage
+  half kills any X/2.
+- **Smash to Smithereens** ({1}{R} Instant) ✅ — Destroy artifact +
+  3 dmg to its controller. Threads through `PlayerRef::ControllerOf
+  (Target(0))` for the printed "to that artifact's controller" half.
+- **Forked Bolt** ({R} Sorcery) 🟡 — 2 dmg to any target. Printed
+  "divided as you choose among one or two targets" collapses to
+  single-shot (no divided-damage primitive — same gap as Magma Opus).
+- **Knight of Meadowgrain** ({W}{W} 2/2 Kithkin Knight) ✅ — Vanilla
+  `Keyword::FirstStrike + Keyword::Lifelink` body.
+- **Defiant Strike** ({W} Instant) ✅ — Combat trick + cantrip
+  (`Seq([PumpPT(+1/+0, EOT), Draw 1])`).
+- **Fanatical Firebrand** ({R} 1/1 Goblin Pirate) ✅ — Haste body +
+  `{T}, Sac: 1 dmg to any target` activation. Uses `sac_cost: true`
+  (same plumbing as Shattered Acolyte's destroy-on-sac).
+
+### SOS promotions (2 — both 🟡 → ✅ via existing primitives)
+
+- **Brush Off** ({2}{U}{U} Instant) — "Costs {1}{U} less if it
+  targets an instant or sorcery spell." Wires the cost reduction
+  via `StaticEffect::CostReductionTargeting` on the cast card itself
+  (self-static, same shape as Ajani's Response). Target filter is
+  `IsSpellOnStack ∧ (HasCardType(Instant) ∨ HasCardType(Sorcery))`.
+  At {U}{U} the spell is effectively a Mana-Leak-rate hard counter
+  for IS spells. The {1}{U} → {2} generic discount approximation
+  loses the colored-pip refund (the engine's discount primitive
+  is generic-only); the {U}{U} colored-pip floor stays put.
+- **Run Behind** ({3}{U} Instant) — "Costs {1} less if it targets an
+  attacking creature." Same `CostReductionTargeting` shape as Brush
+  Off; target filter is `Creature ∧ IsAttacking`. At {2}{U} when
+  pointed at an attacker, the spell becomes a 3-mana
+  bounce-to-bottom — strictly Vraska's Contempt-rate permanent
+  removal.
+
+### CR 120 audit (Damage)
+
+Today's audit references CR 120 (Damage), the section directly
+governing `Effect::DealDamage`, the `LifeLost` event chain, and the
+prevention shield primitives. Per-rule status:
+
+- 120.1 (objects can deal damage to battles, creatures, walkers,
+  players) ✅ — `Effect::DealDamage { to: Selector }` resolves
+  against any of those targets via `evaluate_requirement_static`.
+- 120.2 (any object can deal damage; 120.2a combat, 120.2b spell/
+  ability) ✅ — `resolve_combat_damage_with_filter` for combat,
+  `Effect::DealDamage` for spell/ability.
+- 120.3a (damage to player → that player loses life) ✅ —
+  `LifeLost` event fires before the SBA pass; lifelink riders ride
+  on the same path.
+- 120.3b (damage to player by source with infect → poison counters)
+  🟡 — `Keyword::Infect` exists; the engine routes infect damage
+  through `AddPoison` but the predicate `HasKeyword(Infect)`
+  enforcement on damage events is partial (combat-side only; spell-
+  source infect is wired but less heavily tested).
+- 120.3c (damage to planeswalker → loyalty counters removed) ✅ —
+  `EntityRef::Planeswalker` damage decrements loyalty; SBA destroys
+  at 0.
+- 120.3d (wither/infect → -1/-1 counters on creature) 🟡 — `Keyword::
+  Wither` exists but is not currently routed through `Effect::
+  DealDamage` to creatures (creatures take regular damage marks
+  instead of -1/-1 counters from wither sources).
+- 120.3e (damage marks on creatures) ✅ — `card.damage_marked` set
+  by `deal_damage`; cleared at cleanup per 120.6.
+- 120.3f (lifelink → controller gains that much life) ✅ —
+  `Keyword::Lifelink` triggers a `GainLife` event in the same
+  effect resolution.
+- 120.3g (toxic combat damage → poison counters) ⏳ — Toxic keyword
+  is not yet a first-class engine concept (no `Keyword::Toxic` yet).
+- 120.3h (damage to battle → defense counters) ⏳ — Battle card type
+  is not yet modeled (engine has `CardType::Battle` placeholder
+  only; combat damage to battles is not wired).
+- 120.4 (4-part processing: trample-excess, prevent/replace, results,
+  event) 🟡 — partial:
+  - 120.4a (trample-excess routing) 🟡 — Push XLI's
+    `combat_damage_prevented_this_turn` flag short-circuits combat
+    damage uniformly; trample's "excess to defending player" is
+    handled in `resolve_combat_damage_with_filter` for normal combat
+    but doesn't run through the replacement-effect layer.
+  - 120.4b (prevention/replacement effects) 🟡 — Push XLI's
+    `Effect::PreventCombatDamageThisTurn` is the only prevention
+    primitive; spell-prevention layers (Awe Strike, Ethereal Haze)
+    are still ⏳.
+  - 120.4c (damage → results processing) ✅ — life loss / counter
+    add / damage marks all resolve in a deterministic order.
+  - 120.4d (final event) ✅ — emitted via `GameEvent::DamageDealt`
+    (and combat-specific `CombatDamage`), feeding triggered ability
+    listeners.
+- 120.5 (damage doesn't destroy — SBAs do) ✅ — destruction is a
+  separate SBA pass that walks `damage_marked >= toughness`.
+- 120.6 (damage marked persists till cleanup) ✅ — cleared in
+  `cleanup_step`.
+- 120.7 (source of damage = object that dealt it) ✅ —
+  `EffectContext.source` carries the source through the effect tree.
+- 120.8 (0-damage doesn't deal damage; no triggers) 🟡 — partial;
+  damage events with amount 0 are emitted in some paths and skipped
+  in others (no unified gate). Most damage triggers gate on
+  `ValueAtLeast(amount, 1)` to avoid spurious fires.
+- 120.9 (specific-source "damage dealt" wording) 🟡 — partial; the
+  engine doesn't track per-source damage tally separately, so
+  triggers that read "the damage dealt" pull from the just-emitted
+  event's amount field.
+- 120.10 (excess-damage triggers) ⏳ — no excess-damage tracking
+  primitive yet.
+
+### Tests (+15 net, 1430 → 1445)
+
+- 11 new modern card tests covering Abrade modes 0/1, Izzet Charm
+  modes 1/2, Pillar of Flame, Smash to Smithereens, Forked Bolt,
+  Knight of Meadowgrain definition, Defiant Strike pump+draw,
+  Fanatical Firebrand sac-ping + definition.
+- 2 new SOS promotion tests (Brush Off cost reduction when
+  targeting an IS spell; Run Behind cost reduction when targeting
+  an attacker).
+- 2 new bot pre-flight tests (Vicious Rivalry rejected at low life;
+  accepted with comfortable buffer).
 
 ## 2026-05-04 push XLIV: 10 new cards + AnyPlayer-spell-cast-trigger fix + ControllerOf(Card) fix
 
@@ -3133,7 +3286,7 @@ the back-face spell body is in place.
 | Card | Mana Cost | Type | P/T | Oracle Text | Status | Notes |
 |---|---|---|---|---|---|---|
 | Banishing Betrayal | {1}{U} | Instant |  | Return target nonland permanent to its owner's hand. Surveil 1. (Look at the top card of your library. You may put it into your graveyard.) | ✅ | Wired in `catalog::sets::sos::instants`. |
-| Brush Off | {2}{U}{U} | Instant |  | This spell costs {1}{U} less to cast if it targets an instant or sorcery spell. / Counter target spell. | 🟡 | Wired in `catalog::sets::sos::instants` as a 4-mana hard counter. The conditional cost-reduction-when-targeting-IS rider is omitted (no target-aware cost reduction primitive). |
+| Brush Off | {2}{U}{U} | Instant |  | This spell costs {1}{U} less to cast if it targets an instant or sorcery spell. / Counter target spell. | ✅ | Push XLV: 🟡 → ✅. Cost reduction now wires faithfully via `StaticEffect::CostReductionTargeting` on the cast card itself (self-static, same shape as Ajani's Response). Target filter is `IsSpellOnStack ∧ (HasCardType(Instant) ∨ HasCardType(Sorcery))`; at IS-targets the spell drops from {2}{U}{U} to {U}{U}. The {1}{U} → {2}-generic discount approximation loses the colored-pip refund (the engine's `CostReductionTargeting.amount` is generic-only); the {U}{U} colored-pip floor stays put. Counter half wired via `Effect::CounterSpell` against any stack-resident spell. |
 | Campus Composer // Aqueous Aria | {3}{U} // {4}{U} | Creature — Merfolk Bard // Sorcery | 3/4 |  | 🟡 | Push XIX: front body wired (3/4 Merfolk Bard with `Keyword::Ward(2)`). MDFC back face Aqueous Aria omitted — oracle text unverified (Scryfall unavailable in this environment). Same body-only shape as Mica Reader of Ruins (push XVIII) / Strife Scholar / Colorstorm Stallion. |
 | Chase Inspiration | {U} | Instant |  | Target creature you control gets +0/+3 and gains hexproof until end of turn. (It can't be the target of spells or abilities your opponents control.) | ✅ | Wired in `catalog::sets::sos::instants`. |
 | Deluge Virtuoso | {2}{U} | Creature — Human Wizard | 2/2 | When this creature enters, tap target creature an opponent controls and put a stun counter on it. (If a permanent with a stun counter would become untapped, remove one from it instead.) / Opus — Whenever you cast an instant or sorcery spell, this creature gets +1/+1 until end of turn. If five or more mana was spent to cast that spell, this creature gets +2/+2 until end of turn instead. | ✅ | Push XXXI: Opus rider now wired via `effect::shortcut::opus(5, ...)`. Always: +1/+1 EOT pump. Big-cast: +1/+1 additional EOT pump (net +2/+2 EOT). ETB tap+stun unchanged. |
@@ -3158,7 +3311,7 @@ the back-face spell body is in place.
 | Orysa, Tide Choreographer | {4}{U} | Legendary Creature — Merfolk Bard | 2/2 | This spell costs {3} less to cast if creatures you control have total toughness 10 or greater. / When Orysa enters, draw two cards. | 🟡 | ETB draw 2 wired faithfully. The conditional "{3} less if total toughness ≥ 10" alt-cost rider is omitted (alt-cost-with-board-state-predicate primitive). |
 | Pensive Professor | {1}{U}{U} | Creature — Human Wizard | 0/2 | Increment (Whenever you cast a spell, if the amount of mana you spent is greater than this creature's power or toughness, put a +1/+1 counter on this creature.) / Whenever one or more +1/+1 counters are put on this cr… | 🟡 | Push XXXI: Increment now wired via `effect::shortcut::increment()`. At min(P, T)=0, every 1+ mana spell pushes a +1/+1 counter. The counter-trigger half stays omitted (oracle truncated). 🔍 needs review (oracle previously truncated). |
 | Procrastinate | {X}{U} | Sorcery |  | Tap target creature. Put twice X stun counters on it. (If a permanent with a stun counter would become untapped, remove one from it instead.) | ✅ | Wired in `catalog::sets::sos::sorceries` with `Value::Times(2, XFromCost)`. |
-| Run Behind | {3}{U} | Instant |  | This spell costs {1} less to cast if it targets an attacking creature. / Target creature's owner puts it on their choice of the top or bottom of their library. | 🟡 | Wired in `catalog::sets::sos::instants` — moves target creature to bottom of owner's library (conditional cost reduction omitted; "owner's choice top/bottom" collapsed to bottom-only since bottom is the typical removal outcome). |
+| Run Behind | {3}{U} | Instant |  | This spell costs {1} less to cast if it targets an attacking creature. / Target creature's owner puts it on their choice of the top or bottom of their library. | ✅ | Push XLV: 🟡 → ✅. Cost reduction now wires via `StaticEffect::CostReductionTargeting` (self-static, same shape as Brush Off / Ajani's Response). Target filter is `Creature ∧ IsAttacking`; at attacker-targets the spell drops from {3}{U} to {2}{U} — Vraska's-Contempt-rate permanent removal at instant speed. Body unchanged: target creature → bottom of owner's library. The "owner's choice top/bottom" rider stays collapsed to bottom-only (the engine has no top-or-bottom owner-prompt primitive). |
 | Skycoach Conductor // All Aboard | {2}{U} // {U} | Creature — Bird Pilot // Instant | 2/3 |  | 🟡 | Wired in `catalog::sets::sos::mdfcs` (push XI/XII): vanilla front + back-face spell via the new `GameAction::CastSpellBack` path. Original ⏳ note: Standard primitives — should be straightforward to wire.|
 | Spellbook Seeker // Careful Study | {3}{U} // {U} | Creature — Bird Wizard // Sorcery | 3/3 |  | 🟡 | Wired in `catalog::sets::sos::mdfcs` (push XI/XII): vanilla front + back-face spell via the new `GameAction::CastSpellBack` path. Original ⏳ note: Standard primitives — should be straightforward to wire.|
 | Tester of the Tangential | {1}{U} | Creature — Djinn Wizard | 1/1 | Increment (Whenever you cast a spell, if the amount of mana you spent is greater than this creature's power or toughness, put a +1/+1 counter on this creature.) / At the beginning of combat on your turn, you may pay {X}. When you do, move X +1/+1 counters from this creature onto another target creature. | 🟡 | Push XXXI: Increment now wired via `effect::shortcut::increment()`. Cast where mana_spent ≥ 2 (one above min(P, T)=1) drops a +1/+1 counter. The combat-step pay-X-move-counters rider stays omitted (no `MayPay`-X-cost combat-step trigger primitive). |

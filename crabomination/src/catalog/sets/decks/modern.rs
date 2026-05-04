@@ -9427,3 +9427,249 @@ pub fn krenko_mob_boss() -> CardDefinition {
     }
 }
 
+// ── Push XLV: 2026-05-04 batch — 8 modern cards + 2 SOS promotions ──────────
+//
+// See `STRIXHAVEN2.md` push XLV section for the full breakdown.
+
+// ── Abrade ─────────────────────────────────────────────────────────────────
+
+/// Abrade — {1}{R} Instant. "Choose one — / • Abrade deals 3 damage to
+/// target creature. / • Destroy target artifact."
+///
+/// ✅ Push XLV NEW. Pure modal — no mode-implies-mode rider, no
+/// alternative cost. Wired with `Effect::ChooseMode([DealDamage 3 to
+/// Creature, Destroy Artifact])`. AutoDecider picks the first mode
+/// with a legal target (creature first); ScriptedDecider picks any
+/// mode for tests. Same shape as Mage Hunters' Onslaught (✅ STX).
+pub fn abrade() -> CardDefinition {
+    CardDefinition {
+        name: "Abrade",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseMode(vec![
+            Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Creature),
+                amount: Value::Const(3),
+            },
+            Effect::Destroy {
+                what: target_filtered(SelectionRequirement::Artifact),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+// ── Izzet Charm ────────────────────────────────────────────────────────────
+
+/// Izzet Charm — {U}{R} Instant. "Choose one — / • Counter target
+/// noncreature spell unless its controller pays {2}. / • Izzet Charm
+/// deals 2 damage to target creature. / • Draw two cards, then
+/// discard two cards."
+///
+/// ✅ Push XLV NEW. Three-mode `ChooseMode`: counter unless {2}
+/// (`Effect::CounterSpellUnlessPaid`); 2 dmg to creature; loot-2
+/// (Draw 2 + Discard 2). Mode 0's filter is `IsSpellOnStack ∧
+/// ¬HasCardType(Creature)` for the printed "noncreature spell"
+/// scope.
+pub fn izzet_charm() -> CardDefinition {
+    CardDefinition {
+        name: "Izzet Charm",
+        cost: cost(&[u(), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseMode(vec![
+            Effect::CounterUnlessPaid {
+                what: target_filtered(
+                    SelectionRequirement::IsSpellOnStack
+                        .and(SelectionRequirement::HasCardType(CardType::Creature).negate()),
+                ),
+                mana_cost: cost(&[generic(2)]),
+            },
+            Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Creature),
+                amount: Value::Const(2),
+            },
+            Effect::Seq(vec![
+                Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+                Effect::Discard { who: Selector::You, amount: Value::Const(2), random: false },
+            ]),
+        ]),
+        ..Default::default()
+    }
+}
+
+// ── Pillar of Flame ─────────────────────────────────────────────────────────
+
+/// Pillar of Flame — {R} Sorcery. "Pillar of Flame deals 2 damage to
+/// any target. If a creature dealt damage this way would die this turn,
+/// exile it instead."
+///
+/// 🟡 Push XLV NEW. The 2-damage half is wired faithfully to
+/// `any_target()` (Creature ∨ Planeswalker ∨ Player). The "exile if
+/// it would die this turn" rider is omitted (no damage-replacement
+/// → exile primitive — same family gap as Wilt in the Heat's "exile
+/// if dies" half). The base 2-damage line still kills any X/2.
+pub fn pillar_of_flame() -> CardDefinition {
+    use crate::effect::shortcut::any_target;
+    CardDefinition {
+        name: "Pillar of Flame",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::DealDamage {
+            to: any_target(),
+            amount: Value::Const(2),
+        },
+        ..Default::default()
+    }
+}
+
+// ── Smash to Smithereens ────────────────────────────────────────────────────
+
+/// Smash to Smithereens — {1}{R} Instant. "Destroy target artifact.
+/// Smash to Smithereens deals 3 damage to that artifact's controller."
+///
+/// ✅ Push XLV NEW. Wired as `Seq([Destroy(target Artifact), DealDamage
+/// 3 to ControllerOf(Target(0)) ])`. The "to that artifact's
+/// controller" half threads through the existing `PlayerRef::
+/// ControllerOf(Target(0))` plumbing — same pattern Harsh Annotation
+/// (✅) uses for the Inkling-token-under-the-destroyed-creature's-
+/// controller half.
+pub fn smash_to_smithereens() -> CardDefinition {
+    CardDefinition {
+        name: "Smash to Smithereens",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Destroy {
+                what: target_filtered(SelectionRequirement::Artifact),
+            },
+            Effect::DealDamage {
+                to: Selector::Player(PlayerRef::ControllerOf(Box::new(Selector::Target(0)))),
+                amount: Value::Const(3),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+// ── Forked Bolt ─────────────────────────────────────────────────────────────
+
+/// Forked Bolt — {R} Sorcery. "Forked Bolt deals 2 damage divided as
+/// you choose among one or two targets."
+///
+/// 🟡 Push XLV NEW. Collapsed to "2 damage to any target" — the
+/// engine has no divided-damage primitive (same gap as Magma Opus's
+/// "4 damage divided" + Sundering Stroke's "{R}{R}{R}{R} damage
+/// doubling"). Falls back to a strictly weaker single-shot Wild
+/// Slash + Sorcery-speed (since Wild Slash is {R} Instant 2 dmg).
+pub fn forked_bolt() -> CardDefinition {
+    use crate::effect::shortcut::any_target;
+    CardDefinition {
+        name: "Forked Bolt",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::DealDamage {
+            to: any_target(),
+            amount: Value::Const(2),
+        },
+        ..Default::default()
+    }
+}
+
+// ── Knight of Meadowgrain ───────────────────────────────────────────────────
+
+/// Knight of Meadowgrain — {W}{W} Creature — Kithkin Knight. 2/2.
+/// "First strike, lifelink."
+///
+/// ✅ Push XLV NEW. Vanilla mono-white aggro — `Keyword::FirstStrike`
+/// + `Keyword::Lifelink` on a 2/2 body at the {W}{W} rate. Strictly
+/// upgrades Knight Errant / Savannah Lions in lifegain shells.
+pub fn knight_of_meadowgrain() -> CardDefinition {
+    CardDefinition {
+        name: "Knight of Meadowgrain",
+        cost: cost(&[w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Kithkin, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::FirstStrike, Keyword::Lifelink],
+        ..Default::default()
+    }
+}
+
+// ── Defiant Strike ──────────────────────────────────────────────────────────
+
+/// Defiant Strike — {W} Instant. "Target creature you control gets
+/// +1/+0 until end of turn. Draw a card."
+///
+/// ✅ Push XLV NEW. Combat trick + cantrip in one. Pumps a friendly
+/// creature for the round and replaces itself in hand. Body is
+/// `Seq([PumpPT(+1/+0, EOT), Draw 1])` — same shape as the cantrip
+/// half of Rapier Wit's tap-and-stun rider.
+pub fn defiant_strike() -> CardDefinition {
+    CardDefinition {
+        name: "Defiant Strike",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+                power: Value::Const(1),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        ]),
+        ..Default::default()
+    }
+}
+
+// ── Fanatical Firebrand ─────────────────────────────────────────────────────
+
+/// Fanatical Firebrand — {R} Creature — Goblin Pirate. 1/1. "Haste /
+/// {T}, Sacrifice this creature: It deals 1 damage to any target."
+///
+/// ✅ Push XLV NEW. Cheap haste body + sac-for-ping activation. The
+/// activated ability uses `sac_cost: true` (same plumbing as Shattered
+/// Acolyte's destroy-artifact-or-enchantment-on-sac and Roiling
+/// Vortex's 4-damage sac-activation from push XLIV) plus a tap cost.
+/// `any_target()` lets the ping route to creatures, planeswalkers, or
+/// player face — the lethal-first auto-target picker grabs the
+/// efficient kill or pushes face damage when no kill is available.
+pub fn fanatical_firebrand() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    use crate::effect::shortcut::any_target;
+    CardDefinition {
+        name: "Fanatical Firebrand",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin, CreatureType::Pirate],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Haste],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: ManaCost::default(),
+            effect: Effect::DealDamage {
+                to: any_target(),
+                amount: Value::Const(1),
+            },
+            once_per_turn: false,
+            sorcery_speed: false,
+            sac_cost: true,
+            condition: None,
+            life_cost: 0,
+            exile_gy_cost: 0,
+        }],
+        ..Default::default()
+    }
+}
+

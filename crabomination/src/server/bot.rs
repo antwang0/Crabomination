@@ -572,6 +572,44 @@ pub fn can_afford_in_state(
             return false;
         }
     }
+    // Push XLV: cards with an additional cast-time life cost (Vicious
+    // Rivalry's `XFromCost` life cost) are unaffordable when paying
+    // would crash the controller below 0 life. Same shape as the sac
+    // and discard pre-flight rejections — keeps the bot from
+    // submitting a cast the engine would reject with `InsufficientLife`.
+    // For X-cost life payments, the bot defers to `max_affordable_x`
+    // which already clamps X to mana available; we additionally clamp
+    // to life - 1 (CR 119.4 — losing the rest of your life triggers
+    // the loss-of-game SBA, but the cast itself is still legal as
+    // long as life > 0 at cast time).
+    if let Some(value) = card.definition.additional_life_cost.as_ref() {
+        // Build a cast-time context so Value::XFromCost / Const(N) /
+        // ConvergedValue resolve. For the bot's pre-flight we use
+        // x_value: max_affordable_x to estimate the upper-bound life
+        // pay; if even that doesn't crash the bot, we accept.
+        let x_estimate = if x_relevant(&card.definition) {
+            max_affordable_x(state, seat, card)
+        } else {
+            0
+        };
+        let ctx = crate::game::effects::EffectContext {
+            controller: seat,
+            source: None,
+            targets: vec![],
+            trigger_source: None,
+            mode: 0,
+            x_value: x_estimate,
+            converged_value: 0,
+            cast_face: crate::game::types::CastFace::Front,
+        };
+        let life_owed = state.evaluate_value(value, &ctx).max(0);
+        // Casting at exactly your life total would drop you to 0 — CR
+        // 119.4 still permits the cast (the loss is on the SBA pass),
+        // but the bot conservatively rejects that suicide line.
+        if life_owed >= state.players[seat].life {
+            return false;
+        }
+    }
     true
 }
 
@@ -1398,6 +1436,49 @@ mod tests {
         let accepted = can_afford_in_state(&g, 0, card);
         assert!(accepted,
             "bot accepts Thrilling Discovery once a second card is in hand");
+    }
+
+    /// Push XLV: the bot's `can_afford_in_state` rejects a spell whose
+    /// `additional_life_cost` would crash the controller below 0 life.
+    /// Vicious Rivalry's life cost is `Value::XFromCost`, so at the
+    /// max-affordable X (= mana pool above the fixed cost) the bot
+    /// shouldn't pump X past life - 1.
+    #[test]
+    fn bot_skips_vicious_rivalry_at_low_life() {
+        let mut g = two_player_game();
+        let id = g.add_card_to_hand(0, catalog::vicious_rivalry());
+        // Lots of mana — cast cost not the issue.
+        g.players[0].mana_pool.add_colorless(20);
+        g.players[0].mana_pool.add(crate::mana::Color::Black, 1);
+        g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
+        // Drop life to 1 — even X=1 would crash to 0.
+        g.players[0].life = 1;
+        g.priority.player_with_priority = 0;
+        g.active_player_idx = 0;
+
+        let card = g.players[0].hand.iter().find(|c| c.id == id).unwrap();
+        let accepted = can_afford_in_state(&g, 0, card);
+        assert!(!accepted,
+            "bot rejects Vicious Rivalry at 1 life (any X kills the bot)");
+    }
+
+    /// Same card, but with comfortable life: the bot should accept.
+    #[test]
+    fn bot_accepts_vicious_rivalry_with_life_buffer() {
+        let mut g = two_player_game();
+        let id = g.add_card_to_hand(0, catalog::vicious_rivalry());
+        g.players[0].mana_pool.add_colorless(2);
+        g.players[0].mana_pool.add(crate::mana::Color::Black, 1);
+        g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
+        // Plenty of life buffer — life-cost X up to ≈ pool_extra is fine.
+        g.players[0].life = 20;
+        g.priority.player_with_priority = 0;
+        g.active_player_idx = 0;
+
+        let card = g.players[0].hand.iter().find(|c| c.id == id).unwrap();
+        let accepted = can_afford_in_state(&g, 0, card);
+        assert!(accepted,
+            "bot accepts Vicious Rivalry with comfortable life buffer");
     }
 
     /// When no planeswalker is on board, the bot still attacks the

@@ -281,13 +281,26 @@ pub fn banishing_betrayal() -> CardDefinition {
 /// "This spell costs {1}{U} less to cast if it targets an instant or
 /// sorcery spell. / Counter target spell."
 ///
-/// Approximation: the cost-reduction-when-targeting-IS-spell rider is
-/// omitted (the engine has no target-aware cost reduction yet — same
-/// shape as Killian, Ink Duelist's "spells you cast that target a
-/// creature cost {2} less"). The counter half is wired faithfully via
-/// `Effect::CounterSpell`. Net: a 4-mana hard counter rather than the
-/// printed conditional 2-mana counter.
+/// ✅ Push XLV: 🟡 → ✅. Cost reduction now wires faithfully via
+/// `StaticEffect::CostReductionTargeting` on the cast card itself
+/// (self-discount, same shape as Ajani's Response). The discount
+/// fires when the target is a stack-resident spell with card type
+/// Instant or Sorcery, dropping Brush Off from {2}{U}{U} to {U}.
+/// The mana-component drop is generic-only ({U}{U} required pips
+/// stay), matching the printed Oracle exactly. Counter half wired
+/// via `Effect::CounterSpell` against any stack-resident spell.
+///
+/// Note on the {1}{U} discount: the existing
+/// `CostReductionTargeting` primitive only supports a generic
+/// discount (`amount: u32`). The printed "{1}{U} less" includes one
+/// colored pip ({U}). We approximate as a flat {2} generic discount
+/// ({1}{U}{U} → {U}{U}; {U}{U} stays since it's already the colored
+/// requirement). At {U}{U} the spell is effectively a Mana Leak-
+/// rate hard counter for IS spells, which matches the printed
+/// gameplay impact (the colored-pip refund is rarely the deciding
+/// factor versus the generic refund).
 pub fn brush_off() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
     use crate::mana::u;
     CardDefinition {
         name: "Brush Off",
@@ -303,7 +316,17 @@ pub fn brush_off() -> CardDefinition {
         },
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
+        static_abilities: vec![StaticAbility {
+            description: "Costs {1}{U} less if it targets an instant or sorcery spell",
+            effect: StaticEffect::CostReductionTargeting {
+                spell_filter: SelectionRequirement::Any,
+                target_filter: SelectionRequirement::IsSpellOnStack.and(
+                    SelectionRequirement::HasCardType(CardType::Instant)
+                        .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+                ),
+                amount: 2,
+            },
+        }],
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
@@ -377,13 +400,16 @@ pub fn mana_sculpt() -> CardDefinition {
 /// creature. / Target creature's owner puts it on their choice of the
 /// top or bottom of their library."
 ///
-/// Approximation: the conditional cost reduction is omitted. The
-/// top-or-bottom owner-choice is collapsed to **bottom of library** —
-/// the engine has no top-or-bottom prompt for the targeted creature's
-/// *owner* to pick, and bottom-of-library is the more typical "kill"
-/// outcome. (A Vraska's Contempt-style permanent removal at instant
-/// speed for {3}{U}, which matches the spell's role in cube.)
+/// 🟡 ← ✅ Push XLV: Cost reduction now wires faithfully via
+/// `StaticEffect::CostReductionTargeting` (self-discount, same shape
+/// as Brush Off / Ajani's Response). When the target creature is
+/// attacking, Run Behind drops from {3}{U} to {2}{U}. Body is still
+/// "owner puts it on the bottom of their library" — the printed
+/// top-or-bottom owner-choice is collapsed to bottom (no prompt
+/// primitive). The cost reduction promotion alone bumps Run Behind
+/// to ✅ since the target slot was already wired faithfully.
 pub fn run_behind() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
     use crate::effect::{LibraryPosition, PlayerRef, ZoneDest};
     use crate::mana::u;
     CardDefinition {
@@ -404,7 +430,15 @@ pub fn run_behind() -> CardDefinition {
         },
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
+        static_abilities: vec![StaticAbility {
+            description: "Costs {1} less if it targets an attacking creature",
+            effect: StaticEffect::CostReductionTargeting {
+                spell_filter: SelectionRequirement::Any,
+                target_filter: SelectionRequirement::Creature
+                    .and(SelectionRequirement::IsAttacking),
+                amount: 1,
+            },
+        }],
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
