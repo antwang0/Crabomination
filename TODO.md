@@ -7,9 +7,9 @@ See `CUBE_FEATURES.md` (cube-card implementation status) and
 
 ## Recent additions
 
-- ✅ **Push XLVI (2026-05-04)**: 12 new modern cards + AnotherOfYours
-  ETB de-dup + CR 605 (Mana Abilities) audit. Tests at 1463 (was
-  1445; +18 net), all green.
+- ✅ **Push XLVI (2026-05-04)**: 16 new modern cards + AnotherOfYours
+  ETB de-dup + CR 605 (Mana Abilities) audit. Tests at 1468 (was
+  1445; +23 net), all green.
   - **12 new modern cards** (`catalog::sets::decks::modern`):
     Toxic Deluge ✅ ({X}{2}{B} Sorcery — pay X life, all creatures
     -X/-X EOT); Supreme Verdict 🟡 ({1}{W}{W}{U} Sorcery — destroy
@@ -27,7 +27,11 @@ See `CUBE_FEATURES.md` (cube-card implementation status) and
     life); Cut Down ✅ ({B} Instant — destroy ≤3-MV creature);
     Stitcher's Supplier ✅ ({B} 1/1 Zombie — mill 3 on ETB + death,
     validates the AnotherOfYours fix); Soul Warden ✅ ({W} 1/1
-    Cleric — gain 1 per "another creature" ETB).
+    Cleric — gain 1 per "another creature" ETB);
+    Pyroblast ✅ + Red Elemental Blast ✅ ({R} Instant — color hate:
+    counter blue spell or destroy blue permanent);
+    Hydroblast ✅ + Blue Elemental Blast ✅ ({U} Instant — counter
+    red spell or destroy red permanent).
   - **Engine fix: AnotherOfYours ETB de-dup** —
     `game/mod.rs::is_event_hardcoded` now skips `PermanentEntered
     + AnotherOfYours` triggers in the generic event-matching
@@ -48,9 +52,9 @@ See `CUBE_FEATURES.md` (cube-card implementation status) and
     ✅, 605.5b (spells ≠ mana abilities) ✅. Still 🟡: 605.1b /
     605.4 / 605.4a (triggered mana abilities — no catalog card
     exercises this path).
-  - **18 new tests**: 14 card tests + 4 (Soul Warden ×2, Hangarback
-    on-death scaling, Stitcher's Supplier death validating the
-    AnotherOfYours fix end-to-end).
+  - **23 new tests**: 14 + 4 + 5 color-blast mode tests (Pyroblast
+    counter, Pyroblast destroy, Hydroblast counter, REB destroy, BEB
+    destroy).
 
 - ✅ **Push XLV (2026-05-04)**: 8 new modern cards + 2 SOS promotions +
   bot life-cost preflight + CR 120 (Damage) audit. Tests at 1445

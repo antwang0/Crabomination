@@ -79,15 +79,17 @@ All 248 cards marked ✅ or 🟡 have a corresponding factory in
 positives and 0 stale ⏳ rows. STX 2021 progress is tracked in the
 "Strixhaven base set (STX)" section near the bottom of this file.
 
-## 2026-05-04 push XLVI: 12 new modern cards + AnotherOfYours ETB de-dup + CR 605 audit
+## 2026-05-04 push XLVI: 16 new modern cards + AnotherOfYours ETB de-dup + CR 605 audit
 
-Adds 12 new Modern-supplement card factories (`catalog::sets::decks::
+Adds 16 new Modern-supplement card factories (`catalog::sets::decks::
 modern`) including Toxic Deluge (X-life sweeper), Supreme Verdict,
-Hangarback Walker, and Soul Warden. Fixes a longstanding double-fire
-bug in the `AnotherOfYours` ETB-trigger dispatch (the generic
-event-matching walker and the hardcoded `stack.rs` ETB path were
-both pushing the trigger, doubling lifegain on Soul Warden / Felisa,
-Fang of Silverquill style cards). Tests at 1463 (was 1445; +18 net).
+Hangarback Walker, Soul Warden, and the four classic color-blasts
+(Pyroblast / Red Elemental Blast / Hydroblast / Blue Elemental Blast).
+Fixes a longstanding double-fire bug in the `AnotherOfYours`
+ETB-trigger dispatch (the generic event-matching walker and the
+hardcoded `stack.rs` ETB path were both pushing the trigger, doubling
+lifegain on Soul Warden / Felisa, Fang of Silverquill style cards).
+Tests at 1468 (was 1445; +23 net).
 
 ### Engine fix: `AnotherOfYours` ETB de-dup
 
@@ -201,16 +203,30 @@ Per-rule status (`rules 605.1–605.5`):
   `cast_spell`, never `activate_ability`; the mana ability check is
   structurally unreachable from the spell path.
 
-### Tests (+18 net, 1445 → 1463)
+### Color-blast quad (Pyroblast / REB / Hydroblast / BEB)
 
-- 14 new tests for the 12 new cards (Toxic Deluge ×2 — kills small +
+Four classic Old-School / cube color-hate one-mana modal counters /
+removal — Pyroblast and Red Elemental Blast (functional reprints) at
+{R} hate blue; Hydroblast and Blue Elemental Blast at {U} hate red.
+Each is an `Effect::ChooseMode` over `[CounterSpell, Destroy]`,
+both modes filtered by `HasColor(Blue)` / `HasColor(Red)`. AutoDecider
+picks mode 0 (counter) by default. Counter mode filter is
+`IsSpellOnStack ∧ HasColor(Blue/Red)`; destroy mode targets
+`Permanent ∧ HasColor(Blue/Red)`.
+
+### Tests (+23 net, 1445 → 1468)
+
+- 19 new tests for the 16 new cards (Toxic Deluge ×2 — kills small +
   X=0 noop; Supreme Verdict; Devour Flesh; Brought Back; Persist ×2
   — reanimate + no-eligible noop; Selfless Spirit ×2 — activation +
   body shape; Hangarback Walker — enters-with-counters + on-death
   Thopter mint; Utter End; Vraska's Contempt; Cut Down ×2 — accept
   + reject high-MV; Stitcher's Supplier ×2 — ETB + on-death; Soul
-  Warden ×2 — fires on opp creature + does NOT fire on self ETB).
-- All 1463 tests pass — including the 17 existing AnotherOfYours-
+  Warden ×2 — fires on opp creature + does NOT fire on self ETB;
+  Pyroblast ×2 — counter + destroy modes; Hydroblast — counter mode;
+  Red Elemental Blast — destroy mode; Blue Elemental Blast — destroy
+  mode).
+- All 1468 tests pass — including the 17 existing AnotherOfYours-
   scoped triggered abilities (Felisa Fang, Pestbrood Sloth, Arnyn,
   Augusta, Sparring Regimen, etc.) which previously were silently
   double-firing.

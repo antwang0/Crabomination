@@ -9867,6 +9867,127 @@ pub fn stitchers_supplier() -> CardDefinition {
     }
 }
 
+/// Pyroblast — {R} Instant. Choose one — Counter target spell if it's
+/// blue, OR destroy target permanent if it's blue.
+///
+/// ✅ Push XLVI NEW. Color-hate one-mana modal counter / removal.
+/// Mode 0: counter the target spell only if it's blue
+/// (`IsSpellOnStack ∧ HasColor(Blue)`). Mode 1: destroy a target blue
+/// permanent. Same shape as Boros Charm modally — `Effect::ChooseMode`.
+/// AutoDecider picks mode 0 by default (counter is the higher-tempo
+/// pick); ScriptedDecider can flip to mode 1 for permanent removal.
+pub fn pyroblast() -> CardDefinition {
+    CardDefinition {
+        name: "Pyroblast",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseMode(vec![
+            Effect::CounterSpell {
+                what: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: SelectionRequirement::IsSpellOnStack
+                        .and(SelectionRequirement::HasColor(Color::Blue)),
+                },
+            },
+            Effect::Destroy {
+                what: target_filtered(
+                    SelectionRequirement::Permanent
+                        .and(SelectionRequirement::HasColor(Color::Blue)),
+                ),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Red Elemental Blast — functional reprint of Pyroblast. Same body,
+/// different name (cube/Old School slot).
+///
+/// ✅ Push XLVI NEW. Body identical to Pyroblast — `Effect::ChooseMode`
+/// over the same counter / destroy modes against blue spells / blue
+/// permanents.
+pub fn red_elemental_blast() -> CardDefinition {
+    CardDefinition {
+        name: "Red Elemental Blast",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseMode(vec![
+            Effect::CounterSpell {
+                what: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: SelectionRequirement::IsSpellOnStack
+                        .and(SelectionRequirement::HasColor(Color::Blue)),
+                },
+            },
+            Effect::Destroy {
+                what: target_filtered(
+                    SelectionRequirement::Permanent
+                        .and(SelectionRequirement::HasColor(Color::Blue)),
+                ),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Hydroblast — {U} Instant. Choose one — Counter target spell if it's
+/// red, OR destroy target permanent if it's red.
+///
+/// ✅ Push XLVI NEW. Mirror of Pyroblast — color-hate at the {U} rate
+/// against red spells / red permanents. AutoDecider picks the counter
+/// mode by default.
+pub fn hydroblast() -> CardDefinition {
+    CardDefinition {
+        name: "Hydroblast",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseMode(vec![
+            Effect::CounterSpell {
+                what: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: SelectionRequirement::IsSpellOnStack
+                        .and(SelectionRequirement::HasColor(Color::Red)),
+                },
+            },
+            Effect::Destroy {
+                what: target_filtered(
+                    SelectionRequirement::Permanent
+                        .and(SelectionRequirement::HasColor(Color::Red)),
+                ),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Blue Elemental Blast — functional reprint of Hydroblast.
+///
+/// ✅ Push XLVI NEW. Same body as Hydroblast — `Effect::ChooseMode`
+/// over counter-red-spell / destroy-red-permanent.
+pub fn blue_elemental_blast() -> CardDefinition {
+    CardDefinition {
+        name: "Blue Elemental Blast",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseMode(vec![
+            Effect::CounterSpell {
+                what: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: SelectionRequirement::IsSpellOnStack
+                        .and(SelectionRequirement::HasColor(Color::Red)),
+                },
+            },
+            Effect::Destroy {
+                what: target_filtered(
+                    SelectionRequirement::Permanent
+                        .and(SelectionRequirement::HasColor(Color::Red)),
+                ),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
 /// Soul Warden — {W} Creature — Human Cleric. 1/1.
 /// "Whenever another creature enters, you gain 1 life."
 ///

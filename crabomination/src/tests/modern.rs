@@ -11271,6 +11271,123 @@ fn soul_warden_gains_life_on_other_creature_etb() {
         "Soul Warden gains 1 life when Bear enters");
 }
 
+/// Pyroblast counters a blue spell.
+#[test]
+fn pyroblast_counters_blue_spell() {
+    let mut g = two_player_game();
+    let bolt = g.add_card_to_hand(1, catalog::counterspell()); // {U}{U} blue spell
+    g.players[1].mana_pool.add(Color::Blue, 2);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: None, mode: None, x_value: None,
+    }).expect("Counterspell cast for {U}{U}");
+
+    g.priority.player_with_priority = 0;
+    let pyro = g.add_card_to_hand(0, catalog::pyroblast());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: pyro,
+        target: Some(Target::Permanent(bolt)),
+        mode: Some(0), x_value: None,
+    }).expect("Pyroblast castable for {R}");
+    drain_stack(&mut g);
+
+    // Counterspell is countered → goes to opp's graveyard.
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bolt),
+        "Pyroblast should counter the blue spell");
+}
+
+/// Pyroblast destroys a blue permanent.
+#[test]
+fn pyroblast_destroys_blue_permanent_via_mode_one() {
+    let mut g = two_player_game();
+    // Add a blue permanent — Frost Trickster (blue Spirit creature).
+    let frost = g.add_card_to_battlefield(1, catalog::frost_trickster());
+    let pyro = g.add_card_to_hand(0, catalog::pyroblast());
+    g.players[0].mana_pool.add(Color::Red, 1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: pyro,
+        target: Some(Target::Permanent(frost)),
+        mode: Some(1), x_value: None,
+    }).expect("Pyroblast mode 1 castable");
+    drain_stack(&mut g);
+
+    assert!(!g.battlefield.iter().any(|c| c.id == frost),
+        "Pyroblast mode 1 destroys the blue creature");
+}
+
+/// Hydroblast counters a red spell.
+#[test]
+fn hydroblast_counters_red_spell() {
+    let mut g = two_player_game();
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)), mode: None, x_value: None,
+    }).expect("Bolt cast");
+
+    g.priority.player_with_priority = 0;
+    let hydro = g.add_card_to_hand(0, catalog::hydroblast());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: hydro,
+        target: Some(Target::Permanent(bolt)),
+        mode: Some(0), x_value: None,
+    }).expect("Hydroblast castable for {U}");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[0].life, 20, "Bolt countered, P0 takes no damage");
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bolt),
+        "Bolt goes to opp's graveyard");
+}
+
+/// Red Elemental Blast = Pyroblast functional reprint.
+#[test]
+fn red_elemental_blast_destroys_blue_permanent() {
+    let mut g = two_player_game();
+    let frost = g.add_card_to_battlefield(1, catalog::frost_trickster());
+    let reb = g.add_card_to_hand(0, catalog::red_elemental_blast());
+    g.players[0].mana_pool.add(Color::Red, 1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: reb,
+        target: Some(Target::Permanent(frost)),
+        mode: Some(1), x_value: None,
+    }).expect("Red Elemental Blast mode 1 castable");
+    drain_stack(&mut g);
+
+    assert!(!g.battlefield.iter().any(|c| c.id == frost),
+        "REB destroys the blue creature");
+}
+
+/// Blue Elemental Blast = Hydroblast functional reprint.
+#[test]
+fn blue_elemental_blast_destroys_red_permanent() {
+    let mut g = two_player_game();
+    // A red permanent — Lightning Crafter? Actually let me just use a
+    // creature with Red color via the catalog. Use Goblin Guide?
+    // Actually use a token from a previous create. Simpler: use a
+    // Mountain — but Mountain isn't red. Use a red creature. Let me
+    // pick Fanatical Firebrand.
+    let fire = g.add_card_to_battlefield(1, catalog::fanatical_firebrand());
+    let beb = g.add_card_to_hand(0, catalog::blue_elemental_blast());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: beb,
+        target: Some(Target::Permanent(fire)),
+        mode: Some(1), x_value: None,
+    }).expect("Blue Elemental Blast mode 1 castable");
+    drain_stack(&mut g);
+
+    assert!(!g.battlefield.iter().any(|c| c.id == fire),
+        "BEB destroys the red creature");
+}
+
 /// Soul Warden's own ETB does NOT trigger itself (the "another"
 /// rider — engine excludes the source via SelfSource scope).
 #[test]
