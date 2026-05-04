@@ -127,7 +127,48 @@ fn known_card(card: &CardInstance) -> KnownCard {
             .additional_sac_cost
             .as_ref()
             .map(additional_sac_cost_label),
+        // Push XL: surface the printed `enters_with_counters` field
+        // as a one-line tooltip phrase so the client can show the
+        // body modification before casting. "Enters with 2 +1/+1
+        // counters" / "Enters with X +1/+1 counters" / "Enters with
+        // {value} {kind} counters" depending on the value shape.
+        enters_with_counters_label: card
+            .definition
+            .enters_with_counters
+            .as_ref()
+            .map(|(kind, value)| enters_with_counters_label(*kind, value)),
     }
+}
+
+/// Render an `enters_with_counters` field as a one-line human label
+/// for the client's card preview tooltip. Recognises the common Value
+/// shapes (Const(N), XFromCost, ConvergedValue, PermanentCountControl
+/// ledBy(You)) and falls back to a generic phrase for less common
+/// shapes.
+fn enters_with_counters_label(
+    kind: crate::card::CounterType,
+    value: &crate::effect::Value,
+) -> String {
+    use crate::effect::Value;
+    let kind_label = match kind {
+        crate::card::CounterType::PlusOnePlusOne => "+1/+1",
+        crate::card::CounterType::MinusOneMinusOne => "-1/-1",
+        crate::card::CounterType::Loyalty => "loyalty",
+        crate::card::CounterType::Charge => "charge",
+        crate::card::CounterType::Stun => "stun",
+        crate::card::CounterType::Poison => "poison",
+        _ => "counter",
+    };
+    let count_phrase = match value {
+        Value::Const(n) => format!("{}", n),
+        Value::XFromCost => "X".to_string(),
+        Value::ConvergedValue => "Converge".to_string(),
+        Value::PermanentCountControlledBy(_) => {
+            "one per permanent you control".to_string()
+        }
+        _ => "N".to_string(),
+    };
+    format!("Enters with {} {} counters", count_phrase, kind_label)
 }
 
 /// Render an `additional_sac_cost` filter as a one-line human label.
@@ -961,6 +1002,51 @@ mod tests {
         let kc = known_card(&instance);
         assert!(kc.additional_cost_label.is_none(),
             "vanilla creatures should not surface a cost label");
+    }
+
+    /// Push XL: KnownCard surfaces an `enters_with_counters_label`
+    /// for cards with the `enters_with_counters` field set. Star
+    /// Pupil's "0/0 Spirit, enters with two +1/+1 counters" should
+    /// render the const-2 case as "Enters with 2 +1/+1 counters".
+    #[test]
+    fn known_card_surfaces_enters_with_counters_label_const() {
+        let pupil = catalog::star_pupil();
+        let id = crate::card::CardId(0);
+        let instance = crate::card::CardInstance::new(id, pupil, 0);
+        let kc = known_card(&instance);
+        assert_eq!(
+            kc.enters_with_counters_label.as_deref(),
+            Some("Enters with 2 +1/+1 counters"),
+            "Star Pupil's enters_with_counters should render as a const-2 label"
+        );
+    }
+
+    /// Push XL: X-cost permanents surface "Enters with X +1/+1
+    /// counters". Pterafractyl's `Value::XFromCost` branch should
+    /// render the X path.
+    #[test]
+    fn known_card_surfaces_enters_with_counters_label_x_cost() {
+        let p = catalog::pterafractyl();
+        let id = crate::card::CardId(0);
+        let instance = crate::card::CardInstance::new(id, p, 0);
+        let kc = known_card(&instance);
+        assert_eq!(
+            kc.enters_with_counters_label.as_deref(),
+            Some("Enters with X +1/+1 counters"),
+            "Pterafractyl's enters_with_counters should render the X branch"
+        );
+    }
+
+    /// Push XL: vanilla cards without `enters_with_counters` should
+    /// leave the label `None` (back-compat for older serialized views).
+    #[test]
+    fn known_card_omits_enters_with_counters_label_when_none() {
+        let bear = catalog::grizzly_bears();
+        let id = crate::card::CardId(0);
+        let instance = crate::card::CardInstance::new(id, bear, 0);
+        let kc = known_card(&instance);
+        assert!(kc.enters_with_counters_label.is_none(),
+            "vanilla creatures should not surface an enters-with-counters label");
     }
 
     /// Sac+payoff abilities (Goblin Bombardment, Greater Good, Thud)

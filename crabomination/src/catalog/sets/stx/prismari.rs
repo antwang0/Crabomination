@@ -47,6 +47,7 @@ pub fn prismari_pledgemage() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -97,6 +98,7 @@ pub fn prismari_apprentice() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -143,6 +145,7 @@ pub fn symmetry_sage() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -185,6 +188,7 @@ pub fn creative_outburst() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -263,6 +267,7 @@ pub fn prismari_command() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -345,6 +350,7 @@ pub fn magma_opus() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -392,5 +398,6 @@ pub fn expressive_iteration() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }

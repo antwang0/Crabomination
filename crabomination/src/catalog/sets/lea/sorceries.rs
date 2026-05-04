@@ -26,6 +26,7 @@ pub fn wrath_of_god() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -52,6 +53,7 @@ pub fn armageddon() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -80,6 +82,7 @@ pub fn demonic_tutor() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -117,5 +120,6 @@ pub fn wheel_of_fortune() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }

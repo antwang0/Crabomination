@@ -34,5 +34,6 @@ pub fn force_of_will() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }

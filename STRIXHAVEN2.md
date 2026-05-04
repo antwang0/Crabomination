@@ -36,9 +36,11 @@ This file tracks two adjacent Strixhaven catalogs:
 Counts reflect the regenerated tables below (audited via
 `scripts/audit_strixhaven2.py` against `catalog::sets::sos`).
 
-- ✅ done: **134** (push XXXIX: +1 SOS — Wilt in the Heat (cost
-  reduction now wires via the new `Value::IfPredicate`)).
-- 🟡 partial: **114** (push XXXIX: -1 from Wilt in the Heat 🟡 → ✅).
+- ✅ done: **136** (push XL: +2 SOS — Lluwen, Exchange Student //
+  Pest Friend (hybrid `{B/G}` pip wired faithfully) and Pterafractyl
+  (printed 1/0 body via the new `enters_with_counters` replacement)).
+- 🟡 partial: **112** (push XL: -2 from Lluwen + Pterafractyl
+  promotions).
 - ⏳ todo: **7** (unchanged — all blocked by cast-from-exile / copy-
   permanent pipelines).
 
@@ -71,6 +73,95 @@ All 248 cards marked ✅ or 🟡 have a corresponding factory in
 `crabomination/src/catalog/sets/sos/`; the audit script reports 0 false
 positives and 0 stale ⏳ rows. STX 2021 progress is tracked in the
 "Strixhaven base set (STX)" section near the bottom of this file.
+
+## 2026-05-04 push XL: Hybrid pip fidelity + `enters_with_counters` primitive
+
+Promotes 2 SOS partials to ✅ + adds 1 new engine primitive that
+replaces the prior "base body bumped" approximation across 3 cards.
+
+### Engine primitive
+
+- **`CardDefinition.enters_with_counters: Option<(CounterType, Value)>`**
+  — "this permanent enters with N {kind} counters on it" replacement
+  effect. Resolved at the cast-time spell-resolution path (`stack.rs`)
+  *between* battlefield entry and the ETB-trigger push, so the
+  counters land *before* SBAs run. The `Value` is evaluated against
+  the cast-time `EffectContext` (the spell's `x_value`,
+  `converged_value`, and `targets[]` are in scope), so X-cost
+  permanents like Pterafractyl ({X}{G}{U}) read the actual paid X.
+
+  Distinct from an ETB trigger that adds counters via
+  `Effect::AddCounter`: ETB triggers fire *after* the permanent is
+  on the battlefield, so a 1/0 body would die to the 0-toughness
+  SBA before its trigger could resolve. The replacement form wires
+  the counters in atomically with bf entry, surviving the post-entry
+  SBA pass.
+
+  Honored only on the spell-resolution path; tokens and `Move →
+  Battlefield` paths skip this hook (tokens have no X or paid mana
+  to reference, and reanimate-style returns shouldn't re-add the
+  original counter count). Backed by `#[serde(default)]` for
+  back-compat with older serialized snapshots.
+
+### SOS 🟡 → ✅ promotions (2)
+
+- **Lluwen, Exchange Student // Pest Friend** ({2}{B}{G} // {B/G})
+  — back-face Pest Friend's `{B/G}` hybrid pip now wired exactly
+  via `ManaSymbol::Hybrid(Black, Green)`. The previous `{B}`-only
+  approximation forced black mana for what should be either color.
+  Pest Friend is now castable from a {G}-only pool (or {B}-only,
+  or any mix). Closes the Witherbloom (B/G) school's last 🟡 row.
+
+- **Pterafractyl** ({X}{G}{U}, 1/0 Dinosaur Fractal) — printed
+  1/0 base body via the new `enters_with_counters` replacement
+  (was 1/1 over-statement to keep the body alive). At X=2 it lands
+  as a 3/2 (matching printed 1/0 + 2 +1/+1 counters); at X=0 the
+  1/0 body has 0 toughness with no counters and immediately
+  graveyards (matching printed). The "you gain 2 life" half stays
+  on the ETB trigger.
+
+### STX 2021 fidelity bump (1 — stays ✅, base body now exact)
+
+- **Star Pupil** (STX Silverquill {B}, 0/0 Spirit) — printed 0/0
+  body now exact via the new `enters_with_counters` replacement
+  (was 1/1 over-statement). Two +1/+1 counters land at bf entry
+  before the 0-toughness SBA fires. Felisa, Fang of Silverquill's
+  "creature you control with a counter on it dies" trigger still
+  fires correctly (counters are real `CounterType::PlusOnePlusOne`).
+
+### STX 2021 fidelity bump (1 — stays 🟡)
+
+- **Reckless Amplimancer** (STX mono-green {2}{G}, 0/0 Elf Druid
+  Mutant) — printed 0/0 base body + replacement-effect counters.
+  Per-permanent-you-control proxy stays (the printed
+  per-mana-symbol scaling needs a per-pip introspection primitive
+  the engine doesn't have yet).
+
+### Hybrid pip fidelity bumps (4 — all stay-status, more faithful)
+
+The engine's mana-payment path supports hybrid pips since push
+XXXVIII (Spectacle Mage). This push wires through 4 SOS factories
+that were approximating their hybrid pips as a single color:
+
+- **Stirring Honormancer** ({2}{W}{W/B}{B}, 4/5 Bard) — `{W/B}` pip
+  now exact.
+- **Practiced Scrollsmith** ({R}{R/W}{W}, 3/2 Dwarf Cleric) —
+  `{R/W}` pip now exact.
+- **Paradox Surveyor** ({G}{G/U}{U}, 3/3 Elf Druid) — `{G/U}` pip
+  now exact.
+- **Essenceknit Scholar** ({B}{B/G}{G}, 3/1 Dryad Warlock) —
+  `{B/G}` pip now exact.
+
+### Tests (+8 net, 1368 → 1376)
+
+- Lluwen back-face castable with {G}-only pool (hybrid pip exact).
+- Lluwen back-face rejects empty mana pool.
+- Practiced Scrollsmith castable with {R}{W}{W} (hybrid as W).
+- Essenceknit Scholar castable with {B}{G}{G} (hybrid as G).
+- Pterafractyl X=0 dies to 0-toughness SBA (printed body).
+- Pterafractyl printed body is 1/0 + replacement field wired.
+- Star Pupil printed body is 0/0 + replacement field wired.
+- `enters_with_counters` snapshot serde round-trip.
 
 ## 2026-05-03 push XXXIX: Cast-time additional cost + Aura pre-attach + 10 cards
 
@@ -1598,7 +1689,7 @@ All 1110 lib tests pass (was 1103, +7).
 | Bookwurm | {3}{G}{G} | ✅ | 4/5 Wurm; ETB gain 4 life + draw a card. |
 | Spined Karok | {3}{G} | ✅ | 4/5 vanilla Beast (printed Wurm flavor; we use Beast since Wurm is reserved for Strixhaven-specific tribal hooks). |
 | Field Trip | {2}{G} | ✅ | Sorcery — Lesson. Search library for a basic Forest, put it onto the battlefield tapped, then Scry 1. |
-| Reckless Amplimancer | {2}{G} | 🟡 | 1/1 base body + ETB AddCounter scaled by `Value::PermanentCountControlledBy(You)`. Approximates "for each mana symbol on permanents you control". |
+| Reckless Amplimancer | {2}{G} | 🟡 | Push XL: printed 0/0 body now uses the new `enters_with_counters` replacement (push XL) to land a +1/+1 counter per permanent you control at bf entry, before SBAs run. The "for each mana symbol on permanents you control" rider remains approximated as "per permanent" (no per-pip introspection primitive yet — that gap keeps the card 🟡 overall). |
 | Square Up | {U}{R} | 🟡 | Instant: +0/+1 EOT pump on target friendly + fight an opp creature. Multi-target prompt collapsed to one chosen friendly + auto-picked enemy. |
 | Thrilling Discovery | {1}{U}{R} | 🟡 | Instant: discard 1 + 2 life + draw 2. Additional-cost-on-cast collapsed to in-resolution discard. |
 | Quandrix Cultivator | {3}{G}{U} | ✅ | 3/4 Elf Druid; ETB tutors two basic lands tapped (the printed "up to two" is approximated as exactly-two; second search no-ops if library is empty). |
@@ -2778,7 +2869,7 @@ the back-face spell body is in place.
 | Dina's Guidance | {1}{B}{G} | Sorcery |  | Search your library for a creature card, reveal it, put it into your hand or graveyard, then shuffle. | ✅ | Push XXXV: hand-or-graveyard destination now wired as `Effect::ChooseMode` with two modes (Search → Hand vs Search → Graveyard). Reanimator decks can flip to mode 1; default is mode 0 (hand). |
 | Essenceknit Scholar | {B}{B/G}{G} | Creature — Dryad Warlock | 3/1 | When this creature enters, create a 1/1 black and green Pest creature token with "Whenever this token attacks, you gain 1 life." / At the beginning of your end step, if a creature died under your control this turn, draw a card. | ✅ | ETB Pest token (with on-attack lifegain rider) + end-step gated draw via the new `Predicate::CreaturesDiedThisTurnAtLeast` (backed by `Player.creatures_died_this_turn`). Hybrid `{B/G}` pip approximated as `{B}` (cost: `{B}{B}{G}`). New `CreatureType::Dryad`. |
 | Grapple with Death | {1}{B}{G} | Sorcery |  | Destroy target artifact or creature. You gain 1 life. | ✅ | Wired in `catalog::sets::sos::sorceries`. |
-| Lluwen, Exchange Student // Pest Friend | {2}{B}{G} // {B/G} | Legendary Creature — Elf Druid // Sorcery | 3/4 |  | 🟡 | Push XV: front 3/4 Legendary Elf Druid vanilla + back-face Sorcery `Pest Friend` ({B/G} → {B}, hybrid pip approximation) creates one Pest token (with the on-attack lifegain rider via the shared `pest_token()` helper). Closes out the Witherbloom (B/G) school. |
+| Lluwen, Exchange Student // Pest Friend | {2}{B}{G} // {B/G} | Legendary Creature — Elf Druid // Sorcery | 3/4 |  | ✅ | Push XL: 🟡 → ✅. Front 3/4 Legendary Elf Druid vanilla + back-face Sorcery `Pest Friend` (now exact `{B/G}` hybrid via `ManaSymbol::Hybrid(Black, Green)`, payable from any pool with at least one of {B} or {G}). The Pest token rides on the shared `pest_token()` helper with the on-attack lifegain rider intact. Closes out the Witherbloom (B/G) school's last 🟡 row. |
 | Mind Roots | {1}{B}{G} | Sorcery |  | Target player discards two cards. Put up to one land card discarded this way onto the battlefield tapped under your control. | 🟡 | Push XVII: both halves now wired. Discard half: each opponent discards 2 (player target collapsed to EachOpponent). Land-rider half: `Selector::DiscardedThisResolution(Land)` filtered to one entity via `Selector::one_of(...)`, then moved to your battlefield tapped via `ZoneDest::Battlefield { controller: You, tapped: true }`. The discard tally is bumped by `DiscardChosen` so the per-resolution id list captures the actually-discarded cards. |
 | Old-Growth Educator | {2}{B}{G} | Creature — Treefolk Druid | 4/4 | Vigilance, reach / Infusion — When this creature enters, put two +1/+1 counters on it if you gained life this turn. | ✅ | Wired with the new `Predicate::LifeGainedThisTurnAtLeast` Infusion gate on the ETB trigger. |
 | Pest Mascot | {1}{B}{G} | Creature — Pest Ape | 2/3 | Trample / Whenever you gain life, put a +1/+1 counter on this creature. | ✅ | Wired in `catalog::sets::sos::creatures`. |
@@ -2827,7 +2918,7 @@ the back-face spell body is in place.
 | Paradox Gardens |  | Land |  | This land enters tapped. / {T}: Add {G} or {U}. / {2}{G}{U}, {T}: Surveil 1. (Look at the top card of your library. You may put it into your graveyard.) | ✅ | Wired in `catalog::sets::sos::lands`. |
 | Paradox Surveyor | {G}{G/U}{U} | Creature — Elf Druid | 3/3 | Reach / When this creature enters, look at the top five cards of your library. You may reveal a land card or a card with {X} in its mana cost from among them and put it into your hand. Put the rest on the bottom of your library in a random order. | ✅ | Push XVI: filter promoted to `Land OR HasXInCost` via the new `SelectionRequirement::HasXInCost` primitive — exact-printed reveal filter. Hybrid `{G/U}` pip stays approximated as `{G}` (cost: `{G}{G}{U}`). Misses go to graveyard. |
 | Proctor's Gaze | {2}{G}{U} | Instant |  | Return up to one target nonland permanent to its owner's hand. Search your library for a basic land card, put it onto the battlefield tapped, then shuffle. | ✅ | Wired in `catalog::sets::sos::instants`: bounce target nonland to owner's hand, then `Search { filter: IsBasicLand, to: Battlefield(tapped) }`. |
-| Pterafractyl | {X}{G}{U} | Creature — Dinosaur Fractal | 1/0 | Flying / This creature enters with X +1/+1 counters on it. / When this creature enters, you gain 2 life. | 🟡 | Wired in `catalog::sets::sos::creatures` with base toughness bumped 1/0→1/1 (no replacement-effect primitive yet, so a 1/0 body would die to SBA before its X-counter ETB trigger fires). The X-counter ETB now reads the cast's X correctly via the engine's new trigger-context `x_value` plumbing. |
+| Pterafractyl | {X}{G}{U} | Creature — Dinosaur Fractal | 1/0 | Flying / This creature enters with X +1/+1 counters on it. / When this creature enters, you gain 2 life. | ✅ | Push XL: 🟡 → ✅. Printed body is now exactly 1/0 (was 1/1 over-statement). The new `CardDefinition.enters_with_counters: Option<(CounterType, Value)>` field lands the X +1/+1 counters at battlefield-entry time *before* SBAs run, so the printed 1/0 body is safe. At X=0 the 1/0 body has 0 toughness with no counters and immediately graveyards (matching printed). The "you gain 2 life" half stays on the ETB trigger. |
 | Quandrix Charm | {G}{U} | Instant |  | Choose one — / • Counter target spell unless its controller pays {2}. / • Destroy target enchantment. / • Target creature has base power and toughness 5/5 until end of turn. | 🟡 | Modes 0 (counter unless {2}) and 1 (destroy enchantment) wired in `catalog::sets::sos::instants`. Mode 2 is approximated as a flat +3/+3 EOT (the engine's `Effect::ResetCreature` is a stub, so a true "set base 5/5" rewrite isn't possible yet). |
 | Quandrix, the Proof | {4}{G}{U} | Legendary Creature — Elder Dragon | 6/6 | Flying, trample / Cascade (When you cast this spell, exile cards from the top of your library until you exile a nonland card that costs less. You may cast it without paying its mana cost. Put the exiled cards on the bottom in a random order.) / Instant and sorcery spells you cast from your hand have cascade. | 🟡 | Push XIX: body wired (6/6 Flying+Trample Legendary Elder Dragon G/U). Cascade is not yet a first-class engine keyword (no reveal-until-MV-less-than primitive, no cast-from-exile pipeline; tracked in TODO.md push XVIII). The 6/6 Flying+Trample finisher still hits combat correctly at the 6 CMC slot. |
 | Tam, Observant Sequencer // Deep Sight | {2}{G}{U} // {G}{U} | Legendary Creature — Gorgon Wizard // Sorcery | 4/3 |  | 🟡 | Wired in `catalog::sets::sos::mdfcs` (push XI/XII): vanilla front + back-face spell via the new `GameAction::CastSpellBack` path. Original ⏳ note: Standard primitives — should be straightforward to wire.|
@@ -2895,7 +2986,7 @@ parity is a matter of porting card factories one at a time.
 | Eager First-Year | {W} | ✅ | 2/1 Human Student. Magecraft: target creature gets +1/+1 EOT. Uses the new `effect::shortcut::magecraft()` helper. |
 | Hunt for Specimens | {3}{B} | ✅ | Push XXIV: promoted from 🟡 to ✅. Creates a 1/1 black Pest token whose on-die +1-life trigger rides on `TokenDefinition.triggered_abilities` (SOS push VI), then Learn → Draw 1 (same Lesson approximation as Eyetwitch / Igneous Inspiration). |
 | Silverquill Command | {2}{W}{B} | ✅ | Push XXXVI: "choose two" now wires faithfully via the new `Effect::ChooseModes { count: 2 }` primitive. Auto-decider picks modes 0+1 (counter ability + -3/-3 EOT). ScriptedDecider drives modes [2, 3] (drain + draw) for tests. |
-| Star Pupil | {B} | 🟡 | Push XXV: 0/0 Spirit. Approximated as base 1/1 + ETB AddCounter +1/+1 ×1 (engine has no "enters with N counters" replacement primitive — same approximation as Reckless Amplimancer / Body of Research). Net effective body is 2/2 with one counter, matching the printed two-counters-on-a-0/0. The dies trigger is faithful — `EventKind::CreatureDied/SelfSource` → +1/+1 counter on a targeted creature. |
+| Star Pupil | {B} | ✅ | Push XL: 🟡 → ✅ via the new `enters_with_counters` replacement (push XL). Printed body is now exactly 0/0; two +1/+1 counters land at bf entry before the 0-toughness SBA fires. Dies trigger unchanged — `EventKind::CreatureDied/SelfSource` → +1/+1 counter on a targeted creature. |
 | Codespell Cleric | {W} | ✅ | Push XXV: 1/1 Human Cleric, Lifelink. ETB Scry 1. All three pieces are first-class engine primitives. |
 | Combat Professor | {3}{W} | ✅ | Push XXV: 2/3 Cat Cleric with Flying. Magecraft +1/+1 EOT on target creature (same shape as Eager First-Year, just on a 2/3 flier body). |
 | Clever Lumimancer | {W} | ✅ | Push XXX: 1/1 Human Wizard. Magecraft +2/+2 EOT on self via `magecraft_self_pump(2, 2)`. Aggressive one-mana self-pump magecraft body (1 → 3 → 5 → ... per IS spell cast that turn). |

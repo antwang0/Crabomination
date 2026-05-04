@@ -51,6 +51,7 @@ pub fn thalia_guardian_of_thraben() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -93,6 +94,7 @@ pub fn dark_confidant() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -134,6 +136,7 @@ pub fn sylvan_caryatid() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -192,6 +195,7 @@ pub fn restoration_angel() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -246,6 +250,7 @@ pub fn flickerwisp() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -304,6 +309,7 @@ pub fn loran_of_the_third_path() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -354,6 +360,7 @@ pub fn sentinel_of_the_nameless_city() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -398,6 +405,7 @@ pub fn ranger_captain_of_eos() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -444,6 +452,7 @@ pub fn cathar_commando() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -493,6 +502,7 @@ pub fn haywire_mite() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -543,6 +553,7 @@ pub fn voldaren_epicure() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -587,6 +598,7 @@ pub fn goldspan_dragon() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -635,6 +647,7 @@ pub fn tireless_tracker() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -685,6 +698,7 @@ pub fn bloodtithe_harvester() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -721,6 +735,7 @@ pub fn phyrexian_arena() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -771,6 +786,7 @@ pub fn up_the_beanstalk() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -817,6 +833,7 @@ pub fn tishanas_tidebinder() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -878,6 +895,7 @@ pub fn sylvan_safekeeper() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -941,6 +959,7 @@ pub fn grim_lavamancer() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -984,6 +1003,7 @@ pub fn containment_priest() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -1031,6 +1051,7 @@ pub fn simian_spirit_guide() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -1070,6 +1091,7 @@ pub fn eternal_witness() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -1132,6 +1154,7 @@ pub fn heliod_sun_crowned() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -1172,6 +1195,7 @@ pub fn indulgent_tormentor() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -1210,6 +1234,7 @@ pub fn marauding_mako() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -1489,5 +1514,6 @@ pub fn temur_ascendancy() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }

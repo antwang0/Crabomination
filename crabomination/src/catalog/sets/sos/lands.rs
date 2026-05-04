@@ -59,6 +59,7 @@ fn school_land(
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -184,6 +185,7 @@ pub fn great_hall_of_the_biblioplex() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -220,6 +222,7 @@ pub fn skycoach_waypoint() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -257,5 +260,6 @@ pub fn petrified_hamlet() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }

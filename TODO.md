@@ -7,6 +7,60 @@ See `CUBE_FEATURES.md` (cube-card implementation status) and
 
 ## Recent additions
 
+- ✅ **Push XL (2026-05-04)**: 1 engine primitive + 2 SOS 🟡 → ✅
+  promotions + 4 hybrid pip fidelity bumps + 1 STX 2021 fidelity
+  bump. Tests at 1376 (was 1368, +8 net).
+  - **Engine: `CardDefinition.enters_with_counters: Option<(CounterType,
+    Value)>`** — "this permanent enters with N {kind} counters on
+    it" replacement effect. Resolved at the cast-time spell-resolution
+    path (`stack.rs`) *between* battlefield entry and the ETB-trigger
+    push, so the counters land *before* SBAs run. The `Value` is
+    evaluated against the cast-time `EffectContext` — the spell's
+    `x_value`, `converged_value`, and `targets[]` are in scope, so
+    X-cost permanents like Pterafractyl read the actual paid X.
+    Distinct from an ETB trigger that adds counters via
+    `Effect::AddCounter`: ETB triggers fire *after* bf entry, so a
+    1/0 body would die to the 0-toughness SBA before its trigger
+    could resolve. The replacement form wires the counters in
+    atomically with bf entry, surviving the post-entry SBA pass.
+    Honored only on the spell-resolution path; tokens and
+    `Move → Battlefield` paths skip this hook. `#[serde(default)]`
+    for back-compat with older serialized snapshots.
+  - **2 SOS 🟡 → ✅ promotions**:
+    - **Lluwen, Exchange Student // Pest Friend** ({2}{B}{G} //
+      {B/G}) — back-face Pest Friend's `{B/G}` hybrid pip now wired
+      exactly via `ManaSymbol::Hybrid(Black, Green)`. Closes the
+      Witherbloom (B/G) school's last 🟡 row.
+    - **Pterafractyl** ({X}{G}{U}, 1/0 Dinosaur Fractal) — printed
+      1/0 body via the new `enters_with_counters` replacement.
+  - **STX 2021 fidelity bumps**: Star Pupil (printed 0/0 body via
+    replacement); Reckless Amplimancer (printed 0/0 body, scaling
+    proxy stays 🟡).
+  - **4 hybrid pip fidelity bumps** (stay-status, more faithful):
+    Stirring Honormancer ({W/B}); Practiced Scrollsmith ({R/W});
+    Paradox Surveyor ({G/U}); Essenceknit Scholar ({B/G}).
+  - **8 new tests**: Lluwen castable with {G}-only pool; Lluwen
+    rejects empty pool; Practiced Scrollsmith castable with extra W;
+    Essenceknit Scholar castable with extra G; Pterafractyl X=0
+    dies; Pterafractyl printed body 1/0; Star Pupil printed body
+    0/0; `enters_with_counters` snapshot serde.
+  - **CR 122.6 / 122.6a audit** — "Some spells and abilities refer
+    to counters being put on an object. This refers to putting
+    counters on that object while it's on the battlefield and also
+    to an object that's given counters as it enters the battlefield.
+    / If an object enters the battlefield with counters on it, the
+    effect causing the object to be given counters may specify which
+    player puts those counters on it. If the effect doesn't specify
+    a player, the object's controller puts those counters on it."
+    The new `enters_with_counters` field implements the bf-entry
+    half of CR 122.6 and the controller-puts-counters default of
+    CR 122.6a (the field doesn't expose a player parameter today,
+    so the cast's controller — `caster` in `stack.rs` — places
+    them, matching the unspecified-player default). Validated by
+    Pterafractyl tests (X=0 → 0 counters on entry, dies; X=2 →
+    2 counters before SBA pass) and Star Pupil tests (printed 0/0
+    body + replacement-counters land at entry).
+
 - ✅ **Push XXXIX (2026-05-03)**: 3 engine primitives + 5 card
   promotions + 5 new STX 2021 cards + 1 server view enrichment +
   1 bot affordability fold-in. Tests at 1368 (was 1363, +5 net).
@@ -312,6 +366,63 @@ See `CUBE_FEATURES.md` (cube-card implementation status) and
     reject / Mascot steal + revert), 9 cube-card tests (one per new
     card + body sanity for vanilla bodies), 1 view test
     (`ability_cost_label_renders_exile_gy_cost`).
+
+## Future work — engine/UI suggestions surfaced by push XL
+
+- **`enters_with_counters` for tokens** — the current implementation
+  honors the field only on the cast-time spell-resolution path
+  (`stack.rs`). Tokens (`Effect::CreateToken`) and reanimate-style
+  `Move → Battlefield` paths skip the hook. Future "this token
+  enters with N counters" minters (Incubator tokens, Body of
+  Research's Fractal token mints with X counters, Snow Day's
+  hand-size-counters Fractal) would need a parallel hook on the
+  token-creation path that reads the value at token-mint time. Mostly
+  blocked by the question of which `EffectContext` to evaluate the
+  Value against (the spell's ctx vs. a fresh ctx at mint time);
+  `Value::HandSizeOf` etc. read fine in either, but X-cost values
+  need the spell's x_value.
+
+- **`enters_with_counters` for the cast-from-graveyard path** —
+  Flashback / Aftermath casts re-resolve through `cast_flashback`,
+  which uses `continue_spell_resolution` — that path may or may
+  not hit the `enters_with_counters` hook in `stack.rs`. Audit
+  needed: does flashback-cast Pterafractyl correctly enter with
+  X counters? (Pterafractyl has no Flashback, but a future X-cost
+  Flashback creature would need to be tested.)
+
+- **Multi-counter `enters_with_counters` (poison + +1/+1)** — current
+  field is `Option<(CounterType, Value)>` — exactly one counter
+  kind. Future cards may enter with multiple kinds (a planeswalker
+  enters with 4 loyalty + a stun counter from a static; battles
+  enter with defense counters from a separate static). Would need
+  a `Vec<(CounterType, Value)>` shape to express. Not blocking any
+  current card.
+
+- **CR 122.6a `player` parameter** — CR 122.6a says "the effect
+  causing the object to be given counters may specify which player
+  puts those counters on it. If the effect doesn't specify a
+  player, the object's controller puts those counters on it." The
+  current implementation defaults to the caster (controller) and
+  doesn't expose a player parameter; future "your opponent puts X
+  counters on it" effects would need a `placer: Option<PlayerRef>`
+  field. Today no card needs it.
+
+- **`enters_with_counters` × Pterafractyl etc. with X=0 audit** —
+  Pterafractyl printed 1/0 + 0 counters → dies to SBA. Verified by
+  the new test. Some cards (Hangarback Walker {X}) have a "this
+  enters with X +1/+1 counters and is a 0/0" body that's fine at
+  X=0 because the body is also dependent on counters. Add a future
+  test for Hangarback-style "enters as a 0/0 with X +1/+1 counters"
+  bodies once such a card lands.
+
+- **Hybrid pip migration audit** — push XL wired faithful hybrid
+  pips on Lluwen, Stirring Honormancer, Practiced Scrollsmith,
+  Paradox Surveyor, Essenceknit Scholar. Other cards with
+  "approximated as {single-color}" hybrid notes (audit script
+  output) deserve the same treatment when they come up in test
+  scenarios. The engine's `pay()` already handles hybrid pips
+  correctly since push XXXVIII (Spectacle Mage); this is purely a
+  factory-side migration.
 
 ## Future work — engine/UI suggestions surfaced by push XXXIX
 

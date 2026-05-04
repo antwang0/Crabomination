@@ -91,6 +91,7 @@ fn pathway_face(name: &'static str, land_type: LandType, color: Color) -> CardDe
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -292,6 +293,7 @@ pub fn gemstone_mine() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -391,6 +393,7 @@ pub fn gemstone_caverns() -> CardDefinition {
                 amount: Value::Const(1),
             },
         }),
+        enters_with_counters: None,
     }
 }
 
@@ -459,6 +462,7 @@ pub fn cavern_of_souls() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -520,5 +524,6 @@ pub fn cephalid_coliseum() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }

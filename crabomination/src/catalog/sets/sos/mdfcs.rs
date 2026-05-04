@@ -80,6 +80,7 @@ fn vanilla_front(
         additional_sac_cost: None,
         back_face: Some(Box::new(back)),
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -109,6 +110,7 @@ fn spell_back(
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -1118,19 +1120,20 @@ pub fn abigale_poet_laureate() -> CardDefinition {
 /// Front: 3/4 Legendary Elf Druid (vanilla body for Witherbloom finisher
 /// curve). Back: sorcery — create a 1/1 black-and-green Pest creature
 /// token with the printed "Whenever this token attacks, you gain 1 life"
-/// rider. The hybrid `{B/G}` pip is approximated as `{B}` for cost-pay
-/// (matches the Witherbloom convention used by Essenceknit Scholar's
-/// `{B/G}` and Practiced Scrollsmith's `{R/W}` pips).
+/// rider.
 ///
-/// This MDFC closes out the Witherbloom (B/G) school in `STRIXHAVEN2.md`
-/// — the only ⏳ row left for the school before this push.
+/// Push XL: hybrid `{B/G}` pip on Pest Friend is now wired faithfully via
+/// `ManaSymbol::Hybrid(Black, Green)`. The engine's `pay()` already
+/// supports hybrid pips (push XXXVIII Spectacle Mage), so the back face
+/// can be cast from any pool that has at least one of {B} or {G}
+/// available. The previous `{B}`-only approximation forced black mana
+/// for what should be either color.
 pub fn lluwen_exchange_student() -> CardDefinition {
     use super::sorceries::pest_token;
-    use crate::effect::ManaPayload;
-    let _ = ManaPayload::Colors(vec![]); // suppress unused if not used elsewhere
+    use crate::mana::hybrid;
     let back = spell_back(
         "Pest Friend",
-        cost(&[b()]),
+        cost(&[hybrid(Color::Black, Color::Green)]),
         CardType::Sorcery,
         Effect::CreateToken {
             who: PlayerRef::You,

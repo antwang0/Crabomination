@@ -549,6 +549,45 @@ mod tests {
     }
 
     #[test]
+    fn enters_with_counters_field_serde_round_trip() {
+        // Push XL: `CardDefinition.enters_with_counters: Option<(CounterType,
+        // Value)>` round-trips through serde without dropping the
+        // counter kind or value branch. The field uses `#[serde(default)]`
+        // so older serialized snapshots without it deserialize cleanly
+        // as None.
+        //
+        // The catalog factory itself is the round-trip subject — we
+        // serialize a real Pterafractyl factory and confirm the
+        // deserialized copy retains the `enters_with_counters` field
+        // intact. Avoids the `&'static str` lifetime-vs-`from_str`
+        // friction by going through the catalog's own factory.
+        use crate::card::CounterType;
+        use crate::effect::Value;
+        let def = crate::catalog::pterafractyl();
+        let original = def.enters_with_counters.clone();
+        let json = serde_json::to_string(&def).expect("serialize");
+        // CardDefinition has `#[serde(bound = "")]` which requires
+        // `'de: 'static`. Leak the JSON string so deserialization can
+        // satisfy the static lifetime. Tiny leak (one card per test).
+        let leaked: &'static str = Box::leak(json.into_boxed_str());
+        let parsed: crate::card::CardDefinition =
+            serde_json::from_str(leaked).expect("deserialize");
+        match parsed.enters_with_counters {
+            Some((kind, value)) => {
+                assert_eq!(kind, CounterType::PlusOnePlusOne);
+                assert!(matches!(value, Value::XFromCost),
+                    "Pterafractyl's XFromCost branch round-trips intact");
+                assert_eq!(
+                    original,
+                    Some((kind, value)),
+                    "round-trip preserves the full Pterafractyl spec"
+                );
+            }
+            None => panic!("expected enters_with_counters to be Some after round-trip"),
+        }
+    }
+
+    #[test]
     fn tax_activated_abilities_static_effect_serde_round_trip() {
         // Push XXXVII: `StaticEffect::TaxActivatedAbilities { filter,
         // amount }` round-trips through serde. Used by Augmenter Pugilist

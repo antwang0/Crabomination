@@ -422,6 +422,44 @@ pub struct CardDefinition {
     /// as a mulligan helper (Serum Powder). Resolved post-mulligan by
     /// `GameState::apply_opening_hand_effects`.
     pub opening_hand: Option<OpeningHandEffect>,
+    /// "This permanent enters with N {counter} counters on it" replacement.
+    /// When `Some((kind, value))`, the engine adds `value`-many `kind`
+    /// counters at the moment the card enters the battlefield — *before*
+    /// any ETB trigger fires and before SBAs run. The `Value` is evaluated
+    /// against the cast-time `EffectContext` (the spell's `x_value`,
+    /// `converged_value`, and `targets[]` are in scope), so X-cost
+    /// permanents like Pterafractyl ({X}{G}{U}, "enters with X +1/+1
+    /// counters") and converge-scaled bodies (Body of Research, Rancorous
+    /// Archaic) read the actual paid X / color count.
+    ///
+    /// Distinct from an ETB trigger that adds counters via
+    /// `Effect::AddCounter`: ETB triggers fire *after* the permanent is on
+    /// the battlefield, so a 1/0 body (Pterafractyl) would die to the
+    /// 0-toughness SBA before its trigger gets a chance to resolve. The
+    /// replacement form wires the counters in atomically with the bf
+    /// entry, surviving the post-entry SBA pass.
+    ///
+    /// Only honored on the spell-resolution path in `stack.rs`; tokens
+    /// and `Move → Battlefield` paths skip this hook (tokens have no X
+    /// or paid mana to reference, and reanimate-style returns shouldn't
+    /// re-add the original counter count).
+    ///
+    /// Implements **CR 122.6 / 122.6a**: "Some spells and abilities
+    /// refer to counters being put on an object. This refers to putting
+    /// counters on that object while it's on the battlefield and also
+    /// to an object that's given counters as it enters the battlefield.
+    /// / If an object enters the battlefield with counters on it, the
+    /// effect causing the object to be given counters may specify which
+    /// player puts those counters on it. If the effect doesn't specify
+    /// a player, the object's controller puts those counters on it." The
+    /// field doesn't expose a player parameter (today no card needs
+    /// the "your opponent puts X counters" variant), so the controller
+    /// (`caster` in `stack.rs`) is the implicit placer per the
+    /// unspecified-player default. Also referenced by **CR 707.5**:
+    /// copy effects honor "enters with" replacements on copied
+    /// objects.
+    #[serde(default)]
+    pub enters_with_counters: Option<(CounterType, crate::effect::Value)>,
 }
 
 /// An alternative (pitch) cost. Replaces the normal mana cost when the

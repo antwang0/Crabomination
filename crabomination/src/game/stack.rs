@@ -301,6 +301,41 @@ impl GameState {
                     self.battlefield.push(card);
                     events.push(GameEvent::PermanentEntered { card_id });
 
+                    // Push XL: "enters with N counters" replacement
+                    // (CR 122.6 / 122.6a). Resolves *before* ETB triggers
+                    // fire and *before* SBAs run, so the body is correct
+                    // for subsequent toughness checks. Lets a 1/0
+                    // Pterafractyl + X +1/+1 counters survive the
+                    // post-entry SBA pass (without the replacement, the
+                    // 0-toughness body would graveyard before its ETB
+                    // trigger could resolve to add the counters). The
+                    // controller (`caster`) is the unspecified-player
+                    // default placer per CR 122.6a.
+                    let enters_with = self
+                        .battlefield
+                        .iter()
+                        .find(|c| c.id == card_id)
+                        .and_then(|c| c.definition.enters_with_counters.clone());
+                    if let Some((kind, value)) = enters_with {
+                        let ctx = crate::game::effects::EffectContext::for_spell(
+                            caster,
+                            target,
+                            mode.unwrap_or(0),
+                            x_value,
+                        );
+                        let n = self.evaluate_value(&value, &ctx).max(0) as u32;
+                        if n > 0
+                            && let Some(c) = self.battlefield.iter_mut().find(|c| c.id == card_id)
+                        {
+                            c.add_counters(kind, n);
+                            events.push(GameEvent::CounterAdded {
+                                card_id,
+                                counter_type: kind,
+                                count: n,
+                            });
+                        }
+                    }
+
                     // Evoke: schedule a self-sacrifice trigger that resolves
                     // AFTER the ETB triggers (so the ETB exile happens first,
                     // then the creature sacrifices itself).

@@ -65,6 +65,7 @@ pub fn callous_sell_sword() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -108,6 +109,7 @@ pub fn chancellor_of_the_tangle() -> CardDefinition {
                 pool: ManaPayload::Colors(vec![Color::Green]),
             },
         }),
+        enters_with_counters: None,
     }
 }
 
@@ -143,6 +145,7 @@ pub fn cosmogoyf() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -176,6 +179,7 @@ pub fn devourer_of_destiny() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -233,6 +237,7 @@ pub fn atraxa_grand_unifier() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -279,6 +284,7 @@ pub fn griselbrand() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -357,6 +363,7 @@ pub fn psychic_frog() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -393,6 +400,7 @@ pub fn quantum_riddler() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -448,6 +456,7 @@ pub fn solitude() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -499,6 +508,7 @@ pub fn chancellor_of_the_annex() -> CardDefinition {
                 count: Value::Const(1),
             },
         }),
+        enters_with_counters: None,
     }
 }
 
@@ -537,6 +547,7 @@ pub fn elesh_norn_mother_of_machines() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -614,5 +625,6 @@ pub fn teferi_time_raveler() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }

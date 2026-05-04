@@ -52,6 +52,7 @@ pub fn witherbloom_apprentice() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -100,6 +101,7 @@ pub fn pest_summoning() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -149,6 +151,7 @@ pub fn bayou_groff() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -203,6 +206,7 @@ pub fn witherbloom_pledgemage() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -265,6 +269,7 @@ pub fn daemogoth_woe_eater() -> CardDefinition {
         ),
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -311,6 +316,7 @@ pub fn eyeblight_cullers() -> CardDefinition {
         ),
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -390,6 +396,7 @@ pub fn dina_soul_steeper() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -443,6 +450,7 @@ pub fn daemogoth_titan() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -483,6 +491,7 @@ pub fn pest_infestation() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -525,6 +534,7 @@ pub fn mortality_spear() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -608,6 +618,7 @@ pub fn witherbloom_command() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -669,5 +680,6 @@ pub fn foul_play() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }

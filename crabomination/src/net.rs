@@ -181,6 +181,16 @@ pub struct KnownCard {
     /// to `None` for older serialized views.
     #[serde(default)]
     pub additional_cost_label: Option<String>,
+    /// Short label for the printed "this enters with N counters"
+    /// replacement (`CardDefinition.enters_with_counters`). Lets the
+    /// client tooltip show "Enters with 2 +1/+1 counters" or
+    /// "Enters with X +1/+1 counters" so players can see the printed
+    /// body modification before casting (Star Pupil's "0/0 enters
+    /// with two +1/+1 counters", Pterafractyl's "1/0 enters with X
+    /// +1/+1 counters"). Defaulted to `None` for older serialized
+    /// views.
+    #[serde(default)]
+    pub enters_with_counters_label: Option<String>,
 }
 
 /// One activated ability as projected for the client.

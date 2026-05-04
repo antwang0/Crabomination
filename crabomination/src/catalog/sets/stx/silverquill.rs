@@ -62,6 +62,7 @@ pub fn spirited_companion() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -104,6 +105,7 @@ pub fn eyetwitch() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -146,6 +148,7 @@ pub fn closing_statement() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -185,6 +188,7 @@ pub fn vanishing_verse() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -235,6 +239,7 @@ pub fn killian_ink_duelist() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -316,6 +321,7 @@ pub fn devastating_mastery() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -373,6 +379,7 @@ pub fn felisa_fang_of_silverquill() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -409,6 +416,7 @@ pub fn mavinda_students_advocate() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -452,6 +460,7 @@ pub fn eager_first_year() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -499,6 +508,7 @@ pub fn hunt_for_specimens() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -508,16 +518,15 @@ pub fn hunt_for_specimens() -> CardDefinition {
 /// "Star Pupil enters the battlefield with two +1/+1 counters on it.
 ///  When Star Pupil dies, put a +1/+1 counter on target creature."
 ///
-/// 🟡 Same approximation as Reckless Amplimancer / Body of Research:
-/// the engine has no "enters the battlefield with N +1/+1 counters"
-/// replacement primitive, so we ship base 1/1 + ETB `AddCounter +1/+1
-/// ×1` to land at the printed 2/2 effective body. The counter is a real
-/// `CounterType::PlusOnePlusOne`, so Felisa, Fang of Silverquill's
-/// "creature you control with a counter on it dies" trigger fires
-/// correctly when Star Pupil's death-replacement-counter rider drops a
-/// +1/+1 counter on another creature. The dies trigger is faithful —
-/// `EventKind::CreatureDied/SelfSource` → `Effect::AddCounter` on a
-/// targeted creature (auto-target framework picks a friendly creature).
+/// Push XL: ✅ promoted via the new `enters_with_counters`
+/// replacement field. Base body is now the printed 0/0 (no
+/// over-statement); the two +1/+1 counters are added at bf entry
+/// time *before* SBAs run, so the 0-toughness body never sees the
+/// graveyard. Felisa, Fang of Silverquill's "creature you control
+/// with a counter on it dies" trigger keeps firing correctly
+/// because the counters are real `CounterType::PlusOnePlusOne`. The
+/// dies trigger is faithful — `EventKind::CreatureDied/SelfSource` →
+/// `Effect::AddCounter` on a targeted creature.
 pub fn star_pupil() -> CardDefinition {
     CardDefinition {
         name: "Star Pupil",
@@ -528,32 +537,21 @@ pub fn star_pupil() -> CardDefinition {
             creature_types: vec![CreatureType::Spirit],
             ..Default::default()
         },
-        // Base 1/1 (printed 0/0) so SBA doesn't drop the body before
-        // the ETB +1/+1 counter trigger lands. Net is 2/2 with one
-        // counter, matching the printed two-counters-on-a-0/0.
-        power: 1,
-        toughness: 1,
+        // Printed 0/0 — the two +1/+1 counters from
+        // `enters_with_counters` keep it alive at 2/2.
+        power: 0,
+        toughness: 0,
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![
-            TriggeredAbility {
-                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-                effect: Effect::AddCounter {
-                    what: Selector::This,
-                    kind: CounterType::PlusOnePlusOne,
-                    amount: Value::Const(1),
-                },
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+            effect: Effect::AddCounter {
+                what: target_filtered(SelectionRequirement::Creature),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
             },
-            TriggeredAbility {
-                event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
-                effect: Effect::AddCounter {
-                    what: target_filtered(SelectionRequirement::Creature),
-                    kind: CounterType::PlusOnePlusOne,
-                    amount: Value::Const(1),
-                },
-            },
-        ],
+        }],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -561,6 +559,7 @@ pub fn star_pupil() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(2))),
     }
 }
 
@@ -602,6 +601,7 @@ pub fn codespell_cleric() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -643,6 +643,7 @@ pub fn combat_professor() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -715,6 +716,7 @@ pub fn silverquill_command() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -757,6 +759,7 @@ pub fn dueling_coach() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -800,6 +803,7 @@ pub fn hall_monitor() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -838,6 +842,7 @@ pub fn clever_lumimancer() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -917,6 +922,7 @@ pub fn karok_wrangler() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 

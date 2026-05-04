@@ -65,6 +65,7 @@ pub fn eager_glyphmage() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -117,6 +118,7 @@ pub fn stirring_hopesinger() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -151,6 +153,7 @@ pub fn rehearsed_debater() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -190,6 +193,7 @@ pub fn informed_inkwright() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -246,6 +250,7 @@ pub fn owlin_historian() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -296,6 +301,7 @@ pub fn inkshape_demonstrator() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -342,6 +348,7 @@ pub fn inkling_mascot() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -376,6 +383,7 @@ pub fn imperious_inkmage() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -419,6 +427,7 @@ pub fn sneering_shadewriter() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -462,6 +471,7 @@ pub fn burrog_banemaker() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -506,6 +516,7 @@ pub fn noxious_newt() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -558,6 +569,7 @@ pub fn mindful_biomancer() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -593,6 +605,7 @@ pub fn shopkeepers_bane() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -640,6 +653,7 @@ pub fn studious_first_year() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     };
     CardDefinition {
         name: "Studious First-Year",
@@ -663,6 +677,7 @@ pub fn studious_first_year() -> CardDefinition {
         additional_sac_cost: None,
         back_face: Some(Box::new(back)),
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -707,6 +722,7 @@ pub fn bogwater_lumaret() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -744,6 +760,7 @@ pub fn pest_mascot() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -803,6 +820,7 @@ pub fn blech_loafing_pest() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -833,6 +851,7 @@ pub fn rearing_embermare() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -895,6 +914,7 @@ pub fn ascendant_dustspeaker() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -941,6 +961,7 @@ pub fn shattered_acolyte() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -977,6 +998,7 @@ pub fn summoned_dromedary() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -1000,13 +1022,16 @@ pub fn summoned_dromedary() -> CardDefinition {
 pub fn stirring_honormancer() -> CardDefinition {
     use crate::card::SelectionRequirement;
     use crate::effect::ZoneDest;
+    use crate::mana::hybrid;
     CardDefinition {
         name: "Stirring Honormancer",
-        // {2}{W}{W/B}{B}: hybrid pip approximated as {W} for cost
-        // calculation, so we cast it for {2}{W}{W}{B} (same total CMC
-        // 5; one extra mandatory white pip). The engine has no hybrid
-        // mana primitive yet for spell costs.
-        cost: cost(&[generic(2), w(), w(), b()]),
+        // Push XL: hybrid `{W/B}` pip now wired faithfully via
+        // `ManaSymbol::Hybrid(White, Black)`. Total cost is {2}{W}{W/B}{B}
+        // — castable from any pool with two W + one B, or two W + one
+        // hybrid-able pool, or three W + nothing else. The engine's
+        // `pay()` already supports hybrid pips since push XXXVIII
+        // (Spectacle Mage); this brings Honormancer to printed parity.
+        cost: cost(&[generic(2), w(), hybrid(Color::White, Color::Black), b()]),
         supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
@@ -1038,6 +1063,7 @@ pub fn stirring_honormancer() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -1121,6 +1147,7 @@ pub fn conciliators_duelist() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -1158,6 +1185,7 @@ pub fn lecturing_scornmage() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -1192,6 +1220,7 @@ pub fn melancholic_poet() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -1253,6 +1282,7 @@ pub fn snooping_page() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -1318,6 +1348,7 @@ pub fn scolding_administrator() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -1362,6 +1393,7 @@ pub fn zealous_lorecaster() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -1403,6 +1435,7 @@ pub fn environmental_scientist() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -1447,6 +1480,7 @@ pub fn pestbrood_sloth() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -1500,6 +1534,7 @@ pub fn old_growth_educator() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -1541,6 +1576,7 @@ pub fn teachers_pest() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -1593,6 +1629,7 @@ pub fn arnyn_deathbloom_botanist() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -1656,6 +1693,7 @@ pub fn aziza_mage_tower_captain() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -1717,6 +1755,7 @@ pub fn mica_reader_of_ruins() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -1766,6 +1805,7 @@ pub fn startled_relic_sloth() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -1844,6 +1884,7 @@ pub fn hardened_academic() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -1903,6 +1944,7 @@ pub fn slumbering_trudge() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -1941,6 +1983,7 @@ pub fn tenured_concocter() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -1981,6 +2024,7 @@ pub fn biblioplex_tomekeeper() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -2034,6 +2078,7 @@ pub fn strixhaven_skycoach() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -2079,6 +2124,7 @@ pub fn rancorous_archaic() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -2088,15 +2134,15 @@ pub fn rancorous_archaic() -> CardDefinition {
 /// "Flying / This creature enters with X +1/+1 counters on it. / When
 /// this creature enters, you gain 2 life."
 ///
-/// Approximation: printed P/T is 1/0 (the X +1/+1 counters from the
-/// "enters with" replacement keep it alive). The engine has no
-/// replacement-effect primitive yet, so we model the "enters with"
-/// half as an ETB trigger; that trigger fires *after* state-based
-/// actions, which would lethally check a 0-toughness body before it
-/// gets any counters. To keep the card playable we bump the base body
-/// to 1/1 — a 1-toughness over-statement at X=0, but at typical
-/// casting curves (X≥2) the resulting P/T is near-identical (X=2 →
-/// 3/3 here vs. printed 3/2). The ETB also gains 2 life.
+/// Push XL: the printed "enters with X +1/+1 counters" replacement
+/// is now wired faithfully via the new
+/// `CardDefinition.enters_with_counters` field. Counters are added at
+/// bf entry time *before* SBAs run, so the printed 1/0 base body is
+/// safe — a Pterafractyl cast for X=0 enters as a 1/0 *with no
+/// counters* and immediately graveyards (matching printed). At X=2
+/// it lands as a 3/2 (matching printed 1/0 + 2 +1/+1 counters). The
+/// "you gain 2 life" half stays on the ETB trigger; the
+/// `enters_with_counters` field handles only the counter clause.
 pub fn pterafractyl() -> CardDefinition {
     use crate::card::CounterType;
     use crate::mana::{ManaSymbol, g, u};
@@ -2112,23 +2158,18 @@ pub fn pterafractyl() -> CardDefinition {
             ..Default::default()
         },
         power: 1,
-        toughness: 1,
+        toughness: 0,
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::Seq(vec![
-                Effect::AddCounter {
-                    what: Selector::This,
-                    kind: CounterType::PlusOnePlusOne,
-                    amount: Value::XFromCost,
-                },
-                Effect::GainLife {
-                    who: Selector::You,
-                    amount: Value::Const(2),
-                },
-            ]),
+            // Just the lifegain — the counter clause is handled by the
+            // `enters_with_counters` replacement (push XL).
+            effect: Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
         }],
         static_abilities: vec![],
         base_loyalty: 0,
@@ -2137,6 +2178,7 @@ pub fn pterafractyl() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::XFromCost)),
     }
 }
 
@@ -2184,6 +2226,7 @@ pub fn fractal_mascot() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -2250,6 +2293,7 @@ pub fn stadium_tidalmage() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -2299,6 +2343,7 @@ pub fn charging_strifeknight() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -2343,6 +2388,7 @@ pub fn cuboid_colony() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -2385,6 +2431,7 @@ pub fn fractal_tender() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -2422,6 +2469,7 @@ pub fn thornfist_striker() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -2454,6 +2502,7 @@ pub fn hungry_graffalon() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -2488,6 +2537,7 @@ pub fn pensive_professor() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -2528,6 +2578,7 @@ pub fn tester_of_the_tangential() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -2583,6 +2634,7 @@ pub fn muse_seeker() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -2626,6 +2678,7 @@ pub fn aberrant_manawurm() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -2681,6 +2734,7 @@ pub fn tackle_artist() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -2734,6 +2788,7 @@ pub fn thunderdrum_soloist() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -2792,6 +2847,7 @@ pub fn molten_core_maestro() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -2847,6 +2903,7 @@ pub fn expressive_firedancer() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -2888,6 +2945,7 @@ pub fn strife_scholar() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -2918,6 +2976,7 @@ pub fn eternal_student() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -2962,6 +3021,7 @@ pub fn postmortem_professor() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -3007,6 +3067,7 @@ pub fn spirit_mascot() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -3063,6 +3124,7 @@ pub fn witherbloom_the_balancer() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -3105,6 +3167,7 @@ pub fn garrison_excavator() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -3166,6 +3229,7 @@ pub fn topiary_lecturer() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -3221,6 +3285,7 @@ pub fn transcendent_archaic() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -3291,6 +3356,7 @@ pub fn sundering_archaic() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -3346,6 +3412,7 @@ pub fn poisoners_apprentice() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -3414,6 +3481,7 @@ pub fn hydro_channeler() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -3448,6 +3516,7 @@ pub fn campus_composer() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -3483,6 +3552,7 @@ pub fn ulna_alley_shopkeep() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -3561,6 +3631,7 @@ pub fn emil_vastlands_roamer() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -3618,6 +3689,7 @@ pub fn elemental_mascot() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -3668,6 +3740,7 @@ pub fn colorstorm_stallion() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -3718,6 +3791,7 @@ pub fn abstract_paintmage() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -3766,6 +3840,7 @@ pub fn geometers_arthropod() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -3821,6 +3896,7 @@ pub fn matterbending_mage() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -3865,6 +3941,7 @@ pub fn orysa_tide_choreographer() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -3922,6 +3999,7 @@ pub fn exhibition_tidecaller() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -3942,12 +4020,17 @@ pub fn exhibition_tidecaller() -> CardDefinition {
 ///   3/2 first striker with mild graveyard-hate.
 pub fn practiced_scrollsmith() -> CardDefinition {
     use crate::effect::ZoneDest;
-    use crate::mana::{r, w as wm};
+    use crate::mana::{hybrid, r, w as wm};
     let nonperm_in_gy = SelectionRequirement::Nonland
         .and(SelectionRequirement::Not(Box::new(SelectionRequirement::Creature)));
     CardDefinition {
         name: "Practiced Scrollsmith",
-        cost: cost(&[r(), r(), wm()]),
+        // Push XL: hybrid `{R/W}` pip now wired faithfully via
+        // `ManaSymbol::Hybrid(Red, White)`. Total cost is {R}{R/W}{W}
+        // — castable from R+W, R+R, or W+W pools (the printed legality).
+        // The "may cast until next turn" rider is still gap (no
+        // cast-from-exile-with-time-limit primitive).
+        cost: cost(&[r(), hybrid(Color::Red, Color::White), wm()]),
         supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
@@ -3985,6 +4068,7 @@ pub fn practiced_scrollsmith() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -4067,6 +4151,7 @@ pub fn colossus_of_the_blood_age() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -4106,6 +4191,7 @@ pub fn soaring_stoneglider() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -4162,6 +4248,7 @@ pub fn spectacular_skywhale() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -4204,6 +4291,7 @@ pub fn zaffai_and_the_tempests() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -4269,6 +4357,7 @@ pub fn lorehold_the_historian() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -4329,6 +4418,7 @@ pub fn silverquill_the_disputant() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -4370,6 +4460,7 @@ pub fn quandrix_the_proof() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -4411,6 +4502,7 @@ pub fn prismari_the_inspiration() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -4461,6 +4553,7 @@ pub fn mage_tower_referee() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -4558,6 +4651,7 @@ pub fn ennis_debate_moderator() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -4595,6 +4689,7 @@ pub fn tragedy_feaster() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -4641,6 +4736,7 @@ pub fn forum_necroscribe() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -4731,6 +4827,7 @@ pub fn berta_wise_extrapolator() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -4743,14 +4840,17 @@ pub fn berta_wise_extrapolator() -> CardDefinition {
 /// Now wired (push XVI): the "land OR card with {X}" filter uses the
 /// new `SelectionRequirement::HasXInCost` predicate ORed with `Land`.
 /// Misses go to graveyard (engine default for `RevealUntilFind`); the
-/// printed "rest on bottom random order" rider is approximated. The
-/// hybrid `{G/U}` pip stays approximated as `{G}` (cost: `{G}{G}{U}`).
+/// printed "rest on bottom random order" rider is approximated.
+///
+/// Push XL: hybrid `{G/U}` pip now wired faithfully via
+/// `ManaSymbol::Hybrid(Green, Blue)`. Total cost is {G}{G/U}{U} —
+/// castable from G+U, G+G, or U+U pools (printed legality).
 pub fn paradox_surveyor() -> CardDefinition {
     use crate::effect::ZoneDest;
-    use crate::mana::{g, u};
+    use crate::mana::{g, hybrid, u};
     CardDefinition {
         name: "Paradox Surveyor",
-        cost: cost(&[g(), g(), u()]),
+        cost: cost(&[g(), hybrid(Color::Green, Color::Blue), u()]),
         supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
@@ -4779,6 +4879,7 @@ pub fn paradox_surveyor() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -4836,6 +4937,7 @@ pub fn magmablood_archaic() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -4888,6 +4990,7 @@ pub fn wildgrowth_archaic() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -4936,6 +5039,7 @@ pub fn ambitious_augmenter() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -4993,6 +5097,7 @@ pub fn rubble_rouser() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -5068,6 +5173,7 @@ pub fn professor_dellian_fel() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -5146,6 +5252,7 @@ pub fn ral_zarek_guest_lecturer() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -5192,6 +5299,7 @@ pub fn textbook_tabulator() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -5267,6 +5375,7 @@ pub fn deluge_virtuoso() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -5319,6 +5428,7 @@ pub fn moseo_veins_new_dean() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -5355,6 +5465,7 @@ pub fn stone_docent() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -5395,6 +5506,7 @@ pub fn page_loose_leaf() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -5404,20 +5516,22 @@ pub fn page_loose_leaf() -> CardDefinition {
 /// beginning of your end step, if a creature died under your control
 /// this turn, draw a card."
 ///
-/// Hybrid `{B/G}` pip approximated as `{B}` (cost: `{B}{B}{G}`). Both
-/// triggers wired faithfully — the ETB Pest token rides on the shared
-/// `pest_token()` helper (so its on-attack lifegain rider trickles into
-/// Witherbloom payoffs); the end-step draw uses the new
+/// Push XL: hybrid `{B/G}` pip now wired faithfully via
+/// `ManaSymbol::Hybrid(Black, Green)` — total cost is {B}{B/G}{G},
+/// castable from B+G, B+B, or G+G pools. Both triggers wired
+/// faithfully — the ETB Pest token rides on the shared `pest_token()`
+/// helper (so its on-attack lifegain rider trickles into Witherbloom
+/// payoffs); the end-step draw uses the new
 /// `Predicate::CreaturesDiedThisTurnAtLeast` gate, scoped to the active
 /// player so it fires once per controller's own end step.
 pub fn essenceknit_scholar() -> CardDefinition {
     use super::sorceries::pest_token;
     use crate::card::Predicate;
     use crate::game::types::TurnStep;
-    use crate::mana::g;
+    use crate::mana::{g, hybrid};
     CardDefinition {
         name: "Essenceknit Scholar",
-        cost: cost(&[b(), b(), g()]),
+        cost: cost(&[b(), hybrid(Color::Black, Color::Green), g()]),
         supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
@@ -5466,6 +5580,7 @@ pub fn essenceknit_scholar() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -5525,5 +5640,6 @@ pub fn the_dawning_archaic() -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }

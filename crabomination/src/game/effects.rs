@@ -2717,6 +2717,7 @@ pub fn token_to_card_definition(token: &TokenDefinition) -> CardDefinition {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 

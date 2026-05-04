@@ -2754,12 +2754,28 @@ fn tempted_by_the_oriq_rejects_high_mv_creature() {
 
 // ── Push XXV Silverquill additions ─────────────────────────────────────────
 
+/// Push XL: Star Pupil's printed body is now exactly 0/0 (was 1/1
+/// over-statement). The new `enters_with_counters` replacement
+/// (push XL) lands two +1/+1 counters at bf entry before the
+/// 0-toughness SBA triggers, so the printed 0/0 body is safe.
+#[test]
+fn star_pupil_printed_body_is_zero_zero_with_two_counters_replacement() {
+    let def = catalog::star_pupil();
+    assert_eq!(def.power, 0, "printed power is 0");
+    assert_eq!(def.toughness, 0, "printed toughness is 0");
+    let (kind, value) = def.enters_with_counters.clone()
+        .expect("Star Pupil should use `enters_with_counters`");
+    assert_eq!(kind, CounterType::PlusOnePlusOne);
+    assert!(matches!(value, crate::effect::Value::Const(2)),
+        "should add exactly 2 +1/+1 counters");
+}
+
 #[test]
 fn star_pupil_etb_adds_one_plus_counter_to_self() {
-    // Printed Star Pupil enters with two +1/+1 counters; we approximate
-    // as base 1/1 + ETB +1/+1 ×1 (same approximation as Reckless
-    // Amplimancer) so SBA doesn't drop the body before the trigger
-    // resolves. Net effective body is 2/2 with one counter.
+    // Push XL: Star Pupil now uses the printed `enters_with_counters`
+    // replacement — base body is the printed 0/0 and TWO +1/+1
+    // counters land at bf entry (before SBA runs). Net effective body
+    // is 2/2 with two counters.
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::star_pupil());
     g.players[0].mana_pool.add(Color::Black, 1);
@@ -2771,9 +2787,9 @@ fn star_pupil_etb_adds_one_plus_counter_to_self() {
 
     let pupil = g.battlefield.iter().find(|c| c.definition.name == "Star Pupil")
         .expect("Star Pupil on battlefield");
-    assert_eq!(pupil.counter_count(CounterType::PlusOnePlusOne), 1,
-        "Star Pupil should have one +1/+1 counter from ETB trigger");
-    assert_eq!(pupil.power(), 2, "effective body is base 1 + 1 counter = 2");
+    assert_eq!(pupil.counter_count(CounterType::PlusOnePlusOne), 2,
+        "Star Pupil should have two +1/+1 counters from `enters_with_counters`");
+    assert_eq!(pupil.power(), 2, "effective body is base 0 + 2 counters = 2");
     assert_eq!(pupil.toughness(), 2);
 }
 

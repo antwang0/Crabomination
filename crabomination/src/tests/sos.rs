@@ -162,6 +162,7 @@ fn stand_up_for_yourself_only_targets_power_three_or_more() {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     };
     let mut g = two_player_game();
     let big_id = g.add_card_to_battlefield(1, big);
@@ -1792,6 +1793,50 @@ fn pterafractyl_etb_with_x_counters_and_gains_two_life() {
         "Pterafractyl should gain 2 life on ETB");
 }
 
+/// Push XL: Pterafractyl uses the new `enters_with_counters` replacement
+/// — base body is the printed 1/0 (was 1/1 over-statement). At X=0 the
+/// 1/0 body has 0 toughness with no counters and immediately graveyards
+/// (matching printed semantics — a wasted 0-mana cast). The lifegain
+/// half still fires from the ETB trigger (rules technicality:
+/// `enters_with_counters` replaces the entry-with-counters portion;
+/// the trigger fires after, even if the body dies before the trigger
+/// resolves).
+#[test]
+fn pterafractyl_x_zero_dies_to_zero_toughness_sba() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::pterafractyl());
+    // X=0 cast: pay just {G}{U}.
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: None,
+        mode: None,
+        x_value: Some(0),
+    })
+    .expect("Pterafractyl castable for X=0 {G}{U}");
+    drain_stack(&mut g);
+
+    // Body is 1/0 with 0 counters → 0 toughness → graveyards.
+    assert!(!g.battlefield.iter().any(|c| c.id == id),
+        "Pterafractyl X=0 should be graveyarded by 0-toughness SBA");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == id));
+}
+
+/// Push XL: Pterafractyl printed P/T is now exactly 1/0 (was 1/1 to
+/// keep the 0-toughness body alive before counters landed; the new
+/// `enters_with_counters` replacement removes that workaround).
+#[test]
+fn pterafractyl_printed_body_is_one_zero() {
+    let def = catalog::pterafractyl();
+    assert_eq!(def.power, 1, "printed power is 1");
+    assert_eq!(def.toughness, 0, "printed toughness is 0");
+    // Sanity: the replacement field is wired.
+    assert!(def.enters_with_counters.is_some(),
+        "Pterafractyl should use `enters_with_counters` to land its X +1/+1 counters");
+}
+
 // ── Fractal Mascot ──────────────────────────────────────────────────────────
 
 #[test]
@@ -1933,6 +1978,7 @@ fn quandrix_charm_mode_1_destroys_enchantment() {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     };
     let mut g = two_player_game();
     let ench = g.add_card_to_battlefield(1, ench_def);
@@ -2300,6 +2346,7 @@ fn arnyn_drains_when_a_one_power_creature_you_control_dies() {
         additional_sac_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     };
     let weak_id = g.add_card_to_battlefield(0, weak);
 
@@ -6692,6 +6739,7 @@ fn choreographed_sparks_copies_target_lightning_bolt() {
             additional_sac_cost: None,
         back_face: None,
             opening_hand: None,
+        enters_with_counters: None,
         },
     );
     let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
@@ -7756,6 +7804,90 @@ fn lluwen_front_castable_for_two_b_g_as_three_four_creature() {
         .expect("Lluwen on battlefield");
     assert_eq!(lluwen.definition.power, 3);
     assert_eq!(lluwen.definition.toughness, 4);
+}
+
+/// Push XL: Pest Friend's hybrid `{B/G}` pip is now wired faithfully — it
+/// can be paid with either {B} or {G}. The previous approximation forced
+/// black mana; this test confirms the back face is castable with green
+/// mana alone.
+#[test]
+fn lluwen_back_face_castable_with_green_mana_only() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::lluwen_exchange_student());
+    // Pay {G} alone for Pest Friend's hybrid {B/G} cost.
+    g.players[0].mana_pool.add(Color::Green, 1);
+    let bf_before = g.battlefield.len();
+
+    g.perform_action(GameAction::CastSpellBack {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Pest Friend castable with {G} via hybrid pip");
+    drain_stack(&mut g);
+
+    assert_eq!(g.battlefield.len(), bf_before + 1);
+    let pest = g.battlefield.iter().find(|c| c.definition.name == "Pest")
+        .expect("Pest token created");
+    assert_eq!(pest.definition.power, 1);
+    assert_eq!(pest.definition.toughness, 1);
+}
+
+/// Push XL: Pest Friend's hybrid pip rejects an empty pool (no mana of
+/// either color available).
+#[test]
+fn lluwen_back_face_rejects_empty_mana_pool() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::lluwen_exchange_student());
+    // No mana — can't pay the {B/G} hybrid pip.
+    let result = g.perform_action(GameAction::CastSpellBack {
+        card_id: id, target: None, mode: None, x_value: None,
+    });
+    assert!(result.is_err(), "Pest Friend should reject empty pool");
+    // Card stays in hand.
+    assert!(g.players[0].hand.iter().any(|c| c.id == id));
+}
+
+/// Push XL: Practiced Scrollsmith's hybrid `{R/W}` pip is now wired
+/// faithfully — castable with two {W} pips alone (printed legality is
+/// {R}{R/W}{W}, so two W + one R or two R + one W or one of each, etc.).
+#[test]
+fn practiced_scrollsmith_castable_with_extra_white_via_hybrid_pip() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::practiced_scrollsmith());
+    // Cost: {R}{R/W}{W} — pay with {R}{W}{W} (use the hybrid as W).
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 2);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Scrollsmith castable with {R}{W}{W} via hybrid pip");
+    drain_stack(&mut g);
+
+    let smith = g.battlefield.iter().find(|c| c.id == id)
+        .expect("Scrollsmith on battlefield");
+    assert_eq!(smith.definition.power, 3);
+    assert_eq!(smith.definition.toughness, 2);
+}
+
+/// Push XL: Essenceknit Scholar's hybrid `{B/G}` pip is now wired
+/// faithfully — castable with one B + two G (filling the hybrid as G).
+#[test]
+fn essenceknit_scholar_castable_with_extra_green_via_hybrid_pip() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::essenceknit_scholar());
+    // Cost: {B}{B/G}{G} — pay with {B}{G}{G}.
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 2);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Scholar castable with {B}{G}{G} via hybrid pip");
+    drain_stack(&mut g);
+
+    let scholar = g.battlefield.iter().find(|c| c.id == id)
+        .expect("Scholar on battlefield");
+    assert_eq!(scholar.definition.power, 3);
 }
 
 // ── Push XVI: CastSpellHasX, MayPay, HasXInCost, MayDo land sub ─────────────
