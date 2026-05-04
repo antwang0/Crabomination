@@ -360,7 +360,7 @@ impl GameState {
         if !self.can_cast_sorcery_speed(p) {
             return Err(GameError::SorcerySpeedOnly);
         }
-        if !self.players[p].can_play_land() {
+        if !self.player_can_play_land(p) {
             return Err(GameError::AlreadyPlayedLand);
         }
         if !self.players[p].has_in_hand(card_id) {
@@ -1208,6 +1208,38 @@ impl GameState {
                     .iter()
                     .any(|sa| matches!(sa.effect, StaticEffect::ControllerHasHexproof))
         })
+    }
+
+    /// CR 305.2: maximum number of lands `player` may play this turn.
+    /// Default is 1, plus one for every battlefield permanent the player
+    /// controls with `StaticEffect::ExtraLandPerTurn` (Exploration, Azusa,
+    /// Burgeoning-style cards). The active static is read every cast/play —
+    /// no per-turn caching — so transient grants (an Aura that grants
+    /// ExtraLandPerTurn until end of turn) take effect immediately.
+    pub fn max_lands_per_turn(&self, player: usize) -> u32 {
+        use crate::effect::StaticEffect;
+        let extras = self
+            .battlefield
+            .iter()
+            .filter(|c| c.controller == player)
+            .map(|c| {
+                c.definition
+                    .static_abilities
+                    .iter()
+                    .filter(|sa| matches!(sa.effect, StaticEffect::ExtraLandPerTurn))
+                    .count()
+            })
+            .sum::<usize>() as u32;
+        1 + extras
+    }
+
+    /// CR 305.2a: true iff `player` may legally play another land this
+    /// turn. Compares `lands_played_this_turn` to `max_lands_per_turn`.
+    /// Use this instead of `Player::can_play_land()` whenever GameState
+    /// is in scope — `Player::can_play_land()` only sees the per-player
+    /// counter and so can't honor controller-scoped statics.
+    pub fn player_can_play_land(&self, player: usize) -> bool {
+        (self.players[player].lands_played_this_turn) < self.max_lands_per_turn(player)
     }
 
     /// Push `SpellCast` triggered abilities (e.g. Prowess, Up the Beanstalk)

@@ -152,6 +152,17 @@ pub struct PlayerView {
     /// addition; defaulted via `#[serde(default)]` for back-compat.
     #[serde(default)]
     pub lifegain_prevented_this_turn: bool,
+    /// Convenience derived flag: true iff
+    /// `distinct_card_types_in_graveyard >= 4` (the printed Delirium
+    /// threshold for MH2's Delirium cycle: Unholy Heat, Dragon's Rage
+    /// Channeler, Tourach's Canticle, etc.). Pre-computed by the
+    /// server so clients can render a "Delirium active" badge without
+    /// needing to recompute the threshold themselves. Same shape as
+    /// `instants_or_sorceries_cast_this_turn` — derived field, but
+    /// surfaced for one-glance UI rendering. Defaulted via
+    /// `#[serde(default)]` for back-compat.
+    #[serde(default)]
+    pub delirium_active: bool,
 }
 
 /// A single hand-slot entry. `Hidden` for cards the viewer isn't entitled to

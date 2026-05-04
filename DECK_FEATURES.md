@@ -247,6 +247,20 @@ via `#[path = "../tests/modern.rs"] mod tests_modern` in `game::mod`).
 | Brain Maggot | {1}{B} | 🟡 | 1/1 Spirit Insect. ETB strips a nonland card from each opponent's hand (Tidehollow Sculler approximation; "exile until LTB" still ⏳). Test: `brain_maggot_etb_strips_a_nonland_card`. |
 | Bond of Discipline | {3}{W} | ✅ | Sorcery. Tap each opponent creature + your creatures gain lifelink EOT. Test: `bond_of_discipline_taps_each_opponent_creature_and_grants_lifelink`. |
 | Sudden Edict | {1}{B} | ✅ | Instant. Target player sacrifices a creature; can't be countered (`Keyword::CantBeCountered`). Uses `target_filtered(Player)` so the bot's auto-target heuristic picks the opponent. Tests: `sudden_edict_forces_target_player_to_sacrifice`, `sudden_edict_cannot_be_countered`, `sudden_edict_rejects_creature_target`, `auto_target_for_sudden_edict_picks_opponent`. |
+| Talisman of Hierarchy | {2} | ✅ | WB Talisman. Reuses `talisman_cycle`. Test: `talisman_of_hierarchy_taps_for_black_costing_one_life`. |
+| Talisman of Impulse | {2} | ✅ | RG Talisman. Test: `talisman_of_impulse_taps_for_green_costing_one_life`. |
+| Talisman of Indulgence | {2} | ✅ | BR Talisman. Test: `talisman_of_indulgence_colorless_tap_costs_no_life`. |
+| Talisman of Resilience | {2} | ✅ | BG Talisman. Test: `talisman_of_resilience_taps_for_black_costing_one_life`. |
+| Talisman of Unity | {2} | ✅ | GW Talisman. Closes the 10-pair Talisman cycle. Test: `talisman_of_unity_taps_for_white_costing_one_life`. |
+| Pristine Talisman | {3} | ✅ | Artifact. {T}: Add {C}. {T}: Gain 1 life. Tests: `pristine_talisman_lifegain_ability_grants_one_life`, `pristine_talisman_mana_ability_doesnt_change_life`. |
+| Wayfarer's Bauble | {1} | ✅ | Artifact. {2},{T},Sac: Search basic land → BF tapped. Sac-as-cost folded into resolution. Test: `wayfarers_bauble_searches_a_basic_land`. |
+| Burnished Hart | {3} | ✅ | 2/2 Construct artifact creature. {3},{T},Sac: Search up to 2 basic lands → BF tapped. Tests: `burnished_hart_searches_two_basic_lands`, `burnished_hart_is_a_two_two_construct`. |
+| Adarkar Wastes | — | ✅ | Land. WU painland. New `painland(name, type_a, type_b, c1, c2)` helper bundles `{T}: Add {C}` (no life cost) plus two colored taps that each lose 1 life. Tests: `adarkar_wastes_colorless_tap_costs_no_life`, `adarkar_wastes_blue_tap_costs_one_life`. |
+| Underground River | — | ✅ | Land. UB painland. Test: `underground_river_taps_for_black_costing_one_life`. |
+| Sulfurous Springs | — | ✅ | Land. BR painland. Test: `sulfurous_springs_taps_for_red_costing_one_life`. |
+| Karplusan Forest | — | ✅ | Land. RG painland. Test: `karplusan_forest_taps_for_green_costing_one_life`. |
+| Brushland | — | ✅ | Land. GW painland. Closes the ally cycle. Test: `brushland_taps_for_white_costing_one_life`. |
+| Exploration | {G} | ✅ | Enchantment. **First catalog card** to exercise the engine's `StaticEffect::ExtraLandPerTurn`. Push XLVIII wired the static into a new `GameState::player_can_play_land` predicate (CR 305.2). Multiple copies stack. Tests: `baseline_player_caps_at_one_land_per_turn`, `exploration_allows_a_second_land_play_in_one_turn`, `two_explorations_grant_three_land_plays`, `exploration_does_not_help_the_opponent`. |
 
 ### Engine improvements that landed alongside
 

@@ -94,16 +94,25 @@ fn project_player(player: &Player, player_seat: usize, viewer_seat: usize) -> Pl
         instants_or_sorceries_cast_this_turn: player.instants_or_sorceries_cast_this_turn,
         creatures_cast_this_turn: player.creatures_cast_this_turn,
         distinct_card_types_in_graveyard: {
-            let mut seen = std::collections::HashSet::new();
-            for card in &player.graveyard {
-                for ct in &card.definition.card_types {
-                    seen.insert(ct.clone());
-                }
-            }
-            seen.len() as u32
+            let n = distinct_card_types_in_graveyard(player);
+            n as u32
         },
         lifegain_prevented_this_turn: player.lifegain_prevented_this_turn,
+        delirium_active: distinct_card_types_in_graveyard(player) >= 4,
     }
+}
+
+/// Count distinct `CardType`s across all cards in `player`'s graveyard.
+/// Pre-computed once per `PlayerView` projection to drive both
+/// `distinct_card_types_in_graveyard` and `delirium_active`.
+fn distinct_card_types_in_graveyard(player: &crate::player::Player) -> usize {
+    let mut seen = std::collections::HashSet::new();
+    for card in &player.graveyard {
+        for ct in &card.definition.card_types {
+            seen.insert(ct.clone());
+        }
+    }
+    seen.len()
 }
 
 fn project_hand_card(card: &CardInstance, owner_seat: usize, viewer_seat: usize) -> HandCardView {

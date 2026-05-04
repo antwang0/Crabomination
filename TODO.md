@@ -7,6 +7,68 @@ See `CUBE_FEATURES.md` (cube-card implementation status) and
 
 ## Recent additions
 
+- ✅ **Push XLVIII (2026-05-04)**: 14 modern cards (Talisman cycle
+  completion + Pristine Talisman + Wayfarer's Bauble + Burnished Hart
+  + 5 Painlands + Exploration) + ExtraLandPerTurn wire (CR 305.2) +
+  `delirium_active` server-view derived flag + CR 305 (Lands) audit.
+  Tests at 1501 (was 1480; +21 net), all green.
+  - **Engine wire: `StaticEffect::ExtraLandPerTurn`** — the static
+    has been in the `StaticEffect` enum for several pushes but was a
+    dead branch (no production code path read it). This push hooks
+    it into a new `GameState::max_lands_per_turn(player)` helper that
+    walks the controller's battlefield for `ExtraLandPerTurn`
+    instances and returns `1 + count(extras)`. A new `GameState::
+    player_can_play_land(player)` predicate compares the player's
+    `lands_played_this_turn` against the new cap, replacing the
+    ad-hoc `Player::can_play_land()` check. Exploration is the first
+    catalog card to exercise the path; Azusa / Burgeoning / Oracle
+    of Mul Daya / Wayward Swordtooth can be added the same way.
+    `bot.rs` updated alongside so the bot greedily plays a second
+    land when Exploration is in play.
+  - **Server view: `PlayerView.delirium_active: bool`** — derived
+    flag (== `distinct_card_types_in_graveyard >= 4`) pre-computed on
+    the server side so clients can render a "Delirium active" badge
+    without recomputing the threshold themselves. The `view.rs`
+    projection extracts the distinct-types walk into a shared
+    `distinct_card_types_in_graveyard(player)` helper that drives
+    both the count and the bool — eliminates a duplicate `HashSet`
+    walk and keeps the projection cleaner. Defaulted via
+    `#[serde(default)]` for back-compat.
+  - **14 new modern cards**:
+    - **5 Talismans** (Hierarchy WB, Impulse RG, Indulgence BR,
+      Resilience BG, Unity GW) — closes the 10-pair Talisman cycle
+      alongside the existing Progress / Dominance / Conviction /
+      Creativity / Curiosity factories.
+    - **5 Painlands** (Adarkar Wastes WU, Underground River UB,
+      Sulfurous Springs BR, Karplusan Forest RG, Brushland GW) —
+      covers the 5 ally-color combinations from Apocalypse / Ice
+      Age. New `painland` helper.
+    - **Pristine Talisman** {3} Artifact — `{T}: Add {C}` + `{T}:
+      You gain 1 life`. Lifegain ability is non-mana so it goes on
+      the stack.
+    - **Wayfarer's Bauble** {1} Artifact — `{2},{T},Sac: Search
+      basic land → BF tapped`.
+    - **Burnished Hart** {3} 2/2 Construct — `{3},{T},Sac: Search
+      up to 2 basic lands → BF tapped`. `Effect::Repeat(2, Search)`.
+    - **Exploration** {G} Enchantment — first catalog card to use
+      `StaticEffect::ExtraLandPerTurn`.
+  - **CR 305 audit (Lands)**: rule-by-rule status notes in
+    STRIXHAVEN2.md push XLVIII. Highlights: 305.1 (special-action
+    play) ✅, 305.2 (per-turn cap + continuous extension) ✅, 305.2a
+    (cap-vs-played comparison) ✅, 305.2b (deny when cap reached) ✅,
+    305.3 (no plays on opp turns) ✅, 305.4 ("put" vs. "play"
+    distinction) ✅, 305.5 (subtype encoding) ✅, 305.8 (Basic
+    supertype) ✅. Still 🟡: 305.6 (basic-land-type intrinsic mana
+    ability — wired as explicit `{T}: Add {color}`, not as a derived
+    intrinsic), 305.9 (a card that's both land + other type can only
+    be played as a land — works for MDFC via PlayLandBack, but no
+    Dryad-Arbor-style combined-type card in the catalog yet). Still
+    ⏳: 305.7 (subtype-set rewrite that strips old land types +
+    abilities — would need a new layer-4 subtype-rewrite primitive).
+  - **21 new tests**: 5 Talisman, 2 Pristine Talisman, 1 Wayfarer's
+    Bauble, 2 Burnished Hart, 6 Painland, 1 `delirium_active` derived
+    flag, 4 ExtraLandPerTurn (CR 305.2).
+
 - ✅ **Push XLVII (2026-05-04)**: 10 modern promotions + 2 engine
   primitives + CR 121 audit. Tests at 1480 (was 1468; +12 net), all
   green.
@@ -722,6 +784,58 @@ See `CUBE_FEATURES.md` (cube-card implementation status) and
     reject / Mascot steal + revert), 9 cube-card tests (one per new
     card + body sanity for vanilla bodies), 1 view test
     (`ability_cost_label_renders_exile_gy_cost`).
+
+## Future work — engine/UI suggestions surfaced by push XLVIII
+
+Push XLVIII adds the `StaticEffect::ExtraLandPerTurn` wire and the
+`PlayerView.delirium_active` derived flag. The following remain open:
+
+- **Layer-4 subtype-rewrite primitive (CR 305.7)** — Spreading Seas
+  ("becomes an Island"), Snow-Covered Forest variants, Yavimaya, Cradle
+  of Growth ("each land is a Forest in addition to its other types"),
+  Prismatic Omen / Dryad of the Ilysian Grove ("each land is every
+  basic land type") all need a `StaticEffect::SetSubtype` (overwrite)
+  / `StaticEffect::AddSubtype` (additive) primitive that rewrites a
+  permanent's `Subtypes.land_types` at compute-time. The intrinsic
+  basic-land-type → mana-ability lookup (CR 305.6) plugs in on top:
+  if the rewrite gives a land the Plains type, the engine should
+  derive `{T}: Add {W}` from the subtype rather than from the rules
+  text. Today no card needs it.
+- **Dryad Arbor / land-creature combined-type card (CR 305.9)** —
+  Dryad Arbor is a land that's also a creature; you can only "play"
+  it as a land (not cast it as a spell). The engine has separate
+  `PlayLand` and `CastSpell` actions; a unified "if land + other
+  type, route to play_land" gate at the action-dispatch layer would
+  let Dryad Arbor and the few other combined-type cards work. Today
+  no card needs it.
+- **Per-turn-played-land tally for `Effect::Search → Battlefield`
+  paths (CR 305.4)** — currently `lands_played_this_turn` is bumped
+  only by `play_land_with_face`. Cards that "put" a land onto the
+  battlefield (Cultivate, Kodama's Reach, Wood Elves, Rampant
+  Growth, Burnished Hart) correctly *don't* bump the counter — but
+  the engine should also handle the inverse: a *spell* that says
+  "put this land card from your hand onto the battlefield" must
+  still NOT bump the counter (CR 305.4 explicit rule). All current
+  paths are correct; tracked here as a regression-prevention
+  reminder if a new "put a land from hand to battlefield" effect is
+  ever added.
+- **Burgeoning / Azusa / Oracle of Mul Daya** — would be the next
+  natural cards to wire after Exploration. Burgeoning is a global
+  +1 land per opponent's land play (asymmetric); Azusa is a flat
+  +2 (so 3 land plays per turn); Oracle of Mul Daya is +1 + "play
+  the top card of your library if it's a land". All three exercise
+  the same `StaticEffect::ExtraLandPerTurn` static (Azusa would emit
+  *two* of them on her body to stack to 3); Burgeoning needs an
+  opponent-land-play trigger to bump the cap dynamically.
+- **`delirium_active` parity for Threshold / Spell Mastery / Hellbent
+  / Metalcraft** — same shape as `delirium_active`: derived booleans
+  pre-computed on the server side from a per-player count or
+  threshold check. `threshold_active` (gy ≥ 7), `spell_mastery_active`
+  (≥2 IS in gy), `hellbent_active` (hand size 0), `metalcraft_active`
+  (≥3 artifacts you control). Each could be added as a defaulted
+  `bool` field on `PlayerView` with the same `#[serde(default)]`
+  back-compat shape. UI clients render single-glance "X active" hints
+  on threshold-payoff cards.
 
 ## Future work — engine/UI suggestions surfaced by push XLVII
 

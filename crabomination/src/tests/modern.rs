@@ -4841,6 +4841,312 @@ fn talisman_of_curiosity_taps_for_green_costing_one_life() {
     assert_eq!(g.players[0].life, 19);
 }
 
+/// Talisman of Hierarchy: WB. Index 0 = {C}, index 1 = {W}, index 2 = {B}.
+#[test]
+fn talisman_of_hierarchy_taps_for_black_costing_one_life() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::talisman_of_hierarchy());
+    g.clear_sickness(id);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 2, target: None,
+    }).expect("black tap succeeds");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.amount(Color::Black), 1);
+    assert_eq!(g.players[0].life, 19,
+        "Talisman costs 1 life when tapped for a color");
+}
+
+/// Talisman of Impulse: RG. Index 1 = {R}, index 2 = {G}.
+#[test]
+fn talisman_of_impulse_taps_for_green_costing_one_life() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::talisman_of_impulse());
+    g.clear_sickness(id);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 2, target: None,
+    }).expect("green tap succeeds");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.amount(Color::Green), 1);
+    assert_eq!(g.players[0].life, 19);
+}
+
+/// Talisman of Indulgence: BR. Index 1 = {B}, index 2 = {R}. The colorless
+/// tap (index 0) doesn't cost life.
+#[test]
+fn talisman_of_indulgence_colorless_tap_costs_no_life() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::talisman_of_indulgence());
+    g.clear_sickness(id);
+    let life_before = g.players[0].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None,
+    }).expect("colorless tap succeeds");
+    assert_eq!(g.players[0].mana_pool.colorless_amount(), 1);
+    assert_eq!(g.players[0].life, life_before,
+        "Colorless tap on a Talisman doesn't cost life");
+}
+
+/// Talisman of Resilience: BG. Index 1 = {B}, index 2 = {G}.
+#[test]
+fn talisman_of_resilience_taps_for_black_costing_one_life() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::talisman_of_resilience());
+    g.clear_sickness(id);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 1, target: None,
+    }).expect("black tap succeeds");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.amount(Color::Black), 1);
+    assert_eq!(g.players[0].life, 19);
+}
+
+/// Talisman of Unity: GW. Index 1 = {G}, index 2 = {W}.
+#[test]
+fn talisman_of_unity_taps_for_white_costing_one_life() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::talisman_of_unity());
+    g.clear_sickness(id);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 2, target: None,
+    }).expect("white tap succeeds");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.amount(Color::White), 1);
+    assert_eq!(g.players[0].life, 19);
+}
+
+/// Pristine Talisman: index 0 = colorless mana, index 1 = gain 1 life.
+#[test]
+fn pristine_talisman_lifegain_ability_grants_one_life() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::pristine_talisman());
+    g.clear_sickness(id);
+    let life_before = g.players[0].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 1, target: None,
+    }).expect("lifegain ability succeeds");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life_before + 1,
+        "Pristine Talisman's lifegain ability adds 1 life");
+}
+
+/// Pristine Talisman colorless tap doesn't change life total.
+#[test]
+fn pristine_talisman_mana_ability_doesnt_change_life() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::pristine_talisman());
+    g.clear_sickness(id);
+    let life_before = g.players[0].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None,
+    }).expect("colorless mana ability succeeds");
+    assert_eq!(g.players[0].mana_pool.colorless_amount(), 1);
+    assert_eq!(g.players[0].life, life_before);
+}
+
+/// Wayfarer's Bauble: pay {2}, tap, sac. Search basic land to BF tapped.
+#[test]
+fn wayfarers_bauble_searches_a_basic_land() {
+    let mut g = two_player_game();
+    let forest = g.add_card_to_library(0, catalog::forest());
+    let id = g.add_card_to_battlefield(0, catalog::wayfarers_bauble());
+    g.clear_sickness(id);
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Search(Some(forest)),
+    ]));
+    // Pay {2} for the activation.
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None,
+    }).expect("activate Wayfarer's Bauble");
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == id),
+        "Bauble should be in graveyard");
+    let view = g.battlefield.iter().find(|c| c.id == forest);
+    assert!(view.is_some(), "Forest tutored to battlefield");
+    assert!(view.unwrap().tapped, "Forest enters tapped");
+}
+
+/// Burnished Hart: 2/2 Construct. {3},{T},Sac: search 2 basics to BF
+/// tapped.
+#[test]
+fn burnished_hart_searches_two_basic_lands() {
+    let mut g = two_player_game();
+    let f1 = g.add_card_to_library(0, catalog::forest());
+    let f2 = g.add_card_to_library(0, catalog::forest());
+    let id = g.add_card_to_battlefield(0, catalog::burnished_hart());
+    g.clear_sickness(id);
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Search(Some(f1)),
+        DecisionAnswer::Search(Some(f2)),
+    ]));
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None,
+    }).expect("activate Burnished Hart");
+    drain_stack(&mut g);
+    let forests_on_bf = g.battlefield.iter()
+        .filter(|c| c.definition.name == "Forest").count();
+    assert_eq!(forests_on_bf, 2,
+        "Burnished Hart searches up to 2 basic lands");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == id),
+        "Hart should be sacrificed after activation");
+}
+
+/// Burnished Hart body: 2/2 Construct artifact creature.
+#[test]
+fn burnished_hart_is_a_two_two_construct() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::burnished_hart());
+    let card = g.battlefield_find(id).expect("on battlefield");
+    assert_eq!(card.power(), 2);
+    assert_eq!(card.toughness(), 2);
+    assert!(card.definition.subtypes.creature_types
+        .contains(&crate::card::CreatureType::Construct));
+}
+
+// ── Painlands ────────────────────────────────────────────────────────────────
+
+/// Adarkar Wastes: index 0 = {C} (no life cost), index 1 = {W} (-1 life),
+/// index 2 = {U} (-1 life).
+#[test]
+fn adarkar_wastes_colorless_tap_costs_no_life() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::adarkar_wastes());
+    g.clear_sickness(id);
+    let life_before = g.players[0].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None,
+    }).expect("colorless tap succeeds");
+    assert_eq!(g.players[0].mana_pool.colorless_amount(), 1);
+    assert_eq!(g.players[0].life, life_before,
+        "Adarkar Wastes' colorless tap doesn't cost life");
+}
+
+/// Adarkar Wastes blue tap costs 1 life.
+#[test]
+fn adarkar_wastes_blue_tap_costs_one_life() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::adarkar_wastes());
+    g.clear_sickness(id);
+    let life_before = g.players[0].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 2, target: None,
+    }).expect("blue tap succeeds");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.amount(Color::Blue), 1);
+    assert_eq!(g.players[0].life, life_before - 1);
+}
+
+/// Underground River: BR painland twin — black tap costs 1 life.
+#[test]
+fn underground_river_taps_for_black_costing_one_life() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::underground_river());
+    g.clear_sickness(id);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 2, target: None,
+    }).expect("black tap succeeds");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.amount(Color::Black), 1);
+    assert_eq!(g.players[0].life, 19);
+}
+
+/// Sulfurous Springs: BR painland — red tap costs 1 life.
+#[test]
+fn sulfurous_springs_taps_for_red_costing_one_life() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::sulfurous_springs());
+    g.clear_sickness(id);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 2, target: None,
+    }).expect("red tap succeeds");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.amount(Color::Red), 1);
+    assert_eq!(g.players[0].life, 19);
+}
+
+/// Karplusan Forest: RG painland — green tap costs 1 life.
+#[test]
+fn karplusan_forest_taps_for_green_costing_one_life() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::karplusan_forest());
+    g.clear_sickness(id);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 2, target: None,
+    }).expect("green tap succeeds");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.amount(Color::Green), 1);
+    assert_eq!(g.players[0].life, 19);
+}
+
+/// Brushland: GW painland — closes the ally cycle. White tap = 1 life.
+#[test]
+fn brushland_taps_for_white_costing_one_life() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::brushland());
+    g.clear_sickness(id);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 2, target: None,
+    }).expect("white tap succeeds");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.amount(Color::White), 1);
+    assert_eq!(g.players[0].life, 19);
+}
+
+// ── ExtraLandPerTurn / Exploration (CR 305.2) ────────────────────────────────
+
+/// CR 305.2: continuous effects can increase the number of lands a player
+/// may play in a turn. Without Exploration the player is capped at 1.
+#[test]
+fn baseline_player_caps_at_one_land_per_turn() {
+    let mut g = two_player_game();
+    assert_eq!(g.max_lands_per_turn(0), 1,
+        "no Exploration in play → cap of 1");
+    assert!(g.player_can_play_land(0));
+    let f1 = g.add_card_to_hand(0, catalog::forest());
+    let _f2 = g.add_card_to_hand(0, catalog::forest());
+    g.perform_action(GameAction::PlayLand(f1)).unwrap();
+    assert!(!g.player_can_play_land(0),
+        "second land this turn is illegal without Exploration");
+}
+
+/// Exploration grants +1 land play per turn.
+#[test]
+fn exploration_allows_a_second_land_play_in_one_turn() {
+    let mut g = two_player_game();
+    let _expl = g.add_card_to_battlefield(0, catalog::exploration());
+    assert_eq!(g.max_lands_per_turn(0), 2,
+        "Exploration bumps the cap to 2");
+    let f1 = g.add_card_to_hand(0, catalog::forest());
+    let f2 = g.add_card_to_hand(0, catalog::forest());
+    g.perform_action(GameAction::PlayLand(f1)).expect("first land legal");
+    assert!(g.player_can_play_land(0),
+        "second land legal under Exploration");
+    g.perform_action(GameAction::PlayLand(f2)).expect("second land legal");
+    assert!(!g.player_can_play_land(0),
+        "third land illegal — only one Exploration in play");
+}
+
+/// Two Explorations stack — three land plays per turn.
+#[test]
+fn two_explorations_grant_three_land_plays() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::exploration());
+    g.add_card_to_battlefield(0, catalog::exploration());
+    assert_eq!(g.max_lands_per_turn(0), 3,
+        "two Explorations stack: cap = 3");
+}
+
+/// Exploration is controller-scoped: the opponent's cap stays at 1.
+#[test]
+fn exploration_does_not_help_the_opponent() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::exploration());
+    assert_eq!(g.max_lands_per_turn(0), 2);
+    assert_eq!(g.max_lands_per_turn(1), 1,
+        "opp doesn't benefit from your Exploration");
+}
+
 // ── Edict / forced-sacrifice removal ─────────────────────────────────────────
 
 /// Edict-flavour sacrifice picks the lowest-CMC creature first.
@@ -11687,6 +11993,25 @@ fn player_view_surfaces_distinct_card_types_in_graveyard() {
         "view should report 4 distinct types");
     assert_eq!(view.players[1].distinct_card_types_in_graveyard, 0,
         "opp view should report 0 (empty graveyard)");
+    assert!(view.players[0].delirium_active,
+        "Delirium should be active (≥4 distinct card types in your graveyard)");
+    assert!(!view.players[1].delirium_active,
+        "Opp's Delirium should be inactive (empty graveyard)");
+}
+
+/// `PlayerView.delirium_active` flips off when distinct types drop
+/// below 4. Pre-conditions: 3 distinct types only.
+#[test]
+fn player_view_delirium_active_flag_off_below_threshold() {
+    use crate::server::view::project;
+    let mut g = two_player_game();
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());     // Creature
+    g.add_card_to_graveyard(0, catalog::cathartic_reunion()); // Sorcery
+    g.add_card_to_graveyard(0, catalog::lightning_bolt());    // Instant
+    let view = project(&g, 0);
+    assert_eq!(view.players[0].distinct_card_types_in_graveyard, 3);
+    assert!(!view.players[0].delirium_active,
+        "3 distinct types ≠ Delirium");
 }
 
 /// Dragon's Rage Channeler — body buff fires when Delirium is active

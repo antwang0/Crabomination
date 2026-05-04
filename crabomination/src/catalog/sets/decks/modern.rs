@@ -2606,6 +2606,304 @@ pub fn talisman_of_curiosity() -> CardDefinition {
     talisman_cycle("Talisman of Curiosity", Color::Green, Color::Blue)
 }
 
+/// Talisman of Hierarchy — {2} Artifact. WB mirror of Talisman of Progress.
+pub fn talisman_of_hierarchy() -> CardDefinition {
+    talisman_cycle("Talisman of Hierarchy", Color::White, Color::Black)
+}
+
+/// Talisman of Impulse — {2} Artifact. RG mirror of Talisman of Progress.
+pub fn talisman_of_impulse() -> CardDefinition {
+    talisman_cycle("Talisman of Impulse", Color::Red, Color::Green)
+}
+
+/// Talisman of Indulgence — {2} Artifact. BR mirror of Talisman of Progress.
+pub fn talisman_of_indulgence() -> CardDefinition {
+    talisman_cycle("Talisman of Indulgence", Color::Black, Color::Red)
+}
+
+/// Talisman of Resilience — {2} Artifact. BG mirror of Talisman of Progress.
+pub fn talisman_of_resilience() -> CardDefinition {
+    talisman_cycle("Talisman of Resilience", Color::Black, Color::Green)
+}
+
+/// Talisman of Unity — {2} Artifact. GW mirror of Talisman of Progress.
+pub fn talisman_of_unity() -> CardDefinition {
+    talisman_cycle("Talisman of Unity", Color::Green, Color::White)
+}
+
+/// Pristine Talisman — {3} Artifact. "{T}: Add {C}." "{T}: You gain 1 life."
+///
+/// A simple two-mode artifact for life-buffer ramp shells. The colorless
+/// `{T}: Add {C}` ability is index 0; the lifegain ability is index 1.
+/// Both abilities tap the source. The lifegain isn't a mana ability, so
+/// it goes on the stack and is drained.
+pub fn pristine_talisman() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Pristine Talisman",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: ManaCost::default(),
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Colorless(Value::Const(1)),
+                },
+                once_per_turn: false,
+                sorcery_speed: false,
+                sac_cost: false,
+                condition: None,
+                life_cost: 0,
+                exile_gy_cost: 0,
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: ManaCost::default(),
+                effect: Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
+                once_per_turn: false,
+                sorcery_speed: false,
+                sac_cost: false,
+                condition: None,
+                life_cost: 0,
+                exile_gy_cost: 0,
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Wayfarer's Bauble — {1} Artifact. "{2}, {T}, Sacrifice this artifact:
+/// Search your library for a basic land card, put it onto the battlefield
+/// tapped, then shuffle."
+///
+/// Cheap 1-mana ramp dribble — costs 3 mana net to fetch a basic land,
+/// distinct from Sakura-Tribe Elder by being colorless and not blockable
+/// at the body level. Sac-as-cost folded into resolution: the ETB-tapped
+/// basic-land search runs after the bauble has paid mana, tapped, and
+/// gone to the graveyard. The {2} mana cost on the activation is paid
+/// via `mana_cost`.
+pub fn wayfarers_bauble() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Wayfarer's Bauble",
+        cost: cost(&[generic(1)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[generic(2)]),
+            effect: search_to_battlefield(SelectionRequirement::IsBasicLand, true),
+            once_per_turn: false,
+            sorcery_speed: false,
+            sac_cost: true,
+            condition: None,
+            life_cost: 0,
+            exile_gy_cost: 0,
+        }],
+        ..Default::default()
+    }
+}
+
+// ── Painlands (Apocalypse / Ice Age cycle) ───────────────────────────────────
+//
+// Each enters untapped, taps for {C} freely, or taps for one of two colors at
+// the cost of 1 life. Same shape as the Talisman cycle's mana abilities.
+
+/// Internal helper: build a painland with `{T}: Add {C}` (no life cost) plus
+/// `{T}: Add {c1}, lose 1 life` and `{T}: Add {c2}, lose 1 life`.
+fn painland(
+    name: &'static str,
+    type_a: crate::card::LandType,
+    type_b: crate::card::LandType,
+    c1: Color,
+    c2: Color,
+) -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    let make_color = |color: Color| ActivatedAbility {
+        tap_cost: true,
+        mana_cost: ManaCost::default(),
+        effect: Effect::Seq(vec![
+            Effect::LoseLife { who: Selector::You, amount: Value::Const(1) },
+            Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::Colors(vec![color]),
+            },
+        ]),
+        once_per_turn: false,
+        sorcery_speed: false,
+        sac_cost: false,
+        condition: None,
+        life_cost: 0,
+        exile_gy_cost: 0,
+    };
+    CardDefinition {
+        name,
+        cost: ManaCost::default(),
+        card_types: vec![CardType::Land],
+        subtypes: Subtypes {
+            land_types: vec![type_a, type_b],
+            ..Default::default()
+        },
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: ManaCost::default(),
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Colorless(Value::Const(1)),
+                },
+                once_per_turn: false,
+                sorcery_speed: false,
+                sac_cost: false,
+                condition: None,
+                life_cost: 0,
+                exile_gy_cost: 0,
+            },
+            make_color(c1),
+            make_color(c2),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Adarkar Wastes — Land. Painland from Ice Age (W/U).
+/// `{T}: Add {C}.` `{T}: Add {W} or {U}. Adarkar Wastes deals 1 damage to you.`
+///
+/// The damage is modeled as `LoseLife 1` since the engine treats both
+/// uniformly for the colored-tap cost. Index 0 = colorless (no life cost),
+/// index 1 = {W} (-1 life), index 2 = {U} (-1 life).
+pub fn adarkar_wastes() -> CardDefinition {
+    use crate::card::LandType;
+    painland(
+        "Adarkar Wastes",
+        LandType::Plains,
+        LandType::Island,
+        Color::White,
+        Color::Blue,
+    )
+}
+
+/// Underground River — Land. Painland (U/B). UB twin of Adarkar Wastes.
+pub fn underground_river() -> CardDefinition {
+    use crate::card::LandType;
+    painland(
+        "Underground River",
+        LandType::Island,
+        LandType::Swamp,
+        Color::Blue,
+        Color::Black,
+    )
+}
+
+/// Sulfurous Springs — Land. Painland (B/R). BR twin.
+pub fn sulfurous_springs() -> CardDefinition {
+    use crate::card::LandType;
+    painland(
+        "Sulfurous Springs",
+        LandType::Swamp,
+        LandType::Mountain,
+        Color::Black,
+        Color::Red,
+    )
+}
+
+/// Karplusan Forest — Land. Painland (R/G). RG twin.
+pub fn karplusan_forest() -> CardDefinition {
+    use crate::card::LandType;
+    painland(
+        "Karplusan Forest",
+        LandType::Mountain,
+        LandType::Forest,
+        Color::Red,
+        Color::Green,
+    )
+}
+
+/// Brushland — Land. Painland (G/W). GW twin — closes the ally-color
+/// painland cycle.
+pub fn brushland() -> CardDefinition {
+    use crate::card::LandType;
+    painland(
+        "Brushland",
+        LandType::Forest,
+        LandType::Plains,
+        Color::Green,
+        Color::White,
+    )
+}
+
+/// Exploration — {G} Enchantment. "You may play an additional land on
+/// each of your turns."
+///
+/// First card in the catalog to exercise `StaticEffect::ExtraLandPerTurn`,
+/// which has been in the engine for a while but until this push wasn't
+/// hooked into `play_land`. The new `GameState::player_can_play_land`
+/// check (CR 305.2) reads the static off the controller's battlefield
+/// and bumps the per-turn land cap by 1 per Exploration in play.
+/// Multiple copies stack — two Explorations let you play three lands
+/// per turn.
+pub fn exploration() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Exploration",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility {
+            description: "You may play an additional land on each of your turns.",
+            effect: StaticEffect::ExtraLandPerTurn,
+        }],
+        ..Default::default()
+    }
+}
+
+/// Burnished Hart — {3} Artifact Creature — Construct. 2/2. "{3}, {T},
+/// Sacrifice this artifact: Search your library for up to two basic land
+/// cards, put them onto the battlefield tapped, then shuffle."
+///
+/// Cube-staple colorless ramp piece — sacrifices itself to dig two
+/// basics. Net: 6 mana paid, 2 lands gained, +2 colored sources on the
+/// next turn. Body is a 2/2 chump-blocker until it sacrifices itself.
+/// Sac-as-cost is folded into the resolution; the search uses
+/// `Effect::Repeat(2, Search)` (same shape as Buried Alive's
+/// `Repeat(3, Search → Graveyard)`).
+pub fn burnished_hart() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Burnished Hart",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Construct],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[generic(3)]),
+            effect: Effect::Repeat {
+                count: Value::Const(2),
+                body: Box::new(search_to_battlefield(
+                    SelectionRequirement::IsBasicLand,
+                    true,
+                )),
+            },
+            once_per_turn: false,
+            sorcery_speed: false,
+            sac_cost: true,
+            condition: None,
+            life_cost: 0,
+            exile_gy_cost: 0,
+        }],
+        ..Default::default()
+    }
+}
+
 // ── Removal / interaction ────────────────────────────────────────────────────
 
 /// Innocent Blood — {B} Sorcery. Each player sacrifices a creature.

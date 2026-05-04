@@ -86,6 +86,170 @@ All 248 cards marked ✅ or 🟡 have a corresponding factory in
 positives and 0 stale ⏳ rows. STX 2021 progress is tracked in the
 "Strixhaven base set (STX)" section near the bottom of this file.
 
+## 2026-05-04 push XLVIII: 14 modern cards + ExtraLandPerTurn (CR 305.2) + delirium_active view + CR 305 audit
+
+Adds 14 new cards to the `decks::modern` catalog (Talisman cycle
+completion, Pristine Talisman, Wayfarer's Bauble, Burnished Hart, 5
+Painlands, Exploration), wires up the long-dormant
+`StaticEffect::ExtraLandPerTurn` to a new `GameState::player_can_play_
+land` predicate (CR 305.2), surfaces `PlayerView.delirium_active` as a
+derived flag for UI rendering, and audits CR 305 (Lands). Tests at
+1501 (was 1480, +21 net), all green.
+
+### New Modern cards (14, all in `catalog::sets::decks::modern`)
+
+**Talisman cycle completion (5 — closes the 10-painland-pair cycle alongside the existing Progress / Dominance / Conviction / Creativity / Curiosity factories):**
+
+| Card | Cost | Status | Notes |
+|---|---|---|---|
+| Talisman of Hierarchy | {2} | ✅ | WB Talisman. {T}: Add {C}. {T}: Add {W} or {B}, lose 1 life. Reuses the `talisman_cycle` helper. |
+| Talisman of Impulse | {2} | ✅ | RG Talisman. {T}: Add {R} or {G}, lose 1 life. |
+| Talisman of Indulgence | {2} | ✅ | BR Talisman. |
+| Talisman of Resilience | {2} | ✅ | BG Talisman. |
+| Talisman of Unity | {2} | ✅ | GW Talisman. |
+
+**Painland cycle (5 — covers the 5 ally-color combinations from Apocalypse / Ice Age):**
+
+| Card | Cost | Status | Notes |
+|---|---|---|---|
+| Adarkar Wastes | — | ✅ NEW | Land. WU painland. New `painland(name, type_a, type_b, c1, c2)` helper bundles `{T}: Add {C}` (no life cost) plus two colored taps that each lose 1 life. The damage is modeled as `LoseLife 1` since the engine treats both uniformly for the colored-tap cost. Index 0 = colorless, 1 = c1, 2 = c2. |
+| Underground River | — | ✅ NEW | Land. UB painland twin of Adarkar Wastes. |
+| Sulfurous Springs | — | ✅ NEW | Land. BR painland. |
+| Karplusan Forest | — | ✅ NEW | Land. RG painland. |
+| Brushland | — | ✅ NEW | Land. GW painland. Closes the ally cycle. |
+
+**Other (4 colorless artifacts + 1 enchantment):**
+
+| Card | Cost | Status | Notes |
+|---|---|---|---|
+| Pristine Talisman | {3} | ✅ NEW | Artifact. `{T}: Add {C}` + `{T}: You gain 1 life`. Lifegain ability goes on the stack (not a mana ability) and is drained. |
+| Wayfarer's Bauble | {1} | ✅ NEW | Artifact. `{2}, {T}, Sacrifice this artifact: Search your library for a basic land card, put it onto the battlefield tapped, then shuffle.` Sac-as-cost folded into resolution; `Effect::Search` to BF tapped. |
+| Burnished Hart | {3} | ✅ NEW | 2/2 Artifact Creature — Construct. `{3}, {T}, Sac: Search for up to two basic lands → BF tapped`. Uses `Effect::Repeat(2, Search)` (same shape as Buried Alive's `Repeat(3, Search)`). |
+| Exploration | {G} | ✅ NEW | Enchantment. **First catalog card** to exercise the engine's `StaticEffect::ExtraLandPerTurn`, which has been in the StaticEffect enum for several pushes but until this push wasn't hooked into `play_land`. The new `GameState::player_can_play_land` reads the static off the controller's battlefield and bumps the per-turn land cap by 1 per Exploration in play. Multiple copies stack — two Explorations let you play three lands per turn. |
+
+### Engine improvement: wire `StaticEffect::ExtraLandPerTurn` (CR 305.2)
+
+`StaticEffect::ExtraLandPerTurn` was defined in the `StaticEffect` enum
+since several pushes ago but was a dead branch — `Player::can_play_land()`
+just checked `lands_played_this_turn == 0` flat, with no awareness of
+controller-scoped statics. This push hooks the static into a new
+`GameState::max_lands_per_turn(player)` helper that walks the
+controller's battlefield for `ExtraLandPerTurn` instances and returns
+`1 + count(extras)`. A new `GameState::player_can_play_land(player)`
+predicate compares the player's `lands_played_this_turn` against the
+new cap and is the canonical "may another land be played?" check.
+
+`actions.rs::play_land_with_face` now uses
+`self.player_can_play_land(p)` instead of the ad-hoc
+`self.players[p].can_play_land()` check, so Exploration / Azusa /
+Burgeoning-style cards correctly grant additional land plays.
+`bot.rs` updated alongside so the bot greedily plays a second land
+when Exploration is in play.
+
+`Player::can_play_land()` is preserved (still checks `==0` directly)
+for callers that don't have GameState in scope, but new code should
+prefer the GameState method.
+
+### Server view: `PlayerView.delirium_active`
+
+A derived `bool` field that pre-computes the Delirium threshold
+(`distinct_card_types_in_graveyard >= 4`) on the server side so
+clients can render a "Delirium active" badge on Dragon's Rage
+Channeler / Unholy Heat / future MH2 Delirium payoffs without needing
+to recompute the threshold themselves. Same shape as
+`infusion_ready` (which clients derive from `life_gained_this_turn`,
+though we surface it explicitly in the SOS infusion path). Defaulted
+via `#[serde(default)]` for back-compat with older serialized views.
+
+The `view.rs` projection now extracts the distinct-types walk into a
+shared `distinct_card_types_in_graveyard(player)` helper that drives
+both `distinct_card_types_in_graveyard: u32` and
+`delirium_active: bool` — eliminates a duplicate `HashSet` walk and
+keeps the projection cleaner.
+
+### CR 305 audit (Lands)
+
+Per CR 305 (Lands):
+
+- **305.1** (play a land as a special action during main phase, stack
+  empty, doesn't use stack) ✅ — implemented in
+  `actions.rs::play_land_with_face`. Sorcery-speed gate via
+  `can_cast_sorcery_speed`; non-spell semantics enforced (no stack
+  push, no SpellCast triggers fire on a land play).
+- **305.2** (one land per turn baseline; continuous effects can
+  increase) ✅ — newly wired this push. The new
+  `GameState::max_lands_per_turn(player)` returns `1 + count(
+  ExtraLandPerTurn statics on controller's battlefield)`, and
+  `player_can_play_land` compares the cap against
+  `lands_played_this_turn`. Exploration is the first catalog card to
+  exercise the path; Azusa, Lost But Seeking / Burgeoning / Oracle of
+  Mul Daya can be added the same way (each contributing one or more
+  `ExtraLandPerTurn` statics).
+- **305.2a** (compare cap to plays-already-this-turn) ✅ — the
+  comparison runs every land play; transient grants take effect
+  immediately.
+- **305.2b** (can't play a land if cap reached; ignore effect
+  instructions to do so) ✅ — `GameError::AlreadyPlayedLand` is
+  returned at the cap; the turn-based action just stops.
+- **305.3** (can't play a land on opp's turn) ✅ — `can_cast_sorcery_
+  speed` returns false on opp turns, so `play_land_with_face` rejects
+  with `SorcerySpeedOnly`.
+- **305.4** (effects that "put" lands onto the battlefield don't
+  count as a land played) ✅ — `Effect::Search` to `Battlefield`
+  destination uses `Move`-style mechanics, not `play_land`, so the
+  `lands_played_this_turn` counter isn't bumped. Verified by Cultivate /
+  Kodama's Reach / Wood Elves' tutor paths.
+- **305.5** (subtypes are single words after a long dash) ✅ — the
+  `LandType` enum encodes the basic land types; nonbasic subtypes
+  (e.g. Locus, Urza's, Lair) are tracked similarly. Multi-subtype
+  lands (Tundra has Plains + Island) are wired via `Subtypes.land_
+  types: Vec<LandType>`.
+- **305.6** (basic land types confer intrinsic `{T}: Add {color}`) 🟡 —
+  partial. The basic-land cards in the catalog all have an explicit
+  `{T}: Add {color}` activated ability, so the *behavior* is
+  correct. The engine doesn't yet treat the mana ability as
+  *intrinsic* (i.e. derived from the subtype rather than the rules
+  text). Cards that *change* a land's subtype (e.g. Spreading Seas's
+  "becomes an Island") would need a new layer-4 subtype-rewrite +
+  intrinsic-ability-lookup pass; today no such cards are in the
+  catalog. Same-shape gap for the Dryad of the Ilysian Grove /
+  Prismatic Omen "every land is also a Plains, Island, ..." path.
+- **305.7** (subtype-set rewrite loses old land types + abilities,
+  gains the new ones) ⏳ — same gap as 305.6: no subtype-rewrite
+  primitive yet.
+- **305.8** (`basic` supertype distinguishes basic from nonbasic
+  lands) ✅ — `Supertype::Basic` is wired; basic lands carry it,
+  nonbasics don't. `IsBasicLand` predicate reads it for tutor
+  filters (Rampant Growth, Sakura-Tribe Elder, Burnished Hart, etc.).
+- **305.9** (a card that's both a land and another card type can only
+  be played as a land) 🟡 — partial. No catalog card today is both a
+  land and another type (DFC / MDFC cards have separate front/back
+  faces, each a single card type). `MDFC` cards explicitly support a
+  `PlayLandBack` action when the back face is a land, separate from
+  `CastSpell`, so the "can only play as a land" semantics are
+  enforced at the action-level. A non-DFC land+other-type (e.g.
+  Dryad Arbor — a creature *and* a land) would need a unified
+  `PlayLand` action that recognizes the dual nature; today no such
+  card is in the catalog.
+
+### Tests (+21 net, 1480 → 1501)
+
+- 5 Talisman tests (Hierarchy black tap, Impulse green tap, Indulgence
+  colorless-tap-no-life, Resilience black tap, Unity white tap).
+- 2 Pristine Talisman tests (lifegain ability adds 1 life; mana
+  ability doesn't change life).
+- 1 Wayfarer's Bauble test (search-and-sac).
+- 2 Burnished Hart tests (search 2 basics; 2/2 Construct body).
+- 6 Painland tests (Adarkar colorless-no-life, Adarkar blue cost-1,
+  Underground River black, Sulfurous Springs red, Karplusan green,
+  Brushland white).
+- 1 `delirium_active` derived-flag test (off below threshold).
+- 4 ExtraLandPerTurn (CR 305.2) tests:
+  - `baseline_player_caps_at_one_land_per_turn`
+  - `exploration_allows_a_second_land_play_in_one_turn`
+  - `two_explorations_grant_three_land_plays`
+  - `exploration_does_not_help_the_opponent`
+
 ## 2026-05-04 push XLVII: 10 modern promotions + 2 engine primitives + CR 121 audit
 
 Adds two engine primitives (`Value::DistinctCardTypesInGraveyard`
