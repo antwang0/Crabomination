@@ -1527,6 +1527,112 @@ pub fn tidehollow_sculler() -> CardDefinition {
     }
 }
 
+// ── Vampire Nighthawk ────────────────────────────────────────────────────────
+
+/// Vampire Nighthawk — {1}{B}{B} Creature — Vampire Shaman 2/3 with
+/// Flying, Deathtouch, Lifelink.
+///
+/// ✅ Push LI: NEW. Modern staple body — three keywords slap onto the
+/// creature directly via `keywords: [Flying, Deathtouch, Lifelink]`. No
+/// triggered or activated abilities; same vanilla-keywords shape as
+/// Knight of Meadowgrain. The Lifelink + Deathtouch combo lets a chump
+/// block kill any attacker while keeping the controller stable on life.
+pub fn vampire_nighthawk() -> CardDefinition {
+    CardDefinition {
+        name: "Vampire Nighthawk",
+        cost: cost(&[generic(1), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Shaman],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Flying, Keyword::Deathtouch, Keyword::Lifelink],
+        ..Default::default()
+    }
+}
+
+// ── Blood Artist ─────────────────────────────────────────────────────────────
+
+/// Blood Artist — {1}{B} Creature — Vampire 0/1. "Whenever Blood Artist
+/// or another creature dies, target player loses 1 life and you gain
+/// 1 life."
+///
+/// ✅ Push LI: NEW. The "Blood Artist or another creature dies" trigger
+/// fires on every CreatureDied event regardless of source — wired with
+/// `EventScope::AnyPlayer`. The target-player slot collapses to "each
+/// opponent" via `Selector::Player(EachOpponent)` (auto-target prefers
+/// opp face, matching typical play). On every death, drain 1.
+pub fn blood_artist() -> CardDefinition {
+    CardDefinition {
+        name: "Blood Artist",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnyPlayer),
+            effect: Effect::Drain {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                to: Selector::You,
+                amount: Value::Const(1),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+// ── Lingering Souls ──────────────────────────────────────────────────────────
+
+/// Lingering Souls — {2}{B} Sorcery. "Create two 1/1 white Spirit
+/// creature tokens with flying. Flashback {1}{W}."
+///
+/// ✅ Push LI: NEW. Two-Spirit token mint plus Flashback for white-mana
+/// follow-up. Body uses `Effect::CreateToken` with the engine's
+/// `spirit_token()` helper at count 2; Flashback is wired via
+/// `Keyword::Flashback`. Same factory shape as `antiquities_on_the_loose`
+/// (push V) — token mint + flashback rider.
+pub fn lingering_souls() -> CardDefinition {
+    use crate::card::TokenDefinition;
+    let spirit_token = TokenDefinition {
+        name: "Spirit".to_string(),
+        colors: vec![crate::mana::Color::White],
+        card_types: vec![CardType::Creature],
+        supertypes: vec![],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        activated_abilities: vec![],
+        triggered_abilities: vec![],
+    };
+    CardDefinition {
+        name: "Lingering Souls",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(2),
+            definition: spirit_token,
+        },
+        keywords: vec![Keyword::Flashback(ManaCost {
+            symbols: vec![
+                crate::mana::ManaSymbol::Generic(1),
+                crate::mana::ManaSymbol::Colored(crate::mana::Color::White),
+            ],
+        })],
+        ..Default::default()
+    }
+}
+
 pub fn temur_ascendancy() -> CardDefinition {
     use crate::effect::{Predicate, Selector as Sel, StaticEffect};
     CardDefinition {

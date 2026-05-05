@@ -155,10 +155,10 @@ pub fn score_card_for_seat(factory: CardFactory, seat_picks_so_far: &[CardFactor
     score += match cmc {
         0 => 0,
         1 => 1,
-        2 | 3 | 4 => 3,
+        2..=4 => 3,
         5 => 2,
         _ => 1,
-    } as i32;
+    };
 
     score
 }
@@ -478,7 +478,7 @@ mod tests {
         let pick = bot_pick(&pack, &[]).unwrap();
         let picked = pack[pick];
         assert!(
-            picked as usize == crate::catalog::grizzly_bears as usize,
+            picked as *const () as usize == crate::catalog::grizzly_bears as *const () as usize,
             "creature should outscore the colorless artifact at first pick"
         );
     }
@@ -498,7 +498,7 @@ mod tests {
         ];
         let pick = bot_pick(&pack, &history).unwrap();
         assert!(
-            pack[pick] as usize == crate::catalog::elvish_mystic as usize,
+            pack[pick] as *const () as usize == crate::catalog::elvish_mystic as *const () as usize,
             "bot should follow its existing green commitment"
         );
     }
@@ -563,7 +563,7 @@ mod tests {
         let capped = enforce_copy_cap(cards);
         let bolts = capped
             .iter()
-            .filter(|f| **f as usize == crate::catalog::lightning_bolt as usize)
+            .filter(|f| **f as *const () as usize == crate::catalog::lightning_bolt as *const () as usize)
             .count();
         assert_eq!(bolts, 4);
         assert_eq!(capped.len(), 5); // 4 bolts + 1 counterspell

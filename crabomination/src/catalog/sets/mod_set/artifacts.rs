@@ -1,13 +1,14 @@
 //! Modern-staple / cube artifacts.
 
 use super::no_abilities;
+use super::super::etb_tap;
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, Effect, EventKind, EventScope, EventSpec, Keyword,
     SelectionRequirement, Selector, Subtypes, TriggeredAbility, Value, Zone,
 };
 use crate::effect::shortcut::target_filtered;
 use crate::effect::{ManaPayload, PlayerRef, ZoneDest};
-use crate::mana::{ManaCost, cost, g, generic};
+use crate::mana::{Color, ManaCost, cost, g, generic};
 
 /// Ornithopter — {0} Artifact Creature 0/2 with Flying. Pure vanilla; no
 /// abilities beyond Flying.
@@ -538,4 +539,76 @@ pub fn fellwar_stone() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
     }
+}
+
+// ── Mirage Diamond cycle ─────────────────────────────────────────────────────
+//
+// Five {3} mana rocks from Mirage. Each ETBs tapped and taps for one of
+// the five colors. Same shape as the Talisman cycle ({2} for two colors,
+// 1 life) — bigger pip cost and ETB-tap cost in exchange for non-painful
+// activation.
+
+fn mirage_diamond(name: &'static str, color: Color) -> CardDefinition {
+    CardDefinition {
+        name,
+        cost: cost(&[generic(3)]),
+        supertypes: vec![],
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: ManaCost::default(),
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::Colors(vec![color]),
+            },
+            once_per_turn: false,
+            sorcery_speed: false,
+            sac_cost: false,
+            condition: None,
+            life_cost: 0,
+            exile_gy_cost: 0,
+        }],
+        triggered_abilities: vec![etb_tap()],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        additional_sac_cost: None,
+        additional_discard_cost: None,
+        additional_life_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+    }
+}
+
+/// Marble Diamond — {3} Artifact. ETB-tapped. {T}: Add {W}. (Mirage white slot.)
+pub fn marble_diamond() -> CardDefinition {
+    mirage_diamond("Marble Diamond", Color::White)
+}
+
+/// Sky Diamond — {3} Artifact. ETB-tapped. {T}: Add {U}. (Mirage blue slot.)
+pub fn sky_diamond() -> CardDefinition {
+    mirage_diamond("Sky Diamond", Color::Blue)
+}
+
+/// Charcoal Diamond — {3} Artifact. ETB-tapped. {T}: Add {B}. (Mirage black slot.)
+pub fn charcoal_diamond() -> CardDefinition {
+    mirage_diamond("Charcoal Diamond", Color::Black)
+}
+
+/// Fire Diamond — {3} Artifact. ETB-tapped. {T}: Add {R}. (Mirage red slot.)
+pub fn fire_diamond() -> CardDefinition {
+    mirage_diamond("Fire Diamond", Color::Red)
+}
+
+/// Moss Diamond — {3} Artifact. ETB-tapped. {T}: Add {G}. (Mirage green slot —
+/// closes the 5-card cycle.)
+pub fn moss_diamond() -> CardDefinition {
+    mirage_diamond("Moss Diamond", Color::Green)
 }

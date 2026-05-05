@@ -86,6 +86,77 @@ All 248 cards marked ✅ or 🟡 have a corresponding factory in
 positives and 0 stale ⏳ rows. STX 2021 progress is tracked in the
 "Strixhaven base set (STX)" section near the bottom of this file.
 
+## 2026-05-05 push LI: Bridge cycle fidelity bump + Mirage Diamond cycle + 3 cube staples + CR 702.12 audit
+
+Push LI focuses on the modern-decks / cube-staples catalog rather than
+the SOS supplement: SOS totals unchanged; STX 2021 totals unchanged.
+Tests at 1555 (was 1547). All green.
+
+- **`decks::modern` Bridge cycle promotion** — the 10-card MH3
+  indestructible artifact-land cycle (Mistvault / Drossforge /
+  Razortide / Goldmire / Silverbluff / Tanglepool / Slagwoods /
+  Thornglint / Darkmoss / Rustvale) was approximated in earlier
+  pushes as "ETB tapped + `{T}: Add {C}` + dual basic-land subtypes."
+  Push LI rewires the helper:
+  - Each Bridge taps for the printed two colors (`{T}: Add {U} or {B}`
+    for Mistvault, etc.) via two `ActivatedAbility` entries — same
+    shape as `dual_land_with`.
+  - Basic-land subtypes are dropped — real Oracle's type line is
+    just "Artifact Land," not "Land — Island Swamp." Fetchlands and
+    "is a Forest" lookups will no longer find Bridges, matching
+    printed legality.
+  - Indestructible keyword unchanged (CR 702.12b).
+  - `bridge_land(name, color_a, color_b)` helper now takes colors
+    rather than `LandType`s.
+
+- **5 NEW Mirage Diamond cycle (`mod_set::artifacts`)** — the 5-card
+  {3} mana-rock cycle from Mirage. Each ETBs tapped (via the existing
+  `etb_tap()` shared helper) and taps for one of the five colors.
+  Same shape as the Talisman cycle ({2} for two colors, 1 life) —
+  bigger pip cost and ETB-tap delay in exchange for non-painful
+  activation. Cards: Marble Diamond ({W}), Sky Diamond ({U}),
+  Charcoal Diamond ({B}), Fire Diamond ({R}), Moss Diamond ({G}).
+
+- **3 NEW cube staples (`mod_set::creatures`)**:
+  - **Vampire Nighthawk** {1}{B}{B} 2/3 Vampire Shaman — Flying,
+    Deathtouch, Lifelink. Pure vanilla-keywords body.
+  - **Blood Artist** {1}{B} 0/1 Vampire — `EventKind::CreatureDied /
+    AnyPlayer → Drain 1`. Same trigger shape as Cauldron of Essence's
+    death-drain.
+  - **Lingering Souls** {2}{B} Sorcery — mints 2× 1/1 W Flying Spirit
+    tokens via `Effect::CreateToken` + `Keyword::Flashback({1}{W})`.
+
+- **CR 702.12 (Indestructible) audit**: rule-by-rule status:
+  - 702.12a (Indestructible is a static ability) ✅ — modeled as a
+    `Keyword` flag rather than as a `StaticEffect`, but the runtime
+    semantics are identical (read at action time).
+  - 702.12b (permanents with indestructible can't be destroyed; ignore
+    lethal-damage SBA) ✅ — `Effect::Destroy` short-circuits via
+    `card.has_keyword(&Keyword::Indestructible)` (push V), and the
+    SBA in `stack.rs::check_state_based_actions` excludes indestructible
+    creatures from the lethal-damage destruction pass. New
+    `wasteland_cannot_destroy_an_indestructible_bridge` test covers
+    the end-to-end card-vs-card interaction (Wasteland's `{T},Sac:
+    Destroy nonbasic land` activation cost still resolves — the Bridge
+    just survives the destroy effect).
+  - 702.12c (multiple instances are redundant) ✅ — the keyword set is
+    a `Vec<Keyword>` but the code only checks for *any* match via
+    `contains`, so duplicates are harmless. (Future cleanliness: dedupe
+    on insert; tracked in TODO.md.)
+
+- **11 new tests**: 3 Bridge-cycle reshape tests (replaces the 3 prior
+  approximation tests), 2 Mirage Diamond tests (Marble + cycle sweep),
+  1 Vampire Nighthawk keyword test, 2 Blood Artist death-drain tests
+  (own creature + opp creature), 2 Lingering Souls tests (token mint +
+  Flashback presence), 1 Wasteland-vs-Bridge end-to-end Indestructible
+  test.
+
+- **Code-cleanliness**: `draft.rs` clippy fixes — function-pointer
+  casts now go through `*const ()` pointer casts (clippy's preferred
+  shape), and `score += match cmc { ... 2 | 3 | 4 => 3, ... } as i32`
+  drops the unnecessary `as i32` and uses range pattern `2..=4` per
+  clippy's hint.
+
 ## 2026-05-05 push L: 14 new modern cards + HasColor static-filter wire + CR 613 audit
 
 Adds 14 new cards to the `decks::modern` catalog (Seal of Fire / Seal of

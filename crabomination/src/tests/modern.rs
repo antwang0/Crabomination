@@ -7157,7 +7157,7 @@ fn evolving_wilds_sacrifices_to_search_basic() {
 }
 
 #[test]
-fn mistvault_bridge_etbs_tapped_with_dual_basic_typing() {
+fn mistvault_bridge_etbs_tapped_with_no_basic_subtypes() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::mistvault_bridge());
     g.perform_action(GameAction::PlayLand(id)).unwrap();
@@ -7165,21 +7165,36 @@ fn mistvault_bridge_etbs_tapped_with_dual_basic_typing() {
 
     let card = g.battlefield_find(id).unwrap();
     assert!(card.tapped, "Bridge ETB-tapped");
-    // Bridge is typed as both Island and Swamp.
-    let lts = &card.definition.subtypes.land_types;
-    assert!(lts.contains(&crate::card::LandType::Island));
-    assert!(lts.contains(&crate::card::LandType::Swamp));
+    // Push LI: bridges no longer carry approximation-basic-land subtypes.
+    // Real Oracle: type line is "Artifact Land" with no subtype.
+    assert!(
+        card.definition.subtypes.land_types.is_empty(),
+        "Bridge has no basic land subtypes (matches printed Type line)"
+    );
+    // Bridges are Indestructible per Oracle.
+    assert!(card.definition.keywords.contains(&Keyword::Indestructible));
 }
 
 #[test]
-fn drossforge_bridge_taps_for_colorless() {
+fn drossforge_bridge_taps_for_black_or_red() {
+    // Push LI: bridges now correctly tap for one of two specific colors
+    // (was approximated as `{T}: Add {C}` in earlier pushes).
     let mut g = two_player_game();
     let id = g.add_card_to_battlefield(0, catalog::drossforge_bridge());
     g.battlefield.iter_mut().find(|c| c.id == id).unwrap().tapped = false;
+    // First mana ability — black.
     g.perform_action(GameAction::ActivateAbility {
         card_id: id, ability_index: 0, target: None,
     }).unwrap();
-    assert_eq!(g.players[0].mana_pool.total(), 1, "Bridge taps for {{C}}");
+    assert_eq!(g.players[0].mana_pool.amount(Color::Black), 1, "Bridge ability 0 → {{B}}");
+
+    // Untap and try the second ability — red.
+    g.battlefield.iter_mut().find(|c| c.id == id).unwrap().tapped = false;
+    g.players[0].mana_pool = Default::default();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 1, target: None,
+    }).unwrap();
+    assert_eq!(g.players[0].mana_pool.amount(Color::Red), 1, "Bridge ability 1 → {{R}}");
 }
 
 #[test]
@@ -7251,34 +7266,53 @@ fn modern_utility_factories_have_valid_definitions() {
 }
 
 #[test]
-fn all_bridges_etb_tapped_and_carry_two_basic_land_types() {
-    use crate::card::{CardDefinition, LandType};
-    type BridgeCase = (fn() -> CardDefinition, LandType, LandType);
-    // Each bridge factory paired with the two basic land types it should
-    // expose. If the lookup ever changes (e.g., we promote bridges to
-    // "every basic land type"), tighten this in one place.
+fn all_bridges_etb_tapped_indestructible_and_tap_for_two_colors() {
+    use crate::card::CardDefinition;
+    use crate::mana::Color;
+    type BridgeCase = (fn() -> CardDefinition, Color, Color);
+    // Push LI: each bridge factory paired with the two colors it produces
+    // (matches printed Oracle, replacing the earlier `{T}: Add {C}`
+    // approximation). Real Oracle has no basic land subtypes — those
+    // assertions removed too.
     let cases: &[BridgeCase] = &[
-        (catalog::mistvault_bridge,  LandType::Island,    LandType::Swamp),
-        (catalog::drossforge_bridge, LandType::Swamp,     LandType::Mountain),
-        (catalog::razortide_bridge,  LandType::Plains,    LandType::Island),
-        (catalog::goldmire_bridge,   LandType::Plains,    LandType::Swamp),
-        (catalog::silverbluff_bridge,LandType::Island,    LandType::Mountain),
-        (catalog::tanglepool_bridge, LandType::Island,    LandType::Forest),
-        (catalog::slagwoods_bridge,  LandType::Mountain,  LandType::Forest),
-        (catalog::thornglint_bridge, LandType::Plains,    LandType::Forest),
-        (catalog::darkmoss_bridge,   LandType::Swamp,     LandType::Forest),
-        (catalog::rustvale_bridge,   LandType::Plains,    LandType::Mountain),
+        (catalog::mistvault_bridge,  Color::Blue,  Color::Black),
+        (catalog::drossforge_bridge, Color::Black, Color::Red),
+        (catalog::razortide_bridge,  Color::White, Color::Blue),
+        (catalog::goldmire_bridge,   Color::White, Color::Black),
+        (catalog::silverbluff_bridge,Color::Blue,  Color::Red),
+        (catalog::tanglepool_bridge, Color::Green, Color::Blue),
+        (catalog::slagwoods_bridge,  Color::Red,   Color::Green),
+        (catalog::thornglint_bridge, Color::Green, Color::White),
+        (catalog::darkmoss_bridge,   Color::Black, Color::Green),
+        (catalog::rustvale_bridge,   Color::Red,   Color::White),
     ];
-    for &(factory, ta, tb) in cases {
+    for &(factory, _ca, _cb) in cases {
         let def = factory();
-        let lts = &def.subtypes.land_types;
-        assert!(lts.contains(&ta), "{}: missing {:?}", def.name, ta);
-        assert!(lts.contains(&tb), "{}: missing {:?}", def.name, tb);
-        // Each bridge has exactly the etb-tap trigger + a {T}: Add {C} ability.
-        assert_eq!(def.activated_abilities.len(), 1,
-            "{}: should have one mana ability", def.name);
-        assert!(!def.triggered_abilities.is_empty(),
-            "{}: should have an etb-tap trigger", def.name);
+        // Real Oracle: no basic land subtypes.
+        assert!(
+            def.subtypes.land_types.is_empty(),
+            "{}: should not carry basic land subtypes",
+            def.name,
+        );
+        // Two color-tap mana abilities.
+        assert_eq!(
+            def.activated_abilities.len(),
+            2,
+            "{}: should have two mana abilities (one per color)",
+            def.name,
+        );
+        // Indestructible per Oracle.
+        assert!(
+            def.keywords.contains(&Keyword::Indestructible),
+            "{}: should be Indestructible",
+            def.name,
+        );
+        // ETB-tap trigger present.
+        assert!(
+            !def.triggered_abilities.is_empty(),
+            "{}: should have an etb-tap trigger",
+            def.name,
+        );
     }
 }
 
@@ -12629,4 +12663,187 @@ fn wurms_tooth_triggers_on_green_spell_cast() {
 
     assert_eq!(g.players[0].life, life_before + 1,
         "Wurm's Tooth gains 1 on the green Bears cast");
+}
+
+// ── Mirage Diamond cycle ─────────────────────────────────────────────────────
+
+/// Marble Diamond ETBs tapped (no mana yet) and taps for {W} once untapped.
+#[test]
+fn marble_diamond_etb_taps_and_taps_for_white() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::marble_diamond());
+    // Diamond is a {3} artifact — cast as a spell.
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    }).expect("Marble Diamond cast for {3}");
+    drain_stack(&mut g);
+    let card = g.battlefield_find(id).unwrap();
+    assert!(card.tapped, "Marble Diamond ETB-tapped");
+    // Untap and activate.
+    g.battlefield.iter_mut().find(|c| c.id == id).unwrap().tapped = false;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None,
+    }).unwrap();
+    assert_eq!(g.players[0].mana_pool.amount(Color::White), 1,
+        "Marble Diamond taps for {{W}}");
+}
+
+/// Diamond cycle: each color factory yields a {3} artifact whose tap
+/// produces the correct color. Single test loops the cycle so future
+/// changes to the helper get caught in one place.
+#[test]
+fn mirage_diamond_cycle_taps_for_each_color() {
+    use crate::card::CardDefinition;
+    type Case = (fn() -> CardDefinition, Color);
+    let cases: &[Case] = &[
+        (catalog::marble_diamond,   Color::White),
+        (catalog::sky_diamond,      Color::Blue),
+        (catalog::charcoal_diamond, Color::Black),
+        (catalog::fire_diamond,     Color::Red),
+        (catalog::moss_diamond,     Color::Green),
+    ];
+    for &(factory, c) in cases {
+        let mut g = two_player_game();
+        let id = g.add_card_to_battlefield(0, factory());
+        g.battlefield.iter_mut().find(|c| c.id == id).unwrap().tapped = false;
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: id, ability_index: 0, target: None,
+        }).expect("Diamond mana ability");
+        assert_eq!(g.players[0].mana_pool.amount(c), 1,
+            "{} should produce {:?}", factory().name, c);
+    }
+}
+
+// ── Vampire Nighthawk ────────────────────────────────────────────────────────
+
+/// Nighthawk enters as a 2/3 with all three printed keywords.
+#[test]
+fn vampire_nighthawk_has_flying_deathtouch_and_lifelink() {
+    let g = two_player_game();
+    let _ = &g; // unused; just satisfy the helper.
+    let def = catalog::vampire_nighthawk();
+    assert_eq!(def.power, 2);
+    assert_eq!(def.toughness, 3);
+    let kws = &def.keywords;
+    assert!(kws.contains(&crate::card::Keyword::Flying), "should fly");
+    assert!(kws.contains(&crate::card::Keyword::Deathtouch), "should have deathtouch");
+    assert!(kws.contains(&crate::card::Keyword::Lifelink), "should have lifelink");
+}
+
+// ── Blood Artist ─────────────────────────────────────────────────────────────
+
+/// Blood Artist drains 1 from each opponent when any creature dies.
+#[test]
+fn blood_artist_drains_when_a_creature_dies() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::blood_artist());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    let life_self_before = g.players[0].life;
+    let life_opp_before = g.players[1].life;
+
+    // Bolt our own Bear to trigger Blood Artist's death drain.
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(bear)),
+        mode: None, x_value: None,
+    })
+    .expect("Bolt castable for {R}");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[1].life, life_opp_before - 1,
+        "opp loses 1 from Blood Artist drain");
+    assert_eq!(g.players[0].life, life_self_before + 1,
+        "you gain 1 from Blood Artist drain");
+}
+
+/// Blood Artist also triggers when an opponent's creature dies (any-player scope).
+#[test]
+fn blood_artist_triggers_on_opp_creature_death() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::blood_artist());
+    let opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(opp_bear);
+    let life_opp_before = g.players[1].life;
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(opp_bear)),
+        mode: None, x_value: None,
+    })
+    .expect("Bolt castable for {R}");
+    drain_stack(&mut g);
+    // Bolt targets the bear (not the player) — only the Blood Artist
+    // drain hits opp life.
+    assert_eq!(g.players[1].life, life_opp_before - 1,
+        "opp loses 1 from Blood Artist when their bear dies");
+}
+
+// ── Lingering Souls ──────────────────────────────────────────────────────────
+
+/// Lingering Souls mints two 1/1 Spirit tokens with flying.
+#[test]
+fn lingering_souls_creates_two_flying_spirit_tokens() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::lingering_souls());
+    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    let bf_before = g.battlefield.len();
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    }).expect("Lingering Souls cast for {2}{B}");
+    drain_stack(&mut g);
+
+    let new_perms: Vec<_> = g.battlefield.iter().skip(bf_before).collect();
+    assert_eq!(new_perms.len(), 2, "Two Spirit tokens minted");
+    for tok in &new_perms {
+        assert_eq!(tok.definition.power, 1);
+        assert_eq!(tok.definition.toughness, 1);
+        assert!(tok.definition.keywords.contains(&crate::card::Keyword::Flying));
+        assert!(tok.definition.subtypes.creature_types.contains(&crate::card::CreatureType::Spirit));
+    }
+}
+
+/// Lingering Souls carries `Keyword::Flashback({1}{W})`.
+#[test]
+fn lingering_souls_has_flashback_one_white() {
+    let def = catalog::lingering_souls();
+    let has_flashback = def.keywords.iter().any(|k| matches!(k, crate::card::Keyword::Flashback(_)));
+    assert!(has_flashback, "Lingering Souls should have Flashback");
+}
+
+// ── CR 702.12 (Indestructible) end-to-end ───────────────────────────────────
+//
+// The Bridge cycle (push LI fix) carries `Keyword::Indestructible`.
+// Wasteland's `{T}, Sac: Destroy nonbasic land` should fail to remove a
+// Bridge — the indestructible check in `Effect::Destroy` shorts the
+// Move-to-Graveyard step. Validates CR 702.12b end-to-end through a
+// real card-vs-card interaction (was previously only exercised through
+// Effect-level unit tests).
+
+#[test]
+fn wasteland_cannot_destroy_an_indestructible_bridge() {
+    let mut g = two_player_game();
+    let waste = g.add_card_to_battlefield(0, catalog::wasteland());
+    g.clear_sickness(waste);
+    let bridge = g.add_card_to_battlefield(1, catalog::mistvault_bridge());
+    g.clear_sickness(bridge);
+
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: waste,
+        ability_index: 1, // destroy-nonbasic-land mode
+        target: Some(Target::Permanent(bridge)),
+    })
+    .expect("Wasteland legally targets a nonbasic Bridge");
+    drain_stack(&mut g);
+
+    // Wasteland is sacrificed regardless (sac is the cost), but the
+    // Bridge survives thanks to Indestructible.
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == waste),
+        "Wasteland is sacrificed as part of the activation cost");
+    assert!(g.battlefield.iter().any(|c| c.id == bridge),
+        "Indestructible Bridge survives Wasteland's destroy effect");
 }

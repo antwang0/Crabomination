@@ -275,6 +275,15 @@ via `#[path = "../tests/modern.rs"] mod tests_modern` in `game::mod`).
 | Kraken's Eye | {2} | ✅ NEW | Push L. Artifact. Blue slot in the Mirrodin cycle. Same shape as Dragon's Claw. |
 | Angel's Feather | {2} | ✅ NEW | Push L. Artifact. White slot in the Mirrodin cycle. |
 | Demon's Horn | {2} | ✅ NEW | Push L. Artifact. Black slot in the Mirrodin cycle — closes the 5-card cycle (W/U/B/R/G). |
+| Marble Diamond | {3} | ✅ NEW | Push LI. Artifact. ETBs tapped, `{T}: Add {W}`. White slot of the Mirage Diamond cycle. Test: `marble_diamond_etb_taps_and_taps_for_white`. |
+| Sky Diamond | {3} | ✅ NEW | Push LI. Artifact. ETBs tapped, `{T}: Add {U}`. Blue slot of the Mirage Diamond cycle. |
+| Charcoal Diamond | {3} | ✅ NEW | Push LI. Artifact. ETBs tapped, `{T}: Add {B}`. Black slot of the Mirage Diamond cycle. |
+| Fire Diamond | {3} | ✅ NEW | Push LI. Artifact. ETBs tapped, `{T}: Add {R}`. Red slot of the Mirage Diamond cycle. |
+| Moss Diamond | {3} | ✅ NEW | Push LI. Artifact. ETBs tapped, `{T}: Add {G}`. Green slot — closes the 5-card Mirage Diamond cycle. Cycle test: `mirage_diamond_cycle_taps_for_each_color`. |
+| Vampire Nighthawk | {1}{B}{B} | ✅ NEW | Push LI. 2/3 Vampire Shaman with Flying, Deathtouch, Lifelink. Pure vanilla-keywords body — same shape as Knight of Meadowgrain plus Deathtouch. Test: `vampire_nighthawk_has_flying_deathtouch_and_lifelink`. |
+| Blood Artist | {1}{B} | ✅ NEW | Push LI. 0/1 Vampire. "Whenever Blood Artist or another creature dies" via `EventKind::CreatureDied/AnyPlayer` → drain 1. Tests: `blood_artist_drains_when_a_creature_dies`, `blood_artist_triggers_on_opp_creature_death`. |
+| Lingering Souls | {2}{B} | ✅ NEW | Push LI. Sorcery. Mints two 1/1 white Spirit tokens with Flying. Flashback `{1}{W}` via `Keyword::Flashback`. Tests: `lingering_souls_creates_two_flying_spirit_tokens`, `lingering_souls_has_flashback_one_white`. |
+| Mistvault Bridge / Drossforge / Razortide / Goldmire / Silverbluff / Tanglepool / Slagwoods / Thornglint / Darkmoss / Rustvale | — | ✅ FIXED | Push LI. The 10-card MH3 indestructible artifact-land cycle is now wired correctly: each Bridge taps for one of TWO specific colors (was approximated as `{T}: Add {C}` colorless in earlier pushes), and the basic-land subtypes were dropped to match printed (real Oracle has no `Land — Plains/Island/etc` subtype line — the type line is just "Artifact Land"). Tests: `drossforge_bridge_taps_for_black_or_red`, `mistvault_bridge_etbs_tapped_with_no_basic_subtypes`, `all_bridges_etb_tapped_indestructible_and_tap_for_two_colors`, `wasteland_cannot_destroy_an_indestructible_bridge`. |
 
 ### Engine improvements that landed alongside
 

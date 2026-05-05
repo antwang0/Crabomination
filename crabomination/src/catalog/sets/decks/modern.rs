@@ -5461,106 +5461,84 @@ pub fn evolving_wilds() -> CardDefinition {
     }
 }
 
-/// Build a "bridge"-cycle land: enters tapped, has both basic land types
-/// (so fetchlands and other land-type-matters effects see it), and taps
-/// for {C}.
+/// Build a "bridge"-cycle land (Modern Horizons 3 indestructible artifact
+/// land cycle). Real Oracle: "Artifact Land. This land enters tapped.
+/// Indestructible. {T}: Add {C1} or {C2}."
 ///
-/// In the real Oracle ("X is every basic land type") bridges register all
-/// five basic types. We collapse to the two relevant types — that's
-/// enough to power fetchland targeting and Nature's-Lore-style searches
-/// for a Forest/etc., without overstating the card by giving it Plains
-/// production from a Reflecting Pool, etc.
+/// ✅ Push LI: factories now produce the correct two-color mana ability
+/// (was approximated as `{T}: Add {C}` in earlier pushes — see DECK_FEATURES
+/// push LI). Bridges are NOT basic-typed in real Oracle (Type line is
+/// "Artifact Land" with no subtype), so the `subtypes.land_types`
+/// collapse from earlier pushes is also dropped — fetchlands, Nature's
+/// Lore, and "is a Forest" lookups will no longer find Bridges (matching
+/// printed legality).
 fn bridge_land(
     name: &'static str,
-    type_a: crate::card::LandType,
-    type_b: crate::card::LandType,
+    color_a: crate::mana::Color,
+    color_b: crate::mana::Color,
 ) -> CardDefinition {
-    use crate::card::ActivatedAbility;
     CardDefinition {
         name,
         card_types: vec![CardType::Artifact, CardType::Land],
         keywords: vec![Keyword::Indestructible],
-        subtypes: Subtypes {
-            land_types: vec![type_a, type_b],
-            ..Default::default()
-        },
-        activated_abilities: vec![ActivatedAbility {
-            tap_cost: true,
-            mana_cost: ManaCost::default(),
-            effect: Effect::AddMana {
-                who: PlayerRef::You,
-                pool: ManaPayload::Colorless(Value::Const(1)),
-            },
-            once_per_turn: false,
-            sorcery_speed: false,
-            sac_cost: false,
-            condition: None,
-            life_cost: 0,
-            exile_gy_cost: 0,
-        }],
+        subtypes: Subtypes::default(),
+        activated_abilities: vec![
+            super::super::tap_add(color_a),
+            super::super::tap_add(color_b),
+        ],
         triggered_abilities: vec![modern_etb_tap()],
         ..Default::default()
     }
 }
 
-/// Mistvault Bridge — Land. Enters tapped. Is Island and Swamp. {T}: Add {C}.
+/// Mistvault Bridge — UB Bridge. Enters tapped. Indestructible. {T}: Add {U} or {B}.
 pub fn mistvault_bridge() -> CardDefinition {
-    use crate::card::LandType;
-    bridge_land("Mistvault Bridge", LandType::Island, LandType::Swamp)
+    bridge_land("Mistvault Bridge", Color::Blue, Color::Black)
 }
 
-/// Drossforge Bridge — Land. Enters tapped. Is Swamp and Mountain. {T}: Add {C}.
+/// Drossforge Bridge — BR Bridge. Enters tapped. Indestructible. {T}: Add {B} or {R}.
 pub fn drossforge_bridge() -> CardDefinition {
-    use crate::card::LandType;
-    bridge_land("Drossforge Bridge", LandType::Swamp, LandType::Mountain)
+    bridge_land("Drossforge Bridge", Color::Black, Color::Red)
 }
 
-/// Razortide Bridge — Land. Enters tapped. Is Plains and Island. {T}: Add {C}.
+/// Razortide Bridge — UW Bridge. Enters tapped. Indestructible. {T}: Add {W} or {U}.
 pub fn razortide_bridge() -> CardDefinition {
-    use crate::card::LandType;
-    bridge_land("Razortide Bridge", LandType::Plains, LandType::Island)
+    bridge_land("Razortide Bridge", Color::White, Color::Blue)
 }
 
-/// Goldmire Bridge — Land. Enters tapped. Is Plains and Swamp. {T}: Add {C}.
+/// Goldmire Bridge — WB Bridge. Enters tapped. Indestructible. {T}: Add {W} or {B}.
 pub fn goldmire_bridge() -> CardDefinition {
-    use crate::card::LandType;
-    bridge_land("Goldmire Bridge", LandType::Plains, LandType::Swamp)
+    bridge_land("Goldmire Bridge", Color::White, Color::Black)
 }
 
-/// Silverbluff Bridge — Land. Enters tapped. Is Island and Mountain. {T}: Add {C}.
+/// Silverbluff Bridge — UR Bridge. Enters tapped. Indestructible. {T}: Add {U} or {R}.
 pub fn silverbluff_bridge() -> CardDefinition {
-    use crate::card::LandType;
-    bridge_land("Silverbluff Bridge", LandType::Island, LandType::Mountain)
+    bridge_land("Silverbluff Bridge", Color::Blue, Color::Red)
 }
 
-/// Tanglepool Bridge — Land. Enters tapped. Is Island and Forest. {T}: Add {C}.
+/// Tanglepool Bridge — GU Bridge. Enters tapped. Indestructible. {T}: Add {G} or {U}.
 pub fn tanglepool_bridge() -> CardDefinition {
-    use crate::card::LandType;
-    bridge_land("Tanglepool Bridge", LandType::Island, LandType::Forest)
+    bridge_land("Tanglepool Bridge", Color::Green, Color::Blue)
 }
 
-/// Slagwoods Bridge — Land. Enters tapped. Is Mountain and Forest. {T}: Add {C}.
+/// Slagwoods Bridge — RG Bridge. Enters tapped. Indestructible. {T}: Add {R} or {G}.
 pub fn slagwoods_bridge() -> CardDefinition {
-    use crate::card::LandType;
-    bridge_land("Slagwoods Bridge", LandType::Mountain, LandType::Forest)
+    bridge_land("Slagwoods Bridge", Color::Red, Color::Green)
 }
 
-/// Thornglint Bridge — Land. Enters tapped. Is Plains and Forest. {T}: Add {C}.
+/// Thornglint Bridge — GW Bridge. Enters tapped. Indestructible. {T}: Add {G} or {W}.
 pub fn thornglint_bridge() -> CardDefinition {
-    use crate::card::LandType;
-    bridge_land("Thornglint Bridge", LandType::Plains, LandType::Forest)
+    bridge_land("Thornglint Bridge", Color::Green, Color::White)
 }
 
-/// Darkmoss Bridge — Land. Enters tapped. Is Swamp and Forest. {T}: Add {C}.
+/// Darkmoss Bridge — BG Bridge. Enters tapped. Indestructible. {T}: Add {B} or {G}.
 pub fn darkmoss_bridge() -> CardDefinition {
-    use crate::card::LandType;
-    bridge_land("Darkmoss Bridge", LandType::Swamp, LandType::Forest)
+    bridge_land("Darkmoss Bridge", Color::Black, Color::Green)
 }
 
-/// Rustvale Bridge — Land. Enters tapped. Is Plains and Mountain. {T}: Add {C}.
+/// Rustvale Bridge — RW Bridge. Enters tapped. Indestructible. {T}: Add {R} or {W}.
 pub fn rustvale_bridge() -> CardDefinition {
-    use crate::card::LandType;
-    bridge_land("Rustvale Bridge", LandType::Plains, LandType::Mountain)
+    bridge_land("Rustvale Bridge", Color::Red, Color::White)
 }
 
 // ── Utility artifacts ────────────────────────────────────────────────────────

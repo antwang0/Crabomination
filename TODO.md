@@ -7,6 +7,44 @@ See `CUBE_FEATURES.md` (cube-card implementation status) and
 
 ## Recent additions
 
+- ✅ **Push LI (2026-05-05)**: Bridge cycle fidelity bump + Mirage Diamond
+  cycle + 3 cube staples + CR 702.12 (Indestructible) audit. Tests at
+  1555 (was 1547), all green.
+  - **Bridge cycle promotion** (10 cards reshaped) — the MH3
+    indestructible artifact-land cycle (Mistvault / Drossforge /
+    Razortide / Goldmire / Silverbluff / Tanglepool / Slagwoods /
+    Thornglint / Darkmoss / Rustvale) was approximated as `{T}: Add
+    {C}` colorless tap + dual basic-land subtypes. Push LI rewires
+    `bridge_land(name, color_a, color_b)` to produce two color-tap
+    abilities (matching printed `{T}: Add {B} or {G}` etc.) and drop
+    the basic-land subtype approximation (real Oracle's type line is
+    just "Artifact Land," not "Land — Island Swamp"). `dual_land_with`
+    pattern reused.
+  - **5 NEW Mirage Diamond cycle**: Marble Diamond (W), Sky Diamond
+    (U), Charcoal Diamond (B), Fire Diamond (R), Moss Diamond (G).
+    `{3}` mana rocks that ETB-tapped + tap for one color. New
+    `mirage_diamond(name, color)` helper composes the existing
+    `etb_tap()` triggered ability + a single colored mana ability —
+    no engine changes required.
+  - **3 NEW cube staples**: Vampire Nighthawk ({1}{B}{B} 2/3 Flying
+    Deathtouch Lifelink — pure keyword-body), Blood Artist ({1}{B}
+    0/1 — `EventKind::CreatureDied/AnyPlayer → Drain 1`), Lingering
+    Souls ({2}{B} Sorcery — 2 × 1/1 W Flying Spirit tokens via the
+    `inkling_token`-style minted token pattern + `Keyword::Flashback({1}{W})`).
+  - **CR 702.12 (Indestructible) audit**: 702.12a (static ability) ✅
+    via `Keyword` flag, 702.12b (no destroy + ignore lethal-damage SBA)
+    ✅ via `Effect::Destroy` short-circuit + SBA exclusion. 702.12c
+    (multiple instances redundant) ✅ via `contains` check semantics.
+    New end-to-end test: `wasteland_cannot_destroy_an_indestructible_bridge`
+    validates the Bridge survives Wasteland's `{T},Sac: Destroy
+    nonbasic land` while the Wasteland is correctly sacrificed.
+  - **Code cleanliness**: `draft.rs` clippy fixes —
+    `picked as usize == catalog::grizzly_bears as usize` →
+    `picked as *const () as usize == catalog::grizzly_bears as *const () as usize`
+    (clippy's preferred function-pointer cast shape), and
+    `match cmc { ... 2 | 3 | 4 => 3, ... } as i32` simplified to range
+    pattern `2..=4 => 3` without the redundant `as i32`.
+
 - ✅ **Push L (2026-05-05)**: 14 new modern cards + `HasColor` static-
   effect filter wire + CR 613 (Interaction of Continuous Effects)
   audit. Tests at 1547 (was 1520; +27 net), all green.
@@ -874,6 +912,52 @@ See `CUBE_FEATURES.md` (cube-card implementation status) and
     reject / Mascot steal + revert), 9 cube-card tests (one per new
     card + body sanity for vanilla bodies), 1 view test
     (`ability_cost_label_renders_exile_gy_cost`).
+
+## Future work — engine/UI suggestions surfaced by push LI
+
+Push LI tightens the MH3 Bridge cycle fidelity, adds the Mirage Diamond
+mana-rock cycle, and lands 3 cube staples. The following remain open:
+
+- **`Subtypes::dedupe_keywords` / dedupe-on-insert**: CR 702.12c says
+  multiple instances of Indestructible are redundant. The engine's
+  `Vec<Keyword>` allows duplicates, which today is harmless because
+  every consumer uses `contains()` rather than counting. But if a
+  future static ever counts keyword instances (e.g., a "for each
+  Indestructible source" payoff), duplicate keywords from layered
+  effects could double-count. Tracked here as a low-priority cleanup —
+  introduce `add_keyword_unique` on the layer-applier that no-ops on
+  duplicates.
+- **Snow-permanent count `Value` primitive (re-flagged)**: Skred /
+  Coldsteel Heart / Skrelv's Hive remain blocked because no card uses
+  `Supertype::Snow` today. The supertype enum + `Predicate::HasSupertype`
+  predicate are both in place — adding the missing `Value::CountOf
+  (EachPermanent(Snow ∧ ControlledByYou))` would unblock the entire
+  Snow-payoff family. The push L Skred factory's flat-3 approximation
+  could promote on the same pass.
+- **Bridge-cycle "fetch nothing" semantics**: now that Bridges drop
+  basic-land subtypes, fetchlands (Flooded Strand / Marsh Flats /
+  etc., when added) won't find them. This is *correct* per printed
+  Oracle, but worth a regression test against future fetchlands when
+  they're added. Slot a `fetchland_cannot_find_a_bridge` test alongside
+  the future fetchland factories.
+- **Mirage Diamond dual-mode mana**: today each Diamond produces a
+  single fixed color. The printed Oracle is exact ("`{T}: Add {W}`"
+  for Marble Diamond), but the same factory shape extends naturally
+  to a "{T}: Add one mana of any color a Mirage Diamond could
+  produce" — useful for Coalition Relic / Chromatic Lantern-style
+  cards that want a "dual-mode" mana payload.
+- **Token-keyword dedupe at minting time**: `Effect::CreateToken`
+  copies the token's `keywords` straight onto the new
+  `CardDefinition`. If a token-keyword grants Indestructible, dedupe
+  matters more (per the 702.12c audit above). Same low-priority
+  cleanup family.
+- **`Keyword::Indestructible` on lands SBA validation**: the engine
+  correctly preserves Indestructible lands through `Effect::Destroy`,
+  but lands don't take damage today, so the "lethal damage SBA
+  ignored" half of CR 702.12b doesn't actually trigger for
+  Indestructible lands. Worth a probe test: a hypothetical "deal X
+  damage to target permanent" effect (no such cards in catalog) would
+  exercise the SBA path and confirm Indestructible lands survive.
 
 ## Future work — engine/UI suggestions surfaced by push L
 
