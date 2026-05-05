@@ -511,12 +511,23 @@ impl From<&Decision> for DecisionWire {
                 source: *source,
                 legal: legal.clone(),
             },
-            Decision::Scry { player, cards, prompt } => DecisionWire::Scry {
+            Decision::Scry {
+                player,
+                cards,
+                prompt,
+            } => DecisionWire::Scry {
                 player: *player,
-                cards: cards.iter().map(|(id, n)| (*id, (*n).to_string())).collect(),
+                cards: cards
+                    .iter()
+                    .map(|(id, n)| (*id, (*n).to_string()))
+                    .collect(),
                 prompt: prompt.clone(),
             },
-            Decision::Discard { player, count, hand } => DecisionWire::Discard {
+            Decision::Discard {
+                player,
+                count,
+                hand,
+            } => DecisionWire::Discard {
                 player: *player,
                 count: *count,
                 hand: hand.iter().map(|(id, n)| (*id, (*n).to_string())).collect(),
@@ -528,23 +539,33 @@ impl From<&Decision> for DecisionWire {
                     .map(|(id, n)| (*id, (*n).to_string()))
                     .collect(),
             },
-            Decision::OptionalTrigger { source, description } => DecisionWire::OptionalTrigger {
+            Decision::OptionalTrigger {
+                source,
+                description,
+            } => DecisionWire::OptionalTrigger {
                 source: *source,
                 description: (*description).to_string(),
             },
-            Decision::PutOnLibrary { player, count, hand } => DecisionWire::PutOnLibrary {
+            Decision::PutOnLibrary {
+                player,
+                count,
+                hand,
+            } => DecisionWire::PutOnLibrary {
                 player: *player,
                 count: *count,
                 hand: hand.iter().map(|(id, n)| (*id, (*n).to_string())).collect(),
             },
-            Decision::Mulligan { player, hand, mulligans_taken, serum_powders } => {
-                DecisionWire::Mulligan {
-                    player: *player,
-                    hand: hand.iter().map(|(id, n)| (*id, (*n).to_string())).collect(),
-                    mulligans_taken: *mulligans_taken,
-                    serum_powders: serum_powders.clone(),
-                }
-            }
+            Decision::Mulligan {
+                player,
+                hand,
+                mulligans_taken,
+                serum_powders,
+            } => DecisionWire::Mulligan {
+                player: *player,
+                hand: hand.iter().map(|(id, n)| (*id, (*n).to_string())).collect(),
+                mulligans_taken: *mulligans_taken,
+                serum_powders: serum_powders.clone(),
+            },
             Decision::ChooseCreatureType { source } => {
                 DecisionWire::ChooseCreatureType { source: *source }
             }
@@ -557,10 +578,22 @@ impl From<&Decision> for DecisionWire {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum GameEventWire {
     StepChanged(TurnStep),
-    TurnStarted { player: usize, turn: u32 },
-    CardDrawn { player: usize, card_id: CardId },
-    CardDiscarded { player: usize, card_id: CardId },
-    LandPlayed { player: usize, card_id: CardId },
+    TurnStarted {
+        player: usize,
+        turn: u32,
+    },
+    CardDrawn {
+        player: usize,
+        card_id: CardId,
+    },
+    CardDiscarded {
+        player: usize,
+        card_id: CardId,
+    },
+    LandPlayed {
+        player: usize,
+        card_id: CardId,
+    },
     /// `face` lets replays / spectator UIs distinguish a back-face MDFC
     /// cast (Back) from a normal hand cast (Front) and a flashback
     /// graveyard replay (Flashback). Defaults to `Front` on snapshots
@@ -571,47 +604,131 @@ pub enum GameEventWire {
         #[serde(default)]
         face: crate::game::CastFace,
     },
-    AbilityActivated { source: CardId },
-    ManaAdded { player: usize, color: Color },
-    ColorlessManaAdded { player: usize },
-    PermanentEntered { card_id: CardId },
-    PermanentExiled { card_id: CardId },
-    DamageDealt { amount: u32, to_player: Option<usize>, to_card: Option<CardId> },
-    LifeLost { player: usize, amount: u32 },
-    LifeGained { player: usize, amount: u32 },
-    CreatureDied { card_id: CardId },
-    PumpApplied { card_id: CardId, power: i32, toughness: i32 },
-    CounterAdded { card_id: CardId, counter_type: CounterType, count: u32 },
-    CounterRemoved { card_id: CardId, counter_type: CounterType, count: u32 },
-    PermanentTapped { card_id: CardId },
-    PermanentUntapped { card_id: CardId },
+    AbilityActivated {
+        source: CardId,
+    },
+    ManaAdded {
+        player: usize,
+        color: Color,
+    },
+    ColorlessManaAdded {
+        player: usize,
+    },
+    PermanentEntered {
+        card_id: CardId,
+    },
+    PermanentExiled {
+        card_id: CardId,
+    },
+    DamageDealt {
+        amount: u32,
+        to_player: Option<usize>,
+        to_card: Option<CardId>,
+    },
+    LifeLost {
+        player: usize,
+        amount: u32,
+    },
+    LifeGained {
+        player: usize,
+        amount: u32,
+    },
+    CreatureDied {
+        card_id: CardId,
+    },
+    PumpApplied {
+        card_id: CardId,
+        power: i32,
+        toughness: i32,
+    },
+    CounterAdded {
+        card_id: CardId,
+        counter_type: CounterType,
+        count: u32,
+    },
+    CounterRemoved {
+        card_id: CardId,
+        counter_type: CounterType,
+        count: u32,
+    },
+    PermanentTapped {
+        card_id: CardId,
+    },
+    PermanentUntapped {
+        card_id: CardId,
+    },
     /// Wire mirror of `GameEvent::PreparedChanged` — SOS Prepare
     /// mechanic flag flip. Lets spectator UIs animate the badge.
-    PreparedChanged { card_id: CardId, prepared: bool },
-    TokenCreated { card_id: CardId },
-    CardMilled { player: usize, card_id: CardId },
-    ScryPerformed { player: usize, looked_at: usize, bottomed: usize },
+    PreparedChanged {
+        card_id: CardId,
+        prepared: bool,
+    },
+    TokenCreated {
+        card_id: CardId,
+    },
+    CardMilled {
+        player: usize,
+        card_id: CardId,
+    },
+    ScryPerformed {
+        player: usize,
+        looked_at: usize,
+        bottomed: usize,
+    },
     AttackerDeclared(CardId),
-    BlockerDeclared { blocker: CardId, attacker: CardId },
+    BlockerDeclared {
+        blocker: CardId,
+        attacker: CardId,
+    },
     CombatResolved,
     FirstStrikeDamageResolved,
-    TopCardRevealed { player: usize, card_name: String, is_land: bool },
-    AttachmentMoved { attachment: CardId, attached_to: Option<CardId> },
-    PoisonAdded { player: usize, amount: u32 },
-    LoyaltyAbilityActivated { planeswalker: CardId, loyalty_change: i32 },
-    LoyaltyChanged { card_id: CardId, new_loyalty: i32 },
-    PlaneswalkerDied { card_id: CardId },
-    SpellsCopied { original: CardId, count: u32 },
-    SurveilPerformed { player: usize, looked_at: usize, graveyarded: usize },
+    TopCardRevealed {
+        player: usize,
+        card_name: String,
+        is_land: bool,
+    },
+    AttachmentMoved {
+        attachment: CardId,
+        attached_to: Option<CardId>,
+    },
+    PoisonAdded {
+        player: usize,
+        amount: u32,
+    },
+    LoyaltyAbilityActivated {
+        planeswalker: CardId,
+        loyalty_change: i32,
+    },
+    LoyaltyChanged {
+        card_id: CardId,
+        new_loyalty: i32,
+    },
+    PlaneswalkerDied {
+        card_id: CardId,
+    },
+    SpellsCopied {
+        original: CardId,
+        count: u32,
+    },
+    SurveilPerformed {
+        player: usize,
+        looked_at: usize,
+        graveyarded: usize,
+    },
     /// Wire mirror of `GameEvent::CardLeftGraveyard`. Surfaced so client UIs
     /// can animate "card returned from graveyard" or highlight Lorehold
     /// "cards left graveyard this turn" payoffs.
-    CardLeftGraveyard { player: usize, card_id: CardId },
+    CardLeftGraveyard {
+        player: usize,
+        card_id: CardId,
+    },
     /// Wire mirror of `GameEvent::CombatDamagePreventedThisTurn`.
     /// Surfaced so spectator UIs can render the prevention shield
     /// (Owlin Shieldmage / Holy Day-style fog).
     CombatDamagePreventedThisTurn,
-    GameOver { winner: Option<usize> },
+    GameOver {
+        winner: Option<usize>,
+    },
 }
 
 impl From<&GameEvent> for GameEventWire {
@@ -634,7 +751,11 @@ impl From<&GameEvent> for GameEventWire {
                 player: *player,
                 card_id: *card_id,
             },
-            GameEvent::SpellCast { player, card_id, face } => GameEventWire::SpellCast {
+            GameEvent::SpellCast {
+                player,
+                card_id,
+                face,
+            } => GameEventWire::SpellCast {
                 player: *player,
                 card_id: *card_id,
                 face: *face,
@@ -655,7 +776,11 @@ impl From<&GameEvent> for GameEventWire {
             GameEvent::PermanentExiled { card_id } => {
                 GameEventWire::PermanentExiled { card_id: *card_id }
             }
-            GameEvent::DamageDealt { amount, to_player, to_card } => GameEventWire::DamageDealt {
+            GameEvent::DamageDealt {
+                amount,
+                to_player,
+                to_card,
+            } => GameEventWire::DamageDealt {
                 amount: *amount,
                 to_player: *to_player,
                 to_card: *to_card,
@@ -671,37 +796,43 @@ impl From<&GameEvent> for GameEventWire {
             GameEvent::CreatureDied { card_id } => {
                 GameEventWire::CreatureDied { card_id: *card_id }
             }
-            GameEvent::PumpApplied { card_id, power, toughness } => GameEventWire::PumpApplied {
+            GameEvent::PumpApplied {
+                card_id,
+                power,
+                toughness,
+            } => GameEventWire::PumpApplied {
                 card_id: *card_id,
                 power: *power,
                 toughness: *toughness,
             },
-            GameEvent::CounterAdded { card_id, counter_type, count } => {
-                GameEventWire::CounterAdded {
-                    card_id: *card_id,
-                    counter_type: *counter_type,
-                    count: *count,
-                }
-            }
-            GameEvent::CounterRemoved { card_id, counter_type, count } => {
-                GameEventWire::CounterRemoved {
-                    card_id: *card_id,
-                    counter_type: *counter_type,
-                    count: *count,
-                }
-            }
+            GameEvent::CounterAdded {
+                card_id,
+                counter_type,
+                count,
+            } => GameEventWire::CounterAdded {
+                card_id: *card_id,
+                counter_type: *counter_type,
+                count: *count,
+            },
+            GameEvent::CounterRemoved {
+                card_id,
+                counter_type,
+                count,
+            } => GameEventWire::CounterRemoved {
+                card_id: *card_id,
+                counter_type: *counter_type,
+                count: *count,
+            },
             GameEvent::PermanentTapped { card_id } => {
                 GameEventWire::PermanentTapped { card_id: *card_id }
             }
             GameEvent::PermanentUntapped { card_id } => {
                 GameEventWire::PermanentUntapped { card_id: *card_id }
             }
-            GameEvent::PreparedChanged { card_id, prepared } => {
-                GameEventWire::PreparedChanged {
-                    card_id: *card_id,
-                    prepared: *prepared,
-                }
-            }
+            GameEvent::PreparedChanged { card_id, prepared } => GameEventWire::PreparedChanged {
+                card_id: *card_id,
+                prepared: *prepared,
+            },
             GameEvent::TokenCreated { card_id } => {
                 GameEventWire::TokenCreated { card_id: *card_id }
             }
@@ -709,13 +840,15 @@ impl From<&GameEvent> for GameEventWire {
                 player: *player,
                 card_id: *card_id,
             },
-            GameEvent::ScryPerformed { player, looked_at, bottomed } => {
-                GameEventWire::ScryPerformed {
-                    player: *player,
-                    looked_at: *looked_at,
-                    bottomed: *bottomed,
-                }
-            }
+            GameEvent::ScryPerformed {
+                player,
+                looked_at,
+                bottomed,
+            } => GameEventWire::ScryPerformed {
+                player: *player,
+                looked_at: *looked_at,
+                bottomed: *bottomed,
+            },
             GameEvent::AttackerDeclared(id) => GameEventWire::AttackerDeclared(*id),
             GameEvent::BlockerDeclared { blocker, attacker } => GameEventWire::BlockerDeclared {
                 blocker: *blocker,
@@ -723,35 +856,40 @@ impl From<&GameEvent> for GameEventWire {
             },
             GameEvent::CombatResolved => GameEventWire::CombatResolved,
             GameEvent::FirstStrikeDamageResolved => GameEventWire::FirstStrikeDamageResolved,
-            GameEvent::TopCardRevealed { player, card_name, is_land } => {
-                GameEventWire::TopCardRevealed {
-                    player: *player,
-                    card_name: (*card_name).to_string(),
-                    is_land: *is_land,
-                }
-            }
-            GameEvent::AttachmentMoved { attachment, attached_to } => {
-                GameEventWire::AttachmentMoved {
-                    attachment: *attachment,
-                    attached_to: *attached_to,
-                }
-            }
+            GameEvent::TopCardRevealed {
+                player,
+                card_name,
+                is_land,
+            } => GameEventWire::TopCardRevealed {
+                player: *player,
+                card_name: (*card_name).to_string(),
+                is_land: *is_land,
+            },
+            GameEvent::AttachmentMoved {
+                attachment,
+                attached_to,
+            } => GameEventWire::AttachmentMoved {
+                attachment: *attachment,
+                attached_to: *attached_to,
+            },
             GameEvent::PoisonAdded { player, amount } => GameEventWire::PoisonAdded {
                 player: *player,
                 amount: *amount,
             },
-            GameEvent::LoyaltyAbilityActivated { planeswalker, loyalty_change } => {
-                GameEventWire::LoyaltyAbilityActivated {
-                    planeswalker: *planeswalker,
-                    loyalty_change: *loyalty_change,
-                }
-            }
-            GameEvent::LoyaltyChanged { card_id, new_loyalty } => {
-                GameEventWire::LoyaltyChanged {
-                    card_id: *card_id,
-                    new_loyalty: *new_loyalty,
-                }
-            }
+            GameEvent::LoyaltyAbilityActivated {
+                planeswalker,
+                loyalty_change,
+            } => GameEventWire::LoyaltyAbilityActivated {
+                planeswalker: *planeswalker,
+                loyalty_change: *loyalty_change,
+            },
+            GameEvent::LoyaltyChanged {
+                card_id,
+                new_loyalty,
+            } => GameEventWire::LoyaltyChanged {
+                card_id: *card_id,
+                new_loyalty: *new_loyalty,
+            },
             GameEvent::PlaneswalkerDied { card_id } => {
                 GameEventWire::PlaneswalkerDied { card_id: *card_id }
             }
@@ -759,20 +897,22 @@ impl From<&GameEvent> for GameEventWire {
                 original: *original,
                 count: *count,
             },
-            GameEvent::SurveilPerformed { player, looked_at, graveyarded } => {
-                GameEventWire::SurveilPerformed {
-                    player: *player,
-                    looked_at: *looked_at,
-                    graveyarded: *graveyarded,
-                }
+            GameEvent::SurveilPerformed {
+                player,
+                looked_at,
+                graveyarded,
+            } => GameEventWire::SurveilPerformed {
+                player: *player,
+                looked_at: *looked_at,
+                graveyarded: *graveyarded,
+            },
+            GameEvent::CardLeftGraveyard { player, card_id } => GameEventWire::CardLeftGraveyard {
+                player: *player,
+                card_id: *card_id,
+            },
+            GameEvent::CombatDamagePreventedThisTurn => {
+                GameEventWire::CombatDamagePreventedThisTurn
             }
-            GameEvent::CardLeftGraveyard { player, card_id } => {
-                GameEventWire::CardLeftGraveyard {
-                    player: *player,
-                    card_id: *card_id,
-                }
-            }
-            GameEvent::CombatDamagePreventedThisTurn => GameEventWire::CombatDamagePreventedThisTurn,
             GameEvent::GameOver { winner } => GameEventWire::GameOver { winner: *winner },
         }
     }
@@ -804,7 +944,11 @@ mod tests {
         let json = serde_json::to_string(&w).unwrap();
         let back: DecisionWire = serde_json::from_str(&json).unwrap();
         match back {
-            DecisionWire::Scry { player, cards, prompt } => {
+            DecisionWire::Scry {
+                player,
+                cards,
+                prompt,
+            } => {
                 assert_eq!(player, 0);
                 assert_eq!(cards[0].1, "Island");
                 assert_eq!(prompt.verb, "Scry");
