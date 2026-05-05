@@ -29,7 +29,11 @@ use crate::game::GameState;
 use crate::mana::Color;
 use crate::player::Player;
 
-type CardFactory = fn() -> CardDefinition;
+/// Function pointer that produces a fresh `CardDefinition`. Function
+/// pointers don't carry state, so two pointers to the same factory
+/// compare equal — `cube_deck`/`draft` use that to enforce 4-copy caps
+/// without needing a card-id key.
+pub type CardFactory = fn() -> CardDefinition;
 
 const COPY_CAP: u32 = 4;
 const BASICS_PER_COLOR: usize = 11;

@@ -13,6 +13,46 @@ use crate::card::CardId;
 use crate::game::Target;
 use crate::mana::Color;
 
+/// UI labels for a peek-and-reorder prompt (Scry, Surveil, and any
+/// future variants like Explore / Plot / Fateseal). The decision
+/// shape is identical across these effects — the player partitions
+/// the peeked cards into "kept on top" and a second bucket — so a
+/// single `Decision::Scry` variant carries them all and just swaps
+/// the wording.
+///
+/// Defaults to plain Scry wording so older serialized decisions and
+/// engine call sites that don't customize the prompt keep the
+/// pre-existing UX. Engine resolvers that want different wording
+/// build the struct explicitly (`PeekReorderPrompt::surveil()` etc.).
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct PeekReorderPrompt {
+    /// Verb shown in the modal header (e.g. "Scry", "Surveil").
+    pub verb: String,
+    /// Label for the toggleable second bucket — what cards in that
+    /// pile are headed for. "Bottom" for Scry (bottom of library),
+    /// "Graveyard" for Surveil, "Exile" for a hypothetical exile
+    /// reorder, etc.
+    pub alt_bucket: String,
+}
+
+impl Default for PeekReorderPrompt {
+    fn default() -> Self {
+        Self::scry()
+    }
+}
+
+impl PeekReorderPrompt {
+    /// Standard Scry prompt — "Scry N · ... toggle Bottom".
+    pub fn scry() -> Self {
+        Self { verb: "Scry".into(), alt_bucket: "Bottom".into() }
+    }
+
+    /// Surveil prompt — "Surveil N · ... toggle Graveyard".
+    pub fn surveil() -> Self {
+        Self { verb: "Surveil".into(), alt_bucket: "Graveyard".into() }
+    }
+}
+
 /// A choice the engine must resolve to continue. Carries enough context for
 /// the decider to render / reason about the options.
 ///
@@ -49,11 +89,25 @@ pub enum Decision {
     /// Pick a color (Birds of Paradise, Gilded Lotus, Prismatic Lens).
     ChooseColor { source: CardId, legal: Vec<Color> },
 
-    /// After looking at the top cards of a library, partition them into
-    /// (kept on top in this order, sent to the bottom in this order).
+    /// "Look at the top N cards of `player`'s library; partition them
+    /// into (kept on top in this order, sent elsewhere in this order)."
+    /// The engine routes the second bucket according to the
+    /// `PendingEffectState` it set at suspend time
+    /// (`ScryPeeked` → bottom of library, `SurveilPeeked` → graveyard,
+    /// future variants → wherever they're routed). The shape of the
+    /// answer (`DecisionAnswer::ScryOrder { kept_top, bottom }`) is
+    /// shared across every variant; only the UI wording differs.
+    ///
+    /// `prompt` carries that wording — the verb shown in the header
+    /// (e.g. "Scry", "Surveil") and the label for the toggleable
+    /// second bucket (e.g. "Bottom", "Graveyard"). Defaulted to a
+    /// plain Scry prompt via `#[serde(default)]` for back-compat with
+    /// older serialized decisions.
     Scry {
         player: usize,
         cards: Vec<(CardId, String)>,
+        #[serde(default)]
+        prompt: PeekReorderPrompt,
     },
 
     /// Choose `count` cards from the given hand to discard.
@@ -207,6 +261,10 @@ impl Decider for AutoDecider {
                 DecisionAnswer::Color(*legal.first().unwrap_or(&Color::Green))
             }
             Decision::Scry { cards, .. } => DecisionAnswer::ScryOrder {
+                // Auto path is identical for Scry / Surveil / future
+                // peek-reorder variants — keep all on top, push none
+                // to the alt bucket. Tests can override via
+                // ScriptedDecider.
                 kept_top: cards.iter().map(|(id, _)| *id).collect(),
                 bottom: vec![],
             },

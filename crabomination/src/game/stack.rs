@@ -60,7 +60,8 @@ impl GameState {
         match next {
             // Untap has no priority window — auto-execute and move on.
             TurnStep::Untap => {
-                self.do_untap();
+                let mut untap_events = self.do_untap();
+                events.append(&mut untap_events);
                 events.push(GameEvent::TurnStarted {
                     player: self.active_player_idx,
                     turn: self.turn_number,
@@ -503,18 +504,47 @@ impl GameState {
 
     // ── Automatic step effects ────────────────────────────────────────────────
 
-    pub(crate) fn do_untap(&mut self) {
+    pub(crate) fn do_untap(&mut self) -> Vec<GameEvent> {
         let p = self.active_player_idx;
+        let mut events: Vec<GameEvent> = Vec::new();
         // Untap permanents YOU CONTROL on your untap step, not just
         // those you originally owned. A creature you've stolen
         // (Threaten / Mind Control) untaps on your turn; one of yours
         // that's been stolen does not. Filtering by `owner` here would
         // leave stolen permanents permanently tapped (or, conversely,
         // un-tap a stolen permanent on the wrong player's turn).
+        //
+        // Stun counters (CR 701.55): "If a permanent with one or more
+        // stun counters on it would become untapped, instead remove a
+        // stun counter from it." We model the replacement by checking
+        // the stun count first — if any are present, peel one off and
+        // leave the permanent tapped; otherwise untap normally. The
+        // CounterRemoved event lets the client animate the coin
+        // disappearing on the same frame it would have flipped to
+        // untapped. Summoning sickness clears regardless of stun
+        // (only the untap is replaced, not the new-turn bookkeeping).
         for card in &mut self.battlefield {
-            if card.controller == p {
+            if card.controller != p {
+                continue;
+            }
+            card.summoning_sick = false;
+            if !card.tapped {
+                continue;
+            }
+            let stuns = card.counter_count(crate::card::CounterType::Stun);
+            if stuns > 0 {
+                let removed = card.remove_counters(crate::card::CounterType::Stun, 1);
+                if removed > 0 {
+                    events.push(GameEvent::CounterRemoved {
+                        card_id: card.id,
+                        counter_type: crate::card::CounterType::Stun,
+                        count: removed,
+                    });
+                }
+                // Stays tapped — replacement effect consumed the untap.
+            } else {
                 card.tapped = false;
-                card.summoning_sick = false;
+                events.push(GameEvent::PermanentUntapped { card_id: card.id });
             }
         }
         self.players[p].lands_played_this_turn = 0;
@@ -556,6 +586,7 @@ impl GameState {
         // sticky-shield, same as the existing
         // `combat_damage_prevented_this_turn` cleanup pattern).
         self.players[p].lifegain_prevented_this_turn = false;
+        events
     }
 
     pub(crate) fn do_cleanup(&mut self) {

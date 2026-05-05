@@ -41,6 +41,12 @@ const DECK_X: f32 = 11.0;
 const DECK_Z: f32 = 9.5;
 const GRAVEYARD_X: f32 = 11.0;
 const GRAVEYARD_Z: f32 = 4.0;
+/// Exile pile sits inboard of the graveyard on the same lateral edge.
+/// Smaller `EXILE_X` = closer to the table center; the spacing leaves
+/// the graveyard's click-target untouched while still keeping exile
+/// reachable from the same hand.
+const EXILE_X: f32 = 8.0;
+const EXILE_Z: f32 = 4.0;
 
 pub const LAND_STACK_OFFSET_X: f32 = 0.18;
 pub const LAND_STACK_OFFSET_Z: f32 = 0.35;
@@ -107,6 +113,19 @@ pub fn graveyard_position(seat: usize, viewer: usize, n_seats: usize) -> Vec3 {
         GRAVEYARD_X + opp_x_offset(seat, viewer, n_seats)
     };
     Vec3::new(x, 0.0, sign * GRAVEYARD_Z)
+}
+
+/// Bottom-card position of `seat`'s exile pile. Sits inboard of the
+/// graveyard at the same Z so the two piles share the same lateral
+/// edge but don't overlap clickable areas.
+pub fn exile_position(seat: usize, viewer: usize, n_seats: usize) -> Vec3 {
+    let sign = z_sign(seat, viewer);
+    let x = if is_viewer(seat, viewer) {
+        -EXILE_X
+    } else {
+        EXILE_X + opp_x_offset(seat, viewer, n_seats)
+    };
+    Vec3::new(x, 0.0, sign * EXILE_Z)
 }
 
 /// Rotation applied to a face-down card belonging to `seat` (deck pile,

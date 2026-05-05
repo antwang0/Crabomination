@@ -214,6 +214,17 @@ pub struct GraveyardPile {
     pub owner: usize,
 }
 
+/// Marker for the per-seat exile pile visual. The engine's exile zone
+/// is a single shared `Vec`, but each card retains its `owner` field
+/// (`ExileCardView.owner`); the client splits the shared pile by
+/// owner so each player has their own visible exile stack next to
+/// their graveyard. Mirrors `GraveyardPile`'s sync/click/tooltip
+/// pattern.
+#[derive(Component)]
+pub struct ExilePile {
+    pub owner: usize,
+}
+
 /// Marker added to pile entities (deck/graveyard) while the pointer is over them.
 #[derive(Component)]
 pub struct PileHovered;

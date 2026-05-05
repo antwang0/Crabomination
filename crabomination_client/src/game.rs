@@ -69,6 +69,16 @@ pub struct GraveyardBrowserState {
     pub owner: usize,
 }
 
+/// State for the exile card browser popup. Mirrors
+/// `GraveyardBrowserState` — `owner` selects which seat's slice of the
+/// shared exile zone is shown (engine `ExileCardView` carries the
+/// owner field).
+#[derive(Resource, Default)]
+pub struct ExileBrowserState {
+    pub open: bool,
+    pub owner: usize,
+}
+
 /// Active alt-cast (pitch) flow. Set when the user right-clicks a hand card
 /// with an `alternative_cost`; the modal then prompts for a pitch card.
 #[derive(Resource, Default)]

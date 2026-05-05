@@ -2,6 +2,7 @@ pub mod card;
 pub mod catalog;
 pub mod cube;
 pub mod decision;
+pub mod draft;
 pub mod demo;
 pub mod effect;
 pub mod format;

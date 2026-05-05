@@ -38,7 +38,27 @@ use crate::net_plugin::{NetInbox, NetOutbox};
 pub enum AppState {
     #[default]
     Menu,
+    /// 8-player booster draft against 7 bots, followed by an
+    /// interactive deck-builder and an opponent-pick screen. When
+    /// the player commits, the chosen player + opponent decks are
+    /// stashed in `DraftedDecks` and the app transitions to
+    /// `InGame`, where `start_net_session_from_menu` reads the
+    /// resource and bootstraps a normal 2-player match.
+    Drafting,
     InGame,
+}
+
+/// Pre-built decks left behind by the draft pipeline. Drained by
+/// `start_net_session_from_menu` when transitioning into `InGame`
+/// from a `MatchFormat::Draft` flow. Carries the drafted card
+/// factories for both seats (player and chosen opponent) plus a
+/// human-readable label for the opponent's color identity that the
+/// match HUD uses in its player-name slot.
+#[derive(Resource, Clone, Default)]
+pub struct DraftedDecks {
+    pub player_deck: Vec<crabomination::cube::CardFactory>,
+    pub opponent_deck: Vec<crabomination::cube::CardFactory>,
+    pub opponent_label: String,
 }
 
 /// Filled in by the menu when the user picks an option; drained by
@@ -83,12 +103,22 @@ pub enum MatchFormat {
     Modern,
     Cube,
     Sos,
+    /// 8-player draft pod. Doesn't build a state directly — the
+    /// drafted decks come in via the `DraftedDecks` resource (set by
+    /// `crate::systems::draft`) and are read by
+    /// `start_net_session_from_menu`. Falls back to a Cube state for
+    /// rematch / unguarded callers that hit
+    /// `build_state_for_restart()` without a `DraftedDecks` present.
+    Draft,
 }
 
 impl MatchFormat {
     /// Build a fresh `GameState` for this format. Public so the
     /// game-over "New Game" button can launch a follow-up match
-    /// without going back through the menu UI.
+    /// without going back through the menu UI. Draft callers should
+    /// prefer `build_draft_state_for_restart` (which carries the
+    /// drafted decks) — bare `build_state_for_restart` falls back
+    /// to a fresh cube roll for the Draft variant.
     pub fn build_state_for_restart(self) -> GameState {
         self.build_state()
     }
@@ -98,6 +128,7 @@ impl MatchFormat {
             MatchFormat::Modern => build_demo_state(),
             MatchFormat::Cube => build_cube_state(),
             MatchFormat::Sos => build_sos_state(),
+            MatchFormat::Draft => build_cube_state(),
         }
     }
 
@@ -106,6 +137,7 @@ impl MatchFormat {
             MatchFormat::Modern => "Modern",
             MatchFormat::Cube => "Cube",
             MatchFormat::Sos => "SoS",
+            MatchFormat::Draft => "Draft",
         }
     }
 }
@@ -149,6 +181,9 @@ struct MenuRoot;
 
 #[derive(Component)]
 struct PlayBotButton;
+
+#[derive(Component)]
+struct DraftButton;
 
 #[derive(Component)]
 struct SpectateBotsButton;
@@ -292,6 +327,17 @@ fn spawn_menu(mut commands: Commands, asset_server: Res<AssetServer>) {
 
                 // Play vs Bot
                 button(p, &tf, "Play vs Bot", PLAY_BG, PlayBotButton);
+
+                // 8-player draft pod against 7 bots, then a built deck
+                // and a chosen opponent. Independent of the format
+                // toggle (the draft pool is always the cube).
+                button(
+                    p,
+                    &tf,
+                    "Draft vs 7 Bots",
+                    Color::srgba(0.55, 0.40, 0.20, 1.0),
+                    DraftButton,
+                );
 
                 // Spectate Bot vs Bot
                 button(
@@ -588,6 +634,7 @@ fn handle_action_buttons(
     mut pending: ResMut<PendingNetMode>,
     fields: Res<MenuFields>,
     play_q: Query<&Interaction, (Changed<Interaction>, With<PlayBotButton>)>,
+    draft_q: Query<&Interaction, (Changed<Interaction>, With<DraftButton>)>,
     spectate_q: Query<&Interaction, (Changed<Interaction>, With<SpectateBotsButton>)>,
     load_q: Query<&Interaction, (Changed<Interaction>, With<LoadDebugStateButton>)>,
     host_q: Query<&Interaction, (Changed<Interaction>, With<HostButton>)>,
@@ -597,6 +644,14 @@ fn handle_action_buttons(
     if play_q.iter().any(|i| *i == Interaction::Pressed) {
         pending.0 = Some((NetMode::LocalBot, format));
         next_state.set(AppState::InGame);
+        return;
+    }
+    if draft_q.iter().any(|i| *i == Interaction::Pressed) {
+        // Stash the chosen mode for after the draft completes —
+        // the draft system reads this back when it builds the
+        // post-draft match state.
+        pending.0 = Some((NetMode::LocalBot, MatchFormat::Draft));
+        next_state.set(AppState::Drafting);
         return;
     }
     if spectate_q.iter().any(|i| *i == Interaction::Pressed) {
@@ -654,6 +709,28 @@ pub fn start_net_session_from_menu(world: &mut World) {
     };
     world.insert_resource(kind);
 
+    // Draft path: read the player + opponent decks left behind by
+    // the draft pipeline (`crate::systems::draft`). Falls back to a
+    // fresh cube state if the resource is missing, which would only
+    // happen if a draft transition raced ahead of the deck-builder
+    // commit (effectively impossible — the system that triggers the
+    // transition writes the resource synchronously first).
+    if matches!(format, MatchFormat::Draft) {
+        if let Some(decks) = world.remove_resource::<DraftedDecks>() {
+            spawn_inprocess_bot_with_state(
+                world,
+                crabomination::draft::build_draft_match_state(
+                    decks.player_deck,
+                    decks.opponent_deck,
+                    "You".into(),
+                    decks.opponent_label,
+                ),
+            );
+            return;
+        }
+        eprintln!("draft: DraftedDecks missing — falling back to a fresh cube state");
+    }
+
     match mode {
         NetMode::LocalBot => spawn_inprocess_bot(world, format),
         NetMode::SpectateBots => spawn_spectate_bots(world, format),
@@ -686,12 +763,20 @@ pub fn start_net_session_from_menu(world: &mut World) {
 }
 
 fn spawn_inprocess_bot(world: &mut World, format: MatchFormat) {
+    spawn_inprocess_bot_with_state(world, format.build_state());
+}
+
+/// Spawn the in-process bot match against a pre-built `GameState`.
+/// Used by the draft flow to inject the drafted player + opponent
+/// decks (`crabomination::draft::build_draft_match_state`) instead
+/// of re-rolling random decks via `format.build_state()`.
+fn spawn_inprocess_bot_with_state(world: &mut World, state: GameState) {
     let (server_seat, ClientChannel { tx, rx }) = seat_pair();
     let sink: SnapshotSink = Arc::new(Mutex::new(SnapshotSinkState::default()));
     let sink_for_match = Arc::clone(&sink);
     std::thread::spawn(move || {
         run_match_full(
-            format.build_state(),
+            state,
             vec![
                 SeatOccupant::Human(server_seat),
                 SeatOccupant::Bot(Box::new(RandomBot::new())),

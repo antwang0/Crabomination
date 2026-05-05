@@ -2,9 +2,9 @@ use bevy::prelude::*;
 
 use crate::card::{
     Card, CardBorderHighlight, CardFrontTexture, CardHighlightAssets, CardHovered,
-    DeckCard, DeckPile, GraveyardPile, PileHovered, CARD_THICKNESS,
+    DeckCard, DeckPile, ExilePile, GraveyardPile, PileHovered, CARD_THICKNESS,
 };
-use crate::game::GraveyardBrowserState;
+use crate::game::{ExileBrowserState, GraveyardBrowserState};
 use crate::net_plugin::CurrentView;
 
 /// Tracks a pending top-card reveal popup.
@@ -27,6 +27,19 @@ pub struct GraveyardBrowser;
 /// display name so the hover-name-tooltip system can render it.
 #[derive(Component)]
 pub struct GraveyardCardItem {
+    pub name: String,
+}
+
+/// Marker for the exile browser overlay. Mirrors `GraveyardBrowser`.
+#[derive(Component)]
+pub struct ExileBrowser;
+
+/// One card tile inside the exile browser. Same shape as
+/// `GraveyardCardItem` so existing hover/tooltip wiring (the
+/// `GraveyardCardNameTooltip` system) can be extended onto exile
+/// tiles in a future push without restructuring components.
+#[derive(Component)]
+pub struct ExileCardItem {
     pub name: String,
 }
 
@@ -317,12 +330,181 @@ pub fn graveyard_browser(
     }
 }
 
+/// Modal browser for the per-seat slice of the shared exile zone.
+/// Mirrors `graveyard_browser` shape; reads `cv.exile` and filters
+/// to the active owner.
+pub fn exile_browser(
+    mut commands: Commands,
+    mut state: ResMut<ExileBrowserState>,
+    view: Res<CurrentView>,
+    asset_server: Res<AssetServer>,
+    existing: Query<Entity, With<ExileBrowser>>,
+    keyboard: Res<ButtonInput<KeyCode>>,
+    overlay_interaction: Query<&Interaction, (With<ExileBrowser>, With<Button>)>,
+) {
+    if keyboard.just_pressed(KeyCode::Escape) && state.open {
+        state.open = false;
+    }
+
+    for interaction in &overlay_interaction {
+        if *interaction == Interaction::Pressed {
+            state.open = false;
+        }
+    }
+
+    let should_show = state.open;
+
+    if should_show && existing.is_empty() {
+        let owner = state.owner;
+        let owner_name: String = view
+            .0
+            .as_ref()
+            .and_then(|cv| cv.players.iter().find(|p| p.seat == owner))
+            .map(|p| p.name.clone())
+            .unwrap_or_else(|| format!("Player {owner}"));
+        let owner_label = format!("{owner_name}'s");
+
+        let card_names: Vec<String> = view
+            .0
+            .as_ref()
+            .map(|cv| {
+                cv.exile
+                    .iter()
+                    .filter(|c| c.owner == owner)
+                    .map(|c| c.name.clone())
+                    .collect()
+            })
+            .unwrap_or_default();
+        let count = card_names.len();
+
+        let panel_width = BROWSER_CARD_WIDTH * BROWSER_COLS as f32 + 80.0;
+
+        let root = commands
+            .spawn((
+                Node {
+                    position_type: PositionType::Absolute,
+                    left: Val::Px(0.0),
+                    top: Val::Px(0.0),
+                    width: Val::Percent(100.0),
+                    height: Val::Percent(100.0),
+                    justify_content: JustifyContent::Center,
+                    align_items: AlignItems::Center,
+                    ..default()
+                },
+                BackgroundColor(Color::srgba(0.0, 0.0, 0.0, 0.7)),
+                Button,
+                ExileBrowser,
+            ))
+            .id();
+
+        let panel = commands
+            .spawn((
+                Node {
+                    flex_direction: FlexDirection::Column,
+                    padding: UiRect::all(Val::Px(16.0)),
+                    row_gap: Val::Px(12.0),
+                    width: Val::Px(panel_width),
+                    max_height: Val::Percent(85.0),
+                    overflow: Overflow::scroll_y(),
+                    ..default()
+                },
+                BackgroundColor(Color::srgba(0.08, 0.08, 0.12, 0.97)),
+            ))
+            .id();
+
+        commands.entity(root).add_child(panel);
+
+        commands
+            .entity(panel)
+            .with_children(|panel| {
+                panel
+                    .spawn((
+                        Node {
+                            flex_direction: FlexDirection::Row,
+                            justify_content: JustifyContent::SpaceBetween,
+                            align_items: AlignItems::Center,
+                            margin: UiRect::bottom(Val::Px(8.0)),
+                            ..default()
+                        },
+                        Pickable::IGNORE,
+                    ))
+                    .with_children(|row| {
+                        row.spawn((
+                            Text::new(format!("{owner_label} Exile ({count} cards)")),
+                            TextFont { font_size: 18.0, ..default() },
+                            TextColor(Color::WHITE),
+                            Pickable::IGNORE,
+                        ));
+                    });
+
+                if card_names.is_empty() {
+                    panel.spawn((
+                        Text::new("Empty"),
+                        TextFont { font_size: 14.0, ..default() },
+                        TextColor(Color::srgb(0.6, 0.6, 0.6)),
+                        Pickable::IGNORE,
+                    ));
+                } else {
+                    panel
+                        .spawn((
+                            Node {
+                                flex_direction: FlexDirection::Row,
+                                flex_wrap: FlexWrap::Wrap,
+                                column_gap: Val::Px(8.0),
+                                row_gap: Val::Px(8.0),
+                                ..default()
+                            },
+                            Pickable::IGNORE,
+                        ))
+                        .with_children(|grid| {
+                            for name in &card_names {
+                                let path = scryfall::card_asset_path(name);
+                                let texture: Handle<Image> = asset_server.load(&path);
+                                grid.spawn((
+                                    Button,
+                                    Node {
+                                        width: Val::Px(BROWSER_CARD_WIDTH),
+                                        height: Val::Px(BROWSER_CARD_HEIGHT),
+                                        ..default()
+                                    },
+                                    ExileCardItem { name: name.clone() },
+                                ))
+                                .with_children(|tile| {
+                                    tile.spawn((
+                                        ImageNode { image: texture, ..default() },
+                                        Node {
+                                            width: Val::Percent(100.0),
+                                            height: Val::Percent(100.0),
+                                            ..default()
+                                        },
+                                        Pickable::IGNORE,
+                                    ));
+                                });
+                            }
+                        });
+                }
+
+                panel.spawn((
+                    Text::new("Click outside or press Esc to close"),
+                    TextFont { font_size: 11.0, ..default() },
+                    TextColor(Color::srgba(0.6, 0.6, 0.6, 0.8)),
+                    Pickable::IGNORE,
+                ));
+            });
+    } else if !should_show {
+        for entity in &existing {
+            commands.entity(entity).despawn();
+        }
+    }
+}
+
 pub fn pile_tooltip(
     mut commands: Commands,
     view: Res<CurrentView>,
     deck_hovered: Query<(), (With<DeckCard>, With<CardHovered>)>,
     pile_hovered: Query<&DeckPile, With<PileHovered>>,
     gy_hovered: Query<&GraveyardPile, With<PileHovered>>,
+    exile_hovered: Query<&ExilePile, With<PileHovered>>,
     existing: Query<Entity, With<PileTooltip>>,
 ) {
     let cv = view.0.as_ref();
@@ -334,6 +516,10 @@ pub fn pile_tooltip(
     let gy_count = |owner: usize| -> usize {
         cv.and_then(|cv| cv.players.iter().find(|p| p.seat == owner))
             .map(|p| p.graveyard.len())
+            .unwrap_or(0)
+    };
+    let exile_count = |owner: usize| -> usize {
+        cv.map(|cv| cv.exile.iter().filter(|c| c.owner == owner).count())
             .unwrap_or(0)
     };
     let player_name = |owner: usize| -> String {
@@ -353,6 +539,9 @@ pub fn pile_tooltip(
     } else if let Some(gy) = gy_hovered.iter().next() {
         let count = gy_count(gy.owner);
         Some(format!("{}'s graveyard: {count} card{} — click to browse", player_name(gy.owner), if count == 1 { "" } else { "s" }))
+    } else if let Some(ex) = exile_hovered.iter().next() {
+        let count = exile_count(ex.owner);
+        Some(format!("{}'s exile: {count} card{} — click to browse", player_name(ex.owner), if count == 1 { "" } else { "s" }))
     } else {
         None
     };
@@ -389,28 +578,37 @@ pub fn pile_tooltip(
     }
 }
 
-/// Show the name of the graveyard card currently being hovered as
-/// a tooltip pinned to the top of the browser panel. Despawns when
-/// the cursor leaves all card tiles, or when the browser closes.
+/// Show the name of the graveyard or exile card currently being
+/// hovered as a tooltip pinned to the top of the browser panel.
+/// Despawns when the cursor leaves all card tiles, or when both
+/// browsers close.
 pub fn graveyard_card_hover_name(
     mut commands: Commands,
-    items: Query<(&Interaction, &GraveyardCardItem)>,
+    gy_items: Query<(&Interaction, &GraveyardCardItem)>,
+    exile_items: Query<(&Interaction, &ExileCardItem)>,
     existing: Query<Entity, With<GraveyardCardNameTooltip>>,
-    browser: Query<(), With<GraveyardBrowser>>,
+    gy_browser: Query<(), With<GraveyardBrowser>>,
+    exile_browser: Query<(), With<ExileBrowser>>,
     mut current_text: Query<&mut Text, With<GraveyardCardNameTooltip>>,
 ) {
     // No browser open → drop the tooltip.
-    if browser.is_empty() {
+    if gy_browser.is_empty() && exile_browser.is_empty() {
         for e in &existing {
             commands.entity(e).despawn();
         }
         return;
     }
 
-    let hovered_name = items
+    let hovered_name = gy_items
         .iter()
         .find(|(i, _)| matches!(**i, Interaction::Hovered | Interaction::Pressed))
-        .map(|(_, item)| item.name.clone());
+        .map(|(_, item)| item.name.clone())
+        .or_else(|| {
+            exile_items
+                .iter()
+                .find(|(i, _)| matches!(**i, Interaction::Hovered | Interaction::Pressed))
+                .map(|(_, item)| item.name.clone())
+        });
 
     let Some(name) = hovered_name else {
         for e in &existing {

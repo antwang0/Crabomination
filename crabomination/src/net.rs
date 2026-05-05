@@ -439,6 +439,16 @@ pub enum DecisionWire {
     Scry {
         player: usize,
         cards: Vec<(CardId, String)>,
+        /// UI labels for the peek-and-reorder modal — verb in the
+        /// header, label for the toggleable second bucket. Lets a
+        /// single wire variant cover Scry / Surveil / future
+        /// Explore-style peek-reorder effects without a per-effect
+        /// variant explosion. Defaulted to plain Scry wording via
+        /// `#[serde(default)]` for back-compat with older serialized
+        /// decisions; the engine's `Decision → DecisionWire`
+        /// projection passes the engine-side prompt through verbatim.
+        #[serde(default)]
+        prompt: crate::decision::PeekReorderPrompt,
     },
     Discard {
         player: usize,
@@ -501,9 +511,10 @@ impl From<&Decision> for DecisionWire {
                 source: *source,
                 legal: legal.clone(),
             },
-            Decision::Scry { player, cards } => DecisionWire::Scry {
+            Decision::Scry { player, cards, prompt } => DecisionWire::Scry {
                 player: *player,
                 cards: cards.iter().map(|(id, n)| (*id, (*n).to_string())).collect(),
+                prompt: prompt.clone(),
             },
             Decision::Discard { player, count, hand } => DecisionWire::Discard {
                 player: *player,
@@ -787,14 +798,17 @@ mod tests {
         let d = Decision::Scry {
             player: 0,
             cards: vec![(CardId(1), "Island".into()), (CardId(2), "Forest".into())],
+            prompt: crate::decision::PeekReorderPrompt::scry(),
         };
         let w: DecisionWire = (&d).into();
         let json = serde_json::to_string(&w).unwrap();
         let back: DecisionWire = serde_json::from_str(&json).unwrap();
         match back {
-            DecisionWire::Scry { player, cards } => {
+            DecisionWire::Scry { player, cards, prompt } => {
                 assert_eq!(player, 0);
                 assert_eq!(cards[0].1, "Island");
+                assert_eq!(prompt.verb, "Scry");
+                assert_eq!(prompt.alt_bucket, "Bottom");
             }
             _ => panic!("wrong variant"),
         }

@@ -573,8 +573,17 @@ impl GameState {
                     return Ok(());
                 }
 
-                let decision = Decision::Scry { player: p, cards: peek.clone() };
                 let is_surveil = matches!(effect, Effect::Surveil { .. });
+                let prompt = if is_surveil {
+                    crate::decision::PeekReorderPrompt::surveil()
+                } else {
+                    crate::decision::PeekReorderPrompt::scry()
+                };
+                let decision = Decision::Scry {
+                    player: p,
+                    cards: peek.clone(),
+                    prompt,
+                };
                 let pending_state = if is_surveil {
                     PendingEffectState::SurveilPeeked { count: actual, player: p }
                 } else {

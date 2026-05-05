@@ -2,6 +2,7 @@ pub mod animate;
 pub mod counter_coins;
 pub mod counter_tooltip;
 pub mod decision_ui;
+pub mod draft;
 pub mod export_prompt;
 pub mod game_over;
 pub mod game_ui;

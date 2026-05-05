@@ -187,7 +187,7 @@ pub fn spawn_decision_ui(
     }
 
     match wire {
-        DecisionWire::Scry { cards, .. } => {
+        DecisionWire::Scry { cards, prompt, .. } => {
             if state.scry.is_empty() {
                 state.scry = cards.iter().map(|(id, _)| (*id, false)).collect();
             }
@@ -199,7 +199,7 @@ pub fn spawn_decision_ui(
                 .iter()
                 .map(|(id, bottom)| (*id, name_map[id].to_string(), *bottom))
                 .collect();
-            spawn_scry_modal(&mut commands, &asset_server, &ordered);
+            spawn_scry_modal(&mut commands, &asset_server, &ordered, prompt);
         }
         DecisionWire::SearchLibrary { candidates, .. } => {
             state.search_selected = None;
@@ -238,7 +238,15 @@ fn spawn_scry_modal(
     commands: &mut Commands,
     asset_server: &AssetServer,
     ordered: &[(CardId, String, bool)],
+    prompt: &crabomination::decision::PeekReorderPrompt,
 ) {
+    // The peek-and-reorder modal is shared across Scry, Surveil, and
+    // any future variant that asks the player to partition the top N
+    // cards into "kept on top" and "elsewhere"; the engine populates
+    // `prompt` with the verb / alt-bucket label so the menu just
+    // renders whatever wording was sent.
+    let verb = prompt.verb.as_str();
+    let alt_label = prompt.alt_bucket.as_str();
     let root = commands
         .spawn((
             Node {
@@ -276,7 +284,7 @@ fn spawn_scry_modal(
     commands.entity(panel).with_children(|panel| {
         panel.spawn((
             Text::new(format!(
-                "Scry {n}: click card to toggle Bottom  ·  ← → to reorder  ·  left = top of library"
+                "{verb} {n}: click card to toggle {alt_label}  ·  ← → to reorder  ·  left = top of library"
             )),
             TextFont { font_size: 16.0, ..default() },
             TextColor(Color::WHITE),
@@ -326,7 +334,7 @@ fn spawn_scry_modal(
                                 Pickable::IGNORE,
                             ));
                             cb.spawn((
-                                Text::new(if *is_bottom { "Bottom" } else { "Top" }),
+                                Text::new(if *is_bottom { alt_label } else { "Top" }),
                                 TextFont { font_size: 14.0, ..default() },
                                 TextColor(Color::WHITE),
                                 Pickable::IGNORE,

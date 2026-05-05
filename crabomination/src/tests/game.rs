@@ -546,6 +546,86 @@ fn pass_priority_advances_step() {
     assert_eq!(g.step, TurnStep::BeginCombat);
 }
 
+/// CR 701.55: a permanent that would untap with one or more stun
+/// counters on it instead has one stun counter removed and stays
+/// tapped. This test seeds two stun counters and confirms two
+/// consecutive untap steps each peel one off without untapping.
+#[test]
+fn untap_step_consumes_stun_counter_instead_of_untapping() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // Tap + 2 stun counters; clear summoning sickness so we can isolate
+    // the untap-replacement behaviour.
+    if let Some(c) = g.battlefield_find_mut(bear) {
+        c.tapped = true;
+        c.summoning_sick = false;
+        c.add_counters(CounterType::Stun, 2);
+    }
+    g.active_player_idx = 0;
+
+    // First untap: removes one stun counter, stays tapped.
+    let events = g.do_untap();
+    let bear_card = g.battlefield_find(bear).unwrap();
+    assert!(bear_card.tapped, "stun counter must replace the untap");
+    assert_eq!(bear_card.counter_count(CounterType::Stun), 1, "one stun counter consumed");
+    assert!(
+        events.iter().any(|e| matches!(
+            e,
+            GameEvent::CounterRemoved { card_id, counter_type: CounterType::Stun, count: 1 }
+                if *card_id == bear
+        )),
+        "CounterRemoved event fires when stun replaces untap"
+    );
+    assert!(
+        !events
+            .iter()
+            .any(|e| matches!(e, GameEvent::PermanentUntapped { card_id } if *card_id == bear)),
+        "no PermanentUntapped event when stun replaces the untap"
+    );
+
+    // Second untap: removes the second stun counter, still tapped.
+    let _ = g.do_untap();
+    let bear_card = g.battlefield_find(bear).unwrap();
+    assert!(bear_card.tapped, "still tapped after second stun consumed");
+    assert_eq!(bear_card.counter_count(CounterType::Stun), 0, "no stun counters left");
+
+    // Third untap: no more stun counters, untaps normally.
+    let events = g.do_untap();
+    let bear_card = g.battlefield_find(bear).unwrap();
+    assert!(!bear_card.tapped, "untaps normally once stun counters are gone");
+    assert!(
+        events
+            .iter()
+            .any(|e| matches!(e, GameEvent::PermanentUntapped { card_id } if *card_id == bear)),
+        "PermanentUntapped event fires on the actual untap"
+    );
+}
+
+/// Stun counters only replace the *untap* — summoning sickness
+/// still clears at the start of the controller's turn even while
+/// tapped (the new-turn bookkeeping isn't part of the replacement).
+#[test]
+fn untap_step_clears_summoning_sickness_even_with_stun_counter() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    if let Some(c) = g.battlefield_find_mut(bear) {
+        c.tapped = true;
+        // Summoning sickness still set (just summoned).
+        c.add_counters(CounterType::Stun, 1);
+    }
+    g.active_player_idx = 0;
+
+    let _ = g.do_untap();
+    let bear_card = g.battlefield_find(bear).unwrap();
+    assert!(bear_card.tapped, "still tapped — stun replaced untap");
+    assert!(
+        !bear_card.summoning_sick,
+        "summoning sickness still clears on the controller's turn"
+    );
+}
+
 #[test]
 fn untap_step_clears_summoning_sickness() {
     let mut g = two_player_game();

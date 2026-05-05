@@ -26,8 +26,8 @@ use card::{
 use render_quality::{ChangeQuality, RenderQuality};
 use config::GraphicsConfig;
 use game::{
-    AltCastState, BlockingState, CardNames, FlippedHandCards, GameLog, GraveyardBrowserState,
-    TargetingState,
+    AltCastState, BlockingState, CardNames, ExileBrowserState, FlippedHandCards, GameLog,
+    GraveyardBrowserState, TargetingState,
 };
 use systems::game_ui::FastForward;
 use systems::animate::{
@@ -41,9 +41,9 @@ use systems::animate::{
 use systems::game_ui::{
     apply_swap_front_material, auto_advance_p0, handle_ability_menu, handle_alt_cast_buttons,
     handle_export_keypress, handle_game_input, poll_action_buttons, setup_game_hud,
-    spawn_ability_menu, spawn_alt_cast_modal, sync_flipped_hand_cards, sync_game_visuals,
-    trigger_reveal_animation, update_attack_all_visibility, update_log_text, update_p1_text,
-    update_hint, update_pass_button, update_phase_chart, update_player_text,
+    spawn_ability_menu, spawn_alt_cast_modal, sync_exile_piles, sync_flipped_hand_cards,
+    sync_game_visuals, trigger_reveal_animation, update_attack_all_visibility, update_log_text,
+    update_p1_text, update_hint, update_pass_button, update_phase_chart, update_player_text,
     update_stack_panel, update_turn_text, ButtonState, GameLogicSet,
 };
 use systems::gizmos::{
@@ -55,8 +55,8 @@ use systems::quality::{
     update_speed_slider_visuals,
 };
 use systems::ui::{
-    graveyard_browser, graveyard_card_hover_name, highlight_hovered_cards, peek_popup,
-    pile_tooltip, reveal_popup, RevealPopupState,
+    exile_browser, graveyard_browser, graveyard_card_hover_name, highlight_hovered_cards,
+    peek_popup, pile_tooltip, reveal_popup, RevealPopupState,
 };
 use systems::decision_ui::{spawn_decision_ui, handle_scry_toggles, handle_scry_reorder, handle_search_select, handle_put_on_library_select, handle_put_on_library_hand_click, handle_discard_select, update_put_on_library_count_text, update_put_on_library_visuals, handle_choose_color_buttons, handle_confirm, handle_mulligan_buttons, DecisionUiState};
 
@@ -178,7 +178,7 @@ fn main() {
                 }),
             MeshPickingPlugin,
         ))
-        .add_plugins((SinglePlayerPlugin, MenuPlugin))
+        .add_plugins((SinglePlayerPlugin, MenuPlugin, systems::draft::DraftPlugin))
         .init_gizmo_group::<BlockingGizmos>()
         .init_gizmo_group::<AttackerGizmos>()
         .init_gizmo_group::<StackGizmos>()
@@ -196,6 +196,7 @@ fn main() {
         .insert_resource(FlippedHandCards::default())
         .insert_resource(CardNames::default())
         .insert_resource(GraveyardBrowserState::default())
+        .insert_resource(ExileBrowserState::default())
         .insert_resource(RevealPopupState::default())
         .insert_resource(AnimationSpeed::default())
         .insert_resource(ButtonState::default())
@@ -226,6 +227,13 @@ fn main() {
         .add_systems(
             Update,
             sync_game_visuals.after(GameLogicSet).run_if(in_state(AppState::InGame)),
+        )
+        // Exile piles split out from sync_game_visuals to stay under
+        // Bevy's per-system parameter limit; runs alongside the main
+        // visual sync on the same schedule.
+        .add_systems(
+            Update,
+            sync_exile_piles.after(GameLogicSet).run_if(in_state(AppState::InGame)),
         )
         // MDFC flip sync — runs after visual sync so freshly-spawned hand
         // cards see their flipped state immediately on the next frame.
@@ -279,7 +287,8 @@ fn main() {
             )
                 .run_if(in_state(AppState::InGame)),
         )
-        // Separate add_systems call to stay under Bevy's 20-tuple limit.
+        // Separate add_systems calls to stay under Bevy's 20-tuple limit.
+        .add_systems(Update, exile_browser.run_if(in_state(AppState::InGame)))
         .add_systems(Update, animate_mdfc_flip.run_if(in_state(AppState::InGame)))
         .add_systems(Update, animate_return_to_hand.run_if(in_state(AppState::InGame)))
         // Pop the next queued animation onto an entity once it stops
@@ -306,6 +315,7 @@ fn main() {
             Update,
             graveyard_card_hover_name
                 .after(graveyard_browser)
+                .after(exile_browser)
                 .run_if(in_state(AppState::InGame)),
         )
         .add_systems(

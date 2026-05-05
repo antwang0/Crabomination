@@ -12,12 +12,12 @@ use crabomination::net::StackItemView;
 use super::ui::RevealPopupState;
 use crate::card::{
     Animating, BattlefieldCard, CARD_THICKNESS, CARD_WIDTH, CardHoverLift, CardHovered,
-    CardMeshAssets, CardOwner, DECK_CARD_Y_STEP, DeckCard, DeckPile, DrawCardAnimation,
+    CardMeshAssets, CardOwner, DECK_CARD_Y_STEP, DeckCard, DeckPile, DrawCardAnimation, ExilePile,
     GameCardId, GraveyardPile, HandCard, HandSlideAnimation, OpponentHandCard,
     PlayCardAnimation, PlayerTargetZone, RevealPeekAnimation, SendToGraveyardAnimation,
     StackCard, TapAnimation, TapState, ValidTarget, back_face_rotation, bf_card_transform,
-    card_back_face_material, card_front_material, deck_position, graveyard_position,
-    hand_card_transform, land_card_transform, spawn_single_card,
+    card_back_face_material, card_front_material, deck_position, exile_position,
+    graveyard_position, hand_card_transform, land_card_transform, spawn_single_card,
 };
 use crate::game::{AbilityMenuState, BlockingState, GameLog, TargetingState, format_mana_pool_from_pool};
 use crate::net_plugin::{CurrentView, LatestServerEvents, NetOutbox};
@@ -2791,6 +2791,47 @@ pub fn trigger_reveal_animation(
 }
 
 // ── MDFC flip sync ────────────────────────────────────────────────────────────
+
+/// Per-seat exile pile sync. Splits the shared exile zone
+/// (`ClientView.exile`) by `owner` and updates each `ExilePile`'s
+/// visibility / Y-stack height. Kept separate from `sync_game_visuals`
+/// because that system is already at Bevy's per-system parameter
+/// limit; this one runs alongside it on the visual-sync schedule.
+pub fn sync_exile_piles(
+    view: Res<CurrentView>,
+    mut exile_q: Query<
+        (
+            &ExilePile,
+            &mut Transform,
+            &mut Visibility,
+            &mut CardHoverLift,
+        ),
+        (Without<DeckPile>, Without<GameCardId>, Without<GraveyardPile>),
+    >,
+) {
+    let Some(cv) = &view.0 else { return };
+    let viewer = cv.your_seat;
+    let n_seats = cv.players.len();
+
+    let mut count_by_owner: std::collections::HashMap<usize, usize> =
+        std::collections::HashMap::new();
+    for c in &cv.exile {
+        *count_by_owner.entry(c.owner).or_default() += 1;
+    }
+    for (pile, mut transform, mut vis, mut lift) in &mut exile_q {
+        let count = count_by_owner.get(&pile.owner).copied().unwrap_or(0);
+        if count == 0 {
+            *vis = Visibility::Hidden;
+        } else {
+            *vis = Visibility::Visible;
+            let base_pos = exile_position(pile.owner, viewer, n_seats);
+            let y = count as f32 * DECK_CARD_Y_STEP + 0.01;
+            let pos = Vec3::new(base_pos.x, y, base_pos.z);
+            transform.translation = pos;
+            lift.base_translation = pos;
+        }
+    }
+}
 
 /// Reconcile each viewer hand card's persistent flip state
 /// (`FlippedFace` marker on the entity) against the user's intent

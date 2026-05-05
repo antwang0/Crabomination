@@ -4,14 +4,16 @@ use bevy::prelude::*;
 
 use super::components::{
     BackFaceMesh, Card, CardFrontTexture, CardHighlightAssets, CardHoverLift, CardMeshAssets,
-    FrontFaceMesh,
+    ExilePile, FrontFaceMesh,
     GraveyardPile, PileHovered, PlayerTargetZone, CARD_THICKNESS,
 };
-use super::layout::{back_face_rotation, graveyard_position, player_target_zone_position};
+use super::layout::{
+    back_face_rotation, exile_position, graveyard_position, player_target_zone_position,
+};
 use super::mesh::{card_border_mesh, card_mesh};
 use super::observers::{on_card_out, on_card_over, on_zone_out, on_zone_over};
 
-use crate::game::GraveyardBrowserState;
+use crate::game::{ExileBrowserState, GraveyardBrowserState};
 use crate::scryfall;
 
 /// Initialize shared mesh/material assets and spawn always-present scaffolding
@@ -76,6 +78,30 @@ pub fn init_shared_assets(
             .observe(on_pile_over)
             .observe(on_pile_out)
             .observe(on_graveyard_click);
+    }
+
+    // One exile pile per seat. Hidden until that seat owns at least
+    // one card in the shared exile zone (engine: GameState.exile;
+    // wire: ClientView.exile, with each card carrying its `owner`).
+    for seat in 0..n_seats {
+        let pos = exile_position(seat, viewer_seat, n_seats);
+        let rot = back_face_rotation(seat, viewer_seat);
+        commands
+            .spawn((
+                Mesh3d(card_mesh_handle.clone()),
+                MeshMaterial3d(back_material.clone()),
+                Transform::from_translation(pos).with_rotation(rot),
+                Visibility::Hidden,
+                ExilePile { owner: seat },
+                CardHoverLift {
+                    current_lift: 0.0,
+                    target_lift: 0.0,
+                    base_translation: pos,
+                },
+            ))
+            .observe(on_pile_over)
+            .observe(on_pile_out)
+            .observe(on_exile_click);
     }
 
     // One clickable target zone per opponent. The viewer doesn't need a
@@ -167,6 +193,22 @@ fn on_graveyard_click(
     ev: On<Pointer<Click>>,
     piles: Query<&GraveyardPile>,
     mut browser: ResMut<GraveyardBrowserState>,
+) {
+    let Ok(pile) = piles.get(ev.entity) else { return };
+    if browser.open && browser.owner == pile.owner {
+        browser.open = false;
+    } else {
+        browser.open = true;
+        browser.owner = pile.owner;
+    }
+}
+
+/// Click on any exile pile toggles the browser to that pile's owner.
+/// Mirrors `on_graveyard_click` against `ExileBrowserState`.
+fn on_exile_click(
+    ev: On<Pointer<Click>>,
+    piles: Query<&ExilePile>,
+    mut browser: ResMut<ExileBrowserState>,
 ) {
     let Ok(pile) = piles.get(ev.entity) else { return };
     if browser.open && browser.owner == pile.owner {
