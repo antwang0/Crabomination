@@ -12343,3 +12343,290 @@ fn faiths_fetters_gains_life_and_locks_creature() {
         "bear gains CantBlock from Fetters");
 }
 
+
+// ── Push L: Seals + anthems + lifegain enablers + Mirrodin claws ────────────
+
+/// Seal of Fire — sac-as-cost activation deals 2 damage to target opp.
+#[test]
+fn seal_of_fire_sac_deals_two_to_opponent() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::seal_of_fire());
+    let life_before = g.players[1].life;
+
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id,
+        ability_index: 0,
+        target: Some(Target::Player(1)),
+    })
+    .expect("Seal of Fire activates with no mana cost");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[1].life, life_before - 2,
+        "Seal of Fire deals 2 damage to target player");
+    assert!(!g.battlefield.iter().any(|c| c.id == id),
+        "Seal of Fire was sacrificed as cost");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == id),
+        "Seal of Fire ended in graveyard");
+}
+
+/// Seal of Cleansing — sac-as-cost activation destroys an enchantment.
+#[test]
+fn seal_of_cleansing_destroys_target_enchantment() {
+    let mut g = two_player_game();
+    let seal = g.add_card_to_battlefield(0, catalog::seal_of_cleansing());
+    let target = g.add_card_to_battlefield(1, catalog::glorious_anthem());
+
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: seal,
+        ability_index: 0,
+        target: Some(Target::Permanent(target)),
+    })
+    .expect("Seal of Cleansing activates with sac cost");
+    drain_stack(&mut g);
+
+    assert!(!g.battlefield.iter().any(|c| c.id == target),
+        "target enchantment destroyed");
+    assert!(!g.battlefield.iter().any(|c| c.id == seal),
+        "Seal of Cleansing sacrificed as cost");
+}
+
+/// Phyrexian Walker is a 0/3 Construct artifact creature at {0}.
+#[test]
+fn phyrexian_walker_is_a_zero_three_artifact_creature() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::phyrexian_walker());
+    let perm = g.battlefield.iter().find(|c| c.id == id).expect("on bf");
+    assert_eq!(perm.definition.power, 0);
+    assert_eq!(perm.definition.toughness, 3);
+    assert!(perm.definition.card_types.contains(&CardType::Artifact));
+    assert!(perm.definition.card_types.contains(&CardType::Creature));
+    assert!(perm.definition.cost.symbols.is_empty(),
+        "Phyrexian Walker is a {{0}} cost card");
+}
+
+/// Honor of the Pure pumps your white creatures only.
+#[test]
+fn honor_of_the_pure_pumps_white_creatures_you_control() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::honor_of_the_pure());
+    // White friendly creature: Soul Warden 1/1
+    let warden = g.add_card_to_battlefield(0, catalog::soul_warden());
+    // Non-white friendly creature: Grizzly Bears (green)
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // White opp creature should NOT be pumped
+    let opp_warden = g.add_card_to_battlefield(1, catalog::soul_warden());
+
+    let cw = g.computed_permanent(warden).unwrap();
+    assert_eq!(cw.power, 2, "white friendly +1/+1 → 2/2");
+    assert_eq!(cw.toughness, 2);
+
+    let cb = g.computed_permanent(bears).unwrap();
+    assert_eq!(cb.power, 2, "green friendly stays at 2/2");
+    assert_eq!(cb.toughness, 2);
+
+    let co = g.computed_permanent(opp_warden).unwrap();
+    assert_eq!(co.power, 1, "opp's white creature unaffected by your Honor");
+    assert_eq!(co.toughness, 1);
+}
+
+/// Crusade pumps every white creature in play, both sides.
+#[test]
+fn crusade_pumps_white_creatures_both_sides() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::crusade());
+    let mine = g.add_card_to_battlefield(0, catalog::soul_warden());
+    let theirs = g.add_card_to_battlefield(1, catalog::soul_warden());
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+
+    let cm = g.computed_permanent(mine).unwrap();
+    assert_eq!(cm.power, 2, "your white +1/+1");
+    let ct = g.computed_permanent(theirs).unwrap();
+    assert_eq!(ct.power, 2, "opp's white also gets +1/+1 (symmetric anthem)");
+    let cb = g.computed_permanent(bears).unwrap();
+    assert_eq!(cb.power, 2, "non-white creature unaffected");
+    assert_eq!(cb.toughness, 2);
+}
+
+/// Bad Moon pumps every black creature in play.
+#[test]
+fn bad_moon_pumps_black_creatures_both_sides() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::bad_moon());
+    // Drainpipe Vermin is 1/1 black creature
+    let mine = g.add_card_to_battlefield(0, catalog::drainpipe_vermin());
+    let theirs = g.add_card_to_battlefield(1, catalog::drainpipe_vermin());
+
+    let cm = g.computed_permanent(mine).unwrap();
+    assert_eq!(cm.power, 2, "your black +1/+1");
+    let ct = g.computed_permanent(theirs).unwrap();
+    assert_eq!(ct.power, 2, "opp's black also gets +1/+1 (symmetric anthem)");
+}
+
+/// Lightning Axe — additional discard cost is enforced; spell deals 5 to
+/// target creature.
+#[test]
+fn lightning_axe_discards_a_card_and_burns_for_five() {
+    let mut g = two_player_game();
+    let target = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let axe = g.add_card_to_hand(0, catalog::lightning_axe());
+    let pitch = g.add_card_to_hand(0, catalog::island()); // discard fodder
+    g.players[0].mana_pool.add(Color::Red, 1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: axe,
+        target: Some(Target::Permanent(target)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Lightning Axe castable with discard fodder available");
+    drain_stack(&mut g);
+
+    // Discard fodder ended up in graveyard.
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == pitch),
+        "Lightning Axe additional discard cost moved a card to graveyard");
+    // Target creature is destroyed (5 damage > 2 toughness).
+    assert!(!g.battlefield.iter().any(|c| c.id == target),
+        "5-damage target is destroyed via SBA");
+}
+
+/// Lightning Axe — cast is rejected when the controller has no extra
+/// hand card to discard.
+#[test]
+fn lightning_axe_rejects_with_empty_hand() {
+    let mut g = two_player_game();
+    let target = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let axe = g.add_card_to_hand(0, catalog::lightning_axe());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    // No extra hand card to discard
+
+    let res = g.perform_action(GameAction::CastSpell {
+        card_id: axe,
+        target: Some(Target::Permanent(target)),
+        mode: None,
+        x_value: None,
+    });
+    assert!(res.is_err(),
+        "Lightning Axe cast should fail without a card to discard");
+    // Axe still in hand
+    assert!(g.players[0].hand.iter().any(|c| c.id == axe),
+        "spell failed before hitting the stack");
+}
+
+/// Skred — flat 3 damage to creature (snow scaling collapsed).
+#[test]
+fn skred_deals_three_damage_to_target_creature() {
+    let mut g = two_player_game();
+    let target = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let id = g.add_card_to_hand(0, catalog::skred());
+    g.players[0].mana_pool.add(Color::Red, 1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(target)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Skred castable for {R}");
+    drain_stack(&mut g);
+
+    assert!(!g.battlefield.iter().any(|c| c.id == target),
+        "Skred lethal at 3 vs 2-toughness creature");
+}
+
+/// Soul's Attendant gains 1 life when another creature ETBs.
+#[test]
+fn souls_attendant_gains_life_on_other_creature_etb() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::souls_attendant());
+    let life_before = g.players[0].life;
+    // Cast a Bear from hand → Soul's Attendant's ETB trigger should fire.
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear, target: None, mode: None, x_value: None,
+    }).expect("Bear castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life_before + 1,
+        "Soul's Attendant gains 1 on creature ETB");
+}
+
+/// Soul's Attendant does NOT trigger off its own ETB.
+#[test]
+fn souls_attendant_does_not_trigger_on_self_etb() {
+    let mut g = two_player_game();
+    let life_before = g.players[0].life;
+    g.add_card_to_battlefield(0, catalog::souls_attendant());
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life_before,
+        "AnotherOfYours scope excludes self");
+}
+
+/// Dragon's Claw gains 1 life when any player casts a red spell.
+#[test]
+fn dragons_claw_triggers_on_any_red_spell_cast() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::dragons_claw());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let life_before = g.players[0].life;
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(1)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Lightning Bolt castable for {R}");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[0].life, life_before + 1 - 0,
+        "Dragon's Claw gains 1 life on the red Bolt cast (caster's life un-changed by burn that goes elsewhere)");
+}
+
+/// Dragon's Claw does NOT trigger on a non-red spell cast.
+#[test]
+fn dragons_claw_skips_non_red_spell_cast() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::dragons_claw());
+    let salve = g.add_card_to_hand(0, catalog::healing_salve());
+    g.players[0].mana_pool.add(Color::White, 1);
+    let life_before = g.players[0].life;
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: salve,
+        target: Some(Target::Player(0)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Healing Salve castable for {W}");
+    drain_stack(&mut g);
+
+    // Healing Salve grants 3 life; Dragon's Claw should not add 1.
+    // Total life delta should be exactly +3 (not +4).
+    assert_eq!(g.players[0].life, life_before + 3,
+        "Dragon's Claw does not trigger on white-only spells");
+}
+
+/// Wurm's Tooth gains 1 life when a green spell is cast.
+#[test]
+fn wurms_tooth_triggers_on_green_spell_cast() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::wurms_tooth());
+    let bears = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let life_before = g.players[0].life;
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: bears,
+        target: None,
+        mode: None,
+        x_value: None,
+    })
+    .expect("Grizzly Bears castable for {1}{G}");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[0].life, life_before + 1,
+        "Wurm's Tooth gains 1 on the green Bears cast");
+}

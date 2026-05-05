@@ -261,6 +261,20 @@ via `#[path = "../tests/modern.rs"] mod tests_modern` in `game::mod`).
 | Karplusan Forest | — | ✅ | Land. RG painland. Test: `karplusan_forest_taps_for_green_costing_one_life`. |
 | Brushland | — | ✅ | Land. GW painland. Closes the ally cycle. Test: `brushland_taps_for_white_costing_one_life`. |
 | Exploration | {G} | ✅ | Enchantment. **First catalog card** to exercise the engine's `StaticEffect::ExtraLandPerTurn`. Push XLVIII wired the static into a new `GameState::player_can_play_land` predicate (CR 305.2). Multiple copies stack. Tests: `baseline_player_caps_at_one_land_per_turn`, `exploration_allows_a_second_land_play_in_one_turn`, `two_explorations_grant_three_land_plays`, `exploration_does_not_help_the_opponent`. |
+| Seal of Fire | {R} | ✅ NEW | Push L. Enchantment. Sac-as-cost activation deals 2 damage to any target. Wired via `ActivatedAbility { sac_cost: true, mana_cost: 0, effect: DealDamage(any_target, 2) }`. Test: `seal_of_fire_sac_deals_two_to_opponent`. |
+| Seal of Cleansing | {1}{W} | ✅ NEW | Push L. Enchantment. Sac-as-cost activation destroys an artifact or enchantment. Mirror of Seal of Fire in white. Test: `seal_of_cleansing_destroys_target_enchantment`. |
+| Phyrexian Walker | {0} | ✅ NEW | Push L. 0/3 Construct artifact creature. Free chump-blocker — slots into Affinity shells alongside Memnite (1/1) and Ornithopter (0/2 Flying). Test: `phyrexian_walker_is_a_zero_three_artifact_creature`. |
+| Honor of the Pure | {1}{W} | ✅ NEW | Push L. Enchantment. White creatures you control get +1/+1. **First catalog card** to use the new `colors_any` filter on `AffectedPermanents::All` (push L engine wire — extends `affected_from_requirement` to extract `R::HasColor(c)` pips). Test: `honor_of_the_pure_pumps_white_creatures_you_control`. |
+| Crusade | {W}{W} | ✅ NEW | Push L. Enchantment. White creatures get +1/+1 (symmetric — affects both your and opp's whites). Test: `crusade_pumps_white_creatures_both_sides`. |
+| Bad Moon | {1}{B} | ✅ NEW | Push L. Enchantment. Black creatures get +1/+1 (symmetric). Test: `bad_moon_pumps_black_creatures_both_sides`. |
+| Lightning Axe | {R} | 🟡 NEW | Push L. Instant. `additional_discard_cost: Some(1)` + 5 damage to creature. The "or pay 5 life" alt-cost half collapsed (engine's `AlternativeCost` doesn't yet swap discard-for-life). Tests: `lightning_axe_discards_a_card_and_burns_for_five`, `lightning_axe_rejects_with_empty_hand`. |
+| Skred | {R} | 🟡 NEW | Push L. Instant. Flat 3 damage to creature (snow-permanent scaling collapsed; matches printed at typical 3-Mountain build floor). Test: `skred_deals_three_damage_to_target_creature`. |
+| Soul's Attendant | {W} | ✅ NEW | Push L. 1/1 Human Cleric. Soul Warden mirror — gains 1 life when another creature ETBs. Tests: `souls_attendant_gains_life_on_other_creature_etb`, `souls_attendant_does_not_trigger_on_self_etb`. |
+| Dragon's Claw | {2} | ✅ NEW | Push L. Artifact. Whenever a player casts a red spell, you gain 1 life. `EventScope::AnyPlayer + Predicate::EntityMatches(TriggerSource, HasColor(Red))`. Tests: `dragons_claw_triggers_on_any_red_spell_cast`, `dragons_claw_skips_non_red_spell_cast`. |
+| Wurm's Tooth | {2} | ✅ NEW | Push L. Artifact. Green slot in the Mirrodin colour-protection 5-card cycle. Test: `wurms_tooth_triggers_on_green_spell_cast`. |
+| Kraken's Eye | {2} | ✅ NEW | Push L. Artifact. Blue slot in the Mirrodin cycle. Same shape as Dragon's Claw. |
+| Angel's Feather | {2} | ✅ NEW | Push L. Artifact. White slot in the Mirrodin cycle. |
+| Demon's Horn | {2} | ✅ NEW | Push L. Artifact. Black slot in the Mirrodin cycle — closes the 5-card cycle (W/U/B/R/G). |
 
 ### Engine improvements that landed alongside
 

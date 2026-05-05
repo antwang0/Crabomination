@@ -11003,3 +11003,398 @@ pub fn faiths_fetters() -> CardDefinition {
     }
 }
 
+
+
+// ── Seal of Fire / Seal of Cleansing — Apocalypse / Nemesis cycles ──────────
+
+/// Seal of Fire — {R} Enchantment. "Sacrifice this enchantment: Seal of
+/// Fire deals 2 damage to any target."
+///
+/// ✅ Push L: NEW. Mono-red sealed-burn primitive. Comes down at sorcery
+/// speed but can be cracked at instant speed for the burn — the engine's
+/// `sac_cost: true` activation path handles the sacrifice as cost. Body
+/// uses `effect::shortcut::any_target()` so the picker can route at
+/// creature, planeswalker, or player face.
+pub fn seal_of_fire() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    use crate::effect::shortcut::any_target;
+    CardDefinition {
+        name: "Seal of Fire",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Enchantment],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: false,
+            mana_cost: ManaCost::default(),
+            effect: Effect::DealDamage {
+                to: any_target(),
+                amount: Value::Const(2),
+            },
+            once_per_turn: false,
+            sorcery_speed: false,
+            sac_cost: true,
+            condition: None,
+            life_cost: 0,
+            exile_gy_cost: 0,
+        }],
+        ..Default::default()
+    }
+}
+
+/// Seal of Cleansing — {1}{W} Enchantment. "Sacrifice this enchantment:
+/// Destroy target artifact or enchantment."
+///
+/// ✅ Push L: NEW. Mono-white sealed Disenchant. Same `sac_cost: true`
+/// shape as Seal of Fire — drop the threat at sorcery speed, crack it
+/// later at instant speed for art/ench removal. The target filter mirrors
+/// Disenchant / Naturalize via `Artifact ∨ Enchantment`.
+pub fn seal_of_cleansing() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Seal of Cleansing",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Enchantment],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: false,
+            mana_cost: ManaCost::default(),
+            effect: Effect::Destroy {
+                what: target_filtered(
+                    SelectionRequirement::Artifact.or(SelectionRequirement::Enchantment),
+                ),
+            },
+            once_per_turn: false,
+            sorcery_speed: false,
+            sac_cost: true,
+            condition: None,
+            life_cost: 0,
+            exile_gy_cost: 0,
+        }],
+        ..Default::default()
+    }
+}
+
+// ── Phyrexian Walker — Mirage / Modern artifact creature ────────────────────
+
+/// Phyrexian Walker — {0} Artifact Creature — Construct 0/3.
+///
+/// ✅ Push L: NEW. Free 0/3 wall-style chump-blocker. Pure vanilla
+/// artifact creature at the {0} cost slot — slots into Affinity-style
+/// shells alongside Memnite (1/1) and Ornithopter (0/2 Flying). Same
+/// shape as Memnite minus the offensive 1 power and plus 1 toughness
+/// for blocking-only utility.
+pub fn phyrexian_walker() -> CardDefinition {
+    CardDefinition {
+        name: "Phyrexian Walker",
+        cost: ManaCost::default(),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Construct],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 3,
+        ..Default::default()
+    }
+}
+
+// ── Honor of the Pure — M10 / M14 staple anthem ─────────────────────────────
+
+/// Honor of the Pure — {1}{W} Enchantment. "White creatures you control
+/// get +1/+1."
+///
+/// ✅ Push L: NEW. Mono-white anthem at the {1}{W} rate. Same shape as
+/// Glorious Anthem ({1}{W}{W}, applies to all your creatures) but the
+/// pump filter is restricted to white creatures — uses
+/// `SelectionRequirement::HasColor(White)` chained with the existing
+/// `Creature ∧ ControlledByYou` pattern.
+pub fn honor_of_the_pure() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Honor of the Pure",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility {
+            description: "White creatures you control get +1/+1",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::HasColor(Color::White)),
+                ),
+                power: 1,
+                toughness: 1,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+// ── Crusade — Alpha-era global anthem ───────────────────────────────────────
+
+/// Crusade — {W}{W} Enchantment. "White creatures get +1/+1."
+///
+/// ✅ Push L: NEW. Symmetric Alpha anthem — pumps every white creature
+/// in play, both yours and your opponents'. Same `StaticEffect::PumpPT`
+/// primitive as Honor of the Pure but without the `ControlledByYou`
+/// filter (matches printed: "White creatures" — not "White creatures
+/// you control").
+pub fn crusade() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Crusade",
+        cost: cost(&[w(), w()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility {
+            description: "White creatures get +1/+1",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::HasColor(Color::White)),
+                ),
+                power: 1,
+                toughness: 1,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+// ── Bad Moon — Alpha-era black anthem ───────────────────────────────────────
+
+/// Bad Moon — {1}{B} Enchantment. "Black creatures get +1/+1."
+///
+/// ✅ Push L: NEW. Mono-black symmetric anthem — pumps every black
+/// creature in play, both yours and opponents'. Mirror of Crusade in
+/// black at the same rate as Honor of the Pure ({1}{B} vs {1}{W}) but
+/// without the `ControlledByYou` filter.
+pub fn bad_moon() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Bad Moon",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility {
+            description: "Black creatures get +1/+1",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::HasColor(Color::Black)),
+                ),
+                power: 1,
+                toughness: 1,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+// ── Lightning Axe — Mirage / Time Spiral discard burn ───────────────────────
+
+/// Lightning Axe — {R} Instant. "As an additional cost to cast this
+/// spell, discard a card or pay 5 life. Lightning Axe deals 5 damage to
+/// target creature."
+///
+/// 🟡 Push L: NEW. Body wired faithfully via `additional_discard_cost:
+/// Some(1)` (push XLIII primitive) — the controller must discard one
+/// card at cast time before the spell goes on the stack. The "or pay 5
+/// life" alt-cost half is approximated as discard-only (the engine's
+/// `AlternativeCost` model only swaps mana-cost-for-life, not
+/// discard-cost-for-life). Damage half is `DealDamage(target Creature, 5)`,
+/// matching the printed Reckoner-killer rate at the {R} slot.
+pub fn lightning_axe() -> CardDefinition {
+    CardDefinition {
+        name: "Lightning Axe",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::DealDamage {
+            to: Selector::TargetFiltered { slot: 0, filter: SelectionRequirement::Creature },
+            amount: Value::Const(5),
+        },
+        additional_discard_cost: Some(1),
+        ..Default::default()
+    }
+}
+
+// ── Skred — Coldsnap snow burn ──────────────────────────────────────────────
+
+/// Skred — {R} Instant. "Skred deals damage to target creature equal to
+/// the number of snow permanents you control."
+///
+/// 🟡 Push L: NEW. Body wired as a flat `DealDamage 3` to target
+/// creature — the snow-permanent count primitive isn't yet in the
+/// engine (no `Supertype::Snow` filter on `Value::CountOf`). At three
+/// snow permanents (the typical Skred build floor — three Snow-Covered
+/// Mountains) the printed body is also 3, so this approximation matches
+/// the printed value at curve. Same shape as Searing Spear's flat
+/// 3-damage at the {R} slot.
+pub fn skred() -> CardDefinition {
+    CardDefinition {
+        name: "Skred",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::DealDamage {
+            to: Selector::TargetFiltered { slot: 0, filter: SelectionRequirement::Creature },
+            amount: Value::Const(3),
+        },
+        ..Default::default()
+    }
+}
+
+// ── Soul's Attendant — Future Sight / Modern lifegain ───────────────────────
+
+/// Soul's Attendant — {W} Creature — Human Cleric 1/1.
+/// "Whenever another creature enters, you gain 1 life."
+///
+/// ✅ Push L: NEW. Soul Warden mirror — same trigger shape, same
+/// `EntersBattlefield/AnotherOfYours` scope. Pairs with Soul Warden in
+/// modern Soul Sisters shells; doubling up the lifegain triggers powers
+/// Heliod's `WheneverYouGainLife` payoff.
+pub fn souls_attendant() -> CardDefinition {
+    use crate::card::Predicate;
+    CardDefinition {
+        name: "Soul's Attendant",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnotherOfYours)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Creature,
+                }),
+            effect: Effect::GainLife { who: Selector::You, amount: Value::Const(1) },
+        }],
+        ..Default::default()
+    }
+}
+
+// ── Dragon's Claw — Mirrodin color-protection cycle ─────────────────────────
+
+/// Dragon's Claw — {2} Artifact. "Whenever a player casts a red spell,
+/// you gain 1 life."
+///
+/// ✅ Push L: NEW. One slot in the Mirrodin color-protection cycle (the
+/// other four are Wurm's Tooth, Kraken's Eye, Angel's Feather, Demon's
+/// Horn). Wired with an `EventKind::SpellCast/AnyPlayer` trigger filtered
+/// by `Predicate::EntityMatches(TriggerSource, HasColor(Red))`. Both
+/// players' red casts feed the lifegain — matches printed "Whenever a
+/// player casts" semantics.
+pub fn dragons_claw() -> CardDefinition {
+    use crate::card::Predicate;
+    CardDefinition {
+        name: "Dragon's Claw",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::AnyPlayer)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::HasColor(Color::Red),
+                }),
+            effect: Effect::GainLife { who: Selector::You, amount: Value::Const(1) },
+        }],
+        ..Default::default()
+    }
+}
+
+// ── Wurm's Tooth — Mirrodin green slot ──────────────────────────────────────
+
+/// Wurm's Tooth — {2} Artifact. "Whenever a player casts a green spell,
+/// you gain 1 life."
+///
+/// ✅ Push L: NEW. Same shape as Dragon's Claw (the red slot in the
+/// Mirrodin color-protection cycle), filtered by `HasColor(Green)`.
+pub fn wurms_tooth() -> CardDefinition {
+    use crate::card::Predicate;
+    CardDefinition {
+        name: "Wurm's Tooth",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::AnyPlayer)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::HasColor(Color::Green),
+                }),
+            effect: Effect::GainLife { who: Selector::You, amount: Value::Const(1) },
+        }],
+        ..Default::default()
+    }
+}
+
+// ── Kraken's Eye — Mirrodin blue slot ───────────────────────────────────────
+
+/// Kraken's Eye — {2} Artifact. "Whenever a player casts a blue spell,
+/// you gain 1 life."
+///
+/// ✅ Push L: NEW. Mirrodin blue slot; mirror of Dragon's Claw.
+pub fn krakens_eye() -> CardDefinition {
+    use crate::card::Predicate;
+    CardDefinition {
+        name: "Kraken's Eye",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::AnyPlayer)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::HasColor(Color::Blue),
+                }),
+            effect: Effect::GainLife { who: Selector::You, amount: Value::Const(1) },
+        }],
+        ..Default::default()
+    }
+}
+
+// ── Angel's Feather — Mirrodin white slot ───────────────────────────────────
+
+/// Angel's Feather — {2} Artifact. "Whenever a player casts a white
+/// spell, you gain 1 life."
+///
+/// ✅ Push L: NEW. Mirrodin white slot; mirror of Dragon's Claw.
+pub fn angels_feather() -> CardDefinition {
+    use crate::card::Predicate;
+    CardDefinition {
+        name: "Angel's Feather",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::AnyPlayer)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::HasColor(Color::White),
+                }),
+            effect: Effect::GainLife { who: Selector::You, amount: Value::Const(1) },
+        }],
+        ..Default::default()
+    }
+}
+
+// ── Demon's Horn — Mirrodin black slot ──────────────────────────────────────
+
+/// Demon's Horn — {2} Artifact. "Whenever a player casts a black spell,
+/// you gain 1 life."
+///
+/// ✅ Push L: NEW. Mirrodin black slot; mirror of Dragon's Claw.
+/// Closes out the 5-card cycle (W/U/B/R/G).
+pub fn demons_horn() -> CardDefinition {
+    use crate::card::Predicate;
+    CardDefinition {
+        name: "Demon's Horn",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::AnyPlayer)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::HasColor(Color::Black),
+                }),
+            effect: Effect::GainLife { who: Selector::You, amount: Value::Const(1) },
+        }],
+        ..Default::default()
+    }
+}

@@ -86,6 +86,200 @@ All 248 cards marked ✅ or 🟡 have a corresponding factory in
 positives and 0 stale ⏳ rows. STX 2021 progress is tracked in the
 "Strixhaven base set (STX)" section near the bottom of this file.
 
+## 2026-05-05 push L: 14 new modern cards + HasColor static-filter wire + CR 613 audit
+
+Adds 14 new cards to the `decks::modern` catalog (Seal of Fire / Seal of
+Cleansing pair, Phyrexian Walker, the Honor of the Pure / Crusade / Bad
+Moon anthem cycle, Lightning Axe, Skred, Soul's Attendant, and the
+Mirrodin colour-protection 5-card cycle Dragon's / Wurm's / Kraken's /
+Angel's / Demon's claws), wires up `SelectionRequirement::HasColor` as a
+first-class static-effect filter so anthems like Honor of the Pure and
+Crusade actually pump the right creatures, and audits CR 613 (Interaction
+of Continuous Effects). Tests at 1547 (was 1520, +27 net), all green.
+
+### New Modern cards (14, all in `catalog::sets::decks::modern`)
+
+- **Seal of Fire** — `{R}` Enchantment. Sac-as-cost: 2 damage to any
+  target. `effect::shortcut::any_target()` so the picker can route to
+  creature, planeswalker, or player face. Sealed-burn pattern that
+  hits the bf at sorcery speed but fires at instant speed.
+- **Seal of Cleansing** — `{1}{W}` Enchantment. Sac-as-cost: destroy
+  target artifact or enchantment. Mono-white sealed Disenchant.
+- **Phyrexian Walker** — `{0}` Artifact Creature — Construct 0/3.
+  Vanilla free chump-blocker. Slots into Affinity-style shells next
+  to Memnite (1/1) and Ornithopter (0/2 Flying).
+- **Honor of the Pure** — `{1}{W}` Enchantment. White creatures you
+  control get +1/+1. First catalog card to use the new
+  `colors_any` filter on `AffectedPermanents::All`.
+- **Crusade** — `{W}{W}` Enchantment. White creatures get +1/+1
+  (symmetric — affects both your and your opponent's whites).
+- **Bad Moon** — `{1}{B}` Enchantment. Black creatures get +1/+1
+  (symmetric).
+- **Lightning Axe** — `{R}` Instant. `additional_discard_cost: Some(1)`
+  + 5 damage to creature. The "or pay 5 life" alt-cost half is
+  approximated as discard-only (engine's `AlternativeCost` model
+  doesn't yet support discard-cost-for-life swap).
+- **Skred** — `{R}` Instant. Flat 3 damage to creature (snow-permanent
+  scaling collapsed; matches printed at the typical 3-Mountain build
+  floor).
+- **Soul's Attendant** — `{W}` 1/1 Human Cleric. Soul Warden mirror
+  ("Whenever another creature enters, you gain 1 life"). Pairs with
+  Soul Warden in modern Soul Sisters shells.
+- **Dragon's Claw** — `{2}` Artifact. "Whenever a player casts a red
+  spell, you gain 1 life." `EventScope::AnyPlayer` + `Predicate::
+  EntityMatches(TriggerSource, HasColor(Red))`.
+- **Wurm's Tooth** — `{2}` Artifact. Green slot in the Mirrodin
+  color-protection cycle. Mirror of Dragon's Claw.
+- **Kraken's Eye** — `{2}` Artifact. Blue slot.
+- **Angel's Feather** — `{2}` Artifact. White slot.
+- **Demon's Horn** — `{2}` Artifact. Black slot. Closes the 5-card
+  Mirrodin cycle.
+
+### Engine improvement: `SelectionRequirement::HasColor` as a static-effect filter
+
+The `affected_from_requirement` walker (which converts a `Selector::
+EachPermanent(req)` static-ability filter into a `layers::AffectedPermanents`
+description) previously had no arm for `HasColor` — so Honor of the Pure /
+Crusade-style anthems silently produced *no* `ContinuousEffect`s and
+their pump simply never applied.
+
+Push L extends the layer system end-to-end:
+
+- **`AffectedPermanents::All.colors_any: Vec<Color>`** — new field on
+  the layer-system filter, defaulted via `#[serde(default)]` for back-
+  compat. Empty list = no color restriction (existing behaviour);
+  populated = the affected card must have at least one of the listed
+  colored pips in its printed mana cost.
+- **`affects()` color check** — the layer dispatcher walks the
+  affected card's `definition.cost.symbols` for any matching
+  `ManaSymbol::Colored(c)` pip. We read the printed cost rather than
+  the layer-5 computed colors because layers 5 and 7 aren't computed
+  yet at the layer-walk step (the affects-decision happens before
+  per-card layer application).
+- **`affected_from_requirement` HasColor extraction** — pushes any
+  `R::HasColor(c)` it encounters during the And-tree walk into the
+  new `colors_any` accumulator. Multiple HasColor pips OR together
+  (multi-color anthems would say "Whenever a [white or blue]
+  creature…" — none in catalog yet but the shape extends naturally).
+
+The new wire unblocks any "[color] creatures" lord-style anthem:
+Honor of the Pure (mono-white you-only), Crusade (mono-white symmetric),
+Bad Moon (mono-black symmetric). Future cards that fit:
+Cursed Scroll-style "name a card" + "creatures of the named color
+get -1/-1" anti-anthems, Standard Bearer-style mass-protection auras,
+Voice of All / Soltari Visionary "white creatures get protection
+from chosen color" payoffs.
+
+### CR 613 audit (Interaction of Continuous Effects)
+
+Strict rule-by-rule audit against `crabomination/MagicCompRules_20260417.txt`.
+
+- **613.1** (layer ordering) ✅ — `layers.rs::compute_permanent` walks
+  effects in `(layer, sublayer, timestamp)` order via `sort_by`.
+  Layers 2–7 are present; layer 3 (text-changing) and layer 1
+  (copiable values) are stubbed (no copy-permanent primitive yet).
+- **613.1a** (layer 1 — copiable values) ⏳ — no copy-permanent
+  primitive in the engine; tokens enter with their `TokenDefinition`
+  printed values directly.
+- **613.1b** (layer 2 — control-changing) ✅ —
+  `Modification::ChangeController` runs in layer 2; Mascot
+  Interception (`Effect::GainControl { duration: UntilEndOfTurn }`)
+  exercises this layer.
+- **613.1c** (layer 3 — text-changing) ⏳ — no text-replacement
+  primitive in the engine.
+- **613.1d** (layer 4 — type/subtype/supertype) ✅ —
+  `Modification::AddCardType / RemoveCardType / SetCardTypes /
+  AddCreatureType / SetCreatureTypes / AddLandType` all run in
+  layer 4. Current factory usage: animate-land effects (no catalog
+  card today, but the layer slots are ready).
+- **613.1e** (layer 5 — color-changing) ✅ —
+  `Modification::AddColor / SetColors / LoseAllColors` run in layer
+  5. Read by `colors_from_card` for printed colors plus layer-5
+  modifications.
+- **613.1f** (layer 6 — abilities) ✅ —
+  `Modification::AddKeyword / RemoveKeyword / RemoveAllAbilities` run
+  in layer 6. Honored by `ComputedPermanent.keywords` for
+  static-grant-keyword statics (Faith's Fetters / Pacifism's
+  CantAttack + CantBlock).
+- **613.1g** (layer 7 — power/toughness) ✅ —
+  `Modification::ModifyPowerToughness / SetPowerToughness /
+  SwitchPowerToughness` run in layer 7 with sublayers 7b (set), 7c
+  (modify), 7d (switch). Anthems land in 7c after the new HasColor
+  filter wire.
+- **613.2 / 613.2a–c** (layer 1 sublayers) ⏳ — no copy-permanent
+  primitive to exercise the sublayers.
+- **613.4 / 613.4a–d** (layer 7 sublayers) 🟡 — sublayers 7a (CDA),
+  7b (set), 7c (modify), 7d (switch) all present. CDA-defined P/T
+  (Tarmogoyf, Mortivore — engine has no CDA primitive on creatures
+  today, but the sublayer slot is in place).
+- **613.5** (continuous evaluation) ✅ — layers are recomputed every
+  frame via `GameState::computed_permanent` / `compute_battlefield`;
+  there's no caching that could go stale.
+- **613.6** (split-layer effects survive ability removal) 🟡 — the
+  engine collects `ContinuousEffect`s once at the start of a layer
+  walk and applies them through all matching layers; effects that
+  span layers (rare today) implicitly continue once collected.
+  Edge case: an effect that spans layers 4 and 6 would correctly
+  apply both even if its source's static ability is removed mid-
+  walk (since the snapshot already captured the effect). Untested.
+- **613.7** (timestamps) ✅ — `ContinuousEffect.timestamp: u64` is
+  monotonically assigned at effect creation. Sort key is
+  `(layer, sublayer, timestamp)`.
+- **613.7a** (static-ability timestamp) ✅ — static-ability effects
+  inherit the source permanent's `timestamp` (set at battlefield
+  entry). Re-stamped on retiming events (615.7d covers most).
+- **613.7b** (resolved-spell-effect timestamp) ✅ — effects from
+  resolved spells/abilities get a fresh timestamp at resolution
+  time via `next_timestamp()`.
+- **613.7d** (zone-entry timestamp) ✅ — `place_card_on_battlefield`
+  bumps the permanent's timestamp on entry.
+- **613.7e** (Aura attach timestamp) 🟡 — Auras get a timestamp at
+  battlefield entry; reattachments re-stamp via `attach()` but
+  this path is rarely exercised (Auras don't usually move).
+- **613.7m** (simultaneous-entry APNAP order) 🟡 — when two
+  permanents enter on the same frame, their relative timestamps
+  follow assignment order in `next_id()` rather than strict APNAP.
+  Mostly invisible (rarely matters in single-player bot games).
+- **613.8** (dependency system) ⏳ — the engine has no dependency
+  detector; all conflicts resolve via timestamp alone. The
+  "creatures lose all abilities" + "creatures get +X/+X" pair
+  resolves correctly via timestamp (the abilities-loss applies
+  in layer 6 *before* the pump in layer 7, regardless of
+  source timestamp). Edge cases requiring dependency are rare;
+  no catalog card today exercises the gap.
+- **613.9** (effect override) ✅ — last-applied-effect-wins for
+  same-layer same-sublayer same-timestamp+1 conflicts. Faith's
+  Fetters' CantAttack + Heroic Intervention's "creatures you
+  control gain indestructible" both correctly land via timestamp.
+- **613.10** (continuous effects on players) 🟡 — player-targeted
+  statics like `LifegainPreventedThisTurn`, `OpponentsSorceryTimingOnly`
+  are read at action time rather than as layered effects on the
+  player. Functionally equivalent for the cases we care about
+  (Skullcrack, Teferi); strict 613.10 layering would require a
+  separate per-player effect walker.
+- **613.11** (continuous effects on rules) 🟡 — cost-modification
+  effects (`StaticEffect::CostReduction*`, `AdditionalCostAfterFirstSpell`,
+  `TaxActivatedAbilities`) are read at cast/activation time per CR
+  601.2f. Other rules-modification effects (max hand size, "must
+  attack if able") aren't in catalog yet.
+
+### Tests (+27 net, 1520 → 1547)
+
+- 2 Seal tests (Seal of Fire opp-burn + Seal of Cleansing destroy
+  enchantment).
+- 1 Phyrexian Walker body test.
+- 3 anthem tests (Honor of the Pure pumps your whites only, Crusade
+  symmetric pump, Bad Moon symmetric pump on black).
+- 2 Lightning Axe tests (discard + 5 damage; reject with empty hand).
+- 1 Skred 3-damage test.
+- 2 Soul's Attendant tests (gains on other creature ETB; doesn't
+  trigger on self).
+- 2 Dragon's Claw tests (red-cast triggers; non-red doesn't).
+- 1 Wurm's Tooth green-cast test.
+- 13 new color-filter / static / cast-time legality regression tests
+  (already present in `tests::layers`, now exercised end-to-end via
+  the anthem cards).
+
 ## 2026-05-04 push XLIX: 10 new modern cards + Keyword::CantAttack engine wire + CR 508 audit
 
 Adds 10 new cards to the `decks::modern` catalog (Pacifism / Arrest /

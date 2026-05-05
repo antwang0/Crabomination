@@ -138,6 +138,12 @@ pub enum AffectedPermanents {
         excluded_supertypes: Vec<Supertype>,
         #[serde(default)]
         exclude_source: bool,
+        /// Restrict to permanents whose mana cost contains any of the
+        /// listed colored pips (Honor of the Pure / Crusade / Bad Moon-
+        /// style "[color] creatures get +1/+1" anthems). Empty = no
+        /// color filter (back-compat default).
+        #[serde(default)]
+        colors_any: Vec<Color>,
     },
     /// All permanents controlled by any player *other* than `source_controller`.
     AllOpponents { source_controller: usize, card_types: Vec<CardType> },
@@ -332,7 +338,7 @@ fn affects(effect: &ContinuousEffect, card: &crate::card::CardInstance) -> bool 
     match &effect.affected {
         AffectedPermanents::Source => effect.source == card.id,
         AffectedPermanents::Specific(ids) => ids.contains(&card.id),
-        AffectedPermanents::All { controller, card_types, excluded_supertypes, exclude_source } => {
+        AffectedPermanents::All { controller, card_types, excluded_supertypes, exclude_source, colors_any } => {
             let ctrl_ok = controller.is_none_or(|c| c == card.controller);
             let type_ok = card_types.is_empty()
                 || card_types.iter().any(|t| card.definition.card_types.contains(t));
@@ -340,7 +346,17 @@ fn affects(effect: &ContinuousEffect, card: &crate::card::CardInstance) -> bool 
                 .iter()
                 .all(|st| !card.definition.supertypes.contains(st));
             let source_ok = !*exclude_source || effect.source != card.id;
-            ctrl_ok && type_ok && supertype_ok && source_ok
+            // Colors filter (push L): empty list = no color restriction.
+            // Otherwise the card must have at least one of the listed
+            // colored pips in its printed mana cost (Honor of the Pure
+            // / Crusade-style anthems). We check the printed cost here
+            // rather than `colors_from_card(...)` because layer 5
+            // colors aren't computed yet at this layer-walk step.
+            let color_ok = colors_any.is_empty()
+                || card.definition.cost.symbols.iter().any(|s| {
+                    matches!(s, crate::mana::ManaSymbol::Colored(c) if colors_any.contains(c))
+                });
+            ctrl_ok && type_ok && supertype_ok && source_ok && color_ok
         }
         AffectedPermanents::AllOpponents { source_controller, card_types } => {
             let ctrl_ok = card.controller != *source_controller;

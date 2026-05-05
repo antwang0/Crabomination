@@ -1838,6 +1838,7 @@ fn affected_from_requirement(
     let mut creature_type: Option<crate::card::CreatureType> = None;
     let mut counter_filter: Option<crate::card::CounterType> = None;
     let mut excluded_supertypes: Vec<Supertype> = vec![];
+    let mut colors_any: Vec<crate::mana::Color> = vec![];
     let mut walk = vec![req];
     while let Some(r) = walk.pop() {
         match r {
@@ -1860,6 +1861,7 @@ fn affected_from_requirement(
             R::HasCardType(t) => types.push(t.clone()),
             R::HasCreatureType(ct) => creature_type = Some(*ct),
             R::WithCounter(ct) => counter_filter = Some(*ct),
+            R::HasColor(c) => colors_any.push(*c),
             R::Any | R::Permanent => {}
             // `Not(HasSupertype(_))` is a printed "non-legendary" /
             // "non-snow" filter — represented as an exclusion set on
@@ -1893,6 +1895,7 @@ fn affected_from_requirement(
         card_types: types,
         excluded_supertypes,
         exclude_source: false,
+        colors_any,
     })
 }
 

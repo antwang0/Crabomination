@@ -7,6 +7,66 @@ See `CUBE_FEATURES.md` (cube-card implementation status) and
 
 ## Recent additions
 
+- ✅ **Push L (2026-05-05)**: 14 new modern cards + `HasColor` static-
+  effect filter wire + CR 613 (Interaction of Continuous Effects)
+  audit. Tests at 1547 (was 1520; +27 net), all green.
+  - **Engine: `AffectedPermanents::All.colors_any: Vec<Color>`** —
+    `affected_from_requirement` now extracts `R::HasColor(c)`
+    pips into a new `colors_any` accumulator on
+    `AffectedPermanents::All`. The layer dispatcher's `affects()`
+    walks the affected card's `definition.cost.symbols` for any
+    matching `ManaSymbol::Colored(c)` pip. Empty list = no
+    color restriction (back-compat default via
+    `#[serde(default)]`). Unblocks the entire "[color] creatures
+    get [stat]" anthem family — Honor of the Pure, Crusade, Bad
+    Moon all wire faithfully on first cast.
+  - **14 new modern cards**:
+    - **Seal of Fire** — `{R}` Sealed-burn Enchantment. Sac-as-cost:
+      2 damage to any target. `effect::shortcut::any_target()` so
+      the picker routes at creature, planeswalker, or player face.
+    - **Seal of Cleansing** — `{1}{W}` Sealed Disenchant. Sac-as-cost:
+      destroy artifact/enchantment.
+    - **Phyrexian Walker** — `{0}` 0/3 Construct. Vanilla free
+      chump-blocker; slots into Affinity shells.
+    - **Honor of the Pure** — `{1}{W}` "White creatures you control
+      get +1/+1." First catalog card to use the new
+      `colors_any` filter on `AffectedPermanents::All`.
+    - **Crusade** — `{W}{W}` Symmetric mono-white anthem.
+    - **Bad Moon** — `{1}{B}` Symmetric mono-black anthem.
+    - **Lightning Axe** — `{R}` Instant. `additional_discard_cost:
+      Some(1)` + 5 damage to creature. The "or pay 5 life" alt-cost
+      half collapsed (engine's `AlternativeCost` doesn't yet swap
+      discard-cost-for-life).
+    - **Skred** — `{R}` Instant. Flat 3 damage to creature (snow
+      scaling collapsed; matches printed at typical 3-Mountain
+      build floor).
+    - **Soul's Attendant** — `{W}` 1/1 Cleric. Soul Warden mirror.
+    - **Dragon's Claw / Wurm's Tooth / Kraken's Eye / Angel's
+      Feather / Demon's Horn** — Mirrodin colour-protection 5-card
+      cycle. Each gains 1 life when any player casts a spell of the
+      matching color via `EventScope::AnyPlayer + Predicate::
+      EntityMatches(TriggerSource, HasColor(C))`.
+  - **CR 613 audit (Interaction of Continuous Effects)**: rule-by-
+    rule status notes in STRIXHAVEN2.md push L. Highlights:
+    613.1/613.1a–g (layer 1–7 ordering) ✅, 613.5 (continuous
+    evaluation) ✅, 613.7 (timestamps) ✅, 613.7a/b/d (timestamp
+    sources) ✅, 613.9 (effect override) ✅. Still 🟡: 613.4
+    (layer 7 sublayers — CDA-defined P/T no catalog card today),
+    613.7e/m (Aura attach + APNAP simultaneous-entry timestamps),
+    613.10/613.11 (continuous effects on players + rules — read
+    at action time rather than as layered effects). Still ⏳:
+    613.1a (layer 1 — copiable values, no copy-permanent
+    primitive), 613.1c (layer 3 — text-changing, no
+    text-replacement primitive), 613.8 (dependency system —
+    timestamp-only resolution today).
+  - **27 new tests**: 2 Seal, 1 Phyrexian Walker, 3 anthem (Honor of
+    the Pure, Crusade, Bad Moon), 2 Lightning Axe (discard cost +
+    empty-hand reject), 1 Skred, 2 Soul's Attendant, 2 Dragon's
+    Claw, 1 Wurm's Tooth (5-cycle representative), and 13 cast-
+    time-legality regression tests across the existing
+    `tests::layers` module (now exercised end-to-end via the
+    anthem family).
+
 - ✅ **Push XLIX (2026-05-04)**: 10 new modern cards (Pacifism / Arrest
   / Faith's Fetters Aura family, Solemn Offering, Idyllic Tutor, Frozen
   Shade, Phyrexian Reclamation, Krosan Grip, Stasis Snare, Heliod's
@@ -814,6 +874,53 @@ See `CUBE_FEATURES.md` (cube-card implementation status) and
     reject / Mascot steal + revert), 9 cube-card tests (one per new
     card + body sanity for vanilla bodies), 1 view test
     (`ability_cost_label_renders_exile_gy_cost`).
+
+## Future work — engine/UI suggestions surfaced by push L
+
+Push L wires `SelectionRequirement::HasColor` as a static-effect filter
+and adds 14 new modern cards. The following remain open:
+
+- **`AlternativeCost.discard_cost: Option<u32>`** — Lightning Axe's
+  printed cost line is "discard a card OR pay 5 life". Today the engine's
+  `AlternativeCost` model only swaps mana-cost for life-cost (Snuff Out).
+  Adding a `discard_cost` swap field would let Lightning Axe / Pact-
+  style "discard or pay X life" cards wire faithfully — the alt-cost
+  path would skip the mainline `additional_discard_cost` and instead
+  charge the swapped life cost. Same shape unblocks Reanimate / Buried
+  Alive / Coalition Honor Guard's printed alt-cost lines.
+- **Snow-permanent count `Value` primitive** — Skred's "X = snow
+  permanents you control" body collapses to a flat 3 today. A new
+  `Value::CountOf(EachPermanent(Snow ∧ ControlledByYou))` gated on a
+  `R::HasSupertype(Snow)` filter would wire the printed scaling
+  correctly. Same primitive unblocks Skrelv's Hive, Coldsteel Heart,
+  Boreal Centaur-style "[Snow] [stat]" payoffs. Today no card is
+  marked Snow in the catalog; the supertype enum has the slot.
+- **Anti-anthem (negative) variant** — Sengir Vampire / Shauku-
+  Endbringer / Crawling Filth would use `StaticEffect::PumpPT
+  { applies_to: HasColor(c), power: -N, toughness: -N }` to express
+  "Black creatures get -1/-1". The new `colors_any` filter naturally
+  composes with negative pump values; no engine change required.
+  Just needs catalog cards.
+- **`Value::CountOf(EachPermanent(HasColor(c)))`** — for "X = [color]
+  creatures you control" effects (Multani, Maro-Sorcerer-style
+  "+1/+1 for each [color] in play"). Today `Value::count(...)` walks
+  the bf via `evaluate_requirement_static`, which already handles
+  `HasColor` correctly — so no new primitive needed. Flag here for
+  future authors.
+- **CR 613.10 / 613.11 player-targeted layer system** — current
+  player-targeted statics (LifegainPreventedThisTurn, Sorcery-timing-
+  only locks) are read at action time rather than as continuous
+  effects on the player. Strict CR 613.10 layering would require a
+  separate per-player effect walker. Functionally equivalent for
+  the cases we care about today; flag here for completeness.
+- **Card-level "this is a [color] card" computed property** —
+  today's `R::HasColor(c)` reads the printed cost. Layer-5 color
+  rewrites (Dance of Many's "is white", Painter's Servant) would
+  need the layer-5 computed colors instead. The fix is to thread
+  the `ComputedPermanent.colors` list through `affects()` (it's
+  computed in `compute_permanent` after the affects-decision, so
+  the order needs swapping — affects must run *after* layer 5).
+  Mostly invisible today; would matter once Painter's Servant ships.
 
 ## Future work — engine/UI suggestions surfaced by push XLIX
 
