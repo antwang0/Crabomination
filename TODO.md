@@ -1973,3 +1973,73 @@ listed here so the next pass can pick them up without re-deriving.
   pool-decrease is silent. A `LifePaid`-style `ManaPaidForOptional`
   event (with source CardId + amount) would help replays diagnose
   surprising pool drops.
+
+## New suggestions (added 2026-05-12 push XVII)
+
+These items came up while implementing the Increment/Opus payoff
+batch (`Value::CastSpellManaSpent`, `Predicate::CastSpellManaSpent
+AtLeast`, `Predicate::IncrementSatisfied`, `RevealMissDest`) and are
+listed here so the next pass can pick them up without re-deriving.
+
+### Engine
+
+- **`TriggeredAbility.intervening_if: Option<Predicate>`** —
+  generalize push XVII's body-wrapping `Effect::If` pattern used by
+  `increment_trigger` into a first-class field. Today every card that
+  needs rule-603.4 "if X" semantics has to manually wrap its body in
+  `Effect::If(predicate, body, Noop)`. A first-class
+  `intervening_if` would let the engine handle the wrap automatically
+  and surface the gate to the UI (showing the condition string in
+  the stack-item tooltip). Felidar Sovereign, Avenger of Zendikar's
+  "if you control X creatures" riders, and other classic 603.4 cards
+  benefit too. Implementation: read `intervening_if` on the
+  `StackItem::Trigger` at resolution-pop time and skip the body if
+  it's false.
+
+- **Stack-item `mana_spent` round-trip through the snapshot wire
+  format**. `StackItem::Spell.mana_spent` /
+  `StackItem::Trigger.mana_spent` are serialized inline today (push
+  XVII added the fields with `#[serde(default)]`). But
+  `StackItemSnapshot` doesn't yet surface the value to spectator
+  clients — the new client wire field is gated on the snapshot's
+  `mana_spent: u32` which defaults to 0 on older replays. A new
+  `mana_spent` field on `KnownStackItem` (in `crabomination/src/net.rs`)
+  with the spectator-side label "Opus 5+" would help debug Increment
+  / Opus triggers in playback.
+
+- **Random-bottom shuffle for `RevealMissDest::BottomRandom`**. The
+  current implementation deterministically appends each miss to the
+  back of the library "in-revealed order". Per the printed text the
+  order should be random — but the engine has no RNG hook exposed in
+  `resolve_effect`. Adding a `state.rng.shuffle_range(start, end)`
+  primitive (with a deterministic seed for tests) would let the
+  effect actually randomize. Gameplay impact is essentially zero
+  before the next shuffle event, so this is low-priority cosmetic.
+
+- **`Predicate::SourceHasBaseStatAtMost(u32)`** — sibling to
+  `IncrementSatisfied` but for fixed thresholds. Several Strixhaven
+  cards print "Whenever you cast a spell, if its mana value is
+  greater than this creature's power, [effect]" (Hungry Graffalon
+  variants); having a Const-keyed comparator lets cards pin the
+  threshold to printed number rather than reading P/T live. Both
+  shapes are useful; `IncrementSatisfied` is just the "live P/T"
+  specialization.
+
+### UI
+
+- **Stack tooltip: show `mana_spent` for top spell**. When a spell is
+  on the stack with an Opus listener (Deluge Virtuoso) or an
+  Increment listener (Cuboid Colony) on the battlefield, the
+  spectator UI doesn't show the cast-time mana_spent value. A small
+  badge ("5 mana paid") on the stack item would help players
+  visualize which payoffs will fire. Wire this via the new
+  `KnownStackItem.mana_spent` field suggested above.
+
+### Server
+
+- **Per-trigger filter-pass logging for Increment / Opus**. Push
+  XVII's filter evaluation runs at both push-time and resolution-
+  time (rule 603.4). The server doesn't emit a dedicated event for
+  either path today. A pair of `TriggerEvaluated { source, kind,
+  passed: bool, point: PushOrResolve }` events would help diagnose
+  silent-no-fire reports.

@@ -106,7 +106,8 @@ impl GameState {
                 mode: None,
                 x_value: 0,
                 converged_value: 0,
-            trigger_source: None,
+                trigger_source: None,
+                mana_spent: 0,
             });
         }
         self.give_priority_to_active();
@@ -557,7 +558,8 @@ impl GameState {
                 mode: None,
                 x_value: 0,
                 converged_value: 0,
-            trigger_source: None,
+                trigger_source: None,
+                mana_spent: 0,
             });
         }
     }

@@ -347,6 +347,7 @@ impl GameState {
                     x_value: 0,
                     converged_value: 0,
                 trigger_source: None,
+                    mana_spent: 0,
                 });
             }
         }
@@ -545,6 +546,12 @@ impl GameState {
         // pool by paying the cost. Convoke pips contribute generic only,
         // so they don't raise this count.
         let converged_value = converge_count(&receipt.pool_before, &self.players[p].mana_pool);
+        // Total mana spent — `pool_before.total() - pool_after.total()`.
+        // Read by `Value::CastSpellManaSpent` for Increment / Opus payoffs.
+        let mana_spent = receipt
+            .pool_before
+            .total()
+            .saturating_sub(self.players[p].mana_pool.total());
 
         let mut auto_events = receipt.auto_events;
         auto_events.push(GameEvent::SpellCast {
@@ -554,7 +561,15 @@ impl GameState {
         });
         let events = auto_events;
 
-        self.finalize_cast(p, card, target, mode, x_value.unwrap_or(0), converged_value);
+        self.finalize_cast(
+            p,
+            card,
+            target,
+            mode,
+            x_value.unwrap_or(0),
+            converged_value,
+            mana_spent,
+        );
 
         Ok(events)
     }
@@ -573,6 +588,12 @@ impl GameState {
     ///    countered in response).
     /// 5. Resets priority to the active player so the cast can be responded
     ///    to.
+    // The argument list is wide because each cast path's resolution-time
+    // context (`x_value`, `converged_value`, `mana_spent`) must reach
+    // `finalize_cast` without round-tripping through a struct. The three
+    // callers (regular cast, flashback, alternative cast) all hand off
+    // the scalars directly from local variables computed during payment.
+    #[allow(clippy::too_many_arguments)]
     pub(crate) fn finalize_cast(
         &mut self,
         p: usize,
@@ -581,6 +602,7 @@ impl GameState {
         mode: Option<usize>,
         x_value: u32,
         converged_value: u32,
+        mana_spent: u32,
     ) {
         let card_id = card.id;
         self.spells_cast_this_turn += 1;
@@ -608,6 +630,7 @@ impl GameState {
             mode,
             x_value,
             converged_value,
+            mana_spent,
             uncounterable,
         });
         self.push_on_cast_triggers(card_id, p, on_cast_triggers);
@@ -617,7 +640,11 @@ impl GameState {
         // fires if the spell itself is countered in response). Filters
         // (e.g. CastSpellTargetsMatch) read the just-cast spell's target
         // from the stack while the spell still sits there.
-        self.fire_spell_cast_triggers(p, card_id, !was_creature_spell);
+        //
+        // Threads `mana_spent` (and X / Converge) into the trigger context
+        // so Increment / Opus payoffs reading `Value::CastSpellManaSpent`
+        // observe the actual amount paid for *this* spell.
+        self.fire_spell_cast_triggers(p, card_id, !was_creature_spell, mana_spent);
         self.give_priority_to_active();
     }
 
@@ -647,6 +674,7 @@ impl GameState {
                     mode: 0,
                     x_value: 0,
                     converged_value: 0,
+                    mana_spent: 0,
                 };
                 if !self.evaluate_predicate(pred, &ctx) {
                     continue;
@@ -666,6 +694,7 @@ impl GameState {
                 // carry its CardId as the trigger source so
                 // Effect::CopySpell can find it on the stack.
                 trigger_source: Some(crate::game::effects::EntityRef::Card(source)),
+                mana_spent: 0,
             });
         }
     }
@@ -719,6 +748,10 @@ impl GameState {
         if receipt.side_effects.life_lost > 0 {
             self.players[p].life -= receipt.side_effects.life_lost as i32;
         }
+        let mana_spent = receipt
+            .pool_before
+            .total()
+            .saturating_sub(self.players[p].mana_pool.total());
 
         // Remove from graveyard.
         let mut card = self.players[p].graveyard.remove(graveyard_pos);
@@ -735,7 +768,7 @@ impl GameState {
                 face: CastFace::Flashback,
             },
         ];
-        self.finalize_cast(p, card, target, mode, x_value.unwrap_or(0), 0);
+        self.finalize_cast(p, card, target, mode, x_value.unwrap_or(0), 0, mana_spent);
         Ok(events)
     }
 
@@ -870,6 +903,10 @@ impl GameState {
         if receipt.side_effects.life_lost > 0 {
             self.players[p].life -= receipt.side_effects.life_lost as i32;
         }
+        let alt_mana_spent = receipt
+            .pool_before
+            .total()
+            .saturating_sub(self.players[p].mana_pool.total());
         let mut auto_events = receipt.auto_events;
 
         // Pay the life portion of the alt cost.
@@ -897,7 +934,15 @@ impl GameState {
             face: CastFace::Front,
         });
         let events = auto_events;
-        self.finalize_cast(p, card, target, mode, x_value.unwrap_or(0), 0);
+        self.finalize_cast(
+            p,
+            card,
+            target,
+            mode,
+            x_value.unwrap_or(0),
+            0,
+            alt_mana_spent,
+        );
         Ok(events)
     }
 
@@ -972,6 +1017,7 @@ impl GameState {
         controller: usize,
         cast_card: CardId,
         _is_noncreature: bool,
+        mana_spent: u32,
     ) {
         use crate::effect::{EventKind, EventScope};
         let candidates: Vec<(CardId, Effect, Option<crate::effect::Predicate>)> = self
@@ -1003,6 +1049,7 @@ impl GameState {
                     mode: 0,
                     x_value: 0,
                     converged_value: 0,
+                    mana_spent,
                 };
                 if !self.evaluate_predicate(&filter, &ctx) {
                     continue;
@@ -1022,6 +1069,7 @@ impl GameState {
                 // spell's CardId so resolving effects (Effect::CopySpell,
                 // Selector::CastSpellTarget) can find it on the stack.
                 trigger_source: Some(crate::game::effects::EntityRef::Card(cast_card)),
+                mana_spent,
             });
         }
     }
@@ -1336,6 +1384,7 @@ impl GameState {
                 mode: 0,
                 x_value: 0,
                 converged_value: 0,
+                mana_spent: 0,
             };
             if !self.evaluate_predicate(cond, &ctx) {
                 return Err(GameError::AbilityConditionNotMet);
@@ -1536,6 +1585,7 @@ impl GameState {
                 x_value: 0,
                 converged_value: 0,
             trigger_source: None,
+                mana_spent: 0,
             });
             self.give_priority_to_active();
         }

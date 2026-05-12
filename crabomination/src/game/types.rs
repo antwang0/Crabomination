@@ -214,6 +214,12 @@ pub(crate) enum ResumeContext {
         mode: usize,
         x_value: u32,
         converged_value: u32,
+        /// Total mana spent paying the originating spell's cost. Threaded
+        /// so a suspended spell resolution that consults
+        /// `Value::CastSpellManaSpent` reads the right amount on resume.
+        /// Defaults to 0 for snapshot backwards-compatibility.
+        #[serde(default)]
+        mana_spent: u32,
         in_progress: PendingEffectState,
         remaining: Effect,
     },
@@ -235,6 +241,11 @@ pub(crate) enum ResumeContext {
         /// `Value::ConvergedValue`.
         #[serde(default)]
         converged_value: u32,
+        /// Total mana spent paying the originating spell's cost. Same
+        /// role as `x_value` / `converged_value` for
+        /// `Value::CastSpellManaSpent`.
+        #[serde(default)]
+        mana_spent: u32,
     },
     Ability {
         source: CardId,
@@ -373,6 +384,14 @@ pub enum StackItem {
         /// Control). Convoke pips contribute generic only, so they don't
         /// raise this value.
         converged_value: u32,
+        /// Total mana spent paying this spell's cost (sum of all
+        /// `ManaPool` decreases during payment). Read by
+        /// `Value::CastSpellManaSpent` and `Predicate::ManaSpentAtLeast`
+        /// for SOS's Increment / Opus payoffs that scale on "amount of
+        /// mana spent to cast that spell". Defaults to 0 via
+        /// `#[serde(default)]` for snapshot back-compat.
+        #[serde(default)]
+        mana_spent: u32,
         /// True if this spell can't be countered by spells or abilities
         /// (Cavern of Souls–style protection). `Effect::CounterSpell` skips
         /// these stack items.
@@ -412,6 +431,14 @@ pub enum StackItem {
         /// back to using `source` as `trigger_source`.
         #[serde(default)]
         trigger_source: Option<crate::game::effects::EntityRef>,
+        /// Total mana spent paying the originating spell's cost.
+        /// Threaded so spell-cast triggers consulting
+        /// `Value::CastSpellManaSpent` (Increment / Opus payoffs:
+        /// Cuboid Colony, Berta, Fractal Tender, Tackle Artist, …)
+        /// read the right amount. Defaults to 0 for snapshot
+        /// backwards-compatibility.
+        #[serde(default)]
+        mana_spent: u32,
     },
 }
 

@@ -191,6 +191,7 @@ pub fn spoils_of_the_vault() -> CardDefinition {
             to: ZoneDest::Hand(PlayerRef::You),
             cap: Value::Const(10),
             life_per_revealed: 1,
+            miss_dest: crate::effect::RevealMissDest::Graveyard,
         },
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],

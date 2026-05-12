@@ -2137,13 +2137,14 @@ pub fn zimones_experiment() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Seq(vec![
             // First: look at top 5, find a creature → hand. Misses go to
-            // the bottom of the library (engine default for unmatched).
+            // the bottom of the library (printed text).
             Effect::RevealUntilFind {
                 who: PlayerRef::You,
                 find: SelectionRequirement::Creature,
                 to: ZoneDest::Hand(PlayerRef::You),
                 cap: Value::Const(5),
                 life_per_revealed: 0,
+                miss_dest: crate::effect::RevealMissDest::BottomRandom,
             },
             // Then: search for a basic land → battlefield tapped. The real
             // card pulls a non-basic land too if it's in the top 5;
@@ -2231,10 +2232,11 @@ pub fn flow_state() -> CardDefinition {
 ///   back-to-back, each over the top 4 (after the first miss-mill).
 ///
 /// Approximations:
-/// - Misses go to the graveyard (engine default for `RevealUntilFind`),
-///   not the bottom of the library — this is mildly worse for the
-///   controller but unlocks gy interactions; tracked under the
-///   `look-and-distribute-by-count` engine gap in TODO.md.
+/// - Misses go to the bottom of the library via
+///   `RevealMissDest::BottomRandom` (printed: "the rest on the bottom
+///   in a random order"). Strict "random order" requires an RNG hook
+///   the engine doesn't expose yet; the order is preserved as
+///   revealed.
 /// - The "you may reveal" optionality is collapsed to always-do (the
 ///   `MayDo` wrapping would just mill 4 cards on a "no" answer, which
 ///   is strictly worse).
@@ -2249,6 +2251,7 @@ pub fn follow_the_lumarets() -> CardDefinition {
         to: ZoneDest::Hand(PlayerRef::You),
         cap: Value::Const(4),
         life_per_revealed: 0,
+        miss_dest: crate::effect::RevealMissDest::BottomRandom,
     };
     CardDefinition {
         name: "Follow the Lumarets",

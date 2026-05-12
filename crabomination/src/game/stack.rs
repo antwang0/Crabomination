@@ -221,6 +221,7 @@ impl GameState {
                 x_value: 0,
                 converged_value: 0,
             trigger_source: None,
+                mana_spent: 0,
             });
         }
 
@@ -239,6 +240,7 @@ impl GameState {
                 x_value: 0,
                 converged_value: 0,
             trigger_source: None,
+                mana_spent: 0,
             });
         }
     }
@@ -259,6 +261,7 @@ impl GameState {
                 mode,
                 x_value,
                 converged_value,
+                mana_spent,
                 uncounterable: _,
             } => {
                 let card = *card;
@@ -295,6 +298,7 @@ impl GameState {
                             x_value: 0,
                             converged_value: 0,
                             trigger_source: None,
+                            mana_spent: 0,
                         });
                     }
 
@@ -325,6 +329,7 @@ impl GameState {
                                 trigger_source: Some(
                                     crate::game::effects::EntityRef::Permanent(card_id),
                                 ),
+                                mana_spent,
                             });
                         }
                     }
@@ -368,6 +373,7 @@ impl GameState {
                                     x_value: 0,
                                     converged_value: 0,
                                 trigger_source: None,
+                                    mana_spent: 0,
                                 });
                             }
                         }
@@ -381,6 +387,7 @@ impl GameState {
                         chosen_mode,
                         x_value,
                         converged_value,
+                        mana_spent,
                         None,
                     )?;
                     events.append(&mut spell_events);
@@ -405,6 +412,7 @@ impl GameState {
                 x_value,
                 converged_value,
                 trigger_source,
+                mana_spent,
             } => {
                 let chosen_mode = mode.unwrap_or(0);
                 let mut trig_events = self.continue_trigger_resolution_with_source(
@@ -415,6 +423,7 @@ impl GameState {
                     chosen_mode,
                     x_value,
                     converged_value,
+                    mana_spent,
                     trigger_source,
                 )?;
                 events.append(&mut trig_events);
@@ -647,6 +656,7 @@ impl GameState {
                     x_value: 0,
                     converged_value: 0,
                 trigger_source: None,
+                    mana_spent: 0,
                 });
             }
             // Persist: return to battlefield with -1/-1 counter if it had no -1/-1 counter.
@@ -840,6 +850,7 @@ impl GameState {
                 x_value: 0,
                 converged_value: 0,
             trigger_source: None,
+                mana_spent: 0,
             });
         }
         vec![] // Trigger events are on the stack; callers resolve them via pass_priority.

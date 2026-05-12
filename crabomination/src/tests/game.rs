@@ -3366,6 +3366,7 @@ fn reveal_until_find_caps_at_n_when_no_match() {
             to: ZoneDest::Hand(PlayerRef::You),
             cap: Value::Const(10),
             life_per_revealed: 1,
+            miss_dest: crate::effect::RevealMissDest::Graveyard,
         },
         &ctx,
     ).unwrap();

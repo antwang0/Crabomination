@@ -750,6 +750,7 @@ impl GameState {
                     mode: 0,
                     x_value: 0,
                     converged_value: 0,
+                    mana_spent: 0,
                 };
                 if !self.evaluate_predicate(&filter, &ctx) {
                     continue;
@@ -772,6 +773,7 @@ impl GameState {
                 // triggers like Sparring Regimen's per-attacker counter
                 // bump.
                 trigger_source: subject,
+                mana_spent: 0,
             });
         }
     }
@@ -859,6 +861,7 @@ impl GameState {
             x_value: 0,
             converged_value: 0,
         trigger_source: None,
+            mana_spent: 0,
         });
         self.give_priority_to_active();
 
@@ -938,6 +941,7 @@ impl GameState {
                 mode,
                 x_value,
                 converged_value,
+                mana_spent,
                 in_progress,
                 remaining,
             } => {
@@ -949,6 +953,7 @@ impl GameState {
                     mode,
                     x_value,
                     converged_value,
+                    mana_spent,
                     Some(remaining),
                 )?;
                 evs.append(&mut more);
@@ -963,10 +968,11 @@ impl GameState {
                 remaining,
                 x_value,
                 converged_value,
+                mana_spent,
             } => {
                 let mut evs = self.apply_pending_effect_answer(in_progress, &answer)?;
                 let mut more = self.continue_trigger_resolution(
-                    source, controller, remaining, target, mode, x_value, converged_value,
+                    source, controller, remaining, target, mode, x_value, converged_value, mana_spent,
                 )?;
                 evs.append(&mut more);
                 evs
@@ -1322,11 +1328,12 @@ impl GameState {
         mode: usize,
         x_value: u32,
         converged_value: u32,
+        mana_spent: u32,
         override_effect: Option<Effect>,
     ) -> Result<Vec<GameEvent>, GameError> {
         let effect = override_effect.unwrap_or_else(|| card.definition.effect.clone());
-        let ctx = EffectContext::for_spell_full(
-            caster, target.clone(), mode, x_value, converged_value,
+        let ctx = EffectContext::for_spell_with_mana(
+            caster, target.clone(), mode, x_value, converged_value, mana_spent,
         );
         let events = self.resolve_effect(&effect, &ctx)?;
         if let Some((decision, in_progress, remaining)) = self.suspend_signal.take() {
@@ -1339,6 +1346,7 @@ impl GameState {
                     mode,
                     x_value,
                     converged_value,
+                    mana_spent,
                     in_progress,
                     remaining,
                 },
@@ -1384,6 +1392,7 @@ impl GameState {
 
     /// Resolve a triggered ability's effect tree.
     #[allow(clippy::too_many_arguments)]
+    #[allow(clippy::too_many_arguments)]
     pub(crate) fn continue_trigger_resolution(
         &mut self,
         source: CardId,
@@ -1393,9 +1402,10 @@ impl GameState {
         mode: usize,
         x_value: u32,
         converged_value: u32,
+        mana_spent: u32,
     ) -> Result<Vec<GameEvent>, GameError> {
         self.continue_trigger_resolution_with_source(
-            source, controller, effect, target, mode, x_value, converged_value, None,
+            source, controller, effect, target, mode, x_value, converged_value, mana_spent, None,
         )
     }
 
@@ -1416,6 +1426,7 @@ impl GameState {
         mode: usize,
         x_value: u32,
         converged_value: u32,
+        mana_spent: u32,
         trigger_source_ent: Option<crate::game::effects::EntityRef>,
     ) -> Result<Vec<GameEvent>, GameError> {
         // If the trigger has a stored target that's no longer legal (e.g.
@@ -1437,6 +1448,7 @@ impl GameState {
         if let Some(ts) = trigger_source_ent {
             ctx.trigger_source = Some(ts);
         }
+        ctx.mana_spent = mana_spent;
         let events = self.resolve_effect(&effect, &ctx)?;
         if let Some((decision, in_progress, remaining)) = self.suspend_signal.take() {
             self.pending_decision = Some(PendingDecision {
@@ -1450,6 +1462,7 @@ impl GameState {
                     remaining,
                     x_value,
                     converged_value,
+                    mana_spent,
                 },
             });
         }

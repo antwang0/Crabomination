@@ -1025,6 +1025,7 @@ pub fn stirring_honormancer() -> CardDefinition {
                     SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
                 ))),
                 life_per_revealed: 0,
+                miss_dest: crate::effect::RevealMissDest::Graveyard,
             },
         }],
         static_abilities: vec![],
@@ -2117,8 +2118,14 @@ pub fn charging_strifeknight() -> CardDefinition {
 // "Standard primitives — should be straightforward to wire".
 
 /// Cuboid Colony — {G}{U}, 1/1 Insect with Flash, Flying, and Trample.
-/// Increment rider omitted (mana-spent introspection).
+/// "Increment (Whenever you cast a spell, if the amount of mana you
+/// spent is greater than this creature's power or toughness, put a
+/// +1/+1 counter on this creature.)"
+///
+/// Fully wired via `shortcut::increment_self_plus_one()` — uses the
+/// new `Predicate::IncrementSatisfied` to gate on mana-spent > P or T.
 pub fn cuboid_colony() -> CardDefinition {
+    use crate::effect::shortcut::increment_self_plus_one;
     use crate::mana::{g, u};
     CardDefinition {
         name: "Cuboid Colony",
@@ -2134,7 +2141,7 @@ pub fn cuboid_colony() -> CardDefinition {
         keywords: vec![Keyword::Flash, Keyword::Flying, Keyword::Trample],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
+        triggered_abilities: vec![increment_self_plus_one()],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -2145,21 +2152,17 @@ pub fn cuboid_colony() -> CardDefinition {
 }
 
 /// Fractal Tender — {3}{G}{U}, 3/3 Elf Wizard.
-/// "Ward {2}. Increment (Whenever you cast a spell, if the amount of
-/// mana you spent is greater than this creature's power or toughness,
-/// put a +1/+1 counter on this creature.) / At the beginning of each
-/// end step, if you put a counter on this creature this turn, create
-/// a 0/0 green and blue Fractal creature token and put three +1/+1
-/// counters on it."
+/// "Ward {2}. Increment (...) / At the beginning of each end step, if
+/// you put a counter on this creature this turn, create a 0/0 green
+/// and blue Fractal creature token and put three +1/+1 counters on
+/// it."
 ///
-/// Approximation: body + `Keyword::Ward(2)` wired. Increment trigger
-/// + end-step Fractal-with-counters payoff are both omitted (Increment
-///   requires mana-spent introspection on cast; the end-step trigger
-///   would key off a "did this creature gain a counter this turn"
-///   per-permanent flag the engine doesn't track yet). The card still
-///   slots into Quandrix as a 3/3 attacker with a Ward stub, and the
-///   keyword is wired so future Ward enforcement picks it up.
+/// Increment wired via `shortcut::increment_self_plus_one()`. The
+/// end-step Fractal-with-counters payoff is still omitted (no
+/// per-permanent "got-a-counter-this-turn" flag yet — tracked in
+/// TODO.md). 3/3 Ward {2} body remains.
 pub fn fractal_tender() -> CardDefinition {
+    use crate::effect::shortcut::increment_self_plus_one;
     use crate::mana::{g, u};
     CardDefinition {
         name: "Fractal Tender",
@@ -2175,7 +2178,7 @@ pub fn fractal_tender() -> CardDefinition {
         keywords: vec![Keyword::Ward(2)],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
+        triggered_abilities: vec![increment_self_plus_one()],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -2221,9 +2224,15 @@ pub fn thornfist_striker() -> CardDefinition {
     }
 }
 
-/// Hungry Graffalon — {3}{G}, 3/4 Giraffe with Reach. Increment rider
-/// omitted.
+/// Hungry Graffalon — {3}{G}, 3/4 Giraffe with Reach.
+/// "Increment (Whenever you cast a spell, if the amount of mana you
+/// spent is greater than this creature's power or toughness, put a
+/// +1/+1 counter on this creature.)"
+///
+/// Fully wired via `shortcut::increment_self_plus_one()` — first
+/// 5-mana+ spell after dropping the Giraffe lands a counter.
 pub fn hungry_graffalon() -> CardDefinition {
+    use crate::effect::shortcut::increment_self_plus_one;
     use crate::mana::g;
     CardDefinition {
         name: "Hungry Graffalon",
@@ -2239,7 +2248,7 @@ pub fn hungry_graffalon() -> CardDefinition {
         keywords: vec![Keyword::Reach],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
+        triggered_abilities: vec![increment_self_plus_one()],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -2249,9 +2258,17 @@ pub fn hungry_graffalon() -> CardDefinition {
     }
 }
 
-/// Pensive Professor — {1}{U}{U}, 0/2 Human Wizard. Increment + counter
-/// trigger omitted.
+/// Pensive Professor — {1}{U}{U}, 0/2 Human Wizard.
+/// "Increment (Whenever you cast a spell, if the amount of mana you
+/// spent is greater than this creature's power or toughness, put a
+/// +1/+1 counter on this creature.)"
+///
+/// Increment wired via `shortcut::increment_self_plus_one()`. The
+/// secondary "whenever one or more +1/+1 counters are put on this
+/// creature, …" rider (oracle previously truncated) stays omitted
+/// pending re-fetch.
 pub fn pensive_professor() -> CardDefinition {
+    use crate::effect::shortcut::increment_self_plus_one;
     use crate::mana::u;
     CardDefinition {
         name: "Pensive Professor",
@@ -2267,7 +2284,7 @@ pub fn pensive_professor() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
+        triggered_abilities: vec![increment_self_plus_one()],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -2277,9 +2294,17 @@ pub fn pensive_professor() -> CardDefinition {
     }
 }
 
-/// Tester of the Tangential — {1}{U}, 1/1 Djinn Wizard. Increment + combat
-/// pay-to-pump omitted.
+/// Tester of the Tangential — {1}{U}, 1/1 Djinn Wizard.
+/// "Increment (...) / At the beginning of combat on your turn, you may
+/// pay {X}. When you do, move X +1/+1 counters from this creature
+/// onto another target creature."
+///
+/// Increment wired via `shortcut::increment_self_plus_one()`. The
+/// pay-X-to-move-counters combat trigger stays omitted (no X-cost
+/// optional trigger primitive yet — same engine gap as Berta's
+/// activation's X resolution).
 pub fn tester_of_the_tangential() -> CardDefinition {
+    use crate::effect::shortcut::increment_self_plus_one;
     use crate::mana::u;
     CardDefinition {
         name: "Tester of the Tangential",
@@ -2295,7 +2320,7 @@ pub fn tester_of_the_tangential() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
+        triggered_abilities: vec![increment_self_plus_one()],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -2305,9 +2330,28 @@ pub fn tester_of_the_tangential() -> CardDefinition {
     }
 }
 
-/// Muse Seeker — {1}{U}, 1/2 Elf Wizard. Opus loot rider omitted.
+/// Muse Seeker — {1}{U}, 1/2 Elf Wizard.
+/// "Opus — Whenever you cast an instant or sorcery spell, draw a
+/// card. Then discard a card unless five or more mana was spent to
+/// cast that spell."
+///
+/// Wired via `shortcut::opus_trigger`. Both branches draw first;
+/// the small branch (mana_spent < 5) then forces a discard, while
+/// the big branch (≥5) skips the discard. The "discard a card" half
+/// has no `random` flag so the discarder picks via the existing
+/// `Effect::Discard` UI flow.
 pub fn muse_seeker() -> CardDefinition {
+    use crate::effect::shortcut::opus_trigger;
     use crate::mana::u;
+    let draw_one = || Effect::Draw {
+        who: Selector::You,
+        amount: Value::Const(1),
+    };
+    let discard_one = || Effect::Discard {
+        who: Selector::You,
+        amount: Value::Const(1),
+        random: false,
+    };
     CardDefinition {
         name: "Muse Seeker",
         cost: cost(&[generic(1), u()]),
@@ -2322,7 +2366,12 @@ pub fn muse_seeker() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
+        triggered_abilities: vec![opus_trigger(
+            // small body: draw + discard.
+            Effect::Seq(vec![draw_one(), discard_one()]),
+            // big body (≥5 mana): just draw (skip discard).
+            draw_one(),
+        )],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -2332,9 +2381,18 @@ pub fn muse_seeker() -> CardDefinition {
     }
 }
 
-/// Aberrant Manawurm — {3}{G}, 2/5 Wurm with Trample. Spell-cast +X/+0 EOT
-/// rider omitted (mana-spent introspection).
+/// Aberrant Manawurm — {3}{G}, 2/5 Wurm with Trample.
+/// "Whenever you cast an instant or sorcery spell, this creature gets
+/// +X/+0 until end of turn, where X is the amount of mana spent to
+/// cast that spell."
+///
+/// Wired via `shortcut::magecraft(...)` (cast an IS spell) +
+/// `Effect::PumpPT` with `power: Value::CastSpellManaSpent`. The pump
+/// reads the just-cast spell's stashed `mana_spent` so casting a
+/// 5-mana spell gives the wurm +5/+0 EOT.
 pub fn aberrant_manawurm() -> CardDefinition {
+    use crate::effect::Duration;
+    use crate::effect::shortcut::magecraft;
     use crate::mana::g;
     CardDefinition {
         name: "Aberrant Manawurm",
@@ -2350,7 +2408,12 @@ pub fn aberrant_manawurm() -> CardDefinition {
         keywords: vec![Keyword::Trample],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
+        triggered_abilities: vec![magecraft(Effect::PumpPT {
+            what: Selector::This,
+            power: Value::CastSpellManaSpent,
+            toughness: Value::Const(0),
+            duration: Duration::EndOfTurn,
+        })],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -2360,9 +2423,17 @@ pub fn aberrant_manawurm() -> CardDefinition {
     }
 }
 
-/// Tackle Artist — {3}{R}, 4/3 Orc Sorcerer with Trample. Opus +1/+1
-/// counter rider omitted.
+/// Tackle Artist — {3}{R}, 4/3 Orc Sorcerer with Trample.
+/// "Opus — Whenever you cast an instant or sorcery spell, put a +1/+1
+/// counter on this creature. If five or more mana was spent to cast
+/// that spell, put two +1/+1 counters on this creature instead."
+///
+/// Wired via `shortcut::opus_trigger` — small body is one +1/+1
+/// counter on `Selector::This`, big body (≥5 mana) is two counters
+/// instead.
 pub fn tackle_artist() -> CardDefinition {
+    use crate::card::CounterType;
+    use crate::effect::shortcut::opus_trigger;
     use crate::mana::r;
     CardDefinition {
         name: "Tackle Artist",
@@ -2378,7 +2449,20 @@ pub fn tackle_artist() -> CardDefinition {
         keywords: vec![Keyword::Trample],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
+        triggered_abilities: vec![opus_trigger(
+            // small body: +1/+1 counter
+            Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+            // big body (≥5 mana): two +1/+1 counters
+            Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(2),
+            },
+        )],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -2388,10 +2472,19 @@ pub fn tackle_artist() -> CardDefinition {
     }
 }
 
-/// Thunderdrum Soloist — {1}{R}, 1/3 Dwarf Bard with Reach. Opus damage
-/// rider omitted.
+/// Thunderdrum Soloist — {1}{R}, 1/3 Dwarf Bard with Reach.
+/// "Opus — Whenever you cast an instant or sorcery spell, this
+/// creature deals 1 damage to each opponent. If five or more mana
+/// was spent to cast that spell, this creature deals 3 damage to
+/// each opponent instead."
+///
+/// Wired via `shortcut::opus_trigger` — small body pings each
+/// opponent for 1, big body (≥5 mana) pings for 3.
 pub fn thunderdrum_soloist() -> CardDefinition {
+    use crate::effect::Selector as Sel;
+    use crate::effect::shortcut::opus_trigger;
     use crate::mana::r;
+    let each_opp = || Sel::Player(PlayerRef::EachOpponent);
     CardDefinition {
         name: "Thunderdrum Soloist",
         cost: cost(&[generic(1), r()]),
@@ -2406,7 +2499,18 @@ pub fn thunderdrum_soloist() -> CardDefinition {
         keywords: vec![Keyword::Reach],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
+        triggered_abilities: vec![opus_trigger(
+            // small body: 1 damage to each opponent
+            Effect::DealDamage {
+                to: each_opp(),
+                amount: Value::Const(1),
+            },
+            // big body (≥5 mana): 3 damage to each opponent instead
+            Effect::DealDamage {
+                to: each_opp(),
+                amount: Value::Const(3),
+            },
+        )],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -2416,10 +2520,25 @@ pub fn thunderdrum_soloist() -> CardDefinition {
     }
 }
 
-/// Molten-Core Maestro — {1}{R}, 2/2 Goblin Bard with Menace. Opus rider
-/// omitted.
+/// Molten-Core Maestro — {1}{R}, 2/2 Goblin Bard with Menace.
+/// "Opus — Whenever you cast an instant or sorcery spell, put a +1/+1
+/// counter on this creature. If five or more mana was spent to cast
+/// that spell, add an amount of {R} equal to this creature's power."
+///
+/// Wired via `shortcut::opus_trigger`. Small body lands one +1/+1
+/// counter. Big body (≥5 mana) lands the counter and adds {R} equal
+/// to the creature's current power (read live via
+/// `ManaPayload::OfColor(Red, PowerOf(This))`).
 pub fn molten_core_maestro() -> CardDefinition {
+    use crate::card::CounterType;
+    use crate::effect::ManaPayload;
+    use crate::effect::shortcut::opus_trigger;
     use crate::mana::r;
+    let counter = || Effect::AddCounter {
+        what: Selector::This,
+        kind: CounterType::PlusOnePlusOne,
+        amount: Value::Const(1),
+    };
     CardDefinition {
         name: "Molten-Core Maestro",
         cost: cost(&[generic(1), r()]),
@@ -2434,7 +2553,21 @@ pub fn molten_core_maestro() -> CardDefinition {
         keywords: vec![Keyword::Menace],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
+        triggered_abilities: vec![opus_trigger(
+            // small: +1/+1 counter only.
+            counter(),
+            // big (≥5 mana): counter, then add {R} × power.
+            Effect::Seq(vec![
+                counter(),
+                Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::OfColor(
+                        Color::Red,
+                        Value::PowerOf(Box::new(Selector::This)),
+                    ),
+                },
+            ]),
+        )],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -2444,9 +2577,25 @@ pub fn molten_core_maestro() -> CardDefinition {
     }
 }
 
-/// Expressive Firedancer — {1}{R}, 2/2 Human Sorcerer. Opus rider omitted.
+/// Expressive Firedancer — {1}{R}, 2/2 Human Sorcerer.
+/// "Opus — Whenever you cast an instant or sorcery spell, this
+/// creature gets +1/+1 until end of turn. If five or more mana was
+/// spent to cast that spell, this creature also gains double strike
+/// until end of turn."
+///
+/// Wired via `shortcut::opus_trigger`. Small body is just +1/+1 EOT;
+/// big body (≥5 mana) is +1/+1 EOT + GrantKeyword(DoubleStrike, EOT).
 pub fn expressive_firedancer() -> CardDefinition {
+    use crate::card::Keyword as Kw;
+    use crate::effect::Duration;
+    use crate::effect::shortcut::opus_trigger;
     use crate::mana::r;
+    let small_pump = || Effect::PumpPT {
+        what: Selector::This,
+        power: Value::Const(1),
+        toughness: Value::Const(1),
+        duration: Duration::EndOfTurn,
+    };
     CardDefinition {
         name: "Expressive Firedancer",
         cost: cost(&[generic(1), r()]),
@@ -2461,7 +2610,19 @@ pub fn expressive_firedancer() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
+        triggered_abilities: vec![opus_trigger(
+            // small body: +1/+1 EOT.
+            small_pump(),
+            // big body (≥5 mana): +1/+1 EOT + double strike EOT.
+            Effect::Seq(vec![
+                small_pump(),
+                Effect::GrantKeyword {
+                    what: Selector::This,
+                    keyword: Kw::DoubleStrike,
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+        )],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -2719,13 +2880,15 @@ pub fn garrison_excavator() -> CardDefinition {
 /// counter on this creature.) / {T}: Add an amount of {G} equal to this
 /// creature's power."
 ///
-/// The Increment rider is omitted (engine has no mana-spent introspection
-/// on cast — see TODO.md). The mana ability now uses the new
-/// `ManaPayload::OfColor(Green, PowerOf(This))` primitive — fixed color,
+/// Both abilities now wired. Increment uses
+/// `shortcut::increment_self_plus_one()`. The mana ability uses
+/// `ManaPayload::OfColor(Green, PowerOf(This))` — fixed color,
 /// value-scaled count — so a single AddMana effect produces power-many
-/// {G} pips in one shot (cleaner than the prior `Repeat` approximation).
+/// {G} pips. Each Increment counter scales the mana ability too, since
+/// `PowerOf(This)` reads live P at activation time.
 pub fn topiary_lecturer() -> CardDefinition {
     use crate::effect::ManaPayload;
+    use crate::effect::shortcut::increment_self_plus_one;
     use crate::mana::g;
     CardDefinition {
         name: "Topiary Lecturer",
@@ -2758,7 +2921,7 @@ pub fn topiary_lecturer() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
         }],
-        triggered_abilities: vec![],
+        triggered_abilities: vec![increment_self_plus_one()],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -3215,6 +3378,9 @@ pub fn geometers_arthropod() -> CardDefinition {
             to: ZoneDest::Hand(PlayerRef::You),
             cap: Value::XFromCost,
             life_per_revealed: 0,
+            // Printed: "Put one of them into your hand and the rest on
+            // the bottom of your library in a random order."
+            miss_dest: crate::effect::RevealMissDest::BottomRandom,
         })],
         static_abilities: vec![],
         base_loyalty: 0,
@@ -3327,13 +3493,17 @@ pub fn orysa_tide_choreographer() -> CardDefinition {
 /// player mills three cards. If five or more mana was spent to cast
 /// that spell, that player mills ten cards instead."
 ///
-/// Body-only wire (0/2 Djinn Wizard). The Opus mill rider needs the
-/// engine's mana-spent-on-cast introspection primitive (tracked in
-/// TODO.md as **Spell-Side Predicate: Mana-Spent-On-Cast**) before
-/// the "if 5+ mana, mill 10 instead" branch can fire. The 0/2 body
-/// fits in the Blue color pool as a 1-drop blocker.
+/// Wired via `shortcut::opus_trigger`. Auto-target picks an opponent
+/// for the mill via `Selector::Player(PlayerRef::EachOpponent)` — the
+/// engine's auto-target walker picks the first opponent. Small body
+/// mills 3, big body (≥5 mana) mills 10.
 pub fn exhibition_tidecaller() -> CardDefinition {
+    use crate::effect::Selector as Sel;
+    use crate::effect::shortcut::opus_trigger;
     use crate::mana::u;
+    // Use `PlayerRef::Target(0)` so the auto-targeter picks a player
+    // slot at trigger time; falls back to an opponent.
+    let target_player = || Sel::Player(PlayerRef::Target(0));
     CardDefinition {
         name: "Exhibition Tidecaller",
         cost: cost(&[u()]),
@@ -3348,7 +3518,16 @@ pub fn exhibition_tidecaller() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
+        triggered_abilities: vec![opus_trigger(
+            Effect::Mill {
+                who: target_player(),
+                amount: Value::Const(3),
+            },
+            Effect::Mill {
+                who: target_player(),
+                amount: Value::Const(10),
+            },
+        )],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -3892,6 +4071,7 @@ pub fn forum_necroscribe() -> CardDefinition {
 pub fn berta_wise_extrapolator() -> CardDefinition {
     use crate::card::{ActivatedAbility, CounterType, Supertype};
     use crate::effect::ManaPayload;
+    use crate::effect::shortcut::increment_self_plus_one;
     use crate::mana::{ManaSymbol, g, u};
     use super::sorceries::fractal_token;
     CardDefinition {
@@ -3932,16 +4112,25 @@ pub fn berta_wise_extrapolator() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
         }],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(
-                EventKind::CounterAdded(CounterType::PlusOnePlusOne),
-                EventScope::SelfSource,
-            ),
-            effect: Effect::AddMana {
-                who: PlayerRef::You,
-                pool: ManaPayload::AnyOneColor(Value::Const(1)),
+        triggered_abilities: vec![
+            // Increment (push XVII): "Whenever you cast a spell, if the
+            // amount of mana you spent is greater than this creature's
+            // power or toughness, put a +1/+1 counter on this creature."
+            // The CounterAdded → AddMana trigger below then fires off
+            // each Increment counter, producing the printed "extra mana
+            // for big spells" payoff.
+            increment_self_plus_one(),
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::CounterAdded(CounterType::PlusOnePlusOne),
+                    EventScope::SelfSource,
+                ),
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::AnyOneColor(Value::Const(1)),
+                },
             },
-        }],
+        ],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -3987,6 +4176,9 @@ pub fn paradox_surveyor() -> CardDefinition {
                 to: ZoneDest::Hand(PlayerRef::You),
                 cap: Value::Const(5),
                 life_per_revealed: 0,
+                // Printed: "Put the rest on the bottom of your library
+                // in a random order."
+                miss_dest: crate::effect::RevealMissDest::BottomRandom,
             },
         }],
         static_abilities: vec![],
@@ -4113,12 +4305,13 @@ pub fn wildgrowth_archaic() -> CardDefinition {
 /// creature token, then put this creature's counters on that token."
 ///
 /// Body wired (1/1 Turtle Wizard at {G} — Increment-grown shell).
-/// Increment is omitted (mana-spent-on-cast introspection missing —
-/// tracked in TODO.md). The death-with-counters → Fractal-with-
-/// counters trigger is also omitted (engine has no
-/// `Selector::Self.counters_at_death` snapshot — we'd need a counter-
-/// transfer-on-death primitive, which is tracked separately).
+/// Increment now uses `shortcut::increment_self_plus_one()`. The
+/// death-with-counters → Fractal-with-counters trigger is still
+/// omitted (engine has no `Selector::Self.counters_at_death` snapshot
+/// — we'd need a counter-transfer-on-death primitive, tracked
+/// separately).
 pub fn ambitious_augmenter() -> CardDefinition {
+    use crate::effect::shortcut::increment_self_plus_one;
     use crate::mana::g;
     CardDefinition {
         name: "Ambitious Augmenter",
@@ -4134,7 +4327,7 @@ pub fn ambitious_augmenter() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
+        triggered_abilities: vec![increment_self_plus_one()],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -4400,13 +4593,19 @@ pub fn textbook_tabulator() -> CardDefinition {
 /// +2/+2 until end of turn instead."
 ///
 /// ETB tap+stun wired (same shape as Fractal Mascot's Quandrix variant).
-/// The Opus rider is omitted (mana-spent-on-cast introspection is the
-/// same engine gap blocking the rest of the Opus cycle — Tackle Artist,
-/// Expressive Firedancer, Spectacular Skywhale, etc.).
+/// Opus rider now wired via `shortcut::opus_trigger`: +1/+1 EOT, or
+/// +2/+2 EOT for ≥5-mana IS spells.
 pub fn deluge_virtuoso() -> CardDefinition {
     use crate::card::CounterType;
-    use crate::effect::shortcut::target_filtered;
+    use crate::effect::Duration;
+    use crate::effect::shortcut::{opus_trigger, target_filtered};
     use crate::mana::u;
+    let pump = |amt: i32| Effect::PumpPT {
+        what: Selector::This,
+        power: Value::Const(amt),
+        toughness: Value::Const(amt),
+        duration: Duration::EndOfTurn,
+    };
     CardDefinition {
         name: "Deluge Virtuoso",
         cost: cost(&[generic(2), u()]),
@@ -4421,22 +4620,25 @@ pub fn deluge_virtuoso() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::Seq(vec![
-                Effect::Tap {
-                    what: target_filtered(
-                        SelectionRequirement::Creature
-                            .and(SelectionRequirement::ControlledByOpponent),
-                    ),
-                },
-                Effect::AddCounter {
-                    what: Selector::Target(0),
-                    kind: CounterType::Stun,
-                    amount: Value::Const(1),
-                },
-            ]),
-        }],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: Effect::Seq(vec![
+                    Effect::Tap {
+                        what: target_filtered(
+                            SelectionRequirement::Creature
+                                .and(SelectionRequirement::ControlledByOpponent),
+                        ),
+                    },
+                    Effect::AddCounter {
+                        what: Selector::Target(0),
+                        kind: CounterType::Stun,
+                        amount: Value::Const(1),
+                    },
+                ]),
+            },
+            opus_trigger(pump(1), pump(2)),
+        ],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],

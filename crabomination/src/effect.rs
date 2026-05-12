@@ -202,6 +202,17 @@ pub enum Value {
     /// from `EffectContext.converged_value` here. Used by Prismatic
     /// Ending and Pest Control.
     ConvergedValue,
+    /// Total mana spent paying the originating spell's cost. Stashed on
+    /// `StackItem::Spell.mana_spent` at cast time, propagated onto
+    /// spell-cast `StackItem::Trigger.mana_spent`, and read from
+    /// `EffectContext.mana_spent` here. Powers SOS's Increment /
+    /// Opus payoffs: Cuboid Colony / Berta / Fractal Tender's
+    /// "Whenever you cast a spell, if the amount of mana you spent is
+    /// greater than this creature's power or toughness, put a +1/+1
+    /// counter on this creature", and Opus's "this creature gets +N/+N
+    /// for the rest of the turn (and an extra +N/+N if five or more
+    /// mana was spent)".
+    CastSpellManaSpent,
     /// Number of distinct card types in the top `count` cards of `who`'s
     /// library. Used by Atraxa, Grand Unifier's reveal-and-sort ETB —
     /// "reveal the top 10, take up to one of each card type" is
@@ -315,6 +326,22 @@ pub enum Predicate {
     /// against the topmost matching `StackItem::Spell`'s `card.definition.
     /// mana_cost` via `ManaCost::has_x()`.
     CastSpellHasX,
+    /// True if the just-cast spell's total mana spent (the value stashed
+    /// on `StackItem::Spell.mana_spent` at cast time, threaded onto the
+    /// `StackItem::Trigger.mana_spent`) is at least `at_least`. Powers
+    /// Opus's "if five or more mana was spent to cast that spell"
+    /// branches (Deluge Virtuoso, Expressive Firedancer-style bigger-
+    /// payoff modal) and Increment's "mana spent > P or T" gate (read
+    /// from `ctx.mana_spent` at trigger-resolution time).
+    CastSpellManaSpentAtLeast(u32),
+    /// True if the just-cast spell's total mana spent is **strictly
+    /// greater than** the source permanent's power or toughness. Used
+    /// by SOS's Increment keyword payoff: "Whenever you cast a spell,
+    /// if the amount of mana you spent is greater than this creature's
+    /// power or toughness, put a +1/+1 counter on this creature."
+    /// Evaluated against `ctx.source` (the listening permanent) at
+    /// trigger-evaluation time.
+    IncrementSatisfied,
 }
 
 // ── Duration ─────────────────────────────────────────────────────────────────
@@ -341,6 +368,26 @@ pub enum LibraryPosition {
     Top,
     Bottom,
     Shuffled,
+}
+
+/// Where the non-matching revealed cards go after a
+/// `RevealUntilFind` resolves. The default (`Graveyard`) matches the
+/// historical behavior baked into older catalogs; SOS Strixhaven cards
+/// like Geometer's Arthropod and Paradox Surveyor print "put the rest
+/// on the bottom of your library in a random order" and use
+/// `BottomRandom`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub enum RevealMissDest {
+    /// Misses go to the controller's graveyard (legacy / Spoils-style).
+    #[default]
+    Graveyard,
+    /// Misses go on the bottom of the controller's library, randomized.
+    /// The engine inserts each miss in the order it was revealed; with
+    /// no RNG hook available the order is effectively "as-revealed",
+    /// which is a reasonable approximation since gameplay doesn't read
+    /// the bottom of the library in any deterministic way before the
+    /// next shuffle.
+    BottomRandom,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -728,12 +775,21 @@ pub enum Effect {
     /// passing `find`. The "lose 1 per revealed" rider is wired to
     /// `life_per_revealed` so callers can disable it (Spoils → 1; future
     /// "search until type, no life cost" cards → 0).
+    ///
+    /// `miss_dest` controls where the non-matching revealed cards end
+    /// up. Defaults to `RevealMissDest::Graveyard` for snapshot
+    /// back-compat — the previous behavior. Several Strixhaven cards
+    /// (Geometer's Arthropod, Paradox Surveyor, Follow the Lumarets)
+    /// printed-want misses placed on the bottom of the library in
+    /// random order; pass `RevealMissDest::BottomRandom` to honor that.
     RevealUntilFind {
         who: PlayerRef,
         find: SelectionRequirement,
         to: ZoneDest,
         cap: Value,
         life_per_revealed: u32,
+        #[serde(default)]
+        miss_dest: RevealMissDest,
     },
 
     /// "As [this] enters, choose a creature type." Used by Cavern of Souls.
@@ -1664,6 +1720,66 @@ pub mod shortcut {
                 power: Value::Const(1),
                 toughness: Value::Const(1),
                 duration: Duration::EndOfTurn,
+            },
+        }
+    }
+
+    /// SOS Increment trigger: "Whenever you cast a spell, if the amount
+    /// of mana you spent is greater than this creature's power or
+    /// toughness, [body]." Powered by `Predicate::IncrementSatisfied`,
+    /// which compares the just-cast spell's stashed `mana_spent` to the
+    /// listening permanent's effective P/T. The canonical Increment
+    /// payoff drops a +1/+1 counter on `Selector::This`, but the helper
+    /// is body-agnostic so cards like Pensive Professor (gain a +1/+1
+    /// counter and scry 1) can plug arbitrary effects in.
+    ///
+    /// Implements MTG comp rules 603.4 ("intervening 'if' clause"): the
+    /// `IncrementSatisfied` predicate is checked both at trigger-event
+    /// time (the `EventSpec.filter` gate, controlling whether the
+    /// trigger goes on the stack) AND at resolution time (the wrapping
+    /// `Effect::If`, controlling whether the body actually runs). If
+    /// the source gains counters after this trigger goes on the stack
+    /// but before it resolves, the resolution-time check can suppress
+    /// the body even though the trigger fired.
+    pub fn increment_trigger(effect: Effect) -> TriggeredAbility {
+        TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(Predicate::IncrementSatisfied),
+            effect: Effect::If {
+                cond: Predicate::IncrementSatisfied,
+                then: Box::new(effect),
+                else_: Box::new(Effect::Noop),
+            },
+        }
+    }
+
+    /// SOS Increment payoff that drops one +1/+1 counter on the source.
+    /// Wraps [`increment_trigger`] with the standard `AddCounter` body
+    /// targeting `Selector::This`. Used by Cuboid Colony / Fractal
+    /// Tender / Berta and every other vanilla-Increment creature.
+    pub fn increment_self_plus_one() -> TriggeredAbility {
+        use crate::card::CounterType;
+        increment_trigger(Effect::AddCounter {
+            what: Selector::This,
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        })
+    }
+
+    /// Strixhaven Opus payoff trigger: "Whenever you cast an instant or
+    /// sorcery spell, [body]. If five or more mana was spent to cast
+    /// that spell, [bigger body] instead." Emits an `If`-gated effect
+    /// whose `Predicate::CastSpellManaSpentAtLeast(5)` arm fires the
+    /// bigger payoff. Used by Deluge Virtuoso, Expressive Firedancer,
+    /// Magmablood Archaic and other Opus creatures.
+    pub fn opus_trigger(small_body: Effect, big_body: Effect) -> TriggeredAbility {
+        TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(cast_is_instant_or_sorcery()),
+            effect: Effect::If {
+                cond: Predicate::CastSpellManaSpentAtLeast(5),
+                then: Box::new(big_body),
+                else_: Box::new(small_body),
             },
         }
     }

@@ -257,6 +257,9 @@ fn predicate_short_label(p: &crate::card::Predicate) -> String {
         // Push XVI: cast-time spell-shape introspection labels.
         Predicate::CastSpellHasX => "cast spell w/ {X}".into(),
         Predicate::CastSpellTargetsMatch(_) => "cast spell targets match".into(),
+        // Push XVII: mana-spent-on-cast predicates (Increment / Opus).
+        Predicate::CastSpellManaSpentAtLeast(n) => format!("if ≥{n} mana spent"),
+        Predicate::IncrementSatisfied => "Increment (mana > P or T)".into(),
         // Catch-all: no human-readable form yet.
         _ => "conditional".into(),
     }
@@ -502,6 +505,7 @@ mod tests {
             mode: None,
             x_value: 0,
             converged_value: 0,
+            mana_spent: 0,
             uncounterable: false,
         });
         g.stack.push(StackItem::Trigger {
@@ -513,6 +517,7 @@ mod tests {
             x_value: 0,
             converged_value: 0,
         trigger_source: None,
+            mana_spent: 0,
         });
         let v = project(&g, 0);
         assert_eq!(v.stack.len(), 2);

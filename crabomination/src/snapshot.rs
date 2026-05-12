@@ -121,6 +121,11 @@ pub struct StackItemSnapshot {
     pub mode: Option<usize>,
     pub x_value: u32,
     pub converged_value: u32,
+    /// Total mana spent paying this spell's cost (see
+    /// `Value::CastSpellManaSpent`). `#[serde(default)]` keeps older
+    /// snapshots loadable.
+    #[serde(default)]
+    pub mana_spent: u32,
     pub uncounterable: bool,
 }
 
@@ -154,6 +159,7 @@ impl GameSnapshot {
                     mode,
                     x_value,
                     converged_value,
+                    mana_spent,
                     uncounterable,
                 } => Some(StackItemSnapshot {
                     card: card_snap(card),
@@ -162,6 +168,7 @@ impl GameSnapshot {
                     mode: *mode,
                     x_value: *x_value,
                     converged_value: *converged_value,
+                    mana_spent: *mana_spent,
                     uncounterable: *uncounterable,
                 }),
                 StackItem::Trigger { .. } => {
@@ -298,6 +305,7 @@ impl GameSnapshot {
                 mode: s.mode,
                 x_value: s.x_value,
                 converged_value: s.converged_value,
+                mana_spent: s.mana_spent,
                 uncounterable: s.uncounterable,
             });
         }
@@ -579,6 +587,7 @@ mod tests {
             mode: None,
             x_value: 0,
             converged_value: 0,
+            mana_spent: 0,
             uncounterable: false,
         });
         g.stack.push(StackItem::Trigger {
@@ -590,6 +599,7 @@ mod tests {
             x_value: 0,
             converged_value: 0,
         trigger_source: None,
+            mana_spent: 0,
         });
 
         let snap = GameSnapshot::capture(&g);
@@ -616,6 +626,7 @@ mod tests {
             x_value: 7,
             converged_value: 0,
         trigger_source: None,
+            mana_spent: 0,
         });
 
         let json = serde_json::to_string(&g).expect("serialize GameState");

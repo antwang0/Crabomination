@@ -33,6 +33,10 @@ pub struct EffectContext {
     /// (Pest Control, Prismatic Ending). Computed at cast time and
     /// threaded through `StackItem::Spell`.
     pub converged_value: u32,
+    /// Total mana spent paying the originating spell's cost
+    /// (Increment / Opus payoffs). Computed at cast time and
+    /// threaded through `StackItem::Spell` / `StackItem::Trigger`.
+    pub mana_spent: u32,
 }
 
 impl EffectContext {
@@ -45,14 +49,18 @@ impl EffectContext {
             mode,
             x_value,
             converged_value: 0,
+            mana_spent: 0,
         }
     }
-    pub fn for_spell_full(
+    /// Spell-resolution context with all cast-time scalars (X, Converge,
+    /// total mana spent) threaded in.
+    pub fn for_spell_with_mana(
         caster: usize,
         target: Option<Target>,
         mode: usize,
         x_value: u32,
         converged_value: u32,
+        mana_spent: u32,
     ) -> Self {
         Self {
             controller: caster,
@@ -62,6 +70,7 @@ impl EffectContext {
             mode,
             x_value,
             converged_value,
+            mana_spent,
         }
     }
     pub fn for_trigger(
@@ -78,6 +87,7 @@ impl EffectContext {
             mode,
             x_value: 0,
             converged_value: 0,
+            mana_spent: 0,
         }
     }
     pub fn for_ability(
@@ -93,6 +103,7 @@ impl EffectContext {
             mode: 0,
             x_value: 0,
             converged_value: 0,
+            mana_spent: 0,
         }
     }
 }
@@ -1222,9 +1233,13 @@ impl GameState {
                 to,
                 cap,
                 life_per_revealed,
+                miss_dest,
             } => {
                 // Walk the top of `who`'s library until we either find a
-                // matching card or hit the cap. Mill the misses.
+                // matching card or hit the cap. Route misses according to
+                // `miss_dest` (graveyard by default; bottom-of-library
+                // for SOS Strixhaven "rest on the bottom in a random
+                // order" cards).
                 let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
                 let cap_n = self.evaluate_value(cap, ctx).max(0) as usize;
                 if cap_n == 0 {
@@ -1242,16 +1257,29 @@ impl GameState {
                     }
                 }
                 // Move the misses (everything before `found_idx`, or
-                // everything if no match) into the graveyard.
-                let mill_count = found_idx.unwrap_or(revealed);
-                for _ in 0..mill_count {
+                // everything if no match) into the configured miss zone.
+                let miss_count = found_idx.unwrap_or(revealed);
+                for _ in 0..miss_count {
                     if self.players[p].library.is_empty() {
                         break;
                     }
                     let card = self.players[p].library.remove(0);
                     let cid = card.id;
-                    self.players[p].graveyard.push(card);
-                    events.push(GameEvent::CardMilled { player: p, card_id: cid });
+                    match miss_dest {
+                        crate::effect::RevealMissDest::Graveyard => {
+                            self.players[p].graveyard.push(card);
+                            events.push(GameEvent::CardMilled { player: p, card_id: cid });
+                        }
+                        crate::effect::RevealMissDest::BottomRandom => {
+                            // No RNG hook in the engine yet — push to
+                            // the back of the library deterministically.
+                            // From a gameplay standpoint this is
+                            // indistinguishable from a "random bottom"
+                            // since no card knows the bottom ordering
+                            // before the next shuffle / reveal.
+                            self.players[p].library.push(card);
+                        }
+                    }
                 }
                 // If we found a match, take it off the (now-shifted) top
                 // and place it via the requested destination.
@@ -1363,6 +1391,7 @@ impl GameState {
                             mode,
                             x_value,
                             converged_value,
+                            mana_spent: 0,
                             uncounterable: true, // copies can't be countered
                         });
                     }
@@ -1717,6 +1746,26 @@ impl GameState {
             Value::NonNeg(v) => self.evaluate_value(v, ctx).max(0),
             Value::SacrificedPower => self.sacrificed_power.unwrap_or(0),
             Value::ConvergedValue => ctx.converged_value as i32,
+            Value::CastSpellManaSpent => {
+                // Prefer the spell stack item's stored `mana_spent` when
+                // the just-cast spell is still on the stack (trigger
+                // evaluation at cast-time). Falls back to the trigger
+                // context's `mana_spent` (set when
+                // `fire_spell_cast_triggers` pushes the trigger, or when
+                // the spell itself is resolving and reading from its own
+                // resolution context).
+                if let Some(EntityRef::Card(cid)) = ctx.trigger_source
+                    && let Some(ms) = self.stack.iter().find_map(|si| match si {
+                        StackItem::Spell { card, mana_spent, .. } if card.id == cid => {
+                            Some(*mana_spent as i32)
+                        }
+                        _ => None,
+                    })
+                {
+                    return ms;
+                }
+                ctx.mana_spent as i32
+            }
             Value::ManaValueOf(s) => self
                 .resolve_selector(s, ctx)
                 .into_iter()
@@ -1874,6 +1923,65 @@ impl GameState {
                     }
                     _ => false,
                 })
+            }
+            Predicate::CastSpellManaSpentAtLeast(min) => {
+                // First try the most precise read: the just-cast spell's
+                // `StackItem::Spell.mana_spent`. Falls back to
+                // `ctx.mana_spent` (set when this filter runs at
+                // cast-trigger-push time, when the spell hasn't been
+                // popped from the stack yet) so Opus filters at
+                // `fire_spell_cast_triggers` time also see the right
+                // value.
+                if let Some(EntityRef::Card(cid)) = ctx.trigger_source
+                    && let Some(ms) = self.stack.iter().find_map(|si| match si {
+                        StackItem::Spell { card, mana_spent, .. } if card.id == cid => {
+                            Some(*mana_spent)
+                        }
+                        _ => None,
+                    })
+                {
+                    return ms >= *min;
+                }
+                ctx.mana_spent >= *min
+            }
+            Predicate::IncrementSatisfied => {
+                // SOS Increment: "Whenever you cast a spell, if the
+                // amount of mana you spent is greater than this
+                // creature's power or toughness, put a +1/+1 counter on
+                // this creature." Both clauses (P and T) are OR'd —
+                // pumps fire whenever mana_spent strictly exceeds
+                // *either* stat. We evaluate against the listening
+                // permanent (the source whose triggered ability we're
+                // gating).
+                let Some(source_id) = ctx.source else {
+                    return false;
+                };
+                let Some(source_card) = self.battlefield_find(source_id) else {
+                    // If the Increment-bearing creature already left
+                    // the battlefield (e.g. countered cast that resolved
+                    // a removal spell first), the trigger no-ops.
+                    return false;
+                };
+                // Resolve mana_spent the same way as
+                // `CastSpellManaSpentAtLeast` — prefer the stack item
+                // if the spell hasn't resolved yet, otherwise fall back
+                // to `ctx.mana_spent`.
+                let mana_spent = if let Some(EntityRef::Card(cid)) = ctx.trigger_source {
+                    self.stack
+                        .iter()
+                        .find_map(|si| match si {
+                            StackItem::Spell { card, mana_spent, .. } if card.id == cid => {
+                                Some(*mana_spent)
+                            }
+                            _ => None,
+                        })
+                        .unwrap_or(ctx.mana_spent)
+                } else {
+                    ctx.mana_spent
+                };
+                let p = source_card.power();
+                let t = source_card.toughness();
+                (mana_spent as i32 > p) || (mana_spent as i32 > t)
             }
         }
     }

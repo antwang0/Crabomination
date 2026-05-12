@@ -36,14 +36,14 @@ This file tracks two adjacent Strixhaven catalogs:
 Counts reflect the regenerated tables below (audited via
 `scripts/audit_strixhaven2.py` against `catalog::sets::sos`).
 
-- ✅ done: **100** (+7 in push XVII: Summoned Dromedary, Teacher's Pest,
-  Stone Docent, Eternal Student promoted via the new `from_graveyard`
-  activation field; Aziza Mage Tower Captain + Lumaret's Favor promoted
-  via the new `Effect::CopySpell` primitive; Harsh Annotation promoted
-  via `PlayerRef::OwnerOf(Target(0))` for the token controller).
-- 🟡 partial: **132** (-6 in push XVII: 6 cards promoted to ✅; +0 new
-  🟡; Social Snub added as 🟡 — main effect + cast-time copy wired).
-- ⏳ todo: **23** (-1 in push XVII: Social Snub promoted to 🟡).
+- ✅ done: **110** (+10 in push XXII / Increment+Opus: Cuboid Colony,
+  Hungry Graffalon, Topiary Lecturer, Aberrant Manawurm, Tackle Artist,
+  Thunderdrum Soloist, Molten-Core Maestro, Expressive Firedancer, Muse
+  Seeker, Exhibition Tidecaller, Deluge Virtuoso → ✅).
+- 🟡 partial: **127** (push XXII: 11 promoted out of 🟡 to ✅; Berta /
+  Pensive Professor / Tester / Fractal Tender / Ambitious Augmenter
+  refined — Increment wired but secondary riders still gap).
+- ⏳ todo: **23** (unchanged from push XXI).
 
 All 232 cards marked ✅ or 🟡 have a corresponding factory in
 `crabomination/src/catalog/sets/sos/`; the audit script reports 0 false
