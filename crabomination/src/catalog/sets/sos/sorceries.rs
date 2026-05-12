@@ -2282,3 +2282,70 @@ pub fn follow_the_lumarets() -> CardDefinition {
         opening_hand: None,
     }
 }
+
+// ── push XVII: Silverquill ──────────────────────────────────────────────────
+
+/// Social Snub — {1}{W}{B} Sorcery.
+/// "When you cast this spell while you control a creature, you may copy
+/// this spell. / Each player sacrifices a creature of their choice.
+/// Each opponent loses 1 life and you gain 1 life."
+///
+/// Push XVII: uses the new `Effect::CopySpell` primitive (gated on
+/// MayDo so the controller chooses whether to copy) + a creature-count
+/// filter `Predicate::PermanentExists` on the SpellCast/SelfSource
+/// trigger. Main effect: `ForEach EachPlayer → Sacrifice 1 creature`
+/// + `Drain 1`.
+pub fn social_snub() -> CardDefinition {
+    use crate::card::{EventKind, EventScope, EventSpec, Predicate, TriggeredAbility};
+    CardDefinition {
+        name: "Social Snub",
+        cost: cost(&[generic(1), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        // Main effect: each player sacs a creature, then drain 1.
+        effect: Effect::Seq(vec![
+            Effect::ForEach {
+                selector: Selector::Player(PlayerRef::EachPlayer),
+                body: Box::new(Effect::Sacrifice {
+                    who: Selector::Player(PlayerRef::Triggerer),
+                    count: Value::Const(1),
+                    filter: SelectionRequirement::Creature,
+                }),
+            },
+            Effect::Drain {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                to: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        // Self-cast trigger: if you control a creature, may copy this
+        // spell. The filter checks for any creature on the battlefield
+        // controlled by ctx.controller via `Predicate::SelectorExists`.
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::SelfSource).with_filter(
+                Predicate::SelectorExists(Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou),
+                )),
+            ),
+            effect: Effect::MayDo {
+                description: "Copy Social Snub?".to_string(),
+                body: Box::new(Effect::CopySpell {
+                    what: Selector::This,
+                    count: Value::Const(1),
+                }),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}

@@ -21,6 +21,8 @@ pub fn tap_add(color: Color) -> ActivatedAbility {
         sac_cost: false,
         condition: None,
             life_cost: 0,
+            from_graveyard: false,
+            exile_self_cost: false,
     }
 }
 
@@ -40,6 +42,8 @@ pub fn tap_add_colorless() -> ActivatedAbility {
         sac_cost: false,
         condition: None,
             life_cost: 0,
+            from_graveyard: false,
+            exile_self_cost: false,
     }
 }
 

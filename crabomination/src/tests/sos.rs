@@ -111,8 +111,12 @@ fn harsh_annotation_destroys_and_creates_token() {
 
     assert!(!g.battlefield.iter().any(|c| c.id == bear),
         "Targeted creature should be destroyed");
-    assert!(g.battlefield.iter().any(|c| c.definition.name == "Inkling"),
-        "Inkling token should be created");
+    let inkling = g.battlefield.iter().find(|c| c.definition.name == "Inkling")
+        .expect("Inkling token should be created");
+    // Push XVII: token now goes to the target creature's owner (player 1),
+    // not the caster (player 0).
+    assert_eq!(inkling.controller, 1,
+        "Inkling token should be owned by the target creature's owner");
 }
 
 #[test]
@@ -5829,6 +5833,137 @@ fn lumarets_favor_pumps_creature_plus_two_plus_four() {
 }
 
 #[test]
+fn lumarets_favor_infusion_copies_when_life_gained_this_turn() {
+    // Push XVII: Infusion trigger fires on cast when life-gained-this-turn,
+    // copying the spell via Effect::CopySpell. The copy resolves and pumps
+    // the same target again — stacking the +2/+4 pump.
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.players[0].life_gained_this_turn = 1; // simulate a prior lifegain trigger
+    let id = g.add_card_to_hand(0, catalog::lumarets_favor());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)), mode: None, x_value: None,
+    })
+    .expect("Lumaret's Favor castable for {1}{G}");
+    drain_stack(&mut g);
+
+    // Two pumps applied: +2/+4 twice → +4/+8 over the bear's printed 2/2.
+    let v = g.computed_permanent(bear).expect("Bear should still be alive");
+    assert_eq!(v.power, 2 + 4, "Bear should be pumped twice via Infusion copy → 6 power");
+    assert_eq!(v.toughness, 2 + 8, "Bear should be pumped twice → 10 toughness");
+}
+
+#[test]
+fn social_snub_copies_when_caster_controls_a_creature_and_decider_agrees() {
+    let mut g = two_player_game();
+    let _bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // Bob controls a creature so each-player sac works on resolution.
+    let _bob_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::social_snub());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    // Decider answers Bool(true) so the MayDo runs CopySpell.
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
+    let alice_life_before = g.players[0].life;
+    let bob_life_before = g.players[1].life;
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Social Snub castable for {1}{W}{B}");
+    drain_stack(&mut g);
+
+    // Drain 1 happens twice (original + copy) → Bob -2, Alice +2.
+    assert_eq!(g.players[0].life, alice_life_before + 2,
+        "Alice should gain 1 life from each resolution (×2)");
+    assert_eq!(g.players[1].life, bob_life_before - 2,
+        "Bob should lose 1 life from each resolution (×2)");
+}
+
+#[test]
+fn copied_spell_does_not_linger_in_graveyard_after_resolution() {
+    // CR 707.10a: a copy of a spell ceases to exist in any zone other
+    // than the stack. Our implementation marks the copy `is_token =
+    // true` so the existing token-cleanup SBA path drops it from
+    // graveyard / hand / library / exile after resolution.
+    let mut g = two_player_game();
+    let aziza = g.add_card_to_battlefield(0, catalog::aziza_mage_tower_captain());
+    g.clear_sickness(aziza);
+    for _ in 0..3 {
+        let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        g.clear_sickness(bear);
+    }
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
+    let gy_before = g.players[0].graveyard.len();
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(1)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Lightning Bolt castable for {R}");
+    drain_stack(&mut g);
+
+    // Only the original bolt goes to graveyard. The copy ceases to
+    // exist after resolution (CR 707.10a).
+    assert_eq!(g.players[0].graveyard.len(), gy_before + 1,
+        "Copy of Lightning Bolt should not linger in graveyard");
+    let bolt_count = g.players[0].graveyard.iter()
+        .filter(|c| c.definition.name == "Lightning Bolt")
+        .count();
+    assert_eq!(bolt_count, 1, "Only the original bolt should be in gy");
+}
+
+#[test]
+fn social_snub_does_not_copy_without_a_creature() {
+    let mut g = two_player_game();
+    // No creatures controlled by the caster — trigger filter rejects.
+    let id = g.add_card_to_hand(0, catalog::social_snub());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
+    let bob_life_before = g.players[1].life;
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Social Snub castable for {1}{W}{B}");
+    drain_stack(&mut g);
+
+    // Only one drain — no copy.
+    assert_eq!(g.players[1].life, bob_life_before - 1);
+}
+
+#[test]
+fn lumarets_favor_infusion_does_not_copy_without_lifegain() {
+    // No life gained this turn → trigger filter blocks the copy.
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // life_gained_this_turn defaults to 0.
+    let id = g.add_card_to_hand(0, catalog::lumarets_favor());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)), mode: None, x_value: None,
+    })
+    .expect("Lumaret's Favor castable for {1}{G}");
+    drain_stack(&mut g);
+
+    let v = g.computed_permanent(bear).expect("Bear should still be alive");
+    assert_eq!(v.power, 2 + 2);
+    assert_eq!(v.toughness, 2 + 4);
+}
+
+#[test]
 fn cast_spell_back_face_rejects_card_without_back_face() {
     // A card without `back_face` (most cards) should reject CastSpellBack
     // cleanly with `NotALand`. This ensures the new path doesn't crash
@@ -7117,4 +7252,219 @@ fn zaffai_and_the_tempests_body_legendary_5_7() {
     assert!(card.supertypes.contains(&crate::card::Supertype::Legendary));
     assert!(card.has_creature_type(crate::card::CreatureType::Human));
     assert!(card.has_creature_type(crate::card::CreatureType::Bard));
+}
+
+// ── push XVII: from_graveyard activations ───────────────────────────────────
+
+#[test]
+fn summoned_dromedary_returns_from_graveyard_to_hand() {
+    // {1}{W} sorcery-speed activation from graveyard returns this card to
+    // the controller's hand. Powered by the new ActivatedAbility.
+    // from_graveyard field that lets activate_ability walk the graveyard.
+    let mut g = two_player_game();
+    let drome = g.add_card_to_graveyard(0, catalog::summoned_dromedary());
+    let hand_before = g.players[0].hand.len();
+    let gy_before = g.players[0].graveyard.len();
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: drome,
+        ability_index: 0,
+        target: None,
+    })
+    .expect("Dromedary activation from gy must succeed");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[0].hand.len(), hand_before + 1,
+        "Dromedary should be in hand after activation");
+    assert_eq!(g.players[0].graveyard.len(), gy_before - 1,
+        "Dromedary should leave the graveyard");
+    assert!(g.players[0].hand.iter().any(|c| c.id == drome));
+}
+
+#[test]
+fn summoned_dromedary_activation_rejected_during_opponent_priority() {
+    // Sorcery-speed gate: opponent's main phase must not allow the activation.
+    let mut g = two_player_game();
+    let drome = g.add_card_to_graveyard(0, catalog::summoned_dromedary());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 1; // wrong player
+    let err = g.perform_action(GameAction::ActivateAbility {
+        card_id: drome,
+        ability_index: 0,
+        target: None,
+    })
+    .expect_err("opponent shouldn't be able to activate a graveyard card belonging to player 0");
+    drop(err);
+}
+
+#[test]
+fn teachers_pest_returns_from_graveyard_to_battlefield_tapped() {
+    use crate::mana::g as green;
+    let _ = green;
+    let mut g = two_player_game();
+    let pest = g.add_card_to_graveyard(0, catalog::teachers_pest());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: pest,
+        ability_index: 0,
+        target: None,
+    })
+    .expect("Teacher's Pest activation from gy must succeed");
+    drain_stack(&mut g);
+
+    let bf_card = g.battlefield.iter().find(|c| c.id == pest)
+        .expect("Teacher's Pest should be on the battlefield");
+    assert!(bf_card.tapped, "Teacher's Pest should enter the battlefield tapped");
+    assert!(!g.players[0].graveyard.iter().any(|c| c.id == pest));
+}
+
+#[test]
+fn stone_docent_exiles_self_and_gains_life() {
+    let mut g = two_player_game();
+    let docent = g.add_card_to_graveyard(0, catalog::stone_docent());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    let life_before = g.players[0].life;
+
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: docent,
+        ability_index: 0,
+        target: None,
+    })
+    .expect("Stone Docent activation from gy must succeed");
+    drain_stack(&mut g);
+
+    // Source exiled; life +2; surveil 1 may have milled top card.
+    assert!(g.exile.iter().any(|c| c.id == docent),
+        "Stone Docent should be exiled as cost");
+    assert!(!g.players[0].graveyard.iter().any(|c| c.id == docent));
+    assert_eq!(g.players[0].life, life_before + 2);
+}
+
+#[test]
+fn eternal_student_exiles_self_and_creates_two_inklings() {
+    let mut g = two_player_game();
+    let student = g.add_card_to_graveyard(0, catalog::eternal_student());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    let bf_before = g.battlefield.len();
+
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: student,
+        ability_index: 0,
+        target: None,
+    })
+    .expect("Eternal Student activation from gy must succeed");
+    drain_stack(&mut g);
+
+    assert!(g.exile.iter().any(|c| c.id == student),
+        "Eternal Student should be exiled as cost");
+    let inklings: Vec<_> = g.battlefield.iter()
+        .filter(|c| c.is_token && c.definition.name == "Inkling")
+        .collect();
+    assert_eq!(inklings.len(), 2, "should mint two Inkling tokens");
+    assert!(inklings.iter().all(|c| c.definition.keywords.contains(&Keyword::Flying)));
+    assert_eq!(g.battlefield.len(), bf_before + 2);
+}
+
+#[test]
+fn stone_docent_rejected_at_instant_speed() {
+    // Sorcery-speed gate: stack must be empty + main phase + active player.
+    // Bob's priority during P0's draw step → reject.
+    let mut g = two_player_game();
+    let docent = g.add_card_to_graveyard(0, catalog::stone_docent());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::Upkeep; // not a main phase
+    let err = g.perform_action(GameAction::ActivateAbility {
+        card_id: docent,
+        ability_index: 0,
+        target: None,
+    });
+    assert!(err.is_err(), "Stone Docent should reject upkeep activation (sorcery-speed)");
+}
+
+// ── push XVII: Effect::CopySpell + Aziza ────────────────────────────────────
+
+#[test]
+fn aziza_copies_instant_via_magecraft_when_decider_agrees() {
+    let mut g = two_player_game();
+    let aziza = g.add_card_to_battlefield(0, catalog::aziza_mage_tower_captain());
+    g.clear_sickness(aziza);
+    // Three creatures we can tap as the optional cost.
+    for _ in 0..3 {
+        let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        g.clear_sickness(bear);
+    }
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    // Scripted decider answers Bool(true) for the MayDo prompt.
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
+    let bob_life_before = g.players[1].life;
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(1)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Lightning Bolt castable for {R}");
+    drain_stack(&mut g);
+
+    // Bolt resolves once (3 damage) + copy resolves (3 more) = 6 damage.
+    assert_eq!(g.players[1].life, bob_life_before - 6,
+        "Aziza should copy the bolt: 3 + 3 = 6 damage to Bob");
+    // Three creatures should be tapped as the cost. The picker may
+    // include Aziza herself + 2 bears (printed: "tap three untapped
+    // creatures you control"; the source is a legal pick for the cost).
+    let tapped_creatures = g.battlefield.iter()
+        .filter(|c| c.controller == 0 && c.definition.is_creature() && c.tapped)
+        .count();
+    assert_eq!(tapped_creatures, 3, "Aziza taps three creatures as the cost");
+}
+
+#[test]
+fn aziza_skips_copy_when_decider_declines() {
+    let mut g = two_player_game();
+    let aziza = g.add_card_to_battlefield(0, catalog::aziza_mage_tower_captain());
+    g.clear_sickness(aziza);
+    for _ in 0..3 {
+        let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        g.clear_sickness(bear);
+    }
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    // Decider says no.
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(false)]));
+    let bob_life_before = g.players[1].life;
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(1)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Lightning Bolt castable for {R}");
+    drain_stack(&mut g);
+
+    // Only the original bolt resolved (3 damage); no copy.
+    assert_eq!(g.players[1].life, bob_life_before - 3,
+        "No copy: 3 damage to Bob");
+    // No bears tapped.
+    let tapped_bears = g.battlefield.iter()
+        .filter(|c| c.controller == 0 && c.definition.name == "Grizzly Bears" && c.tapped)
+        .count();
+    assert_eq!(tapped_bears, 0, "Decline should skip the tap-three cost too");
 }

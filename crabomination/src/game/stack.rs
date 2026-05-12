@@ -220,6 +220,7 @@ impl GameState {
                 mode: None,
                 x_value: 0,
                 converged_value: 0,
+            trigger_source: None,
             });
         }
 
@@ -237,6 +238,7 @@ impl GameState {
                 mode: None,
                 x_value: 0,
                 converged_value: 0,
+            trigger_source: None,
             });
         }
     }
@@ -292,6 +294,7 @@ impl GameState {
                             mode: None,
                             x_value: 0,
                             converged_value: 0,
+                            trigger_source: None,
                         });
                     }
 
@@ -319,6 +322,9 @@ impl GameState {
                                 mode: None,
                                 x_value,
                                 converged_value,
+                                trigger_source: Some(
+                                    crate::game::effects::EntityRef::Permanent(card_id),
+                                ),
                             });
                         }
                     }
@@ -361,6 +367,7 @@ impl GameState {
                                     mode: None,
                                     x_value: 0,
                                     converged_value: 0,
+                                trigger_source: None,
                                 });
                             }
                         }
@@ -397,9 +404,10 @@ impl GameState {
                 mode,
                 x_value,
                 converged_value,
+                trigger_source,
             } => {
                 let chosen_mode = mode.unwrap_or(0);
-                let mut trig_events = self.continue_trigger_resolution(
+                let mut trig_events = self.continue_trigger_resolution_with_source(
                     source,
                     controller,
                     *effect,
@@ -407,6 +415,7 @@ impl GameState {
                     chosen_mode,
                     x_value,
                     converged_value,
+                    trigger_source,
                 )?;
                 events.append(&mut trig_events);
                 if self.pending_decision.is_some() {
@@ -636,6 +645,7 @@ impl GameState {
                     mode: None,
                     x_value: 0,
                     converged_value: 0,
+                trigger_source: None,
                 });
             }
             // Persist: return to battlefield with -1/-1 counter if it had no -1/-1 counter.
@@ -828,6 +838,7 @@ impl GameState {
                 mode: None,
                 x_value: 0,
                 converged_value: 0,
+            trigger_source: None,
             });
         }
         vec![] // Trigger events are on the stack; callers resolve them via pass_priority.

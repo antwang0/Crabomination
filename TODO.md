@@ -5,7 +5,82 @@ Items are grouped by area and roughly ordered by impact within each group.
 See `CUBE_FEATURES.md` (cube-card implementation status) and
 `STRIXHAVEN2.md` (Secrets-of-Strixhaven status).
 
+## MagicCompRules coverage audit
+
+Periodic spot-check of the rules document
+(`crabomination/MagicCompRules 20260116.txt`). Each rule below has a
+status tag (✅ wired, 🟡 partial, ⏳ todo) plus a short note.
+
+- ✅ **CR 707.2 — Copy characteristics**: Copies acquire copiable values
+  of the source (name, cost, color, types, text, P/T, loyalty) plus
+  on-stack choices (mode, targets, X, kicker). Wired in push XVII via
+  `Effect::CopySpell` cloning the source's `CardDefinition` (which
+  holds all copiable values) and the StackItem's `target`/`mode`/
+  `x_value`/`converged_value`. Counters, status, and stickers are NOT
+  copied (the copy uses a fresh `CardInstance::new` which starts
+  zero-state).
+- ✅ **CR 707.10 — Spell copies**: Copies of spells aren't cast,
+  copies of activated abilities aren't activated. Our `CopySpell`
+  pushes a `StackItem::Spell` directly without emitting `SpellCast`
+  (the cast triggers don't fire for copies). Copies inherit modes /
+  targets / X / converged_value.
+- ✅ **CR 707.10a — State-based action**: A copy of a spell ceases to
+  exist in any zone other than the stack. Copies are marked
+  `CardInstance.is_token = true`; the existing token-cleanup SBA path
+  (`stack.rs::check_state_based_actions` at line 730) drops them from
+  graveyard / hand / library / exile after resolution. Test:
+  `tests::sos::copied_spell_does_not_linger_in_graveyard_after_resolution`.
+- 🟡 **CR 706 — Casting spells**: `cast_spell` covers the main path.
+  Gaps: choose-additional-cost ("kicker"/"buyback" alternatives are
+  via `alternative_cost`, but only one alt-cost can be active at
+  cast time; multi-alt cycles aren't generalized).
+- ⏳ **CR 702.21 — Cycling**: Not implemented. `keyword::Cycling`
+  doesn't exist; cards with Cycling are either stubbed or omitted.
+- ⏳ **CR 704.5d (token cleanup)**: Already covered by SBA tokens.retain. ✅
+- 🟡 **CR 117.1 — Order of priority**: `pass_priority` walks the
+  alive players in seat order. Multi-player APNAP ordering for
+  triggers / simultaneous effects is approximated.
+
 ## Recent additions
+
+- ✅ **SOS push XVII (2026-05-12)**: 5 engine primitives + 7 SOS card
+  promotions. Tests at 1048 (+12 net):
+  - **`ActivatedAbility.from_graveyard: bool`** + **`exile_self_cost: bool`**
+    — first-class graveyard-source activations. The `activate_ability`
+    engine path now walks the graveyard for `from_graveyard` abilities;
+    `exile_self_cost` exiles the source as part of cost (mirror to
+    `sac_cost` for battlefield permanents). Closes the
+    "Activated-Ability `From Your Graveyard` Path" gap. Wired:
+    Summoned Dromedary, Teacher's Pest, Stone Docent, Eternal Student.
+  - **`Effect::CopySpell { what, count }`** — proper implementation
+    (was a stub). Locates the matching `StackItem::Spell` for the
+    selected target, pushes `count` copies above it on the stack
+    (each with fresh CardId; copies are uncounterable). Emits
+    `GameEvent::SpellsCopied`. Closes a major TODO ("Copy Primitive").
+    Wired: Aziza Mage Tower Captain, Lumaret's Favor (Infusion),
+    Social Snub.
+  - **`StackItem::Trigger.trigger_source: Option<EntityRef>`** —
+    preserves the trigger's source entity (the just-cast spell, the
+    ETBing permanent) through stack resolution. Previously lost when
+    triggers landed on the stack, breaking lookups for
+    `Effect::CopySpell` and `Selector::CastSpellTarget` post-resolve.
+    Now propagated via the new `continue_trigger_resolution_with_source`
+    helper. `EntityRef` now `Serialize`/`Deserialize` for snapshots.
+  - **`push_on_cast_triggers` filter evaluation** — the SpellCast/
+    SelfSource trigger path now evaluates the trigger's `filter`
+    (Infusion's `LifeGainedThisTurnAtLeast`, Social Snub's
+    `SelectorExists`) at trigger-creation time. Previously the filter
+    was silently dropped — every SelfSource cast trigger fired
+    unconditionally. The fix collects `(Option<Predicate>, Effect)`
+    instead of bare effects.
+  - **Sorcery-speed activation gate** — `ActivatedAbility.sorcery_speed`
+    was declared but never enforced; activations leaked through during
+    non-main steps. Now checked at the top of `activate_ability`,
+    returning `GameError::SorcerySpeedOnly` cleanly. Used by Cauldron
+    of Essence, Stone Docent, Summoned Dromedary, etc.
+  - **12 new tests** in `tests::sos::*` (from_graveyard activations,
+    Copy primitive both yes/no paths, Infusion gating, instant-speed
+    rejection). All 1048 lib tests pass (was 1036).
 
 - ✅ **SOS push XVI (2026-05-01)**: 5 engine primitives + 10 SOS/STX
   card promotions. Tests at 1025 (+13 net):
@@ -539,11 +614,18 @@ Suspend, Rebound, Flashback-from-exile, Escape, Adventure second cast,
 Cascade resolution).  Currently each is handled ad-hoc or omitted.  A shared
 "cast from alternate zone" code path would unlock dozens of cards.
 
-### Copy Primitive
-No general "create a copy of target spell/permanent" effect exists.  Needed for:
+### Copy Primitive ✅ DONE
+~~No general "create a copy of target spell/permanent" effect exists.  Needed for:
 Reverberate, Fork, Strionic Resonator, Quasiduplicate, Saheeli Rai −3, etc.
 The `CopySpell` effect stub exists in `effect.rs` but is not wired through
-`apply_effect`.
+`apply_effect`.~~ Done in push XVII: `Effect::CopySpell { what, count }`
+locates the matching `StackItem::Spell` and pushes `count` copies above it
+on the stack with fresh CardIds. Copies are flagged `uncounterable: true`.
+Wired: Aziza Mage Tower Captain (Magecraft copy with tap-3 cost),
+Lumaret's Favor (Infusion copy gated on life-gain), Social Snub (cast-time
+copy gated on creature-control). Still TODO for "permanent" copies
+(Quasiduplicate, Saheeli Rai −3): the variant exists but the
+target → battlefield-token-copy path is not yet wired.
 
 ### Triggered-Ability Event Gaps
 `EventKind` is missing several commonly-needed triggers:
@@ -615,15 +697,24 @@ candidate-cast's chosen target before payment. Probably a new
 and Simian Spirit Guide (exile from hand: add mana) are completely omitted
 because hand-activated mana abilities need a separate activation path.
 
-### Activated-Ability "From Your Graveyard" Path
-The `activate_ability` walker only iterates the battlefield, so cards
-with mana-cost-priced graveyard-recursion abilities (e.g. SOS Summoned
-Dromedary's `{1}{W}: return this from graveyard, sorcery speed`,
-Teacher's Pest's `{B}{G}: return tapped`, Postmortem Professor's exile-
-an-IS-card-from-gy:return) currently drop the activation entirely. The
-`FromYourGraveyard` event-scope path supports *triggered* recursion
-(Bloodghast, Silversmote Ghoul) but not activated. Adding a parallel
-graveyard walk in `activate_ability` would unlock five+ SOS cards.
+### Activated-Ability "From Your Graveyard" Path ✅ DONE
+~~The `activate_ability` walker only iterates the battlefield, so cards
+with mana-cost-priced graveyard-recursion abilities currently drop the
+activation entirely.~~ Done in push XVII:
+`ActivatedAbility.from_graveyard: bool` + `exile_self_cost: bool` are
+now first-class fields. The `activate_ability` engine path walks the
+graveyard for `from_graveyard` abilities; `exile_self_cost` exiles
+the source as part of cost (mirror to `sac_cost` for battlefield
+permanents). Wired: Summoned Dromedary, Teacher's Pest, Stone Docent,
+Eternal Student. Remaining gap (3rd-party cost shapes):
+- **Postmortem Professor**: `{1}{B}, Exile an IS card from your
+  graveyard: Return this card from your graveyard to the battlefield.`
+  needs an additional cost variant: exile a *different* card from gy
+  matching a filter. A new `cost: ActivationCost` enum (or sibling
+  `exile_other_filter: Option<SelectionRequirement>`) would cover this
+  case.
+- **Page, Loose Leaf (Grandeur)**: `Discard another card named [self]:
+  …`. Needs `discard_named_self_cost: bool` (or named-cost variant).
 
 ### "Look At Top X, Pick One, Put Rest in Graveyard" Primitive
 Stirring Honormancer ("look at top X cards where X is creatures you

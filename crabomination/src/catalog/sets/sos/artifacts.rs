@@ -57,6 +57,8 @@ pub fn cauldron_of_essence() -> CardDefinition {
             sac_cost: true,
             condition: None,
             life_cost: 0,
+            from_graveyard: false,
+            exile_self_cost: false,
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours),
@@ -112,6 +114,8 @@ pub fn diary_of_dreams() -> CardDefinition {
             sac_cost: false,
             condition: None,
             life_cost: 0,
+            from_graveyard: false,
+            exile_self_cost: false,
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
@@ -173,6 +177,8 @@ pub fn tablet_of_discovery() -> CardDefinition {
                 sac_cost: false,
                 condition: None,
             life_cost: 0,
+            from_graveyard: false,
+            exile_self_cost: false,
             },
             ActivatedAbility {
                 tap_cost: true,
@@ -186,6 +192,8 @@ pub fn tablet_of_discovery() -> CardDefinition {
                 sac_cost: false,
                 condition: None,
             life_cost: 0,
+            from_graveyard: false,
+            exile_self_cost: false,
             },
         ],
         triggered_abilities: vec![TriggeredAbility {
@@ -239,6 +247,8 @@ pub fn potioners_trove() -> CardDefinition {
                 sac_cost: false,
                 condition: None,
             life_cost: 0,
+            from_graveyard: false,
+            exile_self_cost: false,
             },
             ActivatedAbility {
                 tap_cost: true,
@@ -260,6 +270,8 @@ pub fn potioners_trove() -> CardDefinition {
                     at_least: Value::Const(1),
                 }),
                 life_cost: 0,
+                from_graveyard: false,
+                exile_self_cost: false,
             },
         ],
         triggered_abilities: vec![],
@@ -314,6 +326,8 @@ pub fn resonating_lute() -> CardDefinition {
                 Value::Const(7),
             )),
             life_cost: 0,
+            from_graveyard: false,
+            exile_self_cost: false,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -363,6 +377,8 @@ pub fn ark_of_hunger() -> CardDefinition {
             sac_cost: false,
             condition: None,
             life_cost: 0,
+            from_graveyard: false,
+            exile_self_cost: false,
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::CardLeftGraveyard, EventScope::YourControl),

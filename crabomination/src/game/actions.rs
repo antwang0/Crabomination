@@ -16,8 +16,12 @@ fn is_mana_ability(effect: &Effect) -> bool {
 /// Pull the "when you cast this spell" (`EventKind::SpellCast` +
 /// `EventScope::SelfSource`) triggers off a card. Used by the cast paths
 /// to push these onto the stack above the cast spell so they resolve
-/// before the spell itself.
-fn collect_self_cast_triggers(card: &crate::card::CardInstance) -> Vec<Effect> {
+/// before the spell itself. Returns the trigger's optional filter
+/// predicate alongside its effect so the caller can gate the trigger
+/// fire on the predicate (e.g. Infusion's LifeGainedThisTurnAtLeast).
+fn collect_self_cast_triggers(
+    card: &crate::card::CardInstance,
+) -> Vec<(Option<crate::card::Predicate>, Effect)> {
     use crate::effect::{EventKind, EventScope};
     card.definition
         .triggered_abilities
@@ -26,7 +30,7 @@ fn collect_self_cast_triggers(card: &crate::card::CardInstance) -> Vec<Effect> {
             t.event.kind == EventKind::SpellCast
                 && matches!(t.event.scope, EventScope::SelfSource)
         })
-        .map(|t| t.effect.clone())
+        .map(|t| (t.event.filter.clone(), t.effect.clone()))
         .collect()
 }
 
@@ -289,6 +293,8 @@ impl GameState {
                     sac_cost: false,
                     condition: None,
             life_cost: 0,
+            from_graveyard: false,
+            exile_self_cost: false,
                 },
             ];
         }
@@ -340,6 +346,7 @@ impl GameState {
                     mode: None,
                     x_value: 0,
                     converged_value: 0,
+                trigger_source: None,
                 });
             }
         }
@@ -622,9 +629,29 @@ impl GameState {
         &mut self,
         source: CardId,
         controller: usize,
-        triggers: Vec<Effect>,
+        triggers: Vec<(Option<crate::card::Predicate>, Effect)>,
     ) {
-        for effect in triggers {
+        for (filter, effect) in triggers {
+            // Evaluate the trigger's filter (Infusion's
+            // LifeGainedThisTurnAtLeast, etc.) before pushing. The ctx
+            // is the on-cast context where `trigger_source` points to
+            // the cast card. If the filter rejects, drop the trigger
+            // silently — matches the "won't trigger unless the
+            // condition is met" wording.
+            if let Some(pred) = &filter {
+                let ctx = crate::game::effects::EffectContext {
+                    controller,
+                    source: Some(source),
+                    targets: vec![],
+                    trigger_source: Some(crate::game::effects::EntityRef::Card(source)),
+                    mode: 0,
+                    x_value: 0,
+                    converged_value: 0,
+                };
+                if !self.evaluate_predicate(pred, &ctx) {
+                    continue;
+                }
+            }
             let auto_target =
                 self.auto_target_for_effect_avoiding(&effect, controller, Some(source));
             self.stack.push(StackItem::Trigger {
@@ -635,6 +662,10 @@ impl GameState {
                 mode: None,
                 x_value: 0,
                 converged_value: 0,
+                // Self-cast trigger fires from the cast card itself —
+                // carry its CardId as the trigger source so
+                // Effect::CopySpell can find it on the stack.
+                trigger_source: Some(crate::game::effects::EntityRef::Card(source)),
             });
         }
     }
@@ -979,6 +1010,10 @@ impl GameState {
                 mode: None,
                 x_value: 0,
                 converged_value: 0,
+                // The trigger fires on a spell cast — preserve the cast
+                // spell's CardId so resolving effects (Effect::CopySpell,
+                // Selector::CastSpellTarget) can find it on the stack.
+                trigger_source: Some(crate::game::effects::EntityRef::Card(cast_card)),
             });
         }
     }
@@ -1197,32 +1232,85 @@ impl GameState {
     ) -> Result<Vec<GameEvent>, GameError> {
         let p = self.priority.player_with_priority;
 
-        let pos = self
-            .battlefield
-            .iter()
-            .position(|c| c.id == card_id)
-            .ok_or(GameError::CardNotOnBattlefield(card_id))?;
+        // Source zone: battlefield by default, or the controller's graveyard
+        // when the ability is flagged `from_graveyard`. We scan battlefield
+        // first; if missing, fall back to graveyards (any player's; we
+        // verify ownership/controller match below).
+        let (source_in_gy, source_owner) = {
+            let on_bf = self.battlefield.iter().any(|c| c.id == card_id);
+            if on_bf {
+                (false, None)
+            } else {
+                let owner = self.players.iter().position(|pl|
+                    pl.graveyard.iter().any(|c| c.id == card_id));
+                match owner {
+                    Some(o) => (true, Some(o)),
+                    None => return Err(GameError::CardNotOnBattlefield(card_id)),
+                }
+            }
+        };
 
-        let ability = self.battlefield[pos]
-            .definition
-            .activated_abilities
-            .get(ability_index)
-            .cloned()
-            .ok_or(GameError::AbilityIndexOutOfBounds)?;
+        let ability: crate::effect::ActivatedAbility = if source_in_gy {
+            let owner = source_owner.unwrap();
+            self.players[owner].graveyard.iter()
+                .find(|c| c.id == card_id)
+                .and_then(|c| c.definition.activated_abilities.get(ability_index).cloned())
+                .ok_or(GameError::AbilityIndexOutOfBounds)?
+        } else {
+            let pos = self
+                .battlefield
+                .iter()
+                .position(|c| c.id == card_id)
+                .ok_or(GameError::CardNotOnBattlefield(card_id))?;
+            self.battlefield[pos]
+                .definition
+                .activated_abilities
+                .get(ability_index)
+                .cloned()
+                .ok_or(GameError::AbilityIndexOutOfBounds)?
+        };
 
-        // Only the controller can activate abilities.
-        if self.battlefield[pos].controller != p {
-            return Err(GameError::NotYourPriority);
+        // For graveyard activations, reject if the ability isn't flagged
+        // `from_graveyard`. This prevents activating a card's printed
+        // battlefield-only ability from the graveyard accidentally.
+        if source_in_gy && !ability.from_graveyard {
+            return Err(GameError::CardNotOnBattlefield(card_id));
+        }
+
+        // Only the controller (or graveyard owner) can activate abilities.
+        if source_in_gy {
+            if source_owner != Some(p) {
+                return Err(GameError::NotYourPriority);
+            }
+        } else {
+            let pos = self.battlefield.iter().position(|c| c.id == card_id).unwrap();
+            if self.battlefield[pos].controller != p {
+                return Err(GameError::NotYourPriority);
+            }
         }
 
         // Once-per-turn: reject if this ability index has already been
         // used since the most recent turn-cleanup. The ability is recorded
         // as "used" *after* successful activation below so failed mana
         // payments / illegal targets don't burn the per-turn budget.
-        if ability.once_per_turn
-            && self.battlefield[pos].once_per_turn_used.contains(&ability_index)
-        {
-            return Err(GameError::AbilityAlreadyUsedThisTurn);
+        // (Graveyard activations don't track per-card once-per-turn state
+        // since the card may move between zones; the gate is no-op.)
+        if !source_in_gy && ability.once_per_turn {
+            let pos = self.battlefield.iter().position(|c| c.id == card_id).unwrap();
+            if self.battlefield[pos].once_per_turn_used.contains(&ability_index) {
+                return Err(GameError::AbilityAlreadyUsedThisTurn);
+            }
+        }
+
+        // Sorcery-speed gate: reject the activation if the ability is
+        // flagged sorcery-speed and the controller can't currently
+        // cast sorceries (not their main phase, or stack non-empty).
+        // Used by cards with printed "Activate only as a sorcery" — e.g.
+        // SOS Summoned Dromedary, Stone Docent, Cauldron of Essence's
+        // reanimation. The pre-fix flow let upkeep activations leak
+        // through silently.
+        if ability.sorcery_speed && !self.can_cast_sorcery_speed(p) {
+            return Err(GameError::SorcerySpeedOnly);
         }
 
         // Per-card "activate only if …" gate. Evaluated against the
@@ -1280,8 +1368,14 @@ impl GameState {
         let needs_payment = !ability.mana_cost.symbols.is_empty();
         let pre_snapshot = needs_payment.then(|| self.snapshot_payment_state(p));
 
-        // Pay tap cost
+        // Pay tap cost. Graveyard activations can't tap (the source is not
+        // a permanent), so we reject any `tap_cost: true` ability from a
+        // graveyard source as a guard against malformed card definitions.
         if ability.tap_cost {
+            if source_in_gy {
+                return Err(GameError::CardIsTapped(card_id));
+            }
+            let pos = self.battlefield.iter().position(|c| c.id == card_id).unwrap();
             if self.battlefield[pos].tapped {
                 return Err(GameError::CardIsTapped(card_id));
             }
@@ -1315,10 +1409,11 @@ impl GameState {
         // Mark the ability as used for the once-per-turn budget. (After
         // tap/mana cost validation succeeds, before sacrifice or stack
         // queueing — all of which are guaranteed to commit if we get here.)
-        if ability.once_per_turn {
-            if let Some(card) = self.battlefield.iter_mut().find(|c| c.id == card_id) {
-                card.once_per_turn_used.push(ability_index);
-            }
+        if ability.once_per_turn
+            && !source_in_gy
+            && let Some(card) = self.battlefield.iter_mut().find(|c| c.id == card_id)
+        {
+            card.once_per_turn_used.push(ability_index);
         }
 
         // Sacrifice-as-cost: with tap and mana costs paid, sacrifice the
@@ -1341,6 +1436,29 @@ impl GameState {
             events.append(&mut die_evs);
         }
 
+        // Exile-self-as-cost (graveyard activations): with tap/mana/life
+        // paid, exile the source from the graveyard. This is the cost
+        // line for cards like Stone Docent and Eternal Student that read
+        // "Exile this card from your graveyard:". The effect then
+        // resolves *after* the source is in exile, mirroring `sac_cost`
+        // for battlefield sources.
+        if ability.exile_self_cost && source_in_gy {
+            let owner = source_owner.unwrap();
+            if let Some(idx) = self.players[owner].graveyard.iter().position(|c| c.id == card_id) {
+                let mut card = self.players[owner].graveyard.remove(idx);
+                card.controller = owner;
+                self.exile.push(card);
+                self.players[owner].cards_exiled_this_turn = self.players[owner]
+                    .cards_exiled_this_turn
+                    .saturating_add(1);
+                // Emit CardLeftGraveyard so Lorehold "cards leave your gy" payoffs fire.
+                events.push(GameEvent::CardLeftGraveyard { player: owner, card_id });
+                self.players[owner].cards_left_graveyard_this_turn = self.players[owner]
+                    .cards_left_graveyard_this_turn
+                    .saturating_add(1);
+            }
+        }
+
         // Mana abilities resolve immediately (no stack, no priority reset).
         let is_mana_ab = is_mana_ability(&ability.effect);
 
@@ -1359,6 +1477,7 @@ impl GameState {
                 mode: None,
                 x_value: 0,
                 converged_value: 0,
+            trigger_source: None,
             });
             self.give_priority_to_active();
         }

@@ -442,6 +442,8 @@ pub fn burrog_banemaker() -> CardDefinition {
             sac_cost: false,
             condition: None,
             life_cost: 0,
+            from_graveyard: false,
+            exile_self_cost: false,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -484,6 +486,8 @@ pub fn noxious_newt() -> CardDefinition {
             sac_cost: false,
             condition: None,
             life_cost: 0,
+            from_graveyard: false,
+            exile_self_cost: false,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -528,6 +532,8 @@ pub fn mindful_biomancer() -> CardDefinition {
             sac_cost: false,
             condition: None,
             life_cost: 0,
+            from_graveyard: false,
+            exile_self_cost: false,
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -907,6 +913,8 @@ pub fn shattered_acolyte() -> CardDefinition {
             sac_cost: true,
             condition: None,
             life_cost: 0,
+            from_graveyard: false,
+            exile_self_cost: false,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -922,13 +930,14 @@ pub fn shattered_acolyte() -> CardDefinition {
 /// "{1}{W}: Return this card from your graveyard to your hand. Activate
 /// only as a sorcery."
 ///
-/// Approximation: the graveyard recursion activated ability is omitted
-/// — the engine's activated-ability path only walks the battlefield, so
-/// "from your graveyard" activations don't have a wiring path yet. The
-/// vigilance body is faithfully wired so the card slots in as a 4/3
-/// vigilant beater. Camel isn't a CreatureType yet; we keep the
-/// gameplay-relevant Spirit subtype alone. Status: 🟡.
+/// Wired in push XVII: the graveyard-recursion activated ability uses
+/// the new `ActivatedAbility.from_graveyard: bool` field. The
+/// `activate_ability` engine path now walks the graveyard when the
+/// ability is flagged. Cost `{1}{W}` + sorcery-speed + effect
+/// `Move(Self → Hand(You))`. The source is found in the graveyard via
+/// `move_card_to`'s existing graveyard branch.
 pub fn summoned_dromedary() -> CardDefinition {
+    use crate::effect::ZoneDest;
     CardDefinition {
         name: "Summoned Dromedary",
         cost: cost(&[generic(3), w()]),
@@ -942,7 +951,21 @@ pub fn summoned_dromedary() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Vigilance],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: false,
+            mana_cost: cost(&[generic(1), w()]),
+            effect: Effect::Move {
+                what: Selector::This,
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+            once_per_turn: false,
+            sorcery_speed: true,
+            sac_cost: false,
+            condition: None,
+            life_cost: 0,
+            from_graveyard: true,
+            exile_self_cost: false,
+        }],
         triggered_abilities: vec![],
         static_abilities: vec![],
         base_loyalty: 0,
@@ -1422,14 +1445,16 @@ pub fn old_growth_educator() -> CardDefinition {
 }
 
 /// Teacher's Pest — {B}{G}, 1/1 Skeleton Pest. Menace.
-/// "Whenever this creature attacks, you gain 1 life."
+/// "Whenever this creature attacks, you gain 1 life. / {B}{G}: Return
+/// this card from your graveyard to the battlefield tapped."
 ///
-/// Approximation: the graveyard-recursion ability ("{B}{G}: Return this
-/// card from your graveyard to the battlefield tapped") is omitted —
-/// the engine's `FromYourGraveyard` path supports triggered abilities
-/// (Bloodghast-style) but not activated abilities with a mana cost. The
-/// attacks-gain-1 trigger is wired faithfully.
+/// Push XVII: graveyard-recursion ability now wired via the new
+/// `ActivatedAbility.from_graveyard: bool` field. The
+/// `activate_ability` engine path walks the graveyard for `from_graveyard`
+/// abilities. Cost `{B}{G}` + effect `Move(Self → Battlefield(You,
+/// tapped))`. Attacks-gain-1 trigger unchanged.
 pub fn teachers_pest() -> CardDefinition {
+    use crate::effect::ZoneDest;
     use crate::mana::g;
     CardDefinition {
         name: "Teacher's Pest",
@@ -1444,7 +1469,24 @@ pub fn teachers_pest() -> CardDefinition {
         toughness: 1,
         keywords: vec![Keyword::Menace],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: false,
+            mana_cost: cost(&[b(), g()]),
+            effect: Effect::Move {
+                what: Selector::This,
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: true,
+                },
+            },
+            once_per_turn: false,
+            sorcery_speed: false,
+            sac_cost: false,
+            condition: None,
+            life_cost: 0,
+            from_graveyard: true,
+            exile_self_cost: false,
+        }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
             effect: Effect::GainLife {
@@ -1519,13 +1561,17 @@ pub fn arnyn_deathbloom_botanist() -> CardDefinition {
 /// untapped creatures you control. If you do, copy that spell. You may
 /// choose new targets for the copy."
 ///
-/// 🟡 Body-only wire (push XVI). The cast-IS-then-tap-3-to-copy rider
-/// is omitted (no copy-spell primitive yet — same gap as Mica, Aziza
-/// itself, Silverquill the Disputant, Choreographed Sparks). The 2/2
-/// Legendary body still slots into the Lorehold pool. New
-/// `CreatureType::Sorcerer` already exists (push III).
+/// Push XVII: cast-IS copy rider wired via the new `Effect::CopySpell`
+/// primitive. The "may tap three" optional cost is approximated as
+/// `Effect::MayDo` — the controller is asked yes/no; on yes, the
+/// engine taps three untapped creatures and copies the spell. On no,
+/// the trigger no-ops. The "choose new targets" rider re-uses the
+/// auto-target picker at copy resolution time. This is a strict
+/// approximation: the cost-and-effect ordering ("if you do, copy" vs
+/// "you may copy if you do") is collapsed into one decision shape.
 pub fn aziza_mage_tower_captain() -> CardDefinition {
     use crate::card::Supertype;
+    use crate::effect::shortcut::magecraft;
     use crate::mana::r;
     CardDefinition {
         name: "Aziza, Mage Tower Captain",
@@ -1541,7 +1587,30 @@ pub fn aziza_mage_tower_captain() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
+        triggered_abilities: vec![magecraft(Effect::MayDo {
+            description: "Tap three untapped creatures you control to copy that spell?"
+                .to_string(),
+            body: Box::new(Effect::Seq(vec![
+                // Tap 3 untapped creatures you control (approximation: tap
+                // up to 3 — if fewer than 3 available, still copy since the
+                // engine has no "may pay" all-or-nothing primitive for
+                // creature-tap costs).
+                Effect::Tap {
+                    what: Selector::take(
+                        Selector::EachPermanent(
+                            SelectionRequirement::Creature
+                                .and(SelectionRequirement::ControlledByYou)
+                                .and(SelectionRequirement::Untapped),
+                        ),
+                        Value::Const(3),
+                    ),
+                },
+                Effect::CopySpell {
+                    what: Selector::TriggerSource,
+                    count: Value::Const(1),
+                },
+            ])),
+        })],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -1654,6 +1723,8 @@ pub fn hardened_academic() -> CardDefinition {
             sac_cost: false,
             condition: None,
             life_cost: 0,
+            from_graveyard: false,
+            exile_self_cost: false,
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::CardLeftGraveyard, EventScope::YourControl),
@@ -2020,6 +2091,8 @@ pub fn charging_strifeknight() -> CardDefinition {
             sac_cost: false,
             condition: None,
             life_cost: 0,
+            from_graveyard: false,
+            exile_self_cost: false,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -2398,10 +2471,14 @@ pub fn expressive_firedancer() -> CardDefinition {
     }
 }
 
-/// Eternal Student — {3}{B}, 4/2 Zombie Warlock. The
-/// `{1}{B}, exile from graveyard: create two Inkling tokens` activated
-/// ability is omitted (engine activated-ability path only walks the
-/// battlefield). Vanilla 4/2 body still hits combat correctly.
+/// Eternal Student — {3}{B}, 4/2 Zombie Warlock.
+/// "{1}{B}, Exile this card from your graveyard: Create two 1/1 white
+/// and black Inkling creature tokens with flying."
+///
+/// Push XVII: graveyard-exile activated ability wired via the new
+/// `from_graveyard: bool` + `exile_self_cost: bool` fields. Mana cost
+/// `{1}{B}` + exile-self-as-cost + effect creates 2 Inkling tokens
+/// (via the shared `inkling_token()` helper).
 pub fn eternal_student() -> CardDefinition {
     CardDefinition {
         name: "Eternal Student",
@@ -2416,7 +2493,22 @@ pub fn eternal_student() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: false,
+            mana_cost: cost(&[generic(1), b()]),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                definition: inkling_token(),
+            },
+            once_per_turn: false,
+            sorcery_speed: false,
+            sac_cost: false,
+            condition: None,
+            life_cost: 0,
+            from_graveyard: true,
+            exile_self_cost: true,
+        }],
         triggered_abilities: vec![],
         static_abilities: vec![],
         base_loyalty: 0,
@@ -2639,6 +2731,8 @@ pub fn topiary_lecturer() -> CardDefinition {
             sac_cost: false,
             condition: None,
             life_cost: 0,
+            from_graveyard: false,
+            exile_self_cost: false,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -2752,6 +2846,8 @@ pub fn sundering_archaic() -> CardDefinition {
             sac_cost: false,
             condition: None,
             life_cost: 0,
+            from_graveyard: false,
+            exile_self_cost: false,
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -2866,6 +2962,8 @@ pub fn hydro_channeler() -> CardDefinition {
                 sac_cost: false,
                 condition: None,
             life_cost: 0,
+            from_graveyard: false,
+            exile_self_cost: false,
             },
             ActivatedAbility {
                 tap_cost: true,
@@ -2879,6 +2977,8 @@ pub fn hydro_channeler() -> CardDefinition {
                 sac_cost: false,
                 condition: None,
             life_cost: 0,
+            from_graveyard: false,
+            exile_self_cost: false,
             },
         ],
         triggered_abilities: vec![],
@@ -2978,6 +3078,8 @@ pub fn emil_vastlands_roamer() -> CardDefinition {
             sac_cost: false,
             condition: None,
             life_cost: 0,
+            from_graveyard: false,
+            exile_self_cost: false,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![StaticAbility {
@@ -3803,6 +3905,8 @@ pub fn berta_wise_extrapolator() -> CardDefinition {
             sac_cost: false,
             condition: None,
             life_cost: 0,
+            from_graveyard: false,
+            exile_self_cost: false,
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(
@@ -4373,11 +4477,10 @@ pub fn moseo_veins_new_dean() -> CardDefinition {
 /// "{W}, Exile this card from your graveyard: You gain 2 life. Surveil
 /// 1. Activate only as a sorcery."
 ///
-/// Body-only wire (3/1 Spirit Chimera). The graveyard-exile activated
-/// ability is omitted — the engine's activated-ability walker only
-/// iterates the battlefield (TODO.md "Activated-Ability `From Your
-/// Graveyard` Path"; same gap as Eternal Student, Summoned Dromedary).
-/// The vanilla 2-mana 3/1 body still slots into mono-W aggro pools.
+/// Push XVII: graveyard-exile activated ability wired via the new
+/// `ActivatedAbility.from_graveyard: bool` + `exile_self_cost: bool`
+/// fields. Mana cost `{W}` + sorcery-speed + exile-self-as-cost +
+/// effect `Seq(GainLife 2, Surveil 1)`.
 pub fn stone_docent() -> CardDefinition {
     CardDefinition {
         name: "Stone Docent",
@@ -4393,7 +4496,27 @@ pub fn stone_docent() -> CardDefinition {
         toughness: 1,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: false,
+            mana_cost: cost(&[w()]),
+            effect: Effect::Seq(vec![
+                Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::Const(2),
+                },
+                Effect::Surveil {
+                    who: PlayerRef::You,
+                    amount: Value::Const(1),
+                },
+            ]),
+            once_per_turn: false,
+            sorcery_speed: true,
+            sac_cost: false,
+            condition: None,
+            life_cost: 0,
+            from_graveyard: true,
+            exile_self_cost: true,
+        }],
         triggered_abilities: vec![],
         static_abilities: vec![],
         base_loyalty: 0,

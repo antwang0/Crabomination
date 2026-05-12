@@ -743,6 +743,7 @@ mod tests {
             mode: None,
             x_value: 0,
             converged_value: 0,
+        trigger_source: None,
         });
         g.add_card_to_hand(0, catalog::tireless_tracker());
         g.add_card_to_hand(0, catalog::lightning_bolt());
@@ -801,6 +802,7 @@ mod tests {
             mode: None,
             x_value: 0,
             converged_value: 0,
+        trigger_source: None,
         });
         // Hand: a mix of sorcery- and instant-speed castables. Pyrokinesis
         // (instant) is the only legal cast right now.

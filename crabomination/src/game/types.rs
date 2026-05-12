@@ -401,6 +401,17 @@ pub enum StackItem {
         /// backwards-compatibility.
         #[serde(default)]
         converged_value: u32,
+        /// The trigger's "source" entity (the just-cast spell, the
+        /// dying creature, etc.) — distinct from `source`, which
+        /// always points to the ability-owner. For
+        /// `EventKind::SpellCast/YourControl` triggers, this carries
+        /// the cast spell's CardId so the resolving trigger can locate
+        /// it (Effect::CopySpell, Selector::CastSpellTarget). For ETB
+        /// triggers, it's the ETBing permanent. Defaults to `None`
+        /// for snapshot back-compat; trigger resolutions then fall
+        /// back to using `source` as `trigger_source`.
+        #[serde(default)]
+        trigger_source: Option<crate::game::effects::EntityRef>,
     },
 }
 

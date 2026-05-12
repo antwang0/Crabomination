@@ -589,6 +589,7 @@ mod tests {
             mode: None,
             x_value: 0,
             converged_value: 0,
+        trigger_source: None,
         });
 
         let snap = GameSnapshot::capture(&g);
@@ -614,6 +615,7 @@ mod tests {
             mode: None,
             x_value: 7,
             converged_value: 0,
+        trigger_source: None,
         });
 
         let json = serde_json::to_string(&g).expect("serialize GameState");

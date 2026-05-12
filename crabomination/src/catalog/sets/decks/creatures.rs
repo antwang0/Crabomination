@@ -264,6 +264,8 @@ pub fn griselbrand() -> CardDefinition {
             sac_cost: false,
             condition: None,
             life_cost: 0,
+            from_graveyard: false,
+            exile_self_cost: false,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -318,6 +320,8 @@ pub fn psychic_frog() -> CardDefinition {
                 sac_cost: false,
                 condition: None,
             life_cost: 0,
+            from_graveyard: false,
+            exile_self_cost: false,
             },
             // "Sacrifice Psychic Frog: Each opponent mills 4 cards."
             ActivatedAbility {
@@ -338,6 +342,8 @@ pub fn psychic_frog() -> CardDefinition {
                 sac_cost: false,
                 condition: None,
             life_cost: 0,
+            from_graveyard: false,
+            exile_self_cost: false,
             },
         ],
         triggered_abilities: vec![],

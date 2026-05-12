@@ -36,22 +36,109 @@ This file tracks two adjacent Strixhaven catalogs:
 Counts reflect the regenerated tables below (audited via
 `scripts/audit_strixhaven2.py` against `catalog::sets::sos`).
 
-- ✅ done: **93** (+5 in push XVI: Geometer's Arthropod, Matterbending
-  Mage, Paradox Surveyor, Embrace the Paradox, Sundering Archaic; STX
-  cards Bayou Groff, Felisa Fang, Body of Research not counted in SOS
-  totals).
-- 🟡 partial: **138** (+5 net in push XVI: Aziza Mage Tower Captain
-  and Zaffai and the Tempests added as body-only stubs; Sundering
-  Archaic kept 🟡 since the Converge ETB exile cap is still
-  approximated; Geometer/Matterbending/Paradox/Embrace promoted out of
-  🟡 to ✅; net = +5 - 4 + 2 + 1 - 1 = depends on accounting; audit
-  reports 138).
-- ⏳ todo: **24** (-2 in push XVI: Aziza, Zaffai promoted to body-only
-  🟡; +0 new ⏳).
+- ✅ done: **100** (+7 in push XVII: Summoned Dromedary, Teacher's Pest,
+  Stone Docent, Eternal Student promoted via the new `from_graveyard`
+  activation field; Aziza Mage Tower Captain + Lumaret's Favor promoted
+  via the new `Effect::CopySpell` primitive; Harsh Annotation promoted
+  via `PlayerRef::OwnerOf(Target(0))` for the token controller).
+- 🟡 partial: **132** (-6 in push XVII: 6 cards promoted to ✅; +0 new
+  🟡; Social Snub added as 🟡 — main effect + cast-time copy wired).
+- ⏳ todo: **23** (-1 in push XVII: Social Snub promoted to 🟡).
 
-All 229 cards marked ✅ or 🟡 have a corresponding factory in
+All 232 cards marked ✅ or 🟡 have a corresponding factory in
 `crabomination/src/catalog/sets/sos/`; the audit script reports 0 false
 positives and 0 stale ⏳ rows.
+
+## 2026-05-12 push XVII: from_graveyard activations + Effect::CopySpell
+
+Three engine primitives + 7 SOS card promotions (5 from 🟡→✅, 1 ⏳→🟡,
+1 trigger-filter-evaluation cleanup). All 1048 lib tests pass (was
+1036; +12 new tests).
+
+Engine improvements:
+
+- **`ActivatedAbility.from_graveyard: bool`** + **`exile_self_cost: bool`** —
+  first-class support for activated abilities whose source is in the
+  controller's graveyard rather than the battlefield. The
+  `activate_ability` engine path now searches the graveyard when the
+  ability is flagged, and `exile_self_cost` exiles the source as part
+  of the cost (mirror to `sac_cost` for battlefield permanents). Both
+  fields are `#[serde(default)]` for snapshot back-compat. Powers SOS
+  Summoned Dromedary's `{1}{W}: return from gy to hand`, Teacher's
+  Pest's `{B}{G}: return from gy to bf tapped`, Stone Docent's `{W},
+  Exile from gy: gain 2 + surveil 1`, and Eternal Student's `{1}{B},
+  Exile from gy: create 2 Inklings`. Closes TODO.md "Activated-Ability
+  `From Your Graveyard` Path".
+
+- **`Effect::CopySpell { what, count }`** — proper implementation
+  (previously a stub). Locates the matching `StackItem::Spell` for the
+  selected target (defaults: `Selector::TriggerSource` for cast-time
+  triggers, `Selector::This` for the cast spell itself, or any
+  selector that resolves to a Card/Permanent CardId), then pushes
+  `count` copies on the stack above the original. Each copy gets a
+  fresh CardId, inherits target/mode/x_value/converged_value, and is
+  flagged `uncounterable: true` (copies can't be countered by spells).
+  The original spell still resolves after the copies. Emits
+  `GameEvent::SpellsCopied { original, count }` per resolution. Powers
+  Aziza Mage Tower Captain's Magecraft-style copy + Lumaret's Favor's
+  Infusion copy + Social Snub's "may copy" rider.
+
+- **`StackItem::Trigger.trigger_source: Option<EntityRef>`** —
+  preserves the trigger's source entity (the just-cast spell for
+  Magecraft, the ETBing permanent for ETB) through stack-based
+  resolution. Previously the trigger_source context was lost when the
+  trigger went on the stack, breaking lookups like
+  `Effect::CopySpell`'s "find the just-cast spell on the stack" path
+  and `Selector::CastSpellTarget`. Now propagated end-to-end via the
+  new `continue_trigger_resolution_with_source` helper. Made
+  `EntityRef` `Serialize`/`Deserialize` so it survives snapshots; the
+  field is `#[serde(default)]` for back-compat.
+
+- **`push_on_cast_triggers` filter evaluation** — the SpellCast/
+  SelfSource trigger path now evaluates the trigger's filter
+  (Infusion's `LifeGainedThisTurnAtLeast` for Lumaret's Favor, Social
+  Snub's "you control a creature" check, etc.) at trigger-creation
+  time. Previously the filter was dropped silently — every SelfSource
+  cast trigger fired unconditionally. The fix collects
+  `(Option<Predicate>, Effect)` instead of bare effects, evaluating
+  the predicate in the `EffectContext::for_cast`-shaped ctx where
+  `trigger_source` points to the cast card.
+
+- **Sorcery-speed activation gate** — `ActivatedAbility.sorcery_speed`
+  was declared but never enforced; activations leaked through during
+  opponent turns / non-main steps. Now checked at the top of
+  `activate_ability`, returning `GameError::SorcerySpeedOnly` cleanly.
+  Used by Cauldron of Essence's reanimation, Stone Docent's
+  graveyard-exile, Summoned Dromedary's recursion, and any future
+  activated ability flagged sorcery-speed.
+
+Cards (8 promotions):
+
+| Card | School | Status | Notes |
+|---|---|---|---|
+| Summoned Dromedary | White | ✅ (was 🟡) | {1}{W} sorcery-speed gy-recursion now wired via the new `from_graveyard` field. |
+| Teacher's Pest | Witherbloom | ✅ (was 🟡) | {B}{G} gy-recursion to bf tapped wired via the new `from_graveyard` field. |
+| Stone Docent | White | ✅ (was 🟡) | {W} sorcery-speed exile-from-gy: gain 2 + surveil 1. Uses `from_graveyard` + `exile_self_cost`. |
+| Eternal Student | Black | ✅ (was 🟡) | {1}{B} exile-from-gy: create 2 Inklings. Uses `from_graveyard` + `exile_self_cost`. |
+| Aziza, Mage Tower Captain | Lorehold | ✅ (was 🟡) | Magecraft "may tap 3 to copy" now wired via `Effect::MayDo` + `Effect::Tap(take 3)` + `Effect::CopySpell { what: TriggerSource }`. |
+| Lumaret's Favor | Green | ✅ (was 🟡) | Infusion copy now wired via `Effect::CopySpell { what: Self }` gated on `LifeGainedThisTurnAtLeast(1)`. |
+| Social Snub | Silverquill | 🟡 (was ⏳) | Cast-time copy rider + main "each player sacs + drain" wired. The "you control a creature" filter uses `Predicate::SelectorExists(EachPermanent(Creature & ControlledByYou))`. |
+| Harsh Annotation | White | ✅ (was 🟡) | Inkling token now goes to the target creature's owner via `PlayerRef::OwnerOf(Target(0))` (previously created under the caster). |
+
+Tests in `tests::sos::*`:
+
+- `summoned_dromedary_returns_from_graveyard_to_hand`
+- `summoned_dromedary_activation_rejected_during_opponent_priority`
+- `teachers_pest_returns_from_graveyard_to_battlefield_tapped`
+- `stone_docent_exiles_self_and_gains_life`
+- `eternal_student_exiles_self_and_creates_two_inklings`
+- `stone_docent_rejected_at_instant_speed`
+- `aziza_copies_instant_via_magecraft_when_decider_agrees`
+- `aziza_skips_copy_when_decider_declines`
+- `lumarets_favor_infusion_copies_when_life_gained_this_turn`
+- `lumarets_favor_infusion_does_not_copy_without_lifegain`
+- `social_snub_copies_when_caster_controls_a_creature_and_decider_agrees`
+- `social_snub_does_not_copy_without_a_creature`
 
 ## 2026-05-01 push XVI: CastSpellHasX + MayPay + HasXInCost + LibrarySizeOf
 
@@ -784,7 +871,7 @@ None of these are wired today; all prepare cards are ⏳ until at least
 | Erode | {W} | Instant |  | Destroy target creature or planeswalker. Its controller may search their library for a basic land card, put it onto the battlefield tapped, then shuffle. | ✅ | Push XV: now fully wired. Destroy + `Search { who: ControllerOf(Target), filter: IsBasicLand, to: Battlefield(ControllerOf(Target), tapped) }`. The "may" optionality is collapsed to always-search (decline path covered by `Effect::Search`'s decider returning `Search(None)`). |
 | Graduation Day | {W} | Enchantment |  | Repartee — Whenever you cast an instant or sorcery spell that targets a creature, put a +1/+1 counter on target creature you control. | ✅ | Wired in `catalog::sets::sos::enchantments` via `repartee()` shortcut + `target_filtered(Creature & ControlledByYou)` AddCounter. |
 | Group Project | {1}{W} | Sorcery |  | Create a 2/2 red and white Spirit creature token. / Flashback—Tap three untapped creatures you control. (You may cast this card from your graveyard for its flashback cost. Then exile it.) | 🟡 | Mainline 2/2 R/W Spirit token wired (new `spirit_token()` helper); Flashback "tap three" cost omitted. |
-| Harsh Annotation | {1}{W} | Instant |  | Destroy target creature. Its controller creates a 1/1 white and black Inkling creature token with flying. | 🟡 | Destroy + Inkling token wired; token created under caster (zone-stable controller lookup not available). |
+| Harsh Annotation | {1}{W} | Instant |  | Destroy target creature. Its controller creates a 1/1 white and black Inkling creature token with flying. | ✅ | Push XVII: token now goes to the target creature's owner via `PlayerRef::OwnerOf(Target(0))`. `place_card_in_dest` resolves the player against cast-time ctx (the target id stays valid through `find_card_owner`'s zone walk after the destroy step). |
 | Honorbound Page // Forum's Favor | {3}{W} // {W} | Creature — Cat Cleric // Sorcery | 3/3 |  | 🟡 | Wired in `catalog::sets::sos::mdfcs` (push XI/XII): vanilla front + back-face spell via the new `GameAction::CastSpellBack` path. Original ⏳ note: Standard primitives — should be straightforward to wire.|
 | Informed Inkwright | {1}{W} | Creature — Human Wizard | 2/2 | Vigilance / Repartee — Whenever you cast an instant or sorcery spell that targets a creature, create a 1/1 white and black Inkling creature token with flying. | ✅ | Vigilance body + Repartee Inkling token wired via `repartee()` + `inkling_token()`. |
 | Inkshape Demonstrator | {3}{W} | Creature — Elephant Cleric | 3/4 | Ward {2} (Whenever this creature becomes the target of a spell or ability an opponent controls, counter it unless that player pays {2}.) / Repartee — Whenever you cast an instant or sorcery spell that targets a creature, this creature gets +1/+0 and gains lifelink until end of turn. | 🟡 | Body + `Keyword::Ward(2)` wired in `catalog::sets::sos::creatures` (Ward keyword tagged for future enforcement; not yet a counter-the-spell trigger). Repartee body wired faithfully via the `repartee()` shortcut: pump +1/+0 on the source + grant Lifelink (EOT). |
@@ -802,8 +889,8 @@ None of these are wired today; all prepare cards are ⏳ until at least
 | Spiritcall Enthusiast // Scrollboost | {2}{W} // {1}{W} | Creature — Cat Cleric // Sorcery | 3/3 |  | 🟡 | Wired in `catalog::sets::sos::mdfcs` (push XI/XII): vanilla front + back-face spell via the new `GameAction::CastSpellBack` path. Original ⏳ note: Standard primitives — should be straightforward to wire.|
 | Stand Up for Yourself | {2}{W} | Instant |  | Destroy target creature with power 3 or greater. | ✅ | Wired in `catalog::sets::sos::instants`. |
 | Stirring Hopesinger | {2}{W} | Creature — Bird Bard | 1/3 | Flying, lifelink / Repartee — Whenever you cast an instant or sorcery spell that targets a creature, put a +1/+1 counter on each creature you control. | ✅ | Flying/lifelink body + Repartee fan-out via `ForEach(Creature & ControlledByYou) → AddCounter`. |
-| Stone Docent | {1}{W} | Creature — Spirit Chimera | 3/1 | {W}, Exile this card from your graveyard: You gain 2 life. Surveil 1. Activate only as a sorcery. (Look at the top card of your library. You may put it into your graveyard.) | 🟡 | Body-only wire (3/1 Spirit). Graveyard-exile activated ability omitted (engine activated-ability walker only iterates the battlefield — same gap as Eternal Student, Summoned Dromedary). |
-| Summoned Dromedary | {3}{W} | Creature — Spirit Camel | 4/3 | Vigilance / {1}{W}: Return this card from your graveyard to your hand. Activate only as a sorcery. | 🟡 | Vigilant 4/3 body wired; the graveyard-recursion activated ability is omitted (engine activated-ability path only walks the battlefield). |
+| Stone Docent | {1}{W} | Creature — Spirit Chimera | 3/1 | {W}, Exile this card from your graveyard: You gain 2 life. Surveil 1. Activate only as a sorcery. (Look at the top card of your library. You may put it into your graveyard.) | ✅ | Push XVII: graveyard-exile activation wired via the new `ActivatedAbility.from_graveyard: bool` + `exile_self_cost: bool` fields. The `activate_ability` engine path now walks the graveyard for `from_graveyard` abilities and exiles the source as part of the cost (mirror to `sac_cost` for battlefield activations). Sorcery-speed gate also now enforced. |
+| Summoned Dromedary | {3}{W} | Creature — Spirit Camel | 4/3 | Vigilance / {1}{W}: Return this card from your graveyard to your hand. Activate only as a sorcery. | ✅ | Push XVII: graveyard-recursion activation wired via the new `from_graveyard: bool` field. Cost `{1}{W}` + sorcery-speed + effect `Move(Self → Hand(You))`. |
 
 ## Blue
 
@@ -856,7 +943,7 @@ None of these are wired today; all prepare cards are ⏳ until at least
 | Dissection Practice | {B} | Instant |  | Target opponent loses 1 life and you gain 1 life. / Up to one target creature gets +1/+1 until end of turn. / Up to one target creature gets -1/-1 until end of turn. | 🟡 | Wired in `catalog::sets::sos::instants` — drain 1 + creature target gets -1/-1 EOT. The optional creature +1/+1 mode is dropped (multi-target gap). |
 | Emeritus of Woe // Demonic Tutor | {3}{B} // {1}{B} | Creature — Vampire Warlock // Sorcery | 5/4 |  | 🟡 | Wired in `catalog::sets::sos::mdfcs` (push XI/XII): vanilla front + back-face spell via the new `GameAction::CastSpellBack` path. Original ⏳ note: Standard primitives — should be straightforward to wire.|
 | End of the Hunt | {1}{B} | Sorcery |  | Target opponent exiles a creature or planeswalker they control with the greatest mana value among creatures and planeswalkers they control. | 🟡 | Wired in `catalog::sets::sos::sorceries` as a single-target Exile against `Creature ∨ Planeswalker & ControlledByOpponent`. The "greatest mana value" picker isn't enforced (auto-target picks first eligible). |
-| Eternal Student | {3}{B} | Creature — Zombie Warlock | 4/2 | {1}{B}, Exile this card from your graveyard: Create two 1/1 white and black Inkling creature tokens with flying. | 🟡 | Vanilla 4/2 body wired in `catalog::sets::sos::creatures`. Graveyard-exile activated ability omitted (engine activated-ability path only walks the battlefield). |
+| Eternal Student | {3}{B} | Creature — Zombie Warlock | 4/2 | {1}{B}, Exile this card from your graveyard: Create two 1/1 white and black Inkling creature tokens with flying. | ✅ | Push XVII: graveyard-exile activation wired via the new `from_graveyard: bool` + `exile_self_cost: bool` fields. Cost `{1}{B}` + exile-self-as-cost + effect creates 2 Inkling tokens. |
 | Foolish Fate | {2}{B} | Instant |  | Destroy target creature. / Infusion — If you gained life this turn, that creature's controller loses 3 life. | ✅ | Wired with the new `Predicate::LifeGainedThisTurnAtLeast` Infusion gate. |
 | Forum Necroscribe | {5}{B} | Creature — Troll Warlock | 5/4 | Ward—Discard a card. / Repartee — Whenever you cast an instant or sorcery spell that targets a creature, return target creature card from your graveyard to the battlefield. | 🟡 | Wired in `catalog::sets::sos::creatures` (5/4 Troll Warlock body + Repartee gy-creature-recursion via the `repartee()` shortcut chained with `Effect::Move(target Creature → Battlefield(You))`). Ward—Discard a card omitted (no Ward keyword primitive yet — tracked in TODO.md). |
 | Grave Researcher // Reanimate | {2}{B} // {B} | Creature — Troll Warlock // Sorcery | 3/3 |  | ⏳ | Needs: Surveil keyword primitive. |
@@ -934,7 +1021,7 @@ None of these are wired today; all prepare cards are ⏳ until at least
 | Glorious Decay | {1}{G} | Instant |  | Choose one — / • Destroy target artifact. / • Glorious Decay deals 4 damage to target creature with flying. / • Exile target card from a graveyard. Draw a card. | ✅ | Wired in `catalog::sets::sos::instants`. |
 | Hungry Graffalon | {3}{G} | Creature — Giraffe | 3/4 | Reach / Increment (Whenever you cast a spell, if the amount of mana you spent is greater than this creature's power or toughness, put a +1/+1 counter on this creature.) | 🟡 | 3/4 Reach body wired with the new `Giraffe` creature subtype. Increment rider omitted (mana-spent introspection). |
 | Infirmary Healer // Stream of Life | {1}{G} // {X}{G} | Creature — Cat Cleric // Sorcery | 2/3 |  | 🟡 | Wired in `catalog::sets::sos::mdfcs` (push XI/XII): vanilla front + back-face spell via the new `GameAction::CastSpellBack` path. Original ⏳ note: Standard primitives — should be straightforward to wire.|
-| Lumaret's Favor | {1}{G} | Instant |  | Infusion — When you cast this spell, copy it if you gained life this turn. You may choose new targets for the copy. / Target creature gets +2/+4 until end of turn. | 🟡 | Mainline +2/+4 EOT pump wired faithfully against a single creature target in `catalog::sets::sos::instants`. Infusion copy half is omitted (no copy-spell primitive). |
+| Lumaret's Favor | {1}{G} | Instant |  | Infusion — When you cast this spell, copy it if you gained life this turn. You may choose new targets for the copy. / Target creature gets +2/+4 until end of turn. | ✅ | Push XVII: Infusion copy now wired via the new `Effect::CopySpell` primitive. The SelfSource cast trigger is gated by `Predicate::LifeGainedThisTurnAtLeast(You, 1)` — when you gained life this turn, the trigger fires and copies the spell. The trigger's filter is evaluated at trigger-creation time (cast-time), matching MTG's "intervening if" wording. |
 | Mindful Biomancer | {1}{G} | Creature — Dryad Druid | 2/2 | When this creature enters, you gain 1 life. / {2}{G}: This creature gets +2/+2 until end of turn. Activate only once each turn. | ✅ | Wired in `catalog::sets::sos::creatures`; once-per-turn enforced engine-side. |
 | Noxious Newt | {1}{G} | Creature — Salamander | 1/2 | Deathtouch / {T}: Add {G}. | ✅ | Wired in `catalog::sets::sos::creatures`. Now uses the new `Salamander` creature subtype. |
 | Oracle's Restoration | {G} | Sorcery |  | Target creature you control gets +1/+1 until end of turn. You draw a card and gain 1 life. | ✅ | Wired in `catalog::sets::sos::sorceries`. |
@@ -990,7 +1077,7 @@ None of these are wired today; all prepare cards are ⏳ until at least
 | Pest Mascot | {1}{B}{G} | Creature — Pest Ape | 2/3 | Trample / Whenever you gain life, put a +1/+1 counter on this creature. | ✅ | Wired in `catalog::sets::sos::creatures`. |
 | Professor Dellian Fel | {2}{B}{G} | Legendary Planeswalker — Dellian | [5] | +2: You gain 3 life. / 0: You draw a card and lose 1 life. / −3: Destroy target creature. / −6: You get an emblem with "Whenever you gain life, target opponent loses that much life." | 🟡 | New `PlaneswalkerSubtype::Dellian` + 5 base loyalty. +2 (gain 3 life), 0 (draw 1 / lose 1 life), -3 (destroy target creature) all wired faithfully. The -6 emblem ult is omitted (no emblem zone yet). |
 | Root Manipulation | {3}{B}{G} | Sorcery |  | Until end of turn, creatures you control get +2/+2 and gain menace and "Whenever this creature attacks, you gain 1 life." (A creature with menace can't be blocked except by two or more creatures.) | 🟡 | `ForEach(Creature & ControlledByYou) → PumpPT(+2/+2 EOT) + GrantKeyword(Menace EOT)`. The "whenever this creature attacks → gain 1 life" rider is omitted (no transient-trigger-grant primitive yet). |
-| Teacher's Pest | {B}{G} | Creature — Skeleton Pest | 1/1 | Menace (This creature can't be blocked except by two or more creatures.) / Whenever this creature attacks, you gain 1 life. / {B}{G}: Return this card from your graveyard to the battlefield tapped. | 🟡 | Menace + attacks-gain-1 trigger wired; graveyard-recursion activated ability omitted. |
+| Teacher's Pest | {B}{G} | Creature — Skeleton Pest | 1/1 | Menace (This creature can't be blocked except by two or more creatures.) / Whenever this creature attacks, you gain 1 life. / {B}{G}: Return this card from your graveyard to the battlefield tapped. | ✅ | Push XVII: graveyard-recursion activation wired via the new `from_graveyard: bool` field. Menace + attacks-gain-1 trigger unchanged. Cost `{B}{G}` + effect `Move(Self → Battlefield(You, tapped))`. |
 | Titan's Grave |  | Land |  | This land enters tapped. / {T}: Add {B} or {G}. / {2}{B}{G}, {T}: Surveil 1. (Look at the top card of your library. You may put it into your graveyard.) | ✅ | Wired in `catalog::sets::sos::lands`. |
 | Vicious Rivalry | {2}{B}{G} | Sorcery |  | As an additional cost to cast this spell, pay X life. / Destroy all artifacts and creatures with mana value X or less. | ✅ | Wired in `catalog::sets::sos::sorceries` — `LoseLife X` (approximating the additional cost) + `ForEach(Creature ∨ Artifact).If(ManaValueOf ≤ X) → Destroy`. |
 | Witherbloom Charm | {B}{G} | Instant |  | Choose one — / • You may sacrifice a permanent. If you do, draw two cards. / • You gain 5 life. / • Destroy target nonland permanent with mana value 2 or less. | 🟡 | Push XV: mode 0 (sacrifice → draw 2) now wrapped in `Effect::MayDo` — picking mode 0 then declining the sac-prompt keeps everything else stable. Mode 1 (gain 5) and mode 2 (destroy mv≤2) unchanged. |
@@ -1014,7 +1101,7 @@ None of these are wired today; all prepare cards are ⏳ until at least
 | Silverquill Charm | {W}{B} | Instant |  | Choose one — / • Put two +1/+1 counters on target creature. / • Exile target creature with power 2 or less. / • Each opponent loses 3 life and you gain 3 life. | ✅ | Wired in `catalog::sets::sos::instants`. |
 | Silverquill, the Disputant | {2}{W}{B} | Legendary Creature — Elder Dragon | 4/4 | Flying, vigilance / Each instant and sorcery spell you cast has casualty 1. (As you cast that spell, you may sacrifice a creature with power 1 or greater. When you do, copy the spell and you may choose new targets for the copy.) | ⏳ | 🔍 needs review (oracle previously truncated). Needs: copy-spell/permanent primitive. |
 | Snooping Page | {1}{W}{B} | Creature — Human Cleric | 2/3 | Repartee — Whenever you cast an instant or sorcery spell that targets a creature, this creature can't be blocked this turn. / Whenever this creature deals combat damage to a player, you draw a card and lose 1 life. | ✅ | Repartee grants `Keyword::Unblockable` (EOT) on the source; combat-damage trigger wired (draw + lose 1). |
-| Social Snub | {1}{W}{B} | Sorcery |  | When you cast this spell while you control a creature, you may copy this spell. / Each player sacrifices a creature of their choice. Each opponent loses 1 life and you gain 1 life. | ⏳ | Needs: copy-spell/permanent primitive. |
+| Social Snub | {1}{W}{B} | Sorcery |  | When you cast this spell while you control a creature, you may copy this spell. / Each player sacrifices a creature of their choice. Each opponent loses 1 life and you gain 1 life. | 🟡 | Push XVII: cast-IS-while-you-control-a-creature copy now wired via the new `Effect::CopySpell` primitive. Trigger filter uses `Predicate::SelectorExists(EachPermanent(Creature & ControlledByYou))`. Main effect: each-player-sac + drain 1. The "of their choice" sac picker is collapsed to auto-pick (each player's auto-decider selects). |
 | Stirring Honormancer | {2}{W}{W/B}{B} | Creature — Rhino Bard | 4/5 | When this creature enters, look at the top X cards of your library, where X is the number of creatures you control. Put one of those cards into your hand and the rest into your graveyard. | ✅ | Wired in `catalog::sets::sos::creatures` via `Effect::RevealUntilFind` (find: Creature, cap: count of creatures you control, misses go to graveyard). The hybrid `{W/B}` pip is approximated as `{W}` so cost is `{2}{W}{W}{B}`. |
 
 ## Quandrix (Green-Blue)
@@ -1043,7 +1130,7 @@ None of these are wired today; all prepare cards are ⏳ until at least
 | Card | Mana Cost | Type | P/T | Oracle Text | Status | Notes |
 |---|---|---|---|---|---|---|
 | Ark of Hunger | {2}{R}{W} | Artifact |  | Whenever one or more cards leave your graveyard, this artifact deals 1 damage to each opponent and you gain 1 life. / {T}: Mill a card. You may play that card this turn. | 🟡 | Wired against the `EventKind::CardLeftGraveyard` event — drain 1 (1 to each opp + you gain 1) per gy-leave emission. The {T}: Mill activation is wired faithfully; the "may play that card this turn" rider is omitted (same gap as Tablet of Discovery, Suspend Aggression). |
-| Aziza, Mage Tower Captain | {R}{W} | Legendary Creature — Djinn Sorcerer | 2/2 | Whenever you cast an instant or sorcery spell, you may tap three untapped creatures you control. If you do, copy that spell. You may choose new targets for the copy. | 🟡 | Push XVI: body-only wire (2/2 Legendary Djinn Sorcerer). The cast-IS-then-tap-3-to-copy rider is omitted (no copy-spell primitive yet — same gap as Mica, Silverquill the Disputant, Choreographed Sparks). |
+| Aziza, Mage Tower Captain | {R}{W} | Legendary Creature — Djinn Sorcerer | 2/2 | Whenever you cast an instant or sorcery spell, you may tap three untapped creatures you control. If you do, copy that spell. You may choose new targets for the copy. | ✅ | Push XVII: cast-IS copy rider now wired via the new `Effect::CopySpell` primitive. The "may tap three" cost uses `Effect::MayDo` (yes/no decision) + `Effect::Tap` with `Selector::Take(Untapped Creatures, 3)` + `Effect::CopySpell { what: Selector::TriggerSource }`. The picker may include Aziza herself in the tap-three pool. |
 | Borrowed Knowledge | {2}{R}{W} | Sorcery |  | Choose one — / • Discard your hand, then draw cards equal to the number of cards in target opponent's hand. / • Discard your hand, then draw cards equal to the number of cards discarded this way. | 🟡 | Mode 0 wired faithfully (discard hand → draw target opp's hand size). Mode 1 collapsed to "discard hand → draw 7" — engine has no track-discarded-by-this-effect primitive yet. |
 | Colossus of the Blood Age | {4}{R}{W} | Artifact Creature — Construct | 6/6 | When this creature enters, it deals 3 damage to each opponent and you gain 3 life. / When this creature dies, discard any number of cards, then draw that many cards plus one. | 🟡 | ETB drain wired (3-to-each-opp + gain 3). Death "discard any number, draw that many plus one" collapsed to discard 1 + draw 2 (no track-discarded-by-this-effect primitive). |
 | Fields of Strife |  | Land |  | This land enters tapped. / {T}: Add {R} or {W}. / {2}{R}{W}, {T}: Surveil 1. (Look at the top card of your library. You may put it into your graveyard.) | ✅ | Wired in `catalog::sets::sos::lands`. |

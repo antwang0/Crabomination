@@ -296,6 +296,15 @@ fn ability_cost_label(ability: &crate::effect::ActivatedAbility) -> String {
     if ability.life_cost > 0 {
         parts.push(format!("Pay {} life", ability.life_cost));
     }
+    // Graveyard-source activations (push XVII): "Exile this from gy"
+    // covers the exile-self-as-cost variant (Stone Docent, Eternal
+    // Student). Plain `from_graveyard: true` without exile_self_cost
+    // (Summoned Dromedary, Teacher's Pest) is rendered through the
+    // effect label — the source's return-to-hand or return-to-bf
+    // effect already signals "from gy".
+    if ability.exile_self_cost {
+        parts.push("Exile this from gy".into());
+    }
     if parts.is_empty() { "0".into() } else { parts.join(", ") }
 }
 
@@ -503,6 +512,7 @@ mod tests {
             mode: None,
             x_value: 0,
             converged_value: 0,
+        trigger_source: None,
         });
         let v = project(&g, 0);
         assert_eq!(v.stack.len(), 2);
@@ -606,6 +616,8 @@ mod tests {
             sac_cost: false,
             condition: None,
             life_cost: 0,
+            from_graveyard: false,
+            exile_self_cost: false,
         };
         let label = ability_cost_label(&ab);
         assert!(label.contains("{W}"), "{label} should contain {{W}}");
@@ -625,6 +637,8 @@ mod tests {
             sac_cost: false,
             condition: None,
             life_cost: 0,
+            from_graveyard: false,
+            exile_self_cost: false,
         };
         assert_eq!(ability_cost_label(&ab_x), "{X}",
             "X-cost ability renders as {{X}}");
@@ -648,6 +662,8 @@ mod tests {
             sac_cost: true,
             condition: None,
             life_cost: 0,
+            from_graveyard: false,
+            exile_self_cost: false,
         };
         let label = ability_cost_label(&ab);
         assert!(label.contains("{1}"), "{label} must include the {{1}} cost");
@@ -665,6 +681,8 @@ mod tests {
             sac_cost: true,
             condition: None,
             life_cost: 0,
+            from_graveyard: false,
+            exile_self_cost: false,
         };
         let label = ability_cost_label(&petal);
         assert!(label.contains("{T}") && label.contains("Sac"),

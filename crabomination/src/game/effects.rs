@@ -99,7 +99,7 @@ impl EffectContext {
 
 /// A resolved reference to something in the game (used internally for selector
 /// resolution and `ForEach` iteration).
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum EntityRef {
     Player(usize),
     Permanent(CardId),
@@ -1261,9 +1261,106 @@ impl GameState {
             }
 
             Effect::BecomeBasicLand { .. }
-            | Effect::ResetCreature { .. }
-            | Effect::CopySpell { .. } => {
+            | Effect::ResetCreature { .. } => {
                 // TODO: implement via layer/stack mechanics.
+                Ok(())
+            }
+
+            Effect::CopySpell { what, count } => {
+                // Resolve which spell to copy. We support two main patterns:
+                // 1. `Selector::TriggerSource` — the spell that fired this
+                //    trigger (Magecraft / Storm / Aziza-style "whenever you
+                //    cast X, copy that spell"). The trigger_source carries
+                //    the cast spell's CardId.
+                // 2. `Selector::Target(n)` / `CastSpellTarget(n)` — a
+                //    specifically-targeted spell on the stack
+                //    (Reverberate / Twincast / Choreographed Sparks).
+                //
+                // For each, we locate the matching `StackItem::Spell` and
+                // clone it `count` times with a fresh CardId per copy. The
+                // copies inherit the original's target / mode / x_value /
+                // converged_value. Auto-retargeting for friendly-fire
+                // (choose new targets for the copy) is left to the
+                // existing auto_target_for_effect picker, which runs at
+                // resolution time. The original spell still resolves
+                // afterward — copies always end up above it on the stack.
+                let n = self.evaluate_value(count, ctx).max(0) as usize;
+                if n == 0 {
+                    return Ok(());
+                }
+                // Find candidate stack indices to copy.
+                let candidate_ids: Vec<CardId> = match what {
+                    Selector::TriggerSource => ctx
+                        .trigger_source
+                        .into_iter()
+                        .filter_map(|e| match e {
+                            EntityRef::Permanent(c) | EntityRef::Card(c) => Some(c),
+                            _ => None,
+                        })
+                        .collect(),
+                    Selector::This => ctx.source.into_iter().collect(),
+                    _ => self
+                        .resolve_selector(what, ctx)
+                        .into_iter()
+                        .filter_map(|e| match e {
+                            EntityRef::Permanent(c) | EntityRef::Card(c) => Some(c),
+                            _ => None,
+                        })
+                        .collect(),
+                };
+                for cid in candidate_ids {
+                    // Locate the matching Spell on the stack (topmost wins).
+                    let stack_idx = self.stack.iter().rposition(|s| {
+                        matches!(s, crate::game::types::StackItem::Spell { card, .. }
+                            if card.id == cid)
+                    });
+                    let Some(idx) = stack_idx else { continue; };
+                    // Skip if the spell is flagged uncounterable AND we are
+                    // copying via an effect that says "this spell can't be
+                    // copied". Today we don't carry a per-spell "can't be
+                    // copied" flag; this branch is left for future
+                    // refinement.
+                    // Snapshot the spell, then push `n` copies above it.
+                    let (orig_card_def, caster, target, mode, x_value, converged_value)
+                        = if let crate::game::types::StackItem::Spell {
+                            card, caster, target, mode, x_value, converged_value, ..
+                        } = &self.stack[idx] {
+                            (
+                                card.definition.clone(),
+                                *caster,
+                                target.clone(),
+                                *mode,
+                                *x_value,
+                                *converged_value,
+                            )
+                        } else {
+                            continue;
+                        };
+                    for _ in 0..n {
+                        let new_id = self.next_id();
+                        let mut copy_inst =
+                            crate::card::CardInstance::new(new_id, orig_card_def.clone(), caster);
+                        // Mark as token so CR 707.10a applies: a copy of a
+                        // spell ceases to exist in any zone other than the
+                        // stack. Token-cleanup SBAs handle the removal when
+                        // the resolved copy lands in graveyard / hand /
+                        // library after resolution.
+                        copy_inst.is_token = true;
+                        self.stack.push(crate::game::types::StackItem::Spell {
+                            card: Box::new(copy_inst),
+                            caster,
+                            target: target.clone(),
+                            mode,
+                            x_value,
+                            converged_value,
+                            uncounterable: true, // copies can't be countered
+                        });
+                    }
+                    events.push(GameEvent::SpellsCopied {
+                        original: cid,
+                        count: n as u32,
+                    });
+                }
                 Ok(())
             }
 
@@ -2512,6 +2609,8 @@ pub fn food_token() -> TokenDefinition {
             sac_cost: true,
             condition: None,
             life_cost: 0,
+            from_graveyard: false,
+            exile_self_cost: false,
         }],
         triggered_abilities: vec![],
     }
@@ -2544,6 +2643,8 @@ pub fn treasure_token() -> TokenDefinition {
             sac_cost: true,
             condition: None,
             life_cost: 0,
+            from_graveyard: false,
+            exile_self_cost: false,
         }],
         triggered_abilities: vec![],
     }
@@ -2588,6 +2689,8 @@ pub fn blood_token() -> TokenDefinition {
             sac_cost: true,
             condition: None,
             life_cost: 0,
+            from_graveyard: false,
+            exile_self_cost: false,
         }],
         triggered_abilities: vec![],
     }
@@ -2622,6 +2725,8 @@ pub fn clue_token() -> TokenDefinition {
             sac_cost: true,
             condition: None,
             life_cost: 0,
+            from_graveyard: false,
+            exile_self_cost: false,
         }],
         triggered_abilities: vec![],
     }

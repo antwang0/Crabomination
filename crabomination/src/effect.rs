@@ -1393,6 +1393,33 @@ pub struct ActivatedAbility {
     /// initialisations pick up the new field automatically.
     #[serde(default)]
     pub life_cost: u32,
+    /// True if this ability is activated from the controller's graveyard
+    /// rather than the battlefield. The activation walker searches the
+    /// graveyard for the source instead of the battlefield. Used by
+    /// SOS cards with `{cost}: do X` activated abilities that read like
+    /// "Activate only from your graveyard." — Summoned Dromedary's
+    /// `{1}{W}: return this from gy to hand. sorcery.`, Teacher's Pest's
+    /// `{B}{G}: return this from gy to bf tapped.`, Stone Docent (with
+    /// `exile_self_cost`), Eternal Student (with `exile_self_cost`),
+    /// and Postmortem Professor (with `exile_self_cost` toggled
+    /// separately for the "exile an IS from gy" portion not handled
+    /// here — the source itself is in gy).
+    ///
+    /// Defaults to false via `#[serde(default)]` so all existing
+    /// literal initializations pick up the new field automatically.
+    #[serde(default)]
+    pub from_graveyard: bool,
+    /// True if activating this ability exiles the source as part of
+    /// its cost. Used together with `from_graveyard: true` for cards
+    /// whose printed cost line reads "Exile this card from your
+    /// graveyard: …" (Stone Docent, Eternal Student). The exile
+    /// happens after tap (n/a from gy) + mana + life payments succeed
+    /// but **before** the effect resolves, mirroring `sac_cost`'s
+    /// timing.
+    ///
+    /// Defaults to false via `#[serde(default)]`.
+    #[serde(default)]
+    pub exile_self_cost: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

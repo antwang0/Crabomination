@@ -764,6 +764,7 @@ impl GameState {
                 mode: None,
                 x_value: 0,
                 converged_value: 0,
+            trigger_source: None,
             });
         }
     }
@@ -850,6 +851,7 @@ impl GameState {
             mode: None,
             x_value: 0,
             converged_value: 0,
+        trigger_source: None,
         });
         self.give_priority_to_active();
 
@@ -1374,6 +1376,7 @@ impl GameState {
     }
 
     /// Resolve a triggered ability's effect tree.
+    #[allow(clippy::too_many_arguments)]
     pub(crate) fn continue_trigger_resolution(
         &mut self,
         source: CardId,
@@ -1383,6 +1386,30 @@ impl GameState {
         mode: usize,
         x_value: u32,
         converged_value: u32,
+    ) -> Result<Vec<GameEvent>, GameError> {
+        self.continue_trigger_resolution_with_source(
+            source, controller, effect, target, mode, x_value, converged_value, None,
+        )
+    }
+
+    /// Variant of `continue_trigger_resolution` that carries the
+    /// trigger's "source entity" (the just-cast spell, the dying
+    /// creature, etc.) into `ctx.trigger_source`. Used by spell-cast
+    /// triggers whose body looks up the cast spell on the stack
+    /// (e.g. Aziza's Magecraft copy, Conciliator's Duelist's Repartee
+    /// exile-target). When `trigger_source_ent` is `None`, falls back
+    /// to the legacy behavior (trigger_source = source permanent).
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) fn continue_trigger_resolution_with_source(
+        &mut self,
+        source: CardId,
+        controller: usize,
+        effect: crate::effect::Effect,
+        target: Option<Target>,
+        mode: usize,
+        x_value: u32,
+        converged_value: u32,
+        trigger_source_ent: Option<crate::game::effects::EntityRef>,
     ) -> Result<Vec<GameEvent>, GameError> {
         // If the trigger has a stored target that's no longer legal (e.g.
         // an Elesh-Norn-doubled Solitude ETB whose first target was just
@@ -1400,6 +1427,9 @@ impl GameState {
             EffectContext::for_trigger(source, controller, resolved_target.clone(), mode);
         ctx.x_value = x_value;
         ctx.converged_value = converged_value;
+        if let Some(ts) = trigger_source_ent {
+            ctx.trigger_source = Some(ts);
+        }
         let events = self.resolve_effect(&effect, &ctx)?;
         if let Some((decision, in_progress, remaining)) = self.suspend_signal.take() {
             self.pending_decision = Some(PendingDecision {

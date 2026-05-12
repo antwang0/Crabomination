@@ -83,12 +83,19 @@ pub fn harsh_annotation() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![],
+        // Push XVII: the Inkling token now goes to the *target
+        // creature's owner* (typically the opponent whose creature
+        // we just destroyed). Uses `PlayerRef::OwnerOf(Target(0))`
+        // — `place_card_in_dest` resolves this against the cast-time
+        // ctx where Target(0) still resolves correctly, walking
+        // graveyards if the destroy step has already moved the
+        // card. Closes the doc note about caster-side token approx.
         effect: Effect::Seq(vec![
             Effect::Destroy {
                 what: target_filtered(SelectionRequirement::Creature),
             },
             Effect::CreateToken {
-                who: PlayerRef::You,
+                who: PlayerRef::OwnerOf(Box::new(Selector::Target(0))),
                 count: Value::Const(1),
                 definition: inkling_token(),
             },
@@ -806,10 +813,15 @@ pub fn glorious_decay() -> CardDefinition {
 /// this turn. You may choose new targets for the copy. / Target
 /// creature gets +2/+4 until end of turn."
 ///
-/// Approximation: the Infusion copy half is omitted (no copy-spell
-/// primitive). The mainline +2/+4 EOT pump is wired faithfully against
-/// a single creature target. When/if copy lands the rider drops in.
+/// Push XVII: Infusion copy now wired via the new `Effect::CopySpell`
+/// primitive. The trigger fires on cast (via the standard `SpellCast/
+/// SelfSource` event) and uses `Predicate::LifeGainedThisTurnAtLeast(1)`
+/// as the Infusion gate. When gained-life-this-turn is true, the
+/// just-cast spell is copied via `Selector::This` (the cast spell
+/// itself). New targets for the copy are auto-picked.
 pub fn lumarets_favor() -> CardDefinition {
+    use crate::card::{EventKind, EventScope, EventSpec, Predicate, TriggeredAbility};
+    use crate::effect::PlayerRef;
     use crate::mana::g;
     CardDefinition {
         name: "Lumaret's Favor",
@@ -827,7 +839,21 @@ pub fn lumarets_favor() -> CardDefinition {
             duration: Duration::EndOfTurn,
         },
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
+        // Infusion: SpellCast/SelfSource trigger gated on life-gained.
+        // Copies the cast spell (Selector::This = the just-cast card,
+        // which is the source of this trigger).
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::SelfSource).with_filter(
+                Predicate::LifeGainedThisTurnAtLeast {
+                    who: PlayerRef::You,
+                    at_least: Value::Const(1),
+                },
+            ),
+            effect: Effect::CopySpell {
+                what: Selector::This,
+                count: Value::Const(1),
+            },
+        }],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
