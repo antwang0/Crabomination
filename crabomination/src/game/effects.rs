@@ -894,14 +894,21 @@ impl GameState {
 
             Effect::Sacrifice { who, count, filter } => {
                 let n = self.evaluate_value(count, ctx).max(0) as usize;
+                // The source permanent (if any) — Daemogoth Titan-style
+                // "When this attacks, sacrifice another creature" triggers
+                // bind `ctx.source` to themselves. Prefer NOT picking the
+                // source when other legal candidates exist, so the printed
+                // "another" intent is honored even though the filter
+                // doesn't carry the source exclusion explicitly.
+                let source_id = ctx.source;
                 for ent in self.resolve_selector(who, ctx) {
                     let EntityRef::Player(p) = ent else { continue; };
-                    // Prioritize sacrifice picks: tokens first (free), then
-                    // by lowest mana value, then by lowest power. This is a
-                    // simple AutoDecider heuristic — when forced to
-                    // sacrifice, dump the cheapest/weakest first instead of
-                    // whichever happens to be at the front of the
-                    // battlefield Vec.
+                    // Prioritize sacrifice picks: non-source first
+                    // (deprioritizes self-sacrifice for "another creature"
+                    // semantics), then tokens (free), then by lowest mana
+                    // value, then by lowest power. Simple AutoDecider
+                    // heuristic — when forced to sacrifice, dump the
+                    // cheapest/weakest non-source candidate.
                     let mut candidates: Vec<&CardInstance> = self
                         .battlefield
                         .iter()
@@ -913,7 +920,10 @@ impl GameState {
                         .collect();
                     candidates.sort_by_key(|c| {
                         (
-                            !c.is_token, // false (=0) sorts before true (=1) → tokens first
+                            // Source last (true sorts after false), so any
+                            // non-source candidate is picked first.
+                            Some(c.id) == source_id,
+                            !c.is_token, // false (=0) sorts before true → tokens first
                             c.definition.cost.cmc(),
                             c.power(),
                         )

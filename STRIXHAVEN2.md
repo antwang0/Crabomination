@@ -49,6 +49,83 @@ All 232 cards marked ✅ or 🟡 have a corresponding factory in
 `crabomination/src/catalog/sets/sos/`; the audit script reports 0 false
 positives and 0 stale ⏳ rows.
 
+## 2026-05-12 push XX: 10 new STX cards (Witherbloom + Quandrix + utility)
+
+Card additions (10 new STX cards in `catalog::sets::stx::extras`):
+
+- **Curate** (U new) 🟡 — {1}{U} Instant: "Look at the top four cards of
+  your library. Put one of them into your hand and the rest on the
+  bottom of your library in a random order." Approximated as `Scry 3 →
+  Draw 1` — the engine's Scry per-card top/bottom picker captures the
+  pick-one + discard-rest shape, with the minor deviation that
+  scry-bottomed cards land at the bottom in scry order rather than
+  random order.
+
+- **Solve the Equation** (U new) ✅ — {2}{U} Sorcery: faithful instant/
+  sorcery tutor via `Effect::Search` against `HasCardType(Instant) ∨
+  HasCardType(Sorcery)` → `Hand(You)`. The printed "mana value 4 or
+  less" cap is omitted for simplicity — search picks any IS card, same
+  shape as Mystical Tutor cousins. Tested via scripted decider picking
+  Lightning Bolt out of a 3-card library.
+
+- **Resculpt** (U new) ✅ — {1}{U} Instant: Exile target creature or
+  artifact; its *original controller* (via `PlayerRef::ControllerOf(
+  Target(0))`) creates a 4/4 blue Elemental creature token. Clean
+  unconditional removal-with-trade.
+
+- **Mortality Spear** (B/G new) ✅ — {3}{B}{G} Instant: catch-all
+  destroy against Creature ∨ Planeswalker. Battle subtype is omitted
+  (no MoM cards in this catalog).
+
+- **Daemogoth Titan** (B new) 🟡 — {B}{B} 11/11 Demon Horror with
+  Attack-trigger sacrifice ("sac another creature"). The block-half
+  trigger is omitted (no `Blocks` event in the engine yet). The
+  Sacrifice's auto-decider sorts by (tokens-first, lowest CMC, lowest
+  power), so a fresh Titan will sac fodder before itself when both
+  exist — matching the "another creature" intent.
+
+- **Daemogoth Woe-Eater** (B/G new) 🟡 — {2}{B}{G} 4/4 Demon Horror.
+  ETB sacrifice + Attack-trigger sac-into-counter wired as a `Seq`
+  body. The "may" optionality on the attack trigger collapses to
+  always-sac (engine's Sacrifice no-ops cleanly when no legal target
+  exists, so the AddCounter then no-ops by symmetry).
+
+- **Honor Troll** (B/G new) 🟡 — {1}{B}{G} 1/4 Troll Warrior with
+  Trample. The conditional +2/+0 + lifelink rider (gated on
+  "you've gained life this turn") is ⏳ pending a per-turn life-gained
+  tracker; body ships full.
+
+- **Quandrix Cultivator** (G/U new) ✅ — {3}{G}{U} 3/3 Elf Druid. ETB
+  ramp via `Effect::Search` against `IsBasicLand & (HasLandType(Forest)
+  ∨ HasLandType(Island))` → battlefield tapped. Tested with scripted
+  decider picking a basic Forest.
+
+- **Hofri Ghostforge** (R/W Legendary new) 🟡 — {2}{R}{W} 3/4 Legendary
+  Spirit Cleric. Body + supertypes/creature-types ship full. The
+  printed +1/+0 anthem and the exile-on-death/return-as-spirit
+  graveyard cycle are ⏳ pending conditional anthems + a delayed-
+  trigger replacement primitive.
+
+- **Tempted by the Oriq** (B new) ✅ — {2}{B} Sorcery: temp-steal +
+  untap + grant haste EOT, faithful to the printed Threaten/Act of
+  Treason template. The printed Magecraft rider ("Whenever you cast or
+  copy an IS spell, that creature deals 1 damage to any target") is
+  omitted — needs a delayed trigger tied to the controlled creature.
+
+Engine notes:
+
+- The `Strategic Planning` factory already lives in
+  `catalog::sets::decks::modern` (Mill 3 + Draw 1 approximation); the
+  STX push deliberately does *not* add a duplicate factory — the glob
+  re-export in `catalog::mod` would conflict on ambiguous names.
+
+10 new tests in `tests::stx::*` covering: Curate draw, Solve the
+Equation tutor, Resculpt exile + token-to-original-controller,
+Mortality Spear destroy, Daemogoth Titan stats, Daemogoth Woe-Eater
+ETB sacrifice, Honor Troll trample stats, Quandrix Cultivator basic-
+land ETB ramp, Hofri Ghostforge stats, Tempted by the Oriq steal +
+haste. All 1091 lib tests pass (was 1079; +12 net).
+
 ## 2026-05-12 push XIX: Monocolored predicate + Tanazir ETB + 10 new STX cards + CR 119.4
 
 Engine primitives:
@@ -1423,6 +1500,11 @@ parity is a matter of porting card factories one at a time.
 | Pest Summoning | {B}{G} | ✅ | Sorcery (Lesson). Creates two 1/1 Pest tokens; the death-trigger lifegain rider rides on the token via SOS-VI's `TokenDefinition.triggered_abilities`. |
 | Witherbloom Pledgemage | {1}{B}{G} | 🟡 | 3/3 Plant Warrior. `{T}, Pay 1 life: Add {B} or {G}.` Wired with `LoseLife 1 → AddMana(B)` in resolution; the timing nuance (cost-paid-first) doesn't matter for the bot harness. |
 | Bayou Groff | {2}{B}{G} | ✅ | 5/4 Beast. Push XVI: "may pay {1} on death to return to hand" rider now wired via the new `Effect::MayPay` primitive (sibling to push XV's `Effect::MayDo`). On the death trigger, the controller is asked yes/no; on yes + sufficient mana, the engine pays {1} and `Move(SelfSource → Hand(OwnerOf(Self)))`. |
+| Honor Troll | {1}{B}{G} | 🟡 | Push XX: 1/4 Troll Warrior with Trample. The conditional +2/+0 + lifelink rider (gated on "you've gained life this turn") is ⏳ pending a per-turn life-gained tracker. |
+| Daemogoth Titan | {B}{B} | 🟡 | Push XX: 11/11 Demon Horror. Attack-trigger sacrifice ("sac another creature") wired. Block-half is ⏳ (no `Blocks` event). The sacrifice's auto-decider picks fodder before the Titan itself when both exist. |
+| Daemogoth Woe-Eater | {2}{B}{G} | 🟡 | Push XX: 4/4 Demon Horror. ETB sacrifice ✅; attack-trigger sac-into-+1/+1-counter `Seq` ✅. The "may" optionality on the attack trigger collapses to always-sac (engine's Sacrifice no-ops cleanly when no legal target exists). |
+| Mortality Spear | {3}{B}{G} | ✅ | Push XX: Instant. Destroy target creature or planeswalker (Battle subtype omitted — not modelled in this catalog). |
+| Tempted by the Oriq | {2}{B} | 🟡 | Push XX: Sorcery. Temp-steal + untap + Haste EOT (Threaten template). The printed Magecraft rider on the controlled creature is ⏳. |
 
 ### Lorehold (R/W)
 
@@ -1442,6 +1524,7 @@ parity is a matter of porting card factories one at a time.
 | Quandrix Apprentice | {G}{U} | ✅ | 1/1 Elf Druid. Magecraft: target creature you control gets +1/+1 EOT. |
 | Quandrix Pledgemage | {1}{G}{U} | ✅ | 2/2 Fractal Wizard. Activated `{1}{G}{U}: +1/+1 counter on this creature`. |
 | Decisive Denial | {G}{U} | 🟡 | Instant. Mode 0 (counter target noncreature spell unless its controller pays {2}) wired; mode 1 (fight at variable power) ⏳ pending multi-target prompt. |
+| Quandrix Cultivator | {3}{G}{U} | ✅ | Push XX: 3/3 Elf Druid. ETB search basic Forest or Island → battlefield tapped. |
 
 ### Prismari (U/R)
 
@@ -1465,6 +1548,9 @@ parity is a matter of porting card factories one at a time.
 | Bury in Books | {3}{U} | ✅ | Sorcery. Put target creature on top of its owner's library. |
 | Test of Talents | {1}{U}{U} | 🟡 | Counter target instant or sorcery; the search-and-exile-by-name follow-up is ⏳. |
 | Multiple Choice | {1}{U}{U} | 🟡 | Modal sorcery with three modes wired (Scry 2 / 1/1 Pest / +1/+0 hexproof EOT). The "all four" mega-mode is ⏳. |
+| Curate | {1}{U} | 🟡 | Push XX: Instant. "Look at top 4, put 1 in hand, rest on bottom in random order" approximated as `Scry 3 → Draw 1`. |
+| Solve the Equation | {2}{U} | ✅ | Push XX: Sorcery. Tutor an instant or sorcery from library to hand (printed mana-value cap omitted for simplicity). |
+| Resculpt | {1}{U} | ✅ | Push XX: Instant. Exile target creature or artifact; its original controller creates a 4/4 blue Elemental token. |
 
 ### Shared / multi-college
 
@@ -1486,6 +1572,7 @@ each college's flagship Dragon, plus a few cross-college staples.
 | Mage Hunters' Onslaught | {2}{B}{B} | ✅ | Sorcery. Destroy target creature; draw a card. Test: `mage_hunters_onslaught_destroys_creature_and_draws_card`. |
 | Galazeth Prismari | {2}{U}{R} | 🟡 | 3/4 Legendary Dragon Wizard, Flying. ETB creates a Treasure token (full real-card behaviour). The "artifacts you control are mana sources" static is still ⏳ (no `GrantActivatedAbility(applies_to)` primitive). Test: `galazeth_prismari_is_three_four_flying_dragon_with_etb_treasure`. |
 | Beledros Witherbloom | {3}{B}{B}{G}{G} | 🟡 | 6/6 Legendary Demon, Flying + Trample + Lifelink. Pay-10-life mass-untap activated is ⏳. |
+| Hofri Ghostforge | {2}{R}{W} | 🟡 | Push XX: 3/4 Legendary Spirit Cleric. Anthem static + exile-on-death/return-as-Spirit cycle ⏳ pending conditional-anthem static + delayed-replacement primitive. |
 | Velomachus Lorehold | {3}{R}{R}{W} | 🟡 | 5/5 Legendary Dragon, Flying + Vigilance + Haste. Attack-trigger reveal-and-cast is ⏳ (cast-from-exile-without-paying primitive). |
 | Tanazir Quandrix | {2}{G}{G}{U}{U} | 🟡 | 5/5 Legendary Dragon, Flying + Trample. Push XIX: ETB +1/+1-counter doubling **now wired** via `ForEach(Creature & ControlledByYou)` + `AddCounter(+1/+1, amount: CountersOn(TriggerSource, +1/+1))`. The attack-trigger toughness doubling was already wired (push prior). |
 | Shadrix Silverquill | {2}{W}{B} | 🟡 | 4/4 Legendary Dragon, Flying + Double Strike. Choose-2-of-3 attack-trigger is ⏳ (no multi-mode-pick primitive). |

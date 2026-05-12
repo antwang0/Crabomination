@@ -1538,3 +1538,270 @@ fn spell_satchel_sacrifice_returns_low_cmc_spell_from_graveyard() {
     assert!(g.players[0].graveyard.iter().any(|c| c.id == satchel),
         "Spell Satchel should be sacrificed to graveyard");
 }
+
+// ── Curate ──────────────────────────────────────────────────────────────────
+
+#[test]
+fn curate_draws_after_scry_three() {
+    let mut g = two_player_game();
+    for _ in 0..5 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let id = g.add_card_to_hand(0, catalog::curate());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    let lib_before = g.players[0].library.len();
+    let hand_before = g.players[0].hand.len();
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Curate castable for {1}{U}");
+    drain_stack(&mut g);
+
+    // Hand: -1 (cast) + 1 (draw) = 0 net.
+    assert_eq!(g.players[0].hand.len(), hand_before,
+        "Hand unchanged after cast + draw");
+    // Library: -1 (drew one card).
+    assert_eq!(g.players[0].library.len(), lib_before - 1,
+        "Library should lose one card to draw");
+}
+
+// ── Solve the Equation ──────────────────────────────────────────────────────
+
+#[test]
+fn solve_the_equation_finds_instant_or_sorcery() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    // Seed library with one instant, one creature.
+    g.add_card_to_library(0, catalog::island()); // basic land
+    g.add_card_to_library(0, catalog::grizzly_bears()); // creature
+    let bolt = g.add_card_to_library(0, catalog::lightning_bolt()); // instant
+
+    // Search defaults to None — script the decider to pick Bolt.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(bolt))]));
+
+    let id = g.add_card_to_hand(0, catalog::solve_the_equation());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Solve the Equation castable for {2}{U}");
+    drain_stack(&mut g);
+
+    // Bolt should now be in hand (tutored).
+    assert!(g.players[0].hand.iter().any(|c| c.id == bolt),
+        "Lightning Bolt should be tutored into hand");
+    // Library should no longer contain Bolt.
+    assert!(!g.players[0].library.iter().any(|c| c.id == bolt),
+        "Bolt should have left the library");
+}
+
+// ── Resculpt ────────────────────────────────────────────────────────────────
+
+#[test]
+fn resculpt_exiles_creature_and_mints_elemental_for_controller() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::resculpt());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(bear)),
+        mode: None, x_value: None,
+    })
+    .expect("Resculpt castable for {1}{U}");
+    drain_stack(&mut g);
+
+    // Bear exiled → no longer on battlefield.
+    assert!(!g.battlefield.iter().any(|c| c.id == bear),
+        "Bear should be exiled");
+    assert!(g.exile.iter().any(|c| c.id == bear),
+        "Bear should be in exile");
+    // Opponent (the bear's controller) should now have a 4/4 Elemental.
+    let elemental = g.battlefield.iter()
+        .find(|c| c.controller == 1 && c.definition.name == "Elemental")
+        .expect("Elemental token should be under bear's original controller");
+    assert_eq!(elemental.power(), 4);
+    assert_eq!(elemental.toughness(), 4);
+}
+
+// ── Mortality Spear ────────────────────────────────────────────────────────
+
+#[test]
+fn mortality_spear_destroys_target_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::mortality_spear());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(bear)),
+        mode: None, x_value: None,
+    })
+    .expect("Mortality Spear castable for {3}{B}{G}");
+    drain_stack(&mut g);
+
+    assert!(!g.battlefield.iter().any(|c| c.id == bear),
+        "Bear should be destroyed");
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bear),
+        "Bear should be in graveyard");
+}
+
+// ── Daemogoth Titan ────────────────────────────────────────────────────────
+
+#[test]
+fn daemogoth_titan_is_eleven_eleven_for_double_black() {
+    let t = catalog::daemogoth_titan();
+    assert_eq!(t.power, 11);
+    assert_eq!(t.toughness, 11);
+    assert_eq!(t.cost.cmc(), 2, "Daemogoth Titan costs {{B}}{{B}}");
+    // It's a Demon Horror.
+    use crate::card::CreatureType;
+    assert!(t.subtypes.creature_types.contains(&CreatureType::Demon));
+    assert!(t.subtypes.creature_types.contains(&CreatureType::Horror));
+}
+
+// ── Daemogoth Woe-Eater ────────────────────────────────────────────────────
+
+#[test]
+fn daemogoth_titan_attacks_sacrifices_non_source_creature_first() {
+    use crate::game::Attack;
+    let mut g = two_player_game();
+    let titan = g.add_card_to_battlefield(0, catalog::daemogoth_titan());
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(titan);
+    g.clear_sickness(fodder);
+    g.step = TurnStep::DeclareAttackers;
+
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: titan,
+        target: crate::game::AttackTarget::Player(1),
+    }]))
+    .expect("Titan can attack");
+    drain_stack(&mut g);
+
+    // Sac priority should pick the fodder bear, not the Titan itself.
+    assert!(g.battlefield.iter().any(|c| c.id == titan),
+        "Daemogoth Titan should NOT have sacrificed itself");
+    assert!(!g.battlefield.iter().any(|c| c.id == fodder),
+        "Bear (the non-source candidate) should be sacrificed");
+}
+
+#[test]
+fn daemogoth_woe_eater_etb_sacrifices_another_creature() {
+    let mut g = two_player_game();
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::daemogoth_woe_eater());
+
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Daemogoth Woe-Eater castable for {2}{B}{G}");
+    drain_stack(&mut g);
+
+    // Fodder bear should be sacrificed.
+    assert!(!g.battlefield.iter().any(|c| c.id == fodder),
+        "Bear should have been sacrificed to Woe-Eater ETB");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == fodder),
+        "Bear should be in graveyard");
+    // Woe-Eater itself should still be on the battlefield.
+    let woe = g.battlefield.iter().find(|c| c.definition.name == "Daemogoth Woe-Eater")
+        .expect("Woe-Eater should be on the battlefield");
+    assert_eq!(woe.power(), 4);
+    assert_eq!(woe.toughness(), 4);
+}
+
+// ── Honor Troll ────────────────────────────────────────────────────────────
+
+#[test]
+fn honor_troll_has_trample_and_is_one_four() {
+    let h = catalog::honor_troll();
+    assert_eq!(h.power, 1);
+    assert_eq!(h.toughness, 4);
+    assert!(h.keywords.contains(&Keyword::Trample),
+        "Honor Troll should have Trample");
+}
+
+// ── Quandrix Cultivator ────────────────────────────────────────────────────
+
+#[test]
+fn quandrix_cultivator_etb_fetches_basic_forest_or_island() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    // Seed library with one Forest + an unrelated card so the search
+    // has a legal target.
+    let forest = g.add_card_to_library(0, catalog::forest());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(forest))]));
+
+    let id = g.add_card_to_hand(0, catalog::quandrix_cultivator());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Quandrix Cultivator castable for {3}{G}{U}");
+    drain_stack(&mut g);
+
+    // Forest should be on the battlefield, tapped.
+    let f = g.battlefield_find(forest).expect("Forest should be in play");
+    assert!(f.tapped, "Tutored Forest should enter tapped");
+    assert!(f.definition.is_land());
+}
+
+// ── Hofri Ghostforge ───────────────────────────────────────────────────────
+
+#[test]
+fn hofri_ghostforge_is_three_four_legendary_spirit_cleric() {
+    let h = catalog::hofri_ghostforge();
+    assert_eq!(h.power, 3);
+    assert_eq!(h.toughness, 4);
+    use crate::card::{CreatureType, Supertype};
+    assert!(h.supertypes.contains(&Supertype::Legendary));
+    assert!(h.subtypes.creature_types.contains(&CreatureType::Spirit));
+    assert!(h.subtypes.creature_types.contains(&CreatureType::Cleric));
+}
+
+// ── Tempted by the Oriq ────────────────────────────────────────────────────
+
+#[test]
+fn tempted_by_the_oriq_steals_and_grants_haste() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    // Tap the bear up front so we can verify the untap clause.
+    g.battlefield.iter_mut().find(|c| c.id == bear).unwrap().tapped = true;
+
+    let id = g.add_card_to_hand(0, catalog::tempted_by_the_oriq());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(bear)),
+        mode: None, x_value: None,
+    })
+    .expect("Tempted by the Oriq castable for {2}{B}");
+    drain_stack(&mut g);
+
+    // Bear should now be controlled by caster (player 0), untapped, with haste.
+    let b = g.battlefield_find(bear).expect("Bear should still be on bf");
+    assert_eq!(b.controller, 0, "Bear should be under player 0's control");
+    assert!(!b.tapped, "Bear should be untapped");
+    assert!(b.has_keyword(&Keyword::Haste), "Bear should have haste");
+}

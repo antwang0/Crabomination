@@ -509,7 +509,8 @@ impl GameState {
     pub(crate) fn check_state_based_actions(&mut self) -> Vec<GameEvent> {
         let mut events = vec![];
 
-        // +1/+1 and -1/-1 counters cancel each other out (CR 704.5q / 704.5r).
+        // +1/+1 and -1/-1 counters cancel each other out (CR 122.3 — the
+        // SBA removes `N` of each kind, where `N` is the smaller count).
         for card in &mut self.battlefield {
             let plus = card
                 .counters

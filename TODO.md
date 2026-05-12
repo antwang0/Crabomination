@@ -84,8 +84,77 @@ status tag (✅ wired, 🟡 partial, ⏳ todo) plus a short note.
   empty library marks the player `eliminated`; the next SBA pass
   drops them out of the game. Wired in `Effect::Draw` and in the
   per-turn draw step path.
+- ✅ **CR 122.3 — +1/+1 and -1/-1 counters cancel**: Per the rule,
+  if a permanent has both +1/+1 and -1/-1 counters, `N` of each are
+  removed as a state-based action, where `N` is the smaller of the
+  two counts. Wired in `game/stack.rs::check_state_based_actions`
+  at line 512 inside the main SBA loop, processing every
+  battlefield permanent each pass. The implementation pre-dates
+  the 2024 rules renumbering and still labels the code comment as
+  CR 704.5q/r, which is now the deprecated number — code path is
+  correct, comment is stale; fixed in push XX.
+- ✅ **CR 122.1d — Stun counter prevents next untap**: A permanent
+  with one or more stun counters has a replacement effect
+  "instead of being untapped, remove one stun counter." Wired in
+  `do_untap` which checks for stun counters on each permanent
+  before untapping. Frost Trickster / Snow Day exercise this
+  path.
+- ✅ **CR 122.6a — Counters on enter-with-counters**: "If an
+  object enters the battlefield with counters on it, the effect
+  causing the object to be given counters may specify which
+  player puts those counters on it. If the effect doesn't
+  specify, the object's controller puts them on it." Wired
+  implicitly through the ETB-triggered `Effect::AddCounter`
+  path — every "enters with N counters" body resolves under the
+  controller's resolution context, so `ctx.controller`
+  determines who places the counters (no observable
+  multi-player effect today since the bot harness always has the
+  controller place; but the implementation matches the rule).
 
 ## Recent additions
+
+- ✅ **Push XX (2026-05-12)**: 10 new STX cards + 1 engine improvement
+  + CR 122.3 audit. Tests at 1092 (+13 net). All cards land in
+  `catalog::sets::stx::extras`:
+  - **Curate** (U) 🟡 — Scry 3 + Draw 1 approximation of "look at top
+    4, take 1, bottom rest randomly."
+  - **Solve the Equation** (U) ✅ — Tutor an instant/sorcery into hand
+    via `Effect::Search`.
+  - **Resculpt** (U) ✅ — Exile creature/artifact; its original
+    controller creates a 4/4 blue Elemental.
+  - **Mortality Spear** (B/G) ✅ — Destroy creature/PW (Battle subtype
+    omitted).
+  - **Daemogoth Titan** (B) 🟡 — 11/11 with attack-trigger sac (block
+    half ⏳).
+  - **Daemogoth Woe-Eater** (B/G) 🟡 — ETB sac + attack-trigger
+    sac-into-counter.
+  - **Honor Troll** (B/G) 🟡 — 1/4 trampler; life-gained-this-turn
+    rider ⏳.
+  - **Quandrix Cultivator** (G/U) ✅ — ETB basic Forest/Island ramp.
+  - **Hofri Ghostforge** (R/W Legendary) 🟡 — body only; anthem +
+    exile-and-return cycle ⏳.
+  - **Tempted by the Oriq** (B) ✅ — Threaten template (steal + untap
+    + Haste EOT).
+  - **CR 122.3 audit** — Verified the +1/+1 / -1/-1 counter
+    auto-cancellation lives in `game/stack.rs` SBA loop at line 512;
+    code comment still references CR 704.5q/r (the prior rule
+    numbering). Marked CR 122.3 as ✅ wired in this TODO; the SBA
+    test path is exercised indirectly by Felisa's counter-bearing
+    death trigger and Spike/Persist mechanics. Comment in
+    `game/stack.rs` updated from CR 704.5q/r to CR 122.3 in this
+    push.
+  - **Engine: `Effect::Sacrifice` source-deprioritization** — the
+    AutoDecider sort for forced sacrifice was previously `(token
+    first, lowest CMC, lowest power)`. Added a new leading sort key
+    that puts the trigger's `ctx.source` LAST in the candidate
+    order, so "When this attacks, sacrifice another creature"
+    triggers (Daemogoth Titan, Daemogoth Woe-Eater) prefer
+    non-source candidates as printed. When the source is the only
+    matching candidate, it's still picked as a graceful fallback —
+    a strict CR 605 "another" gate would require new
+    plumbing. New test
+    `daemogoth_titan_attacks_sacrifices_non_source_creature_first`
+    verifies the priority.
 
 - ✅ **Push XIX (2026-05-12)**: 2 engine primitives + CR 119.4 alt-cost
   fix + 12 STX cards (2 promotions + 10 new). Tests at 1079 (+15 net):
@@ -114,6 +183,26 @@ status tag (✅ wired, 🟡 partial, ⏳ todo) plus a short note.
     1064).
 
 ## Suggested next-up tasks
+
+- ⏳ **`SelectionRequirement::OtherThanSource`** — first-class "another
+  creature" filter for Sacrifice / Destroy / Exile costs and effects.
+  Push XX added a `ctx.source`-aware *sort priority* to
+  `Effect::Sacrifice` so Daemogoth-style triggers pick non-source
+  candidates first, but a strict filter that excludes the source from
+  the candidate set entirely (so when the source is the only
+  candidate, the effect no-ops cleanly per CR 605) would close the
+  remaining edge case. Wiring needs threading `ctx.source` into
+  `evaluate_requirement_static` — a single `&Option<CardId>`
+  parameter, mostly mechanical.
+
+- ⏳ **`EventKind::Blocks` / `BlockerDeclared`** — block-half triggers
+  (Daemogoth Titan, Wall of Junk, …) need a per-blocker event that
+  fires when `DeclareBlockers` resolves. The engine has
+  `EventKind::Attacks` for the attack half via the combat module's
+  `do_attack`-style hook, but no symmetric path for blockers.
+  Suggested shape: emit `BlockerDeclared { blocker, attacker }` in
+  `combat::declare_blockers` so triggered abilities can subscribe
+  via `EventScope::SelfSource` or `AnotherOfYours`.
 
 - ⏳ **Lesson sideboard model** — Learn currently collapses to
   Draw 1. A true Lesson sideboard would let Eyetwitch / Hunt for
