@@ -3426,7 +3426,7 @@ fn mathemagics_x_zero_draws_one_card() {
     drain_stack(&mut g);
 
     // -1 (cast) + 1 (drawn) = no net change, but the draw step ran.
-    assert_eq!(g.players[0].hand.len(), hand_before + 0);
+    assert_eq!(g.players[0].hand.len(), hand_before);
 }
 
 #[test]
@@ -4405,7 +4405,7 @@ fn pest_token_attack_trigger_gains_one_life() {
     // Drain any triggers.
     drain_stack(&mut g);
 
-    assert!(g.players[0].life >= life_before + 1,
+    assert!(g.players[0].life > life_before,
         "SOS Pest token's attack trigger should grant +1 life (was {}, now {})",
         life_before, g.players[0].life);
 }
@@ -7293,13 +7293,12 @@ fn summoned_dromedary_activation_rejected_during_opponent_priority() {
     g.players[0].mana_pool.add(Color::White, 1);
     g.players[0].mana_pool.add_colorless(1);
     g.priority.player_with_priority = 1; // wrong player
-    let err = g.perform_action(GameAction::ActivateAbility {
+    let _ = g.perform_action(GameAction::ActivateAbility {
         card_id: drome,
         ability_index: 0,
         target: None,
     })
     .expect_err("opponent shouldn't be able to activate a graveyard card belonging to player 0");
-    drop(err);
 }
 
 #[test]

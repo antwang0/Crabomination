@@ -933,6 +933,64 @@ fn force_of_will_rejects_non_blue_pitch_card() {
     assert!(matches!(err, GameError::InvalidPitchCard(_)));
 }
 
+/// CR 119.4: A player can only pay an amount of life if their life
+/// total is greater than or equal to the payment. Force of Will's alt
+/// cost is "Pay 1 life and exile a blue card" — the cast path must
+/// reject cleanly when the caster is at 0 life rather than driving
+/// life negative. Push XIX wired the alt-cost pre-flight gate so this
+/// no longer crashes the player's life total below 0.
+#[test]
+fn force_of_will_alt_cost_rejected_at_zero_life_per_cr_119_4() {
+    let mut g = two_player_game();
+    g.players[0].life = 0;
+
+    let fow = g.add_card_to_hand(0, catalog::force_of_will());
+    // Add a legal blue pitch card — Brainstorm is blue.
+    let pitch = g.add_card_to_hand(0, catalog::brainstorm());
+
+    let err = g
+        .perform_action(GameAction::CastSpellAlternative {
+            card_id: fow,
+            pitch_card: Some(pitch),
+            target: None,
+            mode: None,
+            x_value: None,
+        })
+        .expect_err("FoW alt cast should be rejected at 0 life per CR 119.4");
+    assert!(matches!(err, GameError::InsufficientLife),
+        "Expected InsufficientLife error, got {err:?}");
+    // Life unchanged.
+    assert_eq!(g.players[0].life, 0,
+        "Life should not be driven negative — pre-flight gate rejected first");
+    // FoW still in hand (not on stack).
+    assert!(g.players[0].hand.iter().any(|c| c.id == fow),
+        "FoW should remain in hand after a rejected cast");
+}
+
+/// CR 119.4 mirror: at 1 life, paying 1 life is legal (since
+/// 1 >= 1). The cast should succeed and the player should be left at
+/// 0 life — life equal to the cost is allowed.
+#[test]
+fn force_of_will_alt_cost_accepted_at_one_life_per_cr_119_4() {
+    let mut g = two_player_game();
+    g.players[0].life = 1;
+    let fow = g.add_card_to_hand(0, catalog::force_of_will());
+    let pitch = g.add_card_to_hand(0, catalog::brainstorm());
+
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: fow,
+        pitch_card: Some(pitch),
+        target: None,
+        mode: None,
+        x_value: None,
+    })
+    .expect("FoW alt cast should succeed at 1 life (1 >= 1)");
+
+    // Life dropped to 0 — the cast paid 1 life, leaving the player at 0.
+    // Note: SBAs only fire on negative life; 0 is still alive.
+    assert_eq!(g.players[0].life, 0);
+}
+
 #[test]
 fn black_lotus_manual_activation_with_wants_ui_prompts_for_color() {
     use crate::decision::Decision;

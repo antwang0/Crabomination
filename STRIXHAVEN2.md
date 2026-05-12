@@ -49,6 +49,94 @@ All 232 cards marked ✅ or 🟡 have a corresponding factory in
 `crabomination/src/catalog/sets/sos/`; the audit script reports 0 false
 positives and 0 stale ⏳ rows.
 
+## 2026-05-12 push XIX: Monocolored predicate + Tanazir ETB + 10 new STX cards + CR 119.4
+
+Engine primitives:
+
+- **`SelectionRequirement::Monocolored`** — `distinct_colors() == 1`
+  filter, sibling to `Multicolored` (≥2) and `Colorless` (0). Wired
+  through both `evaluate_requirement_static` (battlefield/stack) and
+  `evaluate_requirement_on_card` (library/hand/graveyard). Promotes
+  Strixhaven's Vanishing Verse to ✅ — its target filter is now the
+  printed "nonland, monocolored permanent" shape.
+
+- **CR 119.4 — Life-payment pre-flight on alternative casts** — the
+  alt-cost cast path (`cast_spell_alternative`) was missing the
+  pre-flight life-cost gate that the activated-ability path already
+  honored. Per CR 119.4 ("a player may pay X life only if their life
+  total is greater than or equal to X"), the engine now rejects the
+  alt cast cleanly with `GameError::InsufficientLife` instead of
+  driving life negative mid-cast. Existing activated-ability gate at
+  `actions.rs::activate_ability` is unchanged; the alt-cost path
+  mirrors it now.
+
+Card promotions / new cards:
+
+- **Vanishing Verse** (STX W/B) 🟡 → ✅ — target filter is now exactly
+  the printed "nonland, monocolored permanent" via the new
+  `SelectionRequirement::Monocolored` predicate. Multicolored and
+  colorless permanents are correctly rejected by the cast-time target
+  validator.
+
+- **Tanazir Quandrix** (STX G/U Legendary) 🟡 → 🟡 (ETB **now wired**) —
+  ETB "double the number of +1/+1 counters on each creature you
+  control" is wired via `ForEach(Creature & ControlledByYou)` binding
+  `Selector::TriggerSource` to each iteration entity, plus
+  `AddCounter(+1/+1, amount: CountersOn(TriggerSource, +1/+1))`. A
+  creature with N +1/+1 counters before resolution ends with 2N after
+  resolution — matches the printed double behaviour. No new
+  primitive needed — `ForEach` already binds `TriggerSource` to the
+  iteration entity, and `CountersOn` already reads the count off a
+  selector.
+
+- **Bookwurm** (STX G new) ✅ — {5}{G}{G} 5/5 Wurm with trample. ETB
+  Seq(GainLife 4 + Draw 1). Simple late-game value finisher.
+
+- **Field Trip** (STX G new) ✅ — {2}{G} Sorcery: search basic Forest
+  → battlefield, then Learn (→ Draw 1 approximation).
+
+- **Reduce to Memory** (STX U new) ✅ — {2}{U} Sorcery: Exile nonland
+  permanent, then its **controller** (via `PlayerRef::ControllerOf(
+  Target(0))`) creates a 2/2 colorless Inkling artifact creature
+  token.
+
+- **Baleful Mastery** (STX B new) 🟡 — {2}{B} Instant: Exile target
+  creature/planeswalker; an opponent draws a card (collapses to "each
+  opp draws 1" via `Selector::Player(EachOpponent)`). Alt cost {1}{B}
+  not wired (alt-cost-implies-mode primitive gap).
+
+- **Igneous Inspiration** (STX R new) ✅ — {2}{R} Sorcery: 3 damage to
+  target creature/PW, then Learn (→ Draw 1).
+
+- **Combat Professor** (STX W new) 🟡 — {3}{W} 2/4 Cat Cleric, Flying +
+  Vigilance. Mentor approximated as Attacks trigger that adds +1/+1
+  counter on a target attacking creature with power ≤ 1 (the "lesser
+  power than this" base-2 collapse).
+
+- **Conspiracy Theorist** (STX R new) 🟡 — {1}{R} 2/1 Human Shaman.
+  Body only (Mentor's loot-into-exile-with-timer is the same gap as
+  Suspend Aggression).
+
+- **Beaming Defiance** (STX W new) ✅ — {1}{W} Instant: target friendly
+  creature gets +2/+0 and Hexproof EOT.
+
+- **Excavated Wall** (STX C new) ✅ — {2} Wall Artifact Creature 0/4
+  with Defender. ETB gains 2 life.
+
+- **Snow Day** (STX U/R new) 🟡 — {U}{R} Instant: tap one creature +
+  stun counter (printed "up to two targets" collapsed — multi-target
+  prompt is the same gap as Vibrant Outburst).
+
+- **Spell Satchel** (STX C new) 🟡 — {3} Artifact: `{T}: Add {C}` mana
+  ability + `{3},{T},Sac: return a low-CMC instant/sorcery from your
+  graveyard to your hand`. Multi-target return ("any number, total
+  CMC ≤ 4") collapsed to single-target ≤ 4.
+
+15 new tests in `tests::stx::*` (Vanishing Verse Monocolored
+acceptance + rejection, Tanazir ETB counter doubling + zero-counter
+no-op, plus per-card body tests for all 10 new cards). All 1079 lib
+tests pass (was 1064; +15 net).
+
 ## 2026-05-12 push XVIII: exile_other_filter + CR 605 + Lorehold STX closer
 
 Engine primitives:
@@ -1319,7 +1407,7 @@ parity is a matter of porting card factories one at a time.
 | Spirited Companion | {1}{W} | ✅ | 1/2 Dog Spirit. ETB: draw a card. |
 | Eyetwitch | {B} | ✅ | 1/1 Pest. When dies: "learn" approximated as `Draw 1` (no Lesson sideboard yet). |
 | Closing Statement | {X}{W}{W} | ✅ | Sorcery. Exile target nonland permanent. You gain X life (`Value::XFromCost`). |
-| Vanishing Verse | {W}{B} | 🟡 | Instant. Exile target nonland permanent. Real Oracle restricts to monocoloured permanents — collapsed to "any nonland permanent" pending a `MonocoloredOnly` predicate. |
+| Vanishing Verse | {W}{B} | ✅ | Instant. Exile target nonland, **monocolored** permanent. Push XIX: filter promoted to the printed exact-shape `Permanent & Nonland & Monocolored` via the new `SelectionRequirement::Monocolored` predicate (`distinct_colors() == 1`). Multicolored and colorless permanents are correctly rejected by the cast-time target validator. |
 | Killian, Ink Duelist | {W}{B} | 🟡 | 2/3 Legendary Human Warlock. Lifelink wired. "Spells you cast that target a creature cost {2} less" static still ⏳ (target-aware cost reduction primitive). |
 | Devastating Mastery | {4}{W}{W} | 🟡 | Sorcery. Destroy each nonland permanent ("Wrath of God + lands"). Alt cost {7}{W}{W} reanimate clause is ⏳ (alt-cost-implies-mode primitive). |
 | Felisa, Fang of Silverquill | {2}{W}{B} | ✅ | 4/3 Legendary Cat Cleric, Flying + Lifelink. Push XVI: counter-bearing-creature-dies → Inkling trigger now wired via `EventKind::CreatureDied/AnotherOfYours` filtered by `EntityMatches { what: TriggerSource, filter: WithCounter(+1/+1) }`. Counters persist on a card after move-to-graveyard (only `damage`/`tapped`/`attached_to` are cleared on zone-out), so the post-die graveyard-resident card still reports its `+1/+1` counters via `evaluate_requirement_static`. |
@@ -1399,7 +1487,7 @@ each college's flagship Dragon, plus a few cross-college staples.
 | Galazeth Prismari | {2}{U}{R} | 🟡 | 3/4 Legendary Dragon Wizard, Flying. ETB creates a Treasure token (full real-card behaviour). The "artifacts you control are mana sources" static is still ⏳ (no `GrantActivatedAbility(applies_to)` primitive). Test: `galazeth_prismari_is_three_four_flying_dragon_with_etb_treasure`. |
 | Beledros Witherbloom | {3}{B}{B}{G}{G} | 🟡 | 6/6 Legendary Demon, Flying + Trample + Lifelink. Pay-10-life mass-untap activated is ⏳. |
 | Velomachus Lorehold | {3}{R}{R}{W} | 🟡 | 5/5 Legendary Dragon, Flying + Vigilance + Haste. Attack-trigger reveal-and-cast is ⏳ (cast-from-exile-without-paying primitive). |
-| Tanazir Quandrix | {2}{G}{G}{U}{U} | 🟡 | 5/5 Legendary Dragon, Flying + Trample. ETB +1/+1-counter doubling is ⏳ (no counter-multiplier primitive). |
+| Tanazir Quandrix | {2}{G}{G}{U}{U} | 🟡 | 5/5 Legendary Dragon, Flying + Trample. Push XIX: ETB +1/+1-counter doubling **now wired** via `ForEach(Creature & ControlledByYou)` + `AddCounter(+1/+1, amount: CountersOn(TriggerSource, +1/+1))`. The attack-trigger toughness doubling was already wired (push prior). |
 | Shadrix Silverquill | {2}{W}{B} | 🟡 | 4/4 Legendary Dragon, Flying + Double Strike. Choose-2-of-3 attack-trigger is ⏳ (no multi-mode-pick primitive). |
 
 ### Engine pieces driven by STX

@@ -9,6 +9,7 @@
 
 pub use super::no_abilities;
 
+mod extras;
 mod iconic;
 mod legends;
 mod lorehold;
@@ -19,6 +20,7 @@ mod shared;
 mod silverquill;
 mod witherbloom;
 
+pub use extras::*;
 pub use iconic::*;
 pub use legends::*;
 pub use lorehold::*;

@@ -479,6 +479,14 @@ impl EventSpec {
 /// activated-ability effects — are `Effect` trees. Combinators let a single
 /// card express modal choices, iteration, and conditionals without needing
 /// engine changes per card.
+//
+// `large_enum_variant`: `CreateToken { definition: TokenDefinition, .. }`
+// is the outlier (~368 bytes) — Boxing `TokenDefinition` is a structural
+// change that touches every card factory and serde path. Tracked in
+// TODO.md ("Box `TokenDefinition` in `Effect::CreateToken`") as a future
+// cleanup; the stack footprint of `Effect` is fine in practice (most
+// effects are deep behind `Box<Effect>` already via `Seq` / `ForEach`).
+#[allow(clippy::large_enum_variant)]
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Effect {
     // ── Combinators ──────────────────────────────────────────────────────────

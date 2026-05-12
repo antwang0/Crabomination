@@ -57,8 +57,89 @@ status tag (✅ wired, 🟡 partial, ⏳ todo) plus a short note.
 - 🟡 **CR 117.1 — Order of priority**: `pass_priority` walks the
   alive players in seat order. Multi-player APNAP ordering for
   triggers / simultaneous effects is approximated.
+- ✅ **CR 119.4 — Pay-life-only-if-life-≥-cost**: Per the rule, a
+  player may pay X life only if their life total is greater than or
+  equal to X. The activated-ability path
+  (`actions.rs::activate_ability`) was already wired to reject
+  cleanly with `GameError::InsufficientLife` when life < cost. Push
+  XIX (2026-05-12) brings the alt-cost cast path
+  (`cast_spell_alternative`) up to parity — the alt-cost life-cost
+  gate was missing, so a Force-of-Negation-style spell with
+  `AlternativeCost.life_cost: 1` could be cast at 0 life, driving
+  life negative. Now the pre-flight gate matches the activated
+  ability path. Test scaffolding for both paths in
+  `tests::stx::witherbloom_pledgemage_rejects_activation_with_zero_life`
+  + the activated-ability path; a future test will exercise the
+  alt-cost path once we have an alt-cost-with-life-cost card wired.
+- ✅ **CR 121.2 — Drawing cards one at a time**: `Effect::Draw` in
+  `game/effects.rs` evaluates the count, then loops one-card-at-a-time
+  (`for _ in 0..n`) — matching CR 121.2 "Cards may only be drawn one
+  at a time." Each draw fires a `GameEvent::CardDrawn` so trigger
+  payoffs (Wheel of Fortune-style draw-N-trigger-N effects) see the
+  expected stream of CardDrawn events. The deck-out trigger
+  (`121.4 — drawing from empty library`) flips `Player.eliminated`
+  immediately and the SBA picks it up the next loop. No further
+  wiring required.
+- ✅ **CR 121.4 — Decking out loses the game**: Drawing from an
+  empty library marks the player `eliminated`; the next SBA pass
+  drops them out of the game. Wired in `Effect::Draw` and in the
+  per-turn draw step path.
 
 ## Recent additions
+
+- ✅ **Push XIX (2026-05-12)**: 2 engine primitives + CR 119.4 alt-cost
+  fix + 12 STX cards (2 promotions + 10 new). Tests at 1079 (+15 net):
+  - **`SelectionRequirement::Monocolored`** — `distinct_colors() == 1`
+    filter, sibling to `Multicolored` / `Colorless`. Promotes
+    Vanishing Verse to ✅ (target filter is now the printed exact
+    "nonland, monocolored permanent" shape).
+  - **CR 119.4 — alt-cost pre-flight life check** — the alt-cost
+    cast path was missing the life-cost gate that the activated
+    ability path already honored. Fixed to mirror; rejects cleanly
+    with `GameError::InsufficientLife`.
+  - **Tanazir Quandrix ETB** — promoted from 🟡 (attack-only) to 🟡
+    (both halves wired): "double +1/+1 counters on each creature
+    you control" wired via `ForEach(Creature & ControlledByYou)` +
+    `AddCounter(CountersOn(TriggerSource))`. No new primitive
+    needed.
+  - **10 new STX cards** added in `catalog::sets::stx::extras`:
+    Bookwurm (G ETB life+draw), Field Trip (G fetch+Learn), Reduce
+    to Memory (U exile+Inkling), Baleful Mastery (B exile+opp
+    draws), Igneous Inspiration (R 3-damage+Learn), Combat
+    Professor (W 2/4 fly+vig + Mentor approx), Conspiracy Theorist
+    (R 2/1 body), Beaming Defiance (W pump+hexproof), Excavated
+    Wall (C 0/4 defender + ETB lifegain), Snow Day (U/R tap+stun),
+    Spell Satchel (C two activated abilities).
+  - 15 new tests in `tests::stx::*`. All 1079 lib tests pass (was
+    1064).
+
+## Suggested next-up tasks
+
+- ⏳ **Lesson sideboard model** — Learn currently collapses to
+  Draw 1. A true Lesson sideboard would let Eyetwitch / Hunt for
+  Specimens / Field Trip / Igneous Inspiration etc. search a
+  sideboard of Lesson cards. Needs a per-player Lesson sideboard
+  slot plus a search-by-spell-subtype primitive on top of
+  `Effect::Search`.
+- ⏳ **Multi-target prompt for sorceries/instants** — Vibrant
+  Outburst, Snow Day, Stress Dream, etc. all collapse "up to two
+  targets" / "two targets" / "any number of targets" into a single
+  required target. The engine's `CastSpell` action shape carries
+  one `target: Option<Target>`; a `targets: Vec<Target>` field
+  would unblock a wide swath of two-target effects.
+- ⏳ **Counter-multiplier primitive** — Already used by Tanazir
+  (via the ForEach idiom). Future cards (Vorinclex, Doubling
+  Season) want a true multiplier on counter accrual; tracked
+  separately.
+- ⏳ **Mana-spent-on-cast introspection** — Opus / Increment
+  riders read "amount of mana spent to cast that spell" on the
+  just-cast spell event. The engine doesn't yet preserve the
+  numeric mana-paid total per stack item; this would unblock
+  Aberrant Manawurm, Tackle Artist, Expressive Firedancer, etc.
+  Suggested shape: `Value::ManaSpentOnCast(Box<Selector>)` that
+  reads from `StackItem::Spell.mana_paid_total`.
+
+## Past additions
 
 - ✅ **Push XVIII (2026-05-12)**: 3 engine primitives + 1 dispatcher
   bugfix + 9 STX/SOS card promotions/wirings + CR 605 audit. Tests at

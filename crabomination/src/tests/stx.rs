@@ -1129,3 +1129,412 @@ fn witherbloom_pledgemage_rejects_activation_with_zero_life() {
     assert!(!g.battlefield_find(pledge).unwrap().tapped,
         "Tap cost should be rolled back on rejection");
 }
+
+// ── Vanishing Verse: Monocolored predicate ──────────────────────────────────
+
+/// Vanishing Verse should exile a monocolored permanent (single-pip
+/// creature). The targeting filter is built on `Monocolored` =
+/// `distinct_colors() == 1`.
+#[test]
+fn vanishing_verse_exiles_monocolored_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::vanishing_verse());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(bear)),
+        mode: None, x_value: None,
+    })
+    .expect("Vanishing Verse castable for {W}{B} on monocolored bear");
+    drain_stack(&mut g);
+
+    // Bear (mono-green) gets exiled.
+    assert!(!g.battlefield.iter().any(|c| c.id == bear),
+        "Bear should be exiled");
+    assert!(g.exile.iter().any(|c| c.id == bear),
+        "Bear should be in exile");
+}
+
+/// Vanishing Verse must reject targeting a multicolored permanent —
+/// the `Monocolored` filter prevents the cast from being legal.
+#[test]
+fn vanishing_verse_rejects_multicolored_target() {
+    let mut g = two_player_game();
+    // Use a known multicolored card from the catalog. Aziza is {R}{W}
+    // → multicolored. We bypass cast to plant it directly on the
+    // battlefield (the test only cares about target legality).
+    let aziza = g.add_card_to_battlefield(1, catalog::aziza_mage_tower_captain());
+    let id = g.add_card_to_hand(0, catalog::vanishing_verse());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+
+    let r = g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(aziza)),
+        mode: None, x_value: None,
+    });
+    assert!(r.is_err(),
+        "Vanishing Verse should reject multicolored target");
+    // Aziza still on battlefield.
+    assert!(g.battlefield.iter().any(|c| c.id == aziza),
+        "Aziza should stay on the battlefield");
+}
+
+// ── Tanazir Quandrix: ETB counter doubling ──────────────────────────────────
+
+/// Tanazir's ETB doubles +1/+1 counters on each creature you control.
+/// A creature with 2 counters should end with 4 after Tanazir ETBs.
+#[test]
+fn tanazir_etb_doubles_plus_one_counters() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // Manually give the bear two +1/+1 counters.
+    {
+        let b = g.battlefield_find_mut(bear).unwrap();
+        b.add_counters(CounterType::PlusOnePlusOne, 2);
+    }
+    assert_eq!(g.battlefield_find(bear).unwrap()
+        .counter_count(CounterType::PlusOnePlusOne), 2);
+
+    // Cast Tanazir through the normal cast pipeline so the ETB trigger fires.
+    let tanazir = g.add_card_to_hand(0, catalog::tanazir_quandrix());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(2);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: tanazir, target: None, mode: None, x_value: None,
+    })
+    .expect("Tanazir castable for {2}{G}{G}{U}{U}");
+    drain_stack(&mut g);
+
+    // Bear's counters should be doubled (2 → 4).
+    let after = g.battlefield_find(bear).unwrap()
+        .counter_count(CounterType::PlusOnePlusOne);
+    assert_eq!(after, 4,
+        "Bear's +1/+1 counters should double (2 → 4) on Tanazir ETB");
+}
+
+/// Tanazir's ETB no-ops on a creature with zero +1/+1 counters
+/// (doubling 0 still equals 0).
+#[test]
+fn tanazir_etb_does_not_add_counters_to_counterless_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // No counters on the bear.
+
+    let tanazir = g.add_card_to_hand(0, catalog::tanazir_quandrix());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(2);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: tanazir, target: None, mode: None, x_value: None,
+    })
+    .expect("Tanazir castable");
+    drain_stack(&mut g);
+
+    assert_eq!(g.battlefield_find(bear).unwrap()
+        .counter_count(CounterType::PlusOnePlusOne), 0,
+        "Counterless creature should remain counterless");
+}
+
+// ── Bookwurm ────────────────────────────────────────────────────────────────
+
+/// Bookwurm: {5}{G}{G} 5/5 trample with ETB "gain 4 life, draw a card".
+#[test]
+fn bookwurm_etb_gains_four_life_and_draws_a_card() {
+    let mut g = two_player_game();
+    // Seed library so the draw resolves.
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let id = g.add_card_to_hand(0, catalog::bookwurm());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(5);
+
+    let life_before = g.players[0].life;
+    let hand_before = g.players[0].hand.len();
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Bookwurm castable for {5}{G}{G}");
+    drain_stack(&mut g);
+
+    // Cast: hand -1, ETB Draw: hand +1 → net 0
+    assert_eq!(g.players[0].hand.len(), hand_before,
+        "Should have cast Bookwurm and drawn one (net hand change 0)");
+    assert_eq!(g.players[0].life, life_before + 4,
+        "Should gain 4 life");
+    // Bookwurm body on battlefield with Trample.
+    let bw = g.battlefield.iter().find(|c| c.definition.name == "Bookwurm")
+        .expect("Bookwurm should be on battlefield");
+    assert!(bw.has_keyword(&Keyword::Trample));
+    assert_eq!(bw.power(), 5);
+    assert_eq!(bw.toughness(), 5);
+}
+
+// ── Field Trip ──────────────────────────────────────────────────────────────
+
+/// Field Trip: search for a Forest, put it onto the battlefield, then
+/// Learn (→ Draw 1 approximation). Uses a scripted decider to pick the
+/// Forest (AutoDecider declines `SearchLibrary`).
+#[test]
+fn field_trip_fetches_forest_and_draws_a_card() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    // Seed library with a Forest plus filler.
+    let forest = g.add_card_to_library(0, catalog::forest());
+    g.add_card_to_library(0, catalog::island()); // filler for draw
+    g.add_card_to_library(0, catalog::island());
+
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(forest))]));
+
+    let id = g.add_card_to_hand(0, catalog::field_trip());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+
+    let hand_before = g.players[0].hand.len();
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Field Trip castable for {2}{G}");
+    drain_stack(&mut g);
+
+    // Forest should be on the battlefield.
+    assert!(g.battlefield.iter().any(|c| c.id == forest),
+        "Forest should be on the battlefield");
+    // Hand: -1 (cast Field Trip) + 1 (Learn → Draw) = 0
+    assert_eq!(g.players[0].hand.len(), hand_before,
+        "Hand size unchanged (cast -1 + draw +1)");
+}
+
+// ── Reduce to Memory ────────────────────────────────────────────────────────
+
+/// Reduce to Memory exiles the targeted permanent and mints a 2/2
+/// colorless Inkling artifact creature for its controller.
+#[test]
+fn reduce_to_memory_exiles_and_creates_inkling() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+
+    let id = g.add_card_to_hand(0, catalog::reduce_to_memory());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(bear)),
+        mode: None, x_value: None,
+    })
+    .expect("Reduce to Memory castable for {2}{U}");
+    drain_stack(&mut g);
+
+    assert!(g.exile.iter().any(|c| c.id == bear),
+        "Bear should be in exile");
+    let inkling = g.battlefield.iter()
+        .find(|c| c.is_token && c.definition.name == "Inkling")
+        .expect("Inkling token should exist on battlefield");
+    assert_eq!(inkling.power(), 2);
+    assert_eq!(inkling.toughness(), 2);
+    assert!(inkling.definition.is_artifact(),
+        "Inkling should be an artifact");
+    assert!(inkling.definition.is_creature(),
+        "Inkling should be a creature");
+}
+
+// ── Baleful Mastery ─────────────────────────────────────────────────────────
+
+#[test]
+fn baleful_mastery_exiles_creature_and_opp_draws() {
+    let mut g = two_player_game();
+    // Seed opp library so the draw resolves.
+    for _ in 0..3 {
+        g.add_card_to_library(1, catalog::island());
+    }
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::baleful_mastery());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+
+    let opp_hand_before = g.players[1].hand.len();
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(bear)),
+        mode: None, x_value: None,
+    })
+    .expect("Baleful Mastery castable for {2}{B}");
+    drain_stack(&mut g);
+
+    assert!(g.exile.iter().any(|c| c.id == bear), "Bear exiled");
+    assert_eq!(g.players[1].hand.len(), opp_hand_before + 1,
+        "Opponent should draw a card");
+}
+
+// ── Igneous Inspiration ─────────────────────────────────────────────────────
+
+#[test]
+fn igneous_inspiration_deals_three_and_draws() {
+    let mut g = two_player_game();
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::igneous_inspiration());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+
+    let hand_before = g.players[0].hand.len();
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(bear)),
+        mode: None, x_value: None,
+    })
+    .expect("Igneous Inspiration castable for {2}{R}");
+    drain_stack(&mut g);
+
+    // Bear (2/2) takes 3 damage → dies.
+    assert!(!g.battlefield.iter().any(|c| c.id == bear),
+        "Bear should die to 3 damage");
+    // Hand: -1 (cast) + 1 (Learn) = 0
+    assert_eq!(g.players[0].hand.len(), hand_before,
+        "Hand unchanged after cast + Learn");
+}
+
+// ── Combat Professor ────────────────────────────────────────────────────────
+
+#[test]
+fn combat_professor_is_a_two_four_flying_vigilance() {
+    let p = catalog::combat_professor();
+    assert_eq!(p.power, 2);
+    assert_eq!(p.toughness, 4);
+    assert!(p.keywords.contains(&Keyword::Flying));
+    assert!(p.keywords.contains(&Keyword::Vigilance));
+}
+
+// ── Beaming Defiance ────────────────────────────────────────────────────────
+
+#[test]
+fn beaming_defiance_pumps_and_grants_hexproof() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::beaming_defiance());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    let printed_p = g.battlefield_find(bear).unwrap().power();
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(bear)),
+        mode: None, x_value: None,
+    })
+    .expect("Beaming Defiance castable for {1}{W}");
+    drain_stack(&mut g);
+
+    let computed = g.computed_permanent(bear).unwrap();
+    assert_eq!(computed.power, printed_p + 2, "+2 power applied");
+    let bear_card = g.battlefield_find(bear).unwrap();
+    assert!(bear_card.has_keyword(&Keyword::Hexproof),
+        "Bear should have Hexproof until EOT");
+}
+
+// ── Excavated Wall ──────────────────────────────────────────────────────────
+
+#[test]
+fn excavated_wall_etb_gains_two_life() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::excavated_wall());
+    g.players[0].mana_pool.add_colorless(2);
+
+    let life_before = g.players[0].life;
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Excavated Wall castable for {2}");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[0].life, life_before + 2);
+    // Body is a 0/4 artifact creature with Defender.
+    let wall = g.battlefield.iter().find(|c| c.definition.name == "Excavated Wall")
+        .expect("Wall should be on battlefield");
+    assert_eq!(wall.power(), 0);
+    assert_eq!(wall.toughness(), 4);
+    assert!(wall.has_keyword(&Keyword::Defender));
+}
+
+// ── Snow Day ────────────────────────────────────────────────────────────────
+
+#[test]
+fn snow_day_taps_and_stuns_target_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::snow_day());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(bear)),
+        mode: None, x_value: None,
+    })
+    .expect("Snow Day castable for {U}{R}");
+    drain_stack(&mut g);
+
+    let target = g.battlefield_find(bear).unwrap();
+    assert!(target.tapped, "Bear should be tapped");
+    assert_eq!(target.counter_count(CounterType::Stun), 1,
+        "Bear should have a stun counter");
+}
+
+// ── Spell Satchel ───────────────────────────────────────────────────────────
+
+#[test]
+fn spell_satchel_tap_adds_one_colorless() {
+    let mut g = two_player_game();
+    let satchel = g.add_card_to_battlefield(0, catalog::spell_satchel());
+    g.clear_sickness(satchel);
+
+    let mana_before = g.players[0].mana_pool.total();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: satchel, ability_index: 0, target: None,
+    })
+    .expect("Spell Satchel mana ability activatable");
+    assert_eq!(g.players[0].mana_pool.total(), mana_before + 1,
+        "Spell Satchel should add 1 colorless");
+    assert!(g.battlefield_find(satchel).unwrap().tapped,
+        "Spell Satchel should be tapped");
+}
+
+#[test]
+fn spell_satchel_sacrifice_returns_low_cmc_spell_from_graveyard() {
+    let mut g = two_player_game();
+    let satchel = g.add_card_to_battlefield(0, catalog::spell_satchel());
+    g.clear_sickness(satchel);
+    let bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+
+    g.players[0].mana_pool.add_colorless(3);
+
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: satchel,
+        ability_index: 1,
+        target: Some(Target::Permanent(bolt)),
+    })
+    .expect("Spell Satchel grave-return activation");
+    drain_stack(&mut g);
+
+    // Bolt should be back in hand.
+    assert!(g.players[0].hand.iter().any(|c| c.id == bolt),
+        "Bolt should be in hand");
+    // Satchel sacrificed → in graveyard.
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == satchel),
+        "Spell Satchel should be sacrificed to graveyard");
+}

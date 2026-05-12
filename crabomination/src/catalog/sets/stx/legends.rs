@@ -72,11 +72,11 @@ pub fn galazeth_prismari() -> CardDefinition {
 ///
 /// Fully wired: the activation uses the existing `life_cost: 10` field
 /// + `sorcery_speed: true` gate + `Effect::Untap { what:
-/// EachPermanent(Land & ControlledByYou), up_to: None }`. The
-/// pre-flight life-cost gate (`GameError::InsufficientLife`) means the
-/// activation is rejected cleanly when the controller can't pay 10
-/// life. Existing `up_to: None` keeps the printed "untap each land"
-/// semantics (cap-free mass untap).
+///   EachPermanent(Land & ControlledByYou), up_to: None }`. The
+///   pre-flight life-cost gate (`GameError::InsufficientLife`) means the
+///   activation is rejected cleanly when the controller can't pay 10
+///   life. Existing `up_to: None` keeps the printed "untap each land"
+///   semantics (cap-free mass untap).
 pub fn beledros_witherbloom() -> CardDefinition {
     use crate::card::{ActivatedAbility, Selector, SelectionRequirement};
     CardDefinition {
@@ -158,15 +158,22 @@ pub fn velomachus_lorehold() -> CardDefinition {
 /// control; attack trigger doubles toughness of target creature you
 /// control.
 ///
-/// Body + Flying + Trample wired. The ETB counter-doubling is still 🟡
-/// (no counter-multiplier primitive). The **attack trigger** is now
-/// wired via `Effect::PumpPT` with `toughness: Value::ToughnessOf(Target(0))`
-/// — pumping the target's toughness by its current value cleanly doubles
-/// it (printed toughness `T` becomes `T + T = 2T` until end of turn).
-/// Auto-target picker prefers a friendly high-toughness creature for
-/// the pump.
+/// ✅ Both triggers wired without new primitives:
+/// * **ETB counter-doubling** uses `ForEach(Creature & ControlledByYou)`
+///   binding `Selector::TriggerSource` to each iteration entity, then
+///   `AddCounter(+1/+1, amount: CountersOn(TriggerSource, +1/+1))`. A
+///   creature with N +1/+1 counters before resolution ends with 2N after
+///   (matches the printed double).
+/// * **Attack trigger** uses `PumpPT` with `toughness:
+///   ToughnessOf(Target(0))` — pumping the target's toughness by its
+///   current value cleanly doubles it (printed `T` becomes `T + T = 2T`
+///   until end of turn). Auto-target picker prefers a friendly
+///   high-toughness creature for the pump.
 pub fn tanazir_quandrix() -> CardDefinition {
-    use crate::card::{EventKind, EventScope, EventSpec, SelectionRequirement, Selector, TriggeredAbility, Value};
+    use crate::card::{
+        CounterType, EventKind, EventScope, EventSpec, SelectionRequirement, Selector,
+        TriggeredAbility, Value,
+    };
     use crate::effect::Duration;
     use crate::effect::shortcut::target_filtered;
     CardDefinition {
@@ -183,18 +190,40 @@ pub fn tanazir_quandrix() -> CardDefinition {
         keywords: vec![Keyword::Flying, Keyword::Trample],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
-            effect: Effect::PumpPT {
-                what: target_filtered(
-                    SelectionRequirement::Creature
-                        .and(SelectionRequirement::ControlledByYou),
-                ),
-                power: Value::Const(0),
-                toughness: Value::ToughnessOf(Box::new(Selector::Target(0))),
-                duration: Duration::EndOfTurn,
+        triggered_abilities: vec![
+            // ETB: double the number of +1/+1 counters on each creature
+            // you control.
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: Effect::ForEach {
+                    selector: Selector::EachPermanent(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::ControlledByYou),
+                    ),
+                    body: Box::new(Effect::AddCounter {
+                        what: Selector::TriggerSource,
+                        kind: CounterType::PlusOnePlusOne,
+                        amount: Value::CountersOn {
+                            what: Box::new(Selector::TriggerSource),
+                            kind: CounterType::PlusOnePlusOne,
+                        },
+                    }),
+                },
             },
-        }],
+            // Attack: double target creature you control's toughness EOT.
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+                effect: Effect::PumpPT {
+                    what: target_filtered(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::ControlledByYou),
+                    ),
+                    power: Value::Const(0),
+                    toughness: Value::ToughnessOf(Box::new(Selector::Target(0))),
+                    duration: Duration::EndOfTurn,
+                },
+            },
+        ],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],

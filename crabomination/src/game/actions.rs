@@ -776,6 +776,14 @@ impl GameState {
             return Err(GameError::NoAlternativeCost);
         }
 
+        // CR 119.4: A player can only pay an amount of life if their
+        // life total is greater than or equal to the payment. Pre-flight
+        // gate so we reject cleanly rather than driving life negative
+        // mid-cast.
+        if alt.life_cost > 0 && self.players[p].life < alt.life_cost as i32 {
+            return Err(GameError::InsufficientLife);
+        }
+
         // Validate that the pitch card matches the filter (if any).
         if let Some(filter) = &alt.exile_filter {
             let pitch_id = pitch_card.ok_or(GameError::NoAlternativeCost)?;

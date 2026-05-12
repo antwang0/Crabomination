@@ -285,6 +285,14 @@ pub enum SelectionRequirement {
     /// payoffs and the "colorless permanent" variant of various
     /// Eldrazi/devoid hooks.
     Colorless,
+    /// True when the card has **exactly one** distinct color in its
+    /// mana cost (multiple pips of the same color still count as
+    /// monocolored). Used by Strixhaven's Vanishing Verse "target
+    /// nonland, monocolored permanent" — the printed exact-shape
+    /// targeting filter. Hybrid pips (`{W/B}`) count as both halves;
+    /// Phyrexian pips count their colored half. Colorless cards fail
+    /// this check (use `Colorless` instead).
+    Monocolored,
     And(Box<SelectionRequirement>, Box<SelectionRequirement>),
     Or(Box<SelectionRequirement>, Box<SelectionRequirement>),
     Not(Box<SelectionRequirement>),
