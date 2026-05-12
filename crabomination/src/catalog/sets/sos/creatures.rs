@@ -4861,3 +4861,215 @@ pub fn essenceknit_scholar() -> CardDefinition {
         opening_hand: None,
     }
 }
+
+// ── Biblioplex Tomekeeper ───────────────────────────────────────────────────
+
+/// Biblioplex Tomekeeper — {4} Artifact Creature — Construct 3/4.
+/// "When this creature enters, choose up to one — / • Target creature
+/// becomes prepared. / • Target creature becomes unprepared."
+///
+/// 🟡 Body wired (3/4 Construct artifact creature). The "Prepare"
+/// toggle is omitted — the engine has no Prepare keyword nor a
+/// prepared-state flag yet (same gap as Skycoach Waypoint). The body
+/// still slots into the colorless artifact-creature pool. Tracked in
+/// TODO.md under "Prepare keyword".
+pub fn biblioplex_tomekeeper() -> CardDefinition {
+    CardDefinition {
+        name: "Biblioplex Tomekeeper",
+        cost: cost(&[generic(4)]),
+        supertypes: vec![],
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Construct],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── The Dawning Archaic ─────────────────────────────────────────────────────
+
+/// The Dawning Archaic — {10} Legendary Creature — Avatar 7/7.
+/// "This spell costs {1} less to cast for each instant and sorcery card
+/// in your graveyard. / Reach / Whenever The Dawning Archaic attacks,
+/// you may cast target instant or sorcery card from your graveyard
+/// without paying its mana cost. If that spell would be put into your
+/// graveyard, exile it instead."
+///
+/// 🟡 Body wired (7/7 Legendary Avatar with Reach). Both the IS-in-gy
+/// cost-reduction static and the attack-trigger cast-from-graveyard
+/// rider are omitted — the engine has neither a per-graveyard-IS-count
+/// cost-reduction primitive nor a cast-from-graveyard-without-paying
+/// pipeline for arbitrary cards. Tracked in TODO.md.
+pub fn the_dawning_archaic() -> CardDefinition {
+    use crate::card::Supertype;
+    CardDefinition {
+        name: "The Dawning Archaic",
+        cost: cost(&[generic(10)]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Avatar],
+            ..Default::default()
+        },
+        power: 7,
+        toughness: 7,
+        keywords: vec![Keyword::Reach],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Silverquill, the Disputant ──────────────────────────────────────────────
+
+/// Silverquill, the Disputant — {2}{W}{B} Legendary Creature — Elder Dragon 4/4.
+/// "Flying, vigilance / Each instant and sorcery spell you cast has
+/// casualty 1."
+///
+/// 🟡 Body wired (4/4 Legendary Elder Dragon Flying+Vigilance). The
+/// casualty-1 grant on instant/sorcery casts is omitted — engine has
+/// no static "spells of type X gain casualty N" primitive, and no
+/// Casualty keyword yet. The dragon body still serves as a 4/4
+/// flying/vigilance finisher in W/B decks. Tracked in TODO.md under
+/// "Casualty keyword".
+pub fn silverquill_the_disputant() -> CardDefinition {
+    use crate::card::Supertype;
+    CardDefinition {
+        name: "Silverquill, the Disputant",
+        cost: cost(&[generic(2), w(), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elder, CreatureType::Dragon],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Flying, Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Nita, Forum Conciliator ─────────────────────────────────────────────────
+
+/// Nita, Forum Conciliator — {1}{W}{B} Legendary Creature — Human Advisor 2/3.
+/// "Whenever you cast a spell you don't own, put a +1/+1 counter on
+/// each creature you control. / {2}, Sacrifice another creature: Exile
+/// target instant or sorcery card from an opponent's graveyard. You
+/// may cast it this turn, and mana of any type can be spent to cast
+/// that spell. Activate only as a sorcery."
+///
+/// 🟡 Body wired (2/3 Legendary Human Advisor). Both the "cast spell
+/// you don't own" trigger and the activated cast-from-opp-graveyard
+/// ability are omitted — the engine has no "owned by you vs owned by
+/// opp" predicate on cast spells (cube cards default to owner=
+/// controller), and no cast-from-graveyard-without-paying for arbitrary
+/// cards. Tracked in TODO.md.
+pub fn nita_forum_conciliator() -> CardDefinition {
+    use crate::card::Supertype;
+    CardDefinition {
+        name: "Nita, Forum Conciliator",
+        cost: cost(&[generic(1), w(), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Advisor],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Mica, Reader of Ruins ───────────────────────────────────────────────────
+
+/// Mica, Reader of Ruins — {3}{R} Legendary Creature — Human Artificer 4/4.
+/// "Ward—Pay 3 life. / Whenever you cast an instant or sorcery spell,
+/// you may sacrifice an artifact. If you do, copy that spell and you
+/// may choose new targets for the copy."
+///
+/// 🟡 Body + the printed sac-an-artifact-to-copy magecraft rider are
+/// both wired. Body: 4/4 Legendary Human Artificer. Magecraft trigger
+/// wraps `Effect::MayDo` around `Seq(Sacrifice(Artifact, 1) +
+/// CopySpell { what: TriggerSource })` — same template as Aziza, Mage
+/// Tower Captain's tap-three-to-copy trigger, but with a sacrifice cost
+/// in place of the tap-three. Auto-decider defaults to "no" (skip), so
+/// the trigger only fires the copy when the controller scripts a yes.
+/// Ward—Pay 3 life is tagged on the card via `Keyword::Ward(3)` (engine
+/// keyword tag; ward enforcement still pending). Tracked in TODO.md
+/// under "Ward enforcement layer".
+pub fn mica_reader_of_ruins() -> CardDefinition {
+    use crate::effect::shortcut::magecraft;
+    use crate::mana::r;
+    CardDefinition {
+        name: "Mica, Reader of Ruins",
+        cost: cost(&[generic(3), r()]),
+        supertypes: vec![crate::card::Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Artificer],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Ward(3)],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::MayDo {
+            description: "Mica, Reader of Ruins: sacrifice an artifact to copy the spell?".into(),
+            body: Box::new(Effect::Seq(vec![
+                Effect::Sacrifice {
+                    who: Selector::You,
+                    count: Value::Const(1),
+                    filter: SelectionRequirement::HasCardType(CardType::Artifact),
+                },
+                Effect::CopySpell {
+                    what: Selector::TriggerSource,
+                    count: Value::Const(1),
+                },
+            ])),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}

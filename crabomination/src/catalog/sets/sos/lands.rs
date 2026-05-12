@@ -187,6 +187,40 @@ pub fn great_hall_of_the_biblioplex() -> CardDefinition {
     }
 }
 
+/// Skycoach Waypoint — Land.
+/// Real Oracle: "{T}: Add {C}. / {3}, {T}: Target creature becomes
+/// prepared. (Only creatures with prepare spells can become prepared.)"
+///
+/// 🟡 Approximation: we ship the printed `{T}: Add {C}` mana ability
+/// via the shared `tap_add_colorless` helper. The "{3}, {T}: Target
+/// creature becomes prepared" toggle is omitted — the engine has no
+/// Prepare keyword / prepared-state flag yet (same gap as Biblioplex
+/// Tomekeeper). The mana ability alone is enough to let the card slot
+/// into colorless utility roles; the prepare toggle is tracked in
+/// TODO.md under "Prepare keyword".
+pub fn skycoach_waypoint() -> CardDefinition {
+    use super::super::tap_add_colorless;
+    CardDefinition {
+        name: "Skycoach Waypoint",
+        cost: ManaCost::default(),
+        supertypes: vec![],
+        card_types: vec![CardType::Land],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: vec![tap_add_colorless()],
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
 /// Petrified Hamlet — Land.
 /// Real Oracle: "When this land enters, choose a land card name. /
 /// Activated abilities of sources with the chosen name can't be activated

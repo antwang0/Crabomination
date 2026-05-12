@@ -36,18 +36,108 @@ This file tracks two adjacent Strixhaven catalogs:
 Counts reflect the regenerated tables below (audited via
 `scripts/audit_strixhaven2.py` against `catalog::sets::sos`).
 
-- ✅ done: **110** (+10 in push XXII / Increment+Opus: Cuboid Colony,
-  Hungry Graffalon, Topiary Lecturer, Aberrant Manawurm, Tackle Artist,
-  Thunderdrum Soloist, Molten-Core Maestro, Expressive Firedancer, Muse
-  Seeker, Exhibition Tidecaller, Deluge Virtuoso → ✅).
-- 🟡 partial: **127** (push XXII: 11 promoted out of 🟡 to ✅; Berta /
-  Pensive Professor / Tester / Fractal Tender / Ambitious Augmenter
-  refined — Increment wired but secondary riders still gap).
-- ⏳ todo: **23** (unchanged from push XXI).
+- ✅ done: **111** (+1 in push XXV: Killian's Confidence promoted from
+  🟡 to ✅ via the new `EventScope::FromYourGraveyard` extension on
+  combat-damage triggers).
+- 🟡 partial: **133** (push XXV: 7 promoted out of ⏳ to 🟡 — Fix What's
+  Broken, Silverquill the Disputant, Nita Forum Conciliator, Biblioplex
+  Tomekeeper, The Dawning Archaic, Mica Reader of Ruins, Skycoach
+  Waypoint all ship body / partial primary effect).
+- ⏳ todo: **16** (push XXV: 7 cards promoted out of ⏳; -7 net).
 
-All 232 cards marked ✅ or 🟡 have a corresponding factory in
+All 244 cards marked ✅ or 🟡 have a corresponding factory in
 `crabomination/src/catalog/sets/sos/`; the audit script reports 0 false
 positives and 0 stale ⏳ rows.
+
+## 2026-05-12 push XXV: 7 new SOS cards + 1 STX card + Killian's promotion + combat-damage gy triggers
+
+Push XXV (`claude/modern_decks` branch) — wires 7 SOS cards out of ⏳
+into the catalog (body-only where the primary effect needs primitives
+that don't exist yet) plus promotes **Killian's Confidence** from 🟡 to
+✅ via the new `EventScope::FromYourGraveyard` extension on the combat-
+damage-to-player trigger dispatcher. Adds Quick Study (STX U mono).
+Tests at 1150 (+11 net).
+
+New SOS cards (`catalog::sets::sos::*`):
+
+- **Fix What's Broken** (W/B) 🟡 — {X}{2}{W}{B} Sorcery. Pay X life
+  (folded into resolution as `LoseLife(XFromCost)`); for each artifact/
+  creature card in your graveyard with mana value exactly X, return it
+  to the battlefield. The MV=X equality is synthesized as
+  `All([ValueAtLeast(MV, X), ValueAtMost(MV, X)])` since there's no
+  `ValueEquals` predicate. Test exercises X=1 → Sol Ring (MV 1)
+  returns; Grizzly Bears (MV 2) stays in the graveyard.
+
+- **Silverquill, the Disputant** (W/B Legendary) 🟡 — {2}{W}{B} 4/4
+  Legendary Elder Dragon Flying+Vigilance body. Casualty-1 grant
+  static omitted (no Casualty keyword yet).
+
+- **Nita, Forum Conciliator** (W/B Legendary) 🟡 — {1}{W}{B} 2/3
+  Legendary Human Advisor body. "Cast a spell you don't own" trigger +
+  cast-from-opp-graveyard activated ability omitted.
+
+- **Biblioplex Tomekeeper** (Colorless) 🟡 — {4} 3/4 Construct artifact
+  creature body. Prepare toggle omitted (no Prepare keyword yet).
+
+- **The Dawning Archaic** (Colorless Legendary) 🟡 — {10} 7/7 Legendary
+  Avatar with Reach. IS-in-gy cost reduction + attack-trigger cast-
+  from-graveyard rider omitted.
+
+- **Mica, Reader of Ruins** (R Legendary) 🟡 — {3}{R} 4/4 Legendary
+  Human Artificer. Magecraft sac-an-artifact-to-copy-the-spell wired
+  via `magecraft(MayDo + Seq(Sacrifice(Artifact, 1) + CopySpell{what:
+  TriggerSource}))` — same template as Aziza, Mage Tower Captain's
+  tap-three-to-copy. Two tests cover the yes-path (sacrifice fires
+  copy) and no-path (decline keeps artifact).
+
+- **Skycoach Waypoint** (Colorless Land) 🟡 — Land with `{T}: Add {C}`
+  via `tap_add_colorless()`. {3},{T}: prepare-target omitted.
+
+Engine extension:
+
+- **`fire_combat_damage_to_player_triggers` walks graveyards for
+  `EventScope::FromYourGraveyard`.** Previously, combat damage events
+  to a player only fired triggers on the attacker's own battlefield
+  card. Now, after the existing battlefield walk, every player's
+  graveyard is scanned for triggers scoped `FromYourGraveyard` whose
+  card owner matches the attacker's controller — matching the
+  printed "creatures you control deal combat damage" filter on the
+  attacker side. The trigger's effective controller is the gy owner
+  and source binding is the graveyard card. This unblocks Killian's
+  Confidence's "may pay {W/B} to return to hand on combat damage"
+  rider, plus any future combat-damage-payoff sitting in graveyard
+  (a niche but well-defined design space).
+
+- **CR audit (push XXV): consulted **CR 603.7d / 603.10** — graveyard
+  triggers and zone-change triggers.** A trigger's source on the
+  battlefield is "this object as it last existed on the battlefield";
+  the engine's `Selector::This` resolution under
+  `FromYourGraveyard` correctly binds to the graveyard-resident card
+  (ctx.source = card.id) so `Move(This → Hand)` finds it via the
+  graveyard walk in `move_card_to`. The rule's "last existed on the
+  battlefield" wording specifically applies to dies-style triggers,
+  not graveyard-resident triggers fired from a card that was
+  originally cast as a sorcery (Killian's Confidence pattern). Our
+  binding matches both readings.
+
+STX additions:
+
+- **Quick Study** (U mono) ✅ — {1}{U} Instant: Target player draws
+  two cards.
+
+Tests added (11 net):
+
+- `quick_study_draws_two_cards_for_target_player`
+- `silverquill_the_disputant_is_a_four_four_flying_vigilance_dragon`
+- `biblioplex_tomekeeper_is_a_three_four_construct`
+- `the_dawning_archaic_is_a_seven_seven_legendary_avatar_with_reach`
+- `nita_forum_conciliator_is_a_two_three_legendary_human_advisor`
+- `skycoach_waypoint_taps_for_colorless`
+- `fix_whats_broken_returns_mana_value_x_artifact_from_graveyard`
+- `mica_reader_of_ruins_magecraft_sac_artifact_to_copy_when_decider_agrees`
+- `mica_reader_of_ruins_magecraft_skips_copy_when_decider_declines`
+- `killians_confidence_returns_to_hand_when_creature_deals_combat_damage`
+- `killians_confidence_stays_in_graveyard_when_no_damage_or_no_pay`
 
 ## 2026-05-12 push XXIV: 14 new STX cards + CR 121.5 fix + cost-label rendering
 
@@ -1520,7 +1610,7 @@ None of these are wired today; all prepare cards are ⏳ until at least
 | Living History | {1}{R} | Enchantment |  | When this enchantment enters, create a 2/2 red and white Spirit creature token. / Whenever you attack, if a card left your graveyard this turn, target attacking creature gets +2/+0 until end of turn. | 🟡 | ETB Spirit token + on-attack +2/+0 EOT (gated on the new `Predicate::CardsLeftGraveyardThisTurnAtLeast`). The "target attacking creature" picks the trigger source (the just-declared attacker) rather than a fresh target — collapsed for the per-attacker auto-target framework. |
 | Maelstrom Artisan // Rocket Volley | {1}{R}{R} // {1}{R} | Creature — Minotaur Sorcerer // Sorcery | 3/2 |  | 🟡 | Wired in `catalog::sets::sos::mdfcs` (push XI/XII): vanilla front + back-face spell via the new `GameAction::CastSpellBack` path. Original ⏳ note: Standard primitives — should be straightforward to wire.|
 | Magmablood Archaic | {2/R}{2/R}{2/R} | Creature — Avatar | 2/2 | Trample, reach / Converge — This creature enters with a +1/+1 counter on it for each color of mana spent to cast it. / Whenever you cast an instant or sorcery spell, creatures you control get +1/+0 until end of turn for each color of mana spent to cast that spell. | 🟡 | Body wired in `catalog::sets::sos::creatures` (2/2 Avatar with Trample+Reach + Converge ETB AddCounter using `Value::ConvergedValue`). The IS-cast pump rider is omitted pending per-cast converge introspection on the *just-cast* spell (the trigger fires but reads the Archaic's own ETB converge value, not the iterated cast's). Hybrid `{2/R}` pips approximated as `{2}+{R}` per pip. |
-| Mica, Reader of Ruins | {3}{R} | Legendary Creature — Human Artificer | 4/4 | Ward—Pay 3 life. (Whenever this creature becomes the target of a spell or ability an opponent controls, counter it unless that player pays 3 life.) / Whenever you cast an instant or sorcery spell, you may sacrifice an artifact. If you do, copy that spell and you may choose new targets for the copy. | ⏳ | 🔍 needs review (oracle previously truncated). Needs: Ward keyword primitive; copy-spell/permanent primitive. |
+| Mica, Reader of Ruins | {3}{R} | Legendary Creature — Human Artificer | 4/4 | Ward—Pay 3 life. (Whenever this creature becomes the target of a spell or ability an opponent controls, counter it unless that player pays 3 life.) / Whenever you cast an instant or sorcery spell, you may sacrifice an artifact. If you do, copy that spell and you may choose new targets for the copy. | 🟡 | Push XXV: Body wired (4/4 Legendary Human Artificer). Magecraft sac-artifact-to-copy rider wired via `magecraft(MayDo + Seq(Sacrifice(Artifact, 1) + CopySpell{what: TriggerSource}))` — same template as Aziza, Mage Tower Captain. Ward—Pay 3 life tagged via `Keyword::Ward(3)`; ward enforcement still pending. |
 | Molten-Core Maestro | {1}{R} | Creature — Goblin Bard | 2/2 | Menace / Opus — Whenever you cast an instant or sorcery spell, put a +1/+1 counter on this creature. If five or more mana was spent to cast that spell, add an amount of {R} equal to this creature's power. | 🟡 | 2/2 Menace body wired. Opus +1/+1-counter + R-mana-from-power riders omitted. |
 | Pigment Wrangler // Striking Palette | {4}{R} // {R} | Creature — Orc Sorcerer // Sorcery | 4/4 |  | 🟡 | Wired in `catalog::sets::sos::mdfcs` (push XI/XII): vanilla front + back-face spell via the new `GameAction::CastSpellBack` path. Original ⏳ note: Standard primitives — should be straightforward to wire.|
 | Rearing Embermare | {4}{R} | Creature — Horse Beast | 4/5 | Reach, haste | ✅ | Wired in `catalog::sets::sos::creatures`. |
@@ -1621,17 +1711,17 @@ None of these are wired today; all prepare cards are ⏳ until at least
 |---|---|---|---|---|---|---|
 | Abigale, Poet Laureate // Heroic Stanza | {1}{W}{B} // {1}{W/B} | Legendary Creature — Bird Bard // Sorcery | 2/3 |  | 🟡 | Wired in `catalog::sets::sos::mdfcs` (push XI/XII): vanilla front + back-face spell via the new `GameAction::CastSpellBack` path. Original ⏳ note: Standard primitives — should be straightforward to wire.|
 | Conciliator's Duelist | {W}{W}{B}{B} | Creature — Kor Warlock | 4/3 | When this creature enters, draw a card. Each player loses 1 life. / Repartee — Whenever you cast an instant or sorcery spell that targets a creature, exile up to one target creature. Return that card to the battlefield under its owner's control at the beginning of the next end step. | 🟡 | ETB body wired (draw 1 + each player loses 1). Repartee exile half wired via the new `Selector::CastSpellTarget(0)` primitive. The "return at next end step" rider is still omitted (no capture-as-target-from-selector primitive yet). |
-| Fix What's Broken | {2}{W}{B} | Sorcery |  | As an additional cost to cast this spell, pay X life. / Return each artifact and creature card with mana value X from your graveyard to the battlefield. | ⏳ | Needs: cast-from-graveyard. |
+| Fix What's Broken | {2}{W}{B} | Sorcery |  | As an additional cost to cast this spell, pay X life. / Return each artifact and creature card with mana value X from your graveyard to the battlefield. | 🟡 | Push XXV: Pay-X-life folds into resolution as `LoseLife(XFromCost)` (Vicious-Rivalry pattern). The MV=X gate on the gy walk uses `Predicate::All([ValueAtLeast(MV, X), ValueAtMost(MV, X)])` to synthesize equality (no `ValueEquals` primitive). Returns each matching artifact/creature card via `ForEach(EachMatching(Graveyard(You), …)) + Move → Battlefield`. |
 | Forum of Amity |  | Land |  | This land enters tapped. / {T}: Add {W} or {B}. / {2}{W}{B}, {T}: Surveil 1. (Look at the top card of your library. You may put it into your graveyard.) | ✅ | Wired in `catalog::sets::sos::lands`. |
 | Imperious Inkmage | {1}{W}{B} | Creature — Orc Warlock | 3/3 | Vigilance / When this creature enters, surveil 2. (Look at the top two cards of your library, then put any number of them into your graveyard and the rest on top of your library in any order.) | ✅ | Wired in `catalog::sets::sos::creatures`. |
 | Inkling Mascot | {W}{B} | Creature — Inkling Cat | 2/2 | Repartee — Whenever you cast an instant or sorcery spell that targets a creature, this creature gains flying until end of turn. Surveil 1. (Look at the top card of your library. You may put it into your graveyard.) | ✅ | Repartee trigger grants Flying (EOT) on `Selector::This` + Surveil 1. |
-| Killian's Confidence | {W}{B} | Sorcery |  | Target creature gets +1/+1 until end of turn. Draw a card. / Whenever one or more creatures you control deal combat damage to a player, you may pay {W/B}. If you do, return this card from your graveyard to your hand. | 🟡 | Pump + draw wired; the graveyard-recursion trigger is omitted. |
+| Killian's Confidence | {W}{B} | Sorcery |  | Target creature gets +1/+1 until end of turn. Draw a card. / Whenever one or more creatures you control deal combat damage to a player, you may pay {W/B}. If you do, return this card from your graveyard to your hand. | ✅ | Push XXV: Body (+1/+1 EOT + draw 1) was wired; the graveyard-recursion trigger is now also wired via the new `EventScope::FromYourGraveyard` extension on `fire_combat_damage_to_player_triggers`. The combat-damage trigger fires off the graveyard-resident card; `Effect::MayPay { mana_cost: {W} }` asks the controller yes/no and on yes returns `Selector::This` to its owner's hand via `Move`. Hybrid {W/B} approximated as {W} (matches Practiced Scrollsmith). |
 | Moment of Reckoning | {3}{W}{W}{B}{B} | Sorcery |  | Choose up to four. You may choose the same mode more than once. / • Destroy target nonland permanent. / • Return target nonland permanent card from your graveyard to the battlefield. | 🟡 | Wired in `catalog::sets::sos::sorceries` as a 2-mode `ChooseMode`. The "choose up to four / same mode more than once" rider is collapsed to "pick one mode and target one permanent" — same-resolution multi-mode replay needs an engine primitive. |
-| Nita, Forum Conciliator | {1}{W}{B} | Legendary Creature — Human Advisor | 2/3 | Whenever you cast a spell you don't own, put a +1/+1 counter on each creature you control. / {2}, Sacrifice another creature: Exile target instant or sorcery card from an opponent's graveyard. You may cast it this turn, and mana of any type can be spent to cast that spell. If that spell would be put into a graveyard, exile it instead. Activate only as a sorcery. | ⏳ | 🔍 needs review (oracle previously truncated). Needs: cast-from-exile pipeline. |
+| Nita, Forum Conciliator | {1}{W}{B} | Legendary Creature — Human Advisor | 2/3 | Whenever you cast a spell you don't own, put a +1/+1 counter on each creature you control. / {2}, Sacrifice another creature: Exile target instant or sorcery card from an opponent's graveyard. You may cast it this turn, and mana of any type can be spent to cast that spell. If that spell would be put into a graveyard, exile it instead. Activate only as a sorcery. | 🟡 | Push XXV: Body wired (2/3 Legendary Human Advisor). The "cast a spell you don't own" trigger + cast-from-opp-graveyard activated ability are omitted — engine has no owned-vs-controlled-spell predicate and no cast-from-graveyard-without-paying for arbitrary cards. |
 | Render Speechless | {2}{W}{B} | Sorcery |  | Target opponent reveals their hand. You choose a nonland card from it. That player discards that card. / Put two +1/+1 counters on up to one target creature. | 🟡 | Discard half wired via `DiscardChosen`; the optional creature target is collapsed into a required creature target (no two-target prompt yet). |
 | Scolding Administrator | {W}{B} | Creature — Dwarf Cleric | 2/2 | Menace (This creature can't be blocked except by two or more creatures.) / Repartee — Whenever you cast an instant or sorcery spell that targets a creature, put a +1/+1 counter on this creature. / When this creature dies, if it had counters on it, put those counters on up to one target creature. | 🟡 | Menace + Repartee +1/+1 counter wired in `catalog::sets::sos::creatures` (uses the new `Dwarf` subtype). The truncated "When this creature dies, …" trigger is omitted pending an oracle re-fetch. 🔍 needs review (oracle previously truncated). |
 | Silverquill Charm | {W}{B} | Instant |  | Choose one — / • Put two +1/+1 counters on target creature. / • Exile target creature with power 2 or less. / • Each opponent loses 3 life and you gain 3 life. | ✅ | Wired in `catalog::sets::sos::instants`. |
-| Silverquill, the Disputant | {2}{W}{B} | Legendary Creature — Elder Dragon | 4/4 | Flying, vigilance / Each instant and sorcery spell you cast has casualty 1. (As you cast that spell, you may sacrifice a creature with power 1 or greater. When you do, copy the spell and you may choose new targets for the copy.) | ⏳ | 🔍 needs review (oracle previously truncated). Needs: copy-spell/permanent primitive. |
+| Silverquill, the Disputant | {2}{W}{B} | Legendary Creature — Elder Dragon | 4/4 | Flying, vigilance / Each instant and sorcery spell you cast has casualty 1. (As you cast that spell, you may sacrifice a creature with power 1 or greater. When you do, copy the spell and you may choose new targets for the copy.) | 🟡 | Push XXV: Body wired (4/4 Legendary Elder Dragon Flying+Vigilance). The casualty-1 grant on instant/sorcery casts is omitted — engine has no static "spells of type X gain casualty N" primitive, and no Casualty keyword yet. |
 | Snooping Page | {1}{W}{B} | Creature — Human Cleric | 2/3 | Repartee — Whenever you cast an instant or sorcery spell that targets a creature, this creature can't be blocked this turn. / Whenever this creature deals combat damage to a player, you draw a card and lose 1 life. | ✅ | Repartee grants `Keyword::Unblockable` (EOT) on the source; combat-damage trigger wired (draw + lose 1). |
 | Social Snub | {1}{W}{B} | Sorcery |  | When you cast this spell while you control a creature, you may copy this spell. / Each player sacrifices a creature of their choice. Each opponent loses 1 life and you gain 1 life. | 🟡 | Push XVII: cast-IS-while-you-control-a-creature copy now wired via the new `Effect::CopySpell` primitive. Trigger filter uses `Predicate::SelectorExists(EachPermanent(Creature & ControlledByYou))`. Main effect: each-player-sac + drain 1. The "of their choice" sac picker is collapsed to auto-pick (each player's auto-decider selects). |
 | Stirring Honormancer | {2}{W}{W/B}{B} | Creature — Rhino Bard | 4/5 | When this creature enters, look at the top X cards of your library, where X is the number of creatures you control. Put one of those cards into your hand and the rest into your graveyard. | ✅ | Wired in `catalog::sets::sos::creatures` via `Effect::RevealUntilFind` (find: Creature, cap: count of creatures you control, misses go to graveyard). The hybrid `{W/B}` pip is approximated as `{W}` so cost is `{2}{W}{W}{B}`. |
@@ -1670,7 +1760,7 @@ None of these are wired today; all prepare cards are ⏳ until at least
 | Kirol, History Buff // Pack a Punch | {R}{W} // {1}{R}{W} | Legendary Creature — Vampire Cleric // Sorcery | 2/3 |  | 🟡 | Wired in `catalog::sets::sos::mdfcs` (push XI/XII): vanilla front + back-face spell via the new `GameAction::CastSpellBack` path. Original ⏳ note: Standard primitives — should be straightforward to wire.|
 | Lorehold Charm | {R}{W} | Instant |  | Choose one — / • Each opponent sacrifices a nontoken artifact of their choice. / • Return target artifact or creature card with mana value 2 or less from your graveyard to the battlefield. / • Creatures you control get +1/+1 and gain trample until end of turn. | ✅ | Wired in `catalog::sets::sos::instants` — all three modes wired with existing primitives (`Sacrifice`, `Move from gy`, `ForEach(Creature) → PumpPT`). |
 | Lorehold, the Historian | {3}{R}{W} | Legendary Creature — Elder Dragon | 5/5 | Flying, haste / Each instant and sorcery card in your hand has miracle {2}. (You may cast a card for its miracle cost when you draw it if it's the first card you drew this turn.) / At the beginning of each opponent's upkeep, you may discard a card. If you do, draw a card. | 🟡 | Body-only wire (5/5 Flying+Haste Legendary Elder Dragon, R/W). Miracle grant on instants/sorceries in hand is omitted (no miracle/alt-cost-on-draw primitive); per-opp-upkeep loot trigger omitted (no opp-upkeep step trigger that fires for non-active player). The vanilla finisher is the most impactful printed clause — both omitted clauses are tracked in TODO.md. |
-| Molten Note | {X}{R}{W} | Sorcery |  | Molten Note deals damage to target creature equal to the amount of mana spent to cast this spell. Untap all creatures you control. / Flashback {6}{R}{W} (You may cast this card from your graveyard for its flashback cost. Then exile it.) | ⏳ | 🔍 needs review (oracle previously truncated). Needs: cast-from-exile pipeline; cast-from-graveyard. |
+| Molten Note | {X}{R}{W} | Sorcery |  | Molten Note deals damage to target creature equal to the amount of mana spent to cast this spell. Untap all creatures you control. / Flashback {6}{R}{W} (You may cast this card from your graveyard for its flashback cost. Then exile it.) | 🟡 | Body wired: X damage to target creature (X = `Value::XFromCost`, an approximation of "mana spent to cast"; matches the typical play pattern since cost-to-X is mostly identical absent cost reductions). Untap all your creatures wired. Flashback {6}{R}{W} via `Keyword::Flashback`. |
 | Practiced Scrollsmith | {R}{R/W}{W} | Creature — Dwarf Cleric | 3/2 | First strike / When this creature enters, exile target noncreature, nonland card from your graveyard. Until the end of your next turn, you may cast that card. | 🟡 | Wired in `catalog::sets::sos::creatures`. ETB now exiles **exactly one** matching noncreature/nonland card in the controller's graveyard via the new `Selector::Take(_, 1)` primitive (push X) — closer to the printed "target one card" semantics; the prior implementation exiled every matching card. The hybrid `{R/W}` pip is approximated as `{R}` (cost: `{R}{R}{W}`). The "may cast until next turn" rider is omitted (no cast-from-exile-with-time-limit primitive). |
 | Pursue the Past | {R}{W} | Sorcery |  | You gain 2 life. You may discard a card. If you do, draw two cards. / Flashback {2}{R}{W} (You may cast this card from your graveyard for its flashback cost. Then exile it.) | 🟡 | Push XV: gain 2 + the discard+draw chain wrapped in `Effect::MayDo` so the printed "you may discard" optionality is honored. Flashback wired via `Keyword::Flashback`. The lifegain half always resolves; the loot half is opt-in. |
 | Spirit Mascot | {R}{W} | Creature — Spirit Ox | 2/2 | Whenever one or more cards leave your graveyard, put a +1/+1 counter on this creature. | ✅ | Wired against the new `EventKind::CardLeftGraveyard` event. Trigger fires per-card emission (the printed "one or more" wording is approximated per-card). |
@@ -1682,7 +1772,7 @@ None of these are wired today; all prepare cards are ⏳ until at least
 
 | Card | Mana Cost | Type | P/T | Oracle Text | Status | Notes |
 |---|---|---|---|---|---|---|
-| Biblioplex Tomekeeper | {4} | Artifact Creature — Construct | 3/4 | When this creature enters, choose up to one — / • Target creature becomes prepared. (Only creatures with prepare spells can become prepared.) / • Target creature becomes unprepared. | ⏳ | Needs: Prepare keyword primitive (prepared-state toggle). The "prepared" state is a new SOS-only flag flipped on/off by toggles like this card; only creatures whose own oracle text grants them a "Prepare {cost}" ability can hold the state. See "Prepare mechanic" note below. |
+| Biblioplex Tomekeeper | {4} | Artifact Creature — Construct | 3/4 | When this creature enters, choose up to one — / • Target creature becomes prepared. (Only creatures with prepare spells can become prepared.) / • Target creature becomes unprepared. | 🟡 | Push XXV: Body wired (3/4 Construct artifact creature). The Prepare toggle is omitted — engine has no Prepare keyword nor a prepared-state flag (same gap as Skycoach Waypoint). |
 | Diary of Dreams | {2} | Artifact — Book |  | Whenever you cast an instant or sorcery spell, put a page counter on this artifact. / {5}, {T}: Draw a card. This ability costs {1} less to activate for each page counter on this artifact. | 🟡 | Page-counter accrual on instant/sorcery cast (counter type approximated as Charge — engine has no Page counter) + flat {5},{T} draw. The page-counter-scaled cost reduction is omitted (no self-counter cost-reduction primitive). |
 | Great Hall of the Biblioplex |  | Land |  | {T}: Add {C}. / {T}, Pay 1 life: Add one mana of any color. Spend this mana only to cast an instant or sorcery spell. / {5}: If this land isn't a creature, it becomes a 2/4 Wizard creature with "Whenever you cast an instant or sorcery spell, this creature gets +1/+0 until end of turn." It's still a land. | 🟡 | Push XV: legendary colorless utility land. `{T}: Add {C}` faithful + `{T}, Pay 1 life: Add one mana of any color` via the new `ActivatedAbility.life_cost: u32` field — the effect is a pure mana ability (`AddMana(AnyOneColor 1)`) so it resolves immediately without going on the stack. The `{5}: becomes 2/4 Wizard creature` clause is omitted (no land-becomes-creature primitive — same gap as Mishra's Factory). The spend-restriction rider on the rainbow ability is omitted (no per-pip mana metadata yet). |
 | Mage Tower Referee | {2} | Artifact Creature — Construct | 2/1 | Whenever you cast a multicolored spell, put a +1/+1 counter on this creature. | ✅ | Wired in `catalog::sets::sos::creatures` with a `SpellCast/YourControl` trigger filtered on `EntityMatches(TriggerSource, Multicolored)` — uses the new `SelectionRequirement::Multicolored` predicate (≥ 2 distinct colored pips, hybrid both halves, Phyrexian colored side). Mono-color and colorless casts don't bump the Referee. |
@@ -1690,10 +1780,10 @@ None of these are wired today; all prepare cards are ⏳ until at least
 | Petrified Hamlet |  | Land |  | When this land enters, choose a land card name. / Activated abilities of sources with the chosen name can't be activated unless they're mana abilities. / Lands with the chosen name have "{T}: Add {C}." / {T}: Add {C}. | 🟡 | Mana ability `{T}: Add {C}` wired via the new shared `tap_add_colorless()` helper in `catalog::sets`. The "choose a land card name" prompt + name-keyed lock-out static + name-keyed grant of `{T}: Add {C}` on opp lands are all omitted (no name-prompt decision, no name-match selector). The card still slots into colorless utility roles. |
 | Potioner's Trove | {3} | Artifact |  | {T}: Add one mana of any color. / {T}: You gain 2 life. Activate only if you've cast an instant or sorcery spell this turn. | 🟡 | Mana ability + lifegain ability wired; the "if you've cast an instant or sorcery this turn" gate on the lifegain activation is omitted (no per-turn-cast gate on activated abilities yet). |
 | Rancorous Archaic | {5} | Creature — Avatar | 2/2 | Trample, reach / Converge — This creature enters with a +1/+1 counter on it for each color of mana spent to cast it. | ✅ | Wired in `catalog::sets::sos::creatures` (trample/reach + ETB AddCounter using `Value::ConvergedValue`). Powered by the engine's new `StackItem::Trigger.converged_value` plumbing. |
-| Skycoach Waypoint |  | Land |  | {T}: Add {C}. / {3}, {T}: Target creature becomes prepared. (Only creatures with prepare spells can become prepared.) | ⏳ | Needs: Prepare keyword primitive (prepared-state toggle). Mana ability is straightforward; the {3},{T} prepare-target ability is gated on the same engine flag as Biblioplex Tomekeeper. |
+| Skycoach Waypoint |  | Land |  | {T}: Add {C}. / {3}, {T}: Target creature becomes prepared. (Only creatures with prepare spells can become prepared.) | 🟡 | Push XXV: `{T}: Add {C}` mana ability wired via `tap_add_colorless()`. The {3},{T} prepare-target ability is omitted — engine has no Prepare keyword (same gap as Biblioplex Tomekeeper). |
 | Strixhaven Skycoach | {3} | Artifact — Vehicle | 3/2 | Flying / When this Vehicle enters, you may search your library for a basic land card, reveal it, put it into your hand, then shuffle. / Crew 2 (Tap any number of creatures you control with total power 2 or more: This Vehicle becomes an artifact creature until end of turn.) | ⏳ | 🔍 needs review (oracle previously truncated). Needs: Crew keyword primitive; Vehicle crew primitive. |
 | Sundering Archaic | {6} | Creature — Avatar | 3/3 | Converge — When this creature enters, exile target nonland permanent an opponent controls with mana value less than or equal to the number of colors of mana spent to cast this creature. / {2}: Put target card from a graveyard on the bottom of its owner's library. | 🟡 | Push XVI: `{2}: gy → bottom of owner's library` activated ability now wired via `Effect::Move { what: Target(0), to: ZoneDest::Library { who: OwnerOf(Target(0)), pos: Bottom } }`. ETB Converge exile is wired against `Nonland & ControlledByOpponent`; the mana-value cap against `ConvergedValue` is still approximated to "any nonland opp permanent" (no `Value`-keyed `ManaValueAtMost` predicate yet — tracked in TODO.md). |
-| The Dawning Archaic | {10} | Legendary Creature — Avatar | 7/7 | This spell costs {1} less to cast for each instant and sorcery card in your graveyard. / Reach / Whenever The Dawning Archaic attacks, you may cast target instant or sorcery card from your graveyard without paying its mana cost. If that spell would be put into your graveyard, exile it instead. | ⏳ | 🔍 needs review (oracle previously truncated). Needs: cast-from-exile pipeline; cast-from-graveyard. |
+| The Dawning Archaic | {10} | Legendary Creature — Avatar | 7/7 | This spell costs {1} less to cast for each instant and sorcery card in your graveyard. / Reach / Whenever The Dawning Archaic attacks, you may cast target instant or sorcery card from your graveyard without paying its mana cost. If that spell would be put into your graveyard, exile it instead. | 🟡 | Push XXV: Body wired (7/7 Legendary Avatar with Reach). The IS-in-gy cost-reduction static + attack-trigger cast-from-graveyard rider are omitted — engine has no per-graveyard-IS-count cost-reduction primitive nor cast-from-graveyard-without-paying for arbitrary cards. |
 | Together as One | {6} | Sorcery |  | Converge — Target player draws X cards, Together as One deals X damage to any target, and you gain X life, where X is the number of colors of mana spent to cast this spell. | 🟡 | Damage and life-gain halves wired in `catalog::sets::sos::sorceries`; the "target player draws X" half collapses to "you draw X" (multi-target prompt gap). |
 | Transcendent Archaic | {7} | Creature — Avatar | 6/6 | Vigilance / Converge — When this creature enters, you may draw X cards, where X is the number of colors of mana spent to cast this spell. If you draw one or more cards this way, discard two cards. | 🟡 | Body wired (6/6 Vigilance Avatar). ETB Converge draw is wired via `Value::ConvergedValue`; the conditional discard 2 is gated on `ConvergedValue ≥ 1`. The "you may" optionality is collapsed to always-draw-when-X-≥-1 (no may-do primitive yet). |
 
@@ -1803,6 +1893,7 @@ parity is a matter of porting card factories one at a time.
 | Codespell Cleric | {W} | ✅ | Push XXIV: 1/1 Kor Cleric with Lifelink. Vanilla low-curve Silverquill body. |
 | Reckless Amplimancer | {2}{G} | 🟡 | Push XXIV: 2/2 Elf Druid. Activated `{4}{G}{G}: +3/+3 EOT` (printed `+X/+X = mana spent` collapses to fixed +3/+3). |
 | Karok Wrangler | {1}{G}{U} | ✅ | Push XXIV: 2/2 Elf Druid. Magecraft: +1/+1 counter on target creature you control. |
+| Quick Study | {1}{U} | ✅ | Push XXV: Instant. Target player draws two cards. Simple `Effect::Draw { who: Player(You), amount: 2 }`. |
 
 ### Shared / multi-college
 

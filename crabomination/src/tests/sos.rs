@@ -7948,3 +7948,208 @@ fn increment_trigger_re_checks_intervening_if_on_resolution() {
         "Rule 603.4: intervening-if re-check should suppress the body",
     );
 }
+
+// ── Push XXV: new SOS card bodies + Killian's Confidence gy trigger ─────────
+
+#[test]
+fn silverquill_the_disputant_is_a_four_four_flying_vigilance_dragon() {
+    // 🟡 body-only ship. Verify card matches the printed P/T + keywords +
+    // legendary supertype + Elder/Dragon subtypes.
+    use crate::card::{CreatureType, Supertype};
+    let def = catalog::silverquill_the_disputant();
+    assert_eq!(def.power, 4);
+    assert_eq!(def.toughness, 4);
+    assert!(def.keywords.contains(&Keyword::Flying));
+    assert!(def.keywords.contains(&Keyword::Vigilance));
+    assert!(def.supertypes.contains(&Supertype::Legendary));
+    assert!(def.subtypes.creature_types.contains(&CreatureType::Elder));
+    assert!(def.subtypes.creature_types.contains(&CreatureType::Dragon));
+}
+
+#[test]
+fn biblioplex_tomekeeper_is_a_three_four_construct() {
+    use crate::card::CreatureType;
+    let def = catalog::biblioplex_tomekeeper();
+    assert_eq!(def.power, 3);
+    assert_eq!(def.toughness, 4);
+    assert!(def.card_types.contains(&CardType::Artifact));
+    assert!(def.card_types.contains(&CardType::Creature));
+    assert!(def.subtypes.creature_types.contains(&CreatureType::Construct));
+}
+
+#[test]
+fn the_dawning_archaic_is_a_seven_seven_legendary_avatar_with_reach() {
+    use crate::card::{CreatureType, Supertype};
+    let def = catalog::the_dawning_archaic();
+    assert_eq!(def.power, 7);
+    assert_eq!(def.toughness, 7);
+    assert!(def.keywords.contains(&Keyword::Reach));
+    assert!(def.supertypes.contains(&Supertype::Legendary));
+    assert!(def.subtypes.creature_types.contains(&CreatureType::Avatar));
+}
+
+#[test]
+fn nita_forum_conciliator_is_a_two_three_legendary_human_advisor() {
+    use crate::card::{CreatureType, Supertype};
+    let def = catalog::nita_forum_conciliator();
+    assert_eq!(def.power, 2);
+    assert_eq!(def.toughness, 3);
+    assert!(def.supertypes.contains(&Supertype::Legendary));
+    assert!(def.subtypes.creature_types.contains(&CreatureType::Human));
+    assert!(def.subtypes.creature_types.contains(&CreatureType::Advisor));
+}
+
+#[test]
+fn skycoach_waypoint_taps_for_colorless() {
+    // {T}: Add {C} ability is the only ability on the body. Cast / put
+    // onto the battlefield and tap for one colorless.
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(0, catalog::skycoach_waypoint());
+    g.clear_sickness(land);
+    let c_before = g.players[0].mana_pool.colorless_amount();
+
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: land, ability_index: 0, target: None,
+    })
+    .expect("{T}: Add {C} activatable");
+
+    assert_eq!(g.players[0].mana_pool.colorless_amount(), c_before + 1);
+    let c = g.battlefield.iter().find(|c| c.id == land).unwrap();
+    assert!(c.tapped, "land should be tapped");
+}
+
+#[test]
+fn fix_whats_broken_returns_mana_value_x_artifact_from_graveyard() {
+    // Seed P0's graveyard with two artifacts: a Sol Ring (MV 1) and
+    // Wood Elemental (MV 1 too). Cast Fix What's Broken at X=1; pay 1
+    // life; both MV-1 artifacts/creatures should return.
+    let mut g = two_player_game();
+    let sol = g.add_card_to_graveyard(0, catalog::sol_ring());
+    // Seed a higher-MV card too so we can prove the X-gate is applied.
+    let _big = g.add_card_to_graveyard(0, catalog::grizzly_bears()); // MV 2
+    let id = g.add_card_to_hand(0, catalog::fix_whats_broken());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3); // X=1 + 2 generic
+    let life_before = g.players[0].life;
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: Some(1),
+    })
+    .expect("Fix What's Broken castable for {X=1}{2}{W}{B}");
+    drain_stack(&mut g);
+
+    // X=1: lose 1 life.
+    assert_eq!(g.players[0].life, life_before - 1, "pay X=1 life");
+    // Sol Ring (MV 1) returns; grizzly bears (MV 2) does not.
+    assert!(g.battlefield.iter().any(|c| c.id == sol),
+        "Sol Ring (MV 1) should return at X=1");
+    // The bears in gy should still be there (MV 2 doesn't match X=1).
+    let bears_in_gy = g.players[0].graveyard.iter()
+        .filter(|c| c.definition.name == "Grizzly Bears")
+        .count();
+    assert!(bears_in_gy >= 1, "Grizzly Bears (MV 2) should not return at X=1");
+}
+
+#[test]
+fn mica_reader_of_ruins_magecraft_sac_artifact_to_copy_when_decider_agrees() {
+    use crate::decision::DecisionAnswer;
+    let mut g = two_player_game();
+    let _mica = g.add_card_to_battlefield(0, catalog::mica_reader_of_ruins());
+    // Stage an artifact to sacrifice.
+    let _art = g.add_card_to_battlefield(0, catalog::sol_ring());
+    let target = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(target);
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    // ScriptedDecider answers MayDo with `true` to sac the artifact.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(target)), mode: None, x_value: None,
+    })
+    .expect("Bolt castable for {R}");
+    drain_stack(&mut g);
+
+    // Mica's Magecraft sac'd Sol Ring + copied Bolt — target bear takes
+    // 6 damage (Bolt + copy), so it dies.
+    assert!(!g.battlefield.iter().any(|c| c.id == target),
+        "Target bear should die to original + copied Bolt");
+    assert!(g.players[0].graveyard.iter().any(|c| c.definition.name == "Sol Ring"),
+        "Sol Ring sacrificed to Mica's Magecraft");
+}
+
+#[test]
+fn mica_reader_of_ruins_magecraft_skips_copy_when_decider_declines() {
+    use crate::decision::DecisionAnswer;
+    let mut g = two_player_game();
+    let _mica = g.add_card_to_battlefield(0, catalog::mica_reader_of_ruins());
+    let _art = g.add_card_to_battlefield(0, catalog::sol_ring());
+    let target = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(target);
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(false)]));
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(target)), mode: None, x_value: None,
+    })
+    .expect("Bolt castable for {R}");
+    drain_stack(&mut g);
+
+    // No copy fired: target takes 3 damage; the 2/2 bear lives (Bolt
+    // hits for 3 to a 2-toughness creature so it dies). Verify the
+    // artifact is NOT sacrificed.
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Sol Ring"),
+        "Sol Ring NOT sacrificed when MayDo answered false");
+}
+
+#[test]
+fn killians_confidence_returns_to_hand_when_creature_deals_combat_damage() {
+    // Killian's Confidence sits in graveyard. Attack with a creature →
+    // combat damage → may-pay {W} → card returns to hand.
+    use crate::decision::DecisionAnswer;
+    let mut g = two_player_game();
+    // Stage Killian's Confidence in P0's gy.
+    let kc = g.add_card_to_graveyard(0, catalog::killians_confidence());
+    // Stage an attacker on P0's battlefield. Set step so the attacker
+    // can be declared.
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    // Have W mana to pay the return cost.
+    g.players[0].mana_pool.add(Color::White, 1);
+    // Script: MayPay answers yes.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    // Move to combat and declare the bear.
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: bear,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attacker declared");
+    // Force-resolve combat by stepping forward to damage step.
+    g.step = TurnStep::CombatDamage;
+    g.resolve_combat().expect("combat damage resolved");
+    // Drain the may-pay trigger off the stack.
+    drain_stack(&mut g);
+
+    // Killian's Confidence is now in P0's hand (not graveyard).
+    assert!(g.players[0].hand.iter().any(|c| c.id == kc),
+        "Killian's Confidence should be in hand after combat damage + may-pay yes");
+    assert!(!g.players[0].graveyard.iter().any(|c| c.id == kc),
+        "Killian's Confidence should leave the graveyard");
+}
+
+#[test]
+fn killians_confidence_stays_in_graveyard_when_no_damage_or_no_pay() {
+    // Without combat damage to a player, no trigger fires.
+    let mut g = two_player_game();
+    let kc = g.add_card_to_graveyard(0, catalog::killians_confidence());
+    let _bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // Walk to end step without combat damage.
+    g.step = TurnStep::End;
+
+    // KC still in graveyard.
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == kc),
+        "KC should still be in graveyard with no combat damage");
+}

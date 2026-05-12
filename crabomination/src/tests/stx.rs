@@ -2649,3 +2649,27 @@ fn soothsayer_adept_activates_surveil_one() {
         initial_lib, after_lib, after_gy
     );
 }
+
+// ── Push XXV: Quick Study ───────────────────────────────────────────────────
+
+#[test]
+fn quick_study_draws_two_cards_for_target_player() {
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
+    let id = g.add_card_to_hand(0, catalog::quick_study());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let hand_before = g.players[0].hand.len();
+    let lib_before = g.players[0].library.len();
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Quick Study castable for {1}{U}");
+    drain_stack(&mut g);
+
+    // Hand: -1 (cast) + 2 (draw) = +1 net.
+    assert_eq!(g.players[0].hand.len(), hand_before - 1 + 2);
+    // Library: -2 (drawn).
+    assert_eq!(g.players[0].library.len(), lib_before - 2);
+}

@@ -527,8 +527,26 @@ impl GameState {
     /// `DealsCombatDamageToPlayer` onto the stack, with `damaged_player`
     /// stored as the trigger's target so the effect can refer to "that
     /// player" via `PlayerRef::Target(0)`.
+    ///
+    /// Phase 1 walks the battlefield for the attacker's own
+    /// `SelfSource` / `AnyPlayer` triggers (the printed
+    /// "whenever this creature deals combat damage" pattern).
+    ///
+    /// Phase 2 walks every player's graveyard for `FromYourGraveyard`
+    /// triggers whose controller (the gy owner) matches the source's
+    /// controller — the "whenever your creatures deal combat damage,
+    /// return this card from your graveyard" pattern used by Killian's
+    /// Confidence and friends. The trigger source is bound to the
+    /// graveyard card itself so a `Move(SelfSource → Hand)` body
+    /// returns the right card.
     fn fire_combat_damage_to_player_triggers(&mut self, source: CardId, damaged_player: usize) {
-        let triggers: Vec<(Effect, usize)> = self
+        let attacker_controller = self
+            .battlefield
+            .iter()
+            .find(|c| c.id == source)
+            .map(|c| c.controller);
+
+        let mut triggers: Vec<(CardId, Effect, usize)> = self
             .battlefield
             .iter()
             .find(|c| c.id == source)
@@ -544,14 +562,38 @@ impl GameState {
                                     | crate::effect::EventScope::AnyPlayer
                             )
                     })
-                    .map(|t| (t.effect.clone(), c.controller))
+                    .map(|t| (c.id, t.effect.clone(), c.controller))
                     .collect()
             })
             .unwrap_or_default();
 
-        for (effect, controller) in triggers {
+        // Phase 2: walk every player's graveyard for `FromYourGraveyard`
+        // triggers. Only fire if the attacker is controlled by the gy
+        // owner (the printed "creatures you control" filter on the
+        // attacker side).
+        if let Some(atk_controller) = attacker_controller {
+            for player in &self.players {
+                if player.id.0 != atk_controller {
+                    continue;
+                }
+                for gy_card in &player.graveyard {
+                    for t in &gy_card.definition.triggered_abilities {
+                        if t.event.kind == EventKind::DealsCombatDamageToPlayer
+                            && matches!(
+                                t.event.scope,
+                                crate::effect::EventScope::FromYourGraveyard
+                            )
+                        {
+                            triggers.push((gy_card.id, t.effect.clone(), gy_card.owner));
+                        }
+                    }
+                }
+            }
+        }
+
+        for (trig_source, effect, controller) in triggers {
             self.stack.push(StackItem::Trigger {
-                source,
+                source: trig_source,
                 controller,
                 effect: Box::new(effect),
                 target: Some(Target::Player(damaged_player)),

@@ -1424,14 +1424,26 @@ pub fn growth_curve() -> CardDefinition {
 }
 
 /// Killian's Confidence — {W}{B} Sorcery.
-/// "Target creature gets +1/+1 until end of turn. Draw a card."
+/// "Target creature gets +1/+1 until end of turn. Draw a card. /
+/// Whenever one or more creatures you control deal combat damage to a
+/// player, you may pay {W/B}. If you do, return this card from your
+/// graveyard to your hand."
 ///
-/// Approximation: the recursion clause ("Whenever one or more creatures
-/// you control deal combat damage to a player, you may pay {W/B}: return
-/// this card from your graveyard to your hand") is omitted. The body
-/// (pump + draw) is wired faithfully so the card carries its full mainline
-/// effect.
+/// ✅ Body wired (pump + draw). The graveyard-resident may-pay-to-
+/// return rider now wired via the new `EventScope::FromYourGraveyard`
+/// extension on `fire_combat_damage_to_player_triggers` (push XXV).
+/// When your creature connects, every Killian's Confidence sitting in
+/// your graveyard fires; controller is asked yes/no via `MayPay`, and
+/// on yes + sufficient mana the card moves back to hand. Hybrid {W/B}
+/// pip approximated as {W} (matches Practiced Scrollsmith's hybrid
+/// collapse).
 pub fn killians_confidence() -> CardDefinition {
+    use crate::card::{EventKind, EventScope, EventSpec, TriggeredAbility};
+    use crate::mana::{Color, ManaCost, ManaSymbol};
+    // Hybrid {W/B} approximated as {W} for the may-pay return cost.
+    let return_cost = ManaCost {
+        symbols: vec![ManaSymbol::Colored(Color::White)],
+    };
     CardDefinition {
         name: "Killian's Confidence",
         cost: cost(&[w(), b()]),
@@ -1454,7 +1466,20 @@ pub fn killians_confidence() -> CardDefinition {
             },
         ]),
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::DealsCombatDamageToPlayer,
+                EventScope::FromYourGraveyard,
+            ),
+            effect: Effect::MayPay {
+                description: "Killian's Confidence: pay {W/B} to return to hand?".into(),
+                mana_cost: return_cost,
+                body: Box::new(Effect::Move {
+                    what: Selector::This,
+                    to: crate::effect::ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::This))),
+                }),
+            },
+        }],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -2404,6 +2429,92 @@ pub fn molten_note() -> CardDefinition {
                     SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
                 ),
                 up_to: None,
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Fix What's Broken ──────────────────────────────────────────────────────
+
+/// Fix What's Broken — {2}{W}{B} Sorcery.
+/// "As an additional cost to cast this spell, pay X life. / Return each
+/// artifact and creature card with mana value X from your graveyard to
+/// the battlefield."
+///
+/// 🟡 The "as an additional cost, pay X life" cost folds into resolution
+/// as a `LoseLife(XFromCost)` pre-step — same approximation Vicious
+/// Rivalry uses. The main return-each-MV-X clause walks the controller's
+/// graveyard via `ForEach(EachMatching(Graveyard(You), (Artifact ∨
+/// Creature) ∧ Nonland))`, then for each iteration gates on
+/// `ManaValueOf(TriggerSource) == XFromCost` (synthesised as
+/// `All([ValueAtLeast(MV, X), ValueAtMost(MV, X)])` since there's no
+/// `ValueEquals` predicate). The matching cards are moved to the
+/// battlefield under the caster's control. Deviates from the printed
+/// card on costed-vs-resolved ordering, but the auto-decider always
+/// commits to the cast so the deviation has no functional impact.
+pub fn fix_whats_broken() -> CardDefinition {
+    use crate::card::Predicate;
+    use crate::effect::ZoneDest;
+    use crate::effect::ZoneRef;
+    use crate::mana::{ManaSymbol, b, w};
+    let mut spell_cost = cost(&[generic(2), w(), b()]);
+    spell_cost.symbols.insert(0, ManaSymbol::X);
+    CardDefinition {
+        name: "Fix What's Broken",
+        cost: spell_cost,
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            // Approximate "pay X life" additional cost: lose X life in
+            // the resolution pre-step (same shape as Vicious Rivalry).
+            Effect::LoseLife {
+                who: Selector::You,
+                amount: Value::XFromCost,
+            },
+            // Return each (artifact ∨ creature) card from your graveyard
+            // whose mana value equals X. We synthesise equality via
+            // `ValueAtLeast ∧ ValueAtMost`; ManaValueOf reads the
+            // iteration entity bound to `TriggerSource` by ForEach.
+            Effect::ForEach {
+                selector: Selector::EachMatching {
+                    zone: ZoneRef::Graveyard(PlayerRef::You),
+                    filter: SelectionRequirement::Nonland.and(
+                        SelectionRequirement::HasCardType(CardType::Artifact)
+                            .or(SelectionRequirement::Creature),
+                    ),
+                },
+                body: Box::new(Effect::If {
+                    cond: Predicate::All(vec![
+                        Predicate::ValueAtLeast(
+                            Value::ManaValueOf(Box::new(Selector::TriggerSource)),
+                            Value::XFromCost,
+                        ),
+                        Predicate::ValueAtMost(
+                            Value::ManaValueOf(Box::new(Selector::TriggerSource)),
+                            Value::XFromCost,
+                        ),
+                    ]),
+                    then: Box::new(Effect::Move {
+                        what: Selector::TriggerSource,
+                        to: ZoneDest::Battlefield {
+                            controller: PlayerRef::You,
+                            tapped: false,
+                        },
+                    }),
+                    else_: Box::new(Effect::Noop),
+                }),
             },
         ]),
         activated_abilities: no_abilities(),

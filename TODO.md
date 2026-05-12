@@ -71,6 +71,24 @@ status tag (✅ wired, 🟡 partial, ⏳ todo) plus a short note.
   `tests::stx::witherbloom_pledgemage_rejects_activation_with_zero_life`
   + the activated-ability path; a future test will exercise the
   alt-cost path once we have an alt-cost-with-life-cost card wired.
+- ✅ **CR 603.6c — Leaves-the-battlefield abilities check first zone**:
+  "An ability that attempts to do something to the card that left the
+  battlefield checks for it only in the first zone that it went to."
+  The engine's `move_card_to` walks battlefield → graveyards → exile
+  → hand → library, finding the source card in its current zone.
+  Triggered abilities with `EventScope::FromYourGraveyard` correctly
+  resolve `Selector::This` against the graveyard-resident card; the
+  same primitive supports `Move(This → Hand)` from a graveyard scope
+  (push XXV — Killian's Confidence). Engine audit added to TODO.md.
+- ✅ **CR 603.10a — Graveyard-leave triggers look back in time**:
+  "Some zone-change triggers look back in time. These are
+  leaves-the-battlefield abilities, abilities that trigger when a
+  card leaves a graveyard, and abilities that trigger when an object
+  that all players can see is put into a hand or library." Our
+  `EventKind::CardLeftGraveyard` emission in `move_card_to` powers
+  the SOS Lorehold "cards leave your graveyard" cycle. Per-card
+  emission is an idempotent approximation of the "one or more"
+  batched wording.
 - ✅ **CR 121.5 — Put-into-hand is not a draw**: "If an effect moves
   cards from a player's library to that player's hand without using
   the word 'draw,' the player has not drawn those cards. This makes
@@ -157,6 +175,61 @@ status tag (✅ wired, 🟡 partial, ⏳ todo) plus a short note.
   contexts and zero the value when the source has changed zones.
 
 ## Recent additions
+
+- ✅ **Push XXV (2026-05-12, `claude/modern_decks` branch)**: 7 new SOS
+  cards out of ⏳, 1 new STX card, 1 promotion from 🟡 to ✅, plus a
+  `EventScope::FromYourGraveyard` extension on the combat-damage
+  trigger dispatcher. Tests at 1150 (+11 net).
+  - **SOS Silverquill (W/B) ⏳ → 🟡**: Fix What's Broken (X-life cost
+    + return MV=X artifacts/creatures from gy), Silverquill the
+    Disputant (4/4 Legendary Elder Dragon body), Nita Forum
+    Conciliator (2/3 Legendary Human Advisor body).
+  - **SOS Colorless ⏳ → 🟡**: Biblioplex Tomekeeper (3/4 Construct
+    body), The Dawning Archaic (7/7 Legendary Avatar Reach body),
+    Skycoach Waypoint (Land + `{T}: Add {C}`).
+  - **SOS Red ⏳ → 🟡**: Mica, Reader of Ruins (4/4 Legendary Human
+    Artificer + Magecraft sac-an-artifact-to-copy via
+    `magecraft(MayDo + Seq(Sacrifice + CopySpell))`).
+  - **STX U new → ✅**: Quick Study ({1}{U} Instant: target player
+    draws 2).
+  - **SOS Silverquill 🟡 → ✅**: Killian's Confidence — the gy-
+    resident may-pay-on-combat-damage rider is now wired via the
+    new `EventScope::FromYourGraveyard` extension on
+    `fire_combat_damage_to_player_triggers`. Two tests cover the
+    yes path (return to hand) and the no-damage path (stays in gy).
+  - **Engine: combat damage triggers walk graveyards.**
+    `fire_combat_damage_to_player_triggers` was previously
+    battlefield-only. Phase 2 now walks every player's graveyard for
+    `FromYourGraveyard`-scoped triggers whose owner matches the
+    attacker's controller — matches the printed "creatures you
+    control deal combat damage" filter on the attacker side. Trigger
+    binding: source = graveyard card; controller = card owner;
+    target = damaged player. Unblocks Killian's Confidence's
+    `Move(This → Hand)` body, which finds the card in graveyard via
+    `move_card_to`'s existing graveyard walk.
+  - **CR audit**:
+    - ✅ **CR 603.6c — Leaves-the-battlefield abilities check first
+      zone**: "An ability that attempts to do something to the card
+      that left the battlefield checks for it only in the first zone
+      that it went to." Our `move_card_to` walks battlefield first,
+      then graveyards, then exile/hand/library — the source card
+      bound to `Selector::This` is found in its current zone.
+      Killian's Confidence's `Move(This → Hand)` body resolves
+      against the graveyard-resident card and successfully relocates
+      it.
+    - ✅ **CR 603.10a — Graveyard-leave triggers look back in time**:
+      "Some zone-change triggers look back in time. These are
+      leaves-the-battlefield abilities, abilities that trigger when
+      a card leaves a graveyard, and abilities that trigger when an
+      object that all players can see is put into a hand or
+      library." The engine's `EventKind::CardLeftGraveyard` event
+      emission in `move_card_to` is the foundation for the SOS
+      Lorehold "cards leave your graveyard" cycle (Hardened
+      Academic, Spirit Mascot, Garrison Excavator, Living History,
+      Ark of Hunger). The events fire per-card-removed, which is a
+      faithful approximation of the printed "one or more" batched
+      wording (each Strixhaven card body is idempotent under per-
+      card emission).
 
 - ✅ **Push XXIV (2026-05-12, `claude/modern_decks` branch)**: 14 new
   STX cards in `catalog::sets::stx::extras` + CR 121.5 engine fix +

@@ -514,3 +514,36 @@ pub fn multiple_choice() -> CardDefinition {
         opening_hand: None,
     }
 }
+
+// ── Quick Study ─────────────────────────────────────────────────────────────
+
+/// Quick Study — {1}{U} Instant. "Target player draws two cards."
+///
+/// ✅ Simple targeted card-draw instant. The auto-decider aims at the
+/// caster by default (Draw effects bind to the caster when no target
+/// is specified). Mirrors Tidings' shape at instant speed for two
+/// fewer mana.
+pub fn quick_study() -> CardDefinition {
+    CardDefinition {
+        name: "Quick Study",
+        cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Draw {
+            who: Selector::Player(PlayerRef::You),
+            amount: Value::Const(2),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
