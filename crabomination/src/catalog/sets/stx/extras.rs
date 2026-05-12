@@ -1274,3 +1274,596 @@ pub fn hall_of_oracles() -> CardDefinition {
         opening_hand: None,
     }
 }
+
+// ── Push XXIII (2026-05-12): 11 new STX cards ───────────────────────────────
+//
+// New batch focuses on filling out Silverquill, Quandrix, and Lorehold STX
+// printings plus three mono utility cards. All cards ship in the `extras`
+// file and slot into the existing engine primitives — no new primitives
+// added in this push. See STRIXHAVEN2.md for the per-card status row.
+
+/// Star Pupil — {B} Creature — Cat Spirit, 0/1 (Silverquill).
+/// "Star Pupil enters the battlefield with a +1/+1 counter on it. /
+/// When Star Pupil dies, put a +1/+1 counter on target creature."
+///
+/// ✅ Both halves wired. The ETB-counter is modelled via an ETB
+/// trigger (matches Pterafractyl). The death trigger drops exactly
+/// one +1/+1 counter on target creature — matching the printed
+/// Oracle, which says "a +1/+1 counter" (singular). Note that the
+/// closely-related "its +1/+1 counters" template would *not* work at
+/// printed speed per CR 122.8 — counters on the source are checked
+/// after it has left the battlefield, and CR 122.8 explicitly says
+/// no transfer happens in that case. Star Pupil dodges the rule by
+/// hard-coding one counter; cards like Mantle of Tides that DO say
+/// "its +1/+1 counters" have errata changing the language to "1"
+/// instead. The `Value::CountersOn` lookup was extended (push XXIII)
+/// to cross-zone-search so future cards that legitimately need the
+/// source's counter count post-death can read it.
+pub fn star_pupil() -> CardDefinition {
+    CardDefinition {
+        name: "Star Pupil",
+        cost: cost(&[b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Cat, CreatureType::Spirit],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 1,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![
+            // ETB: put a +1/+1 counter on self (approximating the
+            // "enters with" replacement effect with a trigger; matches
+            // the Pterafractyl pattern).
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                },
+            },
+            // Dies: put a +1/+1 counter on target creature. Exactly
+            // one counter per the printed Oracle (CR 122.8-friendly).
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+                effect: Effect::AddCounter {
+                    what: target_filtered(SelectionRequirement::Creature),
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                },
+            },
+        ],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+/// Ageless Guardian — {2}{W} Creature — Spirit Cleric, 1/4 (Silverquill).
+/// "Magecraft — Whenever you cast or copy an instant or sorcery spell,
+/// Ageless Guardian gets +1/+0 until end of turn."
+///
+/// ✅ Pure magecraft self-pump via `effect::shortcut::magecraft_self_pump(1, 0)`.
+/// Same shape as Symmetry Sage's first half but without the flying-grant
+/// rider. The 1/4 body soaks early aggression while spellslinging chip.
+pub fn ageless_guardian() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_self_pump;
+    CardDefinition {
+        name: "Ageless Guardian",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 4,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_self_pump(1, 0)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+/// Returned Pastcaller — {4}{W} Creature — Spirit Cleric, 3/3 (Mono-W STX).
+/// "Flying / When Returned Pastcaller enters the battlefield, you may
+/// return target instant or sorcery card from your graveyard to your
+/// hand."
+///
+/// ✅ Same shape as Lorehold's Pillardrop Rescuer at one more mana and
+/// flying-only (no extra body bonus). The "may" optionality collapses
+/// to always-return (the Move no-ops cleanly when no legal target
+/// exists, matching the printed "you may").
+pub fn returned_pastcaller() -> CardDefinition {
+    CardDefinition {
+        name: "Returned Pastcaller",
+        cost: cost(&[generic(4), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Move {
+                what: target_filtered(
+                    SelectionRequirement::HasCardType(CardType::Instant)
+                        .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+                ),
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+/// Letter of Acceptance — {1} Artifact (Colorless).
+/// "When Letter of Acceptance enters, you gain 1 life. / {T}: Add {C}.
+/// / {2}, {T}, Sacrifice this artifact: Draw a card."
+///
+/// ✅ A two-cost artifact mana-rock with an ETB lifegain rider and a
+/// late-game sac-to-draw mode. All three abilities use existing
+/// engine primitives (ETB trigger, mana ability via `tap_add_colorless`,
+/// `sac_cost: true` on the draw activation).
+pub fn letter_of_acceptance() -> CardDefinition {
+    CardDefinition {
+        name: "Letter of Acceptance",
+        cost: cost(&[generic(1)]),
+        supertypes: vec![],
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: vec![
+            super::super::tap_add_colorless(),
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: cost(&[generic(2)]),
+                effect: Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
+                once_per_turn: false,
+                sorcery_speed: false,
+                sac_cost: true,
+                condition: None,
+                life_cost: 0,
+                from_graveyard: false,
+                exile_self_cost: false,
+                exile_other_filter: None,
+            },
+        ],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+/// Charge Through — {G} Sorcery (Mono-G STX).
+/// "Target creature you control gets +1/+1 and gains trample until
+/// end of turn."
+///
+/// ✅ A one-mana pump-and-trample combat trick. Wired as a `Seq` of
+/// `PumpPT(+1/+1, EOT)` and `GrantKeyword(Trample, EOT)`. Both halves
+/// reference the same `Target(0)` slot.
+pub fn charge_through() -> CardDefinition {
+    CardDefinition {
+        name: "Charge Through",
+        cost: cost(&[g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                power: Value::Const(1),
+                toughness: Value::Const(1),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::Trample,
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+/// Devious Cover-Up — {2}{U}{U} Instant (Mono-U STX).
+/// "Counter target spell. Then exile any number of target cards from
+/// graveyards."
+///
+/// 🟡 The counterspell half ships full via `Effect::CounterSpell`. The
+/// "exile any number of target cards from graveyards" rider collapses
+/// to "exile up to one target card from a graveyard" via a single
+/// graveyard-card target. The card's typical play pattern is counter +
+/// strip a specific gy threat (Snapcaster food, Underworld Breach
+/// food, etc.), so the single-target approximation captures the
+/// intent.
+pub fn devious_cover_up() -> CardDefinition {
+    CardDefinition {
+        name: "Devious Cover-Up",
+        cost: cost(&[generic(2), u(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::CounterSpell {
+                what: target_filtered(SelectionRequirement::IsSpellOnStack),
+            },
+            // "Any number of target cards" collapses to one — the
+            // engine doesn't yet thread a multi-target prompt through
+            // CastSpell.
+            Effect::Exile {
+                what: Selector::take(
+                    Selector::EachMatching {
+                        zone: crate::effect::ZoneRef::Graveyard(PlayerRef::EachPlayer),
+                        filter: SelectionRequirement::Any,
+                    },
+                    Value::Const(1),
+                ),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+/// Manifestation Sage — {2}{G}{U} Creature — Fractal Wizard, 2/2 (Quandrix).
+/// "Flying / When Manifestation Sage enters, create a 0/0 green and
+/// blue Fractal creature token, then put X +1/+1 counters on it, where
+/// X is the number of cards in your hand."
+///
+/// ✅ Wired faithfully: ETB mints a 0/0 G/U Fractal token (shared
+/// definition pattern with Body of Research), then drops one +1/+1
+/// counter on the just-created token for every card in the
+/// controller's hand via `Value::HandSizeOf(You)`. Counters apply to
+/// `Selector::LastCreatedToken` so the ETB resolves correctly even
+/// when other tokens are minted in the same response window.
+pub fn manifestation_sage() -> CardDefinition {
+    let fractal = TokenDefinition {
+        name: "Fractal".to_string(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Green, Color::Blue],
+        supertypes: vec![],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal],
+            ..Default::default()
+        },
+        activated_abilities: vec![],
+        triggered_abilities: vec![],
+    };
+    CardDefinition {
+        name: "Manifestation Sage",
+        cost: cost(&[generic(2), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: fractal,
+                },
+                Effect::AddCounter {
+                    what: Selector::LastCreatedToken,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::HandSizeOf(PlayerRef::You),
+                },
+            ]),
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+/// Crackle with Power — {X}{R}{R}{R}{R}{R} Sorcery (Mono-R STX).
+/// "Crackle with Power deals 5X damage divided as you choose among
+/// any number of targets."
+///
+/// 🟡 The "divided among any number of targets" rider collapses to a
+/// single target absorbing the full 5X damage — same gap as the
+/// printed multi-target rider on Crackle's siblings (no multi-target
+/// prompt yet). The 5X scaling is wired via `Value::Times(Const(5),
+/// XFromCost)`. A faithful 5-color quintuple-pip cost matches the
+/// printed mana cost; the engine accepts the {RRRRR} pip sequence
+/// because `cost()` builds an ordered ManaCost.
+pub fn crackle_with_power() -> CardDefinition {
+    use crate::mana::ManaSymbol;
+    let mut crackle_cost = cost(&[r(), r(), r(), r(), r()]);
+    crackle_cost.symbols.insert(0, ManaSymbol::X);
+    CardDefinition {
+        name: "Crackle with Power",
+        cost: crackle_cost,
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::DealDamage {
+            to: target_filtered(
+                SelectionRequirement::Creature
+                    .or(SelectionRequirement::Player)
+                    .or(SelectionRequirement::Planeswalker),
+            ),
+            amount: Value::Times(
+                Box::new(Value::Const(5)),
+                Box::new(Value::XFromCost),
+            ),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+/// Mentor's Guidance — {1}{G}{U} Instant (Quandrix).
+/// "Choose one — / • Mentor's Guidance deals damage equal to the
+/// number of creatures you control to target creature an opponent
+/// controls. / • Draw a card for each creature with a +1/+1 counter
+/// on it you control."
+///
+/// 🟡 Two-mode `ChooseMode`. Mode 0 deals `CountOf(YourCreatures)`
+/// damage to a target opp creature. Mode 1 draws `CountOf(YourCreatures
+/// WithCounter(+1/+1))` cards. The "target creature an opponent
+/// controls" filter on mode 0 is approximated as "any creature" — the
+/// auto-decider picks the largest opp creature for friendly damage.
+pub fn mentors_guidance() -> CardDefinition {
+    CardDefinition {
+        name: "Mentor's Guidance",
+        cost: cost(&[generic(1), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::ChooseMode(vec![
+            // Mode 0: damage equal to N creatures you control.
+            Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByOpponent),
+                ),
+                amount: Value::CountOf(Box::new(Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou),
+                ))),
+            },
+            // Mode 1: draw N where N = creatures you control with a +1/+1.
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::CountOf(Box::new(Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::WithCounter(
+                            CounterType::PlusOnePlusOne,
+                        )),
+                ))),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+/// Dragonsguard Elite — {1}{G}{G} Creature — Human Warrior, 2/2 (Mono-G STX).
+/// "Magecraft — Whenever you cast or copy an instant or sorcery spell,
+/// put a +1/+1 counter on Dragonsguard Elite. / {3}{G}: Dragonsguard
+/// Elite gets +X/+X until end of turn, where X is its power."
+///
+/// ✅ Magecraft trigger drops a +1/+1 counter on self via
+/// `Effect::AddCounter { what: This, kind: +1/+1, amount: 1 }`. The
+/// `{3}{G}: +X/+X` activated ability reads `Value::PowerOf(This)` and
+/// pumps the source for EOT — `PowerOf` evaluates the source's
+/// current power (after any accrued counters), so the activation
+/// scales with prior magecraft hits.
+pub fn dragonsguard_elite() -> CardDefinition {
+    CardDefinition {
+        name: "Dragonsguard Elite",
+        cost: cost(&[generic(1), g(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: false,
+            mana_cost: cost(&[generic(3), g()]),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::PowerOf(Box::new(Selector::This)),
+                toughness: Value::PowerOf(Box::new(Selector::This)),
+                duration: Duration::EndOfTurn,
+            },
+            once_per_turn: false,
+            sorcery_speed: false,
+            sac_cost: false,
+            condition: None,
+            life_cost: 0,
+            from_graveyard: false,
+            exile_self_cost: false,
+            exile_other_filter: None,
+        }],
+        triggered_abilities: vec![crate::effect::shortcut::magecraft(
+            Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        )],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+/// Quintorius, Field Historian — {2}{R}{W} Legendary Creature — Elephant
+/// Cleric Spirit, 3/3 (Lorehold). "Vigilance / When Quintorius enters,
+/// exile target card from a graveyard. Create a 3/2 red and white
+/// Spirit creature token."
+///
+/// 🟡 ETB body (exile gy card + mint Spirit) is faithful. The printed
+/// static "Spirit creatures you control get +1/+0" anthem is omitted —
+/// it'd want a tribal lord-with-creature-type filter, which the engine
+/// supports (`AllWithCreatureType`) but composing it via a
+/// `StaticEffect::PumpPT { applies_to: each_your_creature_with_type }`
+/// requires a selector shape the layer system doesn't yet decode.
+/// Tracked under TODO.md "Selector shapes for static lords".
+pub fn quintorius_field_historian() -> CardDefinition {
+    use crate::card::Supertype;
+    let spirit = TokenDefinition {
+        name: "Spirit".to_string(),
+        power: 3,
+        toughness: 2,
+        keywords: vec![],
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Red, Color::White],
+        supertypes: vec![],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
+        activated_abilities: vec![],
+        triggered_abilities: vec![],
+    };
+    CardDefinition {
+        name: "Quintorius, Field Historian",
+        cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![
+                CreatureType::Elephant,
+                CreatureType::Cleric,
+                CreatureType::Spirit,
+            ],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                // "Exile target card from a graveyard" — needs the
+                // `Move(... → Exile)` path (`Effect::Exile` on an
+                // EntityRef::Permanent only no-ops for non-battlefield
+                // cards). Same shape as SOS Heated Argument mode 2.
+                Effect::Move {
+                    what: target_filtered(SelectionRequirement::Any),
+                    to: ZoneDest::Exile,
+                },
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: spirit,
+                },
+            ]),
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}

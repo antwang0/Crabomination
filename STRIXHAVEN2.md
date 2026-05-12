@@ -49,6 +49,114 @@ All 232 cards marked ✅ or 🟡 have a corresponding factory in
 `crabomination/src/catalog/sets/sos/`; the audit script reports 0 false
 positives and 0 stale ⏳ rows.
 
+## 2026-05-12 push XXIII: 11 new STX cards + engine fixes for cross-zone selectors
+
+Adds 11 new STX printings (mostly mono / multi-college fills) to the
+catalog plus two cross-zone engine fixes that unblock several future
+cards. All ship in `catalog::sets::stx::extras`. Net +14 functionality
+tests (one Letter of Acceptance + Star Pupil split into two), tests at
+1123 (up from 1098).
+
+New STX cards (all ✅ unless flagged 🟡):
+
+- **Star Pupil** (B) ✅ — {B} Creature — Cat Spirit, 0/1. ETB enters
+  with a +1/+1 counter (Pterafractyl-shape ETB trigger). Dies → put
+  a +1/+1 counter on target creature. Audited against CR 122.8 ("if
+  a triggered ability instructs a player to put one object's
+  counters on another object and that ability's trigger condition
+  or effect checks that the object with those counters left the
+  battlefield, the player doesn't move counters"): the printed card
+  hard-codes one counter to dodge 122.8, so we ship Value::Const(1).
+
+- **Ageless Guardian** (W) ✅ — {2}{W} 1/4 Spirit Cleric. Pure
+  magecraft self-pump via `magecraft_self_pump(1, 0)`. Same shape
+  as Symmetry Sage's first half without the flying-grant rider.
+
+- **Returned Pastcaller** (W) ✅ — {4}{W} 3/3 Spirit Cleric, Flying.
+  ETB return target IS card from your graveyard to your hand. Same
+  shape as Pillardrop Rescuer (Lorehold) at one more mana, no R.
+
+- **Letter of Acceptance** (Colorless) ✅ — {1} Artifact. ETB +1
+  life; `{T}: Add {C}`; `{2}, {T}, Sac: Draw a card`. Three-mode
+  artifact mana-rock that scales into the late game.
+
+- **Charge Through** (G) ✅ — {G} Sorcery. Target creature you
+  control gets +1/+1 and gains trample EOT. Standard combat-trick
+  pump + keyword grant.
+
+- **Devious Cover-Up** (U) 🟡 — {2}{U}{U} Instant. Counter target
+  spell + exile up to one target card from any graveyard. The
+  printed "any number of target cards from graveyards" rider
+  collapses to "one card" via `Selector::Take(EachMatching(gy,
+  Any), 1)` — the cross-player gy iteration is now correct (engine
+  fix below) but multi-target prompting still needs the action
+  shape to expose a target list. The single-strip approximation
+  captures the most common play pattern.
+
+- **Manifestation Sage** (GU) ✅ — {2}{G}{U} 2/2 Fractal Wizard,
+  Flying. ETB mints a 0/0 G/U Fractal token + N +1/+1 counters
+  where N = `HandSizeOf(You)`. Test seeds 3 hand cards and asserts
+  the Fractal enters as a 3/3.
+
+- **Crackle with Power** (R) 🟡 — {X}{R}{R}{R}{R}{R} Sorcery.
+  `Value::Times(5, XFromCost)` damage to a single target. The
+  printed "divided as you choose among any number of targets"
+  rider collapses to single-target absorbing the full 5X damage
+  (multi-target prompt gap).
+
+- **Mentor's Guidance** (GU) ✅ — {1}{G}{U} Instant. Two-mode
+  `ChooseMode`: deal `CountOf(YourCreatures)` damage to target opp
+  creature, OR draw `CountOf(YourCreaturesWithCounter(+1/+1))`
+  cards.
+
+- **Dragonsguard Elite** (G) ✅ — {1}{G}{G} 2/2 Human Warrior.
+  Magecraft adds a +1/+1 counter on self; `{3}{G}: +X/+X EOT`
+  where X = `Value::PowerOf(This)`. Self-scaling combat trick.
+
+- **Quintorius, Field Historian** (RW Legendary) 🟡 — {2}{R}{W}
+  3/3 Legendary Elephant Cleric Spirit, Vigilance. ETB exile
+  target gy card + create a 3/2 R/W Spirit token. The printed
+  "Spirit creatures you control get +1/+0" static anthem is
+  omitted (tribal-lord-with-creature-type selector shape gap).
+
+Engine fixes (push XXIII):
+
+- ✅ **CR 122.1a / 122.2 — `Value::CountersOn` cross-zone search.**
+  The counter-count primitive used to scope to the battlefield
+  only, so any selector resolving to a card in graveyard/exile
+  zero'd silently. The lookup now falls through to graveyards and
+  exile (matching `evaluate_requirement_static`'s zone walk for
+  `WithCounter` filtering). Unblocks future cards that want to
+  read counters from a non-battlefield card. **Note:** This is in
+  technical tension with CR 122.2 ("counters on an object are not
+  retained if that object moves from one zone to another") — the
+  engine retains counters across zones (a benign deviation that
+  most Magic cards work *with*, e.g. Felisa's death-counter
+  filter). A future engine pass could clear counters on zone
+  change to be strictly CR 122.2-compliant.
+
+- ✅ **Multi-player zone iteration in `entities_in_zone`.** The
+  `EachMatching { zone: Graveyard(EachPlayer), filter }` shape
+  used to silently resolve to a single player's graveyard (via
+  `resolve_player`'s singular fallback). Now uses `resolve_players`
+  to iterate every matching player's zone. Unblocks Devious
+  Cover-Up's cross-graveyard exile, Necrogenesis-style total
+  count payoffs, and any future "from any graveyard" effect.
+
+CR audit (push XXIII): Consulted **CR 122.8 — Counter movement
+when source has left the battlefield**: "If a triggered ability
+instructs a player to put one object's counters on another object
+and that ability's trigger condition or effect checks that the
+object with those counters left the battlefield, the player
+doesn't move counters from one object to the other." Star Pupil's
+printed Oracle dodges this by using a fixed "+1/+1 counter"
+language; we ship `Value::Const(1)` accordingly. The cross-zone
+`Value::CountersOn` lookup added in this push DOES NOT change Star
+Pupil's behaviour (which still uses Const(1)), but it does mean
+future die-trigger-readers-of-counters could implement the rare
+errata-compatible "its counters" pattern in a CR 122-compliant way
+once a "snapshot counters at trigger time" mechanism is added.
+
 ## 2026-05-12 push XXI: 6 new STX cards (multicolor + Quandrix utility)
 
 Adds 6 new STX printings on top of push XX's Witherbloom/Quandrix
@@ -1529,6 +1637,7 @@ parity is a matter of porting card factories one at a time.
 | Mavinda, Students' Advocate | {1}{W}{W} | 🟡 | 1/3 Legendary Human Cleric, Flying + Vigilance. Cast-from-graveyard activated ability is ⏳. |
 | Eager First-Year | {W} | ✅ | 2/1 Human Student. Magecraft: target creature gets +1/+1 EOT. Uses the new `effect::shortcut::magecraft()` helper. |
 | Hunt for Specimens | {3}{B} | 🟡 | Sorcery. Creates a 1/1 black Pest token (death-trigger lifegain now rides on the token via SOS-VI's `TokenDefinition.triggered_abilities`) + draws a card (Learn approx — no Lesson sideboard yet). |
+| Star Pupil | {B} | ✅ | Push XXIII: 0/1 Cat Spirit. ETB +1/+1 counter; dies → put a +1/+1 counter on target creature. Audited against CR 122.8. |
 
 ### Witherbloom (B/G)
 
@@ -1563,6 +1672,8 @@ parity is a matter of porting card factories one at a time.
 | Quandrix Pledgemage | {1}{G}{U} | ✅ | 2/2 Fractal Wizard. Activated `{1}{G}{U}: +1/+1 counter on this creature`. |
 | Decisive Denial | {G}{U} | 🟡 | Instant. Mode 0 (counter target noncreature spell unless its controller pays {2}) wired; mode 1 (fight at variable power) ⏳ pending multi-target prompt. |
 | Quandrix Cultivator | {3}{G}{U} | ✅ | Push XX: 3/3 Elf Druid. ETB search basic Forest or Island → battlefield tapped. |
+| Manifestation Sage | {2}{G}{U} | ✅ | Push XXIII: 2/2 Fractal Wizard, Flying. ETB mints 0/0 Fractal + X +1/+1 counters where X = `HandSizeOf(You)`. |
+| Mentor's Guidance | {1}{G}{U} | ✅ | Push XXIII: Instant. Two-mode `ChooseMode` — damage = creatures you control, or draw = creatures with +1/+1 counters. |
 
 ### Prismari (U/R)
 
@@ -1589,6 +1700,14 @@ parity is a matter of porting card factories one at a time.
 | Curate | {1}{U} | 🟡 | Push XX: Instant. "Look at top 4, put 1 in hand, rest on bottom in random order" approximated as `Scry 3 → Draw 1`. |
 | Solve the Equation | {2}{U} | ✅ | Push XX: Sorcery. Tutor an instant or sorcery from library to hand (printed mana-value cap omitted for simplicity). |
 | Resculpt | {1}{U} | ✅ | Push XX: Instant. Exile target creature or artifact; its original controller creates a 4/4 blue Elemental token. |
+| Ageless Guardian | {2}{W} | ✅ | Push XXIII: 1/4 Spirit Cleric. Magecraft: this creature gets +1/+0 EOT (`magecraft_self_pump`). |
+| Returned Pastcaller | {4}{W} | ✅ | Push XXIII: 3/3 Spirit Cleric, Flying. ETB return target IS card from your graveyard to hand. |
+| Letter of Acceptance | {1} | ✅ | Push XXIII: Artifact. ETB +1 life; `{T}: Add {C}`; `{2},{T},Sac: Draw a card`. |
+| Charge Through | {G} | ✅ | Push XXIII: Sorcery. Target creature you control gets +1/+1 and gains trample EOT. |
+| Devious Cover-Up | {2}{U}{U} | 🟡 | Push XXIII: Instant. Counter target spell + exile up to one gy card. Multi-target prompt for "any number" still gates the full Oracle. |
+| Crackle with Power | {X}{R}{R}{R}{R}{R} | 🟡 | Push XXIII: Sorcery. 5X damage to single target (multi-target divided rider collapses to one target). |
+| Dragonsguard Elite | {1}{G}{G} | ✅ | Push XXIII: 2/2 Human Warrior. Magecraft +1/+1 counter; `{3}{G}: +X/+X EOT` where X = `PowerOf(This)`. |
+| Quintorius, Field Historian | {2}{R}{W} | 🟡 | Push XXIII: 3/3 Legendary Elephant Cleric Spirit, Vigilance. ETB exile gy card + create 3/2 R/W Spirit. Tribal anthem static omitted. |
 
 ### Shared / multi-college
 

@@ -1694,18 +1694,37 @@ impl GameState {
                 })
                 .collect(),
             ZoneRef::Library(who) | ZoneRef::Hand(who) | ZoneRef::Graveyard(who) => {
-                let Some(p) = self.resolve_player(who, ctx) else { return vec![]; };
-                let cards: Vec<&CardInstance> = match zone {
-                    ZoneRef::Library(_) => self.players[p].library.iter().collect(),
-                    ZoneRef::Hand(_) => self.players[p].hand.iter().collect(),
-                    ZoneRef::Graveyard(_) => self.players[p].graveyard.iter().collect(),
-                    _ => vec![],
-                };
-                cards
-                    .into_iter()
-                    .filter(|c| self.evaluate_requirement_static(filter, &Target::Permanent(c.id), ctx.controller))
-                    .map(|c| EntityRef::Card(c.id))
-                    .collect()
+                // Multi-player aware: an `EachPlayer` / `EachOpponent` ref
+                // expands to every matching player's zone, not just the
+                // first. Previously this resolved to a single player only,
+                // silently dropping the remaining graveyards / hands.
+                // Powers Devious Cover-Up's "exile any number of target
+                // cards from graveyards" (across all gys), Necrogenesis's
+                // total-creature-count payoff, and any other cross-player
+                // zone iteration.
+                let players = self.resolve_players(who, ctx);
+                let mut out = Vec::new();
+                for p in players {
+                    let cards: Vec<&CardInstance> = match zone {
+                        ZoneRef::Library(_) => self.players[p].library.iter().collect(),
+                        ZoneRef::Hand(_) => self.players[p].hand.iter().collect(),
+                        ZoneRef::Graveyard(_) => self.players[p].graveyard.iter().collect(),
+                        _ => vec![],
+                    };
+                    out.extend(
+                        cards
+                            .into_iter()
+                            .filter(|c| {
+                                self.evaluate_requirement_static(
+                                    filter,
+                                    &Target::Permanent(c.id),
+                                    ctx.controller,
+                                )
+                            })
+                            .map(|c| EntityRef::Card(c.id)),
+                    );
+                }
+                out
             }
             ZoneRef::Exile => self
                 .exile
@@ -1736,7 +1755,25 @@ impl GameState {
             Value::CountersOn { what, kind } => self
                 .resolve_selector(what, ctx)
                 .into_iter()
-                .find_map(|e| if let EntityRef::Permanent(cid) = e { self.battlefield_find(cid).map(|c| c.counter_count(*kind) as i32) } else { None })
+                .find_map(|e| {
+                    let cid = match e {
+                        EntityRef::Permanent(c) | EntityRef::Card(c) => c,
+                        _ => return None,
+                    };
+                    // CR 122 — counters persist on a card when it moves
+                    // between zones. So a die-trigger that reads "its
+                    // +1/+1 counters" needs to be able to find the
+                    // freshly-died card in its new graveyard zone. The
+                    // battlefield lookup stays first (the common case),
+                    // then we fall through to graveyards and exile —
+                    // matching the cross-zone search shape of
+                    // `evaluate_requirement_static` for WithCounter.
+                    self.battlefield_find(cid)
+                        .or_else(|| self.players.iter().find_map(
+                            |p| p.graveyard.iter().find(|c| c.id == cid)))
+                        .or_else(|| self.exile.iter().find(|c| c.id == cid))
+                        .map(|c| c.counter_count(*kind) as i32)
+                })
                 .unwrap_or(0),
             Value::Sum(vs) => vs.iter().map(|v| self.evaluate_value(v, ctx)).sum(),
             Value::Diff(a, b) => self.evaluate_value(a, ctx) - self.evaluate_value(b, ctx),

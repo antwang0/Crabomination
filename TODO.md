@@ -110,8 +110,85 @@ status tag (✅ wired, 🟡 partial, ⏳ todo) plus a short note.
   determines who places the counters (no observable
   multi-player effect today since the bot harness always has the
   controller place; but the implementation matches the rule).
+- 🟡 **CR 122.2 — Counters cleared on zone change**: "Counters on
+  an object are not retained if that object moves from one zone to
+  another." The engine currently **retains** counters across zones
+  (only `damage`/`tapped`/`attached_to` get cleared on `move_card_to`),
+  which is in tension with 122.2 but useful in practice — Felisa
+  Fang of Silverquill's "creature with +1/+1 counter dies" trigger
+  reads the just-dead card's counter pool to confirm the death
+  match, and several future cards (e.g. Spike Feeder die-trigger
+  payoffs) would want this. Push XXIII extended `Value::CountersOn`
+  to also cross-zone-search (graveyards + exile) so triggered
+  abilities can read counters off the source post-move. **CR
+  122.2-compliant** behaviour would clear counters during
+  `move_card_to`; we should add a per-card-type "preserves counters"
+  flag (or a CR 122-strict clear pass that also updates Felisa) in
+  a future engine pass.
+- ✅ **CR 122.8 — Counter movement when source has left the
+  battlefield**: "If a triggered ability instructs a player to put
+  one object's counters on another object and that ability's
+  trigger condition or effect checks that the object with those
+  counters left the battlefield, the player doesn't move counters
+  from one object to the other." Push XXIII's Star Pupil
+  implementation hard-codes a `Value::Const(1)` counter on the
+  death-trigger (matching the printed Oracle's "a +1/+1 counter"
+  wording, which Wizards uses specifically to dodge 122.8). Cards
+  that DO say "its +1/+1 counters" in older Oracle text have
+  errata moving them to a fixed count. Audit point: this rule is
+  not actively enforced by the engine — a future card that
+  improperly uses `Value::CountersOn(Source-That-Left)` in a death
+  trigger would still resolve via the cross-zone fallback added
+  in push XXIII. The fix would be to scan the trigger's `Effect`
+  tree for `Selector::TriggerSource` references in CountersOn
+  contexts and zero the value when the source has changed zones.
 
 ## Recent additions
+
+- ✅ **Push XXIII (2026-05-12)**: 11 new STX cards in
+  `catalog::sets::stx::extras` + 2 cross-zone engine fixes + CR
+  122.2 / 122.8 audit. Tests at 1123 (+25 net). New cards:
+  - **Star Pupil** (B) ✅ — 0/1 Cat Spirit. ETB +1/+1 counter +
+    dies → +1/+1 counter on target creature. Audited against CR
+    122.8 (Const(1) dodges the "left the bf" gate).
+  - **Ageless Guardian** (W) ✅ — 1/4 Spirit Cleric. Magecraft
+    +1/+0 EOT via `magecraft_self_pump(1, 0)`.
+  - **Returned Pastcaller** (W) ✅ — 3/3 Flying Spirit Cleric.
+    ETB return target IS card from your graveyard → hand.
+  - **Letter of Acceptance** (C) ✅ — {1} Artifact. ETB +1 life,
+    tap-for-{C}, `{2},{T},Sac: Draw a card`.
+  - **Charge Through** (G) ✅ — {G} Sorcery. Target creature gets
+    +1/+1 and gains Trample EOT.
+  - **Devious Cover-Up** (U) 🟡 — Counter target spell + exile up
+    to one card from any graveyard. Single-strip approximation
+    of the "any number" rider.
+  - **Manifestation Sage** (GU) ✅ — 2/2 Fractal Wizard, Flying.
+    ETB mints 0/0 G/U Fractal with X +1/+1 counters where X =
+    `HandSizeOf(You)`.
+  - **Crackle with Power** (R) 🟡 — `{X}{R}{R}{R}{R}{R}` Sorcery.
+    5X damage to single target (divided-among-N collapses to
+    single-target full damage).
+  - **Mentor's Guidance** (GU) ✅ — Two-mode `ChooseMode`: damage
+    = N creatures you control, or draw = N creatures with
+    +1/+1 counters.
+  - **Dragonsguard Elite** (G) ✅ — 2/2 Human Warrior. Magecraft
+    +1/+1 counter on self; `{3}{G}: +X/+X EOT` where X =
+    `PowerOf(This)`.
+  - **Quintorius, Field Historian** (RW Legendary) 🟡 — 3/3
+    Vigilance Legendary Elephant Cleric Spirit. ETB exile gy card
+    + create 3/2 R/W Spirit. Tribal anthem static omitted.
+  - **Engine: `Value::CountersOn` cross-zone search.** Previously
+    only checked battlefield; now falls through to graveyards
+    and exile. Unblocks future die-trigger "read counters off
+    the source" cards.
+  - **Engine: `entities_in_zone` multi-player iteration.** The
+    `EachMatching { zone: Graveyard(EachPlayer) }` selector
+    previously resolved to a single player; now uses
+    `resolve_players`. Unblocks Devious Cover-Up's cross-graveyard
+    exile and similar "any graveyard" patterns.
+  - **CR audit: CR 122.2 + CR 122.8.** Documented in the audit
+    block above. 122.2 marked 🟡 (engine retains counters
+    cross-zone), 122.8 marked ✅ (Star Pupil hard-codes Const(1)).
 
 - ✅ **Push XXI (2026-05-12)**: 6 new STX cards in
   `catalog::sets::stx::extras` + 6 functionality tests. Tests at
@@ -208,6 +285,34 @@ status tag (✅ wired, 🟡 partial, ⏳ todo) plus a short note.
     1064).
 
 ## Suggested next-up tasks
+
+- ⏳ **CR 122.2-strict counter clearing on zone change** — to be
+  fully compliant we should clear all counters when a card moves
+  between zones. Currently the engine retains them (matching how
+  the Felisa-style die-trigger reads counters off the graveyard
+  copy), but a future "strict" pass should add an opt-in
+  preservation flag and let CR 122.2 do its job by default. This
+  unblocks future `WithCounter`-filtered triggers that *should*
+  not see post-death counters (e.g. an opponent's Felisa-style
+  payoff being kept alive by a counter that should have evaporated).
+
+- ⏳ **`StaticEffect::SelfPumpIf` (conditional anthem on the source)** —
+  Honor Troll's "as long as you've gained life this turn, gets +2/+0
+  and lifelink" wants a conditional self-pump that checks a
+  predicate (typically `LifeGainedThisTurnAtLeast(1)`) every time
+  layers recompute. Shape:
+  `StaticEffect::SelfPumpIf { condition: Predicate, power, toughness, keywords }`.
+  Wire into `static_ability_to_effects` to conditionally emit the
+  PumpPT + GrantKeyword pair only when `condition` is true.
+
+- ⏳ **Multi-target action shape (Crackle with Power, Devious
+  Cover-Up's "any number")** — the cast-time action shape
+  (`GameAction::CastSpell { target: Option<Target> }`) carries only
+  one target. Bumping to `targets: Vec<Target>` would unblock:
+  Crackle with Power's "divided among any number of targets",
+  Devious Cover-Up's "any number of target cards from graveyards",
+  Decisive Denial's mode 1 fight (two targets), Snow Day's two
+  targets, plus a ton of other STX/SOS cards.
 
 - ⏳ **`SelectionRequirement::OtherThanSource`** — first-class "another
   creature" filter for Sacrifice / Destroy / Exile costs and effects.
