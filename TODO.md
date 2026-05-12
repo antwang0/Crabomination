@@ -113,6 +113,31 @@ status tag (✅ wired, 🟡 partial, ⏳ todo) plus a short note.
 
 ## Recent additions
 
+- ✅ **Push XXI (2026-05-12)**: 6 new STX cards in
+  `catalog::sets::stx::extras` + 6 functionality tests. Tests at
+  1098 (+6 net):
+  - **Confront the Past** 🟡 — `{3}{R}` Sorcery, 3-mode reanimate-
+    or-bounce-or-burn target planeswalker. Mode 2 (X-dmg where X =
+    loyalty counters) collapsed to flat 3 dmg.
+  - **Specter of the Fens** ✅ — `{4}{B}` 3/4 Flying Specter, ETB
+    return creature/PW from your gy → hand.
+  - **Mascot Interception** ✅ — `{4}{R}{W}` Instant, threaten +
+    untap + haste EOT against any permanent. Instant-speed cousin
+    of Tempted by the Oriq.
+  - **Twinscroll Shaman** ✅ — `{2}{U}{R}` 3/3, Magecraft copies
+    the cast spell via `Effect::CopySpell` (the first cube card
+    using the push XVII/XVIII CopySpell wiring through Magecraft's
+    trigger_source binding).
+  - **Practical Research** ✅ — `{1}{G}{U}` Sorcery, doubles +1/+1
+    counters on the chosen friendly creature via `AddCounter(amount
+    = CountersOn(target, +1/+1))`.
+  - **Hall of Oracles** ✅ — Land. `{T}: Add {C}` + `{2}, {T}:
+    +1/+1 counter on Wizard or Fractal you control`.
+  - CR 707 alignment notes: `Effect::CopySpell` faithfully copies
+    modes/targets/X/converged per 707.10. 707.10d (copy-for-each-
+    target) and 707.10f (permanent-spell copies → tokens) remain
+    as engine follow-ups.
+
 - ✅ **Push XX (2026-05-12)**: 10 new STX cards + 1 engine improvement
   + CR 122.3 audit. Tests at 1092 (+13 net). All cards land in
   `catalog::sets::stx::extras`:

@@ -1805,3 +1805,161 @@ fn tempted_by_the_oriq_steals_and_grants_haste() {
     assert!(!b.tapped, "Bear should be untapped");
     assert!(b.has_keyword(&Keyword::Haste), "Bear should have haste");
 }
+
+// ── Push XXI: 6 new STX cards (extras.rs) ───────────────────────────────────
+
+#[test]
+fn confront_the_past_bounces_planeswalker_via_mode_1() {
+    let mut g = two_player_game();
+    let pw = g.add_card_to_battlefield(1, catalog::professor_dellian_fel());
+    let id = g.add_card_to_hand(0, catalog::confront_the_past());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(pw)),
+        mode: Some(1),
+        x_value: None,
+    }).expect("Confront the Past castable for {3}{R}");
+    drain_stack(&mut g);
+
+    assert!(!g.battlefield.iter().any(|c| c.id == pw), "PW off battlefield");
+    assert!(g.players[1].hand.iter().any(|c| c.id == pw), "PW in opp's hand");
+}
+
+#[test]
+fn specter_of_the_fens_etb_returns_creature_card_to_hand() {
+    let mut g = two_player_game();
+    // Seed P0's graveyard with a creature card.
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let bear_card = g.battlefield.iter().find(|c| c.id == bear).unwrap().clone();
+    g.players[0].graveyard.push(bear_card);
+    g.battlefield.retain(|c| c.id != bear);
+
+    let id = g.add_card_to_hand(0, catalog::specter_of_the_fens());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    let hand_before = g.players[0].hand.len();
+    let gy_before = g.players[0].graveyard.len();
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(bear)),
+        mode: None,
+        x_value: None,
+    }).expect("Specter castable for {4}{B}");
+    drain_stack(&mut g);
+
+    // Bear returned to hand.
+    assert!(g.players[0].hand.iter().any(|c| c.id == bear), "Bear in hand");
+    assert_eq!(g.players[0].graveyard.len(), gy_before - 1, "one less in gy");
+    assert_eq!(g.players[0].hand.len(), hand_before, "hand: -1 cast + 1 return");
+    let spec = g.battlefield.iter().find(|c| c.definition.name == "Specter of the Fens")
+        .expect("Specter in play");
+    assert!(spec.has_keyword(&Keyword::Flying));
+}
+
+#[test]
+fn mascot_interception_gains_control_untaps_grants_haste() {
+    let mut g = two_player_game();
+    let opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == opp_bear) {
+        c.tapped = true;
+        c.summoning_sick = false;
+    }
+    let id = g.add_card_to_hand(0, catalog::mascot_interception());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(4);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(opp_bear)), mode: None, x_value: None,
+    }).expect("Mascot Interception castable for {4}{R}{W}");
+    drain_stack(&mut g);
+
+    let bear = g.battlefield.iter().find(|c| c.id == opp_bear)
+        .expect("bear still on bf");
+    assert_eq!(bear.controller, 0, "control transferred to caster");
+    assert!(!bear.tapped, "bear untapped");
+    assert!(bear.has_keyword(&Keyword::Haste), "haste granted EOT");
+}
+
+#[test]
+fn twinscroll_shaman_magecraft_copies_spell() {
+    let mut g = two_player_game();
+    let twin = g.add_card_to_battlefield(0, catalog::twinscroll_shaman());
+    if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == twin) {
+        c.summoning_sick = false;
+    }
+    let opp_life_before = g.players[1].life;
+
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(1)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Bolt castable");
+    drain_stack(&mut g);
+
+    // Original bolt: 3 dmg. Copy: another 3 dmg. Total: -6.
+    assert_eq!(g.players[1].life, opp_life_before - 6,
+        "Twinscroll Shaman copies the Bolt for another 3 damage");
+}
+
+#[test]
+fn practical_research_doubles_plus_one_counters() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == bear) {
+        c.add_counters(CounterType::PlusOnePlusOne, 3);
+    }
+    let id = g.add_card_to_hand(0, catalog::practical_research());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)), mode: None, x_value: None,
+    }).expect("Practical Research castable");
+    drain_stack(&mut g);
+
+    let bear_c = g.battlefield.iter().find(|c| c.id == bear).unwrap();
+    assert_eq!(bear_c.counter_count(CounterType::PlusOnePlusOne), 6,
+        "3 +1/+1 doubled to 6");
+}
+
+#[test]
+fn hall_of_oracles_taps_for_colorless_and_buffs_wizard() {
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(0, catalog::hall_of_oracles());
+    let wiz = g.add_card_to_battlefield(0, catalog::symmetry_sage());
+    if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == wiz) {
+        c.summoning_sick = false;
+    }
+    if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == land) {
+        c.summoning_sick = false;
+    }
+
+    let c_before = g.players[0].mana_pool.colorless_amount();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: land, ability_index: 0, target: None,
+    }).expect("Hall {T}: Add {C}");
+    assert_eq!(g.players[0].mana_pool.colorless_amount(), c_before + 1);
+
+    if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == land) {
+        c.tapped = false;
+    }
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: land, ability_index: 1, target: Some(Target::Permanent(wiz)),
+    }).expect("Hall {2},{T}: +1/+1");
+    drain_stack(&mut g);
+
+    let wiz_c = g.battlefield.iter().find(|c| c.id == wiz).unwrap();
+    assert_eq!(wiz_c.counter_count(CounterType::PlusOnePlusOne), 1,
+        "Wizard got a +1/+1 counter");
+}

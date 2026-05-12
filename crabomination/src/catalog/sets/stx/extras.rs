@@ -1010,3 +1010,267 @@ pub fn tempted_by_the_oriq() -> CardDefinition {
     }
 }
 
+
+// ── Push XXI: 6 new STX cards ───────────────────────────────────────────────
+
+/// Confront the Past — {3}{R} Sorcery.
+/// "Choose one — / • Put target planeswalker card from your graveyard
+/// onto the battlefield. / • Return target planeswalker to its
+/// owner's hand. / • Confront the Past deals damage to target
+/// planeswalker equal to the number of loyalty counters on it."
+///
+/// 🟡 Three-mode `ChooseMode`: mode 0 reanimates a PW from your
+/// graveyard (auto-decider picks the only PW in gy), mode 1 bounces
+/// an opp PW. Mode 2 (X-damage where X = loyalty counters) is
+/// approximated as a flat 3-damage burn — engine has no per-card
+/// loyalty-counter introspection on damage today.
+pub fn confront_the_past() -> CardDefinition {
+    CardDefinition {
+        name: "Confront the Past",
+        cost: cost(&[generic(3), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::ChooseMode(vec![
+            Effect::Move {
+                what: target_filtered(SelectionRequirement::Planeswalker),
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: false,
+                },
+            },
+            Effect::Move {
+                what: target_filtered(SelectionRequirement::Planeswalker),
+                to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+            },
+            Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Planeswalker),
+                amount: Value::Const(3),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+/// Specter of the Fens — {4}{B} Creature — Specter. 3/4 Flying.
+/// "When this creature enters, return target creature or planeswalker
+/// card from your graveyard to your hand."
+///
+/// ✅ Reanimation-flavoured ETB on a sizeable flier. Standard
+/// `Move(filter → Hand(You))` against a graveyard creature/PW.
+pub fn specter_of_the_fens() -> CardDefinition {
+    CardDefinition {
+        name: "Specter of the Fens",
+        cost: cost(&[generic(4), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Specter],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Move {
+                what: target_filtered(
+                    SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+                ),
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+/// Mascot Interception — {4}{R}{W} Instant.
+/// "Gain control of target permanent until end of turn. Untap it.
+/// It gains haste until end of turn."
+///
+/// ✅ Threaten-with-untap-and-haste at instant speed against any
+/// permanent. Similar shape to Tempted by the Oriq (push XX) but
+/// instant-speed and any-permanent rather than sorcery-speed creature-only.
+pub fn mascot_interception() -> CardDefinition {
+    CardDefinition {
+        name: "Mascot Interception",
+        cost: cost(&[generic(4), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::GainControl {
+                what: target_filtered(SelectionRequirement::Permanent),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::Untap {
+                what: Selector::Target(0),
+                up_to: None,
+            },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::Haste,
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+/// Twinscroll Shaman — {2}{U}{R} Creature — Human Wizard. 3/3.
+/// "Magecraft — Whenever you cast or copy an instant or sorcery
+/// spell, copy that spell. You may choose new targets for the copy."
+///
+/// ✅ The Magecraft trigger uses the existing `Effect::CopySpell`
+/// primitive (push XVII), pointed at `Selector::TriggerSource` —
+/// which `fire_spell_cast_triggers` binds to the cast spell's
+/// CardId. The "may choose new targets" rider collapses to keep
+/// (auto-decider default).
+pub fn twinscroll_shaman() -> CardDefinition {
+    use crate::effect::shortcut::magecraft;
+    CardDefinition {
+        name: "Twinscroll Shaman",
+        cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::CopySpell {
+            what: Selector::TriggerSource,
+            count: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+/// Practical Research — {1}{G}{U} Sorcery.
+/// "Choose target creature you control. For each +1/+1 counter on
+/// it, put another +1/+1 counter on it."
+///
+/// ✅ Doubles +1/+1 counters on the chosen creature via
+/// `AddCounter(amount = CountersOn(target, +1/+1))`. Same shape as
+/// Growth Curve's second half but as a one-shot without the
+/// initial-counter bump.
+pub fn practical_research() -> CardDefinition {
+    CardDefinition {
+        name: "Practical Research",
+        cost: cost(&[generic(1), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::AddCounter {
+            what: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            ),
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::CountersOn {
+                what: Box::new(Selector::Target(0)),
+                kind: CounterType::PlusOnePlusOne,
+            },
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+/// Hall of Oracles — Land.
+/// "{T}: Add {C}. / {2}, {T}: Put a +1/+1 counter on target Wizard
+/// or Fractal creature you control."
+///
+/// ✅ Quandrix-flavoured utility land. The `{T}: Add {C}` mana
+/// ability uses the shared `tap_add_colorless` helper. The +1/+1
+/// activation is wired with a tribal filter (Wizard ∪ Fractal &
+/// ControlledByYou).
+pub fn hall_of_oracles() -> CardDefinition {
+    CardDefinition {
+        name: "Hall of Oracles",
+        cost: cost(&[]),
+        supertypes: vec![],
+        card_types: vec![CardType::Land],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: vec![
+            super::super::tap_add_colorless(),
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: cost(&[generic(2)]),
+                effect: Effect::AddCounter {
+                    what: target_filtered(
+                        SelectionRequirement::Creature.and(
+                            SelectionRequirement::HasCreatureType(CreatureType::Wizard)
+                                .or(SelectionRequirement::HasCreatureType(CreatureType::Fractal)),
+                        ),
+                    ),
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                },
+                once_per_turn: false,
+                sorcery_speed: false,
+                sac_cost: false,
+                condition: None,
+                life_cost: 0,
+                from_graveyard: false,
+                exile_self_cost: false,
+                exile_other_filter: None,
+            },
+        ],
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}

@@ -49,6 +49,44 @@ All 232 cards marked ✅ or 🟡 have a corresponding factory in
 `crabomination/src/catalog/sets/sos/`; the audit script reports 0 false
 positives and 0 stale ⏳ rows.
 
+## 2026-05-12 push XXI: 6 new STX cards (multicolor + Quandrix utility)
+
+Adds 6 new STX printings on top of push XX's Witherbloom/Quandrix
+batch. All ship in `catalog::sets::stx::extras`. 6 new functionality
+tests; total tests at 1098 (+6).
+
+New STX cards:
+
+- **Confront the Past** (R) 🟡 — {3}{R} Sorcery. 3-mode `ChooseMode`:
+  reanimate target PW from gy / bounce target PW / 3-dmg to target
+  PW. Mode 2 collapses the "X = loyalty counters" damage to a flat 3
+  (no per-card loyalty introspection yet).
+- **Specter of the Fens** (B) ✅ — {4}{B} 3/4 Flying Specter. ETB
+  return target creature or planeswalker card from your graveyard to
+  your hand. Standard reanimation-to-hand pattern.
+- **Mascot Interception** (RW) ✅ — {4}{R}{W} Instant. Threaten +
+  Untap + Haste EOT against any permanent. Similar shape to push
+  XX's Tempted by the Oriq but instant-speed and any-permanent.
+- **Twinscroll Shaman** (UR) ✅ — {2}{U}{R} 3/3 Human Wizard.
+  Magecraft via `Effect::CopySpell { what: TriggerSource, count: 1 }`
+  — the first cube card pointed at the push XVII / XVIII copy-spell
+  wiring through Magecraft's trigger_source binding.
+- **Practical Research** (GU) ✅ — {1}{G}{U} Sorcery. Doubles +1/+1
+  counters on the chosen creature via `AddCounter(amount =
+  CountersOn(target, +1/+1))`. Same shape as Growth Curve's
+  doubling tail without the initial bump.
+- **Hall of Oracles** (Land) ✅ — `{T}: Add {C}` + `{2}, {T}: +1/+1
+  counter on target Wizard or Fractal creature you control`. Tribal
+  filter via `HasCreatureType(Wizard) ∪ HasCreatureType(Fractal)`.
+
+Rule alignment audited against CR 707 (Copying Objects), specifically
+707.10 (copying spells): the new `Effect::CopySpell` wiring (push
+XVII/XVIII) clones decisions (mode/targets/X/converged) for each
+copy, matches the "you may choose new targets" default (we auto-keep,
+matching MTG's "you may keep them"). 707.10d ("copy for each target")
+and 707.10f ("permanent-spell copies become tokens on resolution")
+remain as future engine work (tracked in TODO.md).
+
 ## 2026-05-12 push XX: 10 new STX cards (Witherbloom + Quandrix + utility)
 
 Card additions (10 new STX cards in `catalog::sets::stx::extras`):
