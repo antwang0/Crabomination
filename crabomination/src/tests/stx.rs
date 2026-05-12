@@ -2310,3 +2310,342 @@ fn quintorius_field_historian_etb_exiles_card_and_makes_spirit() {
         .find(|c| c.definition.name == "Quintorius, Field Historian").unwrap();
     assert!(q.has_keyword(&Keyword::Vigilance));
 }
+
+// ── Push XXIV (claude/modern_decks): 12 new STX cards ────────────────────────
+
+#[test]
+fn galvanic_iteration_copies_target_instant() {
+    let mut g = two_player_game();
+    // Seed cards: a Lightning Bolt as the original instant, Galvanic Iteration
+    // as the copy spell.
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    let gi = g.add_card_to_hand(0, catalog::galvanic_iteration());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+
+    // Cast Bolt targeting the opponent.
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(1)),
+        mode: None,
+        x_value: None,
+    }).expect("bolt casts");
+    // Now cast Galvanic Iteration targeting the Bolt on the stack.
+    let bolt_target = g.stack.iter().find_map(|s| match s {
+        StackItem::Spell { card, .. } if card.definition.name == "Lightning Bolt" => Some(card.id),
+        _ => None,
+    }).expect("bolt on stack");
+    g.perform_action(GameAction::CastSpell {
+        card_id: gi,
+        target: Some(Target::Permanent(bolt_target)),
+        mode: None,
+        x_value: None,
+    }).expect("galvanic iteration casts");
+    drain_stack(&mut g);
+
+    // Opponent took 3 (original Bolt) + 3 (Galvanic Iteration copy) = 6 damage.
+    assert_eq!(g.players[1].life, 20 - 6, "Galvanic Iteration copied the Bolt");
+}
+
+#[test]
+fn expressive_iteration_scrys_two_then_draws_one() {
+    let mut g = two_player_game();
+    for _ in 0..5 {
+        g.add_card_to_library(0, catalog::plains());
+    }
+    let initial_lib = g.players[0].library.len();
+    let initial_hand = g.players[0].hand.len();
+    let id = g.add_card_to_hand(0, catalog::expressive_iteration());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    }).expect("EI castable");
+    drain_stack(&mut g);
+
+    // Net: 1 card drawn; library -1.
+    assert_eq!(g.players[0].library.len(), initial_lib - 1);
+    // initial_hand had +1 for the EI itself (added to hand); then EI was cast
+    // (gone), then 1 drawn.
+    assert_eq!(g.players[0].hand.len(), initial_hand + 1);
+}
+
+#[test]
+fn magma_opus_etb_deals_four_taps_creates_elemental_draws_two() {
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    for _ in 0..6 {
+        g.add_card_to_library(0, catalog::plains());
+    }
+    let initial_hand = g.players[0].hand.len();
+    let id = g.add_card_to_hand(0, catalog::magma_opus());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(7);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(victim)),
+        mode: None, x_value: None,
+    }).expect("Magma Opus castable for {7}{U}{R}");
+    drain_stack(&mut g);
+
+    // 4 damage destroyed the 2/2 bear via SBA.
+    assert!(!g.battlefield.iter().any(|c| c.id == victim), "bear died to 4 dmg");
+    // Elemental token minted.
+    let elem = g.battlefield.iter().find(|c|
+        c.is_token && c.definition.name == "Elemental"
+    ).expect("Elemental token minted");
+    assert_eq!(elem.power(), 3, "elemental_token() is a 3/3 (sos definition)");
+    // initial_hand: +1 for Magma Opus, -1 cast, +2 drawn = +2 net
+    assert_eq!(g.players[0].hand.len(), initial_hand + 2,
+        "drew 2 cards from Magma Opus");
+}
+
+#[test]
+fn reckless_amplimancer_activates_for_plus_three() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::reckless_amplimancer());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(4);
+
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None,
+    }).expect("Reckless Amplimancer activates");
+    drain_stack(&mut g);
+
+    let amp = g.battlefield.iter().find(|c| c.id == id).unwrap();
+    assert_eq!(amp.power(), 5, "2 + 3 = 5");
+    assert_eq!(amp.toughness(), 5);
+}
+
+#[test]
+fn crashing_drawbridge_grants_haste_to_other_creatures() {
+    let mut g = two_player_game();
+    let _drawbridge = g.add_card_to_battlefield(0, catalog::crashing_drawbridge());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // computed_permanent runs the layers pass and returns the post-layered view.
+    let view = g.computed_permanent(bear).unwrap();
+    assert!(view.keywords.contains(&Keyword::Haste),
+        "Crashing Drawbridge grants haste to other creatures");
+}
+
+#[test]
+fn eyetwitch_brood_grows_when_another_pest_dies() {
+    use crate::card::{CardDefinition, CardType, CounterType, CreatureType, Subtypes};
+    let mut g = two_player_game();
+    let brood = g.add_card_to_battlefield(0, catalog::eyetwitch_brood());
+    // Manually add a Pest creature to the battlefield via add_card_to_battlefield
+    // with a small Pest-typed definition (mirrors how tend_the_pests mints).
+    let pest_def = CardDefinition {
+        name: "Pest",
+        cost: crate::mana::ManaCost::default(),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Pest],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![],
+        effect: crate::effect::Effect::Noop,
+        activated_abilities: vec![],
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    };
+    let pest_id = g.add_card_to_battlefield(0, pest_def);
+    g.clear_sickness(pest_id);
+    // Kill the Pest with a Lightning Bolt to fire the death event.
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(pest_id)),
+        mode: None, x_value: None,
+    }).expect("Bolt castable");
+    drain_stack(&mut g);
+
+    let b = g.battlefield.iter().find(|c| c.id == brood).unwrap();
+    assert_eq!(b.counter_count(CounterType::PlusOnePlusOne), 1,
+        "Eyetwitch Brood got a +1/+1 counter from another Pest dying");
+}
+
+#[test]
+fn first_day_of_class_pumps_each_creature_you_control() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let opp = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::first_day_of_class());
+    g.players[0].mana_pool.add(Color::White, 1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    }).expect("FDOC castable for {W}");
+    drain_stack(&mut g);
+
+    let bear_a = g.battlefield.iter().find(|c| c.id == a).unwrap();
+    let bear_b = g.battlefield.iter().find(|c| c.id == b).unwrap();
+    let bear_opp = g.battlefield.iter().find(|c| c.id == opp).unwrap();
+    assert_eq!(bear_a.power(), 3, "your bears get +1/+1");
+    assert_eq!(bear_b.power(), 3);
+    assert_eq!(bear_opp.power(), 2, "opp bears unaffected");
+}
+
+#[test]
+fn verdant_mastery_fetches_basic_for_you_and_opponent() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let forest = g.add_card_to_library(0, catalog::forest());
+    let island = g.add_card_to_library(1, catalog::island());
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Search(Some(forest)),
+        DecisionAnswer::Search(Some(island)),
+    ]));
+    let id = g.add_card_to_hand(0, catalog::verdant_mastery());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(3);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    }).expect("Verdant Mastery castable");
+    drain_stack(&mut g);
+
+    // You should now have a Forest in play.
+    assert!(g.battlefield.iter().any(|c| c.id == forest && c.controller == 0),
+        "you fetched Forest");
+    // Opponent fetched an Island tapped.
+    assert!(g.battlefield.iter().any(|c| c.id == island && c.controller == 1),
+        "opponent fetched Island");
+}
+
+#[test]
+fn rip_apart_mode_zero_deals_three_to_creature() {
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::rip_apart());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(victim)),
+        mode: Some(0), x_value: None,
+    }).expect("Rip Apart mode 0 castable");
+    drain_stack(&mut g);
+
+    // 3 damage to a 2/2 → dies via SBA.
+    assert!(!g.battlefield.iter().any(|c| c.id == victim),
+        "Rip Apart mode 0 killed the bear");
+}
+
+#[test]
+fn rip_apart_mode_one_destroys_artifact() {
+    let mut g = two_player_game();
+    let target = g.add_card_to_battlefield(1, catalog::mind_stone());
+    let id = g.add_card_to_hand(0, catalog::rip_apart());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(target)),
+        mode: Some(1), x_value: None,
+    }).expect("Rip Apart mode 1 castable");
+    drain_stack(&mut g);
+
+    assert!(!g.battlefield.iter().any(|c| c.id == target),
+        "Rip Apart mode 1 destroyed the Mind Stone");
+}
+
+#[test]
+fn sacred_fire_deals_three_and_gains_three_life() {
+    let mut g = two_player_game();
+    let initial_life = g.players[0].life;
+    let id = g.add_card_to_hand(0, catalog::sacred_fire());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Player(1)),
+        mode: None, x_value: None,
+    }).expect("Sacred Fire castable for {R}{W}");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[1].life, 20 - 3, "opponent took 3");
+    assert_eq!(g.players[0].life, initial_life + 3, "you gained 3");
+}
+
+#[test]
+fn codespell_cleric_is_a_one_one_lifelink() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::codespell_cleric());
+    let c = g.battlefield.iter().find(|c| c.id == id).unwrap();
+    assert_eq!(c.power(), 1);
+    assert_eq!(c.toughness(), 1);
+    assert!(c.has_keyword(&Keyword::Lifelink));
+}
+
+#[test]
+fn sparkmage_apprentice_etb_deals_two_to_target() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::sparkmage_apprentice());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Player(1)),
+        mode: None, x_value: None,
+    }).expect("Sparkmage Apprentice castable for {1}{R}");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[1].life, 20 - 2, "ETB dealt 2 damage to opponent");
+}
+
+#[test]
+fn karok_wrangler_magecraft_adds_counter_to_target() {
+    let mut g = two_player_game();
+    let _wrangler = g.add_card_to_battlefield(0, catalog::karok_wrangler());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        mode: None, x_value: None,
+    }).expect("bolt casts");
+    drain_stack(&mut g);
+
+    let b = g.battlefield.iter().find(|c| c.id == bear).unwrap();
+    assert_eq!(b.counter_count(CounterType::PlusOnePlusOne), 1,
+        "Karok Wrangler magecraft added a +1/+1 counter");
+}
+
+#[test]
+fn soothsayer_adept_activates_surveil_one() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::plains());
+    let initial_lib = g.players[0].library.len();
+    let id = g.add_card_to_battlefield(0, catalog::soothsayer_adept());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None,
+    }).expect("Surveil 1 activates");
+    drain_stack(&mut g);
+
+    // Surveil 1 either leaves card on top or sends it to graveyard.
+    // The AutoDecider for Surveil may decide either way; either way the
+    // top card was inspected.
+    let after_lib = g.players[0].library.len();
+    let after_gy = g.players[0].graveyard.len();
+    assert!(
+        after_lib == initial_lib || (after_lib == initial_lib - 1 && after_gy >= 1),
+        "Surveil 1 either kept or graveyarded the top card (lib {} → {}, gy: {})",
+        initial_lib, after_lib, after_gy
+    );
+}

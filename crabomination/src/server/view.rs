@@ -308,6 +308,14 @@ fn ability_cost_label(ability: &crate::effect::ActivatedAbility) -> String {
     if ability.exile_self_cost {
         parts.push("Exile this from gy".into());
     }
+    // Lorehold Pledgemage / Postmortem Professor — "Exile a card from
+    // your graveyard" as an additional cost. We don't yet describe the
+    // filter granularly in the cost label (the engine picks the
+    // lowest-CMC matching card automatically); the bare "Exile a card
+    // from gy" string communicates the requirement cleanly.
+    if ability.exile_other_filter.is_some() {
+        parts.push("Exile a card from gy".into());
+    }
     if parts.is_empty() { "0".into() } else { parts.join(", ") }
 }
 

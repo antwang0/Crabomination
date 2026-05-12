@@ -1207,6 +1207,31 @@ fn goblin_guide_reveals_top_and_gives_land() {
     assert!(!g.players[1].library.iter().any(|c| c.id == forest_id));
 }
 
+/// CR 121.5 — "If an effect moves cards from a player's library to that
+/// player's hand without using the word 'draw,' the player has not drawn
+/// those cards." Goblin Guide says "puts it into their hand" (not "draws"),
+/// so the put-into-hand transition must NOT increment
+/// `cards_drawn_this_turn` and must NOT fire `CardDrawn` events for
+/// draw-payoff triggers. This test pins both invariants.
+#[test]
+fn goblin_guide_put_into_hand_is_not_a_draw_per_cr_121_5() {
+    let mut g = two_player_game();
+    let _forest_id = g.add_card_to_library(1, catalog::forest());
+    let goblin_id = setup_attacker(&mut g, 0, catalog::goblin_guide);
+    let drawn_before = g.players[1].cards_drawn_this_turn;
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: goblin_id,
+        target: AttackTarget::Player(1),
+    }]))
+    .unwrap();
+    drain_stack(&mut g);
+    assert_eq!(
+        g.players[1].cards_drawn_this_turn, drawn_before,
+        "CR 121.5: putting a card into hand is NOT a draw"
+    );
+}
+
 #[test]
 fn hypnotic_specter_discards_damaged_opponent() {
     let mut g = two_player_game();

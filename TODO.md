@@ -71,6 +71,19 @@ status tag (✅ wired, 🟡 partial, ⏳ todo) plus a short note.
   `tests::stx::witherbloom_pledgemage_rejects_activation_with_zero_life`
   + the activated-ability path; a future test will exercise the
   alt-cost path once we have an alt-cost-with-life-cost card wired.
+- ✅ **CR 121.5 — Put-into-hand is not a draw**: "If an effect moves
+  cards from a player's library to that player's hand without using
+  the word 'draw,' the player has not drawn those cards. This makes
+  a difference for abilities that trigger on drawing and effects
+  that count cards drawn." Wired in push XXIV: the
+  `Effect::RevealTopAndDrawIf` resolver no longer emits
+  `GameEvent::CardDrawn` and no longer increments
+  `cards_drawn_this_turn` when the matched card moves library → hand.
+  Goblin Guide's reveal-and-give-land path is the canonical exerciser;
+  see `tests::goblin_guide_put_into_hand_is_not_a_draw_per_cr_121_5`.
+  Note: cards using `Effect::Move(library → hand)` were already
+  CR-compliant — `move_card_to` doesn't fire CardDrawn; only the
+  RevealTopAndDrawIf resolver had the bug.
 - ✅ **CR 121.2 — Drawing cards one at a time**: `Effect::Draw` in
   `game/effects.rs` evaluates the count, then loops one-card-at-a-time
   (`for _ in 0..n`) — matching CR 121.2 "Cards may only be drawn one
@@ -144,6 +157,40 @@ status tag (✅ wired, 🟡 partial, ⏳ todo) plus a short note.
   contexts and zero the value when the source has changed zones.
 
 ## Recent additions
+
+- ✅ **Push XXIV (2026-05-12, `claude/modern_decks` branch)**: 14 new
+  STX cards in `catalog::sets::stx::extras` + CR 121.5 engine fix +
+  server/UI `ability_cost_label` rendering improvement. Tests at 1140
+  (+17 net):
+  - **Prismari school promoted from 3 → 9 cards**: Galvanic Iteration
+    (🟡 CopySpell), Expressive Iteration (🟡 Scry 2 + Draw 1 approx),
+    Magma Opus (🟡 multi-effect sorcery), Sparkmage Apprentice (✅ ETB
+    ping), Soothsayer Adept (✅ {2}{U}: Surveil 1), Reckless
+    Amplimancer (🟡 {4}{G}{G}: +3/+3 EOT).
+  - **Shared Boros/Lorehold**: Sacred Fire (✅ 3 dmg + 3 life +
+    Flashback), Rip Apart (✅ two-mode burn/destroy).
+  - **Silverquill / Witherbloom**: Codespell Cleric (✅ 1/1 lifelink),
+    Eyetwitch Brood (✅ Pest tribal counter), First Day of Class (🟡
+    temp anthem), Karok Wrangler (✅ magecraft counter).
+  - **Quandrix / Green**: Verdant Mastery (🟡 you+opp basic fetch),
+    Crashing Drawbridge (✅ artifact haste-granter via
+    `StaticEffect::GrantKeyword`).
+  - **CR 121.5 fix**: `Effect::RevealTopAndDrawIf` (Goblin Guide,
+    etc.) was incorrectly emitting `GameEvent::CardDrawn` and
+    incrementing `cards_drawn_this_turn` for the "put it into their
+    hand" path — but CR 121.5 explicitly says putting cards into
+    hand without "draw" wording isn't a draw. Removed the spurious
+    emit + tracker bump. New test
+    `goblin_guide_put_into_hand_is_not_a_draw_per_cr_121_5` pins
+    the invariant.
+  - **Server/UI: `ability_cost_label` renders `exile_other_filter`** —
+    Lorehold Pledgemage's `{2}{R}{W}, Exile a card from your gy: +1/+1
+    EOT` now surfaces the exile cost rider in the UI tooltip
+    (previously rendered as just `{2}{R}{W}` which made the activation
+    look free).
+  - **CR audit**:
+    - ✅ **CR 121.5 — put-into-hand is not a draw** added to the audit
+      list. Tested against Goblin Guide's reveal-and-give-land path.
 
 - ✅ **Push XXIII (2026-05-12)**: 11 new STX cards in
   `catalog::sets::stx::extras` + 2 cross-zone engine fixes + CR

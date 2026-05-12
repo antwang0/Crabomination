@@ -49,6 +49,87 @@ All 232 cards marked ✅ or 🟡 have a corresponding factory in
 `crabomination/src/catalog/sets/sos/`; the audit script reports 0 false
 positives and 0 stale ⏳ rows.
 
+## 2026-05-12 push XXIV: 14 new STX cards + CR 121.5 fix + cost-label rendering
+
+Push XXIV (`claude/modern_decks` branch) — 14 new STX cards spanning
+Prismari (the school with the previously-shortest card list), shared
+Boros/Lorehold removal, and small mono-color staples. Plus a CR 121.5
+("put-into-hand is not a draw") engine compliance fix uncovered while
+auditing the unified-dispatcher trigger paths, plus a server/UI
+`ability_cost_label` rendering improvement for `exile_other_filter`
+(Lorehold Pledgemage / Postmortem Professor). Tests at 1140 (+17 net).
+
+All new cards live in `catalog::sets::stx::extras`. Net per-school
+status: Prismari **promoted from 3 to 9 cards** (more than tripled);
+Witherbloom +1 (Eyetwitch Brood); Boros (R/W) shared +2 (Sacred Fire,
+Rip Apart); Quandrix +1 (Karok Wrangler).
+
+New STX cards:
+
+- **Galvanic Iteration** (UR Prismari) 🟡 — {U}{R} Instant. "Copy
+  target instant or sorcery spell you control" via `Effect::CopySpell`
+  on a stack-spell target. The Magecraft-driven exile-then-replay-from-
+  exile rider is omitted (no exile-self-on-resolution primitive).
+- **Expressive Iteration** (UR Prismari) 🟡 — {U}{R} Sorcery.
+  Collapsed to `Scry 2 → Draw 1` (the full exile-and-play-from-exile
+  pattern wants a new primitive).
+- **Magma Opus** (UR Prismari) 🟡 — {7}{U}{R} Sorcery. 4 damage to one
+  creature + tap each opp creature + create a 3/3 Elemental (from
+  shared `elemental_token()`) + draw 2. The "divided as you choose"
+  damage half collapses to single-target; the discard alt-mode is
+  omitted.
+- **Reckless Amplimancer** (G Quandrix) 🟡 — {2}{G} 2/2 Elf Druid.
+  Activated `{4}{G}{G}: +3/+3 EOT`. Printed `+X/+X where X is mana
+  spent` collapses to fixed `+3/+3` (no per-activation mana-spent
+  tracker).
+- **Crashing Drawbridge** (C artifact) ✅ — {3} 0/4 Artifact Creature
+  — Construct. "Creatures you control have haste" via
+  `StaticEffect::GrantKeyword`.
+- **Eyetwitch Brood** (BG Witherbloom) ✅ — {1}{B}{G} 1/1 Pest with
+  Lifelink. "Whenever another Pest you control dies, put a +1/+1
+  counter on this creature." Named to disambiguate from SOS's
+  "Pest Mascot" (which fires on LifeGained).
+- **First Day of Class** (W Silverquill) 🟡 — {W} Sorcery. ForEach
+  creature you control gets +1/+1 EOT. The combat-damage-to-Pest
+  rider is omitted.
+- **Verdant Mastery** (G base) 🟡 — {3}{G}{G} Sorcery. You search
+  for a basic + each opponent searches for a basic tapped via the
+  `PlayerRef::Triggerer` reference inside a `ForEach(EachOpponent)`
+  wrapper.
+- **Sacred Fire** (RW Lorehold) ✅ — {R}{W} Sorcery. 3 damage + 3 life
+  + Flashback {5}{R}{W} via `Keyword::Flashback(ManaCost)`.
+- **Rip Apart** (RW Lorehold) ✅ — {R}{W} Sorcery. Two-mode
+  `ChooseMode`: 3 dmg to creature/PW or destroy artifact/enchantment.
+- **Codespell Cleric** (W Silverquill) ✅ — {W} 1/1 Kor Cleric with
+  Lifelink. Vanilla body for low-curve Silverquill.
+- **Sparkmage Apprentice** (R Prismari) ✅ — {1}{R} 1/2 Human Wizard.
+  ETB: deals 2 damage to any target.
+- **Karok Wrangler** (GU Quandrix) ✅ — {1}{G}{U} 2/2 Elf Druid.
+  Magecraft: +1/+1 counter on target creature you control.
+- **Soothsayer Adept** (U Prismari) ✅ — {1}{U} 2/2 Merfolk Wizard.
+  Activated `{2}{U}: Surveil 1`.
+
+**CR 121.5 engine compliance fix.** Goblin Guide's "puts it into
+their hand" path was incorrectly emitting `GameEvent::CardDrawn` and
+incrementing `cards_drawn_this_turn` via the `RevealTopAndDrawIf`
+effect resolver. Per CR 121.5 ("If an effect moves cards from a
+player's library to that player's hand without using the word
+'draw,' the player has not drawn those cards"), this is not a draw;
+no draw-payoff trigger should fire. Removed the spurious
+`CardDrawn` push and dropped the `cards_drawn_this_turn` increment.
+New test
+`goblin_guide_put_into_hand_is_not_a_draw_per_cr_121_5` pins the
+invariant.
+
+**Server/UI: ability_cost_label renders `exile_other_filter`.** The
+previous renderer only described `tap_cost`, `mana_cost`,
+`sac_cost`, `life_cost`, and `exile_self_cost`; abilities with
+`exile_other_filter: Some(_)` (Lorehold Pledgemage's
+`{2}{R}{W}, Exile a card from your graveyard: +1/+1 EOT`) lost the
+exile-cost rider in the UI tooltip. Now renders as
+`{2}{R}{W}, Exile a card from gy` (bare-bones; the engine still
+auto-picks the lowest-CMC matching card).
+
 ## 2026-05-12 push XXIII: 11 new STX cards + engine fixes for cross-zone selectors
 
 Adds 11 new STX printings (mostly mono / multi-college fills) to the
@@ -1682,6 +1763,11 @@ parity is a matter of porting card factories one at a time.
 | Prismari Pledgemage | {1}{U}{R} | ✅ | 2/3 Elemental with Trample + Haste. |
 | Prismari Apprentice | {U}{R} | 🟡 | 2/2 Human Wizard. Magecraft: Scry 1. The "+1/+0 EOT" alt-mode is ⏳ pending a let-the-controller-pick hook on triggered ChooseMode. |
 | Symmetry Sage | {U} | ✅ | 1/2 Human Wizard. Magecraft: this creature gets +1/+0 and gains flying until end of turn. |
+| Galvanic Iteration | {U}{R} | 🟡 | Push XXIV: Instant. Copy target instant or sorcery spell via `Effect::CopySpell`. Magecraft self-exile rider omitted. |
+| Expressive Iteration | {U}{R} | 🟡 | Push XXIV: Sorcery. Collapsed to `Scry 2 → Draw 1` (the exile-and-play-from-exile primitive is ⏳). |
+| Magma Opus | {7}{U}{R} | 🟡 | Push XXIV: Sorcery. 4 dmg + tap opp creatures + 3/3 Elemental token + draw 2. Multi-target divided damage + discard alt-mode omitted. |
+| Sparkmage Apprentice | {1}{R} | ✅ | Push XXIV: 1/2 Human Wizard. ETB: deals 2 damage to any target. |
+| Soothsayer Adept | {1}{U} | ✅ | Push XXIV: 2/2 Merfolk Wizard. Activated `{2}{U}: Surveil 1`. |
 
 ### Mono-color staples (`stx::mono`)
 
@@ -1708,6 +1794,15 @@ parity is a matter of porting card factories one at a time.
 | Crackle with Power | {X}{R}{R}{R}{R}{R} | 🟡 | Push XXIII: Sorcery. 5X damage to single target (multi-target divided rider collapses to one target). |
 | Dragonsguard Elite | {1}{G}{G} | ✅ | Push XXIII: 2/2 Human Warrior. Magecraft +1/+1 counter; `{3}{G}: +X/+X EOT` where X = `PowerOf(This)`. |
 | Quintorius, Field Historian | {2}{R}{W} | 🟡 | Push XXIII: 3/3 Legendary Elephant Cleric Spirit, Vigilance. ETB exile gy card + create 3/2 R/W Spirit. Tribal anthem static omitted. |
+| Crashing Drawbridge | {3} | ✅ | Push XXIV: 0/4 Artifact Creature — Construct. "Creatures you control have haste" via `StaticEffect::GrantKeyword`. |
+| Eyetwitch Brood | {1}{B}{G} | ✅ | Push XXIV: 1/1 Pest with Lifelink. "Whenever another Pest you control dies, put a +1/+1 counter on this creature." Disambiguated from SOS's "Pest Mascot" (LifeGained trigger). |
+| First Day of Class | {W} | 🟡 | Push XXIV: Sorcery. ForEach creature you control gets +1/+1 EOT. Combat-damage-to-Pest rider omitted. |
+| Verdant Mastery | {3}{G}{G} | 🟡 | Push XXIV: Sorcery. You + each opponent fetch a basic land (opponent's tapped). {6}{G}{G} two-basics alt-cost omitted. |
+| Sacred Fire | {R}{W} | ✅ | Push XXIV: Sorcery. 3 damage to any target + 3 life + Flashback {5}{R}{W}. |
+| Rip Apart | {R}{W} | ✅ | Push XXIV: Sorcery. Two-mode `ChooseMode`: 3 dmg to creature/PW or destroy artifact/enchantment. |
+| Codespell Cleric | {W} | ✅ | Push XXIV: 1/1 Kor Cleric with Lifelink. Vanilla low-curve Silverquill body. |
+| Reckless Amplimancer | {2}{G} | 🟡 | Push XXIV: 2/2 Elf Druid. Activated `{4}{G}{G}: +3/+3 EOT` (printed `+X/+X = mana spent` collapses to fixed +3/+3). |
+| Karok Wrangler | {1}{G}{U} | ✅ | Push XXIV: 2/2 Elf Druid. Magecraft: +1/+1 counter on target creature you control. |
 
 ### Shared / multi-college
 

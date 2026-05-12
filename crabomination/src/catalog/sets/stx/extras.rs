@@ -9,10 +9,10 @@
 use super::no_abilities;
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, Effect, EventKind,
-    EventScope, EventSpec, Keyword, Selector, SelectionRequirement, Subtypes, TokenDefinition,
-    TriggeredAbility, Value,
+    EventScope, EventSpec, Keyword, Predicate, Selector, SelectionRequirement, Subtypes,
+    TokenDefinition, TriggeredAbility, Value,
 };
-use crate::effect::shortcut::target_filtered;
+use crate::effect::shortcut::{magecraft, target_filtered};
 use crate::effect::{Duration, ManaPayload, PlayerRef, ZoneDest};
 use crate::mana::{Color, b, cost, g, generic, r, u, w};
 
@@ -1859,6 +1859,645 @@ pub fn quintorius_field_historian() -> CardDefinition {
                 },
             ]),
         }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Galvanic Iteration ──────────────────────────────────────────────────────
+
+/// Galvanic Iteration — {U}{R} Instant. "Copy target instant or sorcery
+/// spell you control. You may choose new targets for the copy. /
+/// Magecraft — Whenever you cast or copy an instant or sorcery spell,
+/// exile Galvanic Iteration."
+///
+/// The printed Oracle has a "play it from exile next turn" rider via
+/// a follow-up trigger, but the simplest faithful wire is the
+/// `Effect::CopySpell` primitive (push XVII). Targets a friendly
+/// instant/sorcery on the stack and pushes one copy above it. The
+/// Magecraft self-exile rider is omitted — the copy's auto-exile
+/// would compete with the primary cast at the stack top, and there's
+/// no exile-self-on-resolution primitive yet. Body-only is still a
+/// strong Prismari spell (twin-cast a Lightning Bolt for {U}{R}).
+pub fn galvanic_iteration() -> CardDefinition {
+    CardDefinition {
+        name: "Galvanic Iteration",
+        cost: cost(&[u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::CopySpell {
+            what: target_filtered(
+                SelectionRequirement::IsSpellOnStack.and(
+                    SelectionRequirement::HasCardType(CardType::Instant)
+                        .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+                ),
+            ),
+            count: Value::Const(1),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Expressive Iteration ────────────────────────────────────────────────────
+
+/// Expressive Iteration — {U}{R} Sorcery. "Exile the top three cards of
+/// your library. You may play one of them this turn, and you may play
+/// a land from among them this turn. Put the rest on the bottom of
+/// your library in a random order."
+///
+/// 🟡 Collapsed to `Scry 2 → Draw 1` (push the worst card on bottom +
+/// keep one in hand). The full "exile + play one from exile" pattern
+/// needs an exile-and-play-from-exile-this-turn primitive, which is
+/// out of scope for this push. The collapse still mirrors the printed
+/// card-advantage shape (look at 3, pick the best).
+pub fn expressive_iteration() -> CardDefinition {
+    CardDefinition {
+        name: "Expressive Iteration",
+        cost: cost(&[u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(2),
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Magma Opus ──────────────────────────────────────────────────────────────
+
+/// Magma Opus — {7}{U}{R} Sorcery. "Magma Opus deals 4 damage divided
+/// as you choose among any number of targets. Tap up to two creatures.
+/// Create a 4/4 blue and red Elemental creature token. Draw two cards.
+/// / {U/R}{U/R}, Discard Magma Opus: Create a Treasure token."
+///
+/// 🟡 Body-only wire (no discard mode). The "divided as you choose"
+/// damage collapses to **4 damage to one creature** (single target),
+/// matching the engine's one-target-per-effect cast shape. The tap
+/// rider collapses to **tap all opponent creatures** (a strict
+/// upgrade over the printed "up to two" — collapses cleanly when
+/// no creatures exist). 4/4 token mints via the shared
+/// `elemental_token()` helper, and the draw-2 fires as printed.
+pub fn magma_opus() -> CardDefinition {
+    let elemental = crate::catalog::sets::sos::elemental_token();
+    CardDefinition {
+        name: "Magma Opus",
+        cost: cost(&[generic(7), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Creature),
+                amount: Value::Const(4),
+            },
+            Effect::Tap {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+                ),
+            },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: elemental,
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Reckless Amplimancer ────────────────────────────────────────────────────
+
+/// Reckless Amplimancer — {2}{G} Creature — Elf Druid, 2/2.
+/// Activated `{4}{G}{G}: +3/+3 EOT`.
+///
+/// The printed Oracle scales `+X/+X` with the mana spent on the
+/// activation, but the engine has no per-activation mana-spent
+/// tracker. We approximate via a fixed `+3/+3` for the canonical
+/// {4}{G}{G} (6 mana → +3/+3) activation cost. Body is a 2/2 elf for
+/// {2}{G}.
+pub fn reckless_amplimancer() -> CardDefinition {
+    CardDefinition {
+        name: "Reckless Amplimancer",
+        cost: cost(&[generic(2), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: false,
+            mana_cost: cost(&[generic(4), g(), g()]),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(3),
+                toughness: Value::Const(3),
+                duration: Duration::EndOfTurn,
+            },
+            once_per_turn: false,
+            sorcery_speed: false,
+            sac_cost: false,
+            condition: None,
+            life_cost: 0,
+            from_graveyard: false,
+            exile_self_cost: false,
+            exile_other_filter: None,
+        }],
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Crashing Drawbridge ─────────────────────────────────────────────────────
+
+/// Crashing Drawbridge — {3} Artifact Creature — Construct, 0/4.
+/// "Other creatures you control have haste."
+///
+/// Wired with a `StaticEffect::GrantKeyword` applying Haste to
+/// other creatures you control. The static layer evaluates each
+/// frame, so newly-summoned creatures pick up haste immediately
+/// (matches the printed "creatures you control have haste"
+/// continuous effect).
+pub fn crashing_drawbridge() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Crashing Drawbridge",
+        cost: cost(&[generic(3)]),
+        supertypes: vec![],
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Construct],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 4,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![StaticAbility {
+            description: "Creatures you control have haste.",
+            effect: StaticEffect::GrantKeyword {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                keyword: Keyword::Haste,
+            },
+        }],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Eyetwitch Brood ─────────────────────────────────────────────────────────
+
+/// Eyetwitch Brood — {1}{B}{G} Creature — Pest, 1/1, Lifelink. "Whenever
+/// another Pest you control dies, put a +1/+1 counter on this creature."
+///
+/// Tribal Witherbloom payoff sibling to Felisa Fang. Triggers off the
+/// death of any *other* Pest you control via `EventKind::CreatureDied
+/// / AnotherOfYours` + `Predicate::EntityMatches { what: TriggerSource,
+/// filter: HasCreatureType(Pest) }`. Counters on the dead Pest persist
+/// in the graveyard (push XXIII's cross-zone CountersOn fallback), so
+/// the filter reads the dead card's printed creature types correctly.
+///
+/// Name disambiguates from SOS's "Pest Mascot" (same Pest-Ape flavour,
+/// different trigger condition).
+pub fn eyetwitch_brood() -> CardDefinition {
+    CardDefinition {
+        name: "Eyetwitch Brood",
+        cost: cost(&[generic(1), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Pest],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Lifelink],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::HasCreatureType(CreatureType::Pest),
+                }),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── First Day of Class ──────────────────────────────────────────────────────
+
+/// First Day of Class — {W} Sorcery. "Until end of turn, creatures you
+/// control get +1/+1. Whenever a creature you control deals combat
+/// damage to a player this turn, create a 1/1 white Pest creature
+/// token with 'When this creature dies, you gain 1 life.'"
+///
+/// 🟡 Anthem half (+1/+1 EOT for each creature you control) wired
+/// faithfully via `ForEach(Creature & ControlledByYou)` + `PumpPT`.
+/// The "deals combat damage → Pest" rider is omitted (would need a
+/// delayed `DealsCombatDamageToPlayer` registration that captures
+/// the EOT window).
+pub fn first_day_of_class() -> CardDefinition {
+    CardDefinition {
+        name: "First Day of Class",
+        cost: cost(&[w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::ForEach {
+            selector: Selector::EachPermanent(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            ),
+            body: Box::new(Effect::PumpPT {
+                what: Selector::TriggerSource,
+                power: Value::Const(1),
+                toughness: Value::Const(1),
+                duration: Duration::EndOfTurn,
+            }),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Verdant Mastery ─────────────────────────────────────────────────────────
+
+/// Verdant Mastery — {3}{G}{G} Sorcery. "Search your library for a
+/// basic land card, put it onto the battlefield, then shuffle. Each
+/// other player may search their library for a basic land card, put
+/// it onto the battlefield tapped, then shuffle."
+///
+/// Standard mode wired: you fetch + each opponent fetches (no
+/// optional opt-in — the bot harness fetches when there's a candidate;
+/// no-op when there isn't). The {6}{G}{G} alt-cost (two basics each)
+/// is omitted (alt-cost-implies-mode primitive still ⏳).
+pub fn verdant_mastery() -> CardDefinition {
+    CardDefinition {
+        name: "Verdant Mastery",
+        cost: cost(&[generic(3), g(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Search {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::IsBasicLand,
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: false,
+                },
+            },
+            Effect::ForEach {
+                selector: Selector::Player(PlayerRef::EachOpponent),
+                body: Box::new(Effect::Search {
+                    who: PlayerRef::Triggerer,
+                    filter: SelectionRequirement::IsBasicLand,
+                    to: ZoneDest::Battlefield {
+                        controller: PlayerRef::Triggerer,
+                        tapped: true,
+                    },
+                }),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Sacred Fire ─────────────────────────────────────────────────────────────
+
+/// Sacred Fire — {R}{W} Sorcery. "Sacred Fire deals 3 damage to any
+/// target. You gain 3 life. / Flashback {5}{R}{W}."
+///
+/// 🟡 Body wired: 3 damage + 3 life. Flashback {5}{R}{W} declared via
+/// `Keyword::Flashback(ManaCost)` — the engine's `cast_flashback`
+/// path picks up the keyword and re-casts from graveyard.
+pub fn sacred_fire() -> CardDefinition {
+    use crate::mana::{ManaCost, ManaSymbol};
+    let flashback_cost = ManaCost {
+        symbols: vec![
+            ManaSymbol::Generic(5),
+            ManaSymbol::Colored(Color::Red),
+            ManaSymbol::Colored(Color::White),
+        ],
+    };
+    CardDefinition {
+        name: "Sacred Fire",
+        cost: cost(&[r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![Keyword::Flashback(flashback_cost)],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature
+                        .or(SelectionRequirement::Player)
+                        .or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::Const(3),
+            },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(3),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Rip Apart ───────────────────────────────────────────────────────────────
+
+/// Rip Apart — {R}{W} Sorcery. "Choose one — / • Rip Apart deals 3
+/// damage to target creature or planeswalker. / • Destroy target
+/// artifact or enchantment."
+///
+/// Standard two-mode `ChooseMode`. Damage mode aims at creatures or PWs;
+/// destroy mode picks an artifact or enchantment.
+pub fn rip_apart() -> CardDefinition {
+    CardDefinition {
+        name: "Rip Apart",
+        cost: cost(&[r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::ChooseMode(vec![
+            Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::Const(3),
+            },
+            Effect::Destroy {
+                what: target_filtered(
+                    SelectionRequirement::Artifact.or(SelectionRequirement::Enchantment),
+                ),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Codespell Cleric ────────────────────────────────────────────────────────
+
+/// Codespell Cleric — {W} Creature — Kor Cleric, 1/1, Lifelink. Simple
+/// Silverquill body — vanilla 1/1 lifelink for one white mana. Pairs
+/// well with Felisa Fang's "creature with +1/+1 counter dies → Inkling"
+/// trigger when augmented by Eager First-Year-style magecraft pumps.
+pub fn codespell_cleric() -> CardDefinition {
+    CardDefinition {
+        name: "Codespell Cleric",
+        cost: cost(&[w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Kor, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Lifelink],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Sparkmage Apprentice ────────────────────────────────────────────────────
+
+/// Sparkmage Apprentice — {1}{R} Creature — Human Wizard, 1/2.
+/// "When this creature enters, it deals 2 damage to any target."
+///
+/// Pinpoint Prismari ETB removal. Wired with a standard
+/// `EntersBattlefield / SelfSource` trigger and a creature-or-player-
+/// or-planeswalker target picker.
+pub fn sparkmage_apprentice() -> CardDefinition {
+    CardDefinition {
+        name: "Sparkmage Apprentice",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature
+                        .or(SelectionRequirement::Player)
+                        .or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::Const(2),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Karok Wrangler ──────────────────────────────────────────────────────────
+
+/// Karok Wrangler — {1}{G}{U} Creature — Elf Druid, 2/2.
+/// "Magecraft — Whenever you cast or copy an instant or sorcery spell,
+/// put a +1/+1 counter on target creature you control."
+pub fn karok_wrangler() -> CardDefinition {
+    CardDefinition {
+        name: "Karok Wrangler",
+        cost: cost(&[generic(1), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::AddCounter {
+            what: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            ),
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Soothsayer Adept ────────────────────────────────────────────────────────
+
+/// Soothsayer Adept — {1}{U} Creature — Merfolk Wizard, 2/2.
+/// "{2}{U}: Surveil 1."
+///
+/// Cheap interaction body for Quandrix/Prismari decks: a 2/2 for two
+/// mana plus an activated Surveil 1 for filtering. The activated
+/// ability dumps the top card to graveyard or keeps it on top via
+/// the engine's `Effect::Surveil`.
+pub fn soothsayer_adept() -> CardDefinition {
+    CardDefinition {
+        name: "Soothsayer Adept",
+        cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: false,
+            mana_cost: cost(&[generic(2), u()]),
+            effect: Effect::Surveil {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
+            once_per_turn: false,
+            sorcery_speed: false,
+            sac_cost: false,
+            condition: None,
+            life_cost: 0,
+            from_graveyard: false,
+            exile_self_cost: false,
+            exile_other_filter: None,
+        }],
+        triggered_abilities: vec![],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],

@@ -1051,6 +1051,19 @@ impl GameState {
                 // Each resolved player reveals the top card of their library;
                 // if it matches `reveal_filter`, that player puts it into
                 // their hand (otherwise it stays on top).
+                //
+                // CR 121.5 compliance — "If an effect moves cards from a
+                // player's library to that player's hand without using
+                // the word 'draw,' the player has not drawn those cards.
+                // This makes a difference for abilities that trigger on
+                // drawing and effects that count cards drawn." Goblin
+                // Guide and its kin say "puts it into their hand", not
+                // "draws"; so we do NOT emit a `CardDrawn` event here
+                // and do NOT increment `cards_drawn_this_turn`. A
+                // dedicated `CardPutIntoHand` event would let cards
+                // listen to *all* library→hand moves, but no current
+                // card needs that; if/when one lands, add the event
+                // here in front of the silent move.
                 for p in self.resolve_players(who, ctx) {
                     let Some(top) = self.players[p].library.first() else {
                         continue;
@@ -1069,9 +1082,8 @@ impl GameState {
                     });
                     if matches {
                         let card = self.players[p].library.remove(0);
-                        let cid = card.id;
                         self.players[p].hand.push(card);
-                        events.push(GameEvent::CardDrawn { player: p, card_id: cid });
+                        // Intentionally no CardDrawn event (CR 121.5).
                     }
                 }
                 Ok(())
