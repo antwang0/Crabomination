@@ -2476,9 +2476,25 @@ pub(crate) fn event_matches_spec(
             .is_some_and(|p| p != source.controller),
         EventScope::AnyPlayer | EventScope::ActivePlayer => true,
         EventScope::AnotherOfYours => {
-            // ETB/die triggers for "another creature"
-            let target = event_card(event);
-            target != Some(source.id)
+            // ETB / die / attack triggers for "another creature/permanent
+            // you control". Two checks:
+            // (1) the subject card isn't the trigger source itself; and
+            // (2) the subject card's controller (or graveyard-owner for
+            //     a CreatureDied subject) matches the trigger source's
+            //     controller. Without (2) the scope would silently fire
+            //     for opponent-side subjects too — Felisa would mint an
+            //     Inkling on an opp's counter-bearing creature dying,
+            //     Sparring Regimen would pump an opp attacker, etc.
+            let Some(target) = event_card(event) else { return false; };
+            if target == source.id { return false; }
+            let subject_controller = state
+                .battlefield_find(target)
+                .map(|c| c.controller)
+                .or_else(|| {
+                    state.players.iter().position(|p|
+                        p.graveyard.iter().any(|c| c.id == target))
+                });
+            subject_controller == Some(source.controller)
         }
         EventScope::FromYourGraveyard => event_actor(state, event)
             .is_some_and(|p| p == source.owner),
@@ -2610,7 +2626,7 @@ pub fn food_token() -> TokenDefinition {
             condition: None,
             life_cost: 0,
             from_graveyard: false,
-            exile_self_cost: false,
+            exile_self_cost: false, exile_other_filter: None,
         }],
         triggered_abilities: vec![],
     }
@@ -2644,7 +2660,7 @@ pub fn treasure_token() -> TokenDefinition {
             condition: None,
             life_cost: 0,
             from_graveyard: false,
-            exile_self_cost: false,
+            exile_self_cost: false, exile_other_filter: None,
         }],
         triggered_abilities: vec![],
     }
@@ -2690,7 +2706,7 @@ pub fn blood_token() -> TokenDefinition {
             condition: None,
             life_cost: 0,
             from_graveyard: false,
-            exile_self_cost: false,
+            exile_self_cost: false, exile_other_filter: None,
         }],
         triggered_abilities: vec![],
     }
@@ -2726,7 +2742,7 @@ pub fn clue_token() -> TokenDefinition {
             condition: None,
             life_cost: 0,
             from_graveyard: false,
-            exile_self_cost: false,
+            exile_self_cost: false, exile_other_filter: None,
         }],
         triggered_abilities: vec![],
     }

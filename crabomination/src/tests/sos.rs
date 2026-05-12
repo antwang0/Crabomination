@@ -7468,3 +7468,115 @@ fn aziza_skips_copy_when_decider_declines() {
         .count();
     assert_eq!(tapped_bears, 0, "Decline should skip the tap-three cost too");
 }
+
+// ── Push XVIII: exile_other_filter activation cost + new card wirings ──────
+
+/// Postmortem Professor's graveyard-recursion activation: pay `{1}{B}`,
+/// exile an instant/sorcery card from your graveyard, and return the
+/// Professor from your graveyard to the battlefield. Exercises the new
+/// `ActivatedAbility.exile_other_filter` cost primitive in tandem with
+/// `from_graveyard: true`.
+#[test]
+fn postmortem_professor_returns_from_graveyard_by_exiling_instant_or_sorcery() {
+    let mut g = two_player_game();
+    // Put the Professor in P0's graveyard.
+    let prof_id = g.add_card_to_graveyard(0, catalog::postmortem_professor());
+    // Stock an instant in the graveyard so the cost has something to pay.
+    let bolt_id = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    // Pay mana.
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    let bf_before = g.battlefield.len();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: prof_id,
+        ability_index: 0,
+        target: None,
+    })
+    .expect("Postmortem Professor gy-activation should be legal with bolt in gy");
+    drain_stack(&mut g);
+
+    // Professor is now on the battlefield.
+    assert!(g.battlefield.iter().any(|c| c.id == prof_id),
+        "Professor should be on the battlefield after activation");
+    // Bolt was exiled (off-graveyard, on exile).
+    assert!(g.exile.iter().any(|c| c.id == bolt_id),
+        "Bolt should be in exile (paid as activation cost)");
+    assert!(!g.players[0].graveyard.iter().any(|c| c.id == bolt_id),
+        "Bolt should be out of the graveyard");
+    assert_eq!(g.battlefield.len(), bf_before + 1);
+}
+
+/// Without an instant/sorcery in the graveyard, the Postmortem Professor
+/// activation is rejected cleanly — pre-flight gate prevents tap/mana burn.
+#[test]
+fn postmortem_professor_rejects_activation_without_eligible_gy_card() {
+    let mut g = two_player_game();
+    let prof_id = g.add_card_to_graveyard(0, catalog::postmortem_professor());
+    // Stock a *creature* in graveyard — does not satisfy the IS-card cost.
+    let bear_id = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let mana_before = g.players[0].mana_pool.total();
+
+    let result = g.perform_action(GameAction::ActivateAbility {
+        card_id: prof_id,
+        ability_index: 0,
+        target: None,
+    });
+    assert!(result.is_err(),
+        "Activation must reject when no IS card is in the graveyard");
+    // Mana should be untouched (pre-flight gate rejected before payment).
+    assert_eq!(g.players[0].mana_pool.total(), mana_before);
+    // Professor still in graveyard.
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == prof_id));
+    // Bear still in graveyard.
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == bear_id));
+}
+
+/// Molten Note: {X}{R}{W} → X damage to creature + untap all your creatures.
+#[test]
+fn molten_note_deals_x_damage_and_untaps_your_creatures() {
+    use crate::game::types::TurnStep as TS;
+    let mut g = two_player_game();
+    g.step = TS::PreCombatMain;
+    // Two of your creatures, both tapped (simulating after-attack state).
+    let bear1 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let bear2 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear1).unwrap().tapped = true;
+    g.battlefield_find_mut(bear2).unwrap().tapped = true;
+    // Opponent's creature with 3 toughness — X=3 should kill it.
+    let target_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+
+    let id = g.add_card_to_hand(0, catalog::molten_note());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(target_bear)),
+        mode: None,
+        x_value: Some(3),
+    })
+    .expect("Molten Note castable at X=3 for {X}{R}{W}");
+    drain_stack(&mut g);
+
+    // The opp bear (2/2) took 3 damage → dies to SBA.
+    assert!(!g.battlefield.iter().any(|c| c.id == target_bear),
+        "Bear should die to 3 damage from Molten Note at X=3");
+    // Both your bears untapped.
+    assert!(!g.battlefield_find(bear1).unwrap().tapped,
+        "bear1 should be untapped");
+    assert!(!g.battlefield_find(bear2).unwrap().tapped,
+        "bear2 should be untapped");
+}
+
+/// Molten Note ships with Flashback {6}{R}{W} as a keyword.
+#[test]
+fn molten_note_has_flashback_keyword() {
+    use crate::card::Keyword;
+    let m = catalog::molten_note();
+    let has_flashback = m.keywords.iter().any(|k| matches!(k, Keyword::Flashback(_)));
+    assert!(has_flashback, "Molten Note should carry Keyword::Flashback");
+}

@@ -11,6 +11,23 @@ Periodic spot-check of the rules document
 (`crabomination/MagicCompRules 20260116.txt`). Each rule below has a
 status tag (✅ wired, 🟡 partial, ⏳ todo) plus a short note.
 
+- ✅ **CR 605.1a — Mana abilities (activated)**: An activated ability is
+  a mana ability if it (a) doesn't require a target, (b) could add mana
+  to a player's pool when it resolves, and (c) is not a loyalty
+  ability. The engine's `is_mana_ability` recogniser in
+  `game/actions.rs` matches against the rule's criteria conservatively:
+  pure `Effect::AddMana` (no target field, always can add mana) or
+  `Effect::Seq` of mana abilities. The `tap_for_mana` mana-source
+  driver only accepts an ability that passes this check. Pushed
+  XVIII: Witherbloom Pledgemage refactored to use `life_cost: 1` +
+  pure `AddMana` so it qualifies — proving the round-trip via the new
+  `witherbloom_pledgemage_is_a_mana_ability_per_cr_605` test.
+- ✅ **CR 605.4a — Mana abilities don't go on the stack**: The mana-
+  ability path in `activate_ability` resolves immediately via
+  `continue_ability_resolution` (no `StackItem::Trigger` push, no
+  priority window). Test:
+  `witherbloom_pledgemage_is_a_mana_ability_per_cr_605` asserts the
+  stack length is unchanged after activation.
 - ✅ **CR 707.2 — Copy characteristics**: Copies acquire copiable values
   of the source (name, cost, color, types, text, P/T, loyalty) plus
   on-stack choices (mode, targets, X, kicker). Wired in push XVII via
@@ -42,6 +59,47 @@ status tag (✅ wired, 🟡 partial, ⏳ todo) plus a short note.
   triggers / simultaneous effects is approximated.
 
 ## Recent additions
+
+- ✅ **Push XVIII (2026-05-12)**: 3 engine primitives + 1 dispatcher
+  bugfix + 9 STX/SOS card promotions/wirings + CR 605 audit. Tests at
+  1064+ (+15 net):
+  - **`ActivatedAbility.exile_other_filter: Option<SelectionRequirement>`** —
+    new cost variant: exile a *different* card from the activator's
+    graveyard matching the filter. Pre-flight gate rejects cleanly
+    with `GameError::SelectionRequirementViolated` when no match (so
+    tap/mana aren't burned). Picks the lowest-CMC matching card so
+    the activator keeps higher-value cards. Wired:
+    Postmortem Professor `{1}{B}, Exile IS from gy: return self`,
+    Lorehold Pledgemage `{2}{R}{W}, Exile any from gy: +1/+1 EOT`.
+  - **Trigger dispatcher bugfix** —
+    `dispatch_triggers_for_events` had been preparing an
+    `event_subject` reference but hardcoding it to `None` when
+    pushing the `StackItem::Trigger`. Effects referencing
+    `Selector::TriggerSource` from unified-dispatcher triggers
+    silently zero'd. Now correctly threaded — unblocks Sparring
+    Regimen's per-attacker counter bump and every future trigger
+    that reads its source via `TriggerSource`.
+  - **`EventScope::AnotherOfYours` controller check** — the scope was
+    only checking that the subject isn't the trigger source itself.
+    Now also enforces controller match (subject's controller ==
+    trigger source's controller). Without this, Sparring Regimen
+    would pump opp attackers and Felisa would mint Inklings on opp
+    creature deaths — both now correctly gated.
+  - **`effect::shortcut::prowess()`** — one-liner trigger constructor
+    for printed Prowess reminder text ("Whenever you cast a
+    noncreature spell, this creature gets +1/+1 EOT").
+  - **9 cards** in STX Lorehold (Apprentice, Pledgemage, Storm-Kiln,
+    Sparring Regimen), STX legends (Beledros, Tanazir, Spectacle
+    Mage), STX Silverquill (Killian subtype fix), STX Witherbloom
+    (Pledgemage CR 605 refactor), SOS (Postmortem Professor, Molten
+    Note new factory). Lorehold (R/W) STX school: all 6 cards now
+    ✅ or fully-wired 🟡.
+  - **CR 605.1a / 605.4a — Mana abilities audit** — confirmed engine's
+    `is_mana_ability` recogniser matches the printed criteria
+    (conservatively), and confirmed mana abilities resolve without
+    the stack via `continue_ability_resolution`. Witherbloom
+    Pledgemage's refactor exercises the round-trip with a new test
+    (`witherbloom_pledgemage_is_a_mana_ability_per_cr_605`).
 
 - ✅ **SOS push XVII (2026-05-12)**: 5 engine primitives + 7 SOS card
   promotions. Tests at 1048 (+12 net):

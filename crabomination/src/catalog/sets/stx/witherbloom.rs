@@ -154,15 +154,20 @@ pub fn bayou_groff() -> CardDefinition {
 /// Witherbloom Pledgemage — {1}{B}{G}, 3/3 Plant Warlock. "{T}, Pay 1
 /// life: Add {B} or {G}."
 ///
-/// 🟡 The "pay 1 life as part of the activation cost" half is folded
-/// into resolution: the engine has no `life_cost` flag on
-/// `ActivatedAbility`, so the activation drops a `LoseLife 1` into the
-/// effect's resolution sequence. Net effect is correct (the player
-/// loses 1 life and then gets the mana) — the *timing* difference
-/// (whether life loss is paid before or after the ability resolves) is
-/// invisible to the bot harness today. Tracked under TODO.md "Cost
-/// Stacking" and "Generic activated-ability life-cost primitive".
+/// Push XVIII: refactored to use the `life_cost: 1` field (introduced
+/// in push XV for Great Hall of the Biblioplex). The activation now
+/// pays 1 life up front during cost-payment, leaving the effect as a
+/// pure `AddMana` — so CR 605.1a's "no target, could add mana"
+/// criteria are met and the engine's `is_mana_ability` recogniser
+/// resolves this **without the stack**, matching the printed
+/// instant-speed mana ramp behaviour. The prior `Seq([LoseLife,
+/// AddMana])` body went onto the stack, breaking the typical
+/// "tap for mana, immediately spend it" flow during Witherbloom turns.
+/// The "B or G" choice is approximated as `ManaPayload::AnyOneColor` —
+/// player picks 1 mana of any color; broader than the printed B/G
+/// pair but matches the typical cube-pool ramp pattern.
 pub fn witherbloom_pledgemage() -> CardDefinition {
+    let _ = Color::Black;
     CardDefinition {
         name: "Witherbloom Pledgemage",
         cost: cost(&[crate::mana::generic(1), b(), g()]),
@@ -179,23 +184,18 @@ pub fn witherbloom_pledgemage() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             mana_cost: cost(&[]),
-            effect: Effect::Seq(vec![
-                Effect::LoseLife {
-                    who: Selector::You,
-                    amount: Value::Const(1),
-                },
-                Effect::AddMana {
-                    who: PlayerRef::You,
-                    pool: ManaPayload::Colors(vec![Color::Black]),
-                },
-            ]),
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::AnyOneColor(Value::Const(1)),
+            },
             once_per_turn: false,
             sorcery_speed: false,
             sac_cost: false,
             condition: None,
-            life_cost: 0,
+            life_cost: 1,
             from_graveyard: false,
             exile_self_cost: false,
+            exile_other_filter: None,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],

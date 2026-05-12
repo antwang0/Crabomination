@@ -49,6 +49,146 @@ All 232 cards marked ✅ or 🟡 have a corresponding factory in
 `crabomination/src/catalog/sets/sos/`; the audit script reports 0 false
 positives and 0 stale ⏳ rows.
 
+## 2026-05-12 push XVIII: exile_other_filter + CR 605 + Lorehold STX closer
+
+Engine primitives:
+
+- **`ActivatedAbility.exile_other_filter: Option<SelectionRequirement>`** —
+  new cost variant: exile a *different* card from the activator's
+  graveyard matching the filter. Pre-flight gate (rejects cleanly with
+  `GameError::SelectionRequirementViolated` when no match), then exile
+  after tap/mana/life payment succeeds. Picks the lowest-CMC matching
+  card so the activator keeps higher-value cards in graveyard. Emits
+  `CardLeftGraveyard` + bumps the per-turn exile + gy-leave tallies
+  through the existing instrumentation. Closes the long-standing
+  "exile-a-different-card-from-gy as cost" gap in TODO.md (Postmortem
+  Professor's `{1}{B}, Exile an IS card from gy: return self to bf`,
+  Lorehold Pledgemage's `{2}{R}{W}, Exile a card from gy: +1/+1 EOT`).
+
+- **Trigger dispatcher bugfix** — `dispatch_triggers_for_events`
+  prepared an `event_subject` (the attacker / cast spell / ETBing
+  permanent / etc.) but **never threaded it** into the resulting
+  `StackItem::Trigger.trigger_source` field (hardcoded to `None`).
+  Effects that referenced `Selector::TriggerSource` from unified-
+  dispatcher triggers silently zero'd. Now correctly wired —
+  unblocking Sparring Regimen's per-attacker counter bump and every
+  future trigger that reads its source via `TriggerSource`.
+
+- **`EventScope::AnotherOfYours` controller check** — the scope was
+  previously only checking that the subject card isn't the trigger
+  source itself. Now also enforces that the subject's controller
+  (or graveyard-owner for `CreatureDied` subjects) matches the
+  trigger source's controller. Without this, Sparring Regimen would
+  pump opp attackers, Felisa would mint Inklings on opp creature
+  deaths, Cauldron of Essence's drain trigger would fire on opp deaths
+  (already broken; now correct). 1062 lib tests still pass post-fix.
+
+- **`effect::shortcut::prowess()`** — one-liner trigger constructor
+  for the printed Prowess reminder text ("Whenever you cast a
+  noncreature spell, this creature gets +1/+1 EOT"). Filter uses
+  `Predicate::EntityMatches { what: TriggerSource, filter:
+  HasCardType(Creature).negate() }`. Promoted Spectacle Mage's
+  Prowess keyword tag to a functional self-pump trigger.
+
+Card promotions / new cards:
+
+- **Postmortem Professor** (SOS B) 🟡 → ✅ — graveyard-recursion
+  activation `{1}{B}, Exile an IS card from gy: return self` now
+  wired via `from_graveyard: true` + `exile_other_filter:
+  Some(HasCardType(Instant) ∨ HasCardType(Sorcery))`. On-attack drain
+  + CantBlock keyword unchanged.
+
+- **Lorehold Apprentice** (STX R/W) 🟡 → ✅ — Magecraft now also fires
+  the "1 damage to any target" half via a `Seq([GainLife, DealDamage])`
+  trigger body, auto-targeting an opponent or creature for the ping.
+
+- **Lorehold Pledgemage** (STX R/W) 🟡 → ✅ — `{2}{R}{W}, Exile a
+  card from gy: +1/+1 EOT` activated ability wired via the new
+  `exile_other_filter: Some(Any)` cost. Reach + body unchanged.
+
+- **Beledros Witherbloom** (STX W/B Legendary) 🟡 → 🟡 (activation
+  fully wired) — `Pay 10 life: Untap each land you control. Activate
+  only as a sorcery.` uses the existing `life_cost: 10` +
+  `sorcery_speed: true` + `Effect::Untap` over
+  `EachPermanent(Land & ControlledByYou)`. Pre-flight gate rejects
+  cleanly with `GameError::InsufficientLife` on insufficient life.
+
+- **Tanazir Quandrix** (STX G/U Legendary) 🟡 → 🟡 (attack-trigger
+  wired) — "Whenever Tanazir attacks, double target creature you
+  control's toughness EOT" now uses `Effect::PumpPT` with
+  `toughness: Value::ToughnessOf(Target(0))` — the +Toughness pump
+  by the target's own toughness effectively doubles it (T + T = 2T)
+  until end of turn. ETB counter-doubling remains 🟡 (counter-multiplier
+  primitive missing).
+
+- **Spectacle Mage** (STX U/R) 🟡 → 🟡 (Prowess functional) —
+  declared `Keyword::Prowess` is now functionally wired through the
+  new `prowess()` shortcut, with the printed +1/+1 EOT pump firing
+  on noncreature spell casts.
+
+- **Sparring Regimen** (STX R/W) 🟡 → ✅ — "Whenever you attack, put
+  a +1/+1 counter on each attacking creature you control" wired as
+  a per-attacker `Attacks/AnotherOfYours` trigger that puts a counter
+  on `Selector::TriggerSource` (the attacker). Unblocked by the
+  dispatcher trigger_source bugfix above.
+
+- **Storm-Kiln Artist** (STX R/W) 🟡 → 🟡 (faithful damage target) —
+  Magecraft damage half upgraded from `EachOpponent` to
+  `target_filtered(Creature ∨ Player ∨ Planeswalker)` to match the
+  printed "1 damage to any target" — auto-target picker selects the
+  best legal target. Treasure half unchanged.
+
+- **Killian, Ink Duelist** (STX W/B) 🟡 (subtype fix) — creature
+  type fixed from `Warrior` → `Warlock` to match the printed Oracle.
+
+- **Molten Note** (SOS R/W) ⏳ → ✅ (new factory) — `{X}{R}{W}` sorcery
+  in `catalog::sets::sos::sorceries::molten_note`. `Effect::Seq` of
+  `DealDamage(target Creature, XFromCost) + Untap(each Creature
+  ControlledByYou)`. Flashback {6}{R}{W} wired via `Keyword::Flashback`.
+
+- **Witherbloom Pledgemage** (STX B/G) refactor: `{T}, Pay 1 life:
+  Add {B}/{G}` now uses `life_cost: 1` + pure `AddMana(AnyOneColor)`
+  effect. By CR 605.1a (no target, could add mana, not loyalty), the
+  ability now qualifies as a mana ability and resolves **without the
+  stack** per CR 605.4a. Previous behaviour was `Seq([LoseLife,
+  AddMana])` which went onto the stack — breaking the printed
+  instant-speed mana ramp semantics.
+
+MagicCompRules audit additions:
+
+- **CR 605.1a — Mana abilities** ✅ wired. The engine's
+  `is_mana_ability` recogniser in `game/actions.rs` matches an
+  activated ability's effect against the rule's three criteria
+  conservatively: pure `Effect::AddMana` (no target field, always can
+  add mana) or `Effect::Seq` of mana abilities. Witherbloom
+  Pledgemage's refactor (push XVIII) demonstrates the round-trip.
+- **CR 605.4a — Mana abilities don't go on the stack** ✅ wired.
+  `activate_ability` branches on `is_mana_ability(&ability.effect)`:
+  the mana-ability path resolves immediately via
+  `continue_ability_resolution`; the non-mana path pushes a
+  `StackItem::Trigger`. New test
+  `witherbloom_pledgemage_is_a_mana_ability_per_cr_605` asserts the
+  stack length is unchanged after activation.
+
+Tests:
+- `postmortem_professor_returns_from_graveyard_by_exiling_instant_or_sorcery`
+- `postmortem_professor_rejects_activation_without_eligible_gy_card`
+- `molten_note_deals_x_damage_and_untaps_your_creatures`
+- `molten_note_has_flashback_keyword`
+- `lorehold_apprentice_magecraft_drains_one_to_opponent_and_gains_life`
+- `lorehold_pledgemage_gy_exile_cost_pumps_self`
+- `lorehold_pledgemage_rejects_activation_with_empty_graveyard`
+- `beledros_witherbloom_pay_ten_life_untaps_all_lands`
+- `beledros_witherbloom_rejects_activation_with_insufficient_life`
+- `tanazir_quandrix_attack_trigger_doubles_target_toughness`
+- `spectacle_mage_prowess_fires_on_noncreature_spell`
+- `spectacle_mage_prowess_does_not_fire_on_creature_spell`
+- `sparring_regimen_creates_spirit_etb_and_pumps_attacker`
+- `witherbloom_pledgemage_is_a_mana_ability_per_cr_605`
+- `witherbloom_pledgemage_rejects_activation_with_zero_life`
+
+All 1064+ lib tests pass.
+
 ## 2026-05-12 push XVII: from_graveyard activations + Effect::CopySpell
 
 Three engine primitives + 7 SOS card promotions (5 from 🟡→✅, 1 ⏳→🟡,

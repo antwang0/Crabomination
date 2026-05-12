@@ -90,14 +90,16 @@ pub fn sedgemoor_witch() -> CardDefinition {
 
 // ── Spectacle Mage ──────────────────────────────────────────────────────────
 
-/// Spectacle Mage — {U/R}{U/R}, 1/2 Human Wizard. Prowess. Real Oracle
-/// flavor: "Whenever you cast a noncreature spell, this creature gets
-/// +1/+1 until end of turn." (Standard prowess.) Hybrid {U/R}{U/R} is
-/// approximated as `{U}{R}` (engine has no hybrid mana resolver — a
-/// player who can produce only U or only R can still cast). Prowess
-/// keyword is declared today but not yet wired into the trigger
-/// system; the body and stat line are correct.
+/// Spectacle Mage — {U/R}{U/R}, 1/2 Human Wizard. Prowess. Real Oracle:
+/// "Prowess (Whenever you cast a noncreature spell, this creature gets
+/// +1/+1 until end of turn.)"
+///
+/// Hybrid {U/R}{U/R} is approximated as `{U}{R}` (engine has no hybrid
+/// mana resolver). The Prowess keyword is **now functionally wired**
+/// via the new `effect::shortcut::prowess()` helper — fires on every
+/// non-creature spell you cast, pumping the source +1/+1 EOT.
 pub fn spectacle_mage() -> CardDefinition {
+    use crate::effect::shortcut::prowess;
     CardDefinition {
         name: "Spectacle Mage",
         cost: cost(&[u(), r()]),
@@ -112,7 +114,7 @@ pub fn spectacle_mage() -> CardDefinition {
         keywords: vec![Keyword::Prowess],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
+        triggered_abilities: vec![prowess()],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],

@@ -1420,6 +1420,26 @@ pub struct ActivatedAbility {
     /// Defaults to false via `#[serde(default)]`.
     #[serde(default)]
     pub exile_self_cost: bool,
+    /// Optional cost: exile a *different* card from the controller's
+    /// graveyard matching this filter. Used by activated abilities
+    /// whose printed cost line reads "Exile a [filter] card from your
+    /// graveyard:" where the exiled card is **not** the source — for
+    /// example Postmortem Professor's `{1}{B}, Exile an instant or
+    /// sorcery card from your graveyard: Return this card from your
+    /// graveyard to the battlefield.` and Lorehold Pledgemage's
+    /// `{2}{R}{W}, Exile a card from your graveyard: This creature
+    /// gets +1/+1 until end of turn.`
+    ///
+    /// The exile is applied after tap / mana / life payments succeed
+    /// but before the effect resolves, mirroring `sac_cost` /
+    /// `exile_self_cost`. If no graveyard card matches, activation is
+    /// rejected with `GameError::SelectionRequirementViolated`. The
+    /// auto-picker takes the lowest-CMC matching card so the activator
+    /// keeps higher-value cards in their graveyard.
+    ///
+    /// Defaults to None via `#[serde(default)]`.
+    #[serde(default)]
+    pub exile_other_filter: Option<SelectionRequirement>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -1607,6 +1627,36 @@ pub mod shortcut {
             event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
                 .with_filter(Predicate::CastSpellHasX),
             effect,
+        }
+    }
+
+    /// Prowess trigger: "Whenever you cast a noncreature spell, this
+    /// creature gets +1/+1 until end of turn." Fires on every cast you
+    /// control whose card type is **not** Creature (the printed Prowess
+    /// keyword's reminder text). The pumped target is the source itself
+    /// via `Selector::This`, so a single Prowess creature can drop the
+    /// helper in one line and the trigger source is correctly threaded.
+    ///
+    /// Wired into card factories declaring `Keyword::Prowess` —
+    /// Spectacle Mage, Eccentric Apprentice, etc. — to convert the
+    /// keyword tag into a functional trigger. (The keyword itself
+    /// remains in `card.keywords` for display + future "Prowess matters"
+    /// payoffs to filter on.)
+    pub fn prowess() -> TriggeredAbility {
+        TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
+                Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::HasCardType(crate::card::CardType::Creature)
+                        .negate(),
+                },
+            ),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(1),
+                toughness: Value::Const(1),
+                duration: Duration::EndOfTurn,
+            },
         }
     }
 }

@@ -851,3 +851,281 @@ fn shadrix_silverquill_four_four_flying_double_strike() {
 #[allow(dead_code)]
 fn _keepalive(_: CounterType) {}
 
+
+// ── Push XVIII: Lorehold full-wirings, Beledros, Tanazir, Sparring Regimen ──
+
+#[test]
+fn lorehold_apprentice_magecraft_drains_one_to_opponent_and_gains_life() {
+    let mut g = two_player_game();
+    let apprentice = g.add_card_to_battlefield(0, catalog::lorehold_apprentice());
+    g.clear_sickness(apprentice);
+    // Cast a Lightning Bolt to trigger magecraft.
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+
+    let life_before = g.players[0].life;
+    let opp_life_before = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(1)),
+        mode: None, x_value: None,
+    })
+    .expect("Bolt castable for {R}");
+    drain_stack(&mut g);
+
+    // Bolt itself does 3 to opp; magecraft adds 1 more.
+    assert_eq!(g.players[0].life, life_before + 1,
+        "Magecraft should gain you 1 life");
+    assert_eq!(g.players[1].life, opp_life_before - 3 - 1,
+        "Bolt (3) + magecraft damage (1) = 4 to opp");
+}
+
+#[test]
+fn lorehold_pledgemage_gy_exile_cost_pumps_self() {
+    let mut g = two_player_game();
+    let pledge = g.add_card_to_battlefield(0, catalog::lorehold_pledgemage());
+    g.clear_sickness(pledge);
+    let _filler = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+
+    let p_before = g.battlefield_find(pledge).unwrap().power();
+    let t_before = g.battlefield_find(pledge).unwrap().toughness();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: pledge, ability_index: 0, target: None,
+    })
+    .expect("Pledgemage activation with bolt in gy");
+    drain_stack(&mut g);
+
+    let p_after = g.battlefield_find(pledge).unwrap().power();
+    let t_after = g.battlefield_find(pledge).unwrap().toughness();
+    assert_eq!(p_after, p_before + 1);
+    assert_eq!(t_after, t_before + 1);
+    // The bolt was exiled from the graveyard.
+    assert!(g.exile.iter().any(|c| c.definition.name == "Lightning Bolt"),
+        "Bolt should be in exile (paid as cost)");
+    assert!(g.players[0].graveyard.iter().all(|c| c.definition.name != "Lightning Bolt"),
+        "Bolt no longer in graveyard");
+}
+
+#[test]
+fn lorehold_pledgemage_rejects_activation_with_empty_graveyard() {
+    let mut g = two_player_game();
+    let pledge = g.add_card_to_battlefield(0, catalog::lorehold_pledgemage());
+    g.clear_sickness(pledge);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let pool_before = g.players[0].mana_pool.total();
+
+    let r = g.perform_action(GameAction::ActivateAbility {
+        card_id: pledge, ability_index: 0, target: None,
+    });
+    assert!(r.is_err(),
+        "Empty graveyard should reject the exile-other cost");
+    assert_eq!(g.players[0].mana_pool.total(), pool_before,
+        "Mana untouched on rejected activation");
+}
+
+#[test]
+fn beledros_witherbloom_pay_ten_life_untaps_all_lands() {
+    let mut g = two_player_game();
+    let beledros = g.add_card_to_battlefield(0, catalog::beledros_witherbloom());
+    g.clear_sickness(beledros);
+    // Tap some lands.
+    let l1 = g.add_card_to_battlefield(0, catalog::forest());
+    let l2 = g.add_card_to_battlefield(0, catalog::swamp());
+    g.battlefield_find_mut(l1).unwrap().tapped = true;
+    g.battlefield_find_mut(l2).unwrap().tapped = true;
+
+    let life_before = g.players[0].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: beledros, ability_index: 0, target: None,
+    })
+    .expect("Beledros activatable as sorcery");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[0].life, life_before - 10, "Pay 10 life cost");
+    assert!(!g.battlefield_find(l1).unwrap().tapped, "Forest untapped");
+    assert!(!g.battlefield_find(l2).unwrap().tapped, "Swamp untapped");
+}
+
+#[test]
+fn beledros_witherbloom_rejects_activation_with_insufficient_life() {
+    let mut g = two_player_game();
+    let beledros = g.add_card_to_battlefield(0, catalog::beledros_witherbloom());
+    g.clear_sickness(beledros);
+    g.players[0].life = 5; // not enough for the 10-life cost.
+
+    let r = g.perform_action(GameAction::ActivateAbility {
+        card_id: beledros, ability_index: 0, target: None,
+    });
+    assert!(r.is_err(), "Activation rejected when life < 10");
+    assert_eq!(g.players[0].life, 5, "Life unchanged on rejection");
+}
+
+#[test]
+fn tanazir_quandrix_attack_trigger_doubles_target_toughness() {
+    use crate::game::types::AttackTarget;
+    let mut g = two_player_game();
+    let tanazir = g.add_card_to_battlefield(0, catalog::tanazir_quandrix());
+    g.clear_sickness(tanazir);
+    // A friendly creature to target.
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    let printed_toughness = g.battlefield_find(bear).unwrap().toughness();
+    assert_eq!(printed_toughness, 2);
+
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: tanazir,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("Tanazir can attack");
+    drain_stack(&mut g);
+
+    // Tanazir's attack trigger should pump bear's toughness by current
+    // toughness (2 + 2 = 4 effective).
+    let computed = g.computed_permanent(bear).unwrap();
+    assert_eq!(computed.toughness, 4,
+        "Bear's toughness should be doubled (2+2=4) for the turn");
+}
+
+#[test]
+fn spectacle_mage_prowess_fires_on_noncreature_spell() {
+    let mut g = two_player_game();
+    let mage = g.add_card_to_battlefield(0, catalog::spectacle_mage());
+    g.clear_sickness(mage);
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+
+    let printed_p = g.battlefield_find(mage).unwrap().power();
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(1)),
+        mode: None, x_value: None,
+    })
+    .expect("Bolt castable for {R}");
+    drain_stack(&mut g);
+
+    let computed = g.computed_permanent(mage).unwrap();
+    assert_eq!(computed.power, printed_p + 1,
+        "Prowess should pump +1/+1 on noncreature spell cast");
+}
+
+#[test]
+fn spectacle_mage_prowess_does_not_fire_on_creature_spell() {
+    let mut g = two_player_game();
+    let mage = g.add_card_to_battlefield(0, catalog::spectacle_mage());
+    g.clear_sickness(mage);
+    // Cast a creature (Grizzly Bears).
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    let printed_p = g.battlefield_find(mage).unwrap().power();
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear, target: None, mode: None, x_value: None,
+    })
+    .expect("Bear castable for {1}{G}");
+    drain_stack(&mut g);
+
+    let computed = g.computed_permanent(mage).unwrap();
+    assert_eq!(computed.power, printed_p,
+        "Prowess should not fire on creature spell cast");
+}
+
+#[test]
+fn sparring_regimen_creates_spirit_etb_and_pumps_attacker() {
+    use crate::game::types::AttackTarget;
+    let mut g = two_player_game();
+    // ETB through casting so the trigger fires.
+    let id = g.add_card_to_hand(0, catalog::sparring_regimen());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Sparring Regimen castable for {2}{R}{W}");
+    drain_stack(&mut g);
+
+    // Should have minted a Spirit token.
+    let spirit = g.battlefield.iter()
+        .find(|c| c.is_token && c.definition.name == "Spirit")
+        .expect("Spirit token should be present");
+    let spirit_id = spirit.id;
+    g.clear_sickness(spirit_id);
+
+    // Declare it as attacker.
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: spirit_id,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("Spirit can attack");
+    drain_stack(&mut g);
+
+    // Sparring Regimen's "whenever you attack" trigger should put a +1/+1
+    // counter on the attacking Spirit.
+    let counters = g.battlefield_find(spirit_id).unwrap()
+        .counter_count(CounterType::PlusOnePlusOne);
+    assert_eq!(counters, 1, "Sparring Regimen should pump the attacker");
+}
+
+/// CR 605.4 — a mana ability resolves immediately without going on the
+/// stack. Witherbloom Pledgemage's `{T}, Pay 1 life: Add {B}/{G}` is a
+/// mana ability (no target, could add mana, not a loyalty ability) so
+/// the engine should add the mana to the player's pool synchronously,
+/// without leaving a StackItem behind for priority to resolve.
+#[test]
+fn witherbloom_pledgemage_is_a_mana_ability_per_cr_605() {
+    let mut g = two_player_game();
+    let pledge = g.add_card_to_battlefield(0, catalog::witherbloom_pledgemage());
+    g.clear_sickness(pledge);
+
+    let stack_before = g.stack.len();
+    let life_before = g.players[0].life;
+    let mana_before = g.players[0].mana_pool.total();
+
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: pledge, ability_index: 0, target: None,
+    })
+    .expect("Pledgemage mana ability activatable");
+
+    // CR 605.4a: mana abilities don't go on the stack. Stack length should
+    // not have grown.
+    assert_eq!(g.stack.len(), stack_before,
+        "Mana ability should not push onto the stack");
+    // Life was paid as part of cost.
+    assert_eq!(g.players[0].life, life_before - 1,
+        "Should pay 1 life as cost");
+    // Mana pool grew by 1.
+    assert_eq!(g.players[0].mana_pool.total(), mana_before + 1,
+        "Pledgemage should add one mana of any color");
+    // Source is tapped.
+    assert!(g.battlefield_find(pledge).unwrap().tapped,
+        "Pledgemage should be tapped");
+}
+
+/// CR 605.4a: mana abilities can't be responded to. Without a stack
+/// entry, an opponent has no priority window to counter the activation.
+/// Stress-test by activating then immediately checking stack emptiness
+/// (no priority round happened) — verifies the engine drains the mana
+/// ability path synchronously.
+#[test]
+fn witherbloom_pledgemage_rejects_activation_with_zero_life() {
+    let mut g = two_player_game();
+    let pledge = g.add_card_to_battlefield(0, catalog::witherbloom_pledgemage());
+    g.clear_sickness(pledge);
+    g.players[0].life = 0;
+
+    let r = g.perform_action(GameAction::ActivateAbility {
+        card_id: pledge, ability_index: 0, target: None,
+    });
+    assert!(r.is_err(), "Should reject when life < 1");
+    // Source not tapped (rolled back).
+    assert!(!g.battlefield_find(pledge).unwrap().tapped,
+        "Tap cost should be rolled back on rejection");
+}

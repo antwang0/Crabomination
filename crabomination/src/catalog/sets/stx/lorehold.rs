@@ -47,14 +47,12 @@ pub fn lorehold_spirit_token() -> TokenDefinition {
 /// "Magecraft — Whenever you cast or copy an instant or sorcery spell,
 /// you gain 1 life and Lorehold Apprentice deals 1 damage to any target."
 ///
-/// 🟡 The dual-effect rider is split: the lifegain half is wired
-/// unconditionally, but the "1 damage to any target" half is collapsed
-/// into the lifegain only — Magecraft fires off the cast event, which
-/// pre-dates target selection on a triggered ability with its own
-/// target. Wiring the damage half needs the same "auto-target on
-/// trigger" plumbing as Repartee: a `target_filtered(Any)` body that
-/// the Magecraft helper resolves at trigger time. Tracked in
-/// STRIXHAVEN2.md.
+/// Both halves of the magecraft rider wired: a `Seq` body of
+/// `GainLife(1) + DealDamage(1)` against `target_filtered(Creature ∨
+/// Player ∨ Planeswalker)`. The auto-target picker on triggers will
+/// aim the 1 damage at any legal target (defaults to "an opponent"
+/// for friendly-source pings); see `auto_target_for_effect_avoiding`
+/// in the trigger registration path.
 pub fn lorehold_apprentice() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Apprentice",
@@ -70,10 +68,20 @@ pub fn lorehold_apprentice() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![magecraft(Effect::GainLife {
-            who: Selector::You,
-            amount: Value::Const(1),
-        })],
+        triggered_abilities: vec![magecraft(Effect::Seq(vec![
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+            Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature
+                        .or(SelectionRequirement::Player)
+                        .or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::Const(1),
+            },
+        ]))],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -89,12 +97,13 @@ pub fn lorehold_apprentice() -> CardDefinition {
 /// Exile a card from your graveyard: This creature gets +1/+1 until end
 /// of turn."
 ///
-/// 🟡 The activated ability requires "exile a card from your graveyard"
-/// as part of its cost — there's no `exile_gy_cost` flag on
-/// `ActivatedAbility` (we have `tap_cost` and `sac_cost` only). The
-/// pumped body still ships; the activation is omitted until the cost
-/// primitive lands. Tracked in TODO.md.
+/// Activated `{2}{R}{W}, Exile a card from your graveyard: +1/+1 EOT`
+/// wired via the new `ActivatedAbility.exile_other_filter` cost primitive
+/// — picks the lowest-CMC card in the activator's graveyard (excluding
+/// the source). The +1/+1 EOT applies to `Selector::This`.
 pub fn lorehold_pledgemage() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    use crate::effect::Duration;
     CardDefinition {
         name: "Lorehold Pledgemage",
         cost: cost(&[generic(1), r(), w()]),
@@ -108,7 +117,25 @@ pub fn lorehold_pledgemage() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Reach],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: false,
+            mana_cost: cost(&[generic(2), r(), w()]),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(1),
+                toughness: Value::Const(1),
+                duration: Duration::EndOfTurn,
+            },
+            once_per_turn: false,
+            sorcery_speed: false,
+            sac_cost: false,
+            condition: None,
+            life_cost: 0,
+            from_graveyard: false,
+            exile_self_cost: false,
+            // "Exile a card from your graveyard" — any card.
+            exile_other_filter: Some(SelectionRequirement::Any),
+        }],
         triggered_abilities: vec![],
         static_abilities: vec![],
         base_loyalty: 0,
@@ -204,12 +231,17 @@ pub fn heated_debate() -> CardDefinition {
 /// you attack, put a +1/+1 counter on each attacking creature you
 /// control."
 ///
-/// 🟡 Mainline ETB token wired. The "whenever you attack" trigger that
-/// pumps each attacker is omitted — the engine has a `DeclareAttackers`
-/// event but the trigger here wants to enumerate every declared
-/// attacker, not just one source. Tracked under TODO.md "Triggered-
-/// Ability Event Gaps" → `PlayerAttackedWith`.
+/// **Both halves wired.** ETB creates the 2/2 R/W Spirit token via the
+/// shared `lorehold_spirit_token()` helper. The "whenever you attack"
+/// trigger is modelled as a per-attacker `Attacks / AnotherOfYours`
+/// trigger that puts a +1/+1 counter on `Selector::TriggerSource` (the
+/// attacker). Since `AnotherOfYours` excludes the enchantment itself
+/// (which never attacks) and fires once per declared attacker you
+/// control, the net effect matches the printed batch trigger: every
+/// attacking creature you control gains a +1/+1 counter when the
+/// combat-step attacker is declared.
 pub fn sparring_regimen() -> CardDefinition {
+    use crate::card::CounterType;
     CardDefinition {
         name: "Sparring Regimen",
         cost: cost(&[generic(2), r(), w()]),
@@ -221,14 +253,24 @@ pub fn sparring_regimen() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::CreateToken {
-                who: PlayerRef::You,
-                count: Value::Const(1),
-                definition: lorehold_spirit_token(),
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: lorehold_spirit_token(),
+                },
             },
-        }],
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::AnotherOfYours),
+                effect: Effect::AddCounter {
+                    what: Selector::TriggerSource,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                },
+            },
+        ],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -241,17 +283,17 @@ pub fn sparring_regimen() -> CardDefinition {
 // ── Storm-Kiln Artist ───────────────────────────────────────────────────────
 
 /// Storm-Kiln Artist — {2}{R}{W}, 3/3 Human Wizard. "Magecraft — Whenever
-/// you cast or copy an instant or sorcery spell, this creature deals 1
-/// damage to each opponent. Then create a Treasure token."
+/// you cast or copy an instant or sorcery spell, Storm-Kiln Artist deals
+/// 1 damage to any target. Then create a Treasure token."
 ///
-/// Note: the printed Strixhaven Storm-Kiln Artist's text is "Magecraft —
-/// Whenever you cast or copy an instant or sorcery spell, Storm-Kiln
-/// Artist deals 1 damage to any target. Then create a Treasure token."
-/// We collapse the "any target" damage to "each opponent" because the
-/// magecraft trigger fires on cast and binds its targets at trigger-
-/// resolution time — and our auto-targeting framework picks "each
-/// opponent" cleanly when no creature target is available. The Treasure
-/// half is pure: standard `treasure_token()` helper.
+/// Faithfully wired: the magecraft trigger ships a `Seq` body of
+/// `DealDamage(to: target_filtered(Creature ∨ Player ∨ Planeswalker),
+/// amount: 1)` + `CreateToken(treasure_token())`. The auto-target
+/// picker on triggered abilities aims a friendly source's ping at the
+/// best legal target (defaults to "an opponent" when no creature target
+/// is preferable). Now that the dispatcher threads `event_subject`
+/// through `StackItem::Trigger.trigger_source` (push XVIII bugfix), the
+/// Treasure half resolves correctly via `PlayerRef::You`.
 pub fn storm_kiln_artist() -> CardDefinition {
     use crate::game::effects::treasure_token;
     CardDefinition {
@@ -270,7 +312,11 @@ pub fn storm_kiln_artist() -> CardDefinition {
         activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::Seq(vec![
             Effect::DealDamage {
-                to: Selector::Player(PlayerRef::EachOpponent),
+                to: target_filtered(
+                    SelectionRequirement::Creature
+                        .or(SelectionRequirement::Player)
+                        .or(SelectionRequirement::Planeswalker),
+                ),
                 amount: Value::Const(1),
             },
             Effect::CreateToken {

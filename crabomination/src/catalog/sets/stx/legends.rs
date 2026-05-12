@@ -68,10 +68,17 @@ pub fn galazeth_prismari() -> CardDefinition {
 
 /// Beledros Witherbloom — {3}{B}{B}{G}{G}, 6/6 Legendary Demon. Flying,
 /// trample, lifelink. Activated: "Pay 10 life: Untap each land you
-/// control. Activate only as a sorcery." Body wired with the three
-/// keywords; the activated mass-untap is 🟡 (no `Untap each X` over a
-/// selector with life-cost gating today).
+/// control. Activate only as a sorcery."
+///
+/// Fully wired: the activation uses the existing `life_cost: 10` field
+/// + `sorcery_speed: true` gate + `Effect::Untap { what:
+/// EachPermanent(Land & ControlledByYou), up_to: None }`. The
+/// pre-flight life-cost gate (`GameError::InsufficientLife`) means the
+/// activation is rejected cleanly when the controller can't pay 10
+/// life. Existing `up_to: None` keeps the printed "untap each land"
+/// semantics (cap-free mass untap).
 pub fn beledros_witherbloom() -> CardDefinition {
+    use crate::card::{ActivatedAbility, Selector, SelectionRequirement};
     CardDefinition {
         name: "Beledros Witherbloom",
         cost: cost(&[generic(3), b(), b(), g(), g()]),
@@ -85,7 +92,24 @@ pub fn beledros_witherbloom() -> CardDefinition {
         toughness: 6,
         keywords: vec![Keyword::Flying, Keyword::Trample, Keyword::Lifelink],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: false,
+            mana_cost: crate::mana::cost(&[]),
+            effect: Effect::Untap {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::Land.and(SelectionRequirement::ControlledByYou),
+                ),
+                up_to: None,
+            },
+            once_per_turn: false,
+            sorcery_speed: true,
+            sac_cost: false,
+            condition: None,
+            life_cost: 10,
+            from_graveyard: false,
+            exile_self_cost: false,
+            exile_other_filter: None,
+        }],
         triggered_abilities: vec![],
         static_abilities: vec![],
         base_loyalty: 0,
@@ -132,9 +156,19 @@ pub fn velomachus_lorehold() -> CardDefinition {
 /// Tanazir Quandrix — {2}{G}{G}{U}{U}, 5/5 Legendary Dragon. Flying,
 /// trample. Real Oracle ETB doubles +1/+1 counters on each creature you
 /// control; attack trigger doubles toughness of target creature you
-/// control. Body wired; counter-doubling is 🟡 (needs counter-multiplier
-/// primitive).
+/// control.
+///
+/// Body + Flying + Trample wired. The ETB counter-doubling is still 🟡
+/// (no counter-multiplier primitive). The **attack trigger** is now
+/// wired via `Effect::PumpPT` with `toughness: Value::ToughnessOf(Target(0))`
+/// — pumping the target's toughness by its current value cleanly doubles
+/// it (printed toughness `T` becomes `T + T = 2T` until end of turn).
+/// Auto-target picker prefers a friendly high-toughness creature for
+/// the pump.
 pub fn tanazir_quandrix() -> CardDefinition {
+    use crate::card::{EventKind, EventScope, EventSpec, SelectionRequirement, Selector, TriggeredAbility, Value};
+    use crate::effect::Duration;
+    use crate::effect::shortcut::target_filtered;
     CardDefinition {
         name: "Tanazir Quandrix",
         cost: cost(&[generic(2), g(), g(), u(), u()]),
@@ -149,7 +183,18 @@ pub fn tanazir_quandrix() -> CardDefinition {
         keywords: vec![Keyword::Flying, Keyword::Trample],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::PumpPT {
+                what: target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+                power: Value::Const(0),
+                toughness: Value::ToughnessOf(Box::new(Selector::Target(0))),
+                duration: Duration::EndOfTurn,
+            },
+        }],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],

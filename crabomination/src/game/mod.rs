@@ -764,7 +764,14 @@ impl GameState {
                 mode: None,
                 x_value: 0,
                 converged_value: 0,
-            trigger_source: None,
+                // Thread the event subject through so `Selector::TriggerSource`
+                // (the attacker, the cast spell, the ETBing permanent, …)
+                // resolves correctly during effect resolution. Previously
+                // hardcoded to `None`, which silently zero'd
+                // TriggerSource-driven effects for unified-dispatcher
+                // triggers like Sparring Regimen's per-attacker counter
+                // bump.
+                trigger_source: subject,
             });
         }
     }

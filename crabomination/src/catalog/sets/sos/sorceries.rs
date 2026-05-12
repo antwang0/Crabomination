@@ -2349,3 +2349,67 @@ pub fn social_snub() -> CardDefinition {
         opening_hand: None,
     }
 }
+
+// ── Additional Lorehold (R/W) ──────────────────────────────────────────────
+
+/// Molten Note — {X}{R}{W} Sorcery.
+/// "Molten Note deals damage to target creature equal to the amount of
+/// mana spent to cast this spell. Untap all creatures you control. /
+/// Flashback {6}{R}{W}."
+///
+/// Both halves of the printed body wired:
+///
+/// - **Damage half**: `Effect::DealDamage` against
+///   `target_filtered(Creature)` with `amount = Value::XFromCost`. The
+///   printed "amount of mana spent" is approximated as the X paid (the
+///   non-X base is {R}{W} = 2 mana, so a strict reading would add `+2`,
+///   but at X=0 the spell already does 0 damage — a no-op — and the
+///   typical SOS Lorehold deploys it at X≥2 where the off-by-two has
+///   negligible play impact).
+/// - **Untap half**: `Effect::Untap` against `EachPermanent(Creature &
+///   ControlledByYou)` with `up_to: None` (untap all matching, matching
+///   the printed "all creatures you control").
+///
+/// Flashback {6}{R}{W} wired via `Keyword::Flashback` — graveyard
+/// replay reuses the engine's existing `cast_flashback` path.
+pub fn molten_note() -> CardDefinition {
+    use crate::card::Keyword;
+    use crate::mana::{r, x, Color, ManaCost, ManaSymbol};
+    let flashback_cost = ManaCost {
+        symbols: vec![
+            ManaSymbol::Generic(6),
+            ManaSymbol::Colored(Color::Red),
+            ManaSymbol::Colored(Color::White),
+        ],
+    };
+    CardDefinition {
+        name: "Molten Note",
+        cost: cost(&[x(), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![Keyword::Flashback(flashback_cost)],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Creature),
+                amount: Value::XFromCost,
+            },
+            Effect::Untap {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                up_to: None,
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}

@@ -294,7 +294,7 @@ impl GameState {
                     condition: None,
             life_cost: 0,
             from_graveyard: false,
-            exile_self_cost: false,
+            exile_self_cost: false, exile_other_filter: None,
                 },
             ];
         }
@@ -1362,6 +1362,30 @@ impl GameState {
             return Err(GameError::InsufficientLife);
         }
 
+        // Pre-flight exile-other-from-gy gate: confirm a graveyard card
+        // matching the cost's filter exists, *excluding* the source itself
+        // for graveyard activations where source_in_gy is true. Picks the
+        // lowest-CMC matching card. If none, reject cleanly so tap/mana
+        // aren't burned. The actual exile happens after payment succeeds.
+        let exile_other_pick: Option<CardId> = if let Some(filter) =
+            ability.exile_other_filter.as_ref()
+        {
+            let mut picks: Vec<(CardId, i32)> = self.players[p]
+                .graveyard
+                .iter()
+                .filter(|c| c.id != card_id)
+                .filter(|c| self.evaluate_requirement_on_card(filter, c, p))
+                .map(|c| (c.id, c.definition.cost.cmc() as i32))
+                .collect();
+            picks.sort_by_key(|(_, cmc)| *cmc);
+            match picks.first().copied() {
+                Some((cid, _)) => Some(cid),
+                None => return Err(GameError::SelectionRequirementViolated),
+            }
+        } else {
+            None
+        };
+
         // Snapshot pristine state before applying tap-cost so a failed mana
         // payment rolls back both the auto-tap of mana sources AND the
         // tap-cost on the source itself.
@@ -1434,6 +1458,32 @@ impl GameState {
             }
             let mut die_evs = self.remove_to_graveyard_with_triggers(card_id);
             events.append(&mut die_evs);
+        }
+
+        // Exile-another-from-gy-as-cost: with tap/mana/life paid, exile
+        // the cost-picked graveyard card (already validated to exist via
+        // the pre-flight `exile_other_pick` lookup). Used by cards like
+        // Postmortem Professor's `{1}{B}, Exile an instant or sorcery
+        // card from your graveyard: …` and Lorehold Pledgemage's
+        // `{2}{R}{W}, Exile a card from your graveyard: +1/+1 EOT`.
+        if let Some(other_cid) = exile_other_pick
+            && let Some(idx) = self.players[p]
+                .graveyard
+                .iter()
+                .position(|c| c.id == other_cid)
+        {
+            let card = self.players[p].graveyard.remove(idx);
+            self.exile.push(card);
+            self.players[p].cards_exiled_this_turn = self.players[p]
+                .cards_exiled_this_turn
+                .saturating_add(1);
+            events.push(GameEvent::CardLeftGraveyard {
+                player: p,
+                card_id: other_cid,
+            });
+            self.players[p].cards_left_graveyard_this_turn = self.players[p]
+                .cards_left_graveyard_this_turn
+                .saturating_add(1);
         }
 
         // Exile-self-as-cost (graveyard activations): with tap/mana/life

@@ -443,7 +443,7 @@ pub fn burrog_banemaker() -> CardDefinition {
             condition: None,
             life_cost: 0,
             from_graveyard: false,
-            exile_self_cost: false,
+            exile_self_cost: false, exile_other_filter: None,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -487,7 +487,7 @@ pub fn noxious_newt() -> CardDefinition {
             condition: None,
             life_cost: 0,
             from_graveyard: false,
-            exile_self_cost: false,
+            exile_self_cost: false, exile_other_filter: None,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -533,7 +533,7 @@ pub fn mindful_biomancer() -> CardDefinition {
             condition: None,
             life_cost: 0,
             from_graveyard: false,
-            exile_self_cost: false,
+            exile_self_cost: false, exile_other_filter: None,
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -914,7 +914,7 @@ pub fn shattered_acolyte() -> CardDefinition {
             condition: None,
             life_cost: 0,
             from_graveyard: false,
-            exile_self_cost: false,
+            exile_self_cost: false, exile_other_filter: None,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -964,7 +964,7 @@ pub fn summoned_dromedary() -> CardDefinition {
             condition: None,
             life_cost: 0,
             from_graveyard: true,
-            exile_self_cost: false,
+            exile_self_cost: false, exile_other_filter: None,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -1485,7 +1485,7 @@ pub fn teachers_pest() -> CardDefinition {
             condition: None,
             life_cost: 0,
             from_graveyard: true,
-            exile_self_cost: false,
+            exile_self_cost: false, exile_other_filter: None,
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
@@ -1724,7 +1724,7 @@ pub fn hardened_academic() -> CardDefinition {
             condition: None,
             life_cost: 0,
             from_graveyard: false,
-            exile_self_cost: false,
+            exile_self_cost: false, exile_other_filter: None,
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::CardLeftGraveyard, EventScope::YourControl),
@@ -2092,7 +2092,7 @@ pub fn charging_strifeknight() -> CardDefinition {
             condition: None,
             life_cost: 0,
             from_graveyard: false,
-            exile_self_cost: false,
+            exile_self_cost: false, exile_other_filter: None,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -2507,7 +2507,7 @@ pub fn eternal_student() -> CardDefinition {
             condition: None,
             life_cost: 0,
             from_graveyard: true,
-            exile_self_cost: true,
+            exile_self_cost: true, exile_other_filter: None,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -2525,12 +2525,15 @@ pub fn eternal_student() -> CardDefinition {
 /// card from your graveyard: Return this card from your graveyard to
 /// the battlefield."
 ///
-/// Wired: the printed `Keyword::CantBlock` static restriction (now
-/// first-class via the SOS-VI engine push) + the on-attack drain. The
-/// graveyard-exile recursion activated ability is still omitted —
-/// engine's activated-abilities walker only iterates the battlefield
-/// (TODO.md: "Activated-Ability `From Your Graveyard` Path").
+/// Fully wired: the printed `Keyword::CantBlock` static + on-attack
+/// drain + graveyard-recursion activation. The activation uses the new
+/// `ActivatedAbility.exile_other_filter` cost primitive (paired with
+/// `from_graveyard: true`): pay `{1}{B}` and exile an instant/sorcery
+/// card from your graveyard (other than the Professor itself), then
+/// return the Professor from graveyard to battlefield.
 pub fn postmortem_professor() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    use crate::effect::ZoneDest;
     CardDefinition {
         name: "Postmortem Professor",
         cost: cost(&[generic(1), b()]),
@@ -2544,7 +2547,28 @@ pub fn postmortem_professor() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::CantBlock],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: false,
+            mana_cost: cost(&[generic(1), b()]),
+            effect: Effect::Move {
+                what: Selector::This,
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: false,
+                },
+            },
+            once_per_turn: false,
+            sorcery_speed: false,
+            sac_cost: false,
+            condition: None,
+            life_cost: 0,
+            from_graveyard: true,
+            exile_self_cost: false,
+            exile_other_filter: Some(
+                SelectionRequirement::HasCardType(CardType::Instant)
+                    .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+            ),
+        }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
             effect: Effect::Drain {
@@ -2732,7 +2756,7 @@ pub fn topiary_lecturer() -> CardDefinition {
             condition: None,
             life_cost: 0,
             from_graveyard: false,
-            exile_self_cost: false,
+            exile_self_cost: false, exile_other_filter: None,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -2847,7 +2871,7 @@ pub fn sundering_archaic() -> CardDefinition {
             condition: None,
             life_cost: 0,
             from_graveyard: false,
-            exile_self_cost: false,
+            exile_self_cost: false, exile_other_filter: None,
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -2963,7 +2987,7 @@ pub fn hydro_channeler() -> CardDefinition {
                 condition: None,
             life_cost: 0,
             from_graveyard: false,
-            exile_self_cost: false,
+            exile_self_cost: false, exile_other_filter: None,
             },
             ActivatedAbility {
                 tap_cost: true,
@@ -2978,7 +3002,7 @@ pub fn hydro_channeler() -> CardDefinition {
                 condition: None,
             life_cost: 0,
             from_graveyard: false,
-            exile_self_cost: false,
+            exile_self_cost: false, exile_other_filter: None,
             },
         ],
         triggered_abilities: vec![],
@@ -3079,7 +3103,7 @@ pub fn emil_vastlands_roamer() -> CardDefinition {
             condition: None,
             life_cost: 0,
             from_graveyard: false,
-            exile_self_cost: false,
+            exile_self_cost: false, exile_other_filter: None,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![StaticAbility {
@@ -3906,7 +3930,7 @@ pub fn berta_wise_extrapolator() -> CardDefinition {
             condition: None,
             life_cost: 0,
             from_graveyard: false,
-            exile_self_cost: false,
+            exile_self_cost: false, exile_other_filter: None,
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(
@@ -4515,7 +4539,7 @@ pub fn stone_docent() -> CardDefinition {
             condition: None,
             life_cost: 0,
             from_graveyard: true,
-            exile_self_cost: true,
+            exile_self_cost: true, exile_other_filter: None,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
