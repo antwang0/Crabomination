@@ -1759,6 +1759,79 @@ fn daemogoth_woe_eater_etb_sacrifices_another_creature() {
     assert_eq!(woe.toughness(), 4);
 }
 
+#[test]
+fn daemogoth_woe_eater_attack_optional_sac_can_be_declined() {
+    // Push XXVIII: the attack trigger's "you may sacrifice another
+    // creature" is now wired via `Effect::MayDo`. AutoDecider defaults
+    // to "no", so the attack trigger should *not* sac fodder and *not*
+    // put a counter on the Woe-Eater.
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let fodder1 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let fodder2 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let woe = g.add_card_to_battlefield(0, catalog::daemogoth_woe_eater());
+    // Sac fodder1 manually so the ETB doesn't eat fodder2.
+    g.battlefield.retain(|c| c.id != fodder1);
+    g.clear_sickness(woe);
+    g.clear_sickness(fodder2);
+
+    // Move to declare-attackers and attack with the Woe-Eater.
+    g.step = crate::game::TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        crate::game::types::Attack {
+            attacker: woe,
+            target: crate::game::types::AttackTarget::Player(1),
+        }
+    ])).expect("Woe-Eater attacks");
+    drain_stack(&mut g);
+
+    // AutoDecider said no — fodder2 should still be on the battlefield
+    // and Woe-Eater should not have a +1/+1 counter.
+    assert!(g.battlefield.iter().any(|c| c.id == fodder2),
+        "Fodder bear should NOT be sacrificed when controller declines");
+    let woe_card = g.battlefield.iter().find(|c| c.id == woe)
+        .expect("Woe-Eater on battlefield");
+    let counters = woe_card.counters.get(&CounterType::PlusOnePlusOne).copied().unwrap_or(0);
+    assert_eq!(counters, 0,
+        "Woe-Eater should NOT have a +1/+1 counter when the attack-trigger is declined");
+}
+
+#[test]
+fn daemogoth_woe_eater_attack_optional_sac_can_be_accepted() {
+    // Push XXVIII: scripted decider says yes to the MayDo prompt; the
+    // sacrifice fires and the Woe-Eater gains a +1/+1 counter.
+    use crate::card::CounterType;
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let fodder1 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let fodder2 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let woe = g.add_card_to_battlefield(0, catalog::daemogoth_woe_eater());
+    g.battlefield.retain(|c| c.id != fodder1);
+    g.clear_sickness(woe);
+    g.clear_sickness(fodder2);
+
+    // ScriptedDecider: say yes to the optional sacrifice prompt.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+
+    g.step = crate::game::TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        crate::game::types::Attack {
+            attacker: woe,
+            target: crate::game::types::AttackTarget::Player(1),
+        }
+    ])).expect("Woe-Eater attacks");
+    drain_stack(&mut g);
+
+    // Yes-path: fodder2 is sacrificed and Woe-Eater gets a +1/+1 counter.
+    assert!(!g.battlefield.iter().any(|c| c.id == fodder2),
+        "Fodder bear should be sacrificed when controller accepts");
+    let woe_card = g.battlefield.iter().find(|c| c.id == woe)
+        .expect("Woe-Eater on battlefield");
+    let counters = woe_card.counters.get(&CounterType::PlusOnePlusOne).copied().unwrap_or(0);
+    assert_eq!(counters, 1,
+        "Woe-Eater should have one +1/+1 counter after a successful sac");
+}
+
 // ── Honor Troll ────────────────────────────────────────────────────────────
 
 #[test]
@@ -1768,6 +1841,42 @@ fn honor_troll_has_trample_and_is_one_four() {
     assert_eq!(h.toughness, 4);
     assert!(h.keywords.contains(&Keyword::Trample),
         "Honor Troll should have Trample");
+}
+
+#[test]
+fn honor_troll_base_state_no_lifegain_is_one_four() {
+    // Push XXVIII: without life gained this turn, Honor Troll is a
+    // vanilla 1/4 trampler — no +2/+0, no Lifelink.
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::honor_troll());
+    // No life gained — should be base 1/4 with only Trample.
+    let computed = g.computed_permanent(id)
+        .expect("Honor Troll on battlefield");
+    assert_eq!(computed.power, 1, "Base power without lifegain");
+    assert_eq!(computed.toughness, 4, "Base toughness without lifegain");
+    assert!(computed.keywords.contains(&Keyword::Trample),
+        "Trample is always on");
+    assert!(!computed.keywords.contains(&Keyword::Lifelink),
+        "Lifelink should NOT be active without lifegain");
+}
+
+#[test]
+fn honor_troll_with_lifegain_is_three_four_lifelink() {
+    // Push XXVIII: gaining life this turn turns Honor Troll on:
+    // +2/+0 + Lifelink. The gate is `life_gained_this_turn > 0`.
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::honor_troll());
+    // Manually bump the tally — a real lifegain effect would set this.
+    g.players[0].life_gained_this_turn = 1;
+
+    let computed = g.computed_permanent(id)
+        .expect("Honor Troll on battlefield");
+    assert_eq!(computed.power, 3, "Should be 1 + 2 = 3 power with lifegain");
+    assert_eq!(computed.toughness, 4, "Toughness unchanged at 4");
+    assert!(computed.keywords.contains(&Keyword::Trample),
+        "Trample is always on");
+    assert!(computed.keywords.contains(&Keyword::Lifelink),
+        "Lifelink should be active when life_gained_this_turn > 0");
 }
 
 // ── Quandrix Cultivator ────────────────────────────────────────────────────

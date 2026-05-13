@@ -786,10 +786,13 @@ pub fn daemogoth_titan() -> CardDefinition {
 /// sacrifice another creature. Whenever this attacks, you may sacrifice
 /// another creature. If you do, put a +1/+1 counter on this creature."
 ///
-/// 🟡 We ship the ETB sacrifice and the attack-trigger sac → counter as
-/// a mandatory pair (the engine's `Effect::Sacrifice` already no-ops
-/// cleanly when no legal creature exists; the counter then no-ops in
-/// the same `Seq` step). Body is the 4/4 Demon Horror at {2}{B}{G}.
+/// ✅ Push XXVIII: the attack trigger's "you may sacrifice" optionality
+/// is now wired via `Effect::MayDo`. AutoDecider says no (skip the sac
+/// counter), `ScriptedDecider::new([Bool(true)])` exercises the paid
+/// path. ETB sacrifice remains mandatory (printed Oracle has no "you may").
+/// The +1/+1 counter only triggers when the sac fires —
+/// `Effect::Sacrifice` no-ops cleanly when no candidate exists, but the
+/// controller's "yes" answer is the gate, not legality.
 pub fn daemogoth_woe_eater() -> CardDefinition {
     use crate::card::CounterType;
     CardDefinition {
@@ -818,19 +821,24 @@ pub fn daemogoth_woe_eater() -> CardDefinition {
             },
             TriggeredAbility {
                 event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
-                effect: Effect::Seq(vec![
-                    Effect::Sacrifice {
-                        who: Selector::You,
-                        count: Value::Const(1),
-                        filter: SelectionRequirement::Creature
-                            .and(SelectionRequirement::ControlledByYou),
-                    },
-                    Effect::AddCounter {
-                        what: Selector::This,
-                        kind: CounterType::PlusOnePlusOne,
-                        amount: Value::Const(1),
-                    },
-                ]),
+                effect: Effect::MayDo {
+                    description: "Daemogoth Woe-Eater attack: sacrifice another \
+                                  creature to put a +1/+1 counter on it?"
+                        .into(),
+                    body: Box::new(Effect::Seq(vec![
+                        Effect::Sacrifice {
+                            who: Selector::You,
+                            count: Value::Const(1),
+                            filter: SelectionRequirement::Creature
+                                .and(SelectionRequirement::ControlledByYou),
+                        },
+                        Effect::AddCounter {
+                            what: Selector::This,
+                            kind: CounterType::PlusOnePlusOne,
+                            amount: Value::Const(1),
+                        },
+                    ])),
+                },
             },
         ],
         static_abilities: vec![],
@@ -847,11 +855,17 @@ pub fn daemogoth_woe_eater() -> CardDefinition {
 /// Honor Troll — {1}{B}{G}, 1/4 Troll Warrior. "Trample. As long as
 /// you've gained life this turn, this creature has +2/+0 and lifelink."
 ///
-/// 🟡 The conditional pump/lifelink rider is omitted — the engine has
-/// no per-turn `life_gained_this_turn` tracker yet. Body ships as a
-/// {1}{B}{G} 1/4 trampler with the Trample keyword, which is still a
-/// reasonable midrange defender. Tracked in TODO.md alongside the
-/// other "this-turn" lifegain payoffs.
+/// ✅ Push XXVIII: the conditional pump + lifelink is now wired via a
+/// compute-time injection in `GameState::compute_battlefield` (same
+/// pattern as Cruel Somnophage / Tarmogoyf). The gate reads
+/// `Player.life_gained_this_turn` (already tracked for the
+/// `LifeGainedThisTurnAtLeast` predicate). When the controller has
+/// gained ≥ 1 life this turn, layers 6 (keyword) and 7b (P/T modify)
+/// inject `AddKeyword(Lifelink)` and `ModifyPowerToughness(+2, +0)`
+/// targeting the Troll as `AffectedPermanents::Source`. The gate
+/// re-evaluates every recompute, so a mid-turn lifegain flips the
+/// troll on for the rest of the turn, and `do_untap`'s reset to
+/// `life_gained_this_turn = 0` flips it back off next turn.
 pub fn honor_troll() -> CardDefinition {
     CardDefinition {
         name: "Honor Troll",

@@ -1190,6 +1190,40 @@ fn dinas_guidance_searches_creature_to_hand() {
 }
 
 #[test]
+fn dinas_guidance_mode_one_sends_creature_to_graveyard() {
+    // Push XXVIII: Dina's Guidance is now a 2-mode `ChooseMode` —
+    // mode 0 search to hand (existing), mode 1 search to graveyard.
+    // Picking mode 1 lands the chosen creature in the controller's
+    // graveyard, enabling Lorehold/Witherbloom reanimator interactions.
+    let mut g = two_player_game();
+    let bear = g.add_card_to_library(0, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Search(Some(bear)),
+    ]));
+    let id = g.add_card_to_hand(0, catalog::dinas_guidance());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let gy_before = g.players[0].graveyard.len();
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: Some(1), x_value: None,
+    })
+    .expect("Dina's Guidance castable for {1}{B}{G} in mode 1");
+    drain_stack(&mut g);
+
+    // Graveyard +1 for the bear; the cast spell also lands in graveyard
+    // so gy_after should be gy_before + 2 (bear + Dina's Guidance).
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == bear),
+        "Grizzly Bears should be in graveyard after mode-1 search");
+    assert!(g.players[0].graveyard.len() >= gy_before + 2,
+        "Graveyard should grow by at least 2 (bear + sorcery)");
+    // Bear should NOT be in hand.
+    assert!(!g.players[0].hand.iter().any(|c| c.id == bear),
+        "Bear should NOT be in hand for mode 1");
+}
+
+#[test]
 fn pursue_the_past_loots_two_and_gains_two() {
     // Push XV: the discard+draw chain is now gated on `Effect::MayDo`.
     // Inject `Bool(true)` to opt in.
@@ -1880,6 +1914,53 @@ fn together_as_one_uses_converged_value_for_each_clause() {
 }
 
 // ── Rancorous Archaic ───────────────────────────────────────────────────────
+
+#[test]
+fn quandrix_the_proof_is_six_six_flying_trample_legendary_elder_dragon() {
+    // Push XXVIII: ⏳ → 🟡. Body-only check: 6/6 Legendary Elder Dragon
+    // with Flying + Trample. Cascade is omitted (no Cascade keyword
+    // primitive in our engine).
+    use crate::card::{CreatureType, Supertype};
+    let q = catalog::quandrix_the_proof();
+    assert_eq!(q.power, 6);
+    assert_eq!(q.toughness, 6);
+    assert!(q.supertypes.contains(&Supertype::Legendary));
+    assert!(q.subtypes.creature_types.contains(&CreatureType::Elder));
+    assert!(q.subtypes.creature_types.contains(&CreatureType::Dragon));
+    assert!(q.keywords.contains(&Keyword::Flying));
+    assert!(q.keywords.contains(&Keyword::Trample));
+}
+
+#[test]
+fn archaics_agony_deals_converge_damage_to_target_creature() {
+    // Push XXVIII: ⏳ → 🟡. Body is "Converge X damage to creature"
+    // using `Value::ConvergedValue`. Test paying with 2 colors of mana
+    // (R generic + R) — converge value should be 1 (only Red counts as
+    // a distinct color among colored pips paid).
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+
+    let id = g.add_card_to_hand(0, catalog::archaics_agony());
+    // Pay {4}{R}: 4 colorless + 1 red = converge value 1 (only Red).
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(4);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(bear)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Archaic's Agony castable for {4}{R}");
+    drain_stack(&mut g);
+
+    // Converge=1 (only Red contributed). Bear has 2 toughness, takes 1
+    // damage — should still be alive.
+    let bear_card = g.battlefield.iter().find(|c| c.id == bear)
+        .expect("Bear survives 1 damage");
+    assert_eq!(bear_card.damage, 1,
+        "Bear should have 1 damage marker after Converge=1 Archaic's Agony");
+}
 
 #[test]
 fn rancorous_archaic_etb_with_converge_counters() {

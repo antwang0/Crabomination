@@ -11,6 +11,26 @@ Periodic spot-check of the rules document
 (`crabomination/MagicCompRules 20260116.txt`). Each rule below has a
 status tag (✅ wired, 🟡 partial, ⏳ todo) plus a short note.
 
+- ✅ **CR 502.4 — No priority during untap step** (push XXVIII audit):
+  "No player receives priority during the untap step, so no spells can
+  be cast or resolve and no abilities can be activated or trigger."
+  The engine's `advance_to_next_step` (in `game/stack.rs:62`) already
+  handles this: "Untap has no priority window — auto-execute and move
+  on." The untap step runs `do_untap()` then immediately calls
+  `pass_priority` to step into Upkeep. State-based actions are still
+  checked in the SBA loop (which doesn't depend on priority). Test
+  coverage is implicit through the existing turn-progression tests
+  that walk through untap without observing a priority window.
+- 🟡 **CR 614.10 — Skip effects are replacement effects** (push XXVIII
+  audit): "An effect that causes a player to skip an event, step,
+  phase, or turn is a replacement effect. 'Skip [something]' is the
+  same as 'Instead of doing [something], do nothing.'" We have
+  `Player.skip_first_draw` for the start-of-game first-draw skip (CR
+  103.6), but no general skip-effect framework. Cards like Mind's
+  Desire's "extra turn", Time Sieve's extra turns, or Howling Mine /
+  Verity Circle's draw-skip riders depend on a `SkipNextStep` or
+  `SkipNextDraw` replacement primitive. Tracked under "Replacement
+  Effects" below.
 - ✅ **CR 605.1a — Mana abilities (activated)**: An activated ability is
   a mana ability if it (a) doesn't require a target, (b) could add mana
   to a player's pool when it resolves, and (c) is not a loyalty

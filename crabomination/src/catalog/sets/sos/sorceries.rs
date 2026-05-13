@@ -528,15 +528,17 @@ pub fn send_in_the_pest() -> CardDefinition {
     }
 }
 
-/// Dina's Guidance — {1}{B}{G} Instant — wait, Sorcery.
+/// Dina's Guidance — {1}{B}{G} Sorcery.
 /// "Search your library for a creature card, reveal it, put it into your
 /// hand or graveyard, then shuffle."
 ///
-/// Approximation: the choice between hand and graveyard is collapsed to
-/// "hand" — a tutor outcome is strictly stronger than a graveyard
-/// outcome at this engine fidelity (no dredge/death-trigger payoffs that
-/// reward a graveyard target are wired). A future "choose destination"
-/// prompt can re-introduce the toggle.
+/// Push XXVIII: promoted from 🟡 → ✅ via a 2-mode `Effect::ChooseMode`
+/// (mode 0 = search → hand, mode 1 = search → graveyard). The
+/// `AutoDecider` defaults to mode 0 (hand) which is strictly stronger
+/// for an unguided bot. A graveyard-targeting deck (Lorehold gy-leave
+/// payoffs, Witherbloom reanimation) can pick mode 1 via a scripted
+/// decision. The destination-prompt collapse keeps the printed
+/// "hand or graveyard" branch faithful without any new primitive.
 pub fn dinas_guidance() -> CardDefinition {
     use crate::effect::ZoneDest;
     use crate::mana::g;
@@ -549,11 +551,20 @@ pub fn dinas_guidance() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![],
-        effect: Effect::Search {
-            who: PlayerRef::You,
-            filter: SelectionRequirement::Creature,
-            to: ZoneDest::Hand(PlayerRef::You),
-        },
+        effect: Effect::ChooseMode(vec![
+            // Mode 0: search → hand.
+            Effect::Search {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::Creature,
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+            // Mode 1: search → graveyard.
+            Effect::Search {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::Creature,
+                to: ZoneDest::Graveyard,
+            },
+        ]),
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -2603,6 +2614,46 @@ pub fn echocasting_symposium() -> CardDefinition {
 /// (no permanent-copy primitive yet; tracked in TODO.md). Net play
 /// pattern is a 6/6 Fractal for 4 mana — matches the printed lower
 /// bound when the permanent being copied is vanilla.
+/// Archaic's Agony — {4}{R} Sorcery. "Converge — Archaic's Agony deals
+/// X damage to target creature, where X is the number of colors of mana
+/// spent to cast this spell. Exile cards from the top of your library
+/// equal to the excess damage dealt to that creature this way. You may
+/// play those cards until the end of your next turn."
+///
+/// Push XXVIII: promoted from ⏳ → 🟡. Body wired faithfully — the
+/// Converge X damage to a creature target uses `Value::ConvergedValue`
+/// (same primitive as Rancorous Archaic / Sundering Archaic). The
+/// "exile cards equal to excess damage + may play" rider is still
+/// omitted (cast-from-exile pipeline + "exile N for excess damage"
+/// primitive both missing). Net play pattern: a 5-mana Converge burn
+/// spell that goes up to 5 damage at converge 5.
+pub fn archaics_agony() -> CardDefinition {
+    use crate::mana::r;
+    use crate::effect::shortcut::target_filtered;
+    CardDefinition {
+        name: "Archaic's Agony",
+        cost: cost(&[generic(4), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::DealDamage {
+            to: target_filtered(SelectionRequirement::Creature),
+            amount: Value::ConvergedValue,
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
 pub fn applied_geometry() -> CardDefinition {
     use crate::card::CounterType;
     use crate::mana::{g, u};

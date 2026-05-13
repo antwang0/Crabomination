@@ -2833,6 +2833,46 @@ pub fn witherbloom_the_balancer() -> CardDefinition {
     }
 }
 
+/// Quandrix, the Proof — {4}{G}{U} 6/6 Legendary Elder Dragon.
+/// "Flying, trample / Cascade (When you cast this spell, exile cards
+/// from the top of your library until you exile a nonland card that
+/// costs less. You may cast it without paying its mana cost. Put the
+/// exiled cards on the bottom in a random order.) / Instant and
+/// sorcery spells you cast from your hand have cascade."
+///
+/// Push XXVIII: ⏳ → 🟡. Body wired faithfully — 6/6 Legendary Elder
+/// Dragon with Flying + Trample. The Cascade keyword and the IS-grant-
+/// cascade static are still ⏳ (no Cascade keyword primitive in our
+/// engine, no cast-from-exile-without-paying pipeline). At raw stats
+/// this is a 6-mana 6/6 flying trampler in Quandrix colors — strong
+/// finisher even without Cascade.
+pub fn quandrix_the_proof() -> CardDefinition {
+    use crate::card::Supertype;
+    use crate::mana::{g, u};
+    CardDefinition {
+        name: "Quandrix, the Proof",
+        cost: cost(&[generic(4), g(), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elder, CreatureType::Dragon],
+            ..Default::default()
+        },
+        power: 6,
+        toughness: 6,
+        keywords: vec![Keyword::Flying, Keyword::Trample],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
 /// Garrison Excavator — {3}{R}, 3/4 Orc Sorcerer with menace.
 /// "Menace / Whenever one or more cards leave your graveyard, create a
 /// 2/2 red and white Spirit creature token."

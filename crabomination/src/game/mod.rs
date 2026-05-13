@@ -312,6 +312,37 @@ impl GameState {
                     modification: Modification::SetPowerToughness(n, n),
                 });
             }
+            // Honor Troll (STX, push XXVIII): "As long as you've gained life
+            // this turn, this creature has +2/+0 and lifelink." Same compute-
+            // time injection pattern as Cruel Somnophage / Tarmogoyf — we
+            // check the controller's `life_gained_this_turn` tally (reset on
+            // `do_untap`) and inject a +2/+0 PumpPT plus a Lifelink keyword
+            // when the gate is open. The gate evaluation happens every layer
+            // recompute, so a player's "you gain 1 life" mid-turn flips the
+            // troll on for the remainder of that turn — and the troll snaps
+            // back to its vanilla 1/4 trample body next untap step.
+            if name == "Honor Troll"
+                && self.players[card.controller].life_gained_this_turn > 0
+            {
+                all_effects.push(ContinuousEffect {
+                    timestamp: card.id.0 as u64,
+                    source: card.id,
+                    affected: AffectedPermanents::Source,
+                    layer: Layer::L7PowerTough,
+                    sublayer: Some(PtSublayer::Modify),
+                    duration: EffectDuration::WhileSourceOnBattlefield,
+                    modification: Modification::ModifyPowerToughness(2, 0),
+                });
+                all_effects.push(ContinuousEffect {
+                    timestamp: card.id.0 as u64,
+                    source: card.id,
+                    affected: AffectedPermanents::Source,
+                    layer: Layer::L6Ability,
+                    sublayer: None,
+                    duration: EffectDuration::WhileSourceOnBattlefield,
+                    modification: Modification::AddKeyword(crate::card::Keyword::Lifelink),
+                });
+            }
         }
         apply_layers(&self.battlefield, &all_effects)
     }
