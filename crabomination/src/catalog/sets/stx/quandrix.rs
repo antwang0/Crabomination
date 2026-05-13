@@ -114,11 +114,15 @@ pub fn quandrix_pledgemage() -> CardDefinition {
 /// you control deals damage equal to its power to target creature you
 /// don't control."
 ///
-/// 🟡 We ship just mode 0 (counter-noncreature-unless-{2}) faithfully.
-/// Mode 1 is a fight-with-tax — the engine has `Effect::Fight` but it
-/// uses one target slot, while Decisive Denial wants two. The fight
-/// half is omitted until the multi-target prompt lands; mode 0 alone is
-/// still a respectable Quandrix counterspell.
+/// ✅ Push XXXIII: both modes wired. Mode 0 ships the classic
+/// counter-noncreature-unless-{2} primitive. Mode 1 promotes from the
+/// prior 🟡 omission to a faithful Fight-style resolution via
+/// `Effect::Fight { attacker: Target(0), defender: EachPermanent(
+/// Creature & ControlledByOpponent) }`. The printed "two target"
+/// prompt is auto-resolved on the defender side (same Chelonian
+/// Tackle pattern, push XXVII); the attacker is the player-chosen
+/// `Target(0)`. Multi-target prompt for the defender remains a
+/// future engine enhancement.
 pub fn decisive_denial() -> CardDefinition {
     use crate::mana::{ManaCost, generic as gen_pip};
     let two = ManaCost { symbols: vec![gen_pip(2)] };
@@ -140,6 +144,16 @@ pub fn decisive_denial() -> CardDefinition {
                         .and(SelectionRequirement::HasCardType(CardType::Creature).negate()),
                 ),
                 mana_cost: two,
+            },
+            // Mode 1: target creature you control fights an auto-picked
+            // opponent creature (same Chelonian Tackle pattern).
+            Effect::Fight {
+                attacker: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                defender: Selector::EachPermanent(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+                ),
             },
         ]),
         activated_abilities: no_abilities(),

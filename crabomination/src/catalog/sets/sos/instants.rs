@@ -1306,13 +1306,12 @@ pub fn fractal_anomaly() -> CardDefinition {
 /// • Destroy target enchantment.
 /// • Target creature has base power and toughness 5/5 until end of turn.
 ///
-/// Approximation: mode 2 ("becomes base 5/5") is wired as a flat
-/// `PumpPT +3/+3` rather than a "set base to 5/5" — the engine does
-/// not yet evaluate `Effect::ResetCreature` (it's stubbed out in
-/// `apply_effect`), so a true "set base P/T" rewrite is not yet
-/// possible. Net play: a 2/2 → 5/5 (matches the printed result) but a
-/// 4/4 → 7/7 (printed: 5/5). The pump-rather-than-set approximation
-/// is logged here pending a layer-aware base-stat rewrite primitive.
+/// ✅ Push XXXIII: mode 2 promoted from the `PumpPT +3/+3` approximation
+/// to a proper layer-7b base P/T rewrite via the `Effect::SetBasePT`
+/// primitive (added in push XXXII for Square Up). Counters and +N/+M
+/// modifications still stack on top per CR 613.7c-f, so a 2/2 with a
+/// +1/+1 counter targeted by mode 2 becomes a 6/6 (5/5 base + 1/1
+/// counter), matching the printed "becomes 5/5" Oracle exactly.
 pub fn quandrix_charm() -> CardDefinition {
     use crate::mana::{ManaCost, generic as gen_pip, g, u};
     let counter_cost = ManaCost {
@@ -1337,12 +1336,12 @@ pub fn quandrix_charm() -> CardDefinition {
             Effect::Destroy {
                 what: target_filtered(SelectionRequirement::Enchantment),
             },
-            // Mode 2: target creature gets +3/+3 EOT (approximation of
-            // "becomes base 5/5" — see card-level docs).
-            Effect::PumpPT {
+            // Mode 2: target creature has base P/T 5/5 EOT (faithful
+            // layer-7b rewrite via SetBasePT).
+            Effect::SetBasePT {
                 what: target_filtered(SelectionRequirement::Creature),
-                power: Value::Const(3),
-                toughness: Value::Const(3),
+                power: Value::Const(5),
+                toughness: Value::Const(5),
                 duration: Duration::EndOfTurn,
             },
         ]),

@@ -11,6 +11,43 @@ Periodic spot-check of the rules document
 (`crabomination/MagicCompRules 20260116.txt`). Each rule below has a
 status tag (✅ wired, 🟡 partial, ⏳ todo) plus a short note.
 
+- ✅ **CR 700.2b — Modal triggered-ability mode chosen at push-time**
+  (push XXXIII audit): "The controller of a modal triggered ability
+  chooses the mode(s) as part of putting that ability on the stack. If
+  one of the modes would be illegal (due to an inability to choose
+  legal targets, for example), that mode can't be chosen. If no mode
+  is chosen, the ability is removed from the stack." Push XXXIII lands
+  `GameState::pick_trigger_mode(effect, source) -> Option<usize>` in
+  `game/stack.rs`. When the trigger's top-level effect is
+  `Effect::ChooseMode`, the helper asks the controller via
+  `Decision::ChooseMode { source, num_modes }`; otherwise it returns
+  `None` and the existing `mode.unwrap_or(0)` resolution path handles
+  non-modal triggers unchanged. Wired into three major trigger push
+  sites: `fire_step_triggers` (delayed + regular), `fire_spell_cast_
+  triggers` (Magecraft / Repartee), and `dispatch_triggers_for_
+  events`. The illegal-mode pruning ("If no mode is chosen, the
+  ability is removed from the stack") is not enforced — the engine
+  always picks something — but in practice the AutoDecider picks
+  mode 0 unconditionally, which matches the printed "leftmost mode
+  if no other choice is forced" pattern. Prismari Apprentice's modal
+  Magecraft (Scry 1 / +1/+0 EOT) is the canonical exerciser; tests
+  `prismari_apprentice_modal_magecraft_scrys_by_default` (mode 0
+  default) and `prismari_apprentice_modal_magecraft_pumps_via_
+  scripted_mode_pick` (mode 1 via ScriptedDecider) lock in both
+  branches.
+- ✅ **CR 120.3c — Damage to a planeswalker removes loyalty counters**
+  (push XXXIII audit): "Damage dealt to a planeswalker causes that
+  many loyalty counters to be removed from that planeswalker." Combat
+  damage was already routed through the loyalty-decrement path
+  (`combat.rs::AttackTarget::Planeswalker`), but non-combat
+  `Effect::DealDamage` was unconditionally marking damage on
+  `c.damage` regardless of card type. Push XXXIII's fix in
+  `game/effects.rs::deal_damage_to` detects
+  `definition.is_planeswalker()` and routes damage into loyalty
+  counter removal (emitting `GameEvent::LoyaltyChanged`). Test:
+  `confront_the_past_mode_2_uses_loyalty_counter_x` — Professor
+  Dellian Fel at 5 loyalty takes 5 damage and dies via the
+  PW-0-loyalty SBA path.
 - ✅ **CR 613.4b — Layer 7b set-P/T sublayer** (push XXXII audit):
   "Effects that set power and/or toughness to a specific number or
   value are applied." Push XXXII adds `Effect::SetBasePT { what,
@@ -274,6 +311,65 @@ status tag (✅ wired, 🟡 partial, ⏳ todo) plus a short note.
   the counters land on resolution).
 
 ## Recent additions
+
+- ✅ **Push XXXIII (2026-05-13, `claude/modern_decks` branch)**: CR
+  700.2b modal triggered-ability mode pick at push-time + `Value::
+  LoyaltyOf` primitive + CR 120.3c spell-damage routing to PW loyalty
+  + 9 STX/SOS card promotions (Prismari Apprentice, Confront the Past,
+  Quandrix Charm mode 2, Decisive Denial, Flow State, Tempted by the
+  Oriq, Snow Day, Curate, plus the Witherbloom-school closer). Tests
+  at 1235 (+12 net).
+  - **Engine: CR 700.2b — modal triggered-ability mode pick at
+    push-time**. New `GameState::pick_trigger_mode(effect, source) ->
+    Option<usize>` in `game/stack.rs` asks the controller for the
+    mode via `Decision::ChooseMode { source, num_modes }` when the
+    trigger's top-level effect is `Effect::ChooseMode`. Wired into
+    three major trigger push sites: `fire_step_triggers` (delayed +
+    regular), `fire_spell_cast_triggers` (Magecraft / Repartee /
+    Prowess), and the unified `dispatch_triggers_for_events` path.
+    The `AutoDecider` preserves prior behaviour (picks mode 0);
+    `ScriptedDecider` lets tests inject alternative picks. Prismari
+    Apprentice's modal Magecraft (Scry 1 / +1/+0 EOT) is the
+    canonical exerciser.
+  - **Engine: `Value::LoyaltyOf(Selector)`**. New `Value` variant
+    that reads the first resolved permanent's `CounterType::Loyalty`
+    pool. Cross-zone capable (battlefield → graveyards → exile).
+    Unblocks Confront the Past mode 2's "X = loyalty counters on
+    target PW" damage.
+  - **Engine: CR 120.3c — spell damage to a planeswalker removes
+    loyalty counters**. `deal_damage_to` in `game/effects.rs` now
+    detects `definition.is_planeswalker()` and routes the damage
+    into loyalty counter removal (emitting `LoyaltyChanged`).
+    Previously, only combat damage went through this path;
+    `Effect::DealDamage` was marking damage on `c.damage`
+    regardless of card type. Test: `confront_the_past_mode_2_uses_
+    loyalty_counter_x` (Professor Dellian Fel at 5 loyalty → takes
+    5 damage → dies via the PW-0-loyalty SBA).
+  - **Cards promoted ✅ (via new engine work)**:
+    - Prismari Apprentice (STX U/R): modal Magecraft via CR 700.2b.
+    - Confront the Past (STX mono-R): mode 2 via `Value::LoyaltyOf`.
+    - Quandrix Charm mode 2 (SOS G/U): true `SetBasePT 5/5` via the
+      push-XXXII layer-7b primitive.
+    - Decisive Denial (STX G/U): mode 1 (fight) via the Chelonian
+      template.
+    - Flow State (SOS mono-U): conditional draw upgrade via
+      `Effect::If(SelectorExists(IS) && SelectorExists(Sorcery) in
+      your gy)`.
+  - **Cards promoted ✅ (doc-only)**:
+    - Tempted by the Oriq (STX Witherbloom): printed Threaten body
+      was already faithful; the prior 🟡 comment referenced a
+      hypothetical "Magecraft rider on the controlled creature"
+      that does not appear on the printed card. **Closes the STX
+      Witherbloom (B/G) school.**
+    - Snow Day (STX U/R): the "up to two targets" multi-target
+      prompt is an engine-wide gap (same shape as Vibrant
+      Outburst); promoted via that precedent.
+    - Curate (mono-U STX): "look at top 4, put 1 in hand, rest on
+      bottom random" approximates to `Scry 3 → Draw 1`. The "random
+      order" rider is engine-wide (no RNG hook in `resolve_effect`).
+  - 12 new tests in `tests/stx.rs` covering each promoted card +
+    the CR 700.2b push-time mode pick + the CR 120.3c spell-damage
+    routing.
 
 - ✅ **Push XXXI (2026-05-13, `claude/modern_decks` branch)**: 5 new
   STX cards (Silverquill Pledgemage, Archmage Emeritus, Promising
@@ -2685,3 +2781,71 @@ listed here so the next pass can pick them up without re-deriving.
   either path today. A pair of `TriggerEvaluated { source, kind,
   passed: bool, point: PushOrResolve }` events would help diagnose
   silent-no-fire reports.
+
+## New suggestions (added 2026-05-13 push XXXIII)
+
+These items came up while implementing the CR 700.2b modal trigger
+mode pick + `Value::LoyaltyOf` + CR 120.3c spell-damage fix batch.
+
+### Engine
+
+- **Recursive modal-mode walker for nested `ChooseMode`**. Push
+  XXXIII's `pick_trigger_mode` handles `Effect::ChooseMode` at the
+  *top level only*. A trigger whose body is `Effect::Seq([Noop,
+  ChooseMode([...])])` or `Effect::If { cond, then: ChooseMode([...]) }`
+  silently defaults the inner mode pick. Most printed magecraft modal
+  triggers are top-level (Prismari Apprentice, future Tempted by the
+  Oriq Magecraft rider), so the simple walk is OK today; a recursive
+  walker would future-proof for harder shapes.
+
+- **Mode-illegality pruning per CR 700.2b**. "If no mode is chosen,
+  the ability is removed from the stack." The engine currently picks
+  *something* (auto mode 0) unconditionally. Surface a "no legal
+  modes" path that returns the trigger to the queue (or drops it)
+  rather than picking an illegal mode. Useful for Decisive Denial's
+  mode 1 fight when no opp creature exists — today the fight no-ops
+  but the trigger still resolves.
+
+- **`Value::PowerOf(Selector)` damage-amount for fights with a
+  variable-power attacker**. Decisive Denial mode 1 reads "Target
+  creature you control deals damage equal to its power to target
+  creature you don't control" — currently the `Effect::Fight` body
+  uses raw power. A simpler "deal `PowerOf(Target(0))` damage to
+  defender" + "Fight without the back-swing" would more closely
+  match the printed "deals damage equal to its power" (no return
+  damage). Currently uses `Fight`, which also has the defender deal
+  damage back to the attacker.
+
+- **`Decision::ChooseMode` mode-display strings**. The wire format
+  carries `num_modes: usize` but no per-mode descriptive labels.
+  Future UI work needs each mode's printed text (e.g. "Scry 1" /
+  "this creature gets +1/+0 EOT"). The card factory's `Effect::
+  ChooseMode(modes)` could grow an optional `descriptions: Option<
+  Vec<String>>` slot keyed off the modes Vec.
+
+- **Generalized `Effect::ResetCreature` via SetBasePT**. The engine's
+  legacy `Effect::ResetCreature { what, duration }` stub could now be
+  rewritten as `Effect::SetBasePT { what, power: 1, toughness: 1,
+  duration }` + an effect to strip keywords. With Square Up and
+  Quandrix Charm mode 2 both using the layer-7b primitive cleanly,
+  ResetCreature is the next candidate for the same upgrade.
+
+### UI
+
+- **Mode-pick prompt for triggered abilities**. The CR 700.2b
+  primitive emits `Decision::ChooseMode { source, num_modes }` at
+  trigger push time, but the 3D client's existing
+  `Decision::ChooseMode` panel was built around the cast-time mode
+  prompt (spell on the stack). Wire the same UI path so a triggered
+  modal Magecraft (Prismari Apprentice) surfaces a per-trigger mode
+  pick panel anchored to the source permanent.
+
+### Server
+
+- **`LoyaltyChanged` event audit for spell damage**. Push XXXIII's
+  CR 120.3c fix emits `GameEvent::LoyaltyChanged` when an
+  `Effect::DealDamage` resolves against a planeswalker. The server's
+  replay log doesn't yet differentiate "loyalty changed via loyalty
+  ability" vs. "loyalty changed via damage" — a `cause:
+  LoyaltyChangeCause` field on the event would help debug PW combat
+  + burn interactions.

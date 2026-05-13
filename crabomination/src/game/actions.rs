@@ -1057,12 +1057,17 @@ impl GameState {
             }
             let auto_target =
                 self.auto_target_for_effect_avoiding(&effect, controller, Some(source));
+            // CR 700.2b — pick the mode at push time if the trigger is modal.
+            // Powers Prismari Apprentice's modal Magecraft (Scry 1 / +1/+0 EOT):
+            // AutoDecider picks mode 0 (Scry); ScriptedDecider::new([Mode(1)])
+            // exercises the pump branch.
+            let mode = self.pick_trigger_mode(&effect, source);
             self.stack.push(StackItem::Trigger {
                 source,
                 controller,
                 effect: Box::new(effect),
                 target: auto_target,
-                mode: None,
+                mode,
                 x_value: 0,
                 converged_value: 0,
                 // The trigger fires on a spell cast — preserve the cast

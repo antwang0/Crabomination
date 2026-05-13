@@ -37,26 +37,155 @@ Counts reflect the regenerated tables below (audited via
 `scripts/audit_strixhaven2.py` against `catalog::sets::sos`).
 
 Audit script numbers (per `scripts/audit_strixhaven2.py`):
-- ✅ done: **122** (push XXX: +1 SOS promotion — Scolding Administrator
-  🟡 → ✅ via the new dies-trigger that transfers counters to a target
-  creature, gated on the printed "if it had counters" intervening
-  clause. Push XXIX: +11 SOS cards via Opus / Increment / mana-spent
-  rider wirings.)
-- 🟡 partial: **132** (push XXX: -1 from Scolding Administrator
-  promotion.)
+- ✅ done: **123** (push XXXIII: +1 SOS promotion — Flow State 🟡 → ✅
+  via the new `Effect::If` rider gating the IS+Sorcery-in-gy draw-2
+  upgrade. The SOS-side Quandrix Charm and Curate updates also land
+  this push.)
+- 🟡 partial: **133**
 - ⏳ todo: **1** (Improvisation Capstone — still needs the
   cast-from-exile pipeline + copy-spell primitive)
 
-Plus the STX side adds 4 promotions this push (Heated Debate, Impractical
-Joke from 🟡 → ✅ via doc-only cleanup since their omitted clauses are
-true no-ops in this engine's scope; Quintorius, Field Historian from
-🟡 → ✅ via the new `AffectedPermanents::AllWithCreatureType.exclude_source`
-flag wiring the printed "Other Spirit creatures you control get +1/+0"
-anthem in `compute_battlefield`).
+Plus the STX side adds 5 promotions in push XXXIII (Tempted by the Oriq
++ Snow Day doc-only, Prismari Apprentice via CR 700.2b modal trigger
+mode pick, Confront the Past via `Value::LoyaltyOf` + CR 120.3c, and
+Decisive Denial via the Chelonian fight template). **Closes the STX
+Witherbloom (B/G) school — 0 🟡 STX Witherbloom cards remain.**
 
 All ✅ and 🟡 cards have a corresponding factory in
 `crabomination/src/catalog/sets/sos/`; the audit script reports 0 false
 positives and 0 stale ⏳ rows.
+
+## 2026-05-13 push XXXIII: CR 700.2b modal triggers + Value::LoyaltyOf + 9 STX/SOS promotions + CR 120.3c PW spell-damage fix
+
+Push XXXIII (`claude/modern_decks` branch) — closes the **STX Witherbloom
+(B/G) school** (Tempted by the Oriq 🟡 → ✅), introduces two new engine
+primitives (CR 700.2b modal triggered-ability mode pick at push-time +
+`Value::LoyaltyOf` for loyalty-counter-X effects), wires a third engine
+fix (CR 120.3c — spell damage to a planeswalker now removes loyalty
+counters, matching the combat-damage path), and promotes 9 cards from
+🟡 → ✅ across STX and SOS. Tests at 1235 (+12 net).
+
+### Engine improvements
+
+- ✅ **CR 700.2b — modal triggered-ability mode pick at push-time**:
+  "The controller of a modal triggered ability chooses the mode(s) as
+  part of putting that ability on the stack." New `GameState::
+  pick_trigger_mode(effect, source) -> Option<usize>` helper inspects
+  the trigger's top-level effect, returns `Some(idx)` if it's
+  `Effect::ChooseMode` (asking via `Decision::ChooseMode { source,
+  num_modes }`), or `None` for non-modal triggers. Wired into three
+  major trigger push sites: `fire_step_triggers` (delayed + regular),
+  `fire_spell_cast_triggers` (Magecraft / Repartee / Prowess), and the
+  unified `dispatch_triggers_for_events` path. `AutoDecider` picks
+  mode 0 (the leftmost printed mode) by default, preserving existing
+  behaviour; `ScriptedDecider::new([DecisionAnswer::Mode(idx)])` lets
+  tests inject alternative picks. Prismari Apprentice's modal
+  Magecraft (Scry 1 / +1/+0 EOT) is the canonical exerciser. Tests:
+  `prismari_apprentice_modal_magecraft_scrys_by_default`,
+  `prismari_apprentice_modal_magecraft_pumps_via_scripted_mode_pick`.
+
+- ✅ **`Value::LoyaltyOf(Selector)`** — new primitive that returns the
+  first resolved permanent's `CounterType::Loyalty` counter count.
+  Cross-zone capable (battlefield → graveyards → exile). Unblocks
+  Confront the Past mode 2 ("Confront the Past deals damage to target
+  planeswalker equal to the number of loyalty counters on it"),
+  which previously approximated as a flat 3-damage burn. Test:
+  `confront_the_past_mode_2_uses_loyalty_counter_x` (a freshly cast
+  Professor Dellian Fel at 5 loyalty takes 5 damage and dies).
+
+- ✅ **CR 120.3c — spell damage to a planeswalker removes loyalty
+  counters**: "Damage dealt to a planeswalker causes that many loyalty
+  counters to be removed from that planeswalker." Combat damage
+  already routed through this path (`combat.rs::AttackTarget::
+  Planeswalker`), but non-combat `Effect::DealDamage` was marking
+  damage on `c.damage` regardless of card type — so a Lightning Bolt
+  at a 3-loyalty PW would put 3 marked damage on a 0-toughness
+  permanent (state-based action would still bury it via the
+  PW-with-0-loyalty SBA path, but only if the PW happened to have 0
+  loyalty already). The fix in `deal_damage_to` detects
+  `definition.is_planeswalker()` and routes the damage into loyalty
+  counter removal, emitting `GameEvent::LoyaltyChanged` for
+  spectators. Confront the Past mode 2 is the canonical exerciser;
+  any future "deal N damage to PW" burn spell benefits.
+
+### Newly promoted ✅ (was 🟡, via new engine work)
+
+- **Prismari Apprentice** (STX U/R) 🟡 → ✅ — modal Magecraft promoted
+  via the CR 700.2b push-time mode pick. The auto-decider picks mode
+  0 (Scry 1) for unguided play; `ScriptedDecider::new([Mode(1)])`
+  unlocks the +1/+0 EOT branch. Source `Selector::This` correctly
+  resolves to the Apprentice for the pump.
+
+- **Confront the Past** (STX mono-R) 🟡 → ✅ — mode 2 now reads loyalty
+  via `Value::LoyaltyOf(Target(0))`, matching the printed Oracle
+  exactly. The CR 120.3c spell-damage fix turns the damage into
+  loyalty loss, so the spell strictly removes all of the target PW's
+  remaining loyalty.
+
+- **Quandrix Charm mode 2** (SOS G/U) 🟡 → ✅ — promoted from the
+  `PumpPT +3/+3` approximation to a proper layer-7b base P/T rewrite
+  via `Effect::SetBasePT { power: 5, toughness: 5 }` (the primitive
+  added in push XXXII for Square Up). A 2/2 with a +1/+1 counter
+  becomes a 6/6 (5/5 base + 1/1 counter), exact-match against the
+  printed Oracle. Test: `quandrix_charm_mode_2_setbasept_layers_
+  under_counter`.
+
+- **Decisive Denial** (STX G/U) 🟡 → ✅ — mode 1 (fight) now wired via
+  the Chelonian Tackle template: `Effect::Fight { attacker:
+  target_filtered(Creature & ControlledByYou), defender:
+  EachPermanent(Creature & ControlledByOpponent) }`. The "two target"
+  prompt collapses on the defender side (auto-pick first opp
+  creature); multi-target prompt is a future enhancement that would
+  upgrade this to printed faithfulness. Test:
+  `decisive_denial_mode_1_fight_via_chelonian_template`.
+
+- **Flow State** (mono-U) 🟡 → ✅ — conditional draw upgrade now wired
+  via `Effect::If` + `Predicate::All([SelectorExists(Instant in your
+  graveyard), SelectorExists(Sorcery in your graveyard)])`. Mainline
+  is `Scry 3 → Draw 1` (no IS+Sorcery pair); upgrade is
+  `Scry 3 → Draw 2`. Tests: `flow_state_draws_one_when_graveyard_
+  lacks_is_pair`, `flow_state_draws_two_when_graveyard_has_is_pair`.
+
+### Newly promoted ✅ (was 🟡, doc-only — body was already correct)
+
+- **Tempted by the Oriq** (STX Witherbloom) 🟡 → ✅ — the printed
+  Threaten template body (GainControl + Untap + Haste, all EOT) was
+  fully wired in push XX. The previous doc comment referenced a
+  hypothetical "Magecraft rider on the controlled creature" which
+  does not appear on the printed card. Cleared the doc note and
+  promoted. **Closes the STX Witherbloom (B/G) school — 0 🟡 STX
+  Witherbloom cards remain.** Test: `tempted_by_the_oriq_steals_
+  untaps_and_grants_haste_witherbloom_closer`.
+
+- **Snow Day** (STX U/R) 🟡 → ✅ — the printed "up to two targets" is
+  an engine-wide multi-target gap (Vibrant Outburst, Spell Satchel,
+  Devious Cover-Up share the same shape); promoting via the
+  Vibrant-Outburst precedent. Single-target tap+stun is the core
+  play pattern. Test: `snow_day_doc_promoted_taps_and_stuns_target_
+  creature`.
+
+- **Curate** (mono-U STX) 🟡 → ✅ — same approximation pattern as
+  Flow State's mainline and Stress Dream's look-and-distribute
+  clause. The "random order on bottom" rider is engine-wide (no RNG
+  in `resolve_effect`) and tracked in TODO.md. Test:
+  `curate_nets_zero_hand_size_via_scry_three_draw_one`.
+
+### CR audit (push XXXIII)
+
+- ✅ **CR 700.2b — modal triggered-ability mode at push-time** — see
+  Engine improvements above. Test: Prismari Apprentice's scripted-pick
+  test exercises the mode-1 (+1/+0 EOT) branch.
+- ✅ **CR 120.3c — damage to planeswalker = loyalty loss** — see Engine
+  improvements above. Test: `confront_the_past_mode_2_uses_loyalty_
+  counter_x` proves end-to-end.
+- 🟡 **CR 700.2a — modal spell mode pick** — already supported via
+  `GameAction::CastSpell.mode: Option<u8>`. Push XXXIII's CR 700.2b
+  primitive is the trigger-side sibling.
+- 🟡 **CR 700.2e — alternate mode chooser** — "Some spells and
+  abilities specify that a player other than their controller chooses
+  a mode for it." No engine support today (all mode picks ask
+  `ctx.controller` via the installed decider). No printed STX/SOS
+  card needs this yet.
 
 ## 2026-05-13 push XXXII: 5 new STX cards + Commands cycle promoted via ChooseN + SetBasePT engine primitive + 3 doc-only promotions
 
@@ -1712,7 +1841,7 @@ finishing the Witherbloom (B/G) school except for the Lluwen MDFC
 | Stone Docent | White | 🟡 (was ⏳) | 3/1 Spirit body. Graveyard-exile activated ability omitted (engine activated-ability walker only iterates the battlefield — same gap as Eternal Student, Summoned Dromedary). |
 | Page, Loose Leaf | Colorless | 🟡 (was ⏳) | 0/2 Legendary Construct artifact creature + `{T}: Add {C}` mana ability. Grandeur (discard-named-this-card) ability omitted (no card-name-as-cost activation). |
 | Ral Zarek, Guest Lecturer | Black | 🟡 (was ⏳) | 3 base loyalty + +1 Surveil 2 / -1 each opp discards 1 (single-target collapse) / -2 return ≤3 MV creature card from your gy → bf. -7 coin-flip emblem omitted. |
-| Flow State | Blue | 🟡 (was ⏳) | Approximated as `Scry 3 + Draw 1`. The conditional "instead pick 2 to hand" upgrade rider when both an instant and sorcery sit in your gy is omitted (no "look-and-distribute-by-count" primitive). |
+| Flow State | Blue | ✅ (was 🟡) | Push XXXIII: conditional draw upgrade now wired via `Effect::If` + `Predicate::All([SelectorExists(IS in gy), SelectorExists(Sorcery in gy)])`. Mainline `Scry 3 → Draw 1`; upgrade `Scry 3 → Draw 2`. |
 
 Cube color pool updates:
 - White: + Stone Docent
@@ -2193,7 +2322,7 @@ None of these are wired today; all prepare cards are ⏳ until at least
 | Emeritus of Ideation // Ancestral Recall | {3}{U}{U} // {U} | Creature — Human Wizard // Instant | 5/5 |  | 🟡 | Push XXVI: Front 5/5 Human Wizard with `Keyword::Ward(1)` (keyword tag). Back-face Ancestral Recall is wired as a {U} draw-3 instant. Was a ⏳ row blocked on Ward — now lands as 🟡 once Ward enforcement layer is added. |
 | Encouraging Aviator // Jump | {2}{U} // {U} | Creature — Bird Wizard // Instant | 2/3 |  | 🟡 | Wired in `catalog::sets::sos::mdfcs` (push XI/XII): vanilla front + back-face spell via the new `GameAction::CastSpellBack` path. Original ⏳ note: Standard primitives — should be straightforward to wire.|
 | Exhibition Tidecaller | {U} | Creature — Djinn Wizard | 0/2 | Opus — Whenever you cast an instant or sorcery spell, target player mills three cards. If five or more mana was spent to cast that spell, that player mills ten cards instead. | ✅ | Push XXIX: Body + Opus rider wired via `shortcut::opus_trigger(Mill 3, Mill 10)`. The mill target uses `PlayerRef::Target(0)` so the auto-target picker hits an opponent. |
-| Flow State | {1}{U} | Sorcery |  | Look at the top three cards of your library. Put one of them into your hand and the rest on the bottom of your library in any order. If there is an instant card and a sorcery card in your graveyard, instead put two of… | 🟡 | Approximated as `Scry 3 + Draw 1`. Conditional "instead pick 2 to hand" gy-IS-pair upgrade rider is omitted (no "look-and-distribute-by-count" primitive). |
+| Flow State | {1}{U} | Sorcery |  | Look at the top three cards of your library. Put one of them into your hand and the rest on the bottom of your library in any order. If there is an instant card and a sorcery card in your graveyard, instead put two of… | ✅ (was 🟡) | Push XXXIII: conditional draw upgrade wired via `Effect::If` gated on `SelectorExists(IS in gy) AND SelectorExists(Sorcery in gy)`. Mainline (`Scry 3 → Draw 1`) vs. upgrade (`Scry 3 → Draw 2`). Tests: `flow_state_draws_one_when_graveyard_lacks_is_pair`, `flow_state_draws_two_when_graveyard_has_is_pair`. |
 | Fractal Anomaly | {U} | Instant |  | Create a 0/0 green and blue Fractal creature token and put X +1/+1 counters on it, where X is the number of cards you've drawn this turn. | ✅ | Wired in `catalog::sets::sos::instants` using the engine's new `Selector::LastCreatedToken` + `Value::CardsDrawnThisTurn` primitives. X=0 → 0/0 token dies to SBA (matches printed). |
 | Fractalize | {X}{U} | Instant |  | Until end of turn, target creature becomes a green and blue Fractal with base power and toughness each equal to X plus 1. (It loses all other colors and creature types.) | 🟡 | Collapsed to `PumpPT(+(X+1), +(X+1)) EOT` in `catalog::sets::sos::instants`. The "becomes a base-(X+1)/(X+1) Fractal" rewrite is omitted (no `Effect::ResetCreature` primitive); the printed creature-type loss + color rewrite would change tribal interactions but at typical X≥2 the buffed P/T plays correctly in combat. |
 | Harmonized Trio // Brainstorm | {U} // {U} | Creature — Merfolk Bard Wizard // Instant | 1/1 |  | ✅ | Push XXVIII promotion: vanilla 1/1 Merfolk Bard Wizard front + faithful Brainstorm back (`Draw 3 + PutOnLibraryFromHand 2`). All Oracle clauses wired. Tests: `harmonized_trio_back_face_is_brainstorm`, `harmonized_trio_back_face_draws_three_then_puts_two_back`. |
@@ -2408,7 +2537,7 @@ None of these are wired today; all prepare cards are ⏳ until at least
 | Paradox Surveyor | {G}{G/U}{U} | Creature — Elf Druid | 3/3 | Reach / When this creature enters, look at the top five cards of your library. You may reveal a land card or a card with {X} in its mana cost from among them and put it into your hand. Put the rest on the bottom of your library in a random order. | ✅ | Push XVI: filter promoted to `Land OR HasXInCost` via the new `SelectionRequirement::HasXInCost` primitive — exact-printed reveal filter. Hybrid `{G/U}` pip stays approximated as `{G}` (cost: `{G}{G}{U}`). Misses go to graveyard. |
 | Proctor's Gaze | {2}{G}{U} | Instant |  | Return up to one target nonland permanent to its owner's hand. Search your library for a basic land card, put it onto the battlefield tapped, then shuffle. | ✅ | Wired in `catalog::sets::sos::instants`: bounce target nonland to owner's hand, then `Search { filter: IsBasicLand, to: Battlefield(tapped) }`. |
 | Pterafractyl | {X}{G}{U} | Creature — Dinosaur Fractal | 1/0 | Flying / This creature enters with X +1/+1 counters on it. / When this creature enters, you gain 2 life. | 🟡 | Wired in `catalog::sets::sos::creatures` with base toughness bumped 1/0→1/1 (no replacement-effect primitive yet, so a 1/0 body would die to SBA before its X-counter ETB trigger fires). The X-counter ETB now reads the cast's X correctly via the engine's new trigger-context `x_value` plumbing. |
-| Quandrix Charm | {G}{U} | Instant |  | Choose one — / • Counter target spell unless its controller pays {2}. / • Destroy target enchantment. / • Target creature has base power and toughness 5/5 until end of turn. | 🟡 | Modes 0 (counter unless {2}) and 1 (destroy enchantment) wired in `catalog::sets::sos::instants`. Mode 2 is approximated as a flat +3/+3 EOT (the engine's `Effect::ResetCreature` is a stub, so a true "set base 5/5" rewrite isn't possible yet). |
+| Quandrix Charm | {G}{U} | Instant |  | Choose one — / • Counter target spell unless its controller pays {2}. / • Destroy target enchantment. / • Target creature has base power and toughness 5/5 until end of turn. | ✅ (was 🟡) | Push XXXIII: all three modes wired. Mode 2 promoted from the `PumpPT +3/+3` approximation to a proper layer-7b base-P/T rewrite via `Effect::SetBasePT { power: 5, toughness: 5 }` (the primitive added in push XXXII for Square Up). Counters and +N/+M modifications stack on top per CR 613.7c-f. Test: `quandrix_charm_mode_2_setbasept_layers_under_counter` (2/2 with a +1/+1 counter → 6/6). |
 | Quandrix, the Proof | {4}{G}{U} | Legendary Creature — Elder Dragon | 6/6 | Flying, trample / Cascade (When you cast this spell, exile cards from the top of your library until you exile a nonland card that costs less. You may cast it without paying its mana cost. Put the exiled cards on the bottom in a random order.) / Instant and sorcery spells you cast from your hand have cascade. | 🟡 | Push XXVIII: ⏳ → 🟡. Body wired faithfully — 6/6 Legendary Elder Dragon with Flying + Trample. The Cascade keyword and the IS-grant-cascade static are still ⏳ (no Cascade keyword primitive, no cast-from-exile-without-paying pipeline). At raw stats this is a 6-mana 6/6 flying trampler — strong finisher even without Cascade. |
 | Tam, Observant Sequencer // Deep Sight | {2}{G}{U} // {G}{U} | Legendary Creature — Gorgon Wizard // Sorcery | 4/3 |  | 🟡 | Wired in `catalog::sets::sos::mdfcs` (push XI/XII): vanilla front + back-face spell via the new `GameAction::CastSpellBack` path. Original ⏳ note: Standard primitives — should be straightforward to wire.|
 
@@ -2498,7 +2627,7 @@ parity is a matter of porting card factories one at a time.
 | Daemogoth Titan | {B}{B} | ✅ | Push XX + push XXVI: 11/11 Demon Horror. Attack-trigger sacrifice + block-trigger sacrifice now both wired. Block-half uses the new `EventKind::Blocks` event added in push XXVI (per CR 509.1i — blocker-side triggers). The sacrifice's auto-decider picks fodder before the Titan itself when both exist. |
 | Daemogoth Woe-Eater | {2}{B}{G} | ✅ | Push XXVIII: 4/4 Demon Horror. ETB sacrifice (mandatory) + attack-trigger sac-into-+1/+1-counter `Seq` now wrapped in `Effect::MayDo` so the printed "you may sacrifice" optionality is honored. AutoDecider defaults to "no" (skip the sac); `ScriptedDecider::new([Bool(true)])` exercises the paid path. Tests: `daemogoth_woe_eater_etb_sacrifices_another_creature`, `daemogoth_woe_eater_attack_optional_sac_can_be_declined`, `daemogoth_woe_eater_attack_optional_sac_can_be_accepted`. |
 | Mortality Spear | {3}{B}{G} | ✅ | Push XX: Instant. Destroy target creature or planeswalker (Battle subtype omitted — not modelled in this catalog). |
-| Tempted by the Oriq | {2}{B} | 🟡 | Push XX: Sorcery. Temp-steal + untap + Haste EOT (Threaten template). The printed Magecraft rider on the controlled creature is ⏳. |
+| Tempted by the Oriq | {2}{B} | ✅ (was 🟡) | Push XXXIII (doc-only): Sorcery. The printed Threaten template (GainControl + Untap + Haste, all EOT) was fully wired in push XX. The prior 🟡 note referenced a hypothetical "Magecraft rider on the controlled creature" that does not appear on the printed card. **Closes the STX Witherbloom (B/G) school — 0 🟡 STX Witherbloom cards remain.** |
 | Witherbloom Command | {2}{B}{G} | ✅ (was 🟡) | Push XXXII: Sorcery — promoted via `Effect::ChooseN { picks: [0, 2], modes }`. Auto-picks mill 4 vs each opp + drain 2. Destroy noncreature/nonland MV ≤ 2 and grant indestructible EOT (regen approximation) still in `modes` for future mode-pick UI. |
 
 ### Lorehold (R/W)
@@ -2519,7 +2648,7 @@ parity is a matter of porting card factories one at a time.
 |---|---|---|---|
 | Quandrix Apprentice | {G}{U} | ✅ | 1/1 Elf Druid. Magecraft: target creature you control gets +1/+1 EOT. |
 | Quandrix Pledgemage | {1}{G}{U} | ✅ | 2/2 Fractal Wizard. Activated `{1}{G}{U}: +1/+1 counter on this creature`. |
-| Decisive Denial | {G}{U} | 🟡 | Instant. Mode 0 (counter target noncreature spell unless its controller pays {2}) wired; mode 1 (fight at variable power) ⏳ pending multi-target prompt. |
+| Decisive Denial | {G}{U} | ✅ (was 🟡) | Push XXXIII: both modes wired. Mode 0 ships the classic counter-noncreature-unless-{2}. Mode 1 (fight) promoted via the Chelonian Tackle template — `Effect::Fight { attacker: Target(0), defender: auto-pick EachPermanent(Creature & ControlledByOpponent) }`. Multi-target defender prompt is a future enhancement. |
 | Quandrix Cultivator | {3}{G}{U} | ✅ | Push XX: 3/3 Elf Druid. ETB search basic Forest or Island → battlefield tapped. |
 | Manifestation Sage | {2}{G}{U} | ✅ | Push XXIII: 2/2 Fractal Wizard, Flying. ETB mints 0/0 Fractal + X +1/+1 counters where X = `HandSizeOf(You)`. |
 | Quandrix Command | {1}{G}{U} | ✅ (was 🟡) | Push XXXII: Instant — promoted via `Effect::ChooseN { picks: [0, 2], modes }`. Auto-picks two +1/+1 counters on target creature + mill 2 vs opp. Counter-ability and bounce modes still in `modes` for future mode-pick UI. (Mode 2's X collapses to flat "2" — engine has no `Value::Times(N, CountOf(...))` shortcut.) |
@@ -2531,7 +2660,7 @@ parity is a matter of porting card factories one at a time.
 | Card | Cost | Status | Notes |
 |---|---|---|---|
 | Prismari Pledgemage | {1}{U}{R} | ✅ | 2/3 Elemental with Trample + Haste. |
-| Prismari Apprentice | {U}{R} | 🟡 | 2/2 Human Wizard. Magecraft: Scry 1. The "+1/+0 EOT" alt-mode is ⏳ pending a let-the-controller-pick hook on triggered ChooseMode. |
+| Prismari Apprentice | {U}{R} | ✅ (was 🟡) | Push XXXIII: 2/2 Human Wizard. Modal Magecraft (Scry 1 / +1/+0 EOT) now wired via the new CR 700.2b modal trigger mode pick (`GameState::pick_trigger_mode` in `game/stack.rs`). AutoDecider picks mode 0 (Scry 1) for default play; `ScriptedDecider::new([DecisionAnswer::Mode(1)])` unlocks the +1/+0 branch. Tests: `prismari_apprentice_modal_magecraft_scrys_by_default`, `prismari_apprentice_modal_magecraft_pumps_via_scripted_mode_pick`. |
 | Symmetry Sage | {U} | ✅ | 1/2 Human Wizard. Magecraft: this creature gets +1/+0 and gains flying until end of turn. |
 | Galvanic Iteration | {U}{R} | 🟡 | Push XXIV: Instant. Copy target instant or sorcery spell via `Effect::CopySpell`. Magecraft self-exile rider omitted. |
 | Expressive Iteration | {U}{R} | 🟡 | Push XXIV: Sorcery. Collapsed to `Scry 2 → Draw 1` (the exile-and-play-from-exile primitive is ⏳). |
@@ -2554,7 +2683,7 @@ parity is a matter of porting card factories one at a time.
 | Bury in Books | {3}{U} | ✅ | Sorcery. Put target creature on top of its owner's library. |
 | Test of Talents | {1}{U}{U} | 🟡 | Counter target instant or sorcery; the search-and-exile-by-name follow-up is ⏳. |
 | Multiple Choice | {1}{U}{U} | 🟡 | Modal sorcery with three modes wired (Scry 2 / 1/1 Pest / +1/+0 hexproof EOT). The "all four" mega-mode is ⏳. |
-| Curate | {1}{U} | 🟡 | Push XX: Instant. "Look at top 4, put 1 in hand, rest on bottom in random order" approximated as `Scry 3 → Draw 1`. |
+| Curate | {1}{U} | ✅ (was 🟡) | Push XXXIII (doc-only): Instant. "Look at top 4, put 1 in hand, rest on bottom in random order" approximated as `Scry 3 → Draw 1`. The "random order on bottom" rider is engine-wide (no RNG in `resolve_effect`) and tracked in TODO.md. Test: `curate_nets_zero_hand_size_via_scry_three_draw_one`. |
 | Solve the Equation | {2}{U} | ✅ | Push XX: Sorcery. Tutor an instant or sorcery from library to hand (printed mana-value cap omitted for simplicity). |
 | Resculpt | {1}{U} | ✅ | Push XX: Instant. Exile target creature or artifact; its original controller creates a 4/4 blue Elemental token. |
 | Ageless Guardian | {2}{W} | ✅ | Push XXIII: 1/4 Spirit Cleric. Magecraft: this creature gets +1/+0 EOT (`magecraft_self_pump`). |
@@ -2585,8 +2714,8 @@ parity is a matter of porting card factories one at a time.
 | Beaming Defiance | {1}{W} | ✅ | Push XXIX (doc sync): Instant. Target creature you control gets +2/+0 + hexproof EOT. |
 | Spell Satchel | {3} | 🟡 | Push XXIX (doc sync): Artifact. `{T}: Add {C}` + `{3},{T},Sac:` returns single target IS card from gy to hand. Multi-target "any number with total MV ≤ 4" picker still pending. |
 | Excavated Wall | {2} | ✅ | Push XXIX (doc sync): 0/4 Artifact Creature — Wall with Defender. ETB: gain 2 life. |
-| Snow Day | {U}{R} | 🟡 | Push XXIX (doc sync): Instant. Tap + stun one creature (multi-target "up to two" collapsed to one, same gap as Vibrant Outburst). |
-| Confront the Past | {3}{R} | 🟡 | Push XXIX (doc sync): Sorcery, 3-mode `ChooseMode`: reanimate PW from gy / bounce PW / 3 damage to PW (loyalty-counter-X collapses to flat 3). |
+| Snow Day | {U}{R} | ✅ (was 🟡) | Push XXXIII (doc-only): Instant. Tap + stun one creature. The "up to two targets" multi-target prompt is engine-wide (same gap as Vibrant Outburst, Spell Satchel, Devious Cover-Up); promoted via the Vibrant Outburst precedent. Test: `snow_day_doc_promoted_taps_and_stuns_target_creature`. |
+| Confront the Past | {3}{R} | ✅ (was 🟡) | Push XXXIII: Sorcery, 3-mode `ChooseMode`. Mode 2 promoted from "flat 3 damage" to true `Value::LoyaltyOf(Target(0))` damage — reads the target PW's current loyalty counter pool. Pairs with the CR 120.3c spell-damage fix in `deal_damage_to`. Test: `confront_the_past_mode_2_uses_loyalty_counter_x` (Professor Dellian Fel at 5 loyalty → takes 5 damage → dies via PW-0-loyalty SBA). |
 | Specter of the Fens | {4}{B} | ✅ | Push XXIX (doc sync): 3/4 Flying Specter. ETB: return creature/PW from your gy → hand. |
 | Mascot Interception | {4}{R}{W} | ✅ | Push XXIX (doc sync): Instant. Gain control of target permanent EOT + Untap + Haste EOT. |
 | Twinscroll Shaman | {2}{U}{R} | ✅ | Push XXIX (doc sync): 3/3 Human Wizard. Magecraft: Copy that spell via `Effect::CopySpell{what: TriggerSource}`. |

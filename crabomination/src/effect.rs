@@ -241,6 +241,14 @@ pub enum Value {
     /// always read the spell's controller instead of the iterated
     /// player.
     PermanentCountControlledBy(PlayerRef),
+    /// Number of loyalty counters on the first permanent the selector
+    /// resolves to. Used by Strixhaven's **Confront the Past** mode 2
+    /// ("Confront the Past deals damage to target planeswalker equal to
+    /// the number of loyalty counters on it") and any future
+    /// "loyalty-counter-X" payoff. Returns 0 for non-permanents and
+    /// non-planeswalkers (the field is just the `CounterType::Loyalty`
+    /// count, which is 0 for cards without loyalty).
+    LoyaltyOf(Box<Selector>),
 }
 
 impl Value {
@@ -941,6 +949,7 @@ impl Effect {
                 }
                 Value::NonNeg(v) => value_has_target(v),
                 Value::ManaValueOf(s) => sel_has_target(s),
+                Value::LoyaltyOf(s) => sel_has_target(s),
                 _ => false,
             }
         }

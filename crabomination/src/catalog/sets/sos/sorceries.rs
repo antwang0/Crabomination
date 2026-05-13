@@ -2214,15 +2214,19 @@ pub fn zimones_experiment() -> CardDefinition {
 /// instead put two of those cards into your hand and the third on the
 /// bottom of your library."
 ///
-/// Approximated as `Scry 3 + Draw 1` — the controller orders the top
-/// three, then draws the chosen one. The conditional "instead pick 2"
-/// upgrade rider when both an instant and a sorcery sit in the
-/// graveyard is omitted (no per-zone presence-pair predicate yet, and
-/// no "look-and-distribute-by-count" primitive). Net play: the
-/// controller filters their next draw, exact-match against the
-/// printed mainline mode for typical cast paths.
+/// ✅ Push XXXIII: conditional draw upgrade now wired via `Effect::If`
+/// + `Predicate::All([SelectorExists(IS in your gy), SelectorExists(
+/// Sorcery in your gy)])`.
+///
+/// Mainline (gate fails) is the prior `Scry 3 → Draw 1` shape.
+/// Upgrade (both IS + Sorcery in your gy) bumps to `Scry 3 → Draw 2`
+/// — the controller orders the top three, then draws two of them
+/// (the third stays on the bottom of the library, per the printed
+/// Oracle). The Scry-order picker lets the controller pick which two
+/// of the top three are "kept on top" for the draw.
 pub fn flow_state() -> CardDefinition {
     use crate::mana::u;
+    use crate::card::{Predicate, Zone};
     CardDefinition {
         name: "Flow State",
         cost: cost(&[generic(1), u()]),
@@ -2232,16 +2236,40 @@ pub fn flow_state() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![],
-        effect: Effect::Seq(vec![
-            Effect::Scry {
-                who: PlayerRef::You,
-                amount: Value::Const(3),
-            },
-            Effect::Draw {
-                who: Selector::You,
-                amount: Value::Const(1),
-            },
-        ]),
+        effect: Effect::If {
+            cond: Predicate::All(vec![
+                Predicate::SelectorExists(Selector::CardsInZone {
+                    who: PlayerRef::You,
+                    zone: Zone::Graveyard,
+                    filter: SelectionRequirement::HasCardType(CardType::Instant),
+                }),
+                Predicate::SelectorExists(Selector::CardsInZone {
+                    who: PlayerRef::You,
+                    zone: Zone::Graveyard,
+                    filter: SelectionRequirement::HasCardType(CardType::Sorcery),
+                }),
+            ]),
+            then: Box::new(Effect::Seq(vec![
+                Effect::Scry {
+                    who: PlayerRef::You,
+                    amount: Value::Const(3),
+                },
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(2),
+                },
+            ])),
+            else_: Box::new(Effect::Seq(vec![
+                Effect::Scry {
+                    who: PlayerRef::You,
+                    amount: Value::Const(3),
+                },
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
+            ])),
+        },
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],

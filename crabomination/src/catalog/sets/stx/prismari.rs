@@ -55,11 +55,16 @@ pub fn prismari_pledgemage() -> CardDefinition {
 /// choose one — / • Scry 1. / • Prismari Apprentice gets +1/+0 until
 /// end of turn."
 ///
-/// 🟡 Currently picks mode 0 (Scry 1) only — `magecraft` produces a
-/// single trigger, and the auto-decider for `Effect::ChooseMode` inside
-/// a triggered ability defaults to mode 0. A "let the controller pick"
-/// hook for triggered-ability ChooseMode would unblock the +1/+0 mode.
-/// Tracked under TODO.md "May Optionality / mode-pick on triggers".
+/// ✅ Modal magecraft now wired via `Effect::ChooseMode([Scry 1, +1/+0
+/// EOT])`. The engine's CR 700.2b primitive (`pick_trigger_mode` in
+/// `game/stack.rs`) asks the controller for the mode at push-time when
+/// the trigger lands on the stack — so `AutoDecider` picks mode 0
+/// (Scry 1) for the default play pattern, and `ScriptedDecider::new(
+/// [DecisionAnswer::Mode(1)])` exercises the +1/+0 branch in tests.
+/// The mode pick is a `Decision::ChooseMode { source, num_modes: 2 }`,
+/// matching the printed Oracle's "choose one — " wording. Tests:
+/// `prismari_apprentice_scry_one_by_default_on_instant_cast`,
+/// `prismari_apprentice_can_pump_via_scripted_mode_pick`.
 pub fn prismari_apprentice() -> CardDefinition {
     CardDefinition {
         name: "Prismari Apprentice",
@@ -75,10 +80,20 @@ pub fn prismari_apprentice() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![magecraft(Effect::Scry {
-            who: PlayerRef::You,
-            amount: Value::Const(1),
-        })],
+        triggered_abilities: vec![magecraft(Effect::ChooseMode(vec![
+            // Mode 0 — Scry 1.
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
+            // Mode 1 — Prismari Apprentice gets +1/+0 until end of turn.
+            Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(1),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+        ]))],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],

@@ -1,7 +1,46 @@
 use super::*;
 use crate::card::{Keyword, Supertype};
+use crate::decision::{Decision, DecisionAnswer};
 use crate::effect::{Effect, EventKind, EventScope};
 use crate::game::types::{DelayedKind, DelayedTrigger};
+
+impl GameState {
+    /// CR 700.2b — "The controller of a modal triggered ability chooses
+    /// the mode(s) as part of putting that ability on the stack."
+    ///
+    /// Inspect the trigger's top-level effect: if it's `Effect::ChooseMode`,
+    /// ask the controller (via the installed `Decider`) which mode to pick.
+    /// Returns `Some(idx)` for modal triggers and `None` for non-modal ones
+    /// (which keeps the existing `mode.unwrap_or(0)` resolution path
+    /// behaving correctly for the simple case). The `AutoDecider` picks
+    /// mode 0 (the leftmost printed mode), preserving prior behaviour;
+    /// `ScriptedDecider::new([DecisionAnswer::Mode(idx)])` lets tests
+    /// inject alternative picks for cards like Prismari Apprentice
+    /// (modal Magecraft: Scry 1 / +1/+0 EOT).
+    ///
+    /// The picked index is clamped to `modes.len() - 1` to guard against
+    /// a misbehaving decider returning an out-of-range mode. Effects that
+    /// nest `ChooseMode` inside `Seq`/`If`/`ForEach` are not addressed
+    /// here — those would need a recursive walk and an N-tuple of picks;
+    /// the printed Magic cards in scope today (Prismari Apprentice,
+    /// future Tempted by the Oriq Magecraft rider) all have a top-level
+    /// `ChooseMode` so the simple walk is sufficient.
+    pub(crate) fn pick_trigger_mode(&mut self, effect: &Effect, source: CardId) -> Option<usize> {
+        if let Effect::ChooseMode(modes) = effect {
+            if modes.is_empty() {
+                return None;
+            }
+            let answer = self.decider.decide(&Decision::ChooseMode {
+                source,
+                num_modes: modes.len(),
+            });
+            if let DecisionAnswer::Mode(idx) = answer {
+                return Some(idx.min(modes.len() - 1));
+            }
+        }
+        None
+    }
+}
 
 impl GameState {
     // ── Pass priority ─────────────────────────────────────────────────────────
@@ -212,12 +251,14 @@ impl GameState {
             let target = target.or_else(|| {
                 self.auto_target_for_effect_avoiding(&effect, controller, Some(source))
             });
+            // CR 700.2b — pick the mode at push time if the trigger is modal.
+            let mode = self.pick_trigger_mode(&effect, source);
             self.stack.push(StackItem::Trigger {
                 source,
                 controller,
                 effect: Box::new(effect),
                 target,
-                mode: None,
+                mode,
                 x_value: 0,
                 converged_value: 0,
             trigger_source: None,
@@ -231,12 +272,14 @@ impl GameState {
             // exists (Strixhaven Magecraft / Repartee, etc.).
             let auto_target =
                 self.auto_target_for_effect_avoiding(&effect, controller, Some(source));
+            // CR 700.2b — modal trigger mode pick at push-time.
+            let mode = self.pick_trigger_mode(&effect, source);
             self.stack.push(StackItem::Trigger {
                 source,
                 controller,
                 effect: Box::new(effect),
                 target: auto_target,
-                mode: None,
+                mode,
                 x_value: 0,
                 converged_value: 0,
             trigger_source: None,

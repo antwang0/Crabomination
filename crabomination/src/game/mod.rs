@@ -808,12 +808,14 @@ impl GameState {
                 }
             }
             let auto_target = self.auto_target_for_effect(&effect, controller);
+            // CR 700.2b — modal triggered ability mode pick at push-time.
+            let mode = self.pick_trigger_mode(&effect, source);
             self.stack.push(StackItem::Trigger {
                 source,
                 controller,
                 effect: Box::new(effect),
                 target: auto_target,
-                mode: None,
+                mode,
                 x_value: 0,
                 converged_value: 0,
                 // Thread the event subject through so `Selector::TriggerSource`

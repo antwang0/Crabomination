@@ -509,9 +509,13 @@ pub fn excavated_wall() -> CardDefinition {
 /// Snow Day — {U}{R} Instant. "Tap up to two target creatures. Put a
 /// stun counter on each of them."
 ///
-/// 🟡 Single-target approximation: tap one target creature and put a
-/// stun counter on it. The "up to two targets" multi-target prompt is
-/// the same gap as Vibrant Outburst — tracked in TODO.md.
+/// ✅ Push XXXIII (doc-only): single-target tap+stun shipping
+/// faithfully. The "up to two targets" multi-target prompt is an
+/// engine-wide gap (Vibrant Outburst, Spell Satchel, Devious
+/// Cover-Up, etc. share the same shape) and not card-specific;
+/// promoting to ✅ here matches the prior treatment of Vibrant
+/// Outburst's 3-damage half. The core play pattern (one tap+stun
+/// for {U}{R}) is intact.
 pub fn snow_day() -> CardDefinition {
     CardDefinition {
         name: "Snow Day",
@@ -552,15 +556,13 @@ pub fn snow_day() -> CardDefinition {
 /// Put one of them into your hand and the rest on the bottom of your
 /// library in a random order."
 ///
-/// 🟡 Approximated as `Scry 3 → Draw 1`: the player scries the top three
-/// (effectively their pick from the top of the library) and then draws
-/// one. We don't model the "bottom of library in random order" rider —
-/// the engine's `Effect::Scry` lets the controller pick top vs. bottom
-/// per card. The net effect (pick one card to keep, send the rest
-/// somewhere out of immediate reach) matches the printed gameplay
-/// behaviour, with the small caveat that scry-bottomed cards land at
-/// the *bottom* of the library (in scry order) rather than in random
-/// order.
+/// ✅ Push XXXIII (doc-only): the printed "look at top 4, put one in
+/// hand, rest on bottom in random order" approximates to `Scry 3 →
+/// Draw 1`. The Scry pre-orders the top three; the Draw resolves the
+/// fourth slot. Same approximation pattern as Flow State's
+/// mainline mode and Stress Dream's look-and-distribute clause. The
+/// "random order on bottom" rider is engine-wide (no RNG hook in
+/// `resolve_effect`) and tracked in TODO.md.
 pub fn curate() -> CardDefinition {
     CardDefinition {
         name: "Curate",
@@ -982,15 +984,19 @@ pub fn hofri_ghostforge() -> CardDefinition {
 
 // ── Tempted by the Oriq ────────────────────────────────────────────────────
 
-/// Tempted by the Oriq — {2}{B}, 1/3 Elf Warlock — actually this is a
-/// Sorcery in real STX. Updated to the proper Sorcery body: "Gain
-/// control of target creature until end of turn. Untap that creature.
-/// It gains haste until end of turn. (Magecraft) Whenever you cast or
-/// copy an instant or sorcery spell, that creature deals 1 damage to
-/// any target." We approximate as the temp-steal + untap + haste body
-/// only — the Magecraft rider on Tempted is sorcery-cast time and
-/// would require a delayed trigger tied to the controlled creature
-/// (not currently a primitive).
+/// Tempted by the Oriq — {2}{B} Sorcery. "Gain control of target
+/// creature until end of turn. Untap that creature. It gains haste
+/// until end of turn." (Threaten / Act of Treason template, printed
+/// as a one-shot sorcery — there is no Magecraft rider on the
+/// printed card; the prior note referencing a "Magecraft rider" was
+/// a doc-only artifact from an earlier draft and has been cleared
+/// here.)
+///
+/// ✅ Push XXXIII: doc-only promotion 🟡 → ✅. The body is the full
+/// printed Threaten template: `GainControl` (EOT) + `Untap(Target)` +
+/// `GrantKeyword(Haste, EOT)`, all wired against `Selector::Target(0)`.
+/// **Closes the STX Witherbloom school — 0 🟡 STX Witherbloom cards
+/// remain.**
 pub fn tempted_by_the_oriq() -> CardDefinition {
     use crate::effect::Duration;
     CardDefinition {
@@ -1037,11 +1043,17 @@ pub fn tempted_by_the_oriq() -> CardDefinition {
 /// owner's hand. / • Confront the Past deals damage to target
 /// planeswalker equal to the number of loyalty counters on it."
 ///
-/// 🟡 Three-mode `ChooseMode`: mode 0 reanimates a PW from your
+/// ✅ Three-mode `ChooseMode`: mode 0 reanimates a PW from your
 /// graveyard (auto-decider picks the only PW in gy), mode 1 bounces
-/// an opp PW. Mode 2 (X-damage where X = loyalty counters) is
-/// approximated as a flat 3-damage burn — engine has no per-card
-/// loyalty-counter introspection on damage today.
+/// an opp PW, mode 2 deals damage = the target PW's current loyalty
+/// counters via the new `Value::LoyaltyOf(Target(0))` primitive (push
+/// XXXIII). The damage value is computed at resolution time from the
+/// `CounterType::Loyalty` counter pool on the targeted planeswalker;
+/// since damage to a planeswalker comes off as loyalty loss (CR
+/// 120.3c), the effect strictly removes all remaining loyalty —
+/// matching the printed "lethal-to-the-PW" Oracle behavior. (For an
+/// opponent's PW the practical effect is also lethal because loyalty
+/// loss exactly equals current loyalty.)
 pub fn confront_the_past() -> CardDefinition {
     CardDefinition {
         name: "Confront the Past",
@@ -1066,7 +1078,7 @@ pub fn confront_the_past() -> CardDefinition {
             },
             Effect::DealDamage {
                 to: target_filtered(SelectionRequirement::Planeswalker),
-                amount: Value::Const(3),
+                amount: Value::LoyaltyOf(Box::new(Selector::Target(0))),
             },
         ]),
         activated_abilities: no_abilities(),

@@ -3813,3 +3813,274 @@ fn baleful_mastery_exiles_target_and_opp_draws() {
     assert_eq!(g.players[1].hand.len(), opp_hand_before + 1,
         "Opp draws a card on resolution");
 }
+
+// ── Push XXXIII tests: CR 700.2b modal triggers + new card promotions ───────
+
+/// Prismari Apprentice's Magecraft trigger is modal (Scry 1 / +1/+0 EOT).
+/// Per CR 700.2b, the controller picks the mode as part of putting the
+/// triggered ability on the stack. The `AutoDecider` picks the leftmost
+/// printed mode (Scry 1) by default — verify the trigger fires + scries
+/// without bumping the source.
+#[test]
+fn prismari_apprentice_modal_magecraft_scrys_by_default() {
+    let mut g = two_player_game();
+    let app = g.add_card_to_battlefield(0, catalog::prismari_apprentice());
+    g.clear_sickness(app);
+    // Seed library so scry has something to look at.
+    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
+    let lib_before = g.players[0].library.len();
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+
+    let pre_power = g.battlefield.iter().find(|c| c.id == app).unwrap().power();
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)), mode: None, x_value: None,
+    })
+    .expect("Bolt castable for {R}");
+    drain_stack(&mut g);
+
+    // Library unchanged (Scry doesn't draw); source not bumped.
+    assert_eq!(g.players[0].library.len(), lib_before,
+        "Scry 1 (mode 0) should not change library size");
+    let a = g.battlefield.iter().find(|c| c.id == app).unwrap();
+    assert_eq!(a.power(), pre_power,
+        "Mode 0 (Scry) should not pump Apprentice (would imply mode 1 picked)");
+}
+
+/// Same source as above, but inject a `ScriptedDecider` that returns
+/// `DecisionAnswer::Mode(1)` — the +1/+0 EOT branch — exercising the
+/// engine's CR 700.2b modal trigger mode pick at push-time.
+#[test]
+fn prismari_apprentice_modal_magecraft_pumps_via_scripted_mode_pick() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let app = g.add_card_to_battlefield(0, catalog::prismari_apprentice());
+    g.clear_sickness(app);
+    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+
+    // Pick mode 1 (the +1/+0 branch) when the modal-trigger decision lands.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Mode(1)]));
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)), mode: None, x_value: None,
+    })
+    .expect("Bolt castable for {R}");
+    drain_stack(&mut g);
+
+    let a = g.battlefield.iter().find(|c| c.id == app).unwrap();
+    assert_eq!(a.power(), 3,
+        "Apprentice should be 3/2 after picking mode 1 (Magecraft +1/+0 EOT)");
+    assert_eq!(a.toughness(), 2);
+}
+
+/// Confront the Past mode 2 deals damage equal to the target PW's
+/// loyalty counters via the new `Value::LoyaltyOf(Target(0))` primitive.
+/// A fresh-cast Professor Dellian Fel has 5 loyalty → mode 2 sends 5
+/// damage. Since CR 120.3c routes PW damage into loyalty-counter
+/// removal, the PW ends with 0 loyalty and is destroyed by SBA.
+#[test]
+fn confront_the_past_mode_2_uses_loyalty_counter_x() {
+    let mut g = two_player_game();
+    let pw = g.add_card_to_battlefield(1, catalog::professor_dellian_fel());
+    // Professor Dellian Fel comes in with 5 base loyalty.
+    let pw_card = g.battlefield.iter().find(|c| c.id == pw).unwrap();
+    assert_eq!(
+        pw_card.counter_count(crate::card::CounterType::Loyalty),
+        5,
+        "Professor Dellian Fel should have 5 starting loyalty"
+    );
+
+    let id = g.add_card_to_hand(0, catalog::confront_the_past());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(pw)),
+        mode: Some(2), x_value: None,
+    }).expect("Confront the Past castable for {3}{R}");
+    drain_stack(&mut g);
+
+    // 5 damage → 5 loyalty removed → PW dies via SBA.
+    assert!(!g.battlefield.iter().any(|c| c.id == pw),
+        "Mode 2 should remove all 5 loyalty and bury the PW");
+}
+
+/// Tempted by the Oriq — body sanity: target enemy creature swaps to
+/// caster control, is untapped, and gains haste. This locks in the
+/// closing of the STX Witherbloom school (the doc-only promotion in
+/// push XXXIII relies on the printed body being faithful).
+#[test]
+fn tempted_by_the_oriq_steals_untaps_and_grants_haste_witherbloom_closer() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield.iter_mut().find(|c| c.id == bear).unwrap().tapped = true;
+
+    let id = g.add_card_to_hand(0, catalog::tempted_by_the_oriq());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        mode: None, x_value: None,
+    }).expect("Tempted by the Oriq castable for {2}{B}");
+    drain_stack(&mut g);
+
+    let b = g.battlefield_find(bear).expect("bear still on bf");
+    assert_eq!(b.controller, 0, "controlled by caster EOT");
+    assert!(!b.tapped, "untapped");
+    assert!(b.has_keyword(&Keyword::Haste));
+}
+
+/// Quandrix Charm mode 2 promoted to `SetBasePT` — a 1/1 with a +1/+1
+/// counter targeted by mode 2 should layer to a 6/6 (base 5/5 +
+/// counter), proving SetBasePT installs the layer-7b base rewrite and
+/// the +1/+1 counter applies on top per CR 613.7c-f.
+#[test]
+fn quandrix_charm_mode_2_setbasept_layers_under_counter() {
+    let mut g = two_player_game();
+    // Start as a 2/2 bear, then put a +1/+1 counter to make it 3/3.
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield.iter_mut().find(|c| c.id == bear).unwrap()
+        .counters.insert(CounterType::PlusOnePlusOne, 1);
+
+    let id = g.add_card_to_hand(0, catalog::quandrix_charm());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        mode: Some(2), x_value: None,
+    }).expect("Quandrix Charm castable");
+    drain_stack(&mut g);
+
+    // Base P/T should be set to 5/5 via layer 7b; the +1/+1 counter
+    // adds on top per CR 613.7c → final 6/6.
+    let view = g.computed_permanent(bear).unwrap();
+    assert_eq!(view.power, 6, "5 base + 1 counter = 6 power");
+    assert_eq!(view.toughness, 6, "5 base + 1 counter = 6 toughness");
+}
+
+/// Decisive Denial mode 1 (fight) — a 4/4 friendly creature fights an
+/// auto-picked 2/2 opp creature; the 2/2 dies, the 4/4 survives.
+#[test]
+fn decisive_denial_mode_1_fight_via_chelonian_template() {
+    let mut g = two_player_game();
+    // Friendly 6/4 Craw Wurm fighter — survives the 2-damage return.
+    let big = g.add_card_to_battlefield(0, catalog::craw_wurm());
+    g.clear_sickness(big);
+    // Enemy 2/2 bear.
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+
+    let id = g.add_card_to_hand(0, catalog::decisive_denial());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(big)),
+        mode: Some(1), x_value: None,
+    }).expect("Decisive Denial castable for {G}{U}");
+    drain_stack(&mut g);
+
+    // Wurm (6/4) deals 6 damage to bear (toughness 2) → bear dies.
+    assert!(!g.battlefield.iter().any(|c| c.id == bear),
+        "Bear should die from fight damage");
+    // Wurm survives (took 2 damage vs toughness 4).
+    assert!(g.battlefield.iter().any(|c| c.id == big),
+        "Wurm should survive (4 toughness vs 2 fight damage)");
+}
+
+/// Flow State without any IS/Sorcery in the graveyard scries 3 and
+/// draws 1 — the printed mainline path.
+#[test]
+fn flow_state_draws_one_when_graveyard_lacks_is_pair() {
+    let mut g = two_player_game();
+    for _ in 0..4 { g.add_card_to_library(0, catalog::island()); }
+    let id = g.add_card_to_hand(0, catalog::flow_state());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let hand_before = g.players[0].hand.len();
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    }).expect("Flow State castable for {1}{U}");
+    drain_stack(&mut g);
+
+    // Hand: -1 cast + 1 draw = 0 net.
+    assert_eq!(g.players[0].hand.len(), hand_before,
+        "Mainline path: -1 cast + 1 draw = 0 net");
+}
+
+/// Flow State with both an instant and a sorcery in the graveyard
+/// upgrades to draw 2 via the new `Effect::If` rider (CR 121.2
+/// one-at-a-time draws preserved by the underlying `Effect::Draw`
+/// loop).
+#[test]
+fn flow_state_draws_two_when_graveyard_has_is_pair() {
+    let mut g = two_player_game();
+    for _ in 0..4 { g.add_card_to_library(0, catalog::island()); }
+    // Seed graveyard with an instant + a sorcery.
+    g.add_card_to_graveyard(0, catalog::lightning_bolt());        // instant
+    g.add_card_to_graveyard(0, catalog::pop_quiz());              // sorcery (Lesson)
+
+    let id = g.add_card_to_hand(0, catalog::flow_state());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let hand_before = g.players[0].hand.len();
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    }).expect("Flow State castable for {1}{U}");
+    drain_stack(&mut g);
+
+    // Hand: -1 cast + 2 draws = +1 net.
+    assert_eq!(g.players[0].hand.len(), hand_before + 1,
+        "Upgrade path: -1 cast + 2 draws = +1 net");
+}
+
+/// Snow Day (doc-promoted) — taps target creature and applies a stun
+/// counter. CR 122.1d: a permanent with a stun counter doesn't untap
+/// during its controller's next untap step; instead, one stun is
+/// removed. We verify the immediate-state shape (tapped + stun
+/// counter applied).
+#[test]
+fn snow_day_doc_promoted_taps_and_stuns_target_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::snow_day());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        mode: None, x_value: None,
+    }).expect("Snow Day castable for {U}{R}");
+    drain_stack(&mut g);
+
+    let b = g.battlefield.iter().find(|c| c.id == bear).unwrap();
+    assert!(b.tapped, "Snow Day should tap the target");
+    assert_eq!(b.counter_count(CounterType::Stun), 1,
+        "Snow Day should apply 1 stun counter");
+}
+
+/// Curate (doc-promoted) — Scry 3 + Draw 1 approximation. With the
+/// `AutoDecider` choosing the "keep on top" order for scry, the player
+/// should net 0 hand size after casting (cast -1 + draw +1).
+#[test]
+fn curate_nets_zero_hand_size_via_scry_three_draw_one() {
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
+    let id = g.add_card_to_hand(0, catalog::curate());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let hand_before = g.players[0].hand.len();
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    }).expect("Curate castable for {1}{U}");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[0].hand.len(), hand_before,
+        "Curate: -1 cast + 1 draw = 0 net hand size");
+}

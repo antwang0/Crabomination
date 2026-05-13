@@ -1874,6 +1874,24 @@ impl GameState {
                 }
                 ctx.mana_spent as i32
             }
+            Value::LoyaltyOf(s) => self
+                .resolve_selector(s, ctx)
+                .into_iter()
+                .find_map(|e| match e {
+                    EntityRef::Permanent(cid) | EntityRef::Card(cid) => self
+                        .battlefield_find(cid)
+                        .or_else(|| {
+                            self.players.iter().find_map(|p| {
+                                p.graveyard.iter().find(|c| c.id == cid)
+                            })
+                        })
+                        .or_else(|| self.exile.iter().find(|c| c.id == cid))
+                        .map(|c| {
+                            c.counter_count(crate::card::CounterType::Loyalty) as i32
+                        }),
+                    EntityRef::Player(_) => None,
+                })
+                .unwrap_or(0),
             Value::ManaValueOf(s) => self
                 .resolve_selector(s, ctx)
                 .into_iter()
@@ -2428,9 +2446,43 @@ impl GameState {
                 events.push(GameEvent::LifeLost { player: p, amount });
             }
             EntityRef::Permanent(cid) => {
-                if let Some(c) = self.battlefield_find_mut(cid) {
+                // CR 120.3c — damage dealt to a planeswalker causes that
+                // many loyalty counters to be removed from that
+                // planeswalker. Before this branch, non-combat
+                // `Effect::DealDamage` was marking the damage on `c.damage`
+                // regardless of card type, so a Lightning Bolt at a 3-loyalty
+                // PW correctly removed 3 damage to be applied to toughness
+                // (toughness = 0 → die!) but skipped the printed
+                // loyalty-loss path. Combat damage already routes through
+                // `combat.rs::AttackTarget::Planeswalker` which decrements
+                // loyalty — this aligns spell damage with the same rule.
+                let is_pw = self
+                    .battlefield_find(cid)
+                    .map(|c| c.definition.is_planeswalker())
+                    .unwrap_or(false);
+                if is_pw {
+                    if let Some(c) = self.battlefield_find_mut(cid) {
+                        let current = c.counter_count(crate::card::CounterType::Loyalty);
+                        let new_loyalty = current.saturating_sub(amount);
+                        c.counters
+                            .insert(crate::card::CounterType::Loyalty, new_loyalty);
+                        events.push(GameEvent::DamageDealt {
+                            amount,
+                            to_player: None,
+                            to_card: Some(cid),
+                        });
+                        events.push(GameEvent::LoyaltyChanged {
+                            card_id: cid,
+                            new_loyalty: new_loyalty as i32,
+                        });
+                    }
+                } else if let Some(c) = self.battlefield_find_mut(cid) {
                     c.damage += amount;
-                    events.push(GameEvent::DamageDealt { amount, to_player: None, to_card: Some(cid) });
+                    events.push(GameEvent::DamageDealt {
+                        amount,
+                        to_player: None,
+                        to_card: Some(cid),
+                    });
                 }
             }
             EntityRef::Card(_) => {}
