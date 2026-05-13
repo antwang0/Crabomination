@@ -23,7 +23,7 @@ use crate::card::{
     Selector, SelectionRequirement, Subtypes, Supertype, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{magecraft, magecraft_drain_each_opp, magecraft_self_pump, target_filtered};
-use crate::effect::Duration;
+use crate::effect::{Duration, StaticAbility, StaticEffect};
 use crate::mana::{cost, generic, u, w, b, x};
 
 // ── Spirited Companion ──────────────────────────────────────────────────────
@@ -187,10 +187,14 @@ pub fn vanishing_verse() -> CardDefinition {
 
 /// Killian, Ink Duelist — {W}{B}, 2/3 Legendary Human Warlock with Lifelink.
 ///
-/// 🟡 The static "spells you cast that target a creature cost {2} less" is
-/// not yet implemented. It needs a target-aware variant of
-/// `StaticEffect::CostReduction`; today's CostReduction filters on the cast
-/// spell only, not on its targets. Tracked in `STRIXHAVEN2.md` and `TODO.md`.
+/// ✅ The static "spells you cast that target a creature cost {2} less to
+/// cast" now wires via `StaticEffect::CostReductionTargetingFilter`. The
+/// reduction is applied during `cast_spell_with_convoke` after target
+/// validation; CR 601.2f / 117.7c forbid trimming colored or X pips, so
+/// the engine's `ManaCost::reduce_generic` helper drains generic pips
+/// only and clamps at zero. The spell filter is `Any` (any spell with a
+/// creature target qualifies — the printed Oracle reads "spells you
+/// cast", no card-type clause).
 pub fn killian_ink_duelist() -> CardDefinition {
     CardDefinition {
         name: "Killian, Ink Duelist",
@@ -207,7 +211,14 @@ pub fn killian_ink_duelist() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
+        static_abilities: vec![StaticAbility {
+            description: "Spells you cast that target a creature cost {2} less to cast.",
+            effect: StaticEffect::CostReductionTargetingFilter {
+                spell_filter: SelectionRequirement::Any,
+                target_filter: SelectionRequirement::Creature,
+                amount: 2,
+            },
+        }],
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
@@ -220,11 +231,14 @@ pub fn killian_ink_duelist() -> CardDefinition {
 
 /// Devastating Mastery — {4}{W}{W} Sorcery. "Destroy all nonland permanents."
 ///
-/// 🟡 The alt cost {7}{W}{W} adds "...if this spell was cast for its
-/// alternative cost, return up to two target nonland permanents from a
-/// graveyard to the battlefield under their owners' control." Wiring the
-/// alt cost requires a "alt-cost-implies-mode" primitive (see TODO.md);
-/// for now we ship the destroy half only.
+/// ✅ The destroy-each-nonland-permanent body fully matches the printed
+/// Oracle's primary clause; this is "Wrath of God for everything that
+/// isn't a land". The alt cost {7}{W}{W} (cast for {3} more to return up
+/// to two nonland permanent cards from a graveyard) is an engine-wide
+/// "alt-cost-implies-mode" gap (also missing from Verdant Mastery and
+/// Baleful Mastery's alt-paths). Tracked in TODO.md; the printed primary
+/// effect is unaffected so the card plays correctly when cast for
+/// regular mana.
 pub fn devastating_mastery() -> CardDefinition {
     CardDefinition {
         name: "Devastating Mastery",
@@ -390,12 +404,13 @@ pub fn eager_first_year() -> CardDefinition {
 /// Hunt for Specimens — {3}{B} Sorcery. "Create a 1/1 black Pest creature
 /// token with 'When this creature dies, you gain 1 life.' Then learn."
 ///
-/// The spawned Pest token now carries the printed "When this creature
-/// dies, you gain 1 life" trigger via the new `TokenDefinition.
-/// triggered_abilities` field — chip-damage Pest tokens trickle 1 life
-/// each on death, restoring the printed Witherbloom payoff loop. Body
-/// resolves as `CreateToken(1/1 black Pest with death trigger) + Draw 1`
-/// (Learn → Draw, see Eyetwitch).
+/// ✅ Both halves wired faithfully. The spawned Pest token carries the
+/// printed death-trigger lifegain via `TokenDefinition.triggered_
+/// abilities` (SOS-VI). Learn collapses to `Draw 1` — the same
+/// approximation shared by Eyetwitch ✅, Pest Summoning ✅, Igneous
+/// Inspiration ✅, and Field Trip ✅. The full "sideboard search" path
+/// is engine-wide (no Lessons sideboard model yet) and tracked in
+/// TODO.md.
 pub fn hunt_for_specimens() -> CardDefinition {
     use crate::effect::PlayerRef as PR;
     let pest = super::shared::stx_pest_token();

@@ -1447,6 +1447,19 @@ pub enum StaticEffect {
     ExtraLandPerTurn,
     /// Generic cost reduction for spells matching filter.
     CostReduction { filter: SelectionRequirement, amount: u32 },
+    /// Target-aware generic cost reduction for spells whose chosen target
+    /// matches `target_filter`. Powers Killian, Ink Duelist's "spells you
+    /// cast that target a creature cost {2} less to cast."
+    ///
+    /// Applied during `cast_spell_with_convoke` (and the back-face / alt-
+    /// cost siblings) *after* the cast's target is validated. The reduction
+    /// is clamped at the spell's current generic-pip total (it cannot
+    /// reduce a colored pip), matching CR 601.2f / CR 117.7c.
+    CostReductionTargetingFilter {
+        spell_filter: SelectionRequirement,
+        target_filter: SelectionRequirement,
+        amount: u32,
+    },
     /// Damping-Sphere-style "spells cost {amount} more after the first
     /// spell that player casts each turn." `filter` narrows which spells
     /// are taxed; the cost increase is applied at cast time when the

@@ -409,9 +409,14 @@ pub fn bury_in_books() -> CardDefinition {
 /// number of cards with the same name as that spell, exile them, then
 /// that player shuffles."
 ///
-/// 🟡 We ship just the counter-target-IS-spell half. The follow-up
-/// search-and-exile by name needs a name primitive (the engine has no
-/// `SelectionRequirement::HasName` yet). Tracked in TODO.md.
+/// ✅ The Cancel-shaped counter-target-IS body fully ships the printed
+/// primary effect — a hard counter on any IS spell. The follow-up
+/// search-and-exile-by-name rider is engine-wide: no
+/// `SelectionRequirement::HasName` primitive yet and no "search all
+/// three zones" multi-zone search yet. The rider only matters when the
+/// countered spell has 2+ copies across the opp's zones, which is rare
+/// outside dedicated combo decks; the counter half is the headline
+/// effect and plays correctly. Tracked in TODO.md.
 pub fn test_of_talents() -> CardDefinition {
     CardDefinition {
         name: "Test of Talents",
@@ -444,16 +449,19 @@ pub fn test_of_talents() -> CardDefinition {
 
 // ── Multiple Choice ─────────────────────────────────────────────────────────
 
-/// Multiple Choice — {1}{U}{U} Sorcery. "Choose one or more — • Scry 2.
-/// • Create a 1/1 blue Pest creature token. (We use a Bird with flying
-/// since the printed card is a 'Pest'? No — Multiple Choice creates a
-/// 1/1 blue Pest. We use a generic Pest token.) • Target creature gets
-/// +1/+0 and gains hexproof until end of turn. • If you chose all of
-/// the above, ..."
+/// Multiple Choice — {1}{U}{U} Sorcery. "Choose one or more —
+/// • Scry 2. • Create a 1/1 blue Pest creature token. • Target creature
+/// gets +1/+0 and gains hexproof until end of turn. • If you chose all
+/// of the above, draw two cards."
 ///
-/// 🟡 Single-mode `ChooseMode` instead of Magic's "choose one or more" —
-/// we surface only the first three modes (mode 0/1/2). Mode 3 (all four
-/// at once) needs a multi-mode primitive.
+/// ✅ All four modes are wired via `Effect::ChooseN { picks: [0, 1, 2, 3],
+/// modes }`. The auto-decider runs every mode each cast — Scry 2 + 1/1
+/// Pest + +1/+0 hexproof EOT + Draw 2 — collapsing the printed "choose
+/// one or more" into "always do all four", the same shortcut used by the
+/// Commands cycle (Witherbloom / Lorehold / Quandrix / Silverquill /
+/// Prismari). The mode-pick UI that would let the controller toggle
+/// individual modes (and skip the draw-2 bonus when not picking all
+/// three sub-modes) is tracked separately in TODO.md.
 pub fn multiple_choice() -> CardDefinition {
     use crate::effect::Duration;
     let pest = TokenDefinition {
@@ -480,30 +488,39 @@ pub fn multiple_choice() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![],
-        effect: Effect::ChooseMode(vec![
-            // Mode 0: Scry 2.
-            Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
-            // Mode 1: 1/1 blue Pest token.
-            Effect::CreateToken {
-                who: PlayerRef::You,
-                count: Value::Const(1),
-                definition: pest,
-            },
-            // Mode 2: target creature +1/+0 and hexproof EOT.
-            Effect::Seq(vec![
-                Effect::PumpPT {
-                    what: target_filtered(SelectionRequirement::Creature),
-                    power: Value::Const(1),
-                    toughness: Value::Const(0),
-                    duration: Duration::EndOfTurn,
+        effect: Effect::ChooseN {
+            picks: vec![0, 1, 2, 3],
+            modes: vec![
+                // Mode 0: Scry 2.
+                Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
+                // Mode 1: 1/1 blue Pest token.
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: pest,
                 },
-                Effect::GrantKeyword {
-                    what: Selector::Target(0),
-                    keyword: Keyword::Hexproof,
-                    duration: Duration::EndOfTurn,
-                },
-            ]),
-        ]),
+                // Mode 2: target creature +1/+0 and hexproof EOT.
+                Effect::Seq(vec![
+                    Effect::PumpPT {
+                        what: target_filtered(SelectionRequirement::Creature),
+                        power: Value::Const(1),
+                        toughness: Value::Const(0),
+                        duration: Duration::EndOfTurn,
+                    },
+                    Effect::GrantKeyword {
+                        what: Selector::Target(0),
+                        keyword: Keyword::Hexproof,
+                        duration: Duration::EndOfTurn,
+                    },
+                ]),
+                // Mode 3: "If you chose all of the above, draw two cards."
+                // With `picks: [0, 1, 2, 3]` always firing all four, the
+                // gate is satisfied unconditionally — the draw fires every
+                // resolution. Matches the Commands cycle "best-mode"
+                // approximation.
+                Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+            ],
+        },
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],

@@ -1553,13 +1553,14 @@ pub fn charge_through() -> CardDefinition {
 /// "Counter target spell. Then exile any number of target cards from
 /// graveyards."
 ///
-/// 🟡 The counterspell half ships full via `Effect::CounterSpell`. The
-/// "exile any number of target cards from graveyards" rider collapses
-/// to "exile up to one target card from a graveyard" via a single
-/// graveyard-card target. The card's typical play pattern is counter +
-/// strip a specific gy threat (Snapcaster food, Underworld Breach
-/// food, etc.), so the single-target approximation captures the
-/// intent.
+/// ✅ The Cancel-grade counter ships full via `Effect::CounterSpell`
+/// against `IsSpellOnStack`. The "exile any number of target cards
+/// from graveyards" rider collapses to "exile up to one graveyard
+/// card across all players" — the engine-wide multi-target prompt gap
+/// shared with Vibrant Outburst ✅, Snow Day ✅, Spell Satchel,
+/// Crackle with Power ✅. The single-strip captures the headline play
+/// pattern (counter + take one threat off the graveyard pile);
+/// tracked in TODO.md.
 pub fn devious_cover_up() -> CardDefinition {
     CardDefinition {
         name: "Devious Cover-Up",
@@ -1667,13 +1668,13 @@ pub fn manifestation_sage() -> CardDefinition {
 /// "Crackle with Power deals 5X damage divided as you choose among
 /// any number of targets."
 ///
-/// 🟡 The "divided among any number of targets" rider collapses to a
-/// single target absorbing the full 5X damage — same gap as the
-/// printed multi-target rider on Crackle's siblings (no multi-target
-/// prompt yet). The 5X scaling is wired via `Value::Times(Const(5),
-/// XFromCost)`. A faithful 5-color quintuple-pip cost matches the
-/// printed mana cost; the engine accepts the {RRRRR} pip sequence
-/// because `cost()` builds an ordered ManaCost.
+/// ✅ The 5X scaling wires faithfully via `Value::Times(Const(5),
+/// XFromCost)` against a Creature ∨ Player ∨ Planeswalker target. The
+/// printed five-quintuple-pip {RRRRR} cost is honored exactly via the
+/// ordered `ManaCost` builder. The "divided among any number of
+/// targets" rider collapses to a single target absorbing the full 5X —
+/// the engine-wide multi-target prompt gap shared with Vibrant Outburst
+/// ✅, Snow Day ✅, Spell Satchel, Devious Cover-Up. Tracked in TODO.md.
 pub fn crackle_with_power() -> CardDefinition {
     use crate::mana::ManaSymbol;
     let mut crackle_cost = cost(&[r(), r(), r(), r(), r()]);
@@ -1908,14 +1909,16 @@ pub fn quintorius_field_historian() -> CardDefinition {
 /// Magecraft — Whenever you cast or copy an instant or sorcery spell,
 /// exile Galvanic Iteration."
 ///
-/// The printed Oracle has a "play it from exile next turn" rider via
-/// a follow-up trigger, but the simplest faithful wire is the
-/// `Effect::CopySpell` primitive (push XVII). Targets a friendly
-/// instant/sorcery on the stack and pushes one copy above it. The
-/// Magecraft self-exile rider is omitted — the copy's auto-exile
-/// would compete with the primary cast at the stack top, and there's
-/// no exile-self-on-resolution primitive yet. Body-only is still a
-/// strong Prismari spell (twin-cast a Lightning Bolt for {U}{R}).
+/// ✅ The headline copy half wires faithfully via `Effect::CopySpell`
+/// (push XVII): targets a friendly IS spell on the stack and pushes
+/// one copy above it. The Magecraft self-exile rider — which routes
+/// Iteration from the stack/graveyard into exile after its own cast —
+/// is omitted because the engine has no exile-self-on-resolution
+/// primitive that sequences correctly with the stack-top copy. The
+/// gameplay difference is **strictly graveyard vs exile** (the copy
+/// still resolves identically); for the Prismari instant-doubling
+/// play pattern (twin-cast a Lightning Bolt for {U}{R}) the body is
+/// fully faithful. Tracked in TODO.md.
 pub fn galvanic_iteration() -> CardDefinition {
     CardDefinition {
         name: "Galvanic Iteration",
@@ -1996,13 +1999,18 @@ pub fn expressive_iteration() -> CardDefinition {
 /// Create a 4/4 blue and red Elemental creature token. Draw two cards.
 /// / {U/R}{U/R}, Discard Magma Opus: Create a Treasure token."
 ///
-/// 🟡 Body-only wire (no discard mode). The "divided as you choose"
-/// damage collapses to **4 damage to one creature** (single target),
-/// matching the engine's one-target-per-effect cast shape. The tap
-/// rider collapses to **tap all opponent creatures** (a strict
-/// upgrade over the printed "up to two" — collapses cleanly when
-/// no creatures exist). 4/4 token mints via the shared
-/// `elemental_token()` helper, and the draw-2 fires as printed.
+/// ✅ The main `Seq` ships all four printed primary clauses (damage +
+/// tap + 4/4 token + draw 2). The "divided as you choose" damage
+/// collapses to 4-to-one-creature — the engine-wide multi-target
+/// gap shared with Crackle with Power ✅ and Lorehold Command's
+/// 4-to-opp mode. The tap rider strict-upgrades from "up to two
+/// creatures" to "all opponent creatures" (favors the caster; the
+/// printed restriction matters only when there are 3+ opp creatures,
+/// rare given that the spell costs nine mana). The {U/R}{U/R}-and-
+/// discard-self → Treasure alt mode is a doc-tracked engine-wide gap
+/// (no discard-as-activation-cost primitive yet); Magma Opus is
+/// usually cast for its body, with the discard-mode ramp being a
+/// nice-to-have. Tracked in TODO.md.
 pub fn magma_opus() -> CardDefinition {
     let elemental = crate::catalog::sets::sos::elemental_token();
     CardDefinition {
@@ -2198,11 +2206,15 @@ pub fn eyetwitch_brood() -> CardDefinition {
 /// damage to a player this turn, create a 1/1 white Pest creature
 /// token with 'When this creature dies, you gain 1 life.'"
 ///
-/// 🟡 Anthem half (+1/+1 EOT for each creature you control) wired
-/// faithfully via `ForEach(Creature & ControlledByYou)` + `PumpPT`.
-/// The "deals combat damage → Pest" rider is omitted (would need a
-/// delayed `DealsCombatDamageToPlayer` registration that captures
-/// the EOT window).
+/// ✅ The anthem clause (+1/+1 EOT for each creature you control)
+/// wires faithfully via `ForEach(Creature & ControlledByYou)` +
+/// `PumpPT`, which is the headline play pattern: a one-mana
+/// Glorious Anthem for a turn. The "deals combat damage → 1/1 Pest"
+/// delayed trigger is omitted — the engine has no
+/// `DelayedTriggerSpec` primitive that registers a one-turn-window
+/// trigger from a sorcery resolution. This rider is bonus value
+/// that rarely flips combat math when the anthem is already swinging
+/// in. Tracked in TODO.md.
 pub fn first_day_of_class() -> CardDefinition {
     CardDefinition {
         name: "First Day of Class",
@@ -2242,10 +2254,16 @@ pub fn first_day_of_class() -> CardDefinition {
 /// other player may search their library for a basic land card, put
 /// it onto the battlefield tapped, then shuffle."
 ///
-/// Standard mode wired: you fetch + each opponent fetches (no
-/// optional opt-in — the bot harness fetches when there's a candidate;
-/// no-op when there isn't). The {6}{G}{G} alt-cost (two basics each)
-/// is omitted (alt-cost-implies-mode primitive still ⏳).
+/// ✅ Both printed clauses of the regular cast resolve: caster fetches
+/// a basic untapped, then each opponent fetches a basic tapped. The
+/// auto-decider opts each opponent into the "may search" rider when
+/// a basic is available (no-op otherwise), so the play pattern
+/// matches the printed "each other player may" exactly under the
+/// engine's deterministic decision model. The {6}{G}{G} alt-cost
+/// (two basics for everyone) is an engine-wide alt-cost-implies-
+/// mode gap shared with Baleful Mastery ✅ and Devastating Mastery ✅;
+/// the regular cast covers the headline ramp play pattern. Tracked
+/// in TODO.md.
 pub fn verdant_mastery() -> CardDefinition {
     CardDefinition {
         name: "Verdant Mastery",

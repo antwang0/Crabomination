@@ -555,6 +555,41 @@ fn player_dies_when_life_reaches_zero() {
         .any(|e| matches!(e, GameEvent::GameOver { winner: Some(0) })));
 }
 
+/// CR 121.4 / 704.5b — "A player who attempts to draw a card from a library
+/// with no cards in it loses the game." The engine's `Effect::Draw` handler
+/// sets `Player.eliminated = true` immediately when `draw_top()` returns
+/// `None`; the state-based-action sweep at the end of the resolution
+/// promotes that to `game_over = Some(Some(winner))`.
+#[test]
+fn drawing_from_empty_library_eliminates_player() {
+    let mut g = two_player_game();
+    // Empty P1's library — Divination cast by P1 will try to draw 2 cards
+    // off a zero-card library, eliminating P1 the first time draw_top()
+    // returns None.
+    assert!(g.players[1].library.is_empty(), "fixture has empty library");
+
+    let divination = g.add_card_to_hand(1, catalog::divination());
+    // Give P1 the active player slot + priority + mana — Divination is a
+    // sorcery so it requires P1 to be the active player in a main phase.
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.players[1].mana_pool.add(Color::Blue, 1);
+    g.players[1].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: divination,
+        target: None,
+        mode: None,
+        x_value: None,
+    })
+    .expect("Divination castable for {2}{U}");
+    drain_stack(&mut g);
+
+    assert!(g.is_game_over(),
+        "P1 should lose the game from drawing off an empty library");
+    assert_eq!(g.game_over, Some(Some(0)),
+        "P0 should win when P1 decks out");
+}
+
 // ── Turn progression ──────────────────────────────────────────────────────
 
 #[test]

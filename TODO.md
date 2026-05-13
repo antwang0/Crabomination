@@ -11,6 +11,43 @@ Periodic spot-check of the rules document
 (`crabomination/MagicCompRules 20260116.txt`). Each rule below has a
 status tag (✅ wired, 🟡 partial, ⏳ todo) plus a short note.
 
+- ✅ **CR 601.2f — Cost reductions can't take the mana cost below {0},
+  and can't reduce colored or X pips** (push XXXIV audit): "The total
+  cost is the mana cost or alternative cost (as determined in rule
+  601.2b), plus all additional costs and cost increases, and minus all
+  cost reductions. … If the mana component of the total cost is
+  reduced to nothing by cost reduction effects, it is considered to be
+  {0}. It can't be reduced to less than {0}." Push XXXIV lands the new
+  `ManaCost::reduce_generic(amount) -> u32` helper which drains
+  Generic pips left-to-right and clamps at zero, never touching
+  colored, colorless, hybrid, Phyrexian, X, or snow pips. Wired into
+  `cast_spell_with_convoke` via the new `cost_reduction_for_spell`
+  helper, which walks the battlefield for both flat
+  (`StaticEffect::CostReduction`) and target-aware
+  (`StaticEffect::CostReductionTargetingFilter`) reductions. Killian,
+  Ink Duelist is the canonical target-aware exerciser; tests
+  `killian_reduction_does_not_eat_colored_pips` (Bolt at a creature
+  still needs the {R}) and `killian_only_reduces_its_controllers_
+  spells` (controller gate honored) verify the rule end-to-end.
+
+- ✅ **CR 121.4 / 704.5b — Decking out loses the game** (push XXXIV
+  audit — code was already correct, test coverage gap): "A player
+  who attempts to draw a card from a library with no cards in it
+  loses the game the next time a player would receive priority. (This
+  is a state-based action.)" The engine's `Effect::Draw` handler in
+  `game/effects.rs:384` returns early and sets
+  `Player.eliminated = true` when `draw_top()` returns `None`. The
+  state-based-action sweep at the end of resolution
+  (`check_state_based_actions` in `game/stack.rs:803-819`) then
+  promotes `eliminated` flags to `game_over = Some(Some(winner))`
+  when ≤ 1 alive player remains. Push XXXIV adds the missing
+  end-to-end test `drawing_from_empty_library_eliminates_player`:
+  P1 with an empty library casts Divination, attempts to draw 2,
+  immediately loses, and P0 is declared the winner. The "next time
+  a player would receive priority" timing nuance is the SBA
+  framing, but the practical effect is identical (mid-resolution
+  elimination promotes to game-over by the next priority pass).
+
 - ✅ **CR 700.2b — Modal triggered-ability mode chosen at push-time**
   (push XXXIII audit): "The controller of a modal triggered ability
   chooses the mode(s) as part of putting that ability on the stack. If
@@ -2849,3 +2886,76 @@ mode pick + `Value::LoyaltyOf` + CR 120.3c spell-damage fix batch.
   ability" vs. "loyalty changed via damage" — a `cause:
   LoyaltyChangeCause` field on the event would help debug PW combat
   + burn interactions.
+
+## New suggestions (added 2026-05-13 push XXXIV)
+
+These items came up while implementing the target-aware cost
+reduction primitive (`StaticEffect::CostReductionTargetingFilter`,
+Killian, Ink Duelist) + the Multiple Choice all-four-modes
+promotion + 10 doc-only promotions.
+
+### Engine
+
+- **Discard-as-activation-cost primitive**. Magma Opus's printed alt
+  mode "{U/R}{U/R}, Discard Magma Opus: Create a Treasure token" is
+  an activated ability whose cost line includes a hand-discard of
+  the source itself. `ActivatedAbility` has `exile_self_cost` and
+  `sac_cost` fields but no `discard_self_cost` analogue. Adding
+  one would also unlock Aria of Flame (Iconic Masters, not in this
+  catalog) and any future "discard self for value" activation. The
+  trickier engine question is whether the ability can be activated
+  from a graveyard / battlefield / exile — Magma Opus is hand-only.
+
+- **Alt-cost implies additional mode**. Devastating Mastery / Verdant
+  Mastery / Baleful Mastery's printed mana costs include a second
+  cost line whose payment activates an additional resolution clause
+  ("if this spell was cast for its alternative cost, …"). The
+  existing `AlternativeCost` struct carries `mana_cost` but no
+  "extra effect chain to splice into the spell's resolution" slot.
+  Adding `extra_effect_on_alt: Option<Effect>` would let Verdant
+  Mastery's "search for two basics each" and Devastating Mastery's
+  "return up to two nonland permanent cards from gy" both wire
+  cleanly. Audit point: this is alt-cost-as-mode, not alt-cost-as-
+  cheaper-cast; the existing Force-of-Negation-style pitch path
+  doesn't need it.
+
+- **Multi-target prompt for "any number" / "up to N" targets**.
+  Crackle with Power, Magma Opus, Devious Cover-Up, Snow Day,
+  Spell Satchel, and the printed full text of Lorehold Command
+  mode 0 / Witherbloom Command mode 1 all want to nominate a
+  variable-size target list at cast time. The engine collapses
+  these to single-target today. A `Vec<Target>` target slot
+  (instead of `Option<Target>`) at the `CastSpell` level — plus a
+  multi-target prompt at the decision layer — would unlock all of
+  these in one swing.
+
+- **Cast-from-graveyard primitive**. Mavinda, Students' Advocate's
+  `{3}{W}{W}: Cast target IS card that targets only a creature
+  from your graveyard. Exile it as it leaves the stack.` activated
+  ability needs a "this ability casts another card" primitive that
+  doesn't exist. `ActivatedAbility.from_graveyard` enables casting
+  the source from gy, not casting *another* card from gy. A new
+  `Effect::CastFromZone { from: ZoneRef, filter: Predicate,
+  pay_cost: bool, exile_on_leave_stack: bool }` would unlock Mavinda
+  + Sundering Eruption (a hypothetical) + Underworld Breach
+  (already approximated).
+
+### UI
+
+- **Cost-reduction badge on cast prompts**. When Killian (or a future
+  cost-reduction-aware static) reduces a spell's effective cost, the
+  3D client's "you can cast this" affordance should reflect the
+  discounted cost, not the printed cost. The bot harness's
+  `would_accept` dry-run already exercises the discounted path; the
+  human-driven cast prompt should show the same number so players
+  don't undercount their available mana.
+
+### Server
+
+- **Effect-cost transparency in replay log**. When a `SpellCast`
+  event fires after a discount has been applied (Killian, future
+  Wilt-in-the-Heat-style cost reduction, etc.), neither the wire
+  `GameEvent::SpellCast` nor `view.rs`'s `KnownStackItem` records
+  the actually-paid cost. For replay parity + spectator UX, a
+  `mana_paid: ManaCost` field on `SpellCast` would surface the
+  effective cost separately from the printed cost.

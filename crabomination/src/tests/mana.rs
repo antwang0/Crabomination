@@ -142,3 +142,57 @@ fn distinct_colors_does_not_count_x_or_snow_or_colorless() {
         "Colorless pips are not colored"
     );
 }
+
+// ── Cost reduction (CR 601.2f / 117.7c) ─────────────────────────────────────
+
+#[test]
+fn reduce_generic_drains_a_single_generic_pip() {
+    // {2}{R}{R} → reduce_generic(2) → {R}{R} (2 generic + 0 left).
+    let mut c = cost(&[generic(2), r(), r()]);
+    let applied = c.reduce_generic(2);
+    assert_eq!(applied, 2, "all 2 of the requested reduction applied");
+    assert_eq!(c.cmc(), 2, "{{2}}{{R}}{{R}} → {{R}}{{R}} (CMC 4 → 2)");
+    assert_eq!(c.distinct_colors(), 1, "{{R}}{{R}} is still 1 distinct color");
+}
+
+#[test]
+fn reduce_generic_clamps_to_zero_when_request_exceeds_generic() {
+    // {1}{B}{B} → reduce_generic(5): only 1 generic exists; clamp at 1.
+    let mut c = cost(&[generic(1), b(), b()]);
+    let applied = c.reduce_generic(5);
+    assert_eq!(applied, 1, "only the available 1 generic pip drained");
+    assert_eq!(c.cmc(), 2, "{{1}}{{B}}{{B}} → {{B}}{{B}}");
+}
+
+#[test]
+fn reduce_generic_does_not_touch_colored_or_colorless_pips() {
+    // {W}{R}{C}: no generic pips → reduce_generic(99) → unchanged.
+    use crate::mana::colorless;
+    let mut c = cost(&[w(), r(), colorless(1)]);
+    let cmc_before = c.cmc();
+    let applied = c.reduce_generic(99);
+    assert_eq!(applied, 0, "no generic pips → no reduction");
+    assert_eq!(c.cmc(), cmc_before, "colored / {{C}} pips preserved (CR 117.7c)");
+}
+
+#[test]
+fn reduce_generic_splits_multiple_generic_pips() {
+    // {2}{1}{G}: two Generic pips totaling 3. reduce_generic(2) should
+    // drain the first ({2} → {0}) and leave the second ({1}) intact.
+    let mut c = cost(&[generic(2), generic(1), g()]);
+    let applied = c.reduce_generic(2);
+    assert_eq!(applied, 2);
+    assert_eq!(c.cmc(), 2, "{{2}}{{1}}{{G}} → {{1}}{{G}}");
+}
+
+#[test]
+fn reduce_generic_does_not_touch_x_pips() {
+    // {X}{R}{R}: reduce_generic(99) → unchanged (CR 601.2f / 117.7c —
+    // X is determined when the spell is cast, not a generic).
+    use crate::mana::x;
+    let mut c = cost(&[x(), r(), r()]);
+    let symbols_before = c.symbols.clone();
+    let applied = c.reduce_generic(99);
+    assert_eq!(applied, 0);
+    assert_eq!(c.symbols, symbols_before, "X pips preserved");
+}

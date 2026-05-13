@@ -125,6 +125,34 @@ impl ManaCost {
                 .collect(),
         }
     }
+
+    /// Subtract `amount` from this cost's total Generic pips, clamping at
+    /// zero. Colored / colorless / hybrid / Phyrexian / snow / X pips are
+    /// untouched — CR 601.2f and CR 117.7c forbid cost reductions from
+    /// reducing a colored or X pip. Returns the actually-applied
+    /// reduction (so callers can short-circuit when the cost is already
+    /// floored). If multiple Generic pips exist, drain them in order.
+    pub fn reduce_generic(&mut self, amount: u32) -> u32 {
+        let mut remaining = amount;
+        let mut applied = 0u32;
+        let mut new_syms = Vec::with_capacity(self.symbols.len());
+        for sym in &self.symbols {
+            match sym {
+                ManaSymbol::Generic(n) if remaining > 0 => {
+                    let drained = remaining.min(*n);
+                    remaining -= drained;
+                    applied += drained;
+                    let kept = n - drained;
+                    if kept > 0 {
+                        new_syms.push(ManaSymbol::Generic(kept));
+                    }
+                }
+                other => new_syms.push(*other),
+            }
+        }
+        self.symbols = new_syms;
+        applied
+    }
 }
 
 /// Available mana in a player's pool during their turn.

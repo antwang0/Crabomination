@@ -93,6 +93,61 @@ pub(crate) fn consume_first_spell_tax(state: &mut crate::game::GameState, caster
     }
 }
 
+/// Sum all generic-mana cost reductions applicable to a spell being cast.
+///
+/// Supports two flavors:
+///   * `StaticEffect::CostReduction { filter, amount }` — flat per-spell
+///     reduction whose `filter` matches the cast card.
+///   * `StaticEffect::CostReductionTargetingFilter { spell_filter,
+///     target_filter, amount }` — Killian-style "if the spell targets a
+///     creature, it costs {2} less". Honors the cast's chosen target via
+///     `target` (so Lightning Bolt at face counts as targeting a player,
+///     Lightning Bolt at a creature counts as targeting a creature).
+///
+/// CR 601.2f / 117.7c: cost reductions can never reduce a colored or X
+/// pip. The caller funnels the returned reduction through
+/// `ManaCost::reduce_generic`, which clamps at the generic pip total.
+pub(crate) fn cost_reduction_for_spell(
+    state: &crate::game::GameState,
+    caster: usize,
+    card: &crate::card::CardInstance,
+    target: Option<&crate::game::Target>,
+) -> u32 {
+    use crate::effect::StaticEffect;
+    let mut reduction = 0u32;
+    for src in &state.battlefield {
+        for sa in &src.definition.static_abilities {
+            match &sa.effect {
+                StaticEffect::CostReduction { filter, amount } => {
+                    if src.controller == caster
+                        && state.evaluate_requirement_on_card(filter, card, caster)
+                    {
+                        reduction += amount;
+                    }
+                }
+                StaticEffect::CostReductionTargetingFilter {
+                    spell_filter,
+                    target_filter,
+                    amount,
+                } => {
+                    if src.controller != caster {
+                        continue;
+                    }
+                    if !state.evaluate_requirement_on_card(spell_filter, card, caster) {
+                        continue;
+                    }
+                    let Some(tgt) = target else { continue };
+                    if state.evaluate_requirement_static(target_filter, tgt, caster) {
+                        reduction += amount;
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+    reduction
+}
+
 /// True if any battlefield permanent has `StaticEffect::LandsTapColorlessOnly`
 /// (Damping Sphere). Used by `play_land` to decide whether to downgrade
 /// multi-color/multi-mana lands to "{T}: Add {C}".
@@ -513,6 +568,13 @@ impl GameState {
         if tax > 0 {
             cost.symbols.push(crate::mana::ManaSymbol::Generic(tax));
         }
+        // Apply static cost-reduction effects (Killian's "spells that target
+        // a creature cost {2} less"). Tax is applied first so reductions
+        // never make the spell free of its tax.
+        let reduction = cost_reduction_for_spell(self, p, &card, target.as_ref());
+        if reduction > 0 {
+            cost.reduce_generic(reduction);
+        }
 
         // Snapshot pristine state before convoke + auto-tap mutate it, so a
         // failed payment can revert both convoke taps and any lands that
@@ -739,11 +801,18 @@ impl GameState {
         }
 
         // Pay the flashback cost.
-        let cost = if flashback_cost.has_x() {
+        let mut cost = if flashback_cost.has_x() {
             flashback_cost.with_x_value(x_value.unwrap_or(0))
         } else {
             flashback_cost
         };
+        // Flashback IS a cast (CR 702.34a), so Killian-style target-aware
+        // cost reductions apply the same as for hand casts. Drain
+        // generic-only pips after substituting X.
+        let reduction = cost_reduction_for_spell(self, p, &card, target.as_ref());
+        if reduction > 0 {
+            cost.reduce_generic(reduction);
+        }
         let receipt = self.try_pay_with_auto_tap(p, &cost)?;
         if receipt.side_effects.life_lost > 0 {
             self.players[p].life -= receipt.side_effects.life_lost as i32;
@@ -892,6 +961,15 @@ impl GameState {
         let tax = extra_cost_for_spell(self, p, &card);
         if tax > 0 {
             mana_cost.symbols.push(crate::mana::ManaSymbol::Generic(tax));
+        }
+        // CR 601.2f: cost reductions apply uniformly across cast paths
+        // (hand cast / flashback / alt-cost), and `cost_reduction_for_
+        // spell` returns the same delta in each. The alt cost is often
+        // {0} for pitch spells (Force of Negation, Mystical Dispute), in
+        // which case the reduction simply no-ops (clamps at zero).
+        let reduction = cost_reduction_for_spell(self, p, &card, target.as_ref());
+        if reduction > 0 {
+            mana_cost.reduce_generic(reduction);
         }
         let receipt = match self.try_pay_with_auto_tap(p, &mana_cost) {
             Ok(r) => r,

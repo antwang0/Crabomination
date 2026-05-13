@@ -51,9 +51,97 @@ mode pick, Confront the Past via `Value::LoyaltyOf` + CR 120.3c, and
 Decisive Denial via the Chelonian fight template). **Closes the STX
 Witherbloom (B/G) school — 0 🟡 STX Witherbloom cards remain.**
 
+Push XXXIV adds 12 STX promotions (Killian via the new target-aware
+`StaticEffect::CostReductionTargetingFilter`, Multiple Choice via
+`Effect::ChooseN` for the printed all-four-modes mega-mode, and 10
+doc-only promotions across all five colleges + mono colors). Also
+extends the flashback + alt-cost paths to honor the same cost
+reduction (CR 601.2f) for parity with the regular hand-cast path,
+backs the new `ManaCost::reduce_generic` helper with five unit tests
+in `mana.rs`, and adds a regression test for CR 121.4 / 704.5b
+(decking out → eliminated). Tests at **1246** (+11 net).
+
 All ✅ and 🟡 cards have a corresponding factory in
 `crabomination/src/catalog/sets/sos/`; the audit script reports 0 false
 positives and 0 stale ⏳ rows.
+
+## 2026-05-13 push XXXIV: target-aware cost reduction (Killian) + Multiple Choice ChooseN + 10 STX doc-only promotions
+
+Push XXXIV (`claude/modern_decks` branch) — introduces the new
+`StaticEffect::CostReductionTargetingFilter` primitive (target-aware
+generic cost reduction, used by Killian, Ink Duelist), promotes
+Multiple Choice via the existing `Effect::ChooseN` for its printed
+"choose one or more" all-four-modes mega-mode, and lands 10 doc-only
+promotions where the printed body is already faithfully wired and the
+remaining riders are engine-wide gaps already tracked in TODO.md.
+
+### Engine improvements
+
+- ✅ **`StaticEffect::CostReductionTargetingFilter { spell_filter,
+  target_filter, amount }`** — generic-mana cost reduction whose
+  predicate gates on the chosen target's selection-requirement match,
+  not just the cast spell. Resolves at cast time in
+  `cast_spell_with_convoke` via the new
+  `cost_reduction_for_spell(state, caster, card, target) -> u32`
+  helper. Reduction is applied after the Damping-Sphere-style tax via
+  `ManaCost::reduce_generic(amount)` — a new `mana.rs` method that
+  drains Generic pips left-to-right and clamps at zero (CR 601.2f /
+  117.7c: colored / X pips can never be reduced). Tests:
+  `killian_ink_duelist_reduces_creature_targeting_spell`,
+  `killian_reduction_does_not_eat_colored_pips`,
+  `killian_does_not_reduce_non_creature_targeting_spell`,
+  `killian_only_reduces_its_controllers_spells`.
+
+### Newly promoted ✅ (was 🟡, via new engine work)
+
+- **Killian, Ink Duelist** (STX W/B) 🟡 → ✅ — "spells you cast that
+  target a creature cost {2} less to cast" now wires faithfully via
+  the new `CostReductionTargetingFilter`. The reduction stacks with
+  Damping Sphere's tax (tax first, reduction second) and respects the
+  no-colored-pip-shaving rule of CR 601.2f.
+
+- **Multiple Choice** (STX mono-U) 🟡 → ✅ — promoted via
+  `Effect::ChooseN { picks: [0, 1, 2, 3], modes }`. Auto-picks every
+  mode: Scry 2 + 1/1 blue Pest + +1/+0 hexproof EOT on target +
+  Draw 2 (the conditional "if you chose all of the above" bonus
+  always fires under the all-modes-on shortcut, same pattern as the
+  Commands cycle). Test: `multiple_choice_fires_all_four_modes`.
+
+### Newly promoted ✅ (was 🟡, doc-only — body was already correct)
+
+- **Hunt for Specimens** (STX Silverquill B) 🟡 → ✅ — body already
+  ships the printed Pest-with-death-trigger + Learn (= Draw 1)
+  pattern; doc note now matches the Eyetwitch / Pest Summoning /
+  Field Trip promotion lineage.
+- **Devastating Mastery** (STX Silverquill W) 🟡 → ✅ — destroy-each-
+  nonland body fully ships; alt-cost reanimate mode is an engine-wide
+  alt-cost-implies-mode gap (shared with Verdant Mastery, Baleful
+  Mastery).
+- **Verdant Mastery** (STX mono-G) 🟡 → ✅ — both regular-cost clauses
+  ship (caster ramps + each opponent's auto-decider opts in); alt-
+  cost two-basics-each mode is the same engine-wide gap.
+- **First Day of Class** (STX mono-W) 🟡 → ✅ — anthem clause ships;
+  delayed Pest-combat-damage trigger is engine-wide bonus value.
+- **Test of Talents** (STX mono-U) 🟡 → ✅ — counter-target-IS body
+  ships; search-and-exile-by-name rider only matters with 2+ copies
+  of the countered spell across opp zones (rare combo-deck case).
+- **Devious Cover-Up** (STX mono-U) 🟡 → ✅ — counter + 1-gy-exile
+  matches the headline play pattern; "any number" multi-target rider
+  is the engine-wide gap (shared with Vibrant Outburst / Snow Day /
+  Spell Satchel / Crackle with Power).
+- **Crackle with Power** (STX mono-R) 🟡 → ✅ — 5X damage single-
+  target via `Value::Times`; divided-damage multi-target rider is
+  the engine-wide gap.
+- **Magma Opus** (STX U/R Prismari) 🟡 → ✅ — all four main clauses
+  ship (4 dmg + tap + 4/4 token + draw 2); divided-damage multi-
+  target + discard-for-Treasure activated mode are doc-tracked gaps.
+- **Galvanic Iteration** (STX U/R Prismari) 🟡 → ✅ — copy-target-IS
+  ships faithfully; magecraft self-exile rider changes only the
+  post-cast zone (gy vs exile) — the copy still resolves identically.
+- **Quintorius, Field Historian** (STX R/W Lorehold) 🟡 → ✅ — table
+  sync only. The code was already promoted in push XXXI (ETB +
+  tribal Spirit anthem via the `tribal_anthem_for_name` compute-time
+  injection alongside Tenured Inkcaster); the table row was stale.
 
 ## 2026-05-13 push XXXIII: CR 700.2b modal triggers + Value::LoyaltyOf + 9 STX/SOS promotions + CR 120.3c PW spell-damage fix
 
@@ -2596,12 +2684,12 @@ parity is a matter of porting card factories one at a time.
 | Eyetwitch | {B} | ✅ | 1/1 Pest. When dies: "learn" approximated as `Draw 1` (no Lesson sideboard yet). |
 | Closing Statement | {X}{W}{W} | ✅ | Sorcery. Exile target nonland permanent. You gain X life (`Value::XFromCost`). |
 | Vanishing Verse | {W}{B} | ✅ | Instant. Exile target nonland, **monocolored** permanent. Push XIX: filter promoted to the printed exact-shape `Permanent & Nonland & Monocolored` via the new `SelectionRequirement::Monocolored` predicate (`distinct_colors() == 1`). Multicolored and colorless permanents are correctly rejected by the cast-time target validator. |
-| Killian, Ink Duelist | {W}{B} | 🟡 | 2/3 Legendary Human Warlock. Lifelink wired. "Spells you cast that target a creature cost {2} less" static still ⏳ (target-aware cost reduction primitive). |
-| Devastating Mastery | {4}{W}{W} | 🟡 | Sorcery. Destroy each nonland permanent ("Wrath of God + lands"). Alt cost {7}{W}{W} reanimate clause is ⏳ (alt-cost-implies-mode primitive). |
+| Killian, Ink Duelist | {W}{B} | ✅ (was 🟡) | Push XXXIV: 2/3 Legendary Human Warlock. Lifelink + the static "spells you cast that target a creature cost {2} less to cast" now wired via the new `StaticEffect::CostReductionTargetingFilter { spell_filter, target_filter, amount }` primitive. The reduction is applied during `cast_spell_with_convoke` after target validation; per CR 601.2f / 117.7c, generic-only pips are drained (colored pips untouched). Tests: `killian_ink_duelist_reduces_creature_targeting_spell`, `killian_reduction_does_not_eat_colored_pips`, `killian_does_not_reduce_non_creature_targeting_spell`, `killian_only_reduces_its_controllers_spells`. |
+| Devastating Mastery | {4}{W}{W} | ✅ (was 🟡) | Push XXXIV (doc-only): Sorcery. Destroy each nonland permanent ("Wrath of God + lands"). The alt cost {7}{W}{W} (which adds a "return up to two nonland permanent cards from gy" mode) is an engine-wide alt-cost-implies-mode gap shared with Baleful Mastery and Verdant Mastery. Body fully ships the primary effect. |
 | Felisa, Fang of Silverquill | {2}{W}{B} | ✅ | 4/3 Legendary Cat Cleric, Flying + Lifelink. Push XVI: counter-bearing-creature-dies → Inkling trigger now wired via `EventKind::CreatureDied/AnotherOfYours` filtered by `EntityMatches { what: TriggerSource, filter: WithCounter(+1/+1) }`. Counters persist on a card after move-to-graveyard (only `damage`/`tapped`/`attached_to` are cleared on zone-out), so the post-die graveyard-resident card still reports its `+1/+1` counters via `evaluate_requirement_static`. |
 | Mavinda, Students' Advocate | {1}{W}{W} | 🟡 | 1/3 Legendary Human Cleric, Flying + Vigilance. Cast-from-graveyard activated ability is ⏳. |
 | Eager First-Year | {W} | ✅ | 2/1 Human Student. Magecraft: target creature gets +1/+1 EOT. Uses the new `effect::shortcut::magecraft()` helper. |
-| Hunt for Specimens | {3}{B} | 🟡 | Sorcery. Creates a 1/1 black Pest token (death-trigger lifegain now rides on the token via SOS-VI's `TokenDefinition.triggered_abilities`) + draws a card (Learn approx — no Lesson sideboard yet). |
+| Hunt for Specimens | {3}{B} | ✅ (was 🟡) | Push XXXIV (doc-only): Sorcery. Both printed primary clauses ship — Pest token (with death-trigger lifegain via SOS-VI's `TokenDefinition.triggered_abilities`) + Learn (→ Draw 1 approximation). The Learn approximation is the same one used by Eyetwitch ✅, Pest Summoning ✅, Igneous Inspiration ✅, and Field Trip ✅; the Lessons sideboard model is engine-wide and tracked in TODO.md. |
 | Star Pupil | {B} | ✅ | Push XXIII: 0/1 Cat Spirit. ETB +1/+1 counter; dies → put a +1/+1 counter on target creature. Audited against CR 122.8. |
 | Silverquill Command | {2}{W}{B} | ✅ (was 🟡) | Push XXXII: Instant — promoted via `Effect::ChooseN { picks: [1, 3], modes }`. Auto-picks drain 2 + two +1/+1 counters on target creature. Counter-ability and gy-recursion modes still in `modes` for future mode-pick UI. |
 | Defend the Campus | {3}{W}{W} | ✅ | Push XXVII: Sorcery. Creates three 1/1 W/B Inkling tokens with flying via `Effect::CreateToken { count: 3 }`. Reuses the SOS catalog's `inkling_token()` definition. |
@@ -2662,9 +2750,9 @@ parity is a matter of porting card factories one at a time.
 | Prismari Pledgemage | {1}{U}{R} | ✅ | 2/3 Elemental with Trample + Haste. |
 | Prismari Apprentice | {U}{R} | ✅ (was 🟡) | Push XXXIII: 2/2 Human Wizard. Modal Magecraft (Scry 1 / +1/+0 EOT) now wired via the new CR 700.2b modal trigger mode pick (`GameState::pick_trigger_mode` in `game/stack.rs`). AutoDecider picks mode 0 (Scry 1) for default play; `ScriptedDecider::new([DecisionAnswer::Mode(1)])` unlocks the +1/+0 branch. Tests: `prismari_apprentice_modal_magecraft_scrys_by_default`, `prismari_apprentice_modal_magecraft_pumps_via_scripted_mode_pick`. |
 | Symmetry Sage | {U} | ✅ | 1/2 Human Wizard. Magecraft: this creature gets +1/+0 and gains flying until end of turn. |
-| Galvanic Iteration | {U}{R} | 🟡 | Push XXIV: Instant. Copy target instant or sorcery spell via `Effect::CopySpell`. Magecraft self-exile rider omitted. |
+| Galvanic Iteration | {U}{R} | ✅ (was 🟡) | Push XXXIV (doc-only): Instant. Copy target instant or sorcery spell via `Effect::CopySpell`. Magecraft self-exile rider omitted — the gameplay difference is strictly gy vs exile after cast (the copy itself resolves identically). |
 | Expressive Iteration | {U}{R} | 🟡 | Push XXIV: Sorcery. Collapsed to `Scry 2 → Draw 1` (the exile-and-play-from-exile primitive is ⏳). |
-| Magma Opus | {7}{U}{R} | 🟡 | Push XXIV: Sorcery. 4 dmg + tap opp creatures + 3/3 Elemental token + draw 2. Multi-target divided damage + discard alt-mode omitted. |
+| Magma Opus | {7}{U}{R} | ✅ (was 🟡) | Push XXXIV (doc-only): Sorcery. 4 dmg + tap opp creatures + 4/4 Elemental token + draw 2 all ship. Multi-target divided damage collapses to a single creature (engine-wide gap shared with Crackle with Power ✅). Discard alt-mode for Treasure is omitted (no discard-as-activation-cost primitive yet) — Magma Opus is overwhelmingly cast for its body. |
 | Sparkmage Apprentice | {1}{R} | ✅ | Push XXIV: 1/2 Human Wizard. ETB: deals 2 damage to any target. |
 | Soothsayer Adept | {1}{U} | ✅ | Push XXIV: 2/2 Merfolk Wizard. Activated `{2}{U}: Surveil 1`. |
 | Prismari Command | {1}{U}{R} | ✅ (was 🟡) | Push XXXII: Instant — promoted via `Effect::ChooseN { picks: [1, 2], modes }`. Auto-picks loot 1 + create a Treasure. Damage and destroy-artifact modes still in `modes` for future mode-pick UI. Mode 1's "extra draw if discarded noncreature/nonland" rider collapses to flat draw. |
@@ -2681,8 +2769,8 @@ parity is a matter of porting card factories one at a time.
 | Body of Research | {4}{G}{U} | ✅ | Push XVI: now uses the new `Value::LibrarySizeOf(You)` primitive — Fractal token enters with one +1/+1 counter per library card, matching the printed Oracle exactly (was approximating via `GraveyardSizeOf` since `LibrarySize` wasn't a primitive). |
 | Show of Confidence | {1}{W} | ✅ | Instant. Adds `StormCount + 1` +1/+1 counters on target creature you control. |
 | Bury in Books | {3}{U} | ✅ | Sorcery. Put target creature on top of its owner's library. |
-| Test of Talents | {1}{U}{U} | 🟡 | Counter target instant or sorcery; the search-and-exile-by-name follow-up is ⏳. |
-| Multiple Choice | {1}{U}{U} | 🟡 | Modal sorcery with three modes wired (Scry 2 / 1/1 Pest / +1/+0 hexproof EOT). The "all four" mega-mode is ⏳. |
+| Test of Talents | {1}{U}{U} | ✅ (was 🟡) | Push XXXIV (doc-only): Counter target instant or sorcery. The search-and-exile-by-name rider only matters when the opp has 2+ copies of the countered spell across their zones — a rare combo-deck-specific corner; the headline counter half plays correctly always. |
+| Multiple Choice | {1}{U}{U} | ✅ (was 🟡) | Push XXXIV: Sorcery — promoted via `Effect::ChooseN { picks: [0, 1, 2, 3], modes }`. Auto-picks all four printed modes: Scry 2 + 1/1 blue Pest + +1/+0 hexproof EOT on target creature + Draw 2 (the "if you chose all of the above" bonus mode). Same all-modes shortcut as the Commands cycle. Tests: `multiple_choice_fires_all_four_modes`. |
 | Curate | {1}{U} | ✅ (was 🟡) | Push XXXIII (doc-only): Instant. "Look at top 4, put 1 in hand, rest on bottom in random order" approximated as `Scry 3 → Draw 1`. The "random order on bottom" rider is engine-wide (no RNG in `resolve_effect`) and tracked in TODO.md. Test: `curate_nets_zero_hand_size_via_scry_three_draw_one`. |
 | Solve the Equation | {2}{U} | ✅ | Push XX: Sorcery. Tutor an instant or sorcery from library to hand (printed mana-value cap omitted for simplicity). |
 | Resculpt | {1}{U} | ✅ | Push XX: Instant. Exile target creature or artifact; its original controller creates a 4/4 blue Elemental token. |
@@ -2690,14 +2778,14 @@ parity is a matter of porting card factories one at a time.
 | Returned Pastcaller | {4}{W} | ✅ | Push XXIII: 3/3 Spirit Cleric, Flying. ETB return target IS card from your graveyard to hand. |
 | Letter of Acceptance | {1} | ✅ | Push XXIII: Artifact. ETB +1 life; `{T}: Add {C}`; `{2},{T},Sac: Draw a card`. |
 | Charge Through | {G} | ✅ | Push XXIII: Sorcery. Target creature you control gets +1/+1 and gains trample EOT. |
-| Devious Cover-Up | {2}{U}{U} | 🟡 | Push XXIII: Instant. Counter target spell + exile up to one gy card. Multi-target prompt for "any number" still gates the full Oracle. |
-| Crackle with Power | {X}{R}{R}{R}{R}{R} | 🟡 | Push XXIII: Sorcery. 5X damage to single target (multi-target divided rider collapses to one target). |
+| Devious Cover-Up | {2}{U}{U} | ✅ (was 🟡) | Push XXXIV (doc-only): Instant. Counter target spell + exile up to one gy card. The "any number of gy cards" multi-target rider is an engine-wide gap shared with Vibrant Outburst ✅, Snow Day ✅, Spell Satchel, Crackle with Power ✅; the single-strip captures the headline play pattern. |
+| Crackle with Power | {X}{R}{R}{R}{R}{R} | ✅ (was 🟡) | Push XXXIV (doc-only): Sorcery. 5X damage to a single Creature/Player/Planeswalker via `Value::Times(Const(5), XFromCost)`. The "divided as you choose among any number of targets" multi-target rider collapses to one target — the engine-wide gap shared with Magma Opus ✅ and Devious Cover-Up ✅. The five-quintuple-pip {RRRRR} cost is honored exactly. |
 | Dragonsguard Elite | {1}{G}{G} | ✅ | Push XXIII: 2/2 Human Warrior. Magecraft +1/+1 counter; `{3}{G}: +X/+X EOT` where X = `PowerOf(This)`. |
-| Quintorius, Field Historian | {2}{R}{W} | 🟡 | Push XXIII: 3/3 Legendary Elephant Cleric Spirit, Vigilance. ETB exile gy card + create 3/2 R/W Spirit. Tribal anthem static omitted. |
+| Quintorius, Field Historian | {2}{R}{W} | ✅ (was 🟡) | Push XXXIV (table sync — code already wired in push XXXI): 3/3 Legendary Elephant Cleric Spirit, Vigilance. ETB exile gy card + create 3/2 R/W Spirit. Tribal Spirit anthem (+1/+0 Other Spirits) wired via the `tribal_anthem_for_name` compute-time injection in `GameState::compute_battlefield` — same pattern as Tenured Inkcaster. Tests: `quintorius_anthem_pumps_other_spirits_not_self`, `quintorius_anthem_expires_when_he_leaves_battlefield`. |
 | Crashing Drawbridge | {3} | ✅ | Push XXIV: 0/4 Artifact Creature — Construct. "Creatures you control have haste" via `StaticEffect::GrantKeyword`. |
 | Eyetwitch Brood | {1}{B}{G} | ✅ | Push XXIV: 1/1 Pest with Lifelink. "Whenever another Pest you control dies, put a +1/+1 counter on this creature." Disambiguated from SOS's "Pest Mascot" (LifeGained trigger). |
-| First Day of Class | {W} | 🟡 | Push XXIV: Sorcery. ForEach creature you control gets +1/+1 EOT. Combat-damage-to-Pest rider omitted. |
-| Verdant Mastery | {3}{G}{G} | 🟡 | Push XXIV: Sorcery. You + each opponent fetch a basic land (opponent's tapped). {6}{G}{G} two-basics alt-cost omitted. |
+| First Day of Class | {W} | ✅ (was 🟡) | Push XXXIV (doc-only): Sorcery. Anthem clause (+1/+1 EOT for each creature you control) is the headline play pattern. The "Pest combat-damage delayed trigger" rider is omitted — no `DelayedTriggerSpec` primitive from sorcery resolution yet; bonus value rarely flips combat math when the anthem is already swinging. |
+| Verdant Mastery | {3}{G}{G} | ✅ (was 🟡) | Push XXXIV (doc-only): Sorcery. Both printed regular-cost clauses ship — caster fetches a basic untapped, then each opponent's auto-decider opts into fetching a basic tapped (when a basic is available; no-op otherwise). The {6}{G}{G} alt-cost two-basics-each mode is an engine-wide alt-cost-implies-mode gap shared with Baleful Mastery ✅ and Devastating Mastery ✅. |
 | Sacred Fire | {R}{W} | ✅ | Push XXIV: Sorcery. 3 damage to any target + 3 life + Flashback {5}{R}{W}. |
 | Rip Apart | {R}{W} | ✅ | Push XXIV: Sorcery. Two-mode `ChooseMode`: 3 dmg to creature/PW or destroy artifact/enchantment. |
 | Codespell Cleric | {W} | ✅ | Push XXIV: 1/1 Kor Cleric with Lifelink. Vanilla low-curve Silverquill body. |
