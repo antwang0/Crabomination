@@ -7,8 +7,8 @@
 //! once the Crew primitive lands.
 
 use crate::card::{
-    ActivatedAbility, CardDefinition, CardType, Effect, EventKind, EventScope, EventSpec,
-    SelectionRequirement, Subtypes, TriggeredAbility,
+    ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, Effect, EventKind, EventScope,
+    EventSpec, Keyword, SelectionRequirement, Subtypes, TriggeredAbility,
 };
 use crate::effect::shortcut::target_filtered;
 use crate::effect::{PlayerRef, Selector, Value, ZoneDest};
@@ -402,4 +402,54 @@ pub fn ark_of_hunger() -> CardDefinition {
     }
 }
 
+// ── Strixhaven Skycoach ─────────────────────────────────────────────────────
+
+/// Strixhaven Skycoach — {3} Artifact — Vehicle, 3/2.
+/// "Flying / When this Vehicle enters, you may search your library for
+/// a basic land card, reveal it, put it into your hand, then shuffle. /
+/// Crew 2."
+///
+/// 🟡 Body wired: 3/2 Vehicle artifact (subtype tag) with Flying. The
+/// ETB basic-land tutor-to-hand is wired faithfully via `Effect::Search
+/// { filter: IsBasicLand, to: Hand(You) }`. Crew is not enforced — the
+/// engine has no crew-as-tap-cost primitive (TODO.md), so the Skycoach
+/// stays a non-creature artifact until that lands. Body resolves
+/// end-to-end for the ETB tutor, which is the most impactful clause.
+pub fn strixhaven_skycoach() -> CardDefinition {
+    use crate::card::{EventKind, EventScope, EventSpec, TriggeredAbility};
+    use crate::effect::{PlayerRef as PR, ZoneDest as ZD};
+    CardDefinition {
+        name: "Strixhaven Skycoach",
+        cost: cost(&[generic(3)]),
+        supertypes: vec![],
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Vehicle],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        // Note: a "true" Vehicle has no keywords until crewed; we tag
+        // Flying here so the body's printed evasion is reflected during
+        // combat if a future crew layer flips the Vehicle into a creature
+        // mid-turn. Today the Vehicle is non-creature so Flying is inert.
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: vec![],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Search {
+                who: PR::You,
+                filter: SelectionRequirement::IsBasicLand,
+                to: ZD::Hand(PR::You),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
 

@@ -2527,3 +2527,114 @@ pub fn fix_whats_broken() -> CardDefinition {
         opening_hand: None,
     }
 }
+
+// ── Echocasting Symposium ───────────────────────────────────────────────────
+
+/// Echocasting Symposium — {4}{U}{U} Sorcery — Lesson.
+/// "Target player creates a token that's a copy of target creature you
+/// control. / Paradigm — ..."
+///
+/// 🟡 Body-only wire: approximated as you-create-a-copy of your own
+/// chosen creature via `Effect::CreateToken` over a "vanilla mirror"
+/// shell. The printed "target player" creates-the-copy player slot
+/// collapses to "you" (no multi-target prompt yet). The Paradigm
+/// rider is omitted (no copy-spell-from-exile-at-upkeep primitive).
+/// Marks as a Lesson via `SpellSubtype`. Concrete shape: this body
+/// mints a copy of *one* of the caster's creatures, defined inline
+/// as a 3/3 Wizard token (a vanilla placeholder until a permanent-
+/// copy primitive lands).
+pub fn echocasting_symposium() -> CardDefinition {
+    use crate::card::{CreatureType, SpellSubtype, TokenDefinition};
+    use crate::mana::u;
+    let placeholder = TokenDefinition {
+        name: "Echocast".into(),
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Blue],
+        supertypes: vec![],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Wizard],
+            ..Default::default()
+        },
+        activated_abilities: vec![],
+        triggered_abilities: vec![],
+    };
+    CardDefinition {
+        name: "Echocasting Symposium",
+        cost: cost(&[generic(4), u(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes {
+            spell_subtypes: vec![SpellSubtype::Lesson],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: placeholder,
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Applied Geometry ────────────────────────────────────────────────────────
+
+/// Applied Geometry — {2}{G}{U} Sorcery.
+/// "Create a token that's a copy of target non-Aura permanent you
+/// control, except it's a 0/0 Fractal creature in addition to its
+/// other types. Put six +1/+1 counters on it."
+///
+/// 🟡 Body wired as: mint a 0/0 Fractal token (the shared
+/// `fractal_token()` shape) with six +1/+1 counters via the existing
+/// `Selector::LastCreatedToken + AddCounter` pattern. The printed
+/// "copy a non-Aura permanent" half collapses to "make a 0/0 Fractal"
+/// (no permanent-copy primitive yet; tracked in TODO.md). Net play
+/// pattern is a 6/6 Fractal for 4 mana — matches the printed lower
+/// bound when the permanent being copied is vanilla.
+pub fn applied_geometry() -> CardDefinition {
+    use crate::card::CounterType;
+    use crate::mana::{g, u};
+    let fractal = fractal_token();
+    CardDefinition {
+        name: "Applied Geometry",
+        cost: cost(&[generic(2), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: fractal,
+            },
+            Effect::AddCounter {
+                what: Selector::LastCreatedToken,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(6),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}

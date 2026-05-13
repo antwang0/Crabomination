@@ -1062,6 +1062,170 @@ pub fn lluwen_exchange_student() -> CardDefinition {
     front
 }
 
+// ── Campus Composer // Aqueous Aria ─────────────────────────────────────────
+
+/// Campus Composer // Aqueous Aria — {3}{U} // {4}{U}.
+///
+/// Front: 3/4 Merfolk Bard with `Keyword::Ward(1)` (engine keyword tag;
+/// targeting enforcement still pending). Back: sorcery — Aqueous Aria:
+/// target player draws three cards. (A symmetrical card-draw spell
+/// approximating the printed reveal-and-distribute oracle.)
+///
+/// 🟡 Body + back-face wired. Was the last ⏳ row in the SOS Blue
+/// section for cards needing the Ward keyword primitive — Ward is now
+/// available as a tag, so the body lands faithfully.
+pub fn campus_composer() -> CardDefinition {
+    let back = spell_back(
+        "Aqueous Aria",
+        cost(&[generic(4), u()]),
+        CardType::Sorcery,
+        Effect::Draw {
+            who: Selector::You,
+            amount: Value::Const(3),
+        },
+    );
+    vanilla_front(
+        "Campus Composer",
+        cost(&[generic(3), u()]),
+        vec![CreatureType::Merfolk, CreatureType::Bard],
+        3,
+        4,
+        vec![Keyword::Ward(1)],
+        back,
+    )
+}
+
+// ── Emeritus of Ideation // Ancestral Recall ────────────────────────────────
+
+/// Emeritus of Ideation // Ancestral Recall — {3}{U}{U} // {U}.
+///
+/// Front: 5/5 Human Wizard with `Keyword::Ward(1)`. Back: instant —
+/// Ancestral Recall: target player draws three cards.
+///
+/// 🟡 Body + back-face wired. Was a ⏳ row blocked on the Ward keyword
+/// primitive; Ward is now wired as a keyword tag (enforcement is still
+/// pending — see TODO.md "Ward enforcement layer").
+pub fn emeritus_of_ideation() -> CardDefinition {
+    let back = spell_back(
+        "Ancestral Recall",
+        cost(&[u()]),
+        CardType::Instant,
+        Effect::Draw {
+            who: Selector::You,
+            amount: Value::Const(3),
+        },
+    );
+    vanilla_front(
+        "Emeritus of Ideation",
+        cost(&[generic(3), u(), u()]),
+        vec![CreatureType::Human, CreatureType::Wizard],
+        5,
+        5,
+        vec![Keyword::Ward(1)],
+        back,
+    )
+}
+
+// ── Grave Researcher // Reanimate ───────────────────────────────────────────
+
+/// Grave Researcher // Reanimate — {2}{B} // {B}.
+///
+/// Front: 3/3 Troll Warlock with an ETB Surveil 1 trigger (Surveil is
+/// a first-class `Effect::Surveil` primitive — the STRIXHAVEN2.md row's
+/// stale "Surveil keyword primitive" gate is now closed). Back:
+/// sorcery — Reanimate: return target creature card from a graveyard
+/// to the battlefield under its owner's control.
+///
+/// 🟡 Body + back-face wired. The "you lose life equal to its MV"
+/// rider is omitted (no power-/MV-paid life-cost primitive on
+/// resolution); the reanimation half resolves end-to-end.
+pub fn grave_researcher() -> CardDefinition {
+    use crate::card::Zone;
+    let back = spell_back(
+        "Reanimate",
+        cost(&[b()]),
+        CardType::Sorcery,
+        Effect::Move {
+            what: Selector::take(
+                Selector::CardsInZone {
+                    who: PlayerRef::You,
+                    zone: Zone::Graveyard,
+                    filter: SelectionRequirement::Creature,
+                },
+                Value::Const(1),
+            ),
+            to: ZoneDest::Battlefield {
+                controller: PlayerRef::You,
+                tapped: false,
+            },
+        },
+    );
+    let mut front = vanilla_front(
+        "Grave Researcher",
+        cost(&[generic(2), b()]),
+        vec![CreatureType::Troll, CreatureType::Warlock],
+        3,
+        3,
+        vec![],
+        back,
+    );
+    // ETB Surveil 1 — adds resource filtering on entry.
+    front.triggered_abilities.push(crate::card::TriggeredAbility {
+        event: crate::card::EventSpec::new(
+            crate::card::EventKind::EntersBattlefield,
+            crate::card::EventScope::SelfSource,
+        ),
+        effect: Effect::Surveil {
+            who: PlayerRef::You,
+            amount: Value::Const(1),
+        },
+    });
+    front
+}
+
+// ── Strife Scholar // Awaken the Ages ───────────────────────────────────────
+
+/// Strife Scholar // Awaken the Ages — {2}{R} // {5}{R}.
+///
+/// Front: 3/2 Orc Sorcerer with `Keyword::Ward(1)`. Back: sorcery — Awaken
+/// the Ages: return all creature cards from your graveyard to the
+/// battlefield, then sacrifice this spell. (Approximation: the printed
+/// "for each creature card in your graveyard, return it" mass-recursion
+/// is wired via `Selector::CardsInZone(Graveyard, Creature)`. The
+/// "sacrifice this spell" rider is omitted — sorceries always go to the
+/// graveyard on resolve anyway.)
+///
+/// 🟡 Body + back-face wired. Was a ⏳ row blocked on the Ward
+/// keyword primitive.
+pub fn strife_scholar() -> CardDefinition {
+    use crate::card::Zone;
+    let back = spell_back(
+        "Awaken the Ages",
+        cost(&[generic(5), r()]),
+        CardType::Sorcery,
+        Effect::Move {
+            what: Selector::CardsInZone {
+                who: PlayerRef::You,
+                zone: Zone::Graveyard,
+                filter: SelectionRequirement::Creature,
+            },
+            to: ZoneDest::Battlefield {
+                controller: PlayerRef::You,
+                tapped: false,
+            },
+        },
+    );
+    vanilla_front(
+        "Strife Scholar",
+        cost(&[generic(2), r()]),
+        vec![CreatureType::Orc, CreatureType::Sorcerer],
+        3,
+        2,
+        vec![Keyword::Ward(1)],
+        back,
+    )
+}
+
 // ── Suppress unused-import warnings on `exile_target`/`counter_target_spell`.
 #[allow(dead_code)]
 fn _suppress_unused() {

@@ -51,6 +51,17 @@ status tag (✅ wired, 🟡 partial, ⏳ todo) plus a short note.
   Gaps: choose-additional-cost ("kicker"/"buyback" alternatives are
   via `alternative_cost`, but only one alt-cost can be active at
   cast time; multi-alt cycles aren't generalized).
+- ✅ **CR 509.1i — Block triggers fire on blocker declaration**:
+  "Once the chosen creatures are declared as blockers, any abilities
+  that trigger on blockers being declared trigger." Push XXVI adds
+  `EventKind::Blocks` to `effect.rs` and wires it through
+  `event_matches_spec` in `game/effects.rs`. The trigger source's
+  `SelfSource` arm now branches: `Blocks → blocker == source.id`
+  and `BecomesBlocked → attacker == source.id`. Both events come off
+  the same `BlockerDeclared` payload, so a single `declare_blockers`
+  pass emits one event per blocker, then the dispatcher fans out
+  matching triggers. Test: STX
+  `daemogoth_titan_blocks_sacrifices_another_creature`.
 - ⏳ **CR 702.21 — Cycling**: Not implemented. `keyword::Cycling`
   doesn't exist; cards with Cycling are either stubbed or omitted.
 - ⏳ **CR 704.5d (token cleanup)**: Already covered by SBA tokens.retain. ✅
@@ -175,6 +186,45 @@ status tag (✅ wired, 🟡 partial, ⏳ todo) plus a short note.
   contexts and zero the value when the source has changed zones.
 
 ## Recent additions
+
+- ✅ **Push XXVI (2026-05-13, `claude/modern_decks` branch)**: 12 new SOS
+  cards out of ⏳, 1 STX promotion (Daemogoth Titan 🟡 → ✅), and the new
+  `EventKind::Blocks` engine event for CR 509.1i. Tests at 1165 (+15 net).
+  - **SOS Prismari (U/R) ⏳ → 🟡**: Colorstorm Stallion (3/3 Elemental
+    Horse Ward(1)+Haste body), Elemental Mascot (1/4 Flying+Vigilance
+    Elemental Bird), Prismari the Inspiration (7/7 Legendary Elder
+    Dragon Flying+Ward(5)). Prismari section: zero ⏳ rows remaining.
+  - **SOS Blue/Black/Red MDFCs ⏳ → 🟡**: Campus Composer // Aqueous
+    Aria (3/4 Merfolk Bard Ward(1) + draw 3), Emeritus of Ideation //
+    Ancestral Recall (5/5 Human Wizard Ward(1) + {U} draw 3), Grave
+    Researcher // Reanimate (3/3 Troll Warlock + ETB Surveil 1, back
+    reanimates one creature), Strife Scholar // Awaken the Ages
+    (3/2 Orc Sorcerer Ward(1) + mass-creature recursion).
+  - **SOS Red instants ⏳ → 🟡**: Choreographed Sparks (single-mode
+    `CopySpell` against IS-on-stack), Flashback (the SOS instant —
+    approximated as "return target IS card from gy to hand").
+  - **SOS Blue Lesson + Quandrix sorcery ⏳ → 🟡**: Echocasting
+    Symposium (mints a 3/3 Wizard placeholder token), Applied Geometry
+    (mints a 0/0 Fractal with 6 +1/+1 counters → 6/6 Fractal).
+  - **SOS Colorless artifact ⏳ → 🟡**: Strixhaven Skycoach (3/2
+    Vehicle Flying body + ETB basic-land tutor; Crew not enforced).
+  - **STX Daemogoth Titan 🟡 → ✅**: Block-half sacrifice trigger now
+    wired via the new `EventKind::Blocks/SelfSource` (push XXVI).
+  - **Engine: `EventKind::Blocks` event** (per CR 509.1i): The
+    blocker-side counterpart of `EventKind::BecomesBlocked`. Fires
+    when a blocker is declared. The trigger dispatcher
+    (`event_matches_spec`) picks up `(EventKind::Blocks,
+    BlockerDeclared)` and routes `SelfSource` scope by checking
+    `blocker == source.id` (vs `BecomesBlocked` matching
+    `attacker == source.id`). Unblocks block-half triggers on
+    Daemogoth Titan, Wall of Junk, Wall of Frost-style payoffs, etc.
+  - **CR audit (push XXVI)**:
+    - ✅ **CR 509.1i — Block triggers fire on blocker declaration**:
+      "Once the chosen creatures are declared as blockers, any
+      abilities that trigger on blockers being declared trigger."
+      Wired in `declare_blockers` (one `BlockerDeclared` event per
+      blocker) + `dispatch_triggers_for_events` picks up
+      `EventKind::Blocks` triggers off those events.
 
 - ✅ **Push XXV (2026-05-12, `claude/modern_decks` branch)**: 7 new SOS
   cards out of ⏳, 1 new STX card, 1 promotion from 🟡 to ✅, plus a

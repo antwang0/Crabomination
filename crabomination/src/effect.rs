@@ -440,6 +440,10 @@ pub enum EventKind {
     SpellCast,
     /// A creature was declared as an attacker.
     Attacks,
+    /// A creature was declared as a blocker. Fired once per blocker
+    /// from `declare_blockers` (CR 509.1i). Dispatched in addition to
+    /// the existing `BecomesBlocked` event on the attacker side.
+    Blocks,
     /// A creature became blocked.
     BecomesBlocked,
     /// Combat damage was dealt to a player by a creature.

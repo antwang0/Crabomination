@@ -2608,6 +2608,13 @@ pub(crate) fn event_matches_spec(
         (EventKind::LandPlayed, GameEvent::LandPlayed { .. }) => true,
         (EventKind::SpellCast, GameEvent::SpellCast { .. }) => true,
         (EventKind::Attacks, GameEvent::AttackerDeclared(_)) => true,
+        // `Blocks` fires from the blocker's side ("whenever this creature
+        // blocks"). `BecomesBlocked` fires from the attacker's side
+        // ("whenever this creature becomes blocked"). Both come off the
+        // same BlockerDeclared event but are filtered by `event_card`
+        // below — see `event_card` matching on `Blocks` vs
+        // `BecomesBlocked`.
+        (EventKind::Blocks, GameEvent::BlockerDeclared { .. }) => true,
         (EventKind::BecomesBlocked, GameEvent::BlockerDeclared { .. }) => true,
         (EventKind::LifeGained, GameEvent::LifeGained { .. }) => true,
         (EventKind::LifeLost, GameEvent::LifeLost { .. }) => true,
@@ -2632,9 +2639,18 @@ pub(crate) fn event_matches_spec(
         ) || matches!(
             event,
             GameEvent::CreatureDied { card_id } if *card_id == source.id
-        ) || matches!(
-            event,
-            GameEvent::BlockerDeclared { attacker, .. } if *attacker == source.id
+        ) || (
+            // `Blocks` vs `BecomesBlocked` look at different sides of
+            // the same BlockerDeclared event:
+            //   - `EventKind::Blocks` → the blocker side ("when this
+            //     creature blocks"). Source must equal `blocker`.
+            //   - `EventKind::BecomesBlocked` → the attacker side
+            //     ("when this becomes blocked"). Source must equal
+            //     `attacker`.
+            matches!(event, GameEvent::BlockerDeclared { blocker, .. }
+                if matches!(spec.kind, EventKind::Blocks) && *blocker == source.id)
+            || matches!(event, GameEvent::BlockerDeclared { attacker, .. }
+                if matches!(spec.kind, EventKind::BecomesBlocked) && *attacker == source.id)
         ) || matches!(
             event,
             GameEvent::CounterAdded { card_id, .. } if *card_id == source.id

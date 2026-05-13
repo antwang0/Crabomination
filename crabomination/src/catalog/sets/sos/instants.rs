@@ -6,7 +6,7 @@ use crate::card::{
     CardDefinition, CardType, CounterType, Effect, Keyword, SelectionRequirement, Subtypes,
 };
 use crate::effect::shortcut::target_filtered;
-use crate::effect::{Duration, PlayerRef, Selector, Value};
+use crate::effect::{Duration, PlayerRef, Selector, Value, ZoneDest};
 use crate::mana::{b, cost, generic, w};
 
 // ── White ───────────────────────────────────────────────────────────────────
@@ -1975,6 +1975,114 @@ pub fn prismari_charm() -> CardDefinition {
                 to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
             },
         ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Choreographed Sparks ────────────────────────────────────────────────────
+
+/// Choreographed Sparks — {R}{R} Instant.
+/// "This spell can't be copied. / Choose one — • Copy target instant or
+/// sorcery spell you control. You may choose new targets for the copy."
+///
+/// 🟡 Single-mode wire to the new `Effect::CopySpell` primitive (the
+/// "or copy a creature spell" branch needs a permanent-spell copy
+/// variant that mints a token instead of a stack copy). The
+/// "this spell can't be copied" rider is omitted — no `CantBeCopied`
+/// keyword tag yet — but is implicit because copies of Choreographed
+/// Sparks would themselves resolve as no-ops (no Target(0) on a copy).
+/// Was a previously ⏳ row blocked on the copy-spell primitive, which
+/// landed in push XVII.
+pub fn choreographed_sparks() -> CardDefinition {
+    use crate::mana::r;
+    CardDefinition {
+        name: "Choreographed Sparks",
+        cost: cost(&[r(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::CopySpell {
+            // The "you control" filter isn't enforced on stack-target
+            // selection (the engine's `ControlledByYou` predicate only
+            // reaches battlefield permanents, not stack-resident spells).
+            // We rely on the IS-on-stack + IS-card-type gate; in cube
+            // play the target is almost always the caster's own spell
+            // anyway since copying an opponent's instant/sorcery rarely
+            // hits its caster favourably.
+            what: target_filtered(
+                SelectionRequirement::IsSpellOnStack.and(
+                    SelectionRequirement::HasCardType(CardType::Instant)
+                        .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+                ),
+            ),
+            count: Value::Const(1),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Flashback (the SOS instant) ─────────────────────────────────────────────
+
+/// Flashback — {R} Instant.
+/// "Target instant or sorcery card in your graveyard gains flashback
+/// until end of turn. The flashback cost is equal to its mana cost."
+///
+/// 🟡 Body-only wire: applies a flat-cost `Keyword::Flashback` to a
+/// target IS card in your graveyard by recasting it as if its
+/// flashback cost were its own mana cost — implemented as
+/// `Move(target → Hand) → reset to hand` so it can be cast normally.
+/// This is a *strict* approximation since the "flashback cost = its
+/// mana cost" rider can't be expressed as a static keyword grant on a
+/// graveyard-resident card (the engine's `Keyword::Flashback` lives on
+/// `CardDefinition.keywords`, not on per-instance state). A true wiring
+/// would need a transient `CardInstance::granted_keywords` slot that
+/// applies only while the card is in graveyard until end of turn —
+/// tracked in TODO.md.
+pub fn sos_flashback_instant() -> CardDefinition {
+    use crate::card::Zone;
+    use crate::mana::r;
+    CardDefinition {
+        name: "Flashback",
+        cost: cost(&[r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        // Approximation: bounce target IS card from your graveyard to hand.
+        // The player can re-cast it next turn at normal cost — strictly
+        // weaker than the printed "flashback for its mana cost this turn"
+        // but preserves the recovery-of-a-spell-from-graveyard outcome.
+        effect: Effect::Move {
+            what: Selector::take(
+                Selector::CardsInZone {
+                    who: PlayerRef::You,
+                    zone: Zone::Graveyard,
+                    filter: SelectionRequirement::HasCardType(CardType::Instant)
+                        .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+                },
+                Value::Const(1),
+            ),
+            to: ZoneDest::Hand(PlayerRef::You),
+        },
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],

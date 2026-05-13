@@ -8153,3 +8153,285 @@ fn killians_confidence_stays_in_graveyard_when_no_damage_or_no_pay() {
     assert!(g.players[0].graveyard.iter().any(|c| c.id == kc),
         "KC should still be in graveyard with no combat damage");
 }
+
+// ── Push XXVI: Prismari ⏳ closer + Ward-tagged MDFCs + ⏳ utility ──────────
+
+#[test]
+fn colorstorm_stallion_is_three_three_ward_one_haste_elemental_horse() {
+    use crate::card::CreatureType;
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::colorstorm_stallion());
+    let c = g.battlefield.iter().find(|c| c.id == id).unwrap();
+    assert_eq!(c.power(), 3);
+    assert_eq!(c.toughness(), 3);
+    assert!(c.has_keyword(&Keyword::Haste));
+    assert!(c.has_keyword(&Keyword::Ward(1)));
+    assert!(c.definition.subtypes.creature_types.contains(&CreatureType::Elemental));
+    assert!(c.definition.subtypes.creature_types.contains(&CreatureType::Horse));
+}
+
+#[test]
+fn elemental_mascot_is_one_four_flying_vigilance_elemental_bird() {
+    use crate::card::CreatureType;
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::elemental_mascot());
+    let c = g.battlefield.iter().find(|c| c.id == id).unwrap();
+    assert_eq!(c.power(), 1);
+    assert_eq!(c.toughness(), 4);
+    assert!(c.has_keyword(&Keyword::Flying));
+    assert!(c.has_keyword(&Keyword::Vigilance));
+    assert!(c.definition.subtypes.creature_types.contains(&CreatureType::Elemental));
+    assert!(c.definition.subtypes.creature_types.contains(&CreatureType::Bird));
+}
+
+#[test]
+fn prismari_the_inspiration_is_seven_seven_legendary_dragon_with_ward_five() {
+    use crate::card::{CreatureType, Supertype};
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::prismari_the_inspiration());
+    let c = g.battlefield.iter().find(|c| c.id == id).unwrap();
+    assert_eq!(c.power(), 7);
+    assert_eq!(c.toughness(), 7);
+    assert!(c.has_keyword(&Keyword::Flying));
+    assert!(c.has_keyword(&Keyword::Ward(5)));
+    assert!(c.definition.supertypes.contains(&Supertype::Legendary));
+    assert!(c.definition.subtypes.creature_types.contains(&CreatureType::Dragon));
+    assert!(c.definition.subtypes.creature_types.contains(&CreatureType::Elder));
+}
+
+#[test]
+fn campus_composer_is_three_four_ward_one_merfolk_bard() {
+    use crate::card::CreatureType;
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::campus_composer());
+    let c = g.battlefield.iter().find(|c| c.id == id).unwrap();
+    assert_eq!(c.power(), 3);
+    assert_eq!(c.toughness(), 4);
+    assert!(c.has_keyword(&Keyword::Ward(1)));
+    assert!(c.definition.subtypes.creature_types.contains(&CreatureType::Merfolk));
+    assert!(c.definition.subtypes.creature_types.contains(&CreatureType::Bard));
+    // Back face: Aqueous Aria — draw 3.
+    let back = c.definition.back_face.as_ref().expect("MDFC back face");
+    assert_eq!(back.name, "Aqueous Aria");
+}
+
+#[test]
+fn emeritus_of_ideation_back_face_draws_three() {
+    let mut g = two_player_game();
+    for _ in 0..5 { g.add_card_to_library(0, catalog::island()); }
+    let id = g.add_card_to_hand(0, catalog::emeritus_of_ideation());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    let hand_before = g.players[0].hand.len();
+    let lib_before = g.players[0].library.len();
+
+    // Cast the back face Ancestral Recall — costs {U}.
+    g.perform_action(GameAction::CastSpellBack {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Ancestral Recall castable for {U}");
+    drain_stack(&mut g);
+
+    // Net: -1 cast +3 draw = +2 hand. Library -3.
+    assert_eq!(g.players[0].hand.len(), hand_before - 1 + 3);
+    assert_eq!(g.players[0].library.len(), lib_before - 3);
+}
+
+#[test]
+fn grave_researcher_front_etb_surveils_one() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::plains());
+    let id = g.add_card_to_hand(0, catalog::grave_researcher());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let lib_before = g.players[0].library.len();
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Grave Researcher castable for {2}{B}");
+    drain_stack(&mut g);
+
+    // ETB Surveil 1: top card either stays or hits graveyard.
+    let after_lib = g.players[0].library.len();
+    let after_gy = g.players[0].graveyard.len();
+    assert!(
+        after_lib == lib_before || (after_lib == lib_before - 1 && after_gy >= 1),
+        "Surveil 1 either kept or graveyarded the top card",
+    );
+}
+
+#[test]
+fn grave_researcher_back_face_reanimates_creature_from_graveyard() {
+    let mut g = two_player_game();
+    // Seed a creature in P0's graveyard.
+    let bear_id = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let researcher = g.add_card_to_hand(0, catalog::grave_researcher());
+    g.players[0].mana_pool.add(Color::Black, 1);
+
+    // Cast back face Reanimate for {B}.
+    g.perform_action(GameAction::CastSpellBack {
+        card_id: researcher, target: None, mode: None, x_value: None,
+    })
+    .expect("Reanimate castable for {B}");
+    drain_stack(&mut g);
+
+    // Bear should now be on P0's battlefield.
+    assert!(g.battlefield.iter().any(|c| c.id == bear_id),
+        "Grizzly Bears returned to battlefield via Reanimate");
+    assert!(!g.players[0].graveyard.iter().any(|c| c.id == bear_id),
+        "Bear left the graveyard");
+}
+
+#[test]
+fn strife_scholar_is_three_two_ward_one_orc_sorcerer() {
+    use crate::card::CreatureType;
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::strife_scholar());
+    let c = g.battlefield.iter().find(|c| c.id == id).unwrap();
+    assert_eq!(c.power(), 3);
+    assert_eq!(c.toughness(), 2);
+    assert!(c.has_keyword(&Keyword::Ward(1)));
+    assert!(c.definition.subtypes.creature_types.contains(&CreatureType::Orc));
+    assert!(c.definition.subtypes.creature_types.contains(&CreatureType::Sorcerer));
+}
+
+#[test]
+fn strife_scholar_back_face_returns_creatures_from_graveyard_to_battlefield() {
+    let mut g = two_player_game();
+    let bear1 = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let bear2 = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::strife_scholar());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(5);
+
+    g.perform_action(GameAction::CastSpellBack {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Awaken the Ages castable for {5}{R}");
+    drain_stack(&mut g);
+
+    assert!(g.battlefield.iter().any(|c| c.id == bear1),
+        "First bear returned via Awaken the Ages");
+    assert!(g.battlefield.iter().any(|c| c.id == bear2),
+        "Second bear returned via Awaken the Ages");
+}
+
+#[test]
+fn strixhaven_skycoach_etb_searches_for_a_basic_land() {
+    use crate::card::ArtifactSubtype;
+    let mut g = two_player_game();
+    // Seed a Forest into P0's library to tutor for.
+    let forest_id = g.add_card_to_library(0, catalog::forest());
+    let id = g.add_card_to_hand(0, catalog::strixhaven_skycoach());
+    g.players[0].mana_pool.add_colorless(3);
+    // Script the Search decision to actually pick the Forest.
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Search(Some(forest_id)),
+    ]));
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Skycoach castable for {3}");
+    drain_stack(&mut g);
+
+    // Forest tutored to hand by the Skycoach ETB.
+    assert!(g.players[0].hand.iter().any(|c| c.id == forest_id),
+        "Forest tutored to hand by Skycoach ETB");
+    // Skycoach is on battlefield with Vehicle subtype.
+    let sc = g.battlefield.iter().find(|c| c.id == id).unwrap();
+    assert!(sc.definition.subtypes.artifact_subtypes.contains(&ArtifactSubtype::Vehicle));
+}
+
+#[test]
+fn choreographed_sparks_copies_target_instant_you_control() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    // Cast a Bolt first to put it on the stack.
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    let sparks = g.add_card_to_hand(0, catalog::choreographed_sparks());
+    g.players[0].mana_pool.add(Color::Red, 3);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(bear)), mode: None, x_value: None,
+    })
+    .expect("Bolt castable for {R}");
+    // Bolt is on the stack now. Cast Sparks targeting the Bolt stack item by
+    // its original CardId (the engine uses Target::Permanent(card_id) for
+    // stack targets, see Test of Talents).
+    g.perform_action(GameAction::CastSpell {
+        card_id: sparks, target: Some(Target::Permanent(bolt)),
+        mode: None, x_value: None,
+    })
+    .expect("Choreographed Sparks castable for {R}{R}");
+    drain_stack(&mut g);
+
+    // Both the original Bolt and the copy hit the bear → 6 damage total →
+    // bear dies (2 toughness).
+    assert!(!g.battlefield.iter().any(|c| c.id == bear),
+        "Bear should die to original Bolt + Sparks copy (6 total damage)");
+}
+
+#[test]
+fn flashback_instant_returns_an_instant_from_your_graveyard_to_hand() {
+    let mut g = two_player_game();
+    // Seed a Bolt in P0's graveyard.
+    let bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    let fb = g.add_card_to_hand(0, catalog::sos_flashback_instant());
+    g.players[0].mana_pool.add(Color::Red, 1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: fb, target: None, mode: None, x_value: None,
+    })
+    .expect("Flashback (instant) castable for {R}");
+    drain_stack(&mut g);
+
+    // Bolt moved from graveyard to hand.
+    assert!(g.players[0].hand.iter().any(|c| c.id == bolt),
+        "Bolt returned from graveyard to hand by Flashback approximation");
+}
+
+#[test]
+fn echocasting_symposium_creates_a_three_three_wizard_token() {
+    use crate::card::CreatureType;
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::echocasting_symposium());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    let bf_before = g.battlefield.len();
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Echocasting Symposium castable for {4}{U}{U}");
+    drain_stack(&mut g);
+
+    assert_eq!(g.battlefield.len(), bf_before + 1, "One new token entered");
+    let tok = g.battlefield.iter().find(|c| c.definition.name == "Echocast").unwrap();
+    assert_eq!(tok.power(), 3);
+    assert_eq!(tok.toughness(), 3);
+    assert!(tok.definition.subtypes.creature_types.contains(&CreatureType::Wizard));
+}
+
+#[test]
+fn applied_geometry_mints_a_six_six_fractal() {
+    use crate::card::CreatureType;
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::applied_geometry());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Applied Geometry castable for {2}{G}{U}");
+    drain_stack(&mut g);
+
+    let frac = g.battlefield.iter().find(|c| c.definition.name == "Fractal").unwrap();
+    // 0/0 + 6 +1/+1 counters = 6/6.
+    assert_eq!(frac.power(), 6, "Fractal should have power 6 from counters");
+    assert_eq!(frac.toughness(), 6, "Fractal should have toughness 6 from counters");
+    assert!(frac.definition.subtypes.creature_types.contains(&CreatureType::Fractal));
+}

@@ -1697,6 +1697,41 @@ fn daemogoth_titan_attacks_sacrifices_non_source_creature_first() {
 }
 
 #[test]
+fn daemogoth_titan_blocks_sacrifices_another_creature() {
+    // Push XXVI: the new `EventKind::Blocks` event fires off
+    // BlockerDeclared (CR 509.1i). Wire up an attacker on P0 vs the
+    // Titan defender on P1, then declare the Titan as a blocker → its
+    // block trigger fires → sac another creature.
+    use crate::game::Attack;
+    let mut g = two_player_game();
+    // Attacker on P0 (active player).
+    let attacker = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(attacker);
+    // Defender on P1: Daemogoth Titan + a fodder bear.
+    let titan = g.add_card_to_battlefield(1, catalog::daemogoth_titan());
+    let fodder = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(titan);
+    g.clear_sickness(fodder);
+
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker, target: crate::game::AttackTarget::Player(1),
+    }]))
+    .expect("Bear attacks");
+
+    g.step = TurnStep::DeclareBlockers;
+    g.perform_action(GameAction::DeclareBlockers(vec![(titan, attacker)]))
+        .expect("Titan can block the attacking bear");
+    drain_stack(&mut g);
+
+    // Titan should still be on bf (sacked the fodder, not itself).
+    assert!(g.battlefield.iter().any(|c| c.id == titan),
+        "Daemogoth Titan should NOT have sacrificed itself on block");
+    assert!(!g.battlefield.iter().any(|c| c.id == fodder),
+        "Fodder bear (non-source) should be sacrificed on block");
+}
+
+#[test]
 fn daemogoth_woe_eater_etb_sacrifices_another_creature() {
     let mut g = two_player_game();
     let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());

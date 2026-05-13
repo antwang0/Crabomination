@@ -5073,3 +5073,119 @@ pub fn mica_reader_of_ruins() -> CardDefinition {
         opening_hand: None,
     }
 }
+
+// ── Colorstorm Stallion ─────────────────────────────────────────────────────
+
+/// Colorstorm Stallion — {1}{U}{R} Creature — Elemental Horse, 3/3.
+/// "Ward {1}, haste / Opus — Whenever you cast an instant or sorcery
+/// spell, this creature gets +1/+1 until end of turn. If five or more
+/// mana was spent to cast that spell, create a token that's a copy of
+/// this creature."
+///
+/// 🟡 Body wired: 3/3 Elemental Horse with Ward(1) keyword tag and
+/// Haste. The Opus rider's +1/+1 EOT pump is omitted (mana-spent-on-
+/// cast introspection — same gap as Aberrant Manawurm, Tackle Artist,
+/// Expressive Firedancer, Spectacular Skywhale). The copy-this-creature
+/// branch requires a permanent-copy primitive distinct from
+/// `Effect::CopySpell` (which targets stack items).
+pub fn colorstorm_stallion() -> CardDefinition {
+    use crate::mana::{r, u};
+    CardDefinition {
+        name: "Colorstorm Stallion",
+        cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Horse],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Ward(1), Keyword::Haste],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Elemental Mascot ────────────────────────────────────────────────────────
+
+/// Elemental Mascot — {1}{U}{R} Creature — Elemental Bird, 1/4.
+/// "Flying, vigilance / Opus — Whenever you cast an instant or sorcery
+/// spell, this creature gets +1/+0 until end of turn. If five or more
+/// mana was spent to cast that spell, exile the top card of your
+/// library. You may play that card until the end of your next turn."
+///
+/// 🟡 Body wired: 1/4 Flying + Vigilance Elemental Bird. The Opus
+/// rider (+1/+0 EOT + conditional exile-and-may-play) is omitted —
+/// no mana-spent-on-cast introspection and no cast-from-exile pipeline
+/// (tracked in TODO.md). The vanilla 1/4 flying / vigilance body is
+/// still a fine evasive blocker.
+pub fn elemental_mascot() -> CardDefinition {
+    use crate::mana::{r, u};
+    CardDefinition {
+        name: "Elemental Mascot",
+        cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Bird],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 4,
+        keywords: vec![Keyword::Flying, Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Prismari, the Inspiration ───────────────────────────────────────────────
+
+/// Prismari, the Inspiration — {5}{U}{R} Legendary Creature — Elder Dragon
+/// 7/7. "Flying / Ward—Pay 5 life. / Instant and sorcery spells you cast
+/// have storm."
+///
+/// 🟡 Body wired: 7/7 Flying Legendary Elder Dragon with `Keyword::Ward(5)`.
+/// The "your IS spells have storm" static is omitted — storm grants
+/// would need a per-cast trigger that fans out copies for each prior
+/// spell cast this turn, which is a sibling of `Effect::CopySpell` but
+/// over a `Value::SpellsCastThisTurn` count (TODO.md).
+pub fn prismari_the_inspiration() -> CardDefinition {
+    use crate::mana::{r, u};
+    CardDefinition {
+        name: "Prismari, the Inspiration",
+        cost: cost(&[generic(5), u(), r()]),
+        supertypes: vec![crate::card::Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dragon, CreatureType::Elder],
+            ..Default::default()
+        },
+        power: 7,
+        toughness: 7,
+        keywords: vec![Keyword::Flying, Keyword::Ward(5)],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}

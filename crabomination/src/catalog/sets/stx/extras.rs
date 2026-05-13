@@ -734,16 +734,19 @@ pub fn mortality_spear() -> CardDefinition {
 /// Daemogoth Titan — {B}{B}, 11/11 Demon Horror. "When this attacks or
 /// blocks, sacrifice another creature."
 ///
-/// 🟡 We ship the full 11/11 body. The attack/block sacrifice rider is
-/// wired only for the attack half — `EventKind::Attacks` fires on attack
-/// declaration; a `Blocks` event for the block half is a TODO (the
-/// engine has no blocker-declared event yet). The sacrifice resolves
-/// via `Effect::Sacrifice` over "creature you control" — the filter is
-/// approximated as "any creature you control" since the engine's
-/// `Sacrifice` decider already prefers the lowest-power non-self
-/// creature when multiple are available, so a fresh Titan will sac
-/// something else rather than itself.
+/// ✅ Both halves now wired. The attack half uses
+/// `EventKind::Attacks/SelfSource`; the block half uses the new
+/// `EventKind::Blocks/SelfSource` (push XXVI added the `Blocks` event
+/// and the dispatcher wiring per CR 509.1i). The sacrifice resolves
+/// via `Effect::Sacrifice` over creatures you control — the
+/// auto-decider prefers lowest-power non-source creatures, so a fresh
+/// Titan will sac something else rather than itself.
 pub fn daemogoth_titan() -> CardDefinition {
+    let sac_another = Effect::Sacrifice {
+        who: Selector::You,
+        count: Value::Const(1),
+        filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+    };
     CardDefinition {
         name: "Daemogoth Titan",
         cost: cost(&[b(), b()]),
@@ -758,15 +761,16 @@ pub fn daemogoth_titan() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
-            effect: Effect::Sacrifice {
-                who: Selector::You,
-                count: Value::Const(1),
-                filter: SelectionRequirement::Creature
-                    .and(SelectionRequirement::ControlledByYou),
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+                effect: sac_another.clone(),
             },
-        }],
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Blocks, EventScope::SelfSource),
+                effect: sac_another,
+            },
+        ],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
