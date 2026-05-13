@@ -778,11 +778,25 @@ impl GameState {
         events
     }
 
+    /// CR 506.4 — A permanent is removed from combat if it leaves the
+    /// battlefield. Called by every battlefield-removal path
+    /// (`move_card_to`, `remove_from_battlefield_to_graveyard`,
+    /// `remove_from_battlefield_to_exile`, etc.) so the post-removal
+    /// combat state stays consistent. Prunes `self.attacking` (the
+    /// attacker slot) and `self.block_map` (both blocker keys and
+    /// attacker values).
+    pub(crate) fn remove_from_combat(&mut self, id: CardId) {
+        self.attacking.retain(|a| a.attacker != id);
+        self.block_map
+            .retain(|blocker, attacker| *blocker != id && *attacker != id);
+    }
+
     pub(crate) fn remove_from_battlefield_to_graveyard(&mut self, id: CardId) {
         if let Some(pos) = self.battlefield.iter().position(|c| c.id == id) {
             let card = self.battlefield.remove(pos);
             let owner = card.owner;
             self.remove_effects_from_source(id);
+            self.remove_from_combat(id);
             self.players[owner].send_to_graveyard(card);
         }
     }
@@ -791,6 +805,7 @@ impl GameState {
         if let Some(pos) = self.battlefield.iter().position(|c| c.id == id) {
             let card = self.battlefield.remove(pos);
             self.remove_effects_from_source(id);
+            self.remove_from_combat(id);
             self.exile.push(card);
         }
     }

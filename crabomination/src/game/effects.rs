@@ -2398,6 +2398,11 @@ impl GameState {
             card.damage = 0;
             card.tapped = false;
             card.attached_to = None;
+            // CR 506.4 — A permanent leaving the battlefield is removed
+            // from combat. The helper prunes `self.attacking` and
+            // `self.block_map` so the post-move combat state stays
+            // consistent for downstream selectors and trigger dispatchers.
+            self.remove_from_combat(cid);
             self.place_card_in_dest(card, ctx.controller, &resolved_dest, events);
             return;
         }

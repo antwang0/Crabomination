@@ -3756,6 +3756,9 @@ pub fn soaring_stoneglider() -> CardDefinition {
 /// spent)" rider is omitted (mana-spent introspection on cast — same gap
 /// as Aberrant Manawurm, Tackle Artist, Expressive Firedancer).
 pub fn spectacular_skywhale() -> CardDefinition {
+    use crate::card::CounterType;
+    use crate::effect::Duration;
+    use crate::effect::shortcut::opus_trigger;
     use crate::mana::{r, u};
     CardDefinition {
         name: "Spectacular Skywhale",
@@ -3771,7 +3774,24 @@ pub fn spectacular_skywhale() -> CardDefinition {
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
+        // ✅ Opus fully wired via `shortcut::opus_trigger`. Small body
+        // (<5 mana) is +3/+0 EOT on the Skywhale. Big body (≥5 mana)
+        // replaces the pump with three +1/+1 counters — the printed
+        // Oracle says "instead", so the big branch swaps in rather than
+        // stacking, matching the `If` semantics inside `opus_trigger`.
+        triggered_abilities: vec![opus_trigger(
+            Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(3),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(3),
+            },
+        )],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -5129,7 +5149,15 @@ pub fn mica_reader_of_ruins() -> CardDefinition {
 /// branch requires a permanent-copy primitive distinct from
 /// `Effect::CopySpell` (which targets stack items).
 pub fn colorstorm_stallion() -> CardDefinition {
+    use crate::effect::Duration;
+    use crate::effect::shortcut::opus_trigger;
     use crate::mana::{r, u};
+    let pump_one = || Effect::PumpPT {
+        what: Selector::This,
+        power: Value::Const(1),
+        toughness: Value::Const(1),
+        duration: Duration::EndOfTurn,
+    };
     CardDefinition {
         name: "Colorstorm Stallion",
         cost: cost(&[generic(1), u(), r()]),
@@ -5144,7 +5172,14 @@ pub fn colorstorm_stallion() -> CardDefinition {
         keywords: vec![Keyword::Ward(1), Keyword::Haste],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
+        // 🟡 Opus small body (<5 mana) wired: +1/+1 EOT. Big body
+        // (≥5 mana) prints "create a token that's a copy of this
+        // creature" — without a permanent-copy primitive, we
+        // approximate the big body as the same +1/+1 EOT (no
+        // additional bonus). The pump fires on every IS cast either
+        // way, which preserves the printed "always pumps" behaviour
+        // while leaving the copy-on-big branch as a documented gap.
+        triggered_abilities: vec![opus_trigger(pump_one(), pump_one())],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -5168,7 +5203,15 @@ pub fn colorstorm_stallion() -> CardDefinition {
 /// (tracked in TODO.md). The vanilla 1/4 flying / vigilance body is
 /// still a fine evasive blocker.
 pub fn elemental_mascot() -> CardDefinition {
+    use crate::effect::Duration;
+    use crate::effect::shortcut::opus_trigger;
     use crate::mana::{r, u};
+    let pump = || Effect::PumpPT {
+        what: Selector::This,
+        power: Value::Const(1),
+        toughness: Value::Const(0),
+        duration: Duration::EndOfTurn,
+    };
     CardDefinition {
         name: "Elemental Mascot",
         cost: cost(&[generic(1), u(), r()]),
@@ -5183,7 +5226,14 @@ pub fn elemental_mascot() -> CardDefinition {
         keywords: vec![Keyword::Flying, Keyword::Vigilance],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
+        // 🟡 Opus small body (<5 mana) wired: +1/+0 EOT. Big body
+        // (≥5 mana) prints "exile the top card of your library. You
+        // may play that card until the end of your next turn." Without
+        // a cast-from-exile-with-timer primitive the big body
+        // collapses to the same +1/+0 EOT pump. The pump fires on
+        // every IS cast you control; mana-spent introspection
+        // resolves through `Predicate::CastSpellManaSpentAtLeast(5)`.
+        triggered_abilities: vec![opus_trigger(pump(), pump())],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],

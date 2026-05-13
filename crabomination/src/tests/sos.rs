@@ -8516,3 +8516,132 @@ fn applied_geometry_mints_a_six_six_fractal() {
     assert_eq!(frac.toughness(), 6, "Fractal should have toughness 6 from counters");
     assert!(frac.definition.subtypes.creature_types.contains(&CreatureType::Fractal));
 }
+
+// ── Push XXIX: Prismari Opus rider promotions ───────────────────────────────
+//
+// Spectacular Skywhale fully wires its Opus rider (small: +3/+0 EOT;
+// big: 3 +1/+1 counters instead). Colorstorm Stallion and Elemental
+// Mascot wire the +1/+_ small body; the big-body conditional clauses
+// (token-copy / cast-from-exile) remain noted gaps but the small body
+// is exercised here.
+
+#[test]
+fn spectacular_skywhale_opus_small_body_pumps_three_zero_eot() {
+    // Cast Bolt ({R} = 1 mana). Small body fires: +3/+0 EOT → 4/4 power-only.
+    let mut g = two_player_game();
+    let sw = place_creature(&mut g, 0, catalog::spectacular_skywhale());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        mode: None, x_value: None,
+    })
+    .expect("Bolt castable for {R}");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(sw).expect("Skywhale alive");
+    assert_eq!(c.power(), 1 + 3, "Small body adds +3 power EOT");
+    assert_eq!(c.toughness(), 4, "Small body adds +0 toughness");
+}
+
+#[test]
+fn spectacular_skywhale_opus_big_body_adds_three_counters() {
+    // Cast Divergent Equation with X=2 → 5 mana spent, big body fires
+    // and lands three +1/+1 counters instead of the temporary pump.
+    let mut g = two_player_game();
+    let sw = place_creature(&mut g, 0, catalog::spectacular_skywhale());
+    let big = g.add_card_to_hand(0, catalog::divergent_equation());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: big, target: None, mode: None, x_value: Some(2),
+    })
+    .expect("Divergent Equation castable with X=2");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(sw).expect("Skywhale alive");
+    assert_eq!(
+        c.counter_count(CounterType::PlusOnePlusOne),
+        3,
+        "Big body (≥5 mana) lands three +1/+1 counters instead of the EOT pump",
+    );
+}
+
+#[test]
+fn colorstorm_stallion_opus_small_body_pumps_one_one_eot() {
+    // Cast Bolt ({R}, 1 mana). Small body fires: +1/+1 EOT.
+    let mut g = two_player_game();
+    let cs = place_creature(&mut g, 0, catalog::colorstorm_stallion());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        mode: None, x_value: None,
+    })
+    .expect("Bolt castable for {R}");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(cs).expect("Stallion alive");
+    assert_eq!(c.power(), 4, "Small body adds +1 power EOT (3 → 4)");
+    assert_eq!(c.toughness(), 4, "Small body adds +1 toughness EOT");
+}
+
+// ── CR 506.4 — Removed from combat on zone change ───────────────────────────
+//
+// "A permanent is removed from combat if it leaves the battlefield."
+// When an attacker is destroyed mid-combat, the engine must prune
+// `self.attacking` so downstream consumers see consistent state.
+
+#[test]
+fn destroying_attacker_mid_combat_prunes_attacking_per_cr_506_4() {
+    use crate::game::types::AttackTarget;
+    let mut g = two_player_game();
+    let bear = place_creature(&mut g, 0, catalog::grizzly_bears());
+
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: bear,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("Bear can attack");
+    drain_stack(&mut g);
+    assert_eq!(g.attacking().len(), 1, "Bear is the lone attacker");
+
+    // Destroy the bear mid-combat via Lightning Bolt at instant speed.
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Permanent(bear)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Bolt castable for {R}");
+    drain_stack(&mut g);
+
+    // CR 506.4: the bear leaves the battlefield → it's removed from combat.
+    // The `self.attacking` vector should no longer carry the bear's entry.
+    assert!(
+        g.attacking().iter().all(|a| a.attacker != bear),
+        "CR 506.4: attacker removed from combat on zone change",
+    );
+    assert!(
+        !g.battlefield.iter().any(|c| c.id == bear),
+        "Bear is off the battlefield (destroyed by Bolt)",
+    );
+}
+
+#[test]
+fn elemental_mascot_opus_small_body_pumps_one_zero_eot() {
+    let mut g = two_player_game();
+    let em = place_creature(&mut g, 0, catalog::elemental_mascot());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        mode: None, x_value: None,
+    })
+    .expect("Bolt castable for {R}");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(em).expect("Mascot alive");
+    assert_eq!(c.power(), 2, "Small body adds +1 power EOT (1 → 2)");
+    assert_eq!(c.toughness(), 4, "Toughness unchanged (+0)");
+}

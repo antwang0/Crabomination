@@ -11,6 +11,24 @@ Periodic spot-check of the rules document
 (`crabomination/MagicCompRules 20260116.txt`). Each rule below has a
 status tag (✅ wired, 🟡 partial, ⏳ todo) plus a short note.
 
+- ✅ **CR 506.4 — Permanent removed from combat on zone change**
+  (push XXIX audit): "A permanent is removed from combat if it leaves
+  the battlefield, if its controller changes, if it phases out, if
+  an effect specifically removes it from combat, …". Wired via the
+  new `GameState::remove_from_combat(cid)` helper called from
+  `move_card_to`, `remove_from_battlefield_to_graveyard`, and
+  `remove_from_battlefield_to_exile`. The helper prunes
+  `self.attacking` and `self.block_map` so the post-removal combat
+  state stays consistent. Before push XXIX, mid-combat destruction
+  left orphan attacker entries until end of combat; combat damage
+  resolution already filter-mapped against `compute_battlefield`,
+  but other consumers (selectors, trigger dispatchers) could see
+  stale entries. Test:
+  `destroying_attacker_mid_combat_prunes_attacking_per_cr_506_4`.
+  Phase-out / controller-change paths still aren't wired (no
+  phasing primitive, no `Effect::GainControl` cleanup on permanent
+  removal yet), but those clauses aren't exercised by any cataloged
+  card today.
 - ✅ **CR 502.4 — No priority during untap step** (push XXVIII audit):
   "No player receives priority during the untap step, so no spells can
   be cast or resolve and no abilities can be activated or trigger."
@@ -206,6 +224,55 @@ status tag (✅ wired, 🟡 partial, ⏳ todo) plus a short note.
   contexts and zero the value when the source has changed zones.
 
 ## Recent additions
+
+- ✅ **Push XXIX (2026-05-13, `claude/modern_decks` branch)**: SOS
+  Prismari Opus rider closures + stale-doc promotions + CR 506.4
+  combat cleanup fix. Tests at 1192 (+5 net). All card wins came
+  from invoking existing engine primitives at new call sites — the
+  single engine change is the centralized combat-cleanup helper.
+  - **SOS Prismari 🟡 → ✅ (Opus full)**: Spectacular Skywhale —
+    Opus rider fully wired via `shortcut::opus_trigger(+3/+0 EOT,
+    AddCounter ×3)`.
+  - **SOS Prismari 🟡 (Opus small wired)**: Colorstorm Stallion
+    (small +1/+1 EOT — big-body permanent-copy still ⏳),
+    Elemental Mascot (small +1/+0 EOT — big-body cast-from-exile
+    still ⏳).
+  - **SOS 🟡 → ✅ (doc sync: code was already complete)**: Cuboid
+    Colony, Hungry Graffalon, Muse Seeker, Aberrant Manawurm, Tackle
+    Artist, Thunderdrum Soloist, Molten-Core Maestro, Expressive
+    Firedancer, Deluge Virtuoso, Exhibition Tidecaller.
+  - **STX table sync (doc only)**: added 17 STX cards that were in the
+    catalog but missing from the per-section MD table (Bookwurm, Field
+    Trip, Reduce to Memory, Baleful Mastery, Igneous Inspiration,
+    Combat Professor, Conspiracy Theorist, Beaming Defiance, Spell
+    Satchel, Excavated Wall, Snow Day, Confront the Past, Specter of
+    the Fens, Mascot Interception, Twinscroll Shaman, Practical
+    Research, Hall of Oracles).
+  - **Engine: `GameState::remove_from_combat(cid)` helper** — wraps
+    `self.attacking.retain` + `self.block_map.retain` so every
+    battlefield-removal path (`move_card_to`,
+    `remove_from_battlefield_to_graveyard`,
+    `remove_from_battlefield_to_exile`) calls one canonical
+    cleanup. Previously orphan attacker entries lingered in
+    `self.attacking` until end of combat — combat damage resolution
+    already filter-maps against the computed battlefield, but
+    selectors and trigger dispatchers shouldn't see ghosts. Test:
+    `destroying_attacker_mid_combat_prunes_attacking_per_cr_506_4`.
+  - **CR audit**:
+    - ✅ **CR 506.4 — Removed from combat on zone change**: "A
+      permanent is removed from combat if it leaves the battlefield."
+      Now wired via the new `remove_from_combat` helper called from
+      every battlefield-removal path. Test
+      `destroying_attacker_mid_combat_prunes_attacking_per_cr_506_4`
+      casts a Bolt on an attacker mid-combat and asserts the
+      attacker is dropped from `self.attacking` before resolve.
+    - ✅ **CR 603.4 — intervening 'if' clause**: re-confirmed
+      `shortcut::increment_trigger` invokes
+      `Predicate::IncrementSatisfied` both as `EventSpec.filter`
+      (gate at trigger event) and inside resolution-time
+      `Effect::If` (gate at resolution). Existing test
+      `increment_trigger_re_checks_intervening_if_on_resolution`
+      pins the round-trip.
 
 - ✅ **Push XXVII (2026-05-13, `claude/modern_decks` branch)**: 11 new STX
   cards (full Command cycle + 6 utility cards) + `magecraft_self_untap`
