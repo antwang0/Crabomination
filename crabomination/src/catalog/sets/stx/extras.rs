@@ -1817,13 +1817,16 @@ pub fn dragonsguard_elite() -> CardDefinition {
 /// exile target card from a graveyard. Create a 3/2 red and white
 /// Spirit creature token."
 ///
-/// 🟡 ETB body (exile gy card + mint Spirit) is faithful. The printed
-/// static "Spirit creatures you control get +1/+0" anthem is omitted —
-/// it'd want a tribal lord-with-creature-type filter, which the engine
-/// supports (`AllWithCreatureType`) but composing it via a
-/// `StaticEffect::PumpPT { applies_to: each_your_creature_with_type }`
-/// requires a selector shape the layer system doesn't yet decode.
-/// Tracked under TODO.md "Selector shapes for static lords".
+/// ✅ ETB body (exile gy card + mint 3/2 R/W Spirit token) wired via the
+/// EntersBattlefield/SelfSource trigger. The printed static "Other
+/// Spirit creatures you control get +1/+0" anthem is now wired via a
+/// compute-time injection in `GameState::compute_battlefield`, using
+/// the new `AffectedPermanents::AllWithCreatureType.exclude_source`
+/// flag so Quintorius himself doesn't buff himself (he is a Spirit,
+/// matching the printed "Other" gate). The injection scopes to his
+/// controller's Spirit creatures, layer 7b (+1/+0), and re-evaluates
+/// every recompute — so a Spirit minted by his ETB trigger is buffed
+/// immediately when state-based actions next fire.
 pub fn quintorius_field_historian() -> CardDefinition {
     use crate::card::Supertype;
     let spirit = TokenDefinition {

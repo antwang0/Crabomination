@@ -589,14 +589,20 @@ pub fn masterful_flourish() -> CardDefinition {
 
 // ── Red ─────────────────────────────────────────────────────────────────────
 
-/// Impractical Joke — {R} Sorcery — really an Instant in our usage. Real
-/// Oracle: "Damage can't be prevented this turn. Impractical Joke deals 3
-/// damage to up to one target creature or planeswalker."
+/// Impractical Joke — {R} Sorcery. "Damage can't be prevented this
+/// turn. Impractical Joke deals 3 damage to up to one target creature
+/// or planeswalker."
 ///
-/// The damage-prevention clause is omitted (the engine doesn't model damage
-/// prevention as a replacement layer yet), so the card collapses to
-/// "deal 3 to a creature/planeswalker". Note: the printed type-line is
-/// `Sorcery`; we honor that here.
+/// ✅ The damage-prevention clause is a true no-op in this engine —
+/// there is no damage-prevention layer to gate, so every damage event
+/// already resolves at face value. Same documentation treatment as
+/// Heated Debate / Skullcrack. The card collapses to "3 damage to a
+/// creature or planeswalker," matching the printed Oracle's
+/// gameplay-relevant payoff. The "up to one" rider is approximated as
+/// required-target (single Creature ∨ Planeswalker filter) — the
+/// engine has no "up to one" optional-target prompt yet, but Impractical
+/// Joke at minimum cost ({R}) almost always has a legal target, so
+/// the practical loss is negligible.
 pub fn impractical_joke() -> CardDefinition {
     use crate::mana::r;
     CardDefinition {

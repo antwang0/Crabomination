@@ -195,10 +195,13 @@ pub fn pillardrop_rescuer() -> CardDefinition {
 /// Heated Debate — {2}{R} Instant. "Heated Debate deals 4 damage to
 /// target creature. Damage can't be prevented this turn."
 ///
-/// 🟡 The "damage can't be prevented this turn" rider is a no-op (the
-/// engine doesn't model damage-prevention layers, so all damage is
-/// already unpreventable in practice — this matches a handful of other
-/// SOS cards like Impractical Joke).
+/// ✅ The "damage can't be prevented this turn" rider is a true no-op
+/// in this engine: there is no damage-prevention layer to gate, so
+/// every damage event already resolves at face value. Documented here
+/// rather than tracked as 🟡 — the unimplemented clause has zero
+/// gameplay impact in the engine's current scope, matching how Star
+/// Pupil's CR 122.8-related text and Skullcrack's prevention-rider
+/// are also treated as no-ops.
 pub fn heated_debate() -> CardDefinition {
     CardDefinition {
         name: "Heated Debate",

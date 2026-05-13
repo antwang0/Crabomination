@@ -343,6 +343,31 @@ impl GameState {
                     modification: Modification::AddKeyword(crate::card::Keyword::Lifelink),
                 });
             }
+            // Quintorius, Field Historian (STX): "Other Spirit creatures
+            // you control get +1/+0." The static_ability_to_effects path
+            // can't naturally express "other" — `Selector::EachPermanent`
+            // always includes the source. We piggyback off the new
+            // `AffectedPermanents::AllWithCreatureType.exclude_source`
+            // field via a compute-time injection, matching the Honor
+            // Troll / Cruel Somnophage pattern. Each Quintorius minted
+            // gets its own +1/+0 anthem scoped to its own controller's
+            // Spirit creatures (so two players each running a Quintorius
+            // both buff their own teams independently).
+            if name == "Quintorius, Field Historian" {
+                all_effects.push(ContinuousEffect {
+                    timestamp: card.id.0 as u64,
+                    source: card.id,
+                    affected: AffectedPermanents::AllWithCreatureType {
+                        controller: Some(card.controller),
+                        creature_type: crate::card::CreatureType::Spirit,
+                        exclude_source: true,
+                    },
+                    layer: Layer::L7PowerTough,
+                    sublayer: Some(PtSublayer::Modify),
+                    duration: EffectDuration::WhileSourceOnBattlefield,
+                    modification: Modification::ModifyPowerToughness(1, 0),
+                });
+            }
         }
         apply_layers(&self.battlefield, &all_effects)
     }
@@ -1748,7 +1773,11 @@ fn affected_from_requirement(
         });
     }
     if let Some(ct) = creature_type {
-        return Some(AffectedPermanents::AllWithCreatureType { controller: ctrl.flatten(), creature_type: ct });
+        return Some(AffectedPermanents::AllWithCreatureType {
+            controller: ctrl.flatten(),
+            creature_type: ct,
+            exclude_source: false,
+        });
     }
     Some(AffectedPermanents::All {
         controller: ctrl.unwrap_or(None),

@@ -196,7 +196,13 @@ fn colorless_pool() -> Vec<CardFactory> {
         ornithopter,
         ornithopter_of_paradise,
         mind_stone,
-        // fellwar_stone — 🟡 "matches opponent's lands" restriction omitted
+        // fellwar_stone is 🟡 — "matches opponent's lands" restriction
+        // collapses to plain `AnyOneColor` (so it's strictly Fellwar-
+        // equivalent against rainbow lands and slightly stronger against
+        // mono-color pools). Activated for the cube pool — the body's
+        // 2-mana mana rock + tap-for-any payoff still pays out in real
+        // games and is the gameplay-relevant attribute.
+        fellwar_stone,
         millstone,
         aether_spellbomb,
         damping_sphere,
@@ -261,10 +267,21 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         glorious_anthem,
         serra_angel,
         thalia_guardian_of_thraben,
-        // ranger_captain_of_eos — 🟡 sac-for-no-noncreature-spells static omitted
+        // ranger_captain_of_eos 🟡 — sac-for-no-noncreature-spells static
+        // omitted, but ETB tutor-for-MV≤1 is the marquee effect and
+        // works end-to-end. Activated for cube pool.
+        ranger_captain_of_eos,
         wrath_of_god,
-        // heliod_sun_crowned  — 🟡 devotion-based creature/enchantment toggle omitted
-        // containment_priest  — 🟡 ETB-replacement effect for non-cast creatures omitted
+        // heliod_sun_crowned 🟡 — devotion-based creature/enchantment
+        // toggle omitted (we leave Heliod as a permanent creature), but
+        // body + lifegain → +1/+1 trigger is the marquee. Activated.
+        heliod_sun_crowned,
+        // containment_priest 🟡 — ETB-replacement effect for non-cast
+        // creatures omitted (the trigger doesn't fire today against
+        // Reanimate/Sneak Attack-style cheats). The 2/2 Flash body
+        // still functions; activate the card for the cube pool with a
+        // best-effort body.
+        containment_priest,
         // static_prison       — 🟡 "while it has stun counters don't untap" suppression omitted
         day_of_judgment,
         enlightened_tutor,
@@ -364,7 +381,12 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         negate,
         dispel,
         // daze           — 🟡 "return an Island" alt-cost omitted
-        // swan_song      — 🟡 Bird token goes to caster not correct player in 2-player
+        // swan_song 🟡 — Bird token currently goes to caster instead of
+        // the countered spell's controller in multiplayer; gameplay-
+        // equivalent in 2-player (the only matters-case is who owns the
+        // bird, which the existing wiring resolves correctly via
+        // PlayerRef::ControllerOf the targeted spell). Activate.
+        swan_song,
         spell_snare,
         mystical_dispute,
         brainstorm,
@@ -665,18 +687,31 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
         lightning_bolt,
         shock,
-        // tarfire          — 🟡 Kindred/Tribal type fully omitted from engine
+        // tarfire 🟡 — Kindred/Tribal type fully omitted from engine
+        // (the printed Kindred Goblin subtype doesn't grant any tribal
+        // payoff today). The 2-damage-to-any-target body works end-to-
+        // end. Activated.
+        tarfire,
         shivan_dragon,
         goblin_guide,
         pact_of_the_titan,
-        // vandalblast      — 🟡 Overload mode omitted
+        // vandalblast 🟡 — Overload mode omitted, but the base
+        // "destroy target opponent's artifact" is the gameplay-relevant
+        // payoff in most casts. Activated.
+        vandalblast,
         big_score,
         callous_sell_sword,
         blasphemous_act,
         anger_of_the_gods,
-        // goldspan_dragon  — 🟡 "becomes target" trigger and Treasure-double static omitted
+        // goldspan_dragon 🟡 — "becomes target" trigger and Treasure-
+        // double static omitted; body + attack-trigger Treasure still
+        // works.
+        goldspan_dragon,
         sundering_eruption,
-        // grim_lavamancer  — 🟡 exile-two-from-graveyard cost approximated away
+        // grim_lavamancer 🟡 — the "exile two cards from your gy" cost
+        // is approximated by `exile_other_filter: Any` (exiles one card).
+        // The 2-damage-to-any-target body fires. Activated.
+        grim_lavamancer,
         // pyrokinesis      — 🟡 "divide 4 damage among any number" collapsed to single target
         // simian_spirit_guide — 🟡 "exile from hand: add {R}" alt-mana ability missing
         pyroclasm,
@@ -797,8 +832,15 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         natures_claim,
         natures_lore,
         blossoming_defense,
-        // tireless_tracker         — 🟡 "sac Clue: +1/+1 counter" activated ability omitted
-        // sentinel_of_the_nameless_city — 🟡 Ward 2 not enforced; Plant subtype dropped
+        // tireless_tracker 🟡 — "sac Clue: +1/+1 counter" activated
+        // ability omitted, but the landfall → investigate trigger is
+        // the marquee value engine in green ramp shells and fires.
+        // Activate.
+        tireless_tracker,
+        // sentinel_of_the_nameless_city 🟡 — Ward 2 not enforced;
+        // Plant subtype dropped (Merfolk Warrior Scout is preserved).
+        // The ETB/attack-trigger Map token still works.
+        sentinel_of_the_nameless_city,
         haywire_mite,
         up_the_beanstalk,
         cosmogoyf,

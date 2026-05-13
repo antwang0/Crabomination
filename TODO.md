@@ -225,6 +225,64 @@ status tag (✅ wired, 🟡 partial, ⏳ todo) plus a short note.
 
 ## Recent additions
 
+- ✅ **Push XXX (2026-05-13, `claude/modern_decks` branch)**: Tribal
+  anthem engine flag + 4 SOS/STX promotions + 9 cube activations + 8
+  new tests. Tests at 1200 (+8 net).
+  - **Engine: `AffectedPermanents::AllWithCreatureType.exclude_source`**
+    field added (additive, `#[serde(default)]`) to the layer system's
+    `affects()` check. When set, the layer effect skips the source
+    permanent itself, matching printed "**other** [type]s" tribal-
+    anthem wording. The existing `AllWithCreatureType` callsite in
+    `affected_from_requirement` keeps `exclude_source: false`
+    (default) — backward-compatible. Wired through a compute-time
+    injection in `GameState::compute_battlefield` for cards that need
+    the "other" gate.
+  - **Quintorius, Field Historian (STX) 🟡 → ✅**: tribal anthem now
+    wired via the engine improvement above. Compute-time injection
+    layers in `ModifyPowerToughness(+1, +0)` at L7b targeting
+    `AllWithCreatureType { controller: Some(qid_ctl), creature_type:
+    Spirit, exclude_source: true }`. Tests:
+    `quintorius_anthem_pumps_other_spirits_not_self`,
+    `quintorius_anthem_expires_when_he_leaves_battlefield`,
+    `quintorius_anthem_does_not_pump_opponent_spirits`.
+  - **Scolding Administrator (SOS Silverquill) 🟡 → ✅**: dies-trigger
+    counter transfer wired via `Effect::If` gate on `Predicate::
+    ValueAtLeast(CountersOn(This, +1/+1), 1)` (the printed "if it had
+    counters" intervening clause). Counter count is read off the just-
+    dead source via `Value::CountersOn`'s cross-zone lookup (push
+    XXIII). Tests:
+    `scolding_administrator_transfers_counters_on_death`,
+    `scolding_administrator_dies_without_counters_no_transfer`.
+  - **Heated Debate / Impractical Joke 🟡 → ✅ (doc-only)**: both cards'
+    "damage can't be prevented this turn" rider is a true no-op in
+    this engine (no damage-prevention layer to gate). Documented as
+    ✅ rather than 🟡; the omitted clause has zero gameplay impact.
+  - **Cube pool activations** — 9 🟡 cards activated in `cube::*_pool()`:
+    Fellwar Stone, Ranger-Captain of Eos, Heliod Sun-Crowned,
+    Containment Priest, Swan Song, Tarfire, Vandalblast, Goldspan
+    Dragon, Grim Lavamancer, Tireless Tracker, Sentinel of the
+    Nameless City. Each card's marquee payoff fires; the marginal
+    omitted clause is either rare-edge-case (Heliod's devotion
+    toggle) or pure flavor (Tarfire's Kindred subtype).
+  - **CR audit**:
+    - ✅ **CR 605.5a — Ability-with-target is not a mana ability**:
+      The engine's `is_mana_ability` (in `game/actions.rs:8`) is
+      conservative: it matches only `Effect::AddMana` (whose `who`
+      slot is `PlayerRef`, not `Selector::Target(_)`) or `Effect::
+      Seq` of mana abilities. Targets never propagate through, so
+      the recogniser correctly rejects target-bearing effects.
+    - ✅ **CR 605.3b — Mana abilities don't go on stack**: re-
+      confirmed (push XVIII audit). `activate_ability` resolves
+      mana abilities immediately via `continue_ability_resolution`.
+    - 🟡 **CR 605.1b — Triggered mana abilities**: not yet on a
+      fast-path. The engine routes them through the normal trigger
+      dispatcher (onto the stack). No SOS/STX card uses triggered
+      mana abilities; tracked under "Triggered mana ability
+      fast-path" below.
+    - 🟡 **CR 707.10f — Permanent-spell copies become tokens**: the
+      engine's `Effect::CopySpell` doesn't flag the resolved
+      permanent as `is_token = true`. Not blocking any SOS card today.
+
 - ✅ **Push XXIX (2026-05-13, `claude/modern_decks` branch)**: SOS
   Prismari Opus rider closures + stale-doc promotions + CR 506.4
   combat cleanup fix. Tests at 1192 (+5 net). All card wins came
@@ -588,6 +646,40 @@ status tag (✅ wired, 🟡 partial, ⏳ todo) plus a short note.
     1064).
 
 ## Suggested next-up tasks
+
+- ⏳ **`StaticEffect::PumpPTOther` / generalized tribal-anthem
+  primitive** — push XXX added the `exclude_source` flag to
+  `AffectedPermanents::AllWithCreatureType` and used it via a compute-
+  time injection in `compute_battlefield` for Quintorius. A more
+  general path: extend `StaticEffect::PumpPT` to accept a
+  `Selector::EachOtherPermanent(SelectionRequirement)` shape (or a
+  `SelectionRequirement::OtherThanSource` filter) so card factories
+  can express "Other [type]s you control get +N/+M" directly without
+  the hardcoded `compute_battlefield` injection. This would unblock
+  Goblin King-style anthems for other tribes (Goblin / Elf / Zombie /
+  Dragon) and the printed "Other instant and sorcery spells you cast
+  have storm" cycle (Prismari, the Inspiration). Suggested shape:
+  bump `affected_from_requirement` to detect `OtherThanSource` as a
+  predicate combinator and set `exclude_source: true` automatically.
+
+- ⏳ **Triggered mana ability fast-path (CR 605.1b)** — triggered mana
+  abilities don't currently bypass the stack. The engine handles
+  *activated* mana abilities specially (`activate_ability` resolves
+  them immediately without `StackItem::Trigger` push) but triggered
+  mana abilities like Mana Reflection's "Whenever a permanent taps
+  for mana, that permanent produces twice as much instead" go through
+  the normal dispatcher. No SOS/STX card exercises this today; first
+  card to need it will be the wiring trigger.
+
+- ⏳ **Permanent-spell copy → token flag (CR 707.10f)** — `Effect::
+  CopySpell`'s resolved permanent should set `CardInstance.is_token =
+  true` when the copied spell is a permanent spell (Creature /
+  Artifact / Enchantment / Planeswalker / Battle / Land). Currently
+  only the stack copy is flagged; the resolved permanent isn't, so
+  it persists past SBA cleanup of token-copies. Not currently
+  blocking any catalog card (no copy-permanent-spell card wired) but
+  needed for future Mizzium Transreliquat / Sakashima of a Thousand
+  Faces-style permanent copy effects.
 
 - ⏳ **CR 122.2-strict counter clearing on zone change** — to be
   fully compliant we should clear all counters when a card moves

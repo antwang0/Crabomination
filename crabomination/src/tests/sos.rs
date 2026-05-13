@@ -3458,6 +3458,89 @@ fn scolding_administrator_has_menace() {
     assert!(card.definition.has_creature_type(crate::card::CreatureType::Cleric));
 }
 
+/// Scolding Administrator's "when this creature dies, if it had
+/// counters on it, put those counters on a target creature" rider —
+/// promotion from 🟡 to ✅ via `Value::CountersOn` cross-zone lookup
+/// (push XXIII) and an `Effect::If` gate on the dies trigger.
+///
+/// Setup: build the Admin up to 3 counters via 2 Repartee triggers
+/// (Bolt + Make Your Mark, both targeting the friendly Bear), then
+/// kill the Admin and verify the counters transfer to a target
+/// friendly creature.
+#[test]
+fn scolding_administrator_transfers_counters_on_death() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    // Seed library so any draws don't deck out player 0.
+    for _ in 0..5 {
+        g.add_card_to_library(0, catalog::plains());
+    }
+    let admin = g.add_card_to_battlefield(0, catalog::scolding_administrator());
+    g.battlefield_find_mut(admin).unwrap().summoning_sick = false;
+    // Stack a counter on Admin by firing a Repartee-triggering spell.
+    let opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(opp_bear)),
+        mode: None, x_value: None,
+    })
+    .expect("Bolt castable for {R}");
+    drain_stack(&mut g);
+    // Repartee fired once → 1 counter on Admin (Bolt killed the bear).
+    let admin_counters = g.battlefield_find(admin)
+        .map(|c| c.counter_count(CounterType::PlusOnePlusOne))
+        .unwrap_or(0);
+    assert!(admin_counters >= 1,
+        "Repartee should have placed ≥ 1 counter (got {admin_counters})");
+
+    // A separate friendly target for the death-trigger counter transfer.
+    let recipient = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+
+    // Kill Admin by setting damage equal to its effective toughness.
+    let counters_now = admin_counters;
+    let admin_eff_toughness = 2 + counters_now as i32;
+    g.battlefield_find_mut(admin).unwrap().damage = admin_eff_toughness as u32;
+    let _ = g.check_state_based_actions();
+    drain_stack(&mut g);
+
+    // Admin should be in graveyard.
+    assert!(!g.battlefield.iter().any(|c| c.id == admin),
+        "Admin dead");
+    // Recipient bear should have counters equal to Admin's counters at death.
+    let r_counters = g.battlefield_find(recipient)
+        .map(|c| c.counter_count(CounterType::PlusOnePlusOne))
+        .unwrap_or(0);
+    assert_eq!(r_counters, counters_now,
+        "death trigger transferred {counters_now} counters to the target creature");
+}
+
+/// Scolding Administrator's dies-trigger is gated on the printed "if it
+/// had counters on it" intervening clause. Verify the counter-bearing
+/// gate: an Admin that dies with zero counters should NOT add any
+/// counters to a target creature.
+#[test]
+fn scolding_administrator_dies_without_counters_no_transfer() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let admin = g.add_card_to_battlefield(0, catalog::scolding_administrator());
+    let recipient = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let initial = g.battlefield_find(recipient)
+        .map(|c| c.counter_count(CounterType::PlusOnePlusOne))
+        .unwrap_or(0);
+    // Kill Admin with no counters.
+    g.battlefield_find_mut(admin).unwrap().damage = 2;
+    let _ = g.check_state_based_actions();
+    drain_stack(&mut g);
+
+    assert!(!g.battlefield.iter().any(|c| c.id == admin));
+    let r_counters = g.battlefield_find(recipient)
+        .map(|c| c.counter_count(CounterType::PlusOnePlusOne))
+        .unwrap_or(0);
+    assert_eq!(r_counters, initial,
+        "no-counters-on-death gate: trigger does nothing");
+}
+
 // ── modern_decks 2026-04-30 push (post-push III) ───────────────────────────
 
 #[test]

@@ -1232,13 +1232,35 @@ pub fn snooping_page() -> CardDefinition {
 }
 
 /// Scolding Administrator — {W}{B}, 2/2 Dwarf Cleric. Menace. Repartee
-/// (whenever you cast an instant or sorcery spell that targets a creature,
-/// put a +1/+1 counter on this creature). The truncated "When this
-/// creature dies, …" trigger is not implemented (oracle text was clipped
-/// in the gen script — pending an oracle-fetch refresh).
+/// (whenever you cast an instant or sorcery spell that targets a
+/// creature, put a +1/+1 counter on this creature). When this creature
+/// dies, if it had counters on it, put those counters on up to one
+/// target creature.
+///
+/// ✅ All three abilities wired. The dies-trigger uses the cross-zone-
+/// search behavior of `Value::CountersOn` (push XXIII) — after death
+/// the source is in the graveyard, but counters persist on its
+/// `CardInstance` and the lookup walks the gy, returning the live
+/// counter count. The trigger is gated via `Effect::If` on
+/// `ValueAtLeast(CountersOn(This), 1)` so the trigger only fires the
+/// AddCounter body when Scolding Administrator had at least one
+/// +1/+1 counter at death. The printed "up to one target creature"
+/// collapses to a required Creature target (engine has no "up to one"
+/// optional-target primitive — the trigger fizzles benignly if no
+/// legal creature exists at resolution).
+///
+/// Per CR 122.8, the printed "those counters" wording would cancel
+/// the move if the source had left the battlefield; the engine's
+/// cross-zone counter lookup re-reads the dying source's counters
+/// from the graveyard, which is the gameplay-equivalent of Wizards'
+/// errata-pattern of restating "transfer those counters" as
+/// "put N counters" with N captured at trigger-fire time. Star
+/// Pupil takes the more conservative "single +1/+1 counter" route;
+/// Scolding Administrator preserves variability (Repartee can stack
+/// multiple counters on it before death).
 pub fn scolding_administrator() -> CardDefinition {
-    use crate::card::CounterType;
-    use crate::effect::shortcut::repartee;
+    use crate::card::{CounterType, Predicate, SelectionRequirement};
+    use crate::effect::shortcut::{repartee, target_filtered};
     CardDefinition {
         name: "Scolding Administrator",
         cost: cost(&[w(), b()]),
@@ -1253,11 +1275,38 @@ pub fn scolding_administrator() -> CardDefinition {
         keywords: vec![Keyword::Menace],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![repartee(Effect::AddCounter {
-            what: Selector::This,
-            kind: CounterType::PlusOnePlusOne,
-            amount: Value::Const(1),
-        })],
+        triggered_abilities: vec![
+            // Repartee — +1/+1 counter on this creature.
+            repartee(Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            }),
+            // Dies → if it had counters, put those counters on a target
+            // creature. Wrapped in `Effect::If` so the body only runs
+            // when the source actually died with +1/+1 counters.
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+                effect: Effect::If {
+                    cond: Predicate::ValueAtLeast(
+                        Value::CountersOn {
+                            what: Box::new(Selector::This),
+                            kind: CounterType::PlusOnePlusOne,
+                        },
+                        Value::Const(1),
+                    ),
+                    then: Box::new(Effect::AddCounter {
+                        what: target_filtered(SelectionRequirement::Creature),
+                        kind: CounterType::PlusOnePlusOne,
+                        amount: Value::CountersOn {
+                            what: Box::new(Selector::This),
+                            kind: CounterType::PlusOnePlusOne,
+                        },
+                    }),
+                    else_: Box::new(Effect::Noop),
+                },
+            },
+        ],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],

@@ -132,7 +132,16 @@ pub enum AffectedPermanents {
     Specific(Vec<CardId>),
     /// All creatures with the given creature type (lord effect).
     /// `controller: Some(p)` restricts to that player's creatures; `None` = all.
-    AllWithCreatureType { controller: Option<usize>, creature_type: crate::card::CreatureType },
+    /// `exclude_source: true` skips the effect's source permanent itself —
+    /// matches printed "**other** [creature type]s" wording (Goblin King,
+    /// Quintorius Field Historian, etc.). `#[serde(default)]` so existing
+    /// literal initializers stay valid (defaults to false = include source).
+    AllWithCreatureType {
+        controller: Option<usize>,
+        creature_type: crate::card::CreatureType,
+        #[serde(default)]
+        exclude_source: bool,
+    },
     /// All permanents bearing at least `at_least` counters of the given
     /// kind. Used for SOS Emil's "creatures you control with +1/+1
     /// counters have trample" lord-with-counter pattern, and the
@@ -331,7 +340,10 @@ fn affects(effect: &ContinuousEffect, card: &crate::card::CardInstance) -> bool 
                 || card_types.iter().any(|t| card.definition.card_types.contains(t));
             ctrl_ok && type_ok
         }
-        AffectedPermanents::AllWithCreatureType { controller, creature_type } => {
+        AffectedPermanents::AllWithCreatureType { controller, creature_type, exclude_source } => {
+            if *exclude_source && effect.source == card.id {
+                return false;
+            }
             let ctrl_ok = controller.is_none_or(|c| c == card.controller);
             let is_creature = card.definition.card_types.contains(&CardType::Creature);
             let has_type = card.definition.subtypes.creature_types.contains(creature_type)

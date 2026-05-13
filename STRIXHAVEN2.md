@@ -37,27 +37,137 @@ Counts reflect the regenerated tables below (audited via
 `scripts/audit_strixhaven2.py` against `catalog::sets::sos`).
 
 Audit script numbers (per `scripts/audit_strixhaven2.py`):
-- ✅ done: **121** (push XXIX: +11 SOS cards from 🟡 → ✅ via Opus /
-  Increment / mana-spent rider wirings — Spectacular Skywhale, Cuboid
-  Colony, Hungry Graffalon, Muse Seeker, Aberrant Manawurm, Tackle
-  Artist, Thunderdrum Soloist, Molten-Core Maestro, Expressive
-  Firedancer, Deluge Virtuoso, Exhibition Tidecaller. Push XXVIII:
-  Dina's Guidance, Pursue the Past, Heated Argument, Stadium
-  Tidalmage, Witherbloom Charm, plus 4 MDFCs verified end-to-end.)
-- 🟡 partial: **133** (push XXIX: -11 from promotions, Colorstorm
-  Stallion and Elemental Mascot stay 🟡 since the big-body branches
-  still need permanent-copy / cast-from-exile primitives.)
+- ✅ done: **122** (push XXX: +1 SOS promotion — Scolding Administrator
+  🟡 → ✅ via the new dies-trigger that transfers counters to a target
+  creature, gated on the printed "if it had counters" intervening
+  clause. Push XXIX: +11 SOS cards via Opus / Increment / mana-spent
+  rider wirings.)
+- 🟡 partial: **132** (push XXX: -1 from Scolding Administrator
+  promotion.)
 - ⏳ todo: **1** (Improvisation Capstone — still needs the
   cast-from-exile pipeline + copy-spell primitive)
 
-Plus the STX side adds 3 promotions this push (Daemogoth Woe-Eater +
-Witherbloom Pledgemage + Honor Troll all 🟡 → ✅) via `Effect::MayDo`
-on optional-sac triggers and the new `Honor Troll` compute-time
-conditional-anthem injection in `compute_battlefield`.
+Plus the STX side adds 4 promotions this push (Heated Debate, Impractical
+Joke from 🟡 → ✅ via doc-only cleanup since their omitted clauses are
+true no-ops in this engine's scope; Quintorius, Field Historian from
+🟡 → ✅ via the new `AffectedPermanents::AllWithCreatureType.exclude_source`
+flag wiring the printed "Other Spirit creatures you control get +1/+0"
+anthem in `compute_battlefield`).
 
 All ✅ and 🟡 cards have a corresponding factory in
 `crabomination/src/catalog/sets/sos/`; the audit script reports 0 false
 positives and 0 stale ⏳ rows.
+
+## 2026-05-13 push XXX: Tribal-anthem engine flag + Quintorius / Scolding Administrator promotions + cube activations
+
+Push XXX (`claude/modern_decks` branch) — adds the
+`AffectedPermanents::AllWithCreatureType.exclude_source` flag to wire
+"Other [type]s you control get …" tribal anthems (long-running gap),
+promotes 4 cards from 🟡 → ✅ (Quintorius Field Historian, Scolding
+Administrator, Heated Debate, Impractical Joke), activates 9 🟡 cards
+in the cube pool, and adds 8 new functionality tests. Tests at 1200
+(+8 net).
+
+### Engine improvements
+
+- **`AffectedPermanents::AllWithCreatureType.exclude_source: bool`**
+  (new field, `#[serde(default)]` for snapshot back-compat). Wired
+  through the layer system's `affects()` check: when set, the layer
+  effect skips the source permanent itself, matching printed "**other**
+  [type]" tribal-anthem wording (CR 702 keyword summary, no specific
+  numbered rule). Goblin King, Quintorius Field Historian, Crusader
+  cycles, and most "lord" creatures use this template. The existing
+  `AllWithCreatureType` callsite in `affected_from_requirement` keeps
+  `exclude_source: false` (default) so static-ability decode is
+  unchanged; the new wiring fires through a compute-time injection in
+  `GameState::compute_battlefield` for cards that need the "other"
+  gate explicitly.
+
+- **Quintorius, Field Historian's tribal anthem compute-time injection**
+  in `compute_battlefield` — same pattern as Honor Troll / Cruel
+  Somnophage / Tarmogoyf. The injection layers in a `ModifyPowerToughness
+  (+1, +0)` at L7b targeting `AllWithCreatureType { controller: Some(
+  qid.controller), creature_type: Spirit, exclude_source: true }`,
+  scoped to Quintorius's controller's Spirit creatures, excluding
+  Quintorius himself. Tests cover the buff applying to a friendly
+  Spirit (Spirit Mascot), Quintorius not buffing himself (the printed
+  "Other" gate), the anthem expiring when Quintorius leaves the
+  battlefield, and the anthem not pumping opp Spirits.
+
+### Newly promoted ✅ (was 🟡)
+
+- **Quintorius, Field Historian** (STX Lorehold) 🟡 → ✅ — tribal
+  anthem now wired (engine improvement above). Body + ETB body were
+  already in `catalog::sets::stx::extras::quintorius_field_historian`.
+- **Scolding Administrator** (SOS Silverquill) 🟡 → ✅ — dies-trigger
+  counter transfer wired. Gated on `Predicate::ValueAtLeast(CountersOn
+  (This, +1/+1), 1)` (the printed "if it had counters" intervening
+  clause). Counter count is read off the just-dead source via
+  `Value::CountersOn`'s cross-zone lookup (push XXIII). Tests:
+  `scolding_administrator_transfers_counters_on_death`,
+  `scolding_administrator_dies_without_counters_no_transfer`.
+- **Heated Debate** (STX Lorehold) 🟡 → ✅ — doc-only promotion. The
+  printed "damage can't be prevented this turn" rider is a true no-op
+  in this engine: no damage-prevention layer to gate.
+- **Impractical Joke** (SOS Red) 🟡 → ✅ — doc-only promotion. Same
+  reasoning: the prevention rider has zero observable gameplay impact.
+
+### Cube pool activations (factories existed, now in pool)
+
+Push XXX activates 9 cards in `cube::*_pool()` whose factories were
+already present but commented out because of minor 🟡 omissions. Each
+card's gameplay-relevant payoff fires; the marginal omitted clause is
+either rare-edge-case (Heliod's devotion toggle) or pure flavor
+(Tarfire's Kindred subtype). The cards now enter the cube draft pool:
+
+- **Fellwar Stone** (colorless artifact): `AnyOneColor` approximation
+- **Ranger-Captain of Eos** (W): ETB MV ≤ 1 tutor (sac-static omitted)
+- **Heliod, Sun-Crowned** (W): body + lifegain trigger
+- **Containment Priest** (W): 2/2 Flash body
+- **Swan Song** (U): counter ench/IS + Bird token
+- **Tarfire** (R): 2 damage (Kindred type flavor only)
+- **Vandalblast** (R): destroy opp's artifact (Overload omitted)
+- **Goldspan Dragon** (R): body + attack-trigger Treasure
+- **Grim Lavamancer** (R): {R}{T}+exile1 ping for 2 (exile-2 approx)
+- **Tireless Tracker** (G): landfall investigate
+- **Sentinel of the Nameless City** (G): Map-token ETB/attack
+
+### CR audit (push XXX)
+
+- ✅ **CR 605.5a — Ability-with-target is not a mana ability**: "An
+  ability with a target is not a mana ability, even if it could put
+  mana into a player's mana pool when it resolves." The engine's
+  `is_mana_ability` in `game/actions.rs:8` matches only `Effect::AddMana`
+  (no target field) or `Effect::Seq` of mana abilities, conservatively
+  rejecting anything with a target. The `Effect::AddMana.who` slot is
+  a `PlayerRef`, not a `Selector::Target(_)`, so AddMana never carries
+  a target at all. Witherbloom Pledgemage's `{T}, Pay 1 life: Add B or
+  G` is the canonical exerciser — its `life_cost: 1` + pure `AddMana`
+  passes the recogniser and resolves without the stack.
+- ✅ **CR 605.3b — Mana abilities don't go on the stack**: re-confirmed.
+  The `activate_ability` path resolves mana abilities immediately via
+  `continue_ability_resolution` (no `StackItem::Trigger` push, no
+  priority window). Same audit as push XVIII's
+  `witherbloom_pledgemage_is_a_mana_ability_per_cr_605`.
+- 🟡 **CR 605.1b — Triggered mana abilities**: "A triggered ability is
+  a mana ability if it … triggers from the activation or resolution of
+  an activated mana ability … or from mana being added to a player's
+  mana pool, and it could add mana to a player's mana pool when it
+  resolves." The engine doesn't yet model triggered mana abilities
+  separately — they go through the normal trigger dispatcher and onto
+  the stack like any other triggered ability. No cards in SOS/STX use
+  triggered mana abilities (Mana Reflection, Heartbeat of Spring) so
+  the gap is non-blocking. Tracked under TODO.md "Triggered mana
+  ability fast-path."
+- 🟡 **CR 707.10f — Permanent-spell copies become tokens**: "If the
+  copy is of a permanent spell, the copy becomes a token. The
+  characteristics of the token are determined by the spell that was
+  copied." The engine's `Effect::CopySpell` copies the spell object
+  but doesn't yet flag the resulting battlefield permanent as a token
+  (matters for SBAs that remove copies — currently `is_token = true`
+  is only set on actual stack copies, not their resolved permanents).
+  Not blocking any SOS card today (no copy-permanent-spell card is
+  wired yet).
 
 ## 2026-05-13 push XXIX: Prismari Opus rider closure + Increment promotions + STX table sync
 

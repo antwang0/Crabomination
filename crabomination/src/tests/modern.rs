@@ -8668,3 +8668,86 @@ fn sudden_edict_rejects_creature_target() {
         "Sudden Edict should reject a creature target (Player filter): {:?}",
         err);
 }
+
+// ── modern_decks-16: cube-pool activations ───────────────────────────────────
+//
+// These cards already have factories + targeted unit tests covering
+// the cards' primary play patterns — see e.g. `vandalblast_destroys_
+// opponent_artifact`, `ranger_captain_etb_searches_for_a_one_drop`,
+// `heliod_sun_crowned_grants_lifelink_until_end_of_turn`,
+// `containment_priest_is_a_flash_two_two`, `tireless_tracker_*`,
+// `swan_song_*`. The activations below pin the cube-pool wiring (so
+// regressions on the cube prefetch / sampling path get caught early).
+
+/// Fellwar Stone joins the colorless utility pool when activated.
+/// Verify the factory produces a working {2} mana rock that taps for
+/// any one color.
+#[test]
+fn fellwar_stone_taps_for_any_color() {
+    let mut g = two_player_game();
+    let stone = g.add_card_to_battlefield(0, catalog::fellwar_stone());
+    g.battlefield_find_mut(stone).unwrap().summoning_sick = false;
+
+    // Activate the tap-for-mana ability.
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: stone, ability_index: 0, target: None,
+    })
+    .expect("Fellwar Stone's mana ability should resolve");
+
+    // The mana ability resolves immediately (no stack); the pool
+    // should now have one of any color. AnyOneColor defaults to White.
+    let pool = &g.players[0].mana_pool;
+    assert!(
+        pool.amount(Color::White) >= 1
+            || pool.amount(Color::Blue) >= 1
+            || pool.amount(Color::Black) >= 1
+            || pool.amount(Color::Red) >= 1
+            || pool.amount(Color::Green) >= 1,
+        "Fellwar Stone added one mana of some color"
+    );
+}
+
+/// Tarfire (Kindred Goblin Instant) is in the red pool. Verify the
+/// 2-damage payload resolves cleanly. Kindred subtype is preserved on
+/// the type-line even though no tribal payoff card consumes it today.
+#[test]
+fn tarfire_deals_two_damage_to_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::tarfire());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        mode: None, x_value: None,
+    })
+    .expect("Tarfire castable for {R}");
+    drain_stack(&mut g);
+    // Bear (2/2) takes 2 damage and dies.
+    assert!(!g.battlefield.iter().any(|c| c.id == bear),
+        "2-toughness Bear should be dead");
+}
+
+/// Grim Lavamancer's `{R}, {T}, Exile two from your gy:` activated
+/// ability is approximated by the engine's `exile_other_filter` (which
+/// exiles exactly one matching gy card). Verify activation still pings
+/// 2 damage to a target creature when there's a gy card to exile.
+#[test]
+fn grim_lavamancer_pings_creature_with_gy_card_to_exile() {
+    let mut g = two_player_game();
+    let lava = g.add_card_to_battlefield(0, catalog::grim_lavamancer());
+    g.battlefield_find_mut(lava).unwrap().summoning_sick = false;
+    // Seed a graveyard card for the exile-from-gy cost.
+    let _fodder = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    // Need a creature target on the battlefield (opponent's bear).
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: lava, ability_index: 0,
+        target: Some(Target::Permanent(bear)),
+    })
+    .expect("Lavamancer can activate with R + gy fodder");
+    drain_stack(&mut g);
+    // Bear (2/2) takes 2 damage and dies.
+    assert!(!g.battlefield.iter().any(|c| c.id == bear),
+        "Grim Lavamancer should ping the bear for 2 (now dead)");
+}

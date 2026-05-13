@@ -2455,6 +2455,80 @@ fn quintorius_field_historian_etb_exiles_card_and_makes_spirit() {
     assert!(q.has_keyword(&Keyword::Vigilance));
 }
 
+/// Quintorius, Field Historian's tribal anthem: "Other Spirit creatures
+/// you control get +1/+0." Wired via the compute-time injection in
+/// `GameState::compute_battlefield` using the new
+/// `AffectedPermanents::AllWithCreatureType.exclude_source` flag.
+///
+/// This test mints Quintorius alongside a friendly Spirit and verifies
+/// the Spirit gets +1/+0 (3/2 → 4/2) while Quintorius himself stays at
+/// his printed 3/3 (the "Other" gate excludes him).
+#[test]
+fn quintorius_anthem_pumps_other_spirits_not_self() {
+    let mut g = two_player_game();
+    // Put a Quintorius and one friendly Spirit (the minted 3/2 token-equivalent
+    // from his ETB; for the tribal test we just stage the Spirit Mascot from
+    // the SOS catalog which has the Spirit subtype).
+    let qid = g.add_card_to_battlefield(0, catalog::quintorius_field_historian());
+    let mascot = g.add_card_to_battlefield(0, catalog::spirit_mascot());
+
+    // Spirit Mascot is a 2/2 Spirit; Quintorius's anthem should bump it to 3/2.
+    let mascot_card = g.compute_battlefield().into_iter()
+        .find(|c| c.id == mascot)
+        .expect("Spirit Mascot on battlefield");
+    assert_eq!(mascot_card.power, 3, "Other-Spirit gets +1 power");
+    assert_eq!(mascot_card.toughness, 2, "toughness unchanged");
+
+    // Quintorius himself is a Spirit too (printed creature types include
+    // Spirit), but the "Other" gate excludes him.
+    let q_card = g.compute_battlefield().into_iter()
+        .find(|c| c.id == qid)
+        .expect("Quintorius on battlefield");
+    assert_eq!(q_card.power, 3, "Quintorius doesn't buff himself (Other gate)");
+    assert_eq!(q_card.toughness, 3);
+}
+
+/// When Quintorius leaves the battlefield, his anthem layer effect
+/// should evaporate (matching `EffectDuration::WhileSourceOnBattlefield`).
+/// This test stages two Spirits + Quintorius, kills Quintorius via
+/// lethal damage, and verifies the Spirits return to base P/T.
+#[test]
+fn quintorius_anthem_expires_when_he_leaves_battlefield() {
+    let mut g = two_player_game();
+    let qid = g.add_card_to_battlefield(0, catalog::quintorius_field_historian());
+    let mascot = g.add_card_to_battlefield(0, catalog::spirit_mascot());
+
+    // Confirm anthem is active.
+    let before = g.compute_battlefield().into_iter()
+        .find(|c| c.id == mascot).unwrap();
+    assert_eq!(before.power, 3);
+
+    // Lethal damage to Quintorius (3 toughness → 3 damage kills him).
+    g.battlefield_find_mut(qid).unwrap().damage = 3;
+    let _ = g.check_state_based_actions();
+
+    // Re-check the Spirit Mascot: anthem should be gone, base 2/2.
+    let after = g.compute_battlefield().into_iter()
+        .find(|c| c.id == mascot).unwrap();
+    assert_eq!(after.power, 2, "anthem evaporates without Quintorius");
+    assert_eq!(after.toughness, 2);
+}
+
+/// Quintorius doesn't buff an opponent's Spirits, even if they share the
+/// creature type. The `controller: Some(card.controller)` scope in the
+/// compute-time injection gates the anthem to his own side of the board.
+#[test]
+fn quintorius_anthem_does_not_pump_opponent_spirits() {
+    let mut g = two_player_game();
+    let _qid = g.add_card_to_battlefield(0, catalog::quintorius_field_historian());
+    let opp_spirit = g.add_card_to_battlefield(1, catalog::spirit_mascot());
+
+    let opp_card = g.compute_battlefield().into_iter()
+        .find(|c| c.id == opp_spirit).unwrap();
+    assert_eq!(opp_card.power, 2, "opp Spirit unchanged");
+    assert_eq!(opp_card.toughness, 2);
+}
+
 // ── Push XXIV (claude/modern_decks): 12 new STX cards ────────────────────────
 
 #[test]
