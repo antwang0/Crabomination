@@ -351,6 +351,11 @@ fn ability_effect_label(effect: &Effect) -> &'static str {
             .map(ability_effect_label)
             .find(|l| *l != "Activate")
             .unwrap_or("Activate"),
+        Effect::ChooseN { modes, .. } => modes
+            .iter()
+            .map(ability_effect_label)
+            .find(|l| *l != "Activate")
+            .unwrap_or("Activate"),
         Effect::ForEach { body, .. } | Effect::Repeat { body, .. } => ability_effect_label(body),
         // MayDo / MayPay wrap an inner effect — surface the inner label
         // so the UI shows what the player gets to do (the "may"
@@ -382,6 +387,7 @@ fn ability_effect_label(effect: &Effect) -> &'static str {
         Effect::Tap { .. } => "Tap",
         Effect::Untap { .. } => "Untap",
         Effect::PumpPT { .. } => "Pump",
+        Effect::SetBasePT { .. } => "Set base P/T",
         Effect::GrantKeyword { .. } => "Grant keyword",
         Effect::AddPoison { .. } => "Add poison",
         Effect::RevealUntilFind { .. } => "Reveal until find",

@@ -555,6 +555,25 @@ pub enum Effect {
     /// Modal — controller picks one of `modes` at cast time; the chosen index
     /// is stored in the stack item's `mode` field.
     ChooseMode(Vec<Effect>),
+    /// "Choose `picks.len()` —" multi-mode pick. At resolution, runs each
+    /// mode whose index appears in `picks` (in that order). Used by the
+    /// Strixhaven Command cycle (Witherbloom / Lorehold / Quandrix /
+    /// Silverquill / Prismari Commands), Charms, and any other "choose
+    /// two of four" spell.
+    ///
+    /// CR 700.2d covers this: "If a player is allowed to choose more
+    /// than one mode for a modal spell or ability, that player normally
+    /// can't choose the same mode more than once." The `picks` field
+    /// stores the controller's chosen indices; the auto-decider feeds
+    /// them in deterministically (a sensible default for each card),
+    /// and a later mode-pick UI can override the picks per-cast.
+    ///
+    /// Modes share the spell's single target slot (`ctx.targets[0]`).
+    /// The picked modes are run in `picks` order; if multiple modes
+    /// each need a target, only the *first* picked mode's target
+    /// filter is enforced (engine has no multi-target slots yet).
+    /// Mode-pick UI plumbing is tracked in TODO.md as future work.
+    ChooseN { picks: Vec<u8>, modes: Vec<Effect> },
     /// "You may [body]" — emit a yes/no decision via
     /// `Decision::OptionalTrigger`. Run `body` only on `Bool(true)`. The
     /// `description` string is shown to the player (and serialized into
@@ -664,6 +683,17 @@ pub enum Effect {
     Untap   { what: Selector, #[serde(default)] up_to: Option<Value> },
     /// Give a temporary +P/+T bonus.
     PumpPT  { what: Selector, power: Value, toughness: Value, duration: Duration },
+    /// Override the resolved permanent's base power and toughness via a
+    /// layer-7b continuous effect. Unlike `PumpPT` (which adds to the
+    /// existing P/T via direct bonus fields), `SetBasePT` installs a
+    /// proper `Modification::SetPowerToughness(p, t)` continuous effect
+    /// that participates in the layer system. Used by Strixhaven's
+    /// **Square Up** ({U}{R}: "Until end of turn, target creature has
+    /// base power and toughness 0/4") and any future "base P/T
+    /// becomes" effect. Counters and +P/+T modifications still stack
+    /// on top per CR 613.7f / 613.7c — so a +1/+1 counter on a Square-
+    /// Upped creature makes it 1/5, not 1/1.
+    SetBasePT { what: Selector, power: Value, toughness: Value, duration: Duration },
     GrantKeyword { what: Selector, keyword: Keyword, duration: Duration },
     AddCounter    { what: Selector, kind: CounterType, amount: Value },
     RemoveCounter { what: Selector, kind: CounterType, amount: Value },
@@ -939,6 +969,7 @@ impl Effect {
             }
             Effect::Repeat { count, body } => value_has_target(count) || body.requires_target(),
             Effect::ChooseMode(modes) => modes.iter().any(|e| e.requires_target()),
+            Effect::ChooseN { modes, .. } => modes.iter().any(|e| e.requires_target()),
             Effect::MayDo { body, .. } => body.requires_target(),
             Effect::MayPay { body, .. } => body.requires_target(),
             Effect::DealDamage { to, amount } => sel_has_target(to) || value_has_target(amount),
@@ -979,6 +1010,9 @@ impl Effect {
             | Effect::CounterAbility { what }
             | Effect::CounterUnlessPaid { what, .. } => sel_has_target(what),
             Effect::PumpPT { what, power, toughness, .. } => {
+                sel_has_target(what) || value_has_target(power) || value_has_target(toughness)
+            }
+            Effect::SetBasePT { what, power, toughness, .. } => {
                 sel_has_target(what) || value_has_target(power) || value_has_target(toughness)
             }
             Effect::GrantKeyword { what, .. } => sel_has_target(what),
@@ -1052,6 +1086,7 @@ impl Effect {
             | Effect::GainControl { what, .. } => sel_filter(what),
             Effect::AddCounter { what, .. } | Effect::RemoveCounter { what, .. } => sel_filter(what),
             Effect::PumpPT { what, .. } => sel_filter(what),
+            Effect::SetBasePT { what, .. } => sel_filter(what),
             Effect::GrantKeyword { what, .. } => sel_filter(what),
             Effect::Move { what, .. } => sel_filter(what),
             // Player-targeting effects: surface the filter so the bot's
@@ -1087,6 +1122,9 @@ impl Effect {
             Effect::ChooseMode(modes) => modes
                 .iter()
                 .find_map(|e| e.primary_target_filter()),
+            Effect::ChooseN { modes, .. } => modes
+                .iter()
+                .find_map(|e| e.primary_target_filter()),
             // MayDo wraps an inner effect — surface its filter so the
             // cast prompt narrows correctly when the inner effect needs
             // a target (e.g. "you may sacrifice [target permanent]").
@@ -1111,6 +1149,12 @@ impl Effect {
                 // (Tragic Slip, Last Gasp) want opponent targets.
                 Self::value_is_non_negative(power) && Self::value_is_non_negative(toughness)
             }
+            // SetBasePT to 0/N (Square Up) is hostile when the base
+            // power drops below the printed body — used as a removal-
+            // adjacent effect to neutralize attackers. The bot prefers
+            // an opp creature unless the toughness bump is the bigger
+            // tell.
+            Effect::SetBasePT { .. } => false,
             Effect::GrantKeyword { keyword, .. } => Self::keyword_is_friendly(keyword),
             Effect::AddCounter { kind, .. } => matches!(kind, CounterType::PlusOnePlusOne),
             Effect::Seq(v) => v.iter().any(|e| e.prefers_friendly_target()),
@@ -1202,6 +1246,7 @@ impl Effect {
             | Effect::AddCounter { .. }
             | Effect::RemoveCounter { .. }
             | Effect::PumpPT { .. }
+            | Effect::SetBasePT { .. }
             | Effect::GrantKeyword { .. }
             | Effect::GainControl { .. }
             | Effect::ResetCreature { .. }
@@ -1239,6 +1284,7 @@ impl Effect {
             | Effect::Repeat { body, .. }
             | Effect::ForEach { body, .. } => body.accepts_player_target(),
             Effect::ChooseMode(modes) => modes.iter().any(|e| e.accepts_player_target()),
+            Effect::ChooseN { modes, .. } => modes.iter().any(|e| e.accepts_player_target()),
             // Conservative default: anything we don't classify is permitted.
             // The legality gate (filter + check_target_legality) still rejects
             // mismatched types, this just changes the heuristic's preference
@@ -1305,6 +1351,13 @@ impl Effect {
                     // Legacy path: first hit across all modes.
                     _ => modes.iter().find_map(|m| eff_find(m, slot, None)),
                 },
+                // ChooseN: the auto-decider picks specific mode indices;
+                // the slot-0 target should match whichever picked mode
+                // is first to require one. Scan only the picked modes.
+                Effect::ChooseN { picks, modes } => picks
+                    .iter()
+                    .filter_map(|&i| modes.get(i as usize))
+                    .find_map(|m| eff_find(m, slot, None)),
                 Effect::MayDo { body, .. } | Effect::MayPay { body, .. } => {
                     eff_find(body, slot, mode)
                 }
@@ -1326,6 +1379,7 @@ impl Effect {
                 | Effect::CounterUnlessPaid { what, .. }
                 | Effect::GainControl { what, .. } => sel_find(what, slot),
                 Effect::PumpPT { what, .. } => sel_find(what, slot),
+                Effect::SetBasePT { what, .. } => sel_find(what, slot),
                 Effect::GrantKeyword { what, .. } => sel_find(what, slot),
                 Effect::AddCounter { what, .. } | Effect::RemoveCounter { what, .. } => {
                     sel_find(what, slot)

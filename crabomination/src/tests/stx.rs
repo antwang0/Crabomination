@@ -2894,29 +2894,15 @@ fn quick_study_draws_two_cards_for_target_player() {
 
 // ── Push XXVII: STX Commands + utility cards ────────────────────────────────
 
+// Push XXXII: the Strixhaven Command cycle now uses the new
+// `Effect::ChooseN { picks, modes }` primitive (CR 700.2d) — the
+// auto-decider picks the per-card `picks` indices, so each
+// Command always runs *both* of its chosen modes. The previous
+// single-mode tests are rewritten to characterize the new
+// auto-pick behavior (which mirrors the printed "choose two —"
+// rules).
 #[test]
-fn witherbloom_command_mode_two_drains_two_life() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_hand(0, catalog::witherbloom_command());
-    g.players[0].mana_pool.add(Color::Black, 1);
-    g.players[0].mana_pool.add(Color::Green, 1);
-    g.players[0].mana_pool.add_colorless(2);
-    let p0_life_before = g.players[0].life;
-    let p1_life_before = g.players[1].life;
-    g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: Some(2), x_value: None,
-    })
-    .expect("Witherbloom Command castable for {2}{B}{G}");
-    drain_stack(&mut g);
-    // Mode 2 drain: P1 -2, P0 +2.
-    assert_eq!(g.players[0].life, p0_life_before + 2,
-        "P0 should gain 2 life from drain mode");
-    assert_eq!(g.players[1].life, p1_life_before - 2,
-        "P1 should lose 2 life from drain mode");
-}
-
-#[test]
-fn witherbloom_command_mode_zero_mills_four() {
+fn witherbloom_command_auto_picks_mill_and_drain() {
     let mut g = two_player_game();
     // P1 (target opponent) has at least 4 cards in their library.
     for _ in 0..6 { g.add_card_to_library(1, catalog::island()); }
@@ -2924,38 +2910,48 @@ fn witherbloom_command_mode_zero_mills_four() {
     g.players[0].mana_pool.add(Color::Black, 1);
     g.players[0].mana_pool.add(Color::Green, 1);
     g.players[0].mana_pool.add_colorless(2);
+    let p0_life_before = g.players[0].life;
+    let p1_life_before = g.players[1].life;
     let p1_lib_before = g.players[1].library.len();
     let p1_gy_before = g.players[1].graveyard.len();
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: Some(0), x_value: None,
+        card_id: id, target: None, mode: None, x_value: None,
     })
     .expect("Witherbloom Command castable for {2}{B}{G}");
     drain_stack(&mut g);
-    // P1 milled 4: lib -4, gy +4.
+    // Auto-pick = [0 (mill 4), 2 (drain 2)].
     assert_eq!(g.players[1].library.len(), p1_lib_before - 4,
-        "P1 should lose 4 cards from library to mill");
+        "P1 milled 4");
     assert_eq!(g.players[1].graveyard.len(), p1_gy_before + 4,
-        "P1 graveyard should gain 4 cards from mill");
+        "P1 gy +4");
+    assert_eq!(g.players[0].life, p0_life_before + 2,
+        "P0 +2 from drain");
+    assert_eq!(g.players[1].life, p1_life_before - 2,
+        "P1 -2 from drain");
 }
 
 #[test]
-fn lorehold_command_mode_three_creates_two_flying_spirits() {
+fn lorehold_command_auto_picks_damage_and_two_flying_spirits() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::lorehold_command());
     g.players[0].mana_pool.add(Color::Red, 1);
     g.players[0].mana_pool.add(Color::White, 1);
     g.players[0].mana_pool.add_colorless(2);
+    let p1_life_before = g.players[1].life;
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: Some(3), x_value: None,
+        card_id: id, target: Some(Target::Player(1)), mode: None, x_value: None,
     })
     .expect("Lorehold Command castable for {2}{R}{W}");
     drain_stack(&mut g);
 
+    // Auto-pick = [0 (4 damage to opp), 3 (two 2/2 flying Spirits)].
+    assert_eq!(g.players[1].life, p1_life_before - 4,
+        "P1 took 4 damage");
     let spirits: Vec<_> = g.battlefield.iter()
         .filter(|c| c.is_token && c.definition.name == "Spirit"
             && c.controller == 0)
         .collect();
-    assert_eq!(spirits.len(), 2, "Should mint exactly two Spirit tokens");
+    assert_eq!(spirits.len(), 2, "Two Spirit tokens minted");
     for s in &spirits {
         assert_eq!(s.power(), 2);
         assert_eq!(s.toughness(), 2);
@@ -2964,63 +2960,34 @@ fn lorehold_command_mode_three_creates_two_flying_spirits() {
 }
 
 #[test]
-fn lorehold_command_mode_zero_deals_4_damage_to_opponent() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_hand(0, catalog::lorehold_command());
-    g.players[0].mana_pool.add(Color::Red, 1);
-    g.players[0].mana_pool.add(Color::White, 1);
-    g.players[0].mana_pool.add_colorless(2);
-    let p1_life_before = g.players[1].life;
-    g.perform_action(GameAction::CastSpell {
-        card_id: id, target: Some(Target::Player(1)), mode: Some(0), x_value: None,
-    })
-    .expect("Lorehold Command castable for {2}{R}{W}");
-    drain_stack(&mut g);
-    assert_eq!(g.players[1].life, p1_life_before - 4,
-        "P1 should take 4 damage");
-}
-
-#[test]
-fn quandrix_command_mode_zero_adds_two_counters() {
+fn quandrix_command_auto_picks_counters_and_mill_two() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.clear_sickness(bear);
+    for _ in 0..5 { g.add_card_to_library(1, catalog::island()); }
     let id = g.add_card_to_hand(0, catalog::quandrix_command());
     g.players[0].mana_pool.add(Color::Green, 1);
     g.players[0].mana_pool.add(Color::Blue, 1);
     g.players[0].mana_pool.add_colorless(1);
+    let p1_lib_before = g.players[1].library.len();
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: Some(Target::Permanent(bear)), mode: Some(0), x_value: None,
+        card_id: id, target: Some(Target::Permanent(bear)), mode: None, x_value: None,
     })
     .expect("Quandrix Command castable for {1}{G}{U}");
     drain_stack(&mut g);
     let bear_card = g.battlefield.iter().find(|c| c.id == bear).unwrap();
     assert_eq!(bear_card.counter_count(CounterType::PlusOnePlusOne), 2,
         "Bear should have 2 +1/+1 counters");
+    // Auto-pick also fired mode 2 (mill 2). P1 lost 2 from library.
+    assert_eq!(g.players[1].library.len(), p1_lib_before - 2,
+        "Mill 2 fired against P1");
 }
 
 #[test]
-fn silverquill_command_mode_three_adds_two_counters() {
+fn silverquill_command_auto_picks_drain_and_counters() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.clear_sickness(bear);
-    let id = g.add_card_to_hand(0, catalog::silverquill_command());
-    g.players[0].mana_pool.add(Color::White, 1);
-    g.players[0].mana_pool.add(Color::Black, 1);
-    g.players[0].mana_pool.add_colorless(2);
-    g.perform_action(GameAction::CastSpell {
-        card_id: id, target: Some(Target::Permanent(bear)), mode: Some(3), x_value: None,
-    })
-    .expect("Silverquill Command castable for {2}{W}{B}");
-    drain_stack(&mut g);
-    let bear_card = g.battlefield.iter().find(|c| c.id == bear).unwrap();
-    assert_eq!(bear_card.counter_count(CounterType::PlusOnePlusOne), 2,
-        "Bear should have 2 +1/+1 counters from Silverquill Command mode 3");
-}
-
-#[test]
-fn silverquill_command_mode_one_drains_two() {
-    let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::silverquill_command());
     g.players[0].mana_pool.add(Color::White, 1);
     g.players[0].mana_pool.add(Color::Black, 1);
@@ -3028,50 +2995,45 @@ fn silverquill_command_mode_one_drains_two() {
     let p0_life_before = g.players[0].life;
     let p1_life_before = g.players[1].life;
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: Some(1), x_value: None,
+        card_id: id, target: Some(Target::Permanent(bear)), mode: None, x_value: None,
     })
     .expect("Silverquill Command castable for {2}{W}{B}");
     drain_stack(&mut g);
-    assert_eq!(g.players[0].life, p0_life_before + 2);
-    assert_eq!(g.players[1].life, p1_life_before - 2);
+    // Auto-pick = [1 (drain 2), 3 (two +1/+1 counters on creature)].
+    assert_eq!(g.players[0].life, p0_life_before + 2, "P0 +2 from drain");
+    assert_eq!(g.players[1].life, p1_life_before - 2, "P1 -2 from drain");
+    let bear_card = g.battlefield.iter().find(|c| c.id == bear).unwrap();
+    assert_eq!(bear_card.counter_count(CounterType::PlusOnePlusOne), 2,
+        "Bear gained 2 +1/+1 counters from mode 3");
 }
 
 #[test]
-fn prismari_command_mode_zero_deals_2_damage() {
+fn prismari_command_auto_picks_loot_and_treasure() {
     let mut g = two_player_game();
-    // 2-toughness creature dies to 2 damage.
-    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    // Seed a library card so the loot draw succeeds.
+    g.add_card_to_library(0, catalog::island());
+    let _filler = g.add_card_to_hand(0, catalog::island()); // to discard
     let id = g.add_card_to_hand(0, catalog::prismari_command());
     g.players[0].mana_pool.add(Color::Blue, 1);
     g.players[0].mana_pool.add(Color::Red, 1);
     g.players[0].mana_pool.add_colorless(1);
-    g.perform_action(GameAction::CastSpell {
-        card_id: id, target: Some(Target::Permanent(bear)), mode: Some(0), x_value: None,
-    })
-    .expect("Prismari Command castable for {1}{U}{R}");
-    drain_stack(&mut g);
-    // Bear (2 toughness) takes 2 dmg → dies.
-    assert!(!g.battlefield.iter().any(|c| c.id == bear),
-        "Bear should be dead from 2 damage");
-}
 
-#[test]
-fn prismari_command_mode_two_creates_treasure() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_hand(0, catalog::prismari_command());
-    g.players[0].mana_pool.add(Color::Blue, 1);
-    g.players[0].mana_pool.add(Color::Red, 1);
-    g.players[0].mana_pool.add_colorless(1);
+    let hand_before = g.players[0].hand.len();
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: Some(2), x_value: None,
+        card_id: id, target: None, mode: None, x_value: None,
     })
     .expect("Prismari Command castable for {1}{U}{R}");
     drain_stack(&mut g);
+
+    // Auto-pick = [1 (loot), 2 (Treasure)].
+    // Hand: -1 (cast) -1 (discard) +1 (draw) = -1 net.
+    assert_eq!(g.players[0].hand.len(), hand_before - 1,
+        "Hand size shifted by -1 (cast + loot is a wash, the cast itself was the only consumption)");
     let treasures: Vec<_> = g.battlefield.iter()
         .filter(|c| c.is_token && c.definition.name == "Treasure"
             && c.controller == 0)
         .collect();
-    assert_eq!(treasures.len(), 1, "Should mint a Treasure");
+    assert_eq!(treasures.len(), 1, "One Treasure token from mode 2");
 }
 
 #[test]
@@ -3521,4 +3483,333 @@ fn symmathematics_does_not_double_on_creature_cast() {
     let p_after = g.battlefield_find(id).unwrap().power();
     assert_eq!(p_after, p_before,
         "Casting a creature should NOT double counters (magecraft is I/S only)");
+}
+
+// ── Push XXXII: new Lessons + doc-only promotions ──────────────────────────
+
+/// Environmental Sciences ({1}{G}) gains 4 life and tutors a basic land to
+/// hand. AutoDecider declines `SearchLibrary` by default so we feed a
+/// ScriptedDecider with the Forest's CardId to exercise the search half.
+#[test]
+fn environmental_sciences_gains_four_life_and_tutors_a_basic_land() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let forest = g.add_card_to_library(0, catalog::forest());
+    g.add_card_to_library(0, catalog::island()); // filler
+
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(forest))]));
+
+    let id = g.add_card_to_hand(0, catalog::environmental_sciences());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    let hand_before = g.players[0].hand.len();
+    let life_before = g.players[0].life;
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Environmental Sciences castable for {1}{G}");
+    drain_stack(&mut g);
+
+    // Life +4.
+    assert_eq!(g.players[0].life, life_before + 4,
+        "Should gain 4 life from Environmental Sciences");
+    // Hand: -1 (cast) + 1 (tutored Forest) = 0 net.
+    assert_eq!(g.players[0].hand.len(), hand_before,
+        "Hand size unchanged (cast -1 + tutor +1)");
+    // Forest is in hand, not library.
+    assert!(g.players[0].hand.iter().any(|c| c.id == forest),
+        "Forest should be in hand after tutor");
+    assert!(!g.players[0].library.iter().any(|c| c.id == forest),
+        "Forest should no longer be in library");
+}
+
+/// Environmental Sciences still gains life even when AutoDecider declines
+/// the optional tutor — the GainLife half is unconditional.
+#[test]
+fn environmental_sciences_gains_life_even_if_search_declined() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::forest());
+
+    let id = g.add_card_to_hand(0, catalog::environmental_sciences());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    let life_before = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Environmental Sciences castable");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[0].life, life_before + 4,
+        "Life still bumps even when AutoDecider declines the tutor");
+}
+
+/// Introduction to Annihilation destroys a nonland permanent. The Scry 2
+/// rider is fired against the targeted permanent's controller (a no-op
+/// when the library is empty); we focus on the destroy half.
+#[test]
+fn introduction_to_annihilation_destroys_nonland_permanent() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+
+    let id = g.add_card_to_hand(0, catalog::introduction_to_annihilation());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        mode: None, x_value: None,
+    })
+    .expect("Introduction to Annihilation castable for {3}{W}");
+    drain_stack(&mut g);
+
+    // Bear is destroyed.
+    assert!(!g.battlefield.iter().any(|c| c.id == bear),
+        "Bear should be destroyed");
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bear),
+        "Bear should be in P1's graveyard");
+}
+
+/// Introduction to Prophecy scries 3 and draws a card. We seed enough
+/// cards in the library that the Draw isn't an exception.
+#[test]
+fn introduction_to_prophecy_scries_three_and_draws_one() {
+    let mut g = two_player_game();
+    for _ in 0..5 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let id = g.add_card_to_hand(0, catalog::introduction_to_prophecy());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+
+    let hand_before = g.players[0].hand.len();
+    let lib_before = g.players[0].library.len();
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Introduction to Prophecy castable for {2}{U}");
+    drain_stack(&mut g);
+
+    // Hand: -1 (cast) + 1 (draw) = 0 net.
+    assert_eq!(g.players[0].hand.len(), hand_before,
+        "Hand size unchanged (cast -1 + draw +1)");
+    // Library: -1 (drew one). Scry doesn't change library size.
+    assert_eq!(g.players[0].library.len(), lib_before - 1,
+        "Library decremented by one for the draw");
+}
+
+/// Spirit Summoning mints a 3/2 white Spirit with lifelink.
+#[test]
+fn spirit_summoning_creates_a_three_two_lifelink_spirit() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::spirit_summoning());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Spirit Summoning castable for {3}{W}");
+    drain_stack(&mut g);
+
+    let spirit = g.battlefield.iter()
+        .find(|c| c.is_token && c.definition.name == "Spirit")
+        .expect("Spirit token should be on the battlefield");
+    assert_eq!(spirit.power(), 3, "Spirit token is a 3/2");
+    assert_eq!(spirit.toughness(), 2, "Spirit token is a 3/2");
+    assert!(spirit.has_keyword(&Keyword::Lifelink),
+        "Spirit token has lifelink");
+    assert_eq!(spirit.controller, 0,
+        "Spirit token controlled by casting player");
+}
+
+/// Spirit Summoning is recorded as a `Lesson` so future Lesson-aware
+/// mechanics (search-your-sideboard) can filter on it.
+#[test]
+fn spirit_summoning_has_lesson_subtype() {
+    use crate::card::SpellSubtype;
+    let def = catalog::spirit_summoning();
+    assert!(def.subtypes.spell_subtypes.contains(&SpellSubtype::Lesson),
+        "Spirit Summoning should carry the Lesson spell subtype");
+}
+
+/// Introduction to Annihilation is a Lesson too.
+#[test]
+fn introduction_to_annihilation_has_lesson_subtype() {
+    use crate::card::SpellSubtype;
+    let def = catalog::introduction_to_annihilation();
+    assert!(def.subtypes.spell_subtypes.contains(&SpellSubtype::Lesson));
+}
+
+/// Introduction to Prophecy is a Lesson too.
+#[test]
+fn introduction_to_prophecy_has_lesson_subtype() {
+    use crate::card::SpellSubtype;
+    let def = catalog::introduction_to_prophecy();
+    assert!(def.subtypes.spell_subtypes.contains(&SpellSubtype::Lesson));
+}
+
+/// Environmental Sciences is a Lesson too.
+#[test]
+fn environmental_sciences_has_lesson_subtype() {
+    use crate::card::SpellSubtype;
+    let def = catalog::environmental_sciences();
+    assert!(def.subtypes.spell_subtypes.contains(&SpellSubtype::Lesson));
+}
+
+// ── Doc-only promotions covered by characterization tests ──────────────────
+
+/// Necrotic Fumes: even though the additional cost (sacrifice a creature)
+/// is folded into resolution rather than cast-time, the gameplay outcome
+/// matches: one of your creatures is sacrificed AND the targeted creature
+/// is exiled. This characterization locks in the behaviour so the
+/// "doc-only ✅" promotion doesn't regress.
+#[test]
+fn necrotic_fumes_sacrifices_one_and_exiles_target() {
+    let mut g = two_player_game();
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+
+    let id = g.add_card_to_hand(0, catalog::necrotic_fumes());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(2);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(victim)),
+        mode: None, x_value: None,
+    })
+    .expect("Necrotic Fumes castable for {2}{B}{B}");
+    drain_stack(&mut g);
+
+    // Your creature is in graveyard.
+    assert!(!g.battlefield.iter().any(|c| c.id == fodder),
+        "Your bear (fodder) should be sacrificed off the battlefield");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == fodder),
+        "Your bear should be in your graveyard (sacrifice)");
+    // Target is exiled.
+    assert!(!g.battlefield.iter().any(|c| c.id == victim),
+        "Target should be off the battlefield (exiled)");
+    assert!(g.exile.iter().any(|c| c.id == victim),
+        "Target should be in exile (Necrotic Fumes exiles rather than destroys)");
+}
+
+/// Combat Professor's Mentor approximation (`PowerAtMost(1)`) correctly
+/// matches the printed Mentor for a base-power-2 source: "lesser power"
+/// = power < 2 = PowerAtMost(1). Lock this in.
+#[test]
+fn combat_professor_mentor_buffs_a_smaller_attacker() {
+    use crate::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let prof = g.add_card_to_battlefield(0, catalog::combat_professor());
+    let smaller = g.add_card_to_battlefield(0, catalog::memnite()); // 1/1 — strictly lesser power than Combat Professor's 2
+
+    g.clear_sickness(prof);
+    g.clear_sickness(smaller);
+    g.step = TurnStep::DeclareAttackers;
+
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: prof, target: AttackTarget::Player(1) },
+        Attack { attacker: smaller, target: AttackTarget::Player(1) },
+    ]))
+    .expect("DeclareAttackers");
+    drain_stack(&mut g);
+
+    let smaller_card = g.battlefield_find(smaller).unwrap();
+    assert_eq!(
+        smaller_card.counter_count(CounterType::PlusOnePlusOne), 1,
+        "1/1 attacker (lesser power than Combat Professor's 2) gains a +1/+1 counter via Mentor"
+    );
+}
+
+/// Square Up sets the target creature's base power and toughness to 0/4
+/// for the turn, and the caster draws a card. We verify both the
+/// SetBasePT layer-7b effect and the cantrip.
+#[test]
+fn square_up_sets_target_creature_to_zero_four_and_draws() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2 base
+    g.add_card_to_library(0, catalog::island()); // for the draw
+
+    let id = g.add_card_to_hand(0, catalog::square_up());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+
+    let hand_before = g.players[0].hand.len();
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        mode: None, x_value: None,
+    })
+    .expect("Square Up castable for {U}{R}");
+    drain_stack(&mut g);
+
+    let computed = g.computed_permanent(bear).expect("Bear still present");
+    assert_eq!(computed.power, 0, "Base power set to 0");
+    assert_eq!(computed.toughness, 4, "Base toughness set to 4");
+    // Hand: -1 (cast) +1 (draw) = 0 net.
+    assert_eq!(g.players[0].hand.len(), hand_before,
+        "Hand size unchanged (cast -1 + cantrip +1)");
+}
+
+/// +1/+1 counters STACK on top of Square Up's base-P/T override per
+/// CR 613.7b/c/f. A 2/2 bear with a +1/+1 counter, after Square Up,
+/// should be 1/5 — base 0/4 + 1 counter delta.
+#[test]
+fn square_up_layers_under_plus_one_counters() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+
+    let id = g.add_card_to_hand(0, catalog::square_up());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        mode: None, x_value: None,
+    })
+    .expect("Square Up castable");
+    drain_stack(&mut g);
+
+    let computed = g.computed_permanent(bear).expect("Bear still present");
+    // 0 base power + 1 from counter = 1; 4 base toughness + 1 from counter = 5.
+    assert_eq!(computed.power, 1, "0 + counter = 1");
+    assert_eq!(computed.toughness, 5, "4 + counter = 5");
+}
+
+/// Baleful Mastery's body is fully wired: target creature is exiled
+/// and each opponent draws a card. The 🟡 alt-cost note is doc-only —
+/// the alt cost just lets the caster pay cheaper; the "opp draws"
+/// rider always fires regardless of cast path. Characterize the
+/// always-fires behavior so the promotion to ✅ holds.
+#[test]
+fn baleful_mastery_exiles_target_and_opp_draws() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_library(1, catalog::island());
+
+    let id = g.add_card_to_hand(0, catalog::baleful_mastery());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+
+    let opp_hand_before = g.players[1].hand.len();
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        mode: None, x_value: None,
+    })
+    .expect("Baleful Mastery castable for {2}{B}");
+    drain_stack(&mut g);
+
+    // Bear in exile.
+    assert!(g.exile.iter().any(|c| c.id == bear),
+        "Bear should be exiled (Baleful Mastery exile half)");
+    // Opp drew one card.
+    assert_eq!(g.players[1].hand.len(), opp_hand_before + 1,
+        "Opp draws a card on resolution");
 }

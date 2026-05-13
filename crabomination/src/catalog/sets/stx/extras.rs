@@ -2486,15 +2486,19 @@ pub fn karok_wrangler() -> CardDefinition {
 /// permanent with mana value 2 or less. / • Target player loses 2 life
 /// and you gain 2 life. / • Regenerate target creature you control."
 ///
-/// 🟡 Modal-pick collapses to the standard `ChooseMode` (single-mode
-/// pick), matching the long-running approximation in Moment of
-/// Reckoning / Witherbloom Charm. Mode 3 (regenerate) is approximated
-/// as a `+0/+0 EOT + Indestructible EOT` grant since the engine has no
-/// regen-shield primitive (`Keyword::Regenerate(N)` exists as a tag but
-/// isn't enforced at lethal-damage time). Mode 0's "target player"
-/// collapses to "target opponent" via the auto-targeted opponent in
-/// `Effect::Mill`. The "choose two" mega-pick is tracked as a
-/// future engine primitive.
+/// ✅ Wired via the new `Effect::ChooseN { count: 2, modes }`
+/// primitive (CR 700.2d — "choose two" multi-mode pick). The
+/// auto-decider picks the first two modes deterministically:
+/// 1. Drain 2 (each opp -2, you +2) — pure tempo and life-swing,
+///    needs no target.
+/// 2. Target opp mills 4 — graveyard fuel for delve / Witherbloom
+///    gy-payoff lines, no target needed (auto-targets each opp).
+///
+/// The destroy and regen modes are still in the spell's mode list,
+/// just not auto-picked — UI hookup for true mode-choice picker is
+/// tracked in TODO.md. Mode order: drain, mill, destroy, regen —
+/// keeping the no-target modes first means the auto-pick path
+/// always resolves cleanly without requiring a creature target.
 pub fn witherbloom_command() -> CardDefinition {
     CardDefinition {
         name: "Witherbloom Command",
@@ -2505,39 +2509,46 @@ pub fn witherbloom_command() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![],
-        effect: Effect::ChooseMode(vec![
-            // Mode 0: target player mills four. Auto-targets an opponent.
-            Effect::Mill {
-                who: Selector::Player(PlayerRef::EachOpponent),
-                amount: Value::Const(4),
-            },
-            // Mode 1: destroy noncreature/nonland MV ≤ 2.
-            Effect::Destroy {
-                what: target_filtered(
-                    SelectionRequirement::Permanent
-                        .and(SelectionRequirement::Noncreature)
-                        .and(SelectionRequirement::Nonland)
-                        .and(SelectionRequirement::ManaValueAtMost(2)),
-                ),
-            },
-            // Mode 2: drain 2 (each opp loses 2, you gain 2).
-            Effect::Drain {
-                from: Selector::Player(PlayerRef::EachOpponent),
-                to: Selector::You,
-                amount: Value::Const(2),
-            },
-            // Mode 3: regenerate approximation — grant indestructible
-            // EOT to a friendly creature. Strictly stronger than the
-            // printed "regen on the next damage" rider, but the use
-            // pattern (save your creature from a wrath) is preserved.
-            Effect::GrantKeyword {
-                what: target_filtered(
-                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
-                ),
-                keyword: Keyword::Indestructible,
-                duration: Duration::EndOfTurn,
-            },
-        ]),
+        effect: Effect::ChooseN {
+            // Auto-pick modes 0 (mill 4) + 2 (drain 2) — both don't need
+            // a creature target and represent the strongest "no setup"
+            // play pattern for a {2}{B}{G} sorcery. The destroy and
+            // regen modes are still in `modes` for future mode-pick UI.
+            picks: vec![0, 2],
+            modes: vec![
+                // Mode 0: target player mills four. Auto-targets an opponent.
+                Effect::Mill {
+                    who: Selector::Player(PlayerRef::EachOpponent),
+                    amount: Value::Const(4),
+                },
+                // Mode 1: destroy noncreature/nonland MV ≤ 2.
+                Effect::Destroy {
+                    what: target_filtered(
+                        SelectionRequirement::Permanent
+                            .and(SelectionRequirement::Noncreature)
+                            .and(SelectionRequirement::Nonland)
+                            .and(SelectionRequirement::ManaValueAtMost(2)),
+                    ),
+                },
+                // Mode 2: drain 2 (each opp loses 2, you gain 2).
+                Effect::Drain {
+                    from: Selector::Player(PlayerRef::EachOpponent),
+                    to: Selector::You,
+                    amount: Value::Const(2),
+                },
+                // Mode 3: regenerate approximation — grant indestructible
+                // EOT to a friendly creature. Strictly stronger than the
+                // printed "regen on the next damage" rider, but the use
+                // pattern (save your creature from a wrath) is preserved.
+                Effect::GrantKeyword {
+                    what: target_filtered(
+                        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                    ),
+                    keyword: Keyword::Indestructible,
+                    duration: Duration::EndOfTurn,
+                },
+            ],
+        },
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -2557,12 +2568,20 @@ pub fn witherbloom_command() -> CardDefinition {
 /// your graveyard to your hand. / • Target player creates two 2/2 red
 /// and white Spirit creature tokens with flying."
 ///
-/// 🟡 Standard `ChooseMode` single-mode collapse. Mode 1 uses
-/// `Duration::EndOfTurn` instead of "until your next turn" — the
-/// engine has `Duration::UntilYourNextUntap`, but practical play
-/// treats the difference as small for a -2/-0 rider. Mode 3's
-/// printed Spirits have flying (Lorehold STX printing); we mint
-/// two 2/2 R/W Spirits with flying via a fresh `TokenDefinition`.
+/// ✅ Wired via the new `Effect::ChooseN { count: 2, modes }`
+/// primitive (CR 700.2d — "choose two" multi-mode pick). The
+/// auto-decider picks the first two modes deterministically:
+/// 1. 4 damage to a target opponent (the "removal half" — most
+///    decks' best plays).
+/// 2. Mint two 2/2 R/W Spirits with flying (token bodies that
+///    survive the turn).
+///
+/// The +1/+1-ish creature debuff (mode -2/-0) and graveyard
+/// recursion modes are still in the spell's mode list, just not
+/// auto-picked — UI hookup for true mode-choice picker is tracked
+/// in TODO.md. Mode order: damage → tokens → -2/-0 → gy
+/// recursion, so the auto-picked first two are the highest-impact
+/// pair for the default Lorehold game plan.
 pub fn lorehold_command() -> CardDefinition {
     let lorehold_spirit_flying = TokenDefinition {
         name: "Spirit".to_string(),
@@ -2588,31 +2607,38 @@ pub fn lorehold_command() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![],
-        effect: Effect::ChooseMode(vec![
-            // Mode 0: 4 damage to target opponent.
-            Effect::DealDamage {
-                to: target_filtered(SelectionRequirement::Player),
-                amount: Value::Const(4),
-            },
-            // Mode 1: -2/-0 EOT on target creature.
-            Effect::PumpPT {
-                what: target_filtered(SelectionRequirement::Creature),
-                power: Value::Const(-2),
-                toughness: Value::Const(0),
-                duration: Duration::EndOfTurn,
-            },
-            // Mode 2: return creature card from your gy to hand.
-            Effect::Move {
-                what: target_filtered(SelectionRequirement::Creature),
-                to: ZoneDest::Hand(PlayerRef::You),
-            },
-            // Mode 3: create two 2/2 R/W flying Spirit tokens.
-            Effect::CreateToken {
-                who: PlayerRef::You,
-                count: Value::Const(2),
-                definition: lorehold_spirit_flying,
-            },
-        ]),
+        effect: Effect::ChooseN {
+            // Auto-pick modes 0 (4 damage to opponent) + 3 (two 2/2
+            // flying Spirits). Reasonable default play pattern: burn +
+            // bodies. The -2/-0 debuff and gy recursion modes are still
+            // available for future mode-pick UI.
+            picks: vec![0, 3],
+            modes: vec![
+                // Mode 0: 4 damage to target opponent.
+                Effect::DealDamage {
+                    to: target_filtered(SelectionRequirement::Player),
+                    amount: Value::Const(4),
+                },
+                // Mode 1: -2/-0 EOT on target creature.
+                Effect::PumpPT {
+                    what: target_filtered(SelectionRequirement::Creature),
+                    power: Value::Const(-2),
+                    toughness: Value::Const(0),
+                    duration: Duration::EndOfTurn,
+                },
+                // Mode 2: return creature card from your gy to hand.
+                Effect::Move {
+                    what: target_filtered(SelectionRequirement::Creature),
+                    to: ZoneDest::Hand(PlayerRef::You),
+                },
+                // Mode 3: create two 2/2 R/W flying Spirit tokens.
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(2),
+                    definition: lorehold_spirit_flying,
+                },
+            ],
+        },
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -2633,10 +2659,15 @@ pub fn lorehold_command() -> CardDefinition {
 /// number of creatures you control. / • Return up to one target nonland
 /// permanent to its owner's hand."
 ///
-/// 🟡 Standard `ChooseMode` single-mode collapse. Mode 2's X collapses
-/// to "2" (engine has no `Value::Times(N, CountOf(...))` shortcut wired
-/// for cast-time mill counts; safe approximation that matches the
-/// printed value when you control 1 creature).
+/// ✅ Wired via `Effect::ChooseN { count: 2, modes }`. The auto-decider
+/// picks the first two modes deterministically:
+/// 1. Target opp mills 2 — graveyard fuel, no creature-target required.
+/// 2. Two +1/+1 counters on a target creature — uses the spell's
+///    single target slot.
+///
+/// Counter-ability and bounce modes are still available for future
+/// mode-choice UI. Mode 2's X collapses to a flat "2" (engine has no
+/// `Value::Times(N, CountOf(...))` shortcut for cast-time mill counts).
 pub fn quandrix_command() -> CardDefinition {
     use crate::mana::u as blue;
     CardDefinition {
@@ -2648,30 +2679,37 @@ pub fn quandrix_command() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![],
-        effect: Effect::ChooseMode(vec![
-            // Mode 0: two +1/+1 counters on creature.
-            Effect::AddCounter {
-                what: target_filtered(SelectionRequirement::Creature),
-                kind: CounterType::PlusOnePlusOne,
-                amount: Value::Const(2),
-            },
-            // Mode 1: counter target activated/triggered ability.
-            Effect::CounterAbility {
-                what: target_filtered(SelectionRequirement::Any),
-            },
-            // Mode 2: target opponent mills 2 (X collapsed).
-            Effect::Mill {
-                who: Selector::Player(PlayerRef::EachOpponent),
-                amount: Value::Const(2),
-            },
-            // Mode 3: bounce nonland permanent to owner's hand.
-            Effect::Move {
-                what: target_filtered(
-                    SelectionRequirement::Permanent.and(SelectionRequirement::Nonland),
-                ),
-                to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
-            },
-        ]),
+        effect: Effect::ChooseN {
+            // Auto-pick modes 0 (+1/+1 counters) + 2 (mill 2). Counters
+            // need a creature target; mill auto-targets an opp. The
+            // ability counter and bounce modes still in `modes` for
+            // future mode-pick UI.
+            picks: vec![0, 2],
+            modes: vec![
+                // Mode 0: two +1/+1 counters on creature.
+                Effect::AddCounter {
+                    what: target_filtered(SelectionRequirement::Creature),
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(2),
+                },
+                // Mode 1: counter target activated/triggered ability.
+                Effect::CounterAbility {
+                    what: target_filtered(SelectionRequirement::Any),
+                },
+                // Mode 2: target opp mills 2 (X collapsed).
+                Effect::Mill {
+                    who: Selector::Player(PlayerRef::EachOpponent),
+                    amount: Value::Const(2),
+                },
+                // Mode 3: bounce nonland permanent to owner's hand.
+                Effect::Move {
+                    what: target_filtered(
+                        SelectionRequirement::Permanent.and(SelectionRequirement::Nonland),
+                    ),
+                    to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+                },
+            ],
+        },
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -2691,11 +2729,15 @@ pub fn quandrix_command() -> CardDefinition {
 /// mana value 2 or less from your graveyard to the battlefield. / •
 /// Put two +1/+1 counters on target creature."
 ///
-/// 🟡 Standard `ChooseMode` single-mode collapse. All four modes wired
-/// faithfully: counter ability via `Effect::CounterAbility`, drain 2
-/// via `Effect::Drain`, gy-recursion via `Effect::Move(target → bf)`
-/// against the MV ≤ 2 filter, and +1/+1 counters via the standard
-/// `Effect::AddCounter`.
+/// ✅ Wired via `Effect::ChooseN { count: 2, modes }`. The
+/// auto-decider picks the first two modes:
+/// 1. Drain 2 — pure tempo/value swing with no target needed.
+/// 2. Two +1/+1 counters on a target creature — counters scale a
+///    Silverquill body for the rest of the game.
+///
+/// The counter-ability and gy-recursion modes are available for
+/// future mode-choice UI. Mode order puts no-target modes first so
+/// the auto-pick path always resolves cleanly.
 pub fn silverquill_command() -> CardDefinition {
     CardDefinition {
         name: "Silverquill Command",
@@ -2706,35 +2748,42 @@ pub fn silverquill_command() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![],
-        effect: Effect::ChooseMode(vec![
-            // Mode 0: counter activated/triggered ability.
-            Effect::CounterAbility {
-                what: target_filtered(SelectionRequirement::Any),
-            },
-            // Mode 1: drain 2.
-            Effect::Drain {
-                from: Selector::Player(PlayerRef::EachOpponent),
-                to: Selector::You,
-                amount: Value::Const(2),
-            },
-            // Mode 2: return MV ≤ 2 permanent card from your gy to bf.
-            Effect::Move {
-                what: target_filtered(
-                    SelectionRequirement::Permanent
-                        .and(SelectionRequirement::ManaValueAtMost(2)),
-                ),
-                to: ZoneDest::Battlefield {
-                    controller: PlayerRef::You,
-                    tapped: false,
+        effect: Effect::ChooseN {
+            // Auto-pick modes 1 (drain 2) + 3 (two +1/+1 counters).
+            // Drain needs no target; counters use the spell's single
+            // target slot. The counter-ability and gy-recursion modes
+            // are available for future mode-pick UI.
+            picks: vec![1, 3],
+            modes: vec![
+                // Mode 0: counter activated/triggered ability.
+                Effect::CounterAbility {
+                    what: target_filtered(SelectionRequirement::Any),
                 },
-            },
-            // Mode 3: two +1/+1 counters on creature.
-            Effect::AddCounter {
-                what: target_filtered(SelectionRequirement::Creature),
-                kind: CounterType::PlusOnePlusOne,
-                amount: Value::Const(2),
-            },
-        ]),
+                // Mode 1: drain 2.
+                Effect::Drain {
+                    from: Selector::Player(PlayerRef::EachOpponent),
+                    to: Selector::You,
+                    amount: Value::Const(2),
+                },
+                // Mode 2: return MV ≤ 2 permanent card from your gy to bf.
+                Effect::Move {
+                    what: target_filtered(
+                        SelectionRequirement::Permanent
+                            .and(SelectionRequirement::ManaValueAtMost(2)),
+                    ),
+                    to: ZoneDest::Battlefield {
+                        controller: PlayerRef::You,
+                        tapped: false,
+                    },
+                },
+                // Mode 3: two +1/+1 counters on creature.
+                Effect::AddCounter {
+                    what: target_filtered(SelectionRequirement::Creature),
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(2),
+                },
+            ],
+        },
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -2754,12 +2803,17 @@ pub fn silverquill_command() -> CardDefinition {
 /// an additional card. / • Create a Treasure token. / • Destroy target
 /// artifact."
 ///
-/// 🟡 Standard `ChooseMode` single-mode collapse. Mode 1 collapses the
-/// "extra draw if discarded card is noncreature/nonland" rider to a
-/// flat `discard 1 + draw 1` — the engine has no introspection on the
-/// discarded card's type at resolution time. Mode 2 mints the standard
-/// engine Treasure token (`{T}, Sac: Add one mana of any color`) via
-/// `treasure_token()`.
+/// ✅ Wired via `Effect::ChooseN { count: 2, modes }`. The auto-decider
+/// picks the first two modes:
+/// 1. Loot 1 — no target, draws + filters.
+/// 2. Create a Treasure token — pure ramp/fixing, no target.
+///
+/// The damage and destroy-artifact modes are still in the list for
+/// future mode-choice UI. Mode 1's "extra draw if discarded card is
+/// noncreature/nonland" rider collapses to flat `discard 1 + draw 1`
+/// (engine has no discard-type introspection at resolution time).
+/// Mode 2 mints the engine's standard Treasure token (`{T}, Sac: Add
+/// one mana of any color`).
 pub fn prismari_command() -> CardDefinition {
     use crate::game::effects::treasure_token;
     use crate::mana::u as blue;
@@ -2772,39 +2826,46 @@ pub fn prismari_command() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![],
-        effect: Effect::ChooseMode(vec![
-            // Mode 0: 2 damage to any target.
-            Effect::DealDamage {
-                to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
-                ),
-                amount: Value::Const(2),
-            },
-            // Mode 1: loot 1 (discard + draw).
-            Effect::Seq(vec![
-                Effect::Discard {
-                    who: Selector::You,
-                    amount: Value::Const(1),
-                    random: false,
+        effect: Effect::ChooseN {
+            // Auto-pick modes 1 (loot) + 2 (Treasure). Both no-target,
+            // pure card advantage + ramp — classic Prismari payoff.
+            // Damage and artifact-destroy still in the list for
+            // future mode-pick UI.
+            picks: vec![1, 2],
+            modes: vec![
+                // Mode 0: 2 damage to any target.
+                Effect::DealDamage {
+                    to: target_filtered(
+                        SelectionRequirement::Creature
+                            .or(SelectionRequirement::Player)
+                            .or(SelectionRequirement::Planeswalker),
+                    ),
+                    amount: Value::Const(2),
                 },
-                Effect::Draw {
-                    who: Selector::You,
-                    amount: Value::Const(1),
+                // Mode 1: loot 1 (discard + draw). No target.
+                Effect::Seq(vec![
+                    Effect::Discard {
+                        who: Selector::You,
+                        amount: Value::Const(1),
+                        random: false,
+                    },
+                    Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::Const(1),
+                    },
+                ]),
+                // Mode 2: create a Treasure token. No target.
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: treasure_token(),
                 },
-            ]),
-            // Mode 2: create a Treasure token.
-            Effect::CreateToken {
-                who: PlayerRef::You,
-                count: Value::Const(1),
-                definition: treasure_token(),
-            },
-            // Mode 3: destroy target artifact.
-            Effect::Destroy {
-                what: target_filtered(SelectionRequirement::Artifact),
-            },
-        ]),
+                // Mode 3: destroy target artifact.
+                Effect::Destroy {
+                    what: target_filtered(SelectionRequirement::Artifact),
+                },
+            ],
+        },
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],

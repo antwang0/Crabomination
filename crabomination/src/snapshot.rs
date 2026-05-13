@@ -536,6 +536,57 @@ mod tests {
     }
 
     #[test]
+    fn setbasept_effect_serde_round_trip() {
+        // Push XXXII: `Effect::SetBasePT { what, power, toughness, duration }`
+        // round-trips through serde. Layer-7b base-P/T overrides must
+        // survive snapshot/restore so a Square-Upped creature stays
+        // 0/4 across a save.
+        use crate::card::{Effect, Selector, Value};
+        use crate::effect::Duration;
+        let original = Effect::SetBasePT {
+            what: Selector::Target(0),
+            power: Value::Const(0),
+            toughness: Value::Const(4),
+            duration: Duration::EndOfTurn,
+        };
+        let json = serde_json::to_string(&original).expect("serialize");
+        let parsed: Effect = serde_json::from_str(&json).expect("deserialize");
+        match parsed {
+            Effect::SetBasePT { power, toughness, duration, .. } => {
+                assert!(matches!(power, Value::Const(0)));
+                assert!(matches!(toughness, Value::Const(4)));
+                assert_eq!(duration, Duration::EndOfTurn);
+            }
+            other => panic!("expected SetBasePT, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn choosen_effect_serde_round_trip() {
+        // Push XXXII: `Effect::ChooseN { picks, modes }` round-trips
+        // through serde. The Strixhaven Command cycle and any future
+        // multi-mode spell depend on this for snapshot/replay parity.
+        use crate::card::{Effect, Selector, Value};
+        let original = Effect::ChooseN {
+            picks: vec![0, 2],
+            modes: vec![
+                Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+                Effect::Draw { who: Selector::You, amount: Value::Const(3) },
+            ],
+        };
+        let json = serde_json::to_string(&original).expect("serialize");
+        let parsed: Effect = serde_json::from_str(&json).expect("deserialize");
+        match parsed {
+            Effect::ChooseN { picks, modes } => {
+                assert_eq!(picks, vec![0, 2]);
+                assert_eq!(modes.len(), 3);
+            }
+            other => panic!("expected ChooseN, got {:?}", other),
+        }
+    }
+
+    #[test]
     fn unknown_card_fails_with_clear_error() {
         let cs = CardSnapshot {
             id: CardId(99),

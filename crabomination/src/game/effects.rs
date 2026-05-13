@@ -212,6 +212,18 @@ impl GameState {
                 }
             }
 
+            Effect::ChooseN { picks, modes } => {
+                // Run each picked mode in `picks` order. Out-of-range
+                // indices are silently skipped (defensive; the card
+                // factories build the list explicitly).
+                for &i in picks {
+                    if let Some(m) = modes.get(i as usize) {
+                        self.run_effect(m, ctx, events)?;
+                    }
+                }
+                Ok(())
+            }
+
             Effect::MayDo { description, body } => {
                 // Yes/no decision via `Decision::OptionalTrigger`. The
                 // installed `Decider` answers — `AutoDecider` defaults to
@@ -684,6 +696,53 @@ impl GameState {
                             c.toughness_bonus += t;
                             events.push(GameEvent::PumpApplied { card_id: cid, power: p, toughness: t });
                         }
+                }
+                Ok(())
+            }
+
+            Effect::SetBasePT { what, power, toughness, duration } => {
+                // Layer-7b SetPT continuous effect — installs a real
+                // `Modification::SetPowerToughness(p, t)` against the
+                // resolved target permanent, with the given duration
+                // mapped onto `EffectDuration`. The layer system
+                // applies the set *before* counters / +N/+M bonuses
+                // (CR 613.7b vs c/f), so a +1/+1 counter on top of
+                // Square Up's 0/4 yields 1/5 — matching the printed
+                // rules exactly.
+                use crate::game::layers::{
+                    AffectedPermanents, ContinuousEffect, EffectDuration, Layer, Modification,
+                    PtSublayer,
+                };
+                let p = self.evaluate_value(power, ctx);
+                let t = self.evaluate_value(toughness, ctx);
+                let duration_kind = match duration {
+                    crate::effect::Duration::EndOfTurn
+                    | crate::effect::Duration::EndOfCombat => EffectDuration::UntilEndOfTurn,
+                    crate::effect::Duration::UntilNextTurn
+                    | crate::effect::Duration::UntilYourNextUntap => {
+                        EffectDuration::UntilNextTurn
+                    }
+                    crate::effect::Duration::Permanent => EffectDuration::Indefinite,
+                };
+                let source = ctx.source.unwrap_or(CardId(0));
+                for ent in self.resolve_selector(what, ctx) {
+                    if let EntityRef::Permanent(cid) = ent {
+                        let ts = self.next_timestamp();
+                        self.add_continuous_effect(ContinuousEffect {
+                            timestamp: ts,
+                            source,
+                            affected: AffectedPermanents::Specific(vec![cid]),
+                            layer: Layer::L7PowerTough,
+                            sublayer: Some(PtSublayer::SetValue),
+                            duration: duration_kind.clone(),
+                            modification: Modification::SetPowerToughness(p, t),
+                        });
+                        events.push(GameEvent::PumpApplied {
+                            card_id: cid,
+                            power: p,
+                            toughness: t,
+                        });
+                    }
                 }
                 Ok(())
             }

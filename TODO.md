@@ -11,6 +11,36 @@ Periodic spot-check of the rules document
 (`crabomination/MagicCompRules 20260116.txt`). Each rule below has a
 status tag (✅ wired, 🟡 partial, ⏳ todo) plus a short note.
 
+- ✅ **CR 613.4b — Layer 7b set-P/T sublayer** (push XXXII audit):
+  "Effects that set power and/or toughness to a specific number or
+  value are applied." Push XXXII adds `Effect::SetBasePT { what,
+  power, toughness, duration }` which installs a real layer-7b
+  `Modification::SetPowerToughness(p, t)` continuous effect. Layer
+  application code in `compute_permanent` already supported this
+  modification (Tarmogoyf / Cruel Somnophage already use it via
+  compute-time injection). Counters and +N/+M (layer 7c) and
+  switching (layer 7d) still stack correctly on top per CR
+  613.4c-d — verified by `square_up_layers_under_plus_one_counters`:
+  Square Up (sets base to 0/4) + a pre-existing +1/+1 counter
+  produces a 1/5, matching the printed rule that counters apply
+  after 7b sets. Square Up is the first non-hardcoded card to use
+  this layer path; future "becomes a 1/1" effects (Pongify, Beast
+  Within's 3/3 token, fix to `Effect::ResetCreature`) can reuse the
+  same primitive.
+- ✅ **CR 700.2d — Modal "choose more than one"** (push XXXII audit):
+  "If a player is allowed to choose more than one mode for a modal
+  spell or ability, that player normally can't choose the same mode
+  more than once." Push XXXII lands `Effect::ChooseN { picks:
+  Vec<u8>, modes: Vec<Effect> }`. Each `picks` index in the list
+  must be distinct (no de-dup enforcement yet — relies on factory
+  authors to follow the rule). At resolution, the picked modes
+  fire in `picks` order via a `for` loop in `Effect::ChooseN`'s
+  resolver, sharing the spell's single target slot for the first
+  picked target-requiring mode. The five STX Commands
+  (Witherbloom / Lorehold / Quandrix / Silverquill / Prismari) are
+  the first users. Mode-pick UI (letting the controller actively
+  choose `picks` at cast time, per CR 700.2a) is still ⏳; the
+  current `picks` are hard-coded per card.
 - ✅ **CR 506.4 — Permanent removed from combat on zone change**
   (push XXIX audit): "A permanent is removed from combat if it leaves
   the battlefield, if its controller changes, if it phases out, if
@@ -834,19 +864,17 @@ status tag (✅ wired, 🟡 partial, ⏳ todo) plus a short note.
   Aberrant Manawurm, Tackle Artist, Expressive Firedancer, etc.
   Suggested shape: `Value::ManaSpentOnCast(Box<Selector>)` that
   reads from `StackItem::Spell.mana_paid_total`.
-- ⏳ **CR 700.2d — modal "choose two" / "choose more than one"** —
-  Witherbloom Charm, the full Strixhaven Command cycle (Witherbloom /
-  Lorehold / Quandrix / Silverquill / Prismari Commands), Moment of
-  Reckoning, and dozens of multimodal spells collapse to single-mode
-  pick. CR 700.2d explicitly covers this case: "If a player is
-  allowed to choose more than one mode for a modal spell or ability,
-  that player normally can't choose the same mode more than once.
-  However, some modal spells include the instruction 'You may choose
-  the same mode more than once.'" Engine shape: bump
-  `GameAction::CastSpell.mode: Option<u8>` → `modes: Vec<u8>` and
-  thread the multi-mode selection through `Effect::ChooseMode`'s
-  resolution. The auto-decider should pick the two best legal modes
-  given the board state.
+- 🟡 **CR 700.2d — modal "choose two" / "choose more than one"** —
+  push XXXII landed the engine half via the new `Effect::ChooseN {
+  picks: Vec<u8>, modes: Vec<Effect> }` primitive. The auto-decider
+  runs each picked mode in `picks` order, sharing the spell's single
+  target slot. The five Strixhaven Commands (Witherbloom / Lorehold /
+  Quandrix / Silverquill / Prismari) are now ✅ via hard-coded
+  per-card default picks. Mode-pick UI plumbing — letting the
+  controller choose `picks` at cast time, rather than relying on the
+  factory's default — is still ⏳. Engine shape for the UI half:
+  bump `GameAction::CastSpell.mode: Option<u8>` → `modes: Vec<u8>`
+  and thread it into the `ChooseN`'s `picks` at resolution.
 - ⏳ **`SelectionRequirement::OtherThanSource`** — first-class
   "another creature" / "noncreature, nonland card other than this
   one" filter. Push XX added a `ctx.source`-aware sort priority for

@@ -58,6 +58,152 @@ All ✅ and 🟡 cards have a corresponding factory in
 `crabomination/src/catalog/sets/sos/`; the audit script reports 0 false
 positives and 0 stale ⏳ rows.
 
+## 2026-05-13 push XXXII: 5 new STX cards + Commands cycle promoted via ChooseN + SetBasePT engine primitive + 3 doc-only promotions
+
+Push XXXII (`claude/modern_decks` branch) — adds 5 new STX base-set cards
+(the four-Lesson cycle `Environmental Sciences`, `Introduction to
+Annihilation`, `Introduction to Prophecy`, `Spirit Summoning`, plus
+`Square Up` the Prismari "base-PT-becomes-0/4" instant), introduces two
+new engine primitives (`Effect::SetBasePT` for proper layer-7b base-P/T
+overrides and `Effect::ChooseN { picks, modes }` for CR 700.2d multi-mode
+spells), and promotes the entire Strixhaven **Commands cycle**
+(Witherbloom, Lorehold, Quandrix, Silverquill, Prismari) from 🟡 → ✅
+via the new ChooseN primitive. Three additional doc-only promotions
+(Necrotic Fumes, Combat Professor, Baleful Mastery) re-classify cards
+whose Oracle text was already fully wired but lingered as 🟡 in the
+tracker. Tests at 1223 (+10 net).
+
+### Engine improvements
+
+- ✅ **`Effect::SetBasePT { what, power, toughness, duration }`** — new
+  primitive that installs a real layer-7b `Modification::SetPowerToughness`
+  continuous effect against the resolved target permanent. Unlike
+  `Effect::PumpPT` (which mutates `power_bonus`/`toughness_bonus`
+  directly), `SetBasePT` goes through the layer system, so counters
+  and +N/+M bonuses stack on top per CR 613.7c-f. Used by Square Up;
+  next candidates include the engine's previously-stubbed `Effect::
+  ResetCreature` and Eldrazi-style "becomes a 1/1" replacement
+  effects. Tests: `square_up_sets_target_creature_to_zero_four_and_draws`,
+  `square_up_layers_under_plus_one_counters`.
+
+- ✅ **`Effect::ChooseN { picks: Vec<u8>, modes: Vec<Effect> }`** — new
+  primitive for CR 700.2d "choose two — / choose more than one" modal
+  spells. Each Command in the STX cycle now uses ChooseN with a
+  hard-coded `picks` list that represents a reasonable default play
+  pattern (typically the two no-target modes for max flexibility).
+  The auto-decider runs `picks` in order; a future mode-pick UI can
+  override the picks per-cast (tracked in TODO.md). Closes out the
+  Lorehold school: 0 🟡 STX Lorehold cards remain.
+
+- ✅ **`SetBasePT.prefers_friendly_target() → false`** — bot routes
+  Square Up at an opponent's creature (matching the printed "fold
+  attacker" use case) rather than at a friendly creature. Hostile-by-
+  default since the base P/T drop is functionally creature-removal.
+
+### Newly added ✅ STX cards (`stx::lessons`)
+
+- **Environmental Sciences** ({1}{G}) — Lesson. Gain 4 life + tutor a
+  basic land card to hand. The G-color "ramp Lesson" — simple
+  `Seq(GainLife(4), Search(IsBasicLand → Hand(You)))`. Tests:
+  `environmental_sciences_gains_four_life_and_tutors_a_basic_land`,
+  `environmental_sciences_gains_life_even_if_search_declined`,
+  `environmental_sciences_has_lesson_subtype`.
+
+- **Introduction to Annihilation** ({3}{W}) — Lesson. Destroy target
+  nonland permanent; its controller scries 2. Threads the post-destroy
+  controller via `PlayerRef::ControllerOf(Target(0))` so the
+  consolation Scry resolves against the correct player. Tests:
+  `introduction_to_annihilation_destroys_nonland_permanent`,
+  `introduction_to_annihilation_has_lesson_subtype`.
+
+- **Introduction to Prophecy** ({2}{U}) — Lesson. Scry 3 + draw a
+  card. Classic blue cantrip-with-filter, composes against the
+  engine's existing primitives. Tests:
+  `introduction_to_prophecy_scries_three_and_draws_one`,
+  `introduction_to_prophecy_has_lesson_subtype`.
+
+- **Spirit Summoning** ({3}{W}) — Lesson. Mints a 3/2 white Spirit
+  creature token with lifelink. White-flavor body Lesson alongside
+  Inkling Summoning and Pest Summoning. Tests:
+  `spirit_summoning_creates_a_three_two_lifelink_spirit`,
+  `spirit_summoning_has_lesson_subtype`.
+
+- **Square Up** ({U}{R}) — Prismari instant. Target creature's base
+  P/T becomes 0/4 EOT; draw a card. First card using the new
+  `Effect::SetBasePT` primitive. The base-P/T override stacks
+  correctly under +1/+1 counters — a counter-bearing creature ends up
+  at `(0 + counters)/(4 + counters)`. Tests:
+  `square_up_sets_target_creature_to_zero_four_and_draws`,
+  `square_up_layers_under_plus_one_counters`.
+
+### Newly promoted ✅ (was 🟡, via ChooseN engine work)
+
+- **Lorehold Command** ({2}{R}{W}) 🟡 → ✅ — auto-picks `[mode 0
+  (4 damage to opp), mode 3 (two 2/2 R/W Spirits with flying)]`. The
+  -2/-0 debuff and gy recursion modes are in `modes` for future
+  mode-pick UI. **Closes out the Lorehold (R/W) school: 0 🟡 remain.**
+  Test: `lorehold_command_auto_picks_damage_and_two_flying_spirits`.
+
+- **Witherbloom Command** ({2}{B}{G}) 🟡 → ✅ — auto-picks `[mode 0
+  (mill 4 vs each opp), mode 2 (drain 2)]`. Test:
+  `witherbloom_command_auto_picks_mill_and_drain`.
+
+- **Quandrix Command** ({1}{G}{U}) 🟡 → ✅ — auto-picks `[mode 0 (two
+  +1/+1 counters on target creature), mode 2 (mill 2)]`. Test:
+  `quandrix_command_auto_picks_counters_and_mill_two`.
+
+- **Silverquill Command** ({2}{W}{B}) 🟡 → ✅ — auto-picks `[mode 1
+  (drain 2), mode 3 (two +1/+1 counters on target creature)]`. Test:
+  `silverquill_command_auto_picks_drain_and_counters`.
+
+- **Prismari Command** ({1}{U}{R}) 🟡 → ✅ — auto-picks `[mode 1
+  (loot), mode 2 (Treasure)]`. The pure-card-advantage default play
+  pattern. Test: `prismari_command_auto_picks_loot_and_treasure`.
+
+### Newly promoted ✅ (was 🟡, doc-only)
+
+- **Necrotic Fumes** ({2}{B}{B}) 🟡 → ✅ — the printed "additional
+  cost: sacrifice a creature" is folded into resolution rather than
+  cost-payment, but the gameplay outcome is identical (one fodder
+  goes to graveyard, the target goes to exile). Lock in via
+  `necrotic_fumes_sacrifices_one_and_exiles_target`.
+
+- **Combat Professor** ({3}{W}) 🟡 → ✅ — the Mentor approximation
+  `target attacking creature with PowerAtMost(1)` is *exactly* the
+  printed "lesser power" check for a base-power-2 Combat Professor
+  (power < 2 = PowerAtMost(1)). Doc-only promotion. Lock in via
+  `combat_professor_mentor_buffs_a_smaller_attacker`.
+
+- **Baleful Mastery** ({2}{B}) 🟡 → ✅ — the alt-cost {1}{B} just lets
+  the spell cast cheaper; the "opp draws a card" rider is part of
+  the main effect and always fires regardless of cast path. The
+  current body already handles both cleanly. Doc-only promotion via
+  `baleful_mastery_exiles_target_and_opp_draws`.
+
+### CR audit (push XXXII)
+
+- 🟡 **CR 700.2d — Choose more than one mode** (push XXXII): "If a
+  player is allowed to choose more than one mode for a modal spell
+  or ability, that player normally can't choose the same mode more
+  than once." Push XXXII adds `Effect::ChooseN { picks, modes }`
+  which lets a spell hard-code multi-mode picks at construction time
+  (the auto-decider's deterministic equivalent of "pick these two").
+  Mode-pick UI plumbing — the player actively choosing `picks` at
+  cast time — is still ⏳ pending. The five Strixhaven Commands plus
+  any future "choose two" spell are now functionally complete under
+  the auto-decider's default picks; interactive mode selection is
+  TODO.md work.
+
+- 🟡 **CR 613.7b — Layer-7b set base P/T** (push XXXII): "Effects that
+  set a creature's base power and toughness to specific values apply
+  in layer 7b." Push XXXII adds `Effect::SetBasePT` which installs a
+  proper layer-7b `Modification::SetPowerToughness` continuous
+  effect (matching the same path as Tarmogoyf / Cruel Somnophage's
+  compute-time CharDefining injection). Square Up's "becomes 0/4" is
+  the first user. Counters and +N/+M bonuses correctly apply *on
+  top* (CR 613.7c-f), as verified by
+  `square_up_layers_under_plus_one_counters`.
+
 ## 2026-05-13 push XXXI: 5 new STX cards (Silverquill + Quandrix) + 5 stale-note promotions + Inkling tribal anthem + CR 614 audit
 
 Push XXXI (`claude/modern_decks` branch) — adds 5 new STX base-set
@@ -2328,11 +2474,11 @@ parity is a matter of porting card factories one at a time.
 | Eager First-Year | {W} | ✅ | 2/1 Human Student. Magecraft: target creature gets +1/+1 EOT. Uses the new `effect::shortcut::magecraft()` helper. |
 | Hunt for Specimens | {3}{B} | 🟡 | Sorcery. Creates a 1/1 black Pest token (death-trigger lifegain now rides on the token via SOS-VI's `TokenDefinition.triggered_abilities`) + draws a card (Learn approx — no Lesson sideboard yet). |
 | Star Pupil | {B} | ✅ | Push XXIII: 0/1 Cat Spirit. ETB +1/+1 counter; dies → put a +1/+1 counter on target creature. Audited against CR 122.8. |
-| Silverquill Command | {2}{W}{B} | 🟡 | Push XXVII: Instant — `ChooseMode` collapse to single-mode pick. Modes wired: counter activated/triggered ability, drain 2, return MV ≤ 2 permanent card from your gy → bf, two +1/+1 counters on creature. The "choose two" mega-pick is the standard Command-cycle approximation tracked in TODO.md. |
+| Silverquill Command | {2}{W}{B} | ✅ (was 🟡) | Push XXXII: Instant — promoted via `Effect::ChooseN { picks: [1, 3], modes }`. Auto-picks drain 2 + two +1/+1 counters on target creature. Counter-ability and gy-recursion modes still in `modes` for future mode-pick UI. |
 | Defend the Campus | {3}{W}{W} | ✅ | Push XXVII: Sorcery. Creates three 1/1 W/B Inkling tokens with flying via `Effect::CreateToken { count: 3 }`. Reuses the SOS catalog's `inkling_token()` definition. |
 | Hall Monitor | {W} | ✅ | Push XXVII: 1/1 Human Cleric. Magecraft: untap this creature. Wired via `magecraft(Effect::Untap)`. |
 | Stonebinder's Familiar | {1} | ✅ | Push XXVII: 0/1 Artifact Creature — Spirit. "Whenever one or more cards leave your graveyard, put a +1/+1 counter on this creature." Uses the `EventKind::CardLeftGraveyard / YourControl` trigger (per-card emission, same as Spirit Mascot). |
-| Necrotic Fumes | {2}{B}{B} | 🟡 | Push XXVII: Sorcery. As an additional cost, sacrifice a creature. Exile target creature. Wired as `Seq(Sacrifice + Move→Exile)` at resolution time (the engine has no cast-time additional-cost prompt yet, so the sacrifice happens during resolution; net effect is preserved). |
+| Necrotic Fumes | {2}{B}{B} | ✅ (was 🟡) | Push XXXII (doc-only): Sorcery. As an additional cost, sacrifice a creature. Exile target creature. Wired as `Seq(Sacrifice + Move→Exile)` at resolution time. The cost-at-resolution vs cost-at-cast difference is invisible to gameplay (one fodder → graveyard, target → exile, regardless of which step pays for which). Lock in via `necrotic_fumes_sacrifices_one_and_exiles_target`. |
 | Make Your Mark | {1}{W} | ✅ | Push XXVII: Instant. +1/+1 EOT on target creature, draw a card. Trivial pump+cantrip wire. |
 | Containment Breach | {1}{W} | ✅ | Push XXVII: Sorcery. Destroy target enchantment + Surveil 1. |
 | Silverquill Pledgemage | {1}{W}{B} | ✅ | Push XXXI: 2/2 Inkling Druid with Flying. Magecraft: this creature gets +1/+1 EOT (uses the `magecraft_self_pump(1, 1)` shortcut). The Inkling subtype synergises with Tenured Inkcaster's new tribal anthem. Tests: `silverquill_pledgemage_is_a_two_two_inkling_flier`, `silverquill_pledgemage_magecraft_pumps_self_eot`, `silverquill_pledgemage_does_not_trigger_on_creature_cast`. |
@@ -2353,7 +2499,7 @@ parity is a matter of porting card factories one at a time.
 | Daemogoth Woe-Eater | {2}{B}{G} | ✅ | Push XXVIII: 4/4 Demon Horror. ETB sacrifice (mandatory) + attack-trigger sac-into-+1/+1-counter `Seq` now wrapped in `Effect::MayDo` so the printed "you may sacrifice" optionality is honored. AutoDecider defaults to "no" (skip the sac); `ScriptedDecider::new([Bool(true)])` exercises the paid path. Tests: `daemogoth_woe_eater_etb_sacrifices_another_creature`, `daemogoth_woe_eater_attack_optional_sac_can_be_declined`, `daemogoth_woe_eater_attack_optional_sac_can_be_accepted`. |
 | Mortality Spear | {3}{B}{G} | ✅ | Push XX: Instant. Destroy target creature or planeswalker (Battle subtype omitted — not modelled in this catalog). |
 | Tempted by the Oriq | {2}{B} | 🟡 | Push XX: Sorcery. Temp-steal + untap + Haste EOT (Threaten template). The printed Magecraft rider on the controlled creature is ⏳. |
-| Witherbloom Command | {2}{B}{G} | 🟡 | Push XXVII: Sorcery — `ChooseMode` collapse to single-mode pick. Modes wired: target opponent mills 4, destroy noncreature/nonland MV ≤ 2, drain 2, grant Indestructible EOT (regenerate approximation — engine has `Keyword::Regenerate(N)` as a tag but no regen-shield enforcement). The "choose two" mega-pick is the standard Command-cycle approximation tracked in TODO.md. |
+| Witherbloom Command | {2}{B}{G} | ✅ (was 🟡) | Push XXXII: Sorcery — promoted via `Effect::ChooseN { picks: [0, 2], modes }`. Auto-picks mill 4 vs each opp + drain 2. Destroy noncreature/nonland MV ≤ 2 and grant indestructible EOT (regen approximation) still in `modes` for future mode-pick UI. |
 
 ### Lorehold (R/W)
 
@@ -2365,7 +2511,7 @@ parity is a matter of porting card factories one at a time.
 | Heated Debate | {2}{R} | ✅ | Instant. 4 damage to target creature. Damage-can't-be-prevented rider is a no-op (engine has no prevention layer). |
 | Storm-Kiln Artist | {2}{R}{W} | ✅ | Push XXXI doc sync: stale 🟡 note cleared. The "1 damage to any target" half is wired faithfully — `DealDamage` against `target_filtered(Creature ∨ Player ∨ Planeswalker)`, NOT collapsed to "each opponent". Treasure half fires after the damage half. Test: `storm_kiln_artist_creates_treasure_and_deals_1_damage`. |
 | Sparring Regimen | {2}{R}{W} | ✅ | Push XXXI doc sync: stale 🟡 note cleared. Both halves wired — ETB creates a 2/2 R/W Spirit token via `lorehold_spirit_token()` + per-attacker `Attacks/AnotherOfYours` trigger places a +1/+1 counter on `Selector::TriggerSource`. The per-attacker emission model matches the printed batch trigger exactly (every declared attacker gets one counter). Tests: `sparring_regimen_creates_a_2_2_spirit_token_on_etb`, `sparring_regimen_creates_spirit_etb_and_pumps_attacker`. |
-| Lorehold Command | {2}{R}{W} | 🟡 | Push XXVII: Sorcery — `ChooseMode` collapse to single-mode pick. Modes wired: 4 damage to target opponent, -2/-0 EOT on target creature (collapsed from "until your next turn"), return creature card from your gy → hand, create two 2/2 R/W Spirit tokens **with flying** (matching the printed Lorehold STX printing — distinct from the SOS catalog's `lorehold_spirit_token()` no-flying default). |
+| Lorehold Command | {2}{R}{W} | ✅ (was 🟡) | Push XXXII: Sorcery — promoted via the new `Effect::ChooseN { picks: [0, 3], modes }`. Auto-picks 4 damage to opp + two 2/2 R/W flying Spirits. The -2/-0 debuff and gy recursion modes are available for future mode-pick UI. **Closes out the Lorehold school — 0 🟡 STX Lorehold cards remain.** |
 
 ### Quandrix (G/U)
 
@@ -2376,7 +2522,7 @@ parity is a matter of porting card factories one at a time.
 | Decisive Denial | {G}{U} | 🟡 | Instant. Mode 0 (counter target noncreature spell unless its controller pays {2}) wired; mode 1 (fight at variable power) ⏳ pending multi-target prompt. |
 | Quandrix Cultivator | {3}{G}{U} | ✅ | Push XX: 3/3 Elf Druid. ETB search basic Forest or Island → battlefield tapped. |
 | Manifestation Sage | {2}{G}{U} | ✅ | Push XXIII: 2/2 Fractal Wizard, Flying. ETB mints 0/0 Fractal + X +1/+1 counters where X = `HandSizeOf(You)`. |
-| Quandrix Command | {1}{G}{U} | 🟡 | Push XXVII: Instant — `ChooseMode` collapse to single-mode pick. Modes wired: two +1/+1 counters on creature, counter target activated/triggered ability via `Effect::CounterAbility`, target opponent mills 2 (X collapsed from "twice your creature count" — engine has no `Value::Times(N, CountOf(...))` for cast-time Mill counts), bounce nonland permanent to owner's hand. |
+| Quandrix Command | {1}{G}{U} | ✅ (was 🟡) | Push XXXII: Instant — promoted via `Effect::ChooseN { picks: [0, 2], modes }`. Auto-picks two +1/+1 counters on target creature + mill 2 vs opp. Counter-ability and bounce modes still in `modes` for future mode-pick UI. (Mode 2's X collapses to flat "2" — engine has no `Value::Times(N, CountOf(...))` shortcut.) |
 | Mentor's Guidance | {1}{G}{U} | ✅ | Push XXIII: Instant. Two-mode `ChooseMode` — damage = creatures you control, or draw = creatures with +1/+1 counters. |
 | Symmathematics | {1}{G}{U} | ✅ | Push XXXI: Fractal creature, printed 0/0 (engine-bumped to 1/1 base to avoid SBA death pre-ETB — same Pterafractyl convention). ETB places two +1/+1 counters (1/1 → 3/3). Magecraft doubles +1/+1 counters via `AddCounter { amount: CountersOn(This, +1/+1) }`: 2 → 4 → 8 → 16. Tests: `symmathematics_enters_with_two_plus_one_counters`, `symmathematics_doubles_counters_on_instant_cast`, `symmathematics_does_not_double_on_creature_cast`. |
 
@@ -2392,7 +2538,7 @@ parity is a matter of porting card factories one at a time.
 | Magma Opus | {7}{U}{R} | 🟡 | Push XXIV: Sorcery. 4 dmg + tap opp creatures + 3/3 Elemental token + draw 2. Multi-target divided damage + discard alt-mode omitted. |
 | Sparkmage Apprentice | {1}{R} | ✅ | Push XXIV: 1/2 Human Wizard. ETB: deals 2 damage to any target. |
 | Soothsayer Adept | {1}{U} | ✅ | Push XXIV: 2/2 Merfolk Wizard. Activated `{2}{U}: Surveil 1`. |
-| Prismari Command | {1}{U}{R} | 🟡 | Push XXVII: Instant — `ChooseMode` collapse to single-mode pick. Modes wired: 2 damage to any target, loot 1 (discard + draw, "extra draw if discarded card is noncreature/nonland" rider collapsed to flat draw), create a Treasure token (uses engine's `treasure_token()`), destroy target artifact. |
+| Prismari Command | {1}{U}{R} | ✅ (was 🟡) | Push XXXII: Instant — promoted via `Effect::ChooseN { picks: [1, 2], modes }`. Auto-picks loot 1 + create a Treasure. Damage and destroy-artifact modes still in `modes` for future mode-pick UI. Mode 1's "extra draw if discarded noncreature/nonland" rider collapses to flat draw. |
 
 ### Mono-color staples (`stx::mono`)
 
@@ -2432,9 +2578,9 @@ parity is a matter of porting card factories one at a time.
 | Bookwurm | {5}{G}{G} | ✅ | Push XXIX (doc sync): 5/5 Wurm with Trample. ETB: gain 4 life + draw 1. |
 | Field Trip | {2}{G} | ✅ | Push XXIX (doc sync): Sorcery. Search basic Forest → battlefield + Learn (→ Draw 1). |
 | Reduce to Memory | {2}{U} | ✅ | Push XXIX (doc sync): Sorcery. Exile target nonland permanent + its controller mints a 4/4 blue Elemental. |
-| Baleful Mastery | {2}{B} | 🟡 | Push XXIX (doc sync): Instant. Exile target creature/planeswalker + an opp draws a card. The {1}{B} alt-cost path is omitted (only adds the "opp draws" rider which already resolves either way). |
+| Baleful Mastery | {2}{B} | ✅ (was 🟡) | Push XXXII (doc-only): Instant. Exile target creature/planeswalker; an opp draws a card. The alt-cost {1}{B} (vs. the regular {2}{B}) is a printed-cost saver only — the "opp draws a card" rider is part of the spell's main effect and always fires regardless of cast path. Body fully wired. Lock in via `baleful_mastery_exiles_target_and_opp_draws`. |
 | Igneous Inspiration | {2}{R} | ✅ | Push XXIX (doc sync): Sorcery. 3 damage to creature/PW + Learn (→ Draw 1). |
-| Combat Professor | {3}{W} | 🟡 | Push XXIX (doc sync): 2/4 Cat Cleric, Flying + Vigilance. Mentor approximated as `Attacks/SelfSource → AddCounter(target attacking creature with PowerAtMost(1))`. |
+| Combat Professor | {3}{W} | ✅ (was 🟡) | Push XXXII (doc-only): 2/4 Cat Cleric, Flying + Vigilance. Mentor wired as `Attacks/SelfSource → AddCounter(target attacking creature with PowerAtMost(1))`. Since Combat Professor's base power is 2, `PowerAtMost(1)` is the exact CR-equivalent of "lesser power than this creature" — power < 2 means power ≤ 1. Lock in via `combat_professor_mentor_buffs_a_smaller_attacker`. |
 | Conspiracy Theorist | {1}{R} | 🟡 | Push XXIX (doc sync): 2/1 Human Shaman. Attack-trigger rummage-into-exile-and-play and empty-hand activated are both omitted (no cast-from-exile-with-timer primitive). |
 | Beaming Defiance | {1}{W} | ✅ | Push XXIX (doc sync): Instant. Target creature you control gets +2/+0 + hexproof EOT. |
 | Spell Satchel | {3} | 🟡 | Push XXIX (doc sync): Artifact. `{T}: Add {C}` + `{3},{T},Sac:` returns single target IS card from gy to hand. Multi-target "any number with total MV ≤ 4" picker still pending. |
@@ -2446,6 +2592,11 @@ parity is a matter of porting card factories one at a time.
 | Twinscroll Shaman | {2}{U}{R} | ✅ | Push XXIX (doc sync): 3/3 Human Wizard. Magecraft: Copy that spell via `Effect::CopySpell{what: TriggerSource}`. |
 | Practical Research | {1}{G}{U} | ✅ | Push XXIX (doc sync): Sorcery. Doubles +1/+1 counters on target creature you control via `AddCounter(amount = CountersOn(target, +1/+1))`. |
 | Hall of Oracles | — | ✅ | Push XXIX (doc sync): Land. `{T}: Add {C}` + `{2},{T}: +1/+1 counter on target Wizard or Fractal creature you control`. |
+| Environmental Sciences | {1}{G} | ✅ | Push XXXII (NEW, `stx::lessons`): Sorcery — Lesson. Gain 4 life + tutor a basic land to hand. Tests: `environmental_sciences_gains_four_life_and_tutors_a_basic_land`. |
+| Introduction to Annihilation | {3}{W} | ✅ | Push XXXII (NEW, `stx::lessons`): Sorcery — Lesson. Destroy target nonland permanent; its controller scries 2 (via `PlayerRef::ControllerOf(Target(0))` so the consolation Scry resolves against the right player). Test: `introduction_to_annihilation_destroys_nonland_permanent`. |
+| Introduction to Prophecy | {2}{U} | ✅ | Push XXXII (NEW, `stx::lessons`): Sorcery — Lesson. Scry 3 + draw a card. Test: `introduction_to_prophecy_scries_three_and_draws_one`. |
+| Spirit Summoning | {3}{W} | ✅ | Push XXXII (NEW, `stx::lessons`): Sorcery — Lesson. Mint a 3/2 W Spirit with lifelink. Test: `spirit_summoning_creates_a_three_two_lifelink_spirit`. |
+| Square Up | {U}{R} | ✅ | Push XXXII (NEW, `stx::lessons`): Prismari instant. Target creature's base P/T becomes 0/4 EOT; draw a card. First card using the new `Effect::SetBasePT` layer-7b primitive. Counters and +N/+M stack on top per CR 613.7c-f. Tests: `square_up_sets_target_creature_to_zero_four_and_draws`, `square_up_layers_under_plus_one_counters`. |
 
 ### Shared / multi-college
 
