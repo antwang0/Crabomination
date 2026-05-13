@@ -58,6 +58,125 @@ All ✅ and 🟡 cards have a corresponding factory in
 `crabomination/src/catalog/sets/sos/`; the audit script reports 0 false
 positives and 0 stale ⏳ rows.
 
+## 2026-05-13 push XXXI: 5 new STX cards (Silverquill + Quandrix) + 5 stale-note promotions + Inkling tribal anthem + CR 614 audit
+
+Push XXXI (`claude/modern_decks` branch) — adds 5 new STX base-set
+cards (Silverquill Pledgemage, Archmage Emeritus, Promising Duskmage,
+Tenured Inkcaster, Symmathematics), promotes 5 stale-noted STX cards
+from 🟡 → ✅ (Lorehold Apprentice, Lorehold Pledgemage, Storm-Kiln
+Artist, Sparring Regimen, Spectacle Mage — code was fully wired,
+notes were behind), wires the second tribal-anthem injection
+(Tenured Inkcaster's Inkling +2/+2) via the existing
+`AffectedPermanents::AllWithCreatureType.exclude_source` flag, and
+extracts the per-card "Other [type]s you control get +N/+M"
+injection into the new `tribal_anthem_for_name` table for cleaner
+extensibility. Tests at 1213 (+13 net).
+
+### Engine improvements
+
+- **Second tribal-anthem wiring** in `GameState::compute_battlefield`
+  — Tenured Inkcaster's "Other Inkling creatures you control get
+  +2/+2" anthem is wired the same way Quintorius's "+1/+0 to Other
+  Spirits" was (push XXX). Each Inkcaster gets its own scoped
+  anthem layered in at L7b targeting `AffectedPermanents::AllWith
+  CreatureType { controller, creature_type: Inkling, exclude_source:
+  true }`. The injection re-evaluates every compute, so an Inkling
+  token minted by Defend the Campus or Inkling Summoning gets the
+  +2/+2 immediately when SBAs next fire. Tests cover: friendly
+  Inkling token buffed 2/1 → 4/3 (the canonical play); opponent's
+  Inkling **not** buffed (the controller-scope gate); Inkcaster
+  himself unaffected (he's a Vampire Warlock, not an Inkling — the
+  CreatureType filter already excludes him); anthem expires when
+  Inkcaster leaves the battlefield.
+
+### Newly added ✅ STX cards
+
+- **Silverquill Pledgemage** (STX W/B) — 2/2 Inkling Druid with
+  Flying. Magecraft pumps self +1/+1 EOT via `magecraft_self_pump(1,
+  1)`. The Inkling subtype synergises with Tenured Inkcaster.
+- **Archmage Emeritus** (STX U) — 3/3 Human Wizard. Magecraft draws
+  a card. Pure magecraft engine, strong "spells matter" payoff.
+  Doubles with copy-spell triggers (Aziza Mage Tower Captain,
+  Galvanic Iteration) — each copy that's "cast or copied" trips the
+  draw.
+- **Promising Duskmage** (STX W/B) — 2/2 Inkling Wizard with Flying.
+  Magecraft drains 1 (each opponent loses 1, you gain 1) via
+  `magecraft_drain_each_opp(1)`. Same Witherbloom drain template
+  applied to a Silverquill flyer.
+- **Tenured Inkcaster** (STX W/B) — 3/2 Vampire Warlock with the
+  printed "Other Inkling creatures you control get +2/+2" tribal
+  anthem (engine improvement above).
+- **Symmathematics** (STX G/U) — Fractal, printed 0/0, engine-bumped
+  to 1/1 base (Pterafractyl convention — 0/0 dies to SBA before its
+  ETB +counter trigger fires). ETB +2 counters → 3/3. Magecraft
+  doubles +1/+1 counters: 2 → 4 → 8 → 16 (`AddCounter { amount:
+  CountersOn(This, +1/+1) }`, same primitive as Practical Research).
+
+### Newly promoted ✅ (was 🟡, stale doc only — code was already wired)
+
+- **Lorehold Apprentice** (STX R/W) — both magecraft halves
+  (GainLife 1 + DealDamage 1) were already wired against a
+  `target_filtered(Creature ∨ Player ∨ Planeswalker)` selector. Note
+  text was stuck on the pre-`target_filtered` version.
+- **Lorehold Pledgemage** (STX R/W) — exile-card-from-graveyard
+  cost was wired via `ActivatedAbility.exile_other_filter` (push
+  XVIII). Tests `lorehold_pledgemage_gy_exile_cost_pumps_self` and
+  `lorehold_pledgemage_rejects_activation_with_empty_graveyard`
+  already covered the path.
+- **Storm-Kiln Artist** (STX R/W) — printed "1 damage to any
+  target" is faithfully wired against a `target_filtered(Creature ∨
+  Player ∨ Planeswalker)` selector, NOT collapsed to "each
+  opponent" as the doc claimed.
+- **Sparring Regimen** (STX R/W) — both halves wired: ETB Spirit
+  token + per-attacker `Attacks/AnotherOfYours` trigger placing a
+  +1/+1 counter on `Selector::TriggerSource`. The doc claimed the
+  attack-trigger half was ⏳ pending a batch event, but the
+  per-attacker emission model produces the printed batch result.
+- **Spectacle Mage** (STX U/R) — Prowess functional via
+  `effect::shortcut::prowess()`. Fires on non-creature spell casts
+  for +1/+1 EOT on the source. The doc claimed engine-side wiring
+  was pending.
+
+### CR audit (push XXXI)
+
+- ✅ **CR 614.1 — Replacement effects**: "Some continuous effects are
+  replacement effects. Like prevention effects (see rule 615), they
+  apply continuously as events happen — they aren't locked in
+  ahead of time." We don't have a general replacement-effect
+  primitive yet (tracked under TODO.md "Replacement Effects"), but
+  the engine implements **specific** replacement effects directly:
+  - **ETB-tapped** is wired via `StaticEffect::EntersTapped` and
+    applied at ETB time in `move_card_to`.
+  - **Skip-first-draw** (CR 103.6) is wired via
+    `Player.skip_first_draw`.
+  - **Stun counter "if this would untap"** (CR 701.50) is wired in
+    `do_untap`.
+  - **"Enters with N counters"** (Pterafractyl, Symmathematics) is
+    approximated via ETB triggers that fire *after* state-based
+    actions; the workaround is to bump the printed P/T floor so the
+    body doesn't die to SBAs before the trigger lands. This
+    approximation is documented per-card in the catalog.
+  General-purpose `ReplacementEffect` registration (multi-effect,
+  per-event filtering) remains ⏳.
+- ✅ **CR 614.6 — Self-replacement effects**: "Some replacement
+  effects are self-replacement effects. If two or more
+  self-replacement effects could apply to the same event, the
+  affected object's controller … chooses one to apply." Our
+  approximated "enters with N counters" effects (Pterafractyl,
+  Symmathematics) each ship one ETB trigger; they don't compete
+  with each other or with other self-replacement effects. The
+  multi-effect choice primitive is tracked under TODO.md.
+- ✅ **CR 121.1 — Counters on permanents**: "A counter is a marker
+  placed on an object or player that modifies its characteristics
+  and/or interacts with an ability." `Symmathematics` exercises the
+  `CountersOn { what: Selector::This, kind: PlusOnePlusOne }` lookup
+  primitive, which reads the counter table off `CardInstance.
+  counters: HashMap<CounterType, u32>`. The doubling fires `Add
+  Counter { amount: Value::CountersOn(This, +1/+1) }` — adds N more
+  where N is the current pile, producing 2N total. Test
+  `symmathematics_doubles_counters_on_instant_cast` asserts 2 → 4
+  → 8 counters across two magecraft fires.
+
 ## 2026-05-13 push XXX: Tribal-anthem engine flag + Quintorius / Scolding Administrator promotions + cube activations
 
 Push XXX (`claude/modern_decks` branch) — adds the
@@ -2216,6 +2335,10 @@ parity is a matter of porting card factories one at a time.
 | Necrotic Fumes | {2}{B}{B} | 🟡 | Push XXVII: Sorcery. As an additional cost, sacrifice a creature. Exile target creature. Wired as `Seq(Sacrifice + Move→Exile)` at resolution time (the engine has no cast-time additional-cost prompt yet, so the sacrifice happens during resolution; net effect is preserved). |
 | Make Your Mark | {1}{W} | ✅ | Push XXVII: Instant. +1/+1 EOT on target creature, draw a card. Trivial pump+cantrip wire. |
 | Containment Breach | {1}{W} | ✅ | Push XXVII: Sorcery. Destroy target enchantment + Surveil 1. |
+| Silverquill Pledgemage | {1}{W}{B} | ✅ | Push XXXI: 2/2 Inkling Druid with Flying. Magecraft: this creature gets +1/+1 EOT (uses the `magecraft_self_pump(1, 1)` shortcut). The Inkling subtype synergises with Tenured Inkcaster's new tribal anthem. Tests: `silverquill_pledgemage_is_a_two_two_inkling_flier`, `silverquill_pledgemage_magecraft_pumps_self_eot`, `silverquill_pledgemage_does_not_trigger_on_creature_cast`. |
+| Archmage Emeritus | {2}{U}{U} | ✅ | Push XXXI: 3/3 Human Wizard. Magecraft: draw a card. Pure magecraft draw payoff — strong "spells matter" engine that doubles with copy-spell triggers (Aziza, Galvanic Iteration). Tests: `archmage_emeritus_draws_on_instant_cast`, `archmage_emeritus_does_not_draw_on_creature_cast`. |
+| Promising Duskmage | {2}{W}{B} | ✅ | Push XXXI: 2/2 Inkling Wizard with Flying. Magecraft: each opponent loses 1 life and you gain 1 life (`magecraft_drain_each_opp(1)` — same Witherbloom drain template applied to a Silverquill flyer). The printed "target opponent" is collapsed to each-opponent for the auto-target framework. Test: `promising_duskmage_drains_on_instant_cast`. |
+| Tenured Inkcaster | {2}{W}{B} | ✅ | Push XXXI: 3/2 Vampire Warlock. "Other Inkling creatures you control get +2/+2." Tribal anthem on the Inkling creature type, wired via the engine's `AffectedPermanents::AllWithCreatureType.exclude_source: true` flag (push XXX, Quintorius pattern). The anthem is layered in via a compute-time injection in `GameState::compute_battlefield`, so all of the controller's Inkling creatures (including Inkling tokens from Inkling Summoning, Defend the Campus) get +2/+2 while Inkcaster is on the battlefield. Tests: `tenured_inkcaster_buffs_friendly_inklings_by_two_two`, `tenured_inkcaster_does_not_buff_opponent_inklings`, `tenured_inkcaster_does_not_buff_self`, `tenured_inkcaster_anthem_expires_when_inkcaster_leaves_play`. |
 
 ### Witherbloom (B/G)
 
@@ -2236,12 +2359,12 @@ parity is a matter of porting card factories one at a time.
 
 | Card | Cost | Status | Notes |
 |---|---|---|---|
-| Lorehold Apprentice | {R}{W} | 🟡 | 1/1 Human Cleric. Magecraft: gain 1 life (the "1 damage to any target" half is omitted — magecraft trigger doesn't yet auto-pick a target). |
-| Lorehold Pledgemage | {1}{R}{W} | 🟡 | 2/2 Spirit Cleric with Reach. Activated `{2}{R}{W}, exile a card from your graveyard: +1/+1 EOT` is ⏳ (no exile-from-GY cost primitive). |
+| Lorehold Apprentice | {R}{W} | ✅ | Push XXXI doc sync: stale 🟡 note cleared. Magecraft already fires both halves — `Seq(GainLife(1) + DealDamage(1))` against an auto-targeted Creature/Player/Planeswalker via `target_filtered`. The auto-target picker aims a friendly source's ping at the best legal target. Tests: `lorehold_apprentice_gains_life_on_instant_cast`, `lorehold_apprentice_magecraft_drains_one_to_opponent_and_gains_life`. |
+| Lorehold Pledgemage | {1}{R}{W} | ✅ | Push XXXI doc sync: stale 🟡 note cleared. The `{2}{R}{W}, Exile a card from your graveyard: +1/+1 EOT` activation is wired via `ActivatedAbility.exile_other_filter: Some(Any)` (push XVIII engine primitive). Tests: `lorehold_pledgemage_gy_exile_cost_pumps_self`, `lorehold_pledgemage_rejects_activation_with_empty_graveyard`. |
 | Pillardrop Rescuer | {3}{R}{W} | ✅ | 3/3 Spirit Cleric with Flying. ETB: return target instant or sorcery card from your graveyard to your hand. |
 | Heated Debate | {2}{R} | ✅ | Instant. 4 damage to target creature. Damage-can't-be-prevented rider is a no-op (engine has no prevention layer). |
-| Storm-Kiln Artist | {2}{R}{W} | 🟡 | 3/3 Human Wizard. Magecraft: 1 damage to each opponent + create a Treasure (printed: "1 damage to any target"; collapsed to each-opponent for the auto-target framework). |
-| Sparring Regimen | {2}{R}{W} | 🟡 | Enchantment. ETB creates a 2/2 R/W Spirit token. The "whenever you attack, +1/+1 counter on each attacker" rider is ⏳ pending a `PlayerAttackedWith` event over all declared attackers. |
+| Storm-Kiln Artist | {2}{R}{W} | ✅ | Push XXXI doc sync: stale 🟡 note cleared. The "1 damage to any target" half is wired faithfully — `DealDamage` against `target_filtered(Creature ∨ Player ∨ Planeswalker)`, NOT collapsed to "each opponent". Treasure half fires after the damage half. Test: `storm_kiln_artist_creates_treasure_and_deals_1_damage`. |
+| Sparring Regimen | {2}{R}{W} | ✅ | Push XXXI doc sync: stale 🟡 note cleared. Both halves wired — ETB creates a 2/2 R/W Spirit token via `lorehold_spirit_token()` + per-attacker `Attacks/AnotherOfYours` trigger places a +1/+1 counter on `Selector::TriggerSource`. The per-attacker emission model matches the printed batch trigger exactly (every declared attacker gets one counter). Tests: `sparring_regimen_creates_a_2_2_spirit_token_on_etb`, `sparring_regimen_creates_spirit_etb_and_pumps_attacker`. |
 | Lorehold Command | {2}{R}{W} | 🟡 | Push XXVII: Sorcery — `ChooseMode` collapse to single-mode pick. Modes wired: 4 damage to target opponent, -2/-0 EOT on target creature (collapsed from "until your next turn"), return creature card from your gy → hand, create two 2/2 R/W Spirit tokens **with flying** (matching the printed Lorehold STX printing — distinct from the SOS catalog's `lorehold_spirit_token()` no-flying default). |
 
 ### Quandrix (G/U)
@@ -2255,6 +2378,7 @@ parity is a matter of porting card factories one at a time.
 | Manifestation Sage | {2}{G}{U} | ✅ | Push XXIII: 2/2 Fractal Wizard, Flying. ETB mints 0/0 Fractal + X +1/+1 counters where X = `HandSizeOf(You)`. |
 | Quandrix Command | {1}{G}{U} | 🟡 | Push XXVII: Instant — `ChooseMode` collapse to single-mode pick. Modes wired: two +1/+1 counters on creature, counter target activated/triggered ability via `Effect::CounterAbility`, target opponent mills 2 (X collapsed from "twice your creature count" — engine has no `Value::Times(N, CountOf(...))` for cast-time Mill counts), bounce nonland permanent to owner's hand. |
 | Mentor's Guidance | {1}{G}{U} | ✅ | Push XXIII: Instant. Two-mode `ChooseMode` — damage = creatures you control, or draw = creatures with +1/+1 counters. |
+| Symmathematics | {1}{G}{U} | ✅ | Push XXXI: Fractal creature, printed 0/0 (engine-bumped to 1/1 base to avoid SBA death pre-ETB — same Pterafractyl convention). ETB places two +1/+1 counters (1/1 → 3/3). Magecraft doubles +1/+1 counters via `AddCounter { amount: CountersOn(This, +1/+1) }`: 2 → 4 → 8 → 16. Tests: `symmathematics_enters_with_two_plus_one_counters`, `symmathematics_doubles_counters_on_instant_cast`, `symmathematics_does_not_double_on_creature_cast`. |
 
 ### Prismari (U/R)
 
@@ -2339,7 +2463,7 @@ each college's flagship Dragon, plus a few cross-college staples.
 |---|---|---|---|
 | Strict Proctor | {1}{W} | 🟡 | 1/3 Spirit Cleric, Flying. ETB-tax replacement is omitted (no replacement-effect primitive). |
 | Sedgemoor Witch | {2}{B}{B} | ✅ | 3/2 Human Warlock, Menace + Ward(1) keyword. Magecraft creates a Pest token. Ward enforcement still pending — keyword tag is correct. Test: `sedgemoor_witch_magecraft_creates_pest_token`. |
-| Spectacle Mage | {U}{R} | 🟡 | 1/2 Human Wizard with Prowess. Hybrid {U/R}{U/R} approximated as {U}{R}. Prowess keyword tag is correct (engine-side wiring still pending). |
+| Spectacle Mage | {U}{R} | ✅ | Push XXXI doc sync: Prowess is functional via the `effect::shortcut::prowess()` helper. Fires on every non-creature spell you cast, pumping the source +1/+1 EOT. Hybrid {U/R}{U/R} approximated as {U}{R}. |
 | Mage Hunters' Onslaught | {2}{B}{B} | ✅ | Sorcery. Destroy target creature; draw a card. Test: `mage_hunters_onslaught_destroys_creature_and_draws_card`. |
 | Galazeth Prismari | {2}{U}{R} | 🟡 | 3/4 Legendary Dragon Wizard, Flying. ETB creates a Treasure token (full real-card behaviour). The "artifacts you control are mana sources" static is still ⏳ (no `GrantActivatedAbility(applies_to)` primitive). Test: `galazeth_prismari_is_three_four_flying_dragon_with_etb_treasure`. |
 | Beledros Witherbloom | {3}{B}{B}{G}{G} | 🟡 | 6/6 Legendary Demon, Flying + Trample + Lifelink. Pay-10-life mass-untap activated is ⏳. |

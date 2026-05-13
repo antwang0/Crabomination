@@ -22,9 +22,9 @@ use crate::card::{
     CardDefinition, CardType, CreatureType, Effect, EventKind, EventScope, EventSpec, Keyword,
     Selector, SelectionRequirement, Subtypes, Supertype, TriggeredAbility, Value,
 };
-use crate::effect::shortcut::{magecraft, target_filtered};
+use crate::effect::shortcut::{magecraft, magecraft_drain_each_opp, magecraft_self_pump, target_filtered};
 use crate::effect::Duration;
-use crate::mana::{cost, generic, w, b, x};
+use crate::mana::{cost, generic, u, w, b, x};
 
 // ── Spirited Companion ──────────────────────────────────────────────────────
 
@@ -419,6 +419,162 @@ pub fn hunt_for_specimens() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Silverquill Pledgemage ──────────────────────────────────────────────────
+
+/// Silverquill Pledgemage — {1}{W}{B}, 2/2 Inkling Druid. Flying.
+/// "Magecraft — Whenever you cast or copy an instant or sorcery spell,
+/// this creature gets +1/+1 until end of turn."
+///
+/// Uses the `magecraft_self_pump(1, 1)` helper (push XXVII) — the
+/// magecraft trigger pumps the source itself +1/+1 EOT. The Inkling
+/// subtype was added in the Strixhaven era; this card's flying ties
+/// it into the Silverquill tribal pool that Tenured Inkcaster
+/// powers up via the new Inkling anthem.
+pub fn silverquill_pledgemage() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Pledgemage",
+        cost: cost(&[generic(1), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_self_pump(1, 1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Archmage Emeritus ───────────────────────────────────────────────────────
+
+/// Archmage Emeritus — {2}{U}{U}, 3/3 Human Wizard. "Magecraft —
+/// Whenever you cast or copy an instant or sorcery spell, draw a card."
+///
+/// Pure magecraft draw payoff. Reuses the `magecraft(...)` helper to
+/// gate on instant/sorcery casts, then draws one card for the
+/// controller. Closes the same loop as Witherbloom Apprentice's drain
+/// payoff — the canonical "magecraft does N" creature for each
+/// college. Strong synergy with copy-spell triggers (Aziza, Zaffai,
+/// Galvanic Iteration): the "or copy" half doubles the draw.
+pub fn archmage_emeritus() -> CardDefinition {
+    CardDefinition {
+        name: "Archmage Emeritus",
+        cost: cost(&[generic(2), u(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::Draw {
+            who: Selector::You,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Promising Duskmage ──────────────────────────────────────────────────────
+
+/// Promising Duskmage — {2}{W}{B}, 2/2 Inkling Wizard. Flying.
+/// "Magecraft — Whenever you cast or copy an instant or sorcery spell,
+/// target opponent loses 1 life and you gain 1 life."
+///
+/// The Witherbloom-style drain payoff in Silverquill colours — the
+/// `magecraft_drain_each_opp(1)` shortcut emits the canonical
+/// `Effect::Drain { from: EachOpponent, to: You, amount: 1 }` so the
+/// life swap is atomic. The printed Oracle says "target opponent"
+/// (single); the shortcut collapses to each-opponent for the auto-
+/// target friendliness — in a 1v1 game this is identical, and in a
+/// 4-player game it's strictly better (which is fine for an Inkling
+/// 2/2 flyer at four mana).
+pub fn promising_duskmage() -> CardDefinition {
+    CardDefinition {
+        name: "Promising Duskmage",
+        cost: cost(&[generic(2), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_drain_each_opp(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Tenured Inkcaster ───────────────────────────────────────────────────────
+
+/// Tenured Inkcaster — {2}{W}{B}, 3/2 Vampire Warlock. "Other Inkling
+/// creatures you control get +2/+2."
+///
+/// Tribal anthem on the Inkling creature type. The "Other" gate is
+/// wired via the engine's `AffectedPermanents::AllWithCreatureType
+/// .exclude_source: true` flag (push XXX, Quintorius pattern). The
+/// anthem is layered in via a compute-time injection in
+/// `GameState::compute_battlefield`, so all of the controller's
+/// Inkling creatures (including Inkling tokens from Inkling Summoning,
+/// Defend the Campus) get +2/+2 while Inkcaster is on the battlefield
+/// — Inkcaster himself stays a 3/2 Vampire (he is not an Inkling, so
+/// the exclude-source clause is technically vacuous, but the
+/// CreatureType filter on the layer already excludes non-Inklings
+/// anyway). The +2/+2 makes a 2/1 Inkling token attack as a 4/3
+/// flier, which is a huge Silverquill payoff.
+pub fn tenured_inkcaster() -> CardDefinition {
+    CardDefinition {
+        name: "Tenured Inkcaster",
+        cost: cost(&[generic(2), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],

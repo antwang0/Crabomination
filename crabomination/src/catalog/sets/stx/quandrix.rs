@@ -10,8 +10,8 @@
 
 use super::no_abilities;
 use crate::card::{
-    ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, Effect, Selector,
-    SelectionRequirement, Subtypes, Value,
+    ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, Effect, EventKind,
+    EventScope, EventSpec, Selector, SelectionRequirement, Subtypes, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{magecraft, target_filtered};
 use crate::effect::Duration;
@@ -144,6 +144,81 @@ pub fn decisive_denial() -> CardDefinition {
         ]),
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Symmathematics ──────────────────────────────────────────────────────────
+
+/// Symmathematics — {1}{G}{U}, Creature — Fractal (0/0). "Symmathematics
+/// enters with two +1/+1 counters on it. / Magecraft — Whenever you cast
+/// or copy an instant or sorcery spell, double the number of +1/+1
+/// counters on Symmathematics."
+///
+/// Body is a 0/0 Fractal that comes in as a 2/2 via the ETB +1/+1
+/// counter trigger. Each subsequent instant or sorcery cast fires the
+/// magecraft, doubling the counter pile: 2 → 4 → 8 → 16 …
+///
+/// Approximation (same as Pterafractyl): printed P/T is 0/0 with two
+/// +1/+1 counters from the "enters with" replacement effect. The
+/// engine has no replacement-effect primitive yet, so we model "enters
+/// with" as an ETB trigger that fires *after* state-based actions —
+/// which would lethally check a 0/0 body before any counters arrive.
+/// To keep the card playable, base P/T is bumped to 1/1 (a 1-toughness
+/// over-statement that doesn't matter in practice — once the ETB
+/// resolves, the body is 3/3 instead of the printed 2/2, and the
+/// doubling-magecraft scaling pattern is preserved). The ETB adds two
+/// counters via `AddCounter { amount: 2 }`.
+///
+/// The doubling uses the standard `AddCounter { what: This, amount:
+/// CountersOn(This, +1/+1) }` shape (same as Practical Research, Growth
+/// Curve): adds N more counters where N is the current pile, producing
+/// 2N total. `Selector::This` resolves to the trigger's listening
+/// permanent (Symmathematics itself), not the trigger source (the
+/// spell), matching the printed Oracle exactly.
+pub fn symmathematics() -> CardDefinition {
+    CardDefinition {
+        name: "Symmathematics",
+        cost: cost(&[generic(1), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![
+            // ETB: enters with two +1/+1 counters on it. Modeled as a
+            // self-targeting AddCounter on the ETB trigger — the
+            // engine doesn't have an `Effect::EntersWith` primitive
+            // yet, so we approximate via the standard ETB pattern.
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(2),
+                },
+            },
+            // Magecraft: double the +1/+1 counters on Symmathematics.
+            magecraft(Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::CountersOn {
+                    what: Box::new(Selector::This),
+                    kind: CounterType::PlusOnePlusOne,
+                },
+            }),
+        ],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],

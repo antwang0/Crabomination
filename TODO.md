@@ -223,7 +223,48 @@ status tag (✅ wired, 🟡 partial, ⏳ todo) plus a short note.
   tree for `Selector::TriggerSource` references in CountersOn
   contexts and zero the value when the source has changed zones.
 
+- ✅ **CR 614.12 — Enters-with-counters replacement effects** (push
+  XXXI audit): "Some replacement effects modify how a permanent enters
+  the battlefield. … An effect that says a permanent enters the
+  battlefield with one or more counters on it." General-purpose
+  replacement-effect primitive is still ⏳ (tracked under Engine —
+  Missing Mechanics), but the engine implements the printed pattern
+  via an **ETB-trigger approximation**: each card with "enters with N
+  +1/+1 counters" wording (Pterafractyl, Rancorous Archaic,
+  Symmathematics) ships an `EntersBattlefield/SelfSource` trigger that
+  calls `AddCounter { what: Selector::This, amount: N }`. Caveat: ETB
+  triggers fire **after** state-based actions check toughness, so a
+  body that would be 0/0 or 0-toughness pre-counters would die before
+  the trigger lands. Workaround: bump the printed P/T floor to a
+  1-toughness body (Pterafractyl 1/0 → 1/1, Symmathematics 0/0 → 1/1).
+  This produces a 1-toughness over-statement (1/1 + 2 = 3/3 instead of
+  printed 0/0 + 2 = 2/2 for Symmathematics) which is documented in the
+  catalog and tracked under TODO.md's "Replacement Effects" section.
+  Tests: `symmathematics_enters_with_two_plus_one_counters` (asserts
+  the counters land on resolution).
+
 ## Recent additions
+
+- ✅ **Push XXXI (2026-05-13, `claude/modern_decks` branch)**: 5 new
+  STX cards (Silverquill Pledgemage, Archmage Emeritus, Promising
+  Duskmage, Tenured Inkcaster, Symmathematics) + 5 stale-noted STX
+  promotions (Lorehold Apprentice/Pledgemage/Storm-Kiln Artist/
+  Sparring Regimen/Spectacle Mage 🟡 → ✅) + the second tribal-anthem
+  injection (Tenured Inkcaster's Inkling +2/+2 via the existing
+  `AffectedPermanents::AllWithCreatureType.exclude_source` flag) +
+  engine cleanup: extracted the per-card "Other [type]s you control
+  get +N/+M" injection in `GameState::compute_battlefield` into the
+  shared `tribal_anthem_for_name` table — adding a new tribal lord
+  now requires one row in the helper instead of a new
+  `if name == "..."` branch. CR 614.12 (enters-with-counters
+  replacement) audit and Symmathematics's
+  `AddCounter { amount: CountersOn(This, +1/+1) }` doubling
+  primitive documented as the canonical exerciser of the
+  cross-zone CountersOn primitive against a self-anchored lookup.
+  Tests at 1213 (+13 net): 3 each for Silverquill Pledgemage and
+  Symmathematics, 2 for Archmage Emeritus, 1 for Promising Duskmage,
+  4 for Tenured Inkcaster (buffs friendly Inklings, ignores
+  opponents, leaves self alone, anthem expires on zone change).
 
 - ✅ **Push XXX (2026-05-13, `claude/modern_decks` branch)**: Tribal
   anthem engine flag + 4 SOS/STX promotions + 9 cube activations + 8
@@ -650,17 +691,58 @@ status tag (✅ wired, 🟡 partial, ⏳ todo) plus a short note.
 - ⏳ **`StaticEffect::PumpPTOther` / generalized tribal-anthem
   primitive** — push XXX added the `exclude_source` flag to
   `AffectedPermanents::AllWithCreatureType` and used it via a compute-
-  time injection in `compute_battlefield` for Quintorius. A more
-  general path: extend `StaticEffect::PumpPT` to accept a
-  `Selector::EachOtherPermanent(SelectionRequirement)` shape (or a
-  `SelectionRequirement::OtherThanSource` filter) so card factories
-  can express "Other [type]s you control get +N/+M" directly without
-  the hardcoded `compute_battlefield` injection. This would unblock
-  Goblin King-style anthems for other tribes (Goblin / Elf / Zombie /
+  time injection in `compute_battlefield` for Quintorius. Push XXXI
+  consolidated the per-card injection into the
+  `tribal_anthem_for_name` helper table (Quintorius, Tenured
+  Inkcaster). A more general path: extend `StaticEffect::PumpPT` to
+  accept a `Selector::EachOtherPermanent(SelectionRequirement)` shape
+  (or a `SelectionRequirement::OtherThanSource` filter) so card
+  factories can express "Other [type]s you control get +N/+M"
+  directly without the helper table. This would unblock Goblin
+  King-style anthems for other tribes (Goblin / Elf / Zombie /
   Dragon) and the printed "Other instant and sorcery spells you cast
   have storm" cycle (Prismari, the Inspiration). Suggested shape:
   bump `affected_from_requirement` to detect `OtherThanSource` as a
   predicate combinator and set `exclude_source: true` automatically.
+  Once landed, the `tribal_anthem_for_name` table becomes unused and
+  can be retired.
+
+- ⏳ **`Effect::EntersWith` primitive (CR 614.12 replacement)** — push
+  XXXI's Symmathematics and prior push (Pterafractyl, Rancorous
+  Archaic) all approximate "enters with N counters" via an
+  `EntersBattlefield/SelfSource` trigger that fires `AddCounter` post-
+  ETB. The trigger fires **after** state-based actions check
+  toughness, so a 0/0 or 0-toughness body would die to SBAs before
+  any counters arrive — workaround is to bump base toughness to 1
+  (Pterafractyl 1/0 → 1/1, Symmathematics 0/0 → 1/1). True CR 614.12
+  compliance would land the counters at ETB time (before SBAs check
+  the body), letting us drop the toughness bump and match the
+  printed Oracle exactly. Suggested shape:
+  `CardDefinition.enters_with_counters: Option<(CounterType, Value)>`
+  applied during the entering-battlefield resolution path, BEFORE
+  the first SBA check on the new permanent. Wiring needs threading
+  `enters_with_counters` through the resolution-time `move_card_to`
+  to `Battlefield` so the counters land in the same "step" as the
+  zone change. Closes a documented gap on every "enters with N
+  counters" card in the catalog.
+
+- ⏳ **Add Inkling-tribal payoffs to the cube/SOS pools** — push XXXI
+  added Tenured Inkcaster as an Inkling lord (+2/+2 to other
+  Inklings). The catalog now has 4+ Inkling minters (Inkling
+  Summoning, Defend the Campus, Silverquill Pledgemage,
+  Promising Duskmage, Felisa Fang of Silverquill's Inkling
+  generator) — a Silverquill SOS variant pool could lean heavily
+  into the tribal pump. Add Inkling Mascot's printed "draw or pump"
+  payoff variants once the multi-target prompt lands.
+
+- ⏳ **Audit and update STRIXHAVEN2.md tables on every push** — push
+  XXXI found 5 cards (Lorehold Apprentice, Lorehold Pledgemage,
+  Storm-Kiln Artist, Sparring Regimen, Spectacle Mage) whose code
+  was fully wired but whose 🟡 notes hadn't been updated. A simple
+  end-of-push audit script (`audit_strixhaven2.py` already exists
+  for SOS) extended to also walk STX-row notes against the
+  factory's `triggered_abilities` / `static_abilities` / activated-
+  ability complexity could flag stale rows automatically.
 
 - ⏳ **Triggered mana ability fast-path (CR 605.1b)** — triggered mana
   abilities don't currently bypass the stack. The engine handles

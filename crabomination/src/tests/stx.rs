@@ -3215,3 +3215,310 @@ fn containment_breach_destroys_enchantment() {
     assert!(g.players[1].graveyard.iter().any(|c| c.id == ench),
         "Enchantment should be in P1's graveyard");
 }
+
+// ── Push XXXI cards: Silverquill Pledgemage, Archmage Emeritus,
+//    Promising Duskmage, Tenured Inkcaster, Symmathematics ────────────────
+
+#[test]
+fn silverquill_pledgemage_is_a_two_two_inkling_flier() {
+    let p = catalog::silverquill_pledgemage();
+    assert_eq!(p.power, 2);
+    assert_eq!(p.toughness, 2);
+    assert!(p.keywords.contains(&Keyword::Flying));
+    assert!(p.subtypes.creature_types.contains(&crate::card::CreatureType::Inkling));
+    assert!(p.subtypes.creature_types.contains(&crate::card::CreatureType::Druid));
+}
+
+#[test]
+fn silverquill_pledgemage_magecraft_pumps_self_eot() {
+    let mut g = two_player_game();
+    let pledge = g.add_card_to_battlefield(0, catalog::silverquill_pledgemage());
+    g.clear_sickness(pledge);
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let p_before = g.battlefield_find(pledge).unwrap().power();
+    let t_before = g.battlefield_find(pledge).unwrap().toughness();
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)), mode: None, x_value: None,
+    })
+    .expect("Bolt castable for {R}");
+    drain_stack(&mut g);
+    let p_after = g.battlefield_find(pledge).unwrap().power();
+    let t_after = g.battlefield_find(pledge).unwrap().toughness();
+    assert_eq!(p_after, p_before + 1, "Pledgemage power +1 from magecraft");
+    assert_eq!(t_after, t_before + 1, "Pledgemage toughness +1 from magecraft");
+}
+
+#[test]
+fn silverquill_pledgemage_does_not_trigger_on_creature_cast() {
+    let mut g = two_player_game();
+    let pledge = g.add_card_to_battlefield(0, catalog::silverquill_pledgemage());
+    g.clear_sickness(pledge);
+    let bears = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let p_before = g.battlefield_find(pledge).unwrap().power();
+    g.perform_action(GameAction::CastSpell {
+        card_id: bears, target: None, mode: None, x_value: None,
+    })
+    .expect("Bears castable for {1}{G}");
+    drain_stack(&mut g);
+    let p_after = g.battlefield_find(pledge).unwrap().power();
+    assert_eq!(p_after, p_before, "Casting a creature should NOT trigger magecraft");
+}
+
+#[test]
+fn archmage_emeritus_draws_on_instant_cast() {
+    let mut g = two_player_game();
+    // Seed library so the draw has cards available.
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_library(0, catalog::island());
+    let _ae = g.add_card_to_battlefield(0, catalog::archmage_emeritus());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let hand_before = g.players[0].hand.len();
+    let lib_before = g.players[0].library.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)), mode: None, x_value: None,
+    })
+    .expect("Bolt castable for {R}");
+    drain_stack(&mut g);
+    // Net hand: -1 (cast Bolt) + 1 (magecraft draw) = 0.
+    assert_eq!(g.players[0].hand.len(), hand_before);
+    // Library: -1 card.
+    assert_eq!(g.players[0].library.len(), lib_before - 1);
+}
+
+#[test]
+fn archmage_emeritus_does_not_draw_on_creature_cast() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let _ae = g.add_card_to_battlefield(0, catalog::archmage_emeritus());
+    let bears = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let lib_before = g.players[0].library.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: bears, target: None, mode: None, x_value: None,
+    })
+    .expect("Bears castable for {1}{G}");
+    drain_stack(&mut g);
+    // No magecraft fire → library unchanged.
+    assert_eq!(g.players[0].library.len(), lib_before,
+        "Casting a creature should NOT trigger Archmage Emeritus's draw");
+}
+
+#[test]
+fn promising_duskmage_drains_on_instant_cast() {
+    let mut g = two_player_game();
+    let _pdm = g.add_card_to_battlefield(0, catalog::promising_duskmage());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let p0_life_before = g.players[0].life;
+    let p1_life_before = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)), mode: None, x_value: None,
+    })
+    .expect("Bolt castable for {R}");
+    drain_stack(&mut g);
+    // Bolt deals 3 + magecraft loses 1 = 4 total to P1.
+    assert_eq!(g.players[1].life, p1_life_before - 4,
+        "P1 takes 3 (Bolt) + 1 (magecraft drain) = 4 damage");
+    // P0 gains 1 from the drain.
+    assert_eq!(g.players[0].life, p0_life_before + 1,
+        "P0 gains 1 from magecraft drain");
+}
+
+#[test]
+fn tenured_inkcaster_buffs_friendly_inklings_by_two_two() {
+    // Mint an Inkling token via Inkling Summoning, then drop Tenured
+    // Inkcaster, and check the Inkling went from 2/1 → 4/3.
+    let mut g = two_player_game();
+    // Cast Inkling Summoning to mint a 2/1 W/B Inkling with flying.
+    let summon = g.add_card_to_hand(0, catalog::inkling_summoning());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: summon, target: None, mode: None, x_value: None,
+    })
+    .expect("Inkling Summoning castable for {3}{W}{B}");
+    drain_stack(&mut g);
+    // Find the Inkling token (last-created token).
+    let inkling = g.battlefield.iter()
+        .find(|c| c.controller == 0 &&
+            c.definition.subtypes.creature_types.contains(&crate::card::CreatureType::Inkling))
+        .map(|c| c.id)
+        .expect("Inkling token should exist");
+    let before = g.compute_battlefield().into_iter()
+        .find(|c| c.id == inkling)
+        .expect("Inkling on battlefield");
+    assert_eq!(before.power, 2, "Base Inkling power is 2");
+    assert_eq!(before.toughness, 1, "Base Inkling toughness is 1");
+
+    // Now drop Tenured Inkcaster.
+    let _tic = g.add_card_to_battlefield(0, catalog::tenured_inkcaster());
+    let after = g.compute_battlefield().into_iter()
+        .find(|c| c.id == inkling)
+        .expect("Inkling on battlefield post-Inkcaster");
+    assert_eq!(after.power, 4, "Inkling +2/+2 from Tenured Inkcaster: 4 power");
+    assert_eq!(after.toughness, 3, "Inkling +2/+2 from Tenured Inkcaster: 3 toughness");
+}
+
+#[test]
+fn tenured_inkcaster_does_not_buff_opponent_inklings() {
+    let mut g = two_player_game();
+    // P1 has an Inkling token (via Inkling Summoning).
+    let summon = g.add_card_to_hand(1, catalog::inkling_summoning());
+    g.players[1].mana_pool.add(Color::White, 1);
+    g.players[1].mana_pool.add(Color::Black, 1);
+    g.players[1].mana_pool.add_colorless(3);
+    // Switch active player so the cast resolves cleanly.
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: summon, target: None, mode: None, x_value: None,
+    })
+    .expect("Inkling Summoning castable for P1");
+    drain_stack(&mut g);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    let opp_inkling = g.battlefield.iter()
+        .find(|c| c.controller == 1 &&
+            c.definition.subtypes.creature_types.contains(&crate::card::CreatureType::Inkling))
+        .map(|c| c.id)
+        .expect("Opp Inkling token should exist");
+
+    // P0 drops a Tenured Inkcaster.
+    let _tic = g.add_card_to_battlefield(0, catalog::tenured_inkcaster());
+    let after = g.compute_battlefield().into_iter()
+        .find(|c| c.id == opp_inkling)
+        .expect("opp Inkling on battlefield");
+    assert_eq!(after.power, 2,
+        "Opponent's Inkling should stay 2/1 — anthem only affects controller's Inklings");
+}
+
+#[test]
+fn tenured_inkcaster_does_not_buff_self() {
+    // Inkcaster is a Vampire Warlock (not an Inkling), so even without
+    // the exclude_source flag the anthem wouldn't touch him. We assert
+    // his printed 3/2 line is preserved.
+    let mut g = two_player_game();
+    let tic = g.add_card_to_battlefield(0, catalog::tenured_inkcaster());
+    let cp = g.compute_battlefield().into_iter()
+        .find(|c| c.id == tic)
+        .expect("Inkcaster on battlefield");
+    assert_eq!(cp.power, 3, "Tenured Inkcaster's printed power = 3");
+    assert_eq!(cp.toughness, 2, "Tenured Inkcaster's printed toughness = 2");
+}
+
+#[test]
+fn tenured_inkcaster_anthem_expires_when_inkcaster_leaves_play() {
+    // Drop Inkcaster + an Inkling → Inkling is +2/+2. Destroy Inkcaster,
+    // Inkling reverts to printed 2/1.
+    let mut g = two_player_game();
+    let summon = g.add_card_to_hand(0, catalog::inkling_summoning());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: summon, target: None, mode: None, x_value: None,
+    })
+    .expect("Inkling Summoning castable");
+    drain_stack(&mut g);
+    let inkling = g.battlefield.iter()
+        .find(|c| c.controller == 0 &&
+            c.definition.subtypes.creature_types.contains(&crate::card::CreatureType::Inkling))
+        .map(|c| c.id)
+        .expect("Inkling token");
+    let tic = g.add_card_to_battlefield(0, catalog::tenured_inkcaster());
+    {
+        let buffed = g.compute_battlefield().into_iter()
+            .find(|c| c.id == inkling).expect("Inkling");
+        assert_eq!(buffed.power, 4, "Buffed Inkling = 4 power");
+    }
+    // Now exile/destroy Inkcaster.
+    g.remove_from_battlefield_to_graveyard(tic);
+    let after = g.compute_battlefield().into_iter()
+        .find(|c| c.id == inkling).expect("Inkling");
+    assert_eq!(after.power, 2,
+        "After Inkcaster leaves, Inkling reverts to printed 2 power");
+}
+
+#[test]
+fn symmathematics_enters_with_two_plus_one_counters() {
+    // ETB AddCounter(+2) brings base 1/1 → 3/3 (1/1 + 2 +1/+1 counters).
+    // (Engine approximation: base bumped 0/0 → 1/1 to avoid SBA death
+    // pre-ETB. The +2 counter ETB then layers on top, matching the
+    // Pterafractyl pattern.)
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::symmathematics());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Symmathematics castable for {1}{G}{U}");
+    drain_stack(&mut g);
+    let card = g.battlefield_find(id).unwrap();
+    assert_eq!(card.power(), 3,
+        "Symmathematics enters as 3/3 (engine-bumped 1/1 base + 2 counters)");
+    assert_eq!(card.toughness(), 3);
+    // Verify the counter count is exactly 2.
+    let count = *card.counters.get(&CounterType::PlusOnePlusOne).unwrap_or(&0);
+    assert_eq!(count, 2, "ETB places exactly 2 +1/+1 counters");
+}
+
+#[test]
+fn symmathematics_doubles_counters_on_instant_cast() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::symmathematics());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Symmathematics castable");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(id).unwrap().power(), 3);
+    // Cast a Bolt: magecraft doubles 2 → 4 counters → 5/5 body (1/1 + 4).
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)), mode: None, x_value: None,
+    })
+    .expect("Bolt castable for {R}");
+    drain_stack(&mut g);
+    let after = g.battlefield_find(id).unwrap();
+    assert_eq!(after.power(), 5,
+        "After one magecraft fire, 2 → 4 counters → 1/1 + 4 = 5/5");
+    assert_eq!(after.toughness(), 5);
+}
+
+#[test]
+fn symmathematics_does_not_double_on_creature_cast() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::symmathematics());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Symmathematics castable");
+    drain_stack(&mut g);
+    let p_before = g.battlefield_find(id).unwrap().power();
+    let bears = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bears, target: None, mode: None, x_value: None,
+    })
+    .expect("Bears castable");
+    drain_stack(&mut g);
+    let p_after = g.battlefield_find(id).unwrap().power();
+    assert_eq!(p_after, p_before,
+        "Casting a creature should NOT double counters (magecraft is I/S only)");
+}

@@ -343,29 +343,24 @@ impl GameState {
                     modification: Modification::AddKeyword(crate::card::Keyword::Lifelink),
                 });
             }
-            // Quintorius, Field Historian (STX): "Other Spirit creatures
-            // you control get +1/+0." The static_ability_to_effects path
-            // can't naturally express "other" — `Selector::EachPermanent`
-            // always includes the source. We piggyback off the new
-            // `AffectedPermanents::AllWithCreatureType.exclude_source`
-            // field via a compute-time injection, matching the Honor
-            // Troll / Cruel Somnophage pattern. Each Quintorius minted
-            // gets its own +1/+0 anthem scoped to its own controller's
-            // Spirit creatures (so two players each running a Quintorius
-            // both buff their own teams independently).
-            if name == "Quintorius, Field Historian" {
+            // Tribal anthems (push XXXI refactor): consolidate the
+            // per-card "Other [type]s you control get +N/+M" pattern
+            // into the helper `tribal_anthem_for_name`. Adding a new
+            // tribal lord now requires one row in the helper table
+            // instead of a new `if name == "..."` branch.
+            if let Some((creature_type, p, t)) = tribal_anthem_for_name(name) {
                 all_effects.push(ContinuousEffect {
                     timestamp: card.id.0 as u64,
                     source: card.id,
                     affected: AffectedPermanents::AllWithCreatureType {
                         controller: Some(card.controller),
-                        creature_type: crate::card::CreatureType::Spirit,
+                        creature_type,
                         exclude_source: true,
                     },
                     layer: Layer::L7PowerTough,
                     sublayer: Some(PtSublayer::Modify),
                     duration: EffectDuration::WhileSourceOnBattlefield,
-                    modification: Modification::ModifyPowerToughness(1, 0),
+                    modification: Modification::ModifyPowerToughness(p, t),
                 });
             }
         }
@@ -1645,6 +1640,33 @@ fn is_event_hardcoded(ev: &GameEvent, spec: &crate::effect::EventSpec) -> bool {
         GameEvent::SpellCast { .. } => true,
         GameEvent::StepChanged(_) => true,
         _ => false,
+    }
+}
+
+// ── Tribal anthem helper ─────────────────────────────────────────────────────
+
+/// Compute-time tribal-anthem table (push XXXI refactor): cards whose
+/// printed Oracle is "Other [creature_type] creatures you control get
+/// +N/+M." The `static_ability_to_effects` path can't naturally express
+/// "Other" because `Selector::EachPermanent` always includes the source;
+/// we piggyback off the `AffectedPermanents::AllWithCreatureType
+/// .exclude_source: true` flag via a compute-time injection in
+/// `GameState::compute_battlefield`.
+///
+/// Returns `Some((creature_type, power, toughness))` if `name` matches a
+/// known tribal lord, else `None`. To add a new tribal lord, append one
+/// row here. The injection is shared (every entry uses the same layer,
+/// duration, and `exclude_source: true` flag).
+///
+/// Current entries:
+/// - Quintorius, Field Historian (STX Lorehold): Other Spirits +1/+0
+/// - Tenured Inkcaster (STX Silverquill): Other Inklings +2/+2
+fn tribal_anthem_for_name(name: &'static str) -> Option<(crate::card::CreatureType, i32, i32)> {
+    use crate::card::CreatureType;
+    match name {
+        "Quintorius, Field Historian" => Some((CreatureType::Spirit, 1, 0)),
+        "Tenured Inkcaster" => Some((CreatureType::Inkling, 2, 2)),
+        _ => None,
     }
 }
 
