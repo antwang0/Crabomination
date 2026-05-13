@@ -125,7 +125,17 @@ pub enum AffectedPermanents {
     Source,
     /// All permanents matching the given predicate.
     /// `controller: Some(p)` — only that player's permanents; `None` — all players.
-    All { controller: Option<usize>, card_types: Vec<CardType> },
+    /// `exclude_source: true` skips the effect's source permanent — matches the
+    /// printed "**other** [type]" wording (Hofri Ghostforge's "Other creatures
+    /// you control get +1/+0", various "Other X you control" anthems). Defaults
+    /// to `false` (include source) via `#[serde(default)]` for snapshot back-
+    /// compat with pre-push-XXXV serialized states.
+    All {
+        controller: Option<usize>,
+        card_types: Vec<CardType>,
+        #[serde(default)]
+        exclude_source: bool,
+    },
     /// All permanents controlled by any player *other* than `source_controller`.
     AllOpponents { source_controller: usize, card_types: Vec<CardType> },
     /// A specific set of permanents.
@@ -328,7 +338,10 @@ fn affects(effect: &ContinuousEffect, card: &crate::card::CardInstance) -> bool 
     match &effect.affected {
         AffectedPermanents::Source => effect.source == card.id,
         AffectedPermanents::Specific(ids) => ids.contains(&card.id),
-        AffectedPermanents::All { controller, card_types } => {
+        AffectedPermanents::All { controller, card_types, exclude_source } => {
+            if *exclude_source && effect.source == card.id {
+                return false;
+            }
             let ctrl_ok = controller.is_none_or(|c| c == card.controller);
             let type_ok = card_types.is_empty()
                 || card_types.iter().any(|t| card.definition.card_types.contains(t));

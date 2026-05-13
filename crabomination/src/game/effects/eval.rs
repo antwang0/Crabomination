@@ -401,6 +401,17 @@ impl GameState {
                     R::Colorless => card.definition.cost.distinct_colors() == 0,
                     R::Monocolored => card.definition.cost.distinct_colors() == 1,
                     R::HasXInCost => card.definition.cost.has_x(),
+                    // OtherThanSource has no source-id context in the
+                    // `evaluate_requirement_static` path — it's used by the
+                    // static-ability `applies_to` selector pipeline, which
+                    // routes through `affected_from_requirement` to flip
+                    // `exclude_source: true` on the resulting
+                    // `AffectedPermanents` variant. When this predicate
+                    // appears in a target-validation context (rare —
+                    // typically printed "another creature" targeting),
+                    // accept any permanent and rely on the cast-site
+                    // anti-self filter to enforce the "another" gate.
+                    R::OtherThanSource => true,
                     _ => unreachable!("handled above"),
                 }
             }
@@ -462,6 +473,13 @@ impl GameState {
             R::Colorless => card.definition.cost.distinct_colors() == 0,
             R::Monocolored => card.definition.cost.distinct_colors() == 1,
             R::HasXInCost => card.definition.cost.has_x(),
+            // OtherThanSource is `applies_to`-pipeline-only — see the
+            // companion arm in `evaluate_requirement_static`. For
+            // library/zone searches we don't filter on this; the
+            // candidate set already excludes the source's current zone
+            // (a card in a graveyard search can't be the source on the
+            // battlefield).
+            R::OtherThanSource => true,
             // Battlefield-state predicates can't be evaluated for library cards.
             R::Tapped | R::Untapped | R::WithCounter(_)
             | R::IsAttacking | R::IsBlocking | R::IsSpellOnStack => false,

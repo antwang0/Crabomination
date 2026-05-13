@@ -233,13 +233,14 @@ pub fn daydream() -> CardDefinition {
 /// Target creature gains your choice of double strike or lifelink
 /// until end of turn."
 ///
-/// Approximation: the printed card has two target slots (a player and
-/// a creature). We collapse the player target to **you**, so the
-/// counter fan-out lands on every creature *you* control. The chosen
-/// creature target picks up double strike (the more impactful
-/// general-purpose mode); the lifelink alternative is dropped pending
-/// "may pick mode" plumbing on triggered/spell choices. The Flashback
-/// {1}{W} clause is wired via `Keyword::Flashback`.
+/// ✅ (push XXXV) The mode-pick between double strike and lifelink is
+/// now wired via `Effect::ChooseMode([GrantKeyword(DoubleStrike),
+/// GrantKeyword(Lifelink)])` — the controller picks the mode at
+/// resolution time (auto-decider picks mode 0 = double strike, which
+/// is also what the prior collapsed body did). The counter fan-out
+/// still collapses the printed "target player" to **you** (multi-
+/// target prompt is engine-wide). Flashback {1}{W} is wired via
+/// `Keyword::Flashback`.
 pub fn practiced_offense() -> CardDefinition {
     use crate::card::{CounterType, Keyword};
     use crate::mana::{ManaCost, ManaSymbol};
@@ -266,11 +267,19 @@ pub fn practiced_offense() -> CardDefinition {
                     amount: Value::Const(1),
                 }),
             },
-            Effect::GrantKeyword {
-                what: target_filtered(SelectionRequirement::Creature),
-                keyword: Keyword::DoubleStrike,
-                duration: Duration::EndOfTurn,
-            },
+            // Modal: pick double strike OR lifelink for the target.
+            Effect::ChooseMode(vec![
+                Effect::GrantKeyword {
+                    what: target_filtered(SelectionRequirement::Creature),
+                    keyword: Keyword::DoubleStrike,
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::GrantKeyword {
+                    what: target_filtered(SelectionRequirement::Creature),
+                    keyword: Keyword::Lifelink,
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
         ]),
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],

@@ -4214,3 +4214,314 @@ fn killian_only_reduces_its_controllers_spells() {
         "Opponent's Killian should not reduce my Murder — generic pip stays unpaid"
     );
 }
+
+// ── Push XXXV: OtherThanSource + Hofri anthem + Shadrix attack trigger ──────
+
+/// Hofri Ghostforge's printed "Other creatures you control get +1/+0"
+/// anthem now flows through the new `SelectionRequirement::OtherThanSource`
+/// predicate. A friendly Grizzly Bears should compute as 3/2 (was 2/2)
+/// while Hofri is on the battlefield.
+#[test]
+fn hofri_ghostforge_anthem_buffs_other_creatures_by_one_zero() {
+    let mut g = two_player_game();
+    let _hofri = g.add_card_to_battlefield(0, catalog::hofri_ghostforge());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+
+    let bear_view = g.computed_permanent(bear).expect("bear on bf");
+    assert_eq!(bear_view.power, 3, "anthem grants +1 power to Other creature");
+    assert_eq!(bear_view.toughness, 2, "toughness unchanged");
+}
+
+/// The anthem must skip Hofri itself per the printed "Other" gate.
+/// Hofri's printed P/T is 3/4; he should compute as 3/4 (no self-buff).
+#[test]
+fn hofri_ghostforge_anthem_does_not_buff_self() {
+    let mut g = two_player_game();
+    let hofri = g.add_card_to_battlefield(0, catalog::hofri_ghostforge());
+
+    let hofri_view = g.computed_permanent(hofri).expect("hofri on bf");
+    assert_eq!(hofri_view.power, 3, "Hofri keeps printed 3 power");
+    assert_eq!(hofri_view.toughness, 4);
+}
+
+/// Opponent's creatures must not benefit from Hofri's anthem — the
+/// `ControlledByYou` filter gates the layer to the source controller.
+#[test]
+fn hofri_ghostforge_anthem_does_not_buff_opp_creatures() {
+    let mut g = two_player_game();
+    let _hofri = g.add_card_to_battlefield(0, catalog::hofri_ghostforge());
+    let opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+
+    let bear_view = g.computed_permanent(opp_bear).expect("opp bear on bf");
+    assert_eq!(bear_view.power, 2, "opp's bear unchanged (anthem is friendly-only)");
+    assert_eq!(bear_view.toughness, 2);
+}
+
+/// When Hofri leaves the battlefield, the anthem expires and friendly
+/// creatures return to their printed P/T. Mirrors the Quintorius test
+/// pattern (anthem timestamp is `WhileSourceOnBattlefield`).
+#[test]
+fn hofri_ghostforge_anthem_expires_when_hofri_leaves() {
+    let mut g = two_player_game();
+    let hofri = g.add_card_to_battlefield(0, catalog::hofri_ghostforge());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+
+    // Anthem active: bear is 3/2.
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 3);
+
+    // Kill Hofri via lethal damage. His base toughness is 4.
+    g.battlefield_find_mut(hofri).unwrap().damage = 4;
+    let _ = g.check_state_based_actions();
+
+    // Bear returns to printed 2/2.
+    let after = g.computed_permanent(bear).expect("bear still on bf");
+    assert_eq!(after.power, 2, "anthem gone");
+    assert_eq!(after.toughness, 2);
+}
+
+/// Shadrix Silverquill's attack trigger fires (via the new ChooseN
+/// auto-pick of modes 1+2): a +1/+1 counter on a target friendly
+/// creature, and two Inkling tokens minted under the controller.
+#[test]
+fn shadrix_silverquill_attack_pumps_target_creature_and_mints_inklings() {
+    use crate::game::types::AttackTarget;
+    let mut g = two_player_game();
+    let shadrix = g.add_card_to_battlefield(0, catalog::shadrix_silverquill());
+    g.clear_sickness(shadrix);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    let inklings_before = g.battlefield.iter()
+        .filter(|c| c.is_token && c.definition.subtypes.creature_types.contains(&crate::card::CreatureType::Inkling))
+        .count();
+
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: shadrix,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("Shadrix can attack");
+    drain_stack(&mut g);
+
+    // Mode 1: target friendly creature now has a +1/+1 counter.
+    let bear_card = g.battlefield_find(bear).expect("bear on bf");
+    assert_eq!(
+        bear_card.counter_count(CounterType::PlusOnePlusOne),
+        1,
+        "Bear should have a +1/+1 counter from Shadrix mode 1"
+    );
+
+    // Mode 2: two Inkling tokens added on P0's side.
+    let inklings_after = g.battlefield.iter()
+        .filter(|c| c.is_token
+            && c.controller == 0
+            && c.definition.subtypes.creature_types.contains(&crate::card::CreatureType::Inkling))
+        .count();
+    assert_eq!(
+        inklings_after - inklings_before, 2,
+        "Shadrix mode 2 should mint two Inkling tokens for the controller"
+    );
+}
+
+/// Shadrix's trigger is SelfSource — opponent attacking should NOT
+/// fire Shadrix's choose-two.
+#[test]
+fn shadrix_silverquill_attack_does_not_trigger_on_opp_attack() {
+    use crate::game::types::AttackTarget;
+    let mut g = two_player_game();
+    let _shadrix = g.add_card_to_battlefield(0, catalog::shadrix_silverquill());
+    // Opp creature attacks.
+    let opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(opp_bear);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    let inklings_before = g.battlefield.iter()
+        .filter(|c| c.is_token).count();
+    let bear_counters_before = g.battlefield_find(bear).unwrap()
+        .counter_count(CounterType::PlusOnePlusOne);
+
+    // P1's turn — opp's bear attacks. (Active player is P0 by default in
+    // two_player_game; switch.)
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: opp_bear,
+        target: AttackTarget::Player(0),
+    }]))
+    .expect("Opp bear can attack");
+    drain_stack(&mut g);
+
+    let inklings_after = g.battlefield.iter()
+        .filter(|c| c.is_token).count();
+    assert_eq!(inklings_after, inklings_before,
+        "Shadrix should not trigger off opponent's attack");
+    assert_eq!(
+        g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        bear_counters_before,
+        "No counter added when opp attacks"
+    );
+}
+
+// ── Push XXXV: Practiced Offense mode pick + new Lash of Malice + Big Play ──
+
+/// Practiced Offense's auto-decider should default to mode 0 (double
+/// strike). The +1/+1 counter fan-out (collapsed to "you") and the
+/// keyword grant both fire in the same resolution.
+#[test]
+fn practiced_offense_auto_picks_double_strike() {
+    let mut g = two_player_game();
+    let _bear1 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let bear2 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+
+    let po = g.add_card_to_hand(0, catalog::practiced_offense());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: po,
+        target: Some(Target::Permanent(bear2)),
+        mode: None, x_value: None,
+    })
+    .expect("Practiced Offense castable for {2}{W}");
+    drain_stack(&mut g);
+
+    // Each friendly creature picks up a +1/+1 counter.
+    assert!(
+        g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.is_creature())
+            .all(|c| c.counter_count(CounterType::PlusOnePlusOne) == 1),
+        "Each friendly creature should have a +1/+1 counter"
+    );
+
+    // Target bear should have double strike EOT (mode 0 auto-pick).
+    let bear2_card = g.battlefield_find(bear2).unwrap();
+    assert!(bear2_card.has_keyword(&Keyword::DoubleStrike),
+        "Target should have double strike from mode 0 auto-pick");
+    assert!(!bear2_card.has_keyword(&Keyword::Lifelink),
+        "Default pick is double strike, not lifelink");
+}
+
+/// Casting Practiced Offense with `mode: Some(1)` routes the inner
+/// `ChooseMode` to lifelink instead of double strike. The mode flows
+/// through the spell-level slot (`StackItem::Spell.mode`) into the
+/// resolution context as `ctx.mode`.
+#[test]
+fn practiced_offense_can_pick_lifelink_via_cast_time_mode() {
+    let mut g = two_player_game();
+    let bear2 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+
+    let po = g.add_card_to_hand(0, catalog::practiced_offense());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: po,
+        target: Some(Target::Permanent(bear2)),
+        mode: Some(1),
+        x_value: None,
+    })
+    .expect("Practiced Offense castable for {2}{W}");
+    drain_stack(&mut g);
+
+    let bear2_card = g.battlefield_find(bear2).unwrap();
+    assert!(bear2_card.has_keyword(&Keyword::Lifelink),
+        "mode: Some(1) should pick lifelink");
+    assert!(!bear2_card.has_keyword(&Keyword::DoubleStrike),
+        "Lifelink mode should NOT also pick double strike");
+}
+
+/// Lash of Malice ({B}) shrinks a target creature by -2/-2 — a 2/2
+/// Grizzly Bears becomes 0/0 and dies to SBA.
+#[test]
+fn lash_of_malice_kills_two_two_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+
+    let lash = g.add_card_to_hand(0, catalog::lash_of_malice());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    let bear_before = g.battlefield_find(bear).unwrap().toughness();
+    assert_eq!(bear_before, 2);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: lash,
+        target: Some(Target::Permanent(bear)),
+        mode: None, x_value: None,
+    })
+    .expect("Lash of Malice castable for {B}");
+    drain_stack(&mut g);
+
+    // The 2/2 becomes effective 0/0 → dies to SBA.
+    let _ = g.check_state_based_actions();
+    assert!(g.battlefield_find(bear).is_none(),
+        "Lash should kill a 2/2 via -2/-2 → 0/0 → SBA");
+}
+
+/// Lash of Malice carries `Keyword::Flashback({3}{B})`. We just check
+/// the keyword is present on the card definition (the engine's
+/// `cast_flashback` path handles the actual graveyard re-cast).
+#[test]
+fn lash_of_malice_has_flashback_keyword() {
+    let card = catalog::lash_of_malice();
+    let has_flashback = card.keywords.iter().any(|k|
+        matches!(k, Keyword::Flashback(_)));
+    assert!(has_flashback, "Lash of Malice should carry Keyword::Flashback");
+}
+
+/// Big Play auto-picks mode 1 by default (Tap + Stun a target opp
+/// creature). With mode 1 wired as Tap + Stun against any creature,
+/// targeting an opp's bear should tap it and apply a stun counter.
+#[test]
+fn big_play_auto_picks_tap_and_stun() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    // Bear starts untapped.
+    assert!(!g.battlefield_find(bear).unwrap().tapped);
+
+    let bp = g.add_card_to_hand(0, catalog::big_play());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: bp,
+        target: Some(Target::Permanent(bear)),
+        mode: None, x_value: None,
+    })
+    .expect("Big Play castable for {3}{R}{W}");
+    drain_stack(&mut g);
+
+    let bear_card = g.battlefield_find(bear).expect("bear still on bf");
+    assert!(bear_card.tapped, "Big Play should tap the target");
+    assert_eq!(
+        bear_card.counter_count(CounterType::Stun), 1,
+        "Big Play should leave a stun counter"
+    );
+}
+
+/// Big Play mode 2 (`mode: Some(2)`) grants Trample EOT to each
+/// friendly creature. We verify the keyword grant lands on a Grizzly
+/// Bears.
+#[test]
+fn big_play_mode_2_grants_trample_to_friendlies() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+
+    let bp = g.add_card_to_hand(0, catalog::big_play());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: bp,
+        target: None,
+        mode: Some(2),
+        x_value: None,
+    })
+    .expect("Big Play castable for {3}{R}{W}");
+    drain_stack(&mut g);
+
+    let computed = g.computed_permanent(bear).unwrap();
+    assert!(computed.keywords.contains(&Keyword::Trample),
+        "Mode 2 should grant trample to the friendly bear");
+}

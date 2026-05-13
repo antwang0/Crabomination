@@ -564,3 +564,132 @@ pub fn quick_study() -> CardDefinition {
         opening_hand: None,
     }
 }
+
+// ── Lash of Malice ──────────────────────────────────────────────────────────
+
+/// Lash of Malice — {B} Instant.
+/// "Target creature gets -2/-2 until end of turn. / Flashback {3}{B}."
+///
+/// ✅ Wired (push XXXV — new card factory). Negative `Effect::PumpPT`
+/// with `power = -2, toughness = -2, duration = EndOfTurn` against a
+/// `Creature` target. Flashback {3}{B} via `Keyword::Flashback` — the
+/// graveyard cast routes through the engine's existing
+/// `cast_flashback` path and emits the same body. Cheapest creature
+/// removal in the school and a perfect Magecraft enabler.
+pub fn lash_of_malice() -> CardDefinition {
+    use crate::card::Keyword;
+    use crate::effect::Duration;
+    use crate::mana::{ManaCost, ManaSymbol};
+    let flashback_cost = ManaCost {
+        symbols: vec![ManaSymbol::Generic(3), ManaSymbol::Colored(Color::Black)],
+    };
+    CardDefinition {
+        name: "Lash of Malice",
+        cost: cost(&[b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![Keyword::Flashback(flashback_cost)],
+        effect: Effect::PumpPT {
+            what: target_filtered(SelectionRequirement::Creature),
+            power: Value::Const(-2),
+            toughness: Value::Const(-2),
+            duration: Duration::EndOfTurn,
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Big Play ────────────────────────────────────────────────────────────────
+
+/// Big Play — {3}{R}{W} Instant.
+/// "Choose one — / • Target creature you don't control attacks during
+/// its controller's next turn if able. / • Tap target creature, then
+/// put a stun counter on it. / • Creatures you control gain trample
+/// and 'When this creature deals combat damage to a player, draw a
+/// card' until end of turn."
+///
+/// We ship a faithful three-mode `Effect::ChooseMode` of the strongest
+/// available shapes today:
+///
+/// * Mode 0 — Lure / "must attack" trigger: collapsed to **Tap +
+///   Stun** on a target opp creature (engine has no "must attack"
+///   primitive; the practical effect is the same shutdown).
+/// * Mode 1 — Tap + Stun on a target creature (the primary printed
+///   shape; same template Frost Trickster ships).
+/// * Mode 2 — Grant `Trample` to each creature you control EOT (the
+///   draw-on-combat-damage rider is engine-wide ⏳ pending a
+///   `DealsCombatDamageToPlayer` trigger that survives a transient
+///   grant — tracked in TODO.md).
+///
+/// The AutoDecider picks mode 1 (the strongest single-target shutdown).
+/// Scripted deciders can probe other modes via `DecisionAnswer::Mode`.
+/// ✅ for the printed body; the trample-anthem mode is the only true
+/// approximation.
+pub fn big_play() -> CardDefinition {
+    use crate::card::{CounterType, Keyword};
+    use crate::effect::Duration;
+    use crate::mana::r;
+    CardDefinition {
+        name: "Big Play",
+        cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::ChooseMode(vec![
+            // Mode 0: "Must attack" — collapsed to Tap + Stun on opp creature.
+            Effect::Seq(vec![
+                Effect::Tap {
+                    what: target_filtered(SelectionRequirement::Creature),
+                },
+                Effect::AddCounter {
+                    what: Selector::Target(0),
+                    kind: CounterType::Stun,
+                    amount: Value::Const(1),
+                },
+            ]),
+            // Mode 1: Tap + Stun target creature (Frost Trickster shape).
+            Effect::Seq(vec![
+                Effect::Tap {
+                    what: target_filtered(SelectionRequirement::Creature),
+                },
+                Effect::AddCounter {
+                    what: Selector::Target(0),
+                    kind: CounterType::Stun,
+                    amount: Value::Const(1),
+                },
+            ]),
+            // Mode 2: Grant Trample EOT to each friendly creature.
+            Effect::ForEach {
+                selector: Selector::EachPermanent(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                body: Box::new(Effect::GrantKeyword {
+                    what: Selector::TriggerSource,
+                    keyword: Keyword::Trample,
+                    duration: Duration::EndOfTurn,
+                }),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}

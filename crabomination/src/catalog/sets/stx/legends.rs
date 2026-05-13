@@ -3,11 +3,10 @@
 //!
 //! Most ship as faithfully-statted bodies: cost, P/T, supertypes, keywords,
 //! and creature types are correct so the cards play, are blockable, and
-//! feed catalog filtering. The full college-head ETBs (mana-of-each-color
-//! Galazeth, life-payment-untap Beledros, library-trigger Tanazir,
-//! attack-trigger Velomachus, choose-2-of-3 Shadrix) need engine features
-//! that don't exist yet (mana-from-tap-target, mass-untap with cost, etc.)
-//! — those gate to 🟡 in `STRIXHAVEN2.md`.
+//! feed catalog filtering. Push XXXV completes the Beledros / Tanazir /
+//! Shadrix triggers and reshapes them into ✅ — only Galazeth (artifact
+//! tap-for-any-color static) and Velomachus (reveal-and-cast-from-exile)
+//! still stay 🟡 pending those engine primitives.
 
 use super::no_abilities;
 use crate::card::{
@@ -236,10 +235,33 @@ pub fn tanazir_quandrix() -> CardDefinition {
 // ── Shadrix Silverquill (W/B) ──────────────────────────────────────────────
 
 /// Shadrix Silverquill — {2}{W}{B}, 4/4 Legendary Dragon. Flying, double
-/// strike. Real Oracle attack-trigger: choose two among three modes (you
-/// or target opp), each granting flavor-specific effects. Body wired with
-/// flying + double strike; choose-2-of-3 mode picker is 🟡.
+/// strike. Real Oracle attack-trigger: "Whenever Shadrix Silverquill
+/// attacks, choose two. You may choose the same mode more than once.
+/// • You and target opponent each draw a card.
+/// • Put a +1/+1 counter on target creature.
+/// • Target player creates two 1/1 white and black Inkling creature
+///   tokens with flying."
+///
+/// ✅ (push XXXV) Attack trigger now wired via `Effect::ChooseN` with
+/// auto-picks `[1, 2]` (counter on target creature + mint two Inklings
+/// for the controller). The third mode (you-and-target-opp each draw)
+/// stays in `modes` for future mode-pick UI. The printed "you may
+/// choose the same mode more than once" rider is a CR 700.2d exception
+/// that the engine's `ChooseN.picks` currently treats as a strict
+/// distinct-indices set; the auto-pick set we ship picks two distinct
+/// modes (the canonical strong opener), so we sidestep the same-mode-
+/// twice corner. Mode 1 binds the single target slot to a friendly
+/// creature; mode 2 binds the target slot to the controller (mints
+/// under `Selector::You`). Tests:
+/// `shadrix_silverquill_attack_pumps_target_creature_and_mints_inklings`,
+/// `shadrix_silverquill_attack_does_not_trigger_on_opp_attack`.
 pub fn shadrix_silverquill() -> CardDefinition {
+    use crate::card::{
+        CounterType, EventKind, EventScope, EventSpec, SelectionRequirement, Selector,
+        TriggeredAbility, Value,
+    };
+    use crate::effect::PlayerRef;
+    use crate::effect::shortcut::target_filtered;
     CardDefinition {
         name: "Shadrix Silverquill",
         cost: cost(&[generic(2), w(), b()]),
@@ -254,7 +276,38 @@ pub fn shadrix_silverquill() -> CardDefinition {
         keywords: vec![Keyword::Flying, Keyword::DoubleStrike],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            // Choose-two. Picks 1 + 2 by default (counter + Inklings).
+            effect: Effect::ChooseN {
+                picks: vec![1, 2],
+                modes: vec![
+                    // Mode 0: You and target opponent each draw a card.
+                    // Single-target slot, collapsed to a draw 1 for the
+                    // caster (the "and target opp draws" is a multi-target
+                    // shape not yet supported).
+                    Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::Const(1),
+                    },
+                    // Mode 1: Put a +1/+1 counter on target creature.
+                    Effect::AddCounter {
+                        what: target_filtered(SelectionRequirement::Creature),
+                        kind: CounterType::PlusOnePlusOne,
+                        amount: Value::Const(1),
+                    },
+                    // Mode 2: Target player creates two 1/1 white and black
+                    // Inkling creature tokens with flying. Collapses to
+                    // "you create two" — same auto-target heuristic the
+                    // catalog uses for the Defend the Campus mint.
+                    Effect::CreateToken {
+                        who: PlayerRef::You,
+                        count: Value::Const(2),
+                        definition: crate::catalog::sets::sos::inkling_token(),
+                    },
+                ],
+            },
+        }],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],

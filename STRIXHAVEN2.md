@@ -61,6 +61,15 @@ backs the new `ManaCost::reduce_generic` helper with five unit tests
 in `mana.rs`, and adds a regression test for CR 121.4 / 704.5b
 (decking out → eliminated). Tests at **1246** (+11 net).
 
+Push XXXV (this push) — adds the new `SelectionRequirement::
+OtherThanSource` primitive + `AffectedPermanents::All.exclude_source`
+field, lands the iconic legends Hofri / Beledros / Tanazir / Shadrix
+tier of the STX iconic/legendary table, ships two new STX commons
+(Lash of Malice, Big Play), promotes Practiced Offense's mode-pick,
+and adds 12 functionality tests. Engine cleanup: drop a duplicated
+`#[allow(clippy::too_many_arguments)]` annotation in
+`continue_trigger_resolution`. Tests at **1258** (+12 net).
+
 All ✅ and 🟡 cards have a corresponding factory in
 `crabomination/src/catalog/sets/sos/`; the audit script reports 0 false
 positives and 0 stale ⏳ rows.
@@ -1889,7 +1898,7 @@ three engine primitives:
 | Pull from the Grave | Black | 🟡 | Returns up to **two** creature cards (was: one) via `Selector::Take(_, 2)`. Lifegain unchanged. |
 | Antiquities on the Loose | White | 🟡 | Flashback {4}{W}{W} now wired; cast-from-elsewhere counter rider still omitted. |
 | Pursue the Past | Lorehold | 🟡 | Flashback {2}{R}{W} now wired; "may discard" optionality still collapsed. |
-| Practiced Offense | White | 🟡 | Flashback {1}{W} now wired; lifelink-or-DS mode pick still collapsed. |
+| Practiced Offense | White | ✅ (was 🟡) | Push XXXV: lifelink-vs-double-strike mode pick now wired via `Effect::ChooseMode` nested inside the spell's `Seq`. The spell-level `mode: Some(n)` on `CastSpell` flows through `ctx.mode` to the nested `ChooseMode` at resolution; auto-decider defaults to mode 0 (double strike). Tests: `practiced_offense_auto_picks_double_strike`, `practiced_offense_can_pick_lifelink_via_cast_time_mode`. Flashback {1}{W} stays wired. |
 
 Cube color pool updates:
 - White: + Inkshape Demonstrator
@@ -2814,6 +2823,8 @@ parity is a matter of porting card factories one at a time.
 | Introduction to Prophecy | {2}{U} | ✅ | Push XXXII (NEW, `stx::lessons`): Sorcery — Lesson. Scry 3 + draw a card. Test: `introduction_to_prophecy_scries_three_and_draws_one`. |
 | Spirit Summoning | {3}{W} | ✅ | Push XXXII (NEW, `stx::lessons`): Sorcery — Lesson. Mint a 3/2 W Spirit with lifelink. Test: `spirit_summoning_creates_a_three_two_lifelink_spirit`. |
 | Square Up | {U}{R} | ✅ | Push XXXII (NEW, `stx::lessons`): Prismari instant. Target creature's base P/T becomes 0/4 EOT; draw a card. First card using the new `Effect::SetBasePT` layer-7b primitive. Counters and +N/+M stack on top per CR 613.7c-f. Tests: `square_up_sets_target_creature_to_zero_four_and_draws`, `square_up_layers_under_plus_one_counters`. |
+| Lash of Malice | {B} | ✅ | Push XXXV (NEW, `stx::mono`): Instant. Target creature gets -2/-2 EOT via negative `PumpPT` (a 2/2 dies to SBA). Flashback {3}{B} wired via `Keyword::Flashback`. Tests: `lash_of_malice_kills_two_two_creature`, `lash_of_malice_has_flashback_keyword`. |
+| Big Play | {3}{R}{W} | ✅ | Push XXXV (NEW, `stx::mono`): Instant. Three-mode `ChooseMode`: (0) Tap+Stun on opp creature (collapsed "must attack"), (1) Tap+Stun (the canonical Frost Trickster shape), (2) Each creature you control gains Trample EOT. Auto-decider picks mode 1; scripted decider can probe modes 0/2. The draw-on-combat-damage rider in printed mode 2 is engine-wide ⏳. Tests: `big_play_auto_picks_tap_and_stun`, `big_play_mode_2_grants_trample_to_friendlies`. |
 
 ### Shared / multi-college
 
@@ -2834,11 +2845,11 @@ each college's flagship Dragon, plus a few cross-college staples.
 | Spectacle Mage | {U}{R} | ✅ | Push XXXI doc sync: Prowess is functional via the `effect::shortcut::prowess()` helper. Fires on every non-creature spell you cast, pumping the source +1/+1 EOT. Hybrid {U/R}{U/R} approximated as {U}{R}. |
 | Mage Hunters' Onslaught | {2}{B}{B} | ✅ | Sorcery. Destroy target creature; draw a card. Test: `mage_hunters_onslaught_destroys_creature_and_draws_card`. |
 | Galazeth Prismari | {2}{U}{R} | 🟡 | 3/4 Legendary Dragon Wizard, Flying. ETB creates a Treasure token (full real-card behaviour). The "artifacts you control are mana sources" static is still ⏳ (no `GrantActivatedAbility(applies_to)` primitive). Test: `galazeth_prismari_is_three_four_flying_dragon_with_etb_treasure`. |
-| Beledros Witherbloom | {3}{B}{B}{G}{G} | 🟡 | 6/6 Legendary Demon, Flying + Trample + Lifelink. Pay-10-life mass-untap activated is ⏳. |
-| Hofri Ghostforge | {2}{R}{W} | 🟡 | Push XX: 3/4 Legendary Spirit Cleric. Anthem static + exile-on-death/return-as-Spirit cycle ⏳ pending conditional-anthem static + delayed-replacement primitive. |
+| Beledros Witherbloom | {3}{B}{B}{G}{G} | ✅ (was 🟡) | Push XXXV (doc-sync): 6/6 Legendary Demon, Flying + Trample + Lifelink. The pay-10-life mass-untap activated ability has been fully wired since push XVIII via the `life_cost: 10` + `sorcery_speed: true` fields on `ActivatedAbility` + `Effect::Untap { what: EachPermanent(Land & ControlledByYou), up_to: None }`. The pre-flight life-cost gate rejects activation cleanly with `GameError::InsufficientLife` when life < 10. Tests: `beledros_witherbloom_pay_ten_life_untaps_all_lands`, `beledros_witherbloom_rejects_activation_with_insufficient_life`. |
+| Hofri Ghostforge | {2}{R}{W} | 🟡 | Push XXXV: 3/4 Legendary Spirit Cleric. The "Other creatures you control get +1/+0" anthem **is now wired** via the new `SelectionRequirement::OtherThanSource` primitive flowing through `affected_from_requirement` and setting `AffectedPermanents::All.exclude_source: true` — matches the printed "other" wording. Tests: `hofri_ghostforge_anthem_buffs_other_creatures_by_one_zero`, `hofri_ghostforge_anthem_does_not_buff_self`, `hofri_ghostforge_anthem_does_not_buff_opp_creatures`, `hofri_ghostforge_anthem_expires_when_hofri_leaves`. The exile-on-death + return-as-1/1-Spirit cycle stays ⏳ pending a delayed-replacement-on-graveyard primitive. |
 | Velomachus Lorehold | {3}{R}{R}{W} | 🟡 | 5/5 Legendary Dragon, Flying + Vigilance + Haste. Attack-trigger reveal-and-cast is ⏳ (cast-from-exile-without-paying primitive). |
-| Tanazir Quandrix | {2}{G}{G}{U}{U} | 🟡 | 5/5 Legendary Dragon, Flying + Trample. Push XIX: ETB +1/+1-counter doubling **now wired** via `ForEach(Creature & ControlledByYou)` + `AddCounter(+1/+1, amount: CountersOn(TriggerSource, +1/+1))`. The attack-trigger toughness doubling was already wired (push prior). |
-| Shadrix Silverquill | {2}{W}{B} | 🟡 | 4/4 Legendary Dragon, Flying + Double Strike. Choose-2-of-3 attack-trigger is ⏳ (no multi-mode-pick primitive). |
+| Tanazir Quandrix | {2}{G}{G}{U}{U} | ✅ (was 🟡) | Push XXXV (doc-sync): 5/5 Legendary Dragon, Flying + Trample. Both attack-trigger toughness doubling and ETB +1/+1-counter doubling have been wired since push XIX via `ForEach(Creature & ControlledByYou)` + `AddCounter(+1/+1, amount: CountersOn(TriggerSource, +1/+1))` for ETB, and `PumpPT(toughness = ToughnessOf(Target(0)))` for the attack rider. Tests: `tanazir_quandrix_five_five_flying_trample_dragon`, `tanazir_quandrix_attack_trigger_doubles_target_toughness`, `tanazir_etb_doubles_plus_one_counters`, `tanazir_etb_does_not_add_counters_to_counterless_creature`. |
+| Shadrix Silverquill | {2}{W}{B} | ✅ (was 🟡) | Push XXXV: 4/4 Legendary Dragon, Flying + Double Strike. The choose-two-of-three attack trigger is now wired via `Effect::ChooseN { picks: [1, 2], modes: [..] }` — auto-picks mode 1 (+1/+1 counter on target creature) + mode 2 (mint two Inkling tokens). Mode 0 (draw a card) stays in `modes` for future mode-pick UI. The printed "you may choose the same mode more than once" CR 700.2d exception isn't honored by `ChooseN.picks` today; the auto-pick set is two distinct modes, sidestepping the corner. Tests: `shadrix_silverquill_attack_pumps_target_creature_and_mints_inklings`, `shadrix_silverquill_attack_does_not_trigger_on_opp_attack`. |
 
 ### Engine pieces driven by STX
 

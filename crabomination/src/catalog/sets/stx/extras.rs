@@ -928,16 +928,21 @@ pub fn quandrix_cultivator() -> CardDefinition {
 /// creature you control dies, exile it. At the beginning of the next
 /// end step, return it to the battlefield as a 1/1 Spirit with flying."
 ///
-/// 🟡 Body + keywords (legendary, P/T, types) ship full. The two
-/// printed riders are not wired:
-/// * "Other creatures you control get +1/+0" is a static anthem layer
-///   we don't model (the engine's `StaticAbility` palette doesn't yet
-///   include conditional anthems gated by "this is on the
-///   battlefield").
-/// * "Exile-on-death + return at end step as a Spirit" is a complex
-///   delayed-trigger graveyard-cycle replacement we don't have a
-///   primitive for yet. Both tracked in TODO.md.
+/// 🟡 Body + keywords (legendary, P/T, types) ship full. The "Other
+/// creatures you control get +1/+0" anthem is **now wired** (push
+/// XXXV) via the new `SelectionRequirement::OtherThanSource` primitive
+/// flowing through `affected_from_requirement`, which flips the
+/// resulting `AffectedPermanents::All.exclude_source` flag so the
+/// anthem layer skips Hofri itself. Matches the printed "**other**
+/// creatures" wording exactly.
+///
+/// The "exile-on-death + return at end step as a 1/1 Spirit" cycle
+/// stays ⏳ pending a delayed-replacement-on-graveyard primitive
+/// (tracked in TODO.md). Hofri retains its 🟡 status until that
+/// closes; the anthem half is real-card-faithful.
 pub fn hofri_ghostforge() -> CardDefinition {
+    use crate::card::{SelectionRequirement, StaticAbility};
+    use crate::effect::{Selector, StaticEffect};
     CardDefinition {
         name: "Hofri Ghostforge",
         cost: cost(&[generic(2), r(), w()]),
@@ -953,7 +958,18 @@ pub fn hofri_ghostforge() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
+        static_abilities: vec![StaticAbility {
+            description: "Other creatures you control get +1/+0.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                power: 1,
+                toughness: 0,
+            },
+        }],
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,

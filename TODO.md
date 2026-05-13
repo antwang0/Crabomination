@@ -11,6 +11,20 @@ Periodic spot-check of the rules document
 (`crabomination/MagicCompRules 20260116.txt`). Each rule below has a
 status tag (✅ wired, 🟡 partial, ⏳ todo) plus a short note.
 
+- ✅ **CR 702.34a — Flashback exile-on-resolve** (push XXXV audit):
+  "Flashback [cost]" means "You may cast this card from your graveyard
+  if the resulting spell is an instant or sorcery spell by paying
+  [cost] rather than paying its mana cost" and "If the flashback cost
+  was paid, exile this card instead of putting it anywhere else any
+  time it would leave the stack." The engine's `cast_flashback` (in
+  `game/actions.rs`) marks the cast card with `kicked = true` to flag
+  the path; the resolution-time `move_card_to` (in `game/mod.rs:1479`)
+  routes flashback-cast cards into exile when leaving the stack. The
+  alternative-cost framing in 601.2b / 601.2f–h is honored — flashback
+  payments respect cost reductions (CR 601.2f), pre-flight life cost
+  gates, etc. Exercised by the existing SOS Flashback corpus
+  (Daydream, Tome Blast, Duel Tactics) and the new Lash of Malice's
+  Flashback {3}{B}.
 - ✅ **CR 601.2f — Cost reductions can't take the mana cost below {0},
   and can't reduce colored or X pips** (push XXXIV audit): "The total
   cost is the mana cost or alternative cost (as determined in rule
@@ -348,6 +362,71 @@ status tag (✅ wired, 🟡 partial, ⏳ todo) plus a short note.
   the counters land on resolution).
 
 ## Recent additions
+
+- ✅ **Push XXXV (2026-05-13, `claude/modern_decks` branch)**: New
+  `SelectionRequirement::OtherThanSource` primitive +
+  `AffectedPermanents::All.exclude_source` field that together unlock
+  printed "Other [X] you control" anthem wording. Plus a wave of STX
+  legends / iconic promotions and two brand-new STX commons. Tests at
+  **1258** (+12 net).
+  - **Engine: `SelectionRequirement::OtherThanSource`** — predicate
+    filter for "another [X]". When this appears inside an `applies_to`
+    selector, `affected_from_requirement` flips the resulting
+    `AffectedPermanents` variant's `exclude_source` flag, so the layer
+    application skips the source permanent. Works for both `All` and
+    `AllWithCreatureType`. For target-validation contexts the filter
+    accepts any permanent (the source-exclusion gate would need a
+    source-id-aware eval path; today no cataloged card uses
+    OtherThanSource in targeting).
+  - **Engine: `AffectedPermanents::All.exclude_source`** — new field
+    with `#[serde(default)]` for snapshot back-compat. The layer-time
+    `affects()` check honors it (skips when source == card.id). The
+    `affected_from_requirement` walker sets `exclude_source: true`
+    when it sees `OtherThanSource` in the And-tree.
+  - **Hofri Ghostforge** (STX R/W Legendary) 🟡: "Other creatures you
+    control get +1/+0" anthem now wired via the new primitive. The
+    exile-on-death + return-as-1/1-Spirit cycle stays ⏳ pending a
+    delayed-replacement-on-graveyard primitive. 4 new tests.
+  - **Shadrix Silverquill** (STX W/B Legendary) 🟡 → ✅: attack-trigger
+    choose-two wired via `Effect::ChooseN { picks: [1, 2], modes:
+    [draw, +1/+1 counter, mint 2 Inklings] }`. The printed CR 700.2d
+    "you may choose the same mode more than once" exception is
+    sidestepped by picking two distinct modes. 2 new tests.
+  - **Beledros Witherbloom** (STX B/G Legendary) 🟡 → ✅ (doc-sync):
+    activated ability already wired since push XVIII; existing tests
+    `beledros_witherbloom_pay_ten_life_untaps_all_lands` and
+    `beledros_witherbloom_rejects_activation_with_insufficient_life`
+    cover the path.
+  - **Tanazir Quandrix** (STX G/U Legendary) 🟡 → ✅ (doc-sync): both
+    ETB counter-doubling and attack-trigger toughness-doubling wired
+    since push XIX; existing tests
+    `tanazir_quandrix_attack_trigger_doubles_target_toughness`,
+    `tanazir_etb_doubles_plus_one_counters`,
+    `tanazir_etb_does_not_add_counters_to_counterless_creature`
+    cover the path.
+  - **Practiced Offense** (SOS White) 🟡 → ✅: nested `Effect::
+    ChooseMode([DoubleStrike, Lifelink])` mode pick now wired. The
+    spell-level `mode: Some(n)` on `CastSpell` flows through
+    `ctx.mode` to the nested ChooseMode at resolution. 2 new tests.
+  - **Lash of Malice** (STX B common, NEW): {B} Instant — target
+    creature gets -2/-2 EOT via negative `Effect::PumpPT`. Flashback
+    {3}{B} wired via `Keyword::Flashback`. 2 new tests.
+  - **Big Play** (STX R/W common, NEW): {3}{R}{W} Instant — three-mode
+    `ChooseMode` (Tap+Stun ×2 modes + grant Trample EOT to friendlies).
+    Auto-decider picks mode 1. The draw-on-combat-damage rider in
+    printed mode 2 is engine-wide ⏳. 2 new tests.
+  - **Engine cleanup**: dropped a duplicated
+    `#[allow(clippy::too_many_arguments)]` attribute in
+    `continue_trigger_resolution` (`crabomination/src/game/mod.rs`).
+  - **CR audit**:
+    - ✅ **CR 702.34a — Flashback exile-on-resolve**: re-confirmed
+      the engine's `cast_flashback` path (in `game/actions.rs:765`)
+      marks the cast card with `kicked = true` and the resolution
+      path in `move_card_to` (in `game/mod.rs:1479`) routes
+      flashback-cast cards into exile when leaving the stack. Tests
+      via the SOS Flashback corpus (Daydream, Tome Blast, Duel
+      Tactics, Practiced Offense's Flashback {1}{W} re-cast, Lash
+      of Malice's Flashback {3}{B} via the same path).
 
 - ✅ **Push XXXIII (2026-05-13, `claude/modern_decks` branch)**: CR
   700.2b modal triggered-ability mode pick at push-time + `Value::

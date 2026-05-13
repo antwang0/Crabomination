@@ -1488,7 +1488,6 @@ impl GameState {
 
     /// Resolve a triggered ability's effect tree.
     #[allow(clippy::too_many_arguments)]
-    #[allow(clippy::too_many_arguments)]
     pub(crate) fn continue_trigger_resolution(
         &mut self,
         source: CardId,
@@ -1792,6 +1791,12 @@ fn affected_from_requirement(
     let mut types: Vec<CardType> = vec![];
     let mut creature_type: Option<crate::card::CreatureType> = None;
     let mut counter_filter: Option<crate::card::CounterType> = None;
+    // CR-driven "other" exclusion (push XXXV). `SelectionRequirement::
+    // OtherThanSource` flips this to true; the resulting AffectedPermanents
+    // variant carries `exclude_source: true` so the layer-time `affects()`
+    // check skips the source permanent itself — matching printed "**other**
+    // [type] you control" wording.
+    let mut other_than_source = false;
     let mut walk = vec![req];
     while let Some(r) = walk.pop() {
         match r {
@@ -1814,6 +1819,7 @@ fn affected_from_requirement(
             R::HasCardType(t) => types.push(t.clone()),
             R::HasCreatureType(ct) => creature_type = Some(*ct),
             R::WithCounter(ct) => counter_filter = Some(*ct),
+            R::OtherThanSource => other_than_source = true,
             R::Any | R::Permanent => {}
             _ => return None,
         }
@@ -1830,12 +1836,13 @@ fn affected_from_requirement(
         return Some(AffectedPermanents::AllWithCreatureType {
             controller: ctrl.flatten(),
             creature_type: ct,
-            exclude_source: false,
+            exclude_source: other_than_source,
         });
     }
     Some(AffectedPermanents::All {
         controller: ctrl.unwrap_or(None),
         card_types: types,
+        exclude_source: other_than_source,
     })
 }
 

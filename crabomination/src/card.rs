@@ -293,6 +293,17 @@ pub enum SelectionRequirement {
     /// Phyrexian pips count their colored half. Colorless cards fail
     /// this check (use `Colorless` instead).
     Monocolored,
+    /// True when the candidate is **not** the source permanent that owns
+    /// the surrounding ability. Used by printed "Other [type]" wording
+    /// — Hofri Ghostforge's "Other creatures you control get +1/+0",
+    /// "another creature" targeting filters for triggers, and any
+    /// future "another permanent" filter. When this predicate is part
+    /// of a static `applies_to` selector, `affected_from_requirement`
+    /// detects it and sets `exclude_source: true` on the resulting
+    /// `AffectedPermanents` variant; for selection-requirement-style
+    /// targeting filters it routes through `evaluate_requirement_*`
+    /// which read the source id from the resolution context.
+    OtherThanSource,
     And(Box<SelectionRequirement>, Box<SelectionRequirement>),
     Or(Box<SelectionRequirement>, Box<SelectionRequirement>),
     Not(Box<SelectionRequirement>),
