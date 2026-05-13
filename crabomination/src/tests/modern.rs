@@ -1,29 +1,13 @@
 //! Functionality tests for the Modern-supplement card pack
 //! (`catalog::sets::decks::modern`). Each card gets at least one test
-//! exercising its primary play pattern; helpers from `tests/game.rs`
-//! (`two_player_game`, `drain_stack`) are reused via `super::*` once this
-//! file is registered alongside the existing test modules.
+//! exercising its primary play pattern.
 
 use crate::card::CardType;
 use crate::catalog;
 use crate::decision::{DecisionAnswer, ScriptedDecider};
 use crate::game::*;
+use crate::game::{drain_stack, two_player_game};
 use crate::mana::Color;
-use crate::player::Player;
-
-fn two_player_game() -> GameState {
-    let players = vec![Player::new(0, "Alice"), Player::new(1, "Bob")];
-    let mut g = GameState::new(players);
-    g.step = TurnStep::PreCombatMain;
-    g
-}
-
-fn drain_stack(g: &mut GameState) {
-    while !g.stack.is_empty() {
-        g.perform_action(GameAction::PassPriority).unwrap();
-        g.perform_action(GameAction::PassPriority).unwrap();
-    }
-}
 
 // ── Cantrips ─────────────────────────────────────────────────────────────────
 

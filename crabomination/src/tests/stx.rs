@@ -5,22 +5,8 @@
 use crate::card::{CounterType, Keyword};
 use crate::catalog;
 use crate::game::*;
+use crate::game::{drain_stack, two_player_game};
 use crate::mana::Color;
-use crate::player::Player;
-
-fn two_player_game() -> GameState {
-    let players = vec![Player::new(0, "Alice"), Player::new(1, "Bob")];
-    let mut g = GameState::new(players);
-    g.step = TurnStep::PreCombatMain;
-    g
-}
-
-fn drain_stack(g: &mut GameState) {
-    while !g.stack.is_empty() {
-        g.perform_action(GameAction::PassPriority).unwrap();
-        g.perform_action(GameAction::PassPriority).unwrap();
-    }
-}
 
 // ── Mono-color additions ────────────────────────────────────────────────────
 
@@ -145,8 +131,6 @@ fn frost_trickster_taps_and_stuns_target_on_etb() {
 
 #[test]
 fn body_of_research_creates_fractal_with_counters_from_library() {
-    // Push XVI: Body of Research now uses `Value::LibrarySizeOf(You)` to
-    // match the printed "for each card in your library" Oracle.
     let mut g = two_player_game();
     // Seed P0's library with 5 cards.
     for _ in 0..5 {
@@ -846,13 +830,6 @@ fn shadrix_silverquill_four_four_flying_double_strike() {
     assert!(s.keywords.contains(&Keyword::Flying));
     assert!(s.keywords.contains(&Keyword::DoubleStrike));
 }
-
-// Suppress unused-import lint when CounterType isn't used in this batch.
-#[allow(dead_code)]
-fn _keepalive(_: CounterType) {}
-
-
-// ── Push XVIII: Lorehold full-wirings, Beledros, Tanazir, Sparring Regimen ──
 
 #[test]
 fn lorehold_apprentice_magecraft_drains_one_to_opponent_and_gains_life() {
@@ -1698,10 +1675,7 @@ fn daemogoth_titan_attacks_sacrifices_non_source_creature_first() {
 
 #[test]
 fn daemogoth_titan_blocks_sacrifices_another_creature() {
-    // Push XXVI: the new `EventKind::Blocks` event fires off
-    // BlockerDeclared (CR 509.1i). Wire up an attacker on P0 vs the
-    // Titan defender on P1, then declare the Titan as a blocker → its
-    // block trigger fires → sac another creature.
+    // `EventKind::Blocks` fires off BlockerDeclared (CR 509.1i).
     use crate::game::Attack;
     let mut g = two_player_game();
     // Attacker on P0 (active player).
@@ -1761,10 +1735,8 @@ fn daemogoth_woe_eater_etb_sacrifices_another_creature() {
 
 #[test]
 fn daemogoth_woe_eater_attack_optional_sac_can_be_declined() {
-    // Push XXVIII: the attack trigger's "you may sacrifice another
-    // creature" is now wired via `Effect::MayDo`. AutoDecider defaults
-    // to "no", so the attack trigger should *not* sac fodder and *not*
-    // put a counter on the Woe-Eater.
+    // AutoDecider defaults to "no" on the `MayDo` sac, so neither the
+    // sacrifice nor the +1/+1 counter should fire.
     use crate::card::CounterType;
     let mut g = two_player_game();
     let fodder1 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
@@ -1798,8 +1770,8 @@ fn daemogoth_woe_eater_attack_optional_sac_can_be_declined() {
 
 #[test]
 fn daemogoth_woe_eater_attack_optional_sac_can_be_accepted() {
-    // Push XXVIII: scripted decider says yes to the MayDo prompt; the
-    // sacrifice fires and the Woe-Eater gains a +1/+1 counter.
+    // Scripted decider says yes to the MayDo prompt; the sacrifice
+    // fires and the Woe-Eater gains a +1/+1 counter.
     use crate::card::CounterType;
     use crate::decision::{DecisionAnswer, ScriptedDecider};
     let mut g = two_player_game();
@@ -1845,8 +1817,6 @@ fn honor_troll_has_trample_and_is_one_four() {
 
 #[test]
 fn honor_troll_base_state_no_lifegain_is_one_four() {
-    // Push XXVIII: without life gained this turn, Honor Troll is a
-    // vanilla 1/4 trampler — no +2/+0, no Lifelink.
     let mut g = two_player_game();
     let id = g.add_card_to_battlefield(0, catalog::honor_troll());
     // No life gained — should be base 1/4 with only Trample.
@@ -1862,8 +1832,7 @@ fn honor_troll_base_state_no_lifegain_is_one_four() {
 
 #[test]
 fn honor_troll_with_lifegain_is_three_four_lifelink() {
-    // Push XXVIII: gaining life this turn turns Honor Troll on:
-    // +2/+0 + Lifelink. The gate is `life_gained_this_turn > 0`.
+    // Gating on `life_gained_this_turn > 0`: +2/+0 + Lifelink.
     let mut g = two_player_game();
     let id = g.add_card_to_battlefield(0, catalog::honor_troll());
     // Manually bump the tally — a real lifegain effect would set this.
@@ -1950,7 +1919,6 @@ fn tempted_by_the_oriq_steals_and_grants_haste() {
     assert!(b.has_keyword(&Keyword::Haste), "Bear should have haste");
 }
 
-// ── Push XXI: 6 new STX cards (extras.rs) ───────────────────────────────────
 
 #[test]
 fn confront_the_past_bounces_planeswalker_via_mode_1() {
@@ -2108,7 +2076,6 @@ fn hall_of_oracles_taps_for_colorless_and_buffs_wizard() {
         "Wizard got a +1/+1 counter");
 }
 
-// ── Push XXIII: new STX cards ───────────────────────────────────────────────
 
 #[test]
 fn star_pupil_enters_with_a_plus_one_counter() {
@@ -2529,7 +2496,6 @@ fn quintorius_anthem_does_not_pump_opponent_spirits() {
     assert_eq!(opp_card.toughness, 2);
 }
 
-// ── Push XXIV (claude/modern_decks): 12 new STX cards ────────────────────────
 
 #[test]
 fn galvanic_iteration_copies_target_instant() {
@@ -2868,7 +2834,6 @@ fn soothsayer_adept_activates_surveil_one() {
     );
 }
 
-// ── Push XXV: Quick Study ───────────────────────────────────────────────────
 
 #[test]
 fn quick_study_draws_two_cards_for_target_player() {
@@ -2892,15 +2857,10 @@ fn quick_study_draws_two_cards_for_target_player() {
     assert_eq!(g.players[0].library.len(), lib_before - 2);
 }
 
-// ── Push XXVII: STX Commands + utility cards ────────────────────────────────
 
-// Push XXXII: the Strixhaven Command cycle now uses the new
-// `Effect::ChooseN { picks, modes }` primitive (CR 700.2d) — the
-// auto-decider picks the per-card `picks` indices, so each
-// Command always runs *both* of its chosen modes. The previous
-// single-mode tests are rewritten to characterize the new
-// auto-pick behavior (which mirrors the printed "choose two —"
-// rules).
+// The Strixhaven Command cycle uses `Effect::ChooseN { picks, modes }`
+// (CR 700.2d) — the auto-decider picks the per-card `picks` indices,
+// so each Command always runs both of its chosen modes.
 #[test]
 fn witherbloom_command_auto_picks_mill_and_drain() {
     let mut g = two_player_game();
@@ -3178,8 +3138,8 @@ fn containment_breach_destroys_enchantment() {
         "Enchantment should be in P1's graveyard");
 }
 
-// ── Push XXXI cards: Silverquill Pledgemage, Archmage Emeritus,
-//    Promising Duskmage, Tenured Inkcaster, Symmathematics ────────────────
+// ── Silverquill Pledgemage, Archmage Emeritus, Promising Duskmage,
+//    Tenured Inkcaster, Symmathematics ──────────────────────────────────
 
 #[test]
 fn silverquill_pledgemage_is_a_two_two_inkling_flier() {
@@ -3485,7 +3445,6 @@ fn symmathematics_does_not_double_on_creature_cast() {
         "Casting a creature should NOT double counters (magecraft is I/S only)");
 }
 
-// ── Push XXXII: new Lessons + doc-only promotions ──────────────────────────
 
 /// Environmental Sciences ({1}{G}) gains 4 life and tutors a basic land to
 /// hand. AutoDecider declines `SearchLibrary` by default so we feed a
@@ -3814,7 +3773,7 @@ fn baleful_mastery_exiles_target_and_opp_draws() {
         "Opp draws a card on resolution");
 }
 
-// ── Push XXXIII tests: CR 700.2b modal triggers + new card promotions ───────
+// ── CR 700.2b modal triggers ────────────────────────────────────────────────
 
 /// Prismari Apprentice's Magecraft trigger is modal (Scry 1 / +1/+0 EOT).
 /// Per CR 700.2b, the controller picks the mode as part of putting the

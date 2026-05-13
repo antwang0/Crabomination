@@ -16,15 +16,8 @@ use crate::mana::{b, cost, generic, w};
 /// library for a basic land card, put it onto the battlefield tapped, then
 /// shuffle."
 ///
-/// Push XV: now wired faithfully. The destroy half resolves first;
-/// then the target's controller (looked up via
-/// `PlayerRef::ControllerOf(Target(0))`, which falls back through the
-/// graveyard via `find_card_owner` after the destroy moved the
-/// permanent off the battlefield) gets a `Search { IsBasicLand →
-/// Battlefield(tapped) }`. The "may" optionality is collapsed to
-/// always-search — most opponents will accept the free basic, and
-/// `Effect::Search`'s decider already lets the searcher decline by
-/// returning `Search(None)`.
+/// The "may" optionality collapses to always-search — `Effect::Search`
+/// already lets the searcher decline by returning `Search(None)`.
 pub fn erode() -> CardDefinition {
     use crate::effect::ZoneDest;
     CardDefinition {
@@ -83,13 +76,10 @@ pub fn harsh_annotation() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![],
-        // Push XVII: the Inkling token now goes to the *target
-        // creature's owner* (typically the opponent whose creature
-        // we just destroyed). Uses `PlayerRef::OwnerOf(Target(0))`
-        // — `place_card_in_dest` resolves this against the cast-time
-        // ctx where Target(0) still resolves correctly, walking
-        // graveyards if the destroy step has already moved the
-        // card. Closes the doc note about caster-side token approx.
+        // Inkling token goes to the target creature's owner via
+        // `PlayerRef::OwnerOf(Target(0))`; `place_card_in_dest`
+        // walks graveyards if the destroy step has already moved the
+        // card.
         effect: Effect::Seq(vec![
             Effect::Destroy {
                 what: target_filtered(SelectionRequirement::Creature),
@@ -649,13 +639,6 @@ pub fn heated_argument() -> CardDefinition {
     use crate::card::Zone;
     use crate::effect::ZoneDest;
     use crate::mana::r;
-    // Push XV: the printed "you may exile a card from your graveyard.
-    // If you do, also deal 2 to that creature's controller" is now
-    // wired faithfully via `Effect::MayDo` — the controller picks
-    // yes/no, and the gy-exile + extra damage either both fire or
-    // both skip. The gy-exile itself uses `Selector::CardsInZone`
-    // with a `Take(1)` wrapper to pick exactly one card (matching
-    // the printed "a card", not "every card").
     CardDefinition {
         name: "Heated Argument",
         cost: cost(&[generic(4), r()]),
@@ -818,13 +801,6 @@ pub fn glorious_decay() -> CardDefinition {
 /// "Infusion — When you cast this spell, copy it if you gained life
 /// this turn. You may choose new targets for the copy. / Target
 /// creature gets +2/+4 until end of turn."
-///
-/// Push XVII: Infusion copy now wired via the new `Effect::CopySpell`
-/// primitive. The trigger fires on cast (via the standard `SpellCast/
-/// SelfSource` event) and uses `Predicate::LifeGainedThisTurnAtLeast(1)`
-/// as the Infusion gate. When gained-life-this-turn is true, the
-/// just-cast spell is copied via `Selector::This` (the cast spell
-/// itself). New targets for the copy are auto-picked.
 pub fn lumarets_favor() -> CardDefinition {
     use crate::card::{EventKind, EventScope, EventSpec, Predicate, TriggeredAbility};
     use crate::effect::PlayerRef;
@@ -1306,12 +1282,8 @@ pub fn fractal_anomaly() -> CardDefinition {
 /// • Destroy target enchantment.
 /// • Target creature has base power and toughness 5/5 until end of turn.
 ///
-/// ✅ Push XXXIII: mode 2 promoted from the `PumpPT +3/+3` approximation
-/// to a proper layer-7b base P/T rewrite via the `Effect::SetBasePT`
-/// primitive (added in push XXXII for Square Up). Counters and +N/+M
-/// modifications still stack on top per CR 613.7c-f, so a 2/2 with a
-/// +1/+1 counter targeted by mode 2 becomes a 6/6 (5/5 base + 1/1
-/// counter), matching the printed "becomes 5/5" Oracle exactly.
+/// Mode 2 is a layer-7b base P/T rewrite via `Effect::SetBasePT`.
+/// Counters and +N/+M still stack on top per CR 613.7c-f.
 pub fn quandrix_charm() -> CardDefinition {
     use crate::mana::{ManaCost, generic as gen_pip, g, u};
     let counter_cost = ManaCost {
@@ -1848,8 +1820,6 @@ pub fn divergent_equation() -> CardDefinition {
         opening_hand: None,
     }
 }
-
-// ── Push IX additions: Surveil-anchored cards + Prismari Charm ─────────────
 
 /// Unsubtle Mockery — {2}{R} Instant.
 /// "Unsubtle Mockery deals 4 damage to target creature. Surveil 1."

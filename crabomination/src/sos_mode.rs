@@ -358,9 +358,7 @@ fn mono_color_pool(c: Color) -> Vec<CardFactory> {
             soaring_stoneglider,
             stand_up_for_yourself,
             stirring_hopesinger,
-            // Push IX additions:
             stone_docent,
-            // Push X additions:
             inkshape_demonstrator,
         ],
         // Blue (8) — added Mana Sculpt (counter + mana refund),
@@ -376,7 +374,6 @@ fn mono_color_pool(c: Color) -> Vec<CardFactory> {
             homesickness,
             mana_sculpt,
             procrastinate,
-            // Push IX additions:
             deluge_virtuoso,
             flow_state,
             muses_encouragement,
@@ -401,7 +398,6 @@ fn mono_color_pool(c: Color) -> Vec<CardFactory> {
             tragedy_feaster,
             wander_off,
             withering_curse,
-            // Push IX additions:
             moseo_veins_new_dean,
             ral_zarek_guest_lecturer,
         ],
@@ -424,7 +420,6 @@ fn mono_color_pool(c: Color) -> Vec<CardFactory> {
             tablet_of_discovery,
             tome_blast,
             zealous_lorecaster,
-            // Push IX additions:
             unsubtle_mockery,
         ],
         // Green — added Burrog Barrage (conditional pump + power damage),
@@ -453,11 +448,9 @@ fn mono_color_pool(c: Color) -> Vec<CardFactory> {
             wild_hypothesis,
             wildgrowth_archaic,
             zimones_experiment,
-            // Push X additions:
             studious_first_year,
             thornfist_striker,
             lumarets_favor,
-            // Push XV additions:
             follow_the_lumarets,
         ],
     }

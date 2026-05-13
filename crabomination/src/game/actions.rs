@@ -39,7 +39,7 @@ fn collect_self_cast_triggers(
 fn converge_count(before: &crate::mana::ManaPool, after: &crate::mana::ManaPool) -> u32 {
     use crate::mana::Color;
     let mut count = 0u32;
-    for color in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] {
+    for color in Color::ALL {
         if before.amount(color) > after.amount(color) {
             count += 1;
         }

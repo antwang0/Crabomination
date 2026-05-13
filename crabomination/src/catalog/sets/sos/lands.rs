@@ -145,12 +145,9 @@ pub fn great_hall_of_the_biblioplex() -> CardDefinition {
     use super::super::tap_add_colorless;
     use crate::card::Supertype;
     use crate::effect::{ActivatedAbility, ManaPayload};
-    // Push XV: now uses the new `ActivatedAbility.life_cost` field for
-    // the printed "Pay 1 life" cost. The effect is a pure mana ability
-    // (`AddMana` only), so it qualifies as a true mana ability and
-    // resolves immediately without going on the stack — matching MTG's
-    // mana-ability rules. The life is paid up front (pre-flight gate
-    // rejects activation if controller would drop to 0 life).
+    // Pure mana ability (`AddMana` only) → resolves immediately without
+    // going on the stack. Life is paid up front; pre-flight rejects
+    // activation if controller would drop to 0 life.
     let pay_life_for_any = ActivatedAbility {
         tap_cost: true,
         mana_cost: ManaCost::default(),

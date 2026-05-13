@@ -1497,12 +1497,6 @@ pub fn old_growth_educator() -> CardDefinition {
 /// Teacher's Pest — {B}{G}, 1/1 Skeleton Pest. Menace.
 /// "Whenever this creature attacks, you gain 1 life. / {B}{G}: Return
 /// this card from your graveyard to the battlefield tapped."
-///
-/// Push XVII: graveyard-recursion ability now wired via the new
-/// `ActivatedAbility.from_graveyard: bool` field. The
-/// `activate_ability` engine path walks the graveyard for `from_graveyard`
-/// abilities. Cost `{B}{G}` + effect `Move(Self → Battlefield(You,
-/// tapped))`. Attacks-gain-1 trigger unchanged.
 pub fn teachers_pest() -> CardDefinition {
     use crate::effect::ZoneDest;
     use crate::mana::g;
@@ -1611,14 +1605,9 @@ pub fn arnyn_deathbloom_botanist() -> CardDefinition {
 /// untapped creatures you control. If you do, copy that spell. You may
 /// choose new targets for the copy."
 ///
-/// Push XVII: cast-IS copy rider wired via the new `Effect::CopySpell`
-/// primitive. The "may tap three" optional cost is approximated as
-/// `Effect::MayDo` — the controller is asked yes/no; on yes, the
-/// engine taps three untapped creatures and copies the spell. On no,
-/// the trigger no-ops. The "choose new targets" rider re-uses the
-/// auto-target picker at copy resolution time. This is a strict
-/// approximation: the cost-and-effect ordering ("if you do, copy" vs
-/// "you may copy if you do") is collapsed into one decision shape.
+/// The "may tap three" optional cost is approximated as `Effect::MayDo`:
+/// the cost-and-effect ordering ("if you do, copy" vs "you may copy if
+/// you do") is collapsed into one decision shape.
 pub fn aziza_mage_tower_captain() -> CardDefinition {
     use crate::card::Supertype;
     use crate::effect::shortcut::magecraft;
@@ -2051,12 +2040,6 @@ pub fn fractal_mascot() -> CardDefinition {
 /// draw+discard pair. Both ETB and Attacks triggers fire the loot.
 pub fn stadium_tidalmage() -> CardDefinition {
     use crate::mana::{r, u};
-    // Push XV: the printed "you may draw a card. If you do, discard a card"
-    // is now wired via the new `Effect::MayDo` primitive — the ETB and
-    // attack triggers ask the controller a yes/no via
-    // `Decision::OptionalTrigger`. Tests can flip the answer to `true`
-    // via `ScriptedDecider`; the bot/auto-decider declines (matching
-    // MTG's "you may defaults to no").
     let loot_body = Effect::Seq(vec![
         Effect::Draw {
             who: Selector::You,
@@ -2685,10 +2668,6 @@ pub fn expressive_firedancer() -> CardDefinition {
 /// "{1}{B}, Exile this card from your graveyard: Create two 1/1 white
 /// and black Inkling creature tokens with flying."
 ///
-/// Push XVII: graveyard-exile activated ability wired via the new
-/// `from_graveyard: bool` + `exile_self_cost: bool` fields. Mana cost
-/// `{1}{B}` + exile-self-as-cost + effect creates 2 Inkling tokens
-/// (via the shared `inkling_token()` helper).
 pub fn eternal_student() -> CardDefinition {
     CardDefinition {
         name: "Eternal Student",
@@ -2889,12 +2868,9 @@ pub fn witherbloom_the_balancer() -> CardDefinition {
 /// exiled cards on the bottom in a random order.) / Instant and
 /// sorcery spells you cast from your hand have cascade."
 ///
-/// Push XXVIII: ⏳ → 🟡. Body wired faithfully — 6/6 Legendary Elder
-/// Dragon with Flying + Trample. The Cascade keyword and the IS-grant-
-/// cascade static are still ⏳ (no Cascade keyword primitive in our
-/// engine, no cast-from-exile-without-paying pipeline). At raw stats
-/// this is a 6-mana 6/6 flying trampler in Quandrix colors — strong
-/// finisher even without Cascade.
+/// 🟡: body wired as a 6/6 Legendary Elder Dragon with Flying + Trample.
+/// Cascade and the IS-grant-cascade static are still ⏳ (no Cascade
+/// primitive in the engine, no cast-from-exile-without-paying pipeline).
 pub fn quandrix_the_proof() -> CardDefinition {
     use crate::card::Supertype;
     use crate::mana::{g, u};
@@ -4458,10 +4434,6 @@ pub fn ambitious_augmenter() -> CardDefinition {
 /// engine has no per-effect yes/no decision (TODO.md).
 pub fn rubble_rouser() -> CardDefinition {
     use crate::mana::r;
-    // Push XV: the printed "you may discard a card. If you do, draw a
-    // card" rummage is now wired via `Effect::MayDo` — the controller
-    // picks yes/no via `OptionalTrigger`. Tests can flip the answer to
-    // `true`; the auto-decider declines.
     CardDefinition {
         name: "Rubble Rouser",
         cost: cost(&[generic(2), r()]),
@@ -4812,10 +4784,6 @@ pub fn moseo_veins_new_dean() -> CardDefinition {
 /// "{W}, Exile this card from your graveyard: You gain 2 life. Surveil
 /// 1. Activate only as a sorcery."
 ///
-/// Push XVII: graveyard-exile activated ability wired via the new
-/// `ActivatedAbility.from_graveyard: bool` + `exile_self_cost: bool`
-/// fields. Mana cost `{W}` + sorcery-speed + exile-self-as-cost +
-/// effect `Seq(GainLife 2, Surveil 1)`.
 pub fn stone_docent() -> CardDefinition {
     CardDefinition {
         name: "Stone Docent",

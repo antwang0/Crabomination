@@ -33,6 +33,51 @@ mod tests_sos;
 mod tests_stx;
 pub mod types;
 
+#[cfg(test)]
+pub(crate) fn two_player_game() -> GameState {
+    let players = vec![
+        crate::player::Player::new(0, "Alice"),
+        crate::player::Player::new(1, "Bob"),
+    ];
+    let mut g = GameState::new(players);
+    g.step = TurnStep::PreCombatMain;
+    g
+}
+
+/// Pass priority for both players until the stack is empty, returning all
+/// events produced during resolution. Callers that don't care about events
+/// can simply discard the return value.
+#[cfg(test)]
+pub(crate) fn drain_stack(g: &mut GameState) -> Vec<GameEvent> {
+    let mut all_events = Vec::new();
+    while !g.stack.is_empty() {
+        all_events.extend(g.perform_action(GameAction::PassPriority).unwrap());
+        all_events.extend(g.perform_action(GameAction::PassPriority).unwrap());
+    }
+    all_events
+}
+
+/// Cast a spell with no target and drain the stack. Returns resolve events.
+/// Tests with non-default `mode`/`x_value`, the error path, or that need to
+/// inspect cast-time events separately should use `GameAction::CastSpell`
+/// directly.
+#[cfg(test)]
+pub(crate) fn cast(g: &mut GameState, id: CardId) -> Vec<GameEvent> {
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    }).expect("cast spell");
+    drain_stack(g)
+}
+
+/// Cast a spell at a specific target and drain the stack.
+#[cfg(test)]
+pub(crate) fn cast_at(g: &mut GameState, id: CardId, target: Target) -> Vec<GameEvent> {
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(target), mode: None, x_value: None,
+    }).expect("cast spell at target");
+    drain_stack(g)
+}
+
 pub use types::*;
 
 use crate::card::{CardDefinition, CardId, CardInstance, CardType, Keyword, SelectionRequirement};
@@ -92,7 +137,6 @@ pub struct GameState {
     pub priority: PriorityState,
     /// Active continuous effects from resolved spells, abilities, and static abilities.
     pub continuous_effects: Vec<ContinuousEffect>,
-    #[allow(dead_code)]
     pub(crate) next_effect_timestamp: u64,
     pub(crate) next_id: u32,
     /// Attackers declared this combat, each with the player or planeswalker
@@ -393,7 +437,6 @@ impl GameState {
     }
 
     /// Allocate a new monotonically-increasing timestamp.
-    #[allow(dead_code)]
     pub(crate) fn next_timestamp(&mut self) -> u64 {
         let ts = self.next_effect_timestamp;
         self.next_effect_timestamp += 1;
@@ -1595,25 +1638,11 @@ impl GameState {
 
     /// Returns true if the permanent `id` has `kw` after all layer effects are applied.
     /// Falls back to `false` if the permanent is not on the battlefield.
-    #[allow(dead_code)]
+    #[cfg(test)]
     pub(crate) fn permanent_has_keyword(&self, id: CardId, kw: &Keyword) -> bool {
         self.computed_permanent(id)
             .map(|c| c.keywords.contains(kw))
             .unwrap_or(false)
-    }
-
-    /// Returns the computed power of permanent `id`, or 0 if not on battlefield.
-    #[allow(dead_code)]
-    pub(crate) fn computed_power(&self, id: CardId) -> i32 {
-        self.computed_permanent(id).map(|c| c.power).unwrap_or(0)
-    }
-
-    /// Returns the computed toughness of permanent `id`, or 0 if not on battlefield.
-    #[allow(dead_code)]
-    pub(crate) fn computed_toughness(&self, id: CardId) -> i32 {
-        self.computed_permanent(id)
-            .map(|c| c.toughness)
-            .unwrap_or(0)
     }
 }
 

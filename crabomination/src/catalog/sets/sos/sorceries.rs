@@ -532,13 +532,9 @@ pub fn send_in_the_pest() -> CardDefinition {
 /// "Search your library for a creature card, reveal it, put it into your
 /// hand or graveyard, then shuffle."
 ///
-/// Push XXVIII: promoted from 🟡 → ✅ via a 2-mode `Effect::ChooseMode`
-/// (mode 0 = search → hand, mode 1 = search → graveyard). The
-/// `AutoDecider` defaults to mode 0 (hand) which is strictly stronger
-/// for an unguided bot. A graveyard-targeting deck (Lorehold gy-leave
-/// payoffs, Witherbloom reanimation) can pick mode 1 via a scripted
-/// decision. The destination-prompt collapse keeps the printed
-/// "hand or graveyard" branch faithful without any new primitive.
+/// 2-mode `Effect::ChooseMode`: mode 0 → hand, mode 1 → graveyard.
+/// `AutoDecider` defaults to mode 0 (strictly stronger for an unguided
+/// bot); gy-reanimation decks can pick mode 1 via a scripted decision.
 pub fn dinas_guidance() -> CardDefinition {
     use crate::effect::ZoneDest;
     use crate::mana::g;
@@ -868,11 +864,6 @@ pub fn pursue_the_past() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![Keyword::Flashback(flashback_cost)],
-        // Push XV: the printed "you may discard a card. If you do, draw
-        // two cards" is now wired via `Effect::MayDo`. The 2-life gain
-        // is unconditional. The discard+draw chain is gated on a single
-        // yes/no decision (auto-decider says no by default; the
-        // ScriptedDecider can flip it for tests).
         effect: Effect::Seq(vec![
             Effect::GainLife {
                 who: Selector::You,
@@ -2214,16 +2205,9 @@ pub fn zimones_experiment() -> CardDefinition {
 /// instead put two of those cards into your hand and the third on the
 /// bottom of your library."
 ///
-/// ✅ Push XXXIII: conditional draw upgrade now wired via `Effect::If`
-/// + `Predicate::All([SelectorExists(IS in your gy), SelectorExists(
-/// Sorcery in your gy)])`.
-///
-/// Mainline (gate fails) is the prior `Scry 3 → Draw 1` shape.
-/// Upgrade (both IS + Sorcery in your gy) bumps to `Scry 3 → Draw 2`
-/// — the controller orders the top three, then draws two of them
-/// (the third stays on the bottom of the library, per the printed
-/// Oracle). The Scry-order picker lets the controller pick which two
-/// of the top three are "kept on top" for the draw.
+/// Mainline: `Scry 3 → Draw 1`. With both an instant and a sorcery in
+/// your graveyard, upgrades to `Scry 3 → Draw 2` (the third stays on
+/// the bottom of the library, per the printed Oracle).
 pub fn flow_state() -> CardDefinition {
     use crate::mana::u;
     use crate::card::{Predicate, Zone};
@@ -2357,11 +2341,6 @@ pub fn follow_the_lumarets() -> CardDefinition {
 /// this spell. / Each player sacrifices a creature of their choice.
 /// Each opponent loses 1 life and you gain 1 life."
 ///
-/// Push XVII: uses the new `Effect::CopySpell` primitive (gated on
-/// MayDo so the controller chooses whether to copy) + a creature-count
-/// filter `Predicate::PermanentExists` on the SpellCast/SelfSource
-/// trigger. Main effect: `ForEach EachPlayer → Sacrifice 1 creature`
-/// + `Drain 1`.
 pub fn social_snub() -> CardDefinition {
     use crate::card::{EventKind, EventScope, EventSpec, Predicate, TriggeredAbility};
     CardDefinition {
@@ -2648,13 +2627,9 @@ pub fn echocasting_symposium() -> CardDefinition {
 /// equal to the excess damage dealt to that creature this way. You may
 /// play those cards until the end of your next turn."
 ///
-/// Push XXVIII: promoted from ⏳ → 🟡. Body wired faithfully — the
-/// Converge X damage to a creature target uses `Value::ConvergedValue`
-/// (same primitive as Rancorous Archaic / Sundering Archaic). The
-/// "exile cards equal to excess damage + may play" rider is still
-/// omitted (cast-from-exile pipeline + "exile N for excess damage"
-/// primitive both missing). Net play pattern: a 5-mana Converge burn
-/// spell that goes up to 5 damage at converge 5.
+/// 🟡: Converge X damage via `Value::ConvergedValue`. The "exile cards
+/// equal to excess damage + may play" rider is omitted — cast-from-exile
+/// pipeline and "exile N for excess damage" primitive both missing.
 pub fn archaics_agony() -> CardDefinition {
     use crate::mana::r;
     use crate::effect::shortcut::target_filtered;

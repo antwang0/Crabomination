@@ -6,22 +6,8 @@ use crate::card::{CardType, CounterType, Keyword};
 use crate::catalog;
 use crate::decision::{DecisionAnswer, ScriptedDecider};
 use crate::game::*;
+use crate::game::{drain_stack, two_player_game};
 use crate::mana::Color;
-use crate::player::Player;
-
-fn two_player_game() -> GameState {
-    let players = vec![Player::new(0, "Alice"), Player::new(1, "Bob")];
-    let mut g = GameState::new(players);
-    g.step = TurnStep::PreCombatMain;
-    g
-}
-
-fn drain_stack(g: &mut GameState) {
-    while !g.stack.is_empty() {
-        g.perform_action(GameAction::PassPriority).unwrap();
-        g.perform_action(GameAction::PassPriority).unwrap();
-    }
-}
 
 // ── White ───────────────────────────────────────────────────────────────────
 
@@ -65,9 +51,8 @@ fn erode_destroys_target_creature() {
 
 #[test]
 fn erode_grants_target_controller_a_basic_land() {
-    // Push XV: the basic-land tutor half is now wired. The target's
-    // controller searches their library for a basic land (auto-decider
-    // takes the first match) and puts it onto the battlefield tapped.
+    // Target's controller tutors a basic land (auto-decider takes the
+    // first match) and puts it onto the battlefield tapped.
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let _bf_count_before = g.battlefield.iter().filter(|c| c.controller == 1).count();
@@ -113,8 +98,8 @@ fn harsh_annotation_destroys_and_creates_token() {
         "Targeted creature should be destroyed");
     let inkling = g.battlefield.iter().find(|c| c.definition.name == "Inkling")
         .expect("Inkling token should be created");
-    // Push XVII: token now goes to the target creature's owner (player 1),
-    // not the caster (player 0).
+    // Token goes to the target creature's owner (player 1), not the
+    // caster.
     assert_eq!(inkling.controller, 1,
         "Inkling token should be owned by the target creature's owner");
 }
@@ -534,9 +519,8 @@ fn witherbloom_charm_lifegain_mode_gains_five() {
 
 #[test]
 fn witherbloom_charm_sacrifice_mode_opts_in() {
-    // Push XV: mode 0 (sacrifice → draw 2) is now wrapped in
-    // `Effect::MayDo`. The controller picks mode 0 then opts in to the
-    // sac via OptionalTrigger.
+    // Mode 0 (sacrifice → draw 2) is wrapped in `Effect::MayDo`: the
+    // controller picks mode 0 then opts in via OptionalTrigger.
     let mut g = two_player_game();
     g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.add_card_to_library(0, catalog::island());
@@ -562,7 +546,6 @@ fn witherbloom_charm_sacrifice_mode_opts_in() {
 
 #[test]
 fn witherbloom_charm_sacrifice_mode_skips_when_declining() {
-    // Push XV: declining the sac means no draw fires.
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let id = g.add_card_to_hand(0, catalog::witherbloom_charm());
@@ -1191,10 +1174,8 @@ fn dinas_guidance_searches_creature_to_hand() {
 
 #[test]
 fn dinas_guidance_mode_one_sends_creature_to_graveyard() {
-    // Push XXVIII: Dina's Guidance is now a 2-mode `ChooseMode` —
-    // mode 0 search to hand (existing), mode 1 search to graveyard.
-    // Picking mode 1 lands the chosen creature in the controller's
-    // graveyard, enabling Lorehold/Witherbloom reanimator interactions.
+    // Mode 1 (search → graveyard) lands the chosen creature in the
+    // controller's graveyard, enabling reanimator interactions.
     let mut g = two_player_game();
     let bear = g.add_card_to_library(0, catalog::grizzly_bears());
     g.decider = Box::new(ScriptedDecider::new([
@@ -1225,8 +1206,7 @@ fn dinas_guidance_mode_one_sends_creature_to_graveyard() {
 
 #[test]
 fn pursue_the_past_loots_two_and_gains_two() {
-    // Push XV: the discard+draw chain is now gated on `Effect::MayDo`.
-    // Inject `Bool(true)` to opt in.
+    // Discard+draw chain is gated on `Effect::MayDo`; opt in via Bool(true).
     let mut g = two_player_game();
     // Library: two cards to draw from.
     g.add_card_to_library(0, catalog::island());
@@ -1264,8 +1244,7 @@ fn pursue_the_past_loots_two_and_gains_two() {
 
 #[test]
 fn pursue_the_past_skips_loot_when_declining() {
-    // Push XV: declining the may-discard means we still gain 2 life
-    // but no draw or discard fires.
+    // Declining the may-discard: 2 life still gains, no draw/discard.
     let mut g = two_player_game();
     g.add_card_to_library(0, catalog::island());
     let pursue = g.add_card_to_hand(0, catalog::pursue_the_past());
@@ -1567,9 +1546,8 @@ fn mind_roots_makes_opponent_discard_two() {
 
 #[test]
 fn stadium_tidalmage_etb_loots_once() {
-    // Push XV: Stadium Tidalmage's loot trigger is now an `Effect::MayDo`
-    // — the controller must opt in via `OptionalTrigger`. Test injects
-    // `Bool(true)` to exercise the opted-in loot path.
+    // Loot trigger is `Effect::MayDo` — inject `Bool(true)` to exercise
+    // the opted-in path.
     let mut g = two_player_game();
     g.add_card_to_library(0, catalog::island());
     g.add_card_to_hand(0, catalog::lightning_bolt());
@@ -1596,9 +1574,7 @@ fn stadium_tidalmage_etb_loots_once() {
 
 #[test]
 fn stadium_tidalmage_etb_skips_loot_when_declining() {
-    // Push XV: with the auto-decider's default Bool(false) answer, the
-    // ETB loot is skipped — hand size remains the same after ETB,
-    // graveyard stays empty.
+    // AutoDecider defaults to Bool(false) → ETB loot is skipped.
     let mut g = two_player_game();
     g.add_card_to_library(0, catalog::island());
     g.add_card_to_hand(0, catalog::lightning_bolt());
@@ -1917,9 +1893,8 @@ fn together_as_one_uses_converged_value_for_each_clause() {
 
 #[test]
 fn quandrix_the_proof_is_six_six_flying_trample_legendary_elder_dragon() {
-    // Push XXVIII: ⏳ → 🟡. Body-only check: 6/6 Legendary Elder Dragon
-    // with Flying + Trample. Cascade is omitted (no Cascade keyword
-    // primitive in our engine).
+    // Body-only check: 6/6 Legendary Elder Dragon with Flying + Trample.
+    // Cascade is omitted (no Cascade primitive in the engine).
     use crate::card::{CreatureType, Supertype};
     let q = catalog::quandrix_the_proof();
     assert_eq!(q.power, 6);
@@ -1933,10 +1908,8 @@ fn quandrix_the_proof_is_six_six_flying_trample_legendary_elder_dragon() {
 
 #[test]
 fn archaics_agony_deals_converge_damage_to_target_creature() {
-    // Push XXVIII: ⏳ → 🟡. Body is "Converge X damage to creature"
-    // using `Value::ConvergedValue`. Test paying with 2 colors of mana
-    // (R generic + R) — converge value should be 1 (only Red counts as
-    // a distinct color among colored pips paid).
+    // Pay {4}{R}: only Red counts as a distinct color among colored
+    // pips paid → converge value should be 1.
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
 
@@ -2884,8 +2857,8 @@ fn dissection_practice_drains_one_and_shrinks_target() {
 
 #[test]
 fn heated_argument_deals_six_to_creature_and_two_to_controller() {
-    // Push XV: the gy-exile + 2-to-controller rider is now wrapped in
-    // `Effect::MayDo`. Inject `Bool(true)` to opt in.
+    // Gy-exile + 2-to-controller rider is wrapped in `Effect::MayDo`;
+    // inject `Bool(true)` to opt in.
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2 — dies
     g.add_card_to_graveyard(0, catalog::lightning_bolt()); // a card to exile
@@ -2921,7 +2894,7 @@ fn heated_argument_deals_six_to_creature_and_two_to_controller() {
 
 #[test]
 fn heated_argument_skips_rider_when_declining() {
-    // Push XV: declining the gy-exile means no extra 2 damage fires.
+    // Declining the gy-exile: no extra 2 damage fires.
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     g.add_card_to_graveyard(0, catalog::lightning_bolt());
@@ -3912,8 +3885,6 @@ fn conciliators_duelist_repartee_exiles_target() {
     assert!(!g.battlefield.iter().any(|c| c.id == bear));
 }
 
-// ── Push V: CardLeftGraveyard event + new SOS cards ────────────────────────
-
 #[test]
 fn hardened_academic_grants_counter_when_card_leaves_graveyard() {
     // Hardened Academic triggers off the `EventKind::CardLeftGraveyard`
@@ -4715,7 +4686,7 @@ fn mage_tower_referee_no_counter_on_monocolored_cast() {
 
 #[test]
 fn rubble_rouser_etb_rummages() {
-    // Push XV: ETB rummage is now `Effect::MayDo`. Inject Bool(true).
+    // ETB rummage is `Effect::MayDo`; inject Bool(true).
     let mut g = two_player_game();
     // Seed a card to discard + a card to draw.
     let _ = g.add_card_to_hand(0, catalog::lightning_bolt());
@@ -5096,10 +5067,7 @@ fn ennis_debate_moderator_end_step_counter_when_card_exiled() {
     let mut g = two_player_game();
     let id = g.add_card_to_battlefield(0, catalog::ennis_debate_moderator());
     drain_stack(&mut g);
-    // Push IX promotion: Ennis now uses the exact
-    // `Predicate::CardsExiledThisTurnAtLeast` (was approximating with
-    // `CardsLeftGraveyardThisTurnAtLeast`). Set the per-turn exile
-    // tally directly to verify the predicate gates correctly.
+    // Set the per-turn exile tally to gate `CardsExiledThisTurnAtLeast`.
     g.players[0].cards_exiled_this_turn = 1;
 
     let counters_before = g.battlefield_find(id)
@@ -5357,9 +5325,8 @@ fn potioners_trove_lifegain_succeeds_after_spell_cast() {
     let mut g = two_player_game();
     let trove = g.add_card_to_battlefield(0, catalog::potioners_trove());
     drain_stack(&mut g);
-    // Push XIII: gate now uses `instants_or_sorceries_cast_this_turn`
-    // (the printed predicate). Bumping `spells_cast_this_turn` alone is
-    // no longer sufficient; we set the IS tally directly.
+    // Set the IS tally directly (the printed predicate uses
+    // `instants_or_sorceries_cast_this_turn`, not the generic count).
     g.players[0].instants_or_sorceries_cast_this_turn = 1;
     let life_before = g.players[0].life;
 
@@ -5372,7 +5339,7 @@ fn potioners_trove_lifegain_succeeds_after_spell_cast() {
     assert_eq!(g.players[0].life, life_before + 2);
 }
 
-// ── Push IX: Witherbloom finisher + Surveil-anchored cards ─────────────────
+// ── Witherbloom finisher + Surveil-anchored cards ──────────────────────────
 
 #[test]
 fn essenceknit_scholar_etb_creates_pest_token() {
@@ -5836,7 +5803,7 @@ fn pursue_the_past_flashback_replays_loot() {
     g.players[0].mana_pool.add(Color::Red, 1);
     g.players[0].mana_pool.add(Color::White, 1);
     g.players[0].mana_pool.add_colorless(2);
-    // Push XV: opt into the may-discard.
+    // Opt into the may-discard.
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
 
     let life_before = g.players[0].life;
@@ -5999,9 +5966,8 @@ fn lumarets_favor_pumps_creature_plus_two_plus_four() {
 
 #[test]
 fn lumarets_favor_infusion_copies_when_life_gained_this_turn() {
-    // Push XVII: Infusion trigger fires on cast when life-gained-this-turn,
-    // copying the spell via Effect::CopySpell. The copy resolves and pumps
-    // the same target again — stacking the +2/+4 pump.
+    // Infusion trigger fires on cast when life-gained-this-turn,
+    // copying via `Effect::CopySpell` → +2/+4 pump stacks.
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.players[0].life_gained_this_turn = 1; // simulate a prior lifegain trigger
@@ -6858,7 +6824,7 @@ fn abigale_back_face_pumps_and_grants_lifelink() {
     assert!(v.keywords.contains(&Keyword::Lifelink));
 }
 
-// Push XIV: GameEvent::SpellCast.face audit log.
+// GameEvent::SpellCast.face audit log.
 #[test]
 fn cast_spell_emits_front_face_event() {
     let mut g = two_player_game();
@@ -6893,7 +6859,7 @@ fn cast_spell_back_emits_back_face_event() {
     assert_eq!(face, CastFace::Back, "Back-face cast should be tagged Back");
 }
 
-// Push XIII: per-spell-type tallies.
+// Per-spell-type tallies.
 #[test]
 fn instants_or_sorceries_cast_tally_bumps_only_for_is_casts() {
     let mut g = two_player_game();
@@ -6928,9 +6894,8 @@ fn instants_or_sorceries_cast_tally_bumps_only_for_is_casts() {
 
 #[test]
 fn potioners_trove_lifegain_rejects_after_creature_cast_only() {
-    // Push XIII: with the exact-printed gate
-    // (`InstantsOrSorceriesCastThisTurnAtLeast`), a turn where you've
-    // only cast creatures should NOT enable the lifegain ability.
+    // `InstantsOrSorceriesCastThisTurnAtLeast` should NOT trip on a turn
+    // where only creatures were cast.
     let mut g = two_player_game();
     let trove = g.add_card_to_battlefield(0, catalog::potioners_trove());
     drain_stack(&mut g);
@@ -7131,8 +7096,6 @@ fn lluwen_front_castable_for_two_b_g_as_three_four_creature() {
     assert_eq!(lluwen.definition.power, 3);
     assert_eq!(lluwen.definition.toughness, 4);
 }
-
-// ── Push XVI: CastSpellHasX, MayPay, HasXInCost, MayDo land sub ─────────────
 
 #[test]
 fn geometers_arthropod_x_cast_pulls_card_to_hand() {
@@ -7633,8 +7596,6 @@ fn aziza_skips_copy_when_decider_declines() {
     assert_eq!(tapped_bears, 0, "Decline should skip the tap-three cost too");
 }
 
-// ── Push XVIII: exile_other_filter activation cost + new card wirings ──────
-
 /// Postmortem Professor's graveyard-recursion activation: pay `{1}{B}`,
 /// exile an instant/sorcery card from your graveyard, and return the
 /// Professor from your graveyard to the battlefield. Exercises the new
@@ -7744,7 +7705,7 @@ fn molten_note_has_flashback_keyword() {
     let has_flashback = m.keywords.iter().any(|k| matches!(k, Keyword::Flashback(_)));
     assert!(has_flashback, "Molten Note should carry Keyword::Flashback");
 }
-// ── Push XVII: Increment / Opus tests ───────────────────────────────────────
+// ── Increment / Opus tests ──────────────────────────────────────────────────
 
 /// Helper: drop a creature on the battlefield with summoning sickness cleared
 /// and verify it has no +1/+1 counters before we cast a spell off it.
@@ -8113,7 +8074,7 @@ fn increment_trigger_re_checks_intervening_if_on_resolution() {
     );
 }
 
-// ── Push XXV: new SOS card bodies + Killian's Confidence gy trigger ─────────
+// ── New SOS card bodies + Killian's Confidence gy trigger ──────────────────
 
 #[test]
 fn silverquill_the_disputant_is_a_four_four_flying_vigilance_dragon() {
@@ -8318,7 +8279,7 @@ fn killians_confidence_stays_in_graveyard_when_no_damage_or_no_pay() {
         "KC should still be in graveyard with no combat damage");
 }
 
-// ── Push XXVI: Prismari ⏳ closer + Ward-tagged MDFCs + ⏳ utility ──────────
+// ── Prismari ⏳ closer + Ward-tagged MDFCs + ⏳ utility ─────────────────────
 
 #[test]
 fn colorstorm_stallion_is_three_three_ward_one_haste_elemental_horse() {
@@ -8600,7 +8561,7 @@ fn applied_geometry_mints_a_six_six_fractal() {
     assert!(frac.definition.subtypes.creature_types.contains(&CreatureType::Fractal));
 }
 
-// ── Push XXIX: Prismari Opus rider promotions ───────────────────────────────
+// ── Prismari Opus rider promotions ──────────────────────────────────────────
 //
 // Spectacular Skywhale fully wires its Opus rider (small: +3/+0 EOT;
 // big: 3 +1/+1 counters instead). Colorstorm Stallion and Elemental

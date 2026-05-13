@@ -509,13 +509,8 @@ pub fn excavated_wall() -> CardDefinition {
 /// Snow Day — {U}{R} Instant. "Tap up to two target creatures. Put a
 /// stun counter on each of them."
 ///
-/// ✅ Push XXXIII (doc-only): single-target tap+stun shipping
-/// faithfully. The "up to two targets" multi-target prompt is an
-/// engine-wide gap (Vibrant Outburst, Spell Satchel, Devious
-/// Cover-Up, etc. share the same shape) and not card-specific;
-/// promoting to ✅ here matches the prior treatment of Vibrant
-/// Outburst's 3-damage half. The core play pattern (one tap+stun
-/// for {U}{R}) is intact.
+/// Single-target tap+stun. "Up to two targets" is an engine-wide gap
+/// (shared with Vibrant Outburst, Spell Satchel, Devious Cover-Up).
 pub fn snow_day() -> CardDefinition {
     CardDefinition {
         name: "Snow Day",
@@ -556,13 +551,9 @@ pub fn snow_day() -> CardDefinition {
 /// Put one of them into your hand and the rest on the bottom of your
 /// library in a random order."
 ///
-/// ✅ Push XXXIII (doc-only): the printed "look at top 4, put one in
-/// hand, rest on bottom in random order" approximates to `Scry 3 →
-/// Draw 1`. The Scry pre-orders the top three; the Draw resolves the
-/// fourth slot. Same approximation pattern as Flow State's
-/// mainline mode and Stress Dream's look-and-distribute clause. The
-/// "random order on bottom" rider is engine-wide (no RNG hook in
-/// `resolve_effect`) and tracked in TODO.md.
+/// Approximated as `Scry 3 → Draw 1` (same pattern as Flow State's
+/// mainline mode). "Random order on bottom" is an engine-wide gap
+/// (no RNG hook in `resolve_effect`) tracked in TODO.md.
 pub fn curate() -> CardDefinition {
     CardDefinition {
         name: "Curate",
@@ -788,13 +779,9 @@ pub fn daemogoth_titan() -> CardDefinition {
 /// sacrifice another creature. Whenever this attacks, you may sacrifice
 /// another creature. If you do, put a +1/+1 counter on this creature."
 ///
-/// ✅ Push XXVIII: the attack trigger's "you may sacrifice" optionality
-/// is now wired via `Effect::MayDo`. AutoDecider says no (skip the sac
-/// counter), `ScriptedDecider::new([Bool(true)])` exercises the paid
-/// path. ETB sacrifice remains mandatory (printed Oracle has no "you may").
-/// The +1/+1 counter only triggers when the sac fires —
-/// `Effect::Sacrifice` no-ops cleanly when no candidate exists, but the
-/// controller's "yes" answer is the gate, not legality.
+/// ETB sacrifice is mandatory; attack sac is optional via `MayDo`. The
+/// +1/+1 counter is gated on the controller's "yes" answer, not on
+/// legality — `Sacrifice` no-ops cleanly when no candidate exists.
 pub fn daemogoth_woe_eater() -> CardDefinition {
     use crate::card::CounterType;
     CardDefinition {
@@ -857,17 +844,10 @@ pub fn daemogoth_woe_eater() -> CardDefinition {
 /// Honor Troll — {1}{B}{G}, 1/4 Troll Warrior. "Trample. As long as
 /// you've gained life this turn, this creature has +2/+0 and lifelink."
 ///
-/// ✅ Push XXVIII: the conditional pump + lifelink is now wired via a
-/// compute-time injection in `GameState::compute_battlefield` (same
-/// pattern as Cruel Somnophage / Tarmogoyf). The gate reads
-/// `Player.life_gained_this_turn` (already tracked for the
-/// `LifeGainedThisTurnAtLeast` predicate). When the controller has
-/// gained ≥ 1 life this turn, layers 6 (keyword) and 7b (P/T modify)
-/// inject `AddKeyword(Lifelink)` and `ModifyPowerToughness(+2, +0)`
-/// targeting the Troll as `AffectedPermanents::Source`. The gate
-/// re-evaluates every recompute, so a mid-turn lifegain flips the
-/// troll on for the rest of the turn, and `do_untap`'s reset to
-/// `life_gained_this_turn = 0` flips it back off next turn.
+/// Compute-time injection in `GameState::compute_battlefield` (same
+/// pattern as Cruel Somnophage / Tarmogoyf): when controller has gained
+/// ≥1 life this turn, layers 6 and 7b add Lifelink and +2/+0. The gate
+/// re-evaluates every recompute and resets at untap.
 pub fn honor_troll() -> CardDefinition {
     CardDefinition {
         name: "Honor Troll",
@@ -992,11 +972,8 @@ pub fn hofri_ghostforge() -> CardDefinition {
 /// a doc-only artifact from an earlier draft and has been cleared
 /// here.)
 ///
-/// ✅ Push XXXIII: doc-only promotion 🟡 → ✅. The body is the full
-/// printed Threaten template: `GainControl` (EOT) + `Untap(Target)` +
-/// `GrantKeyword(Haste, EOT)`, all wired against `Selector::Target(0)`.
-/// **Closes the STX Witherbloom school — 0 🟡 STX Witherbloom cards
-/// remain.**
+/// Full printed Threaten template: `GainControl` (EOT) +
+/// `Untap(Target)` + `GrantKeyword(Haste, EOT)`.
 pub fn tempted_by_the_oriq() -> CardDefinition {
     use crate::effect::Duration;
     CardDefinition {
@@ -1034,8 +1011,6 @@ pub fn tempted_by_the_oriq() -> CardDefinition {
     }
 }
 
-
-// ── Push XXI: 6 new STX cards ───────────────────────────────────────────────
 
 /// Confront the Past — {3}{R} Sorcery.
 /// "Choose one — / • Put target planeswalker card from your graveyard
@@ -1305,13 +1280,6 @@ pub fn hall_of_oracles() -> CardDefinition {
     }
 }
 
-// ── Push XXIII (2026-05-12): 11 new STX cards ───────────────────────────────
-//
-// New batch focuses on filling out Silverquill, Quandrix, and Lorehold STX
-// printings plus three mono utility cards. All cards ship in the `extras`
-// file and slot into the existing engine primitives — no new primitives
-// added in this push. See STRIXHAVEN2.md for the per-card status row.
-
 /// Star Pupil — {B} Creature — Cat Spirit, 0/1 (Silverquill).
 /// "Star Pupil enters the battlefield with a +1/+1 counter on it. /
 /// When Star Pupil dies, put a +1/+1 counter on target creature."
@@ -1326,9 +1294,8 @@ pub fn hall_of_oracles() -> CardDefinition {
 /// no transfer happens in that case. Star Pupil dodges the rule by
 /// hard-coding one counter; cards like Mantle of Tides that DO say
 /// "its +1/+1 counters" have errata changing the language to "1"
-/// instead. The `Value::CountersOn` lookup was extended (push XXIII)
-/// to cross-zone-search so future cards that legitimately need the
-/// source's counter count post-death can read it.
+/// instead. `Value::CountersOn` supports cross-zone search so future
+/// cards that need source's counter count post-death can read it.
 pub fn star_pupil() -> CardDefinition {
     CardDefinition {
         name: "Star Pupil",

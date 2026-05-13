@@ -21,11 +21,6 @@ use crate::mana::{cost, b, g, generic, Color, ManaCost};
 /// Witherbloom Apprentice — {B}{G}, 2/2 Human Warlock. "Magecraft —
 /// Whenever you cast or copy an instant or sorcery spell, each opponent
 /// loses 1 life and you gain 1 life."
-///
-/// Push XXVII: Refactored to use the new `magecraft_drain_each_opp(1)`
-/// shortcut. `Effect::Drain` is the canonical Witherbloom magecraft
-/// payoff — the shortcut keeps the call site one line and the
-/// life-swap is atomic.
 pub fn witherbloom_apprentice() -> CardDefinition {
     CardDefinition {
         name: "Witherbloom Apprentice",
@@ -151,18 +146,11 @@ pub fn bayou_groff() -> CardDefinition {
 /// Witherbloom Pledgemage — {1}{B}{G}, 3/3 Plant Warlock. "{T}, Pay 1
 /// life: Add {B} or {G}."
 ///
-/// Push XVIII: refactored to use the `life_cost: 1` field (introduced
-/// in push XV for Great Hall of the Biblioplex). The activation now
-/// pays 1 life up front during cost-payment, leaving the effect as a
-/// pure `AddMana` — so CR 605.1a's "no target, could add mana"
-/// criteria are met and the engine's `is_mana_ability` recogniser
-/// resolves this **without the stack**, matching the printed
-/// instant-speed mana ramp behaviour. The prior `Seq([LoseLife,
-/// AddMana])` body went onto the stack, breaking the typical
-/// "tap for mana, immediately spend it" flow during Witherbloom turns.
-/// The "B or G" choice is approximated as `ManaPayload::AnyOneColor` —
-/// player picks 1 mana of any color; broader than the printed B/G
-/// pair but matches the typical cube-pool ramp pattern.
+/// Life is paid up front during cost-payment so the effect is a pure
+/// `AddMana` — qualifies as a true mana ability (CR 605.1a) and
+/// resolves without the stack. "B or G" is approximated as
+/// `ManaPayload::AnyOneColor`: broader than printed but matches the
+/// typical cube-pool ramp pattern.
 pub fn witherbloom_pledgemage() -> CardDefinition {
     let _ = Color::Black;
     CardDefinition {

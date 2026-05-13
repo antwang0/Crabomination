@@ -392,14 +392,7 @@ fn restore_card(cs: CardSnapshot) -> Result<CardInstance, LoadError> {
 mod tests {
     use super::*;
     use crate::catalog;
-    use crate::game::{GameAction, TurnStep};
-    use crate::player::Player;
-
-    fn two_player_game() -> GameState {
-        let mut g = GameState::new(vec![Player::new(0, "Alice"), Player::new(1, "Bob")]);
-        g.step = TurnStep::PreCombatMain;
-        g
-    }
+    use crate::game::{GameAction, two_player_game};
 
     #[test]
     fn snapshot_round_trips_basic_fields() {
@@ -508,11 +501,8 @@ mod tests {
 
     #[test]
     fn maypay_effect_serde_round_trip() {
-        // Push XVI: `Effect::MayPay { description, mana_cost, body }`
-        // round-trips through serde without dropping fields. Important
-        // because the catalog and any future replay tooling needs to
-        // serialize Effect values; a missed field would silently corrupt
-        // the rebuilt body.
+        // `Effect::MayPay` must round-trip through serde without dropping
+        // fields — a missed field would silently corrupt the rebuilt body.
         use crate::card::Effect;
         use crate::mana::{generic, ManaCost};
         let original = Effect::MayPay {
@@ -537,10 +527,8 @@ mod tests {
 
     #[test]
     fn setbasept_effect_serde_round_trip() {
-        // Push XXXII: `Effect::SetBasePT { what, power, toughness, duration }`
-        // round-trips through serde. Layer-7b base-P/T overrides must
-        // survive snapshot/restore so a Square-Upped creature stays
-        // 0/4 across a save.
+        // Layer-7b base-P/T overrides must survive snapshot/restore so a
+        // Square-Upped creature stays 0/4 across a save.
         use crate::card::{Effect, Selector, Value};
         use crate::effect::Duration;
         let original = Effect::SetBasePT {
@@ -563,9 +551,8 @@ mod tests {
 
     #[test]
     fn choosen_effect_serde_round_trip() {
-        // Push XXXII: `Effect::ChooseN { picks, modes }` round-trips
-        // through serde. The Strixhaven Command cycle and any future
-        // multi-mode spell depend on this for snapshot/replay parity.
+        // The Strixhaven Command cycle and any future multi-mode spell
+        // depend on `Effect::ChooseN` serde parity for snapshot/replay.
         use crate::card::{Effect, Selector, Value};
         let original = Effect::ChooseN {
             picks: vec![0, 2],

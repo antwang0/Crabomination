@@ -30,9 +30,7 @@ use crate::card::{
     CardDefinition, CardType, CounterType, CreatureType, Effect, Keyword, SelectionRequirement,
     Subtypes,
 };
-use crate::effect::shortcut::{
-    counter_target_spell, exile_target, pump_target, target_filtered,
-};
+use crate::effect::shortcut::{pump_target, target_filtered};
 use crate::effect::{Duration, PlayerRef, Selector, Value, ZoneDest};
 use crate::mana::{Color, ManaCost, b, cost, g, generic, r, u, w};
 use crate::card::Zone;
@@ -1226,9 +1224,3 @@ pub fn strife_scholar() -> CardDefinition {
     )
 }
 
-// ── Suppress unused-import warnings on `exile_target`/`counter_target_spell`.
-#[allow(dead_code)]
-fn _suppress_unused() {
-    let _ = exile_target();
-    let _ = counter_target_spell();
-}

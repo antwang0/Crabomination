@@ -1,0 +1,470 @@
+//! Pure-query helpers over `GameState`: `evaluate_value` (numeric expressions),
+//! `evaluate_predicate` (boolean conditions), `evaluate_requirement_static`
+//! and `evaluate_requirement_on_card` (selection-requirement matching).
+//!
+//! These are read-only and called from the resolver match arms in
+//! `mod.rs` (and from `auto_target_for_effect_avoiding` in `targeting.rs`).
+
+use super::{EffectContext, EntityRef};
+use crate::card::{CardInstance, CardType, SelectionRequirement, Supertype};
+use crate::effect::{Predicate, Value};
+use crate::game::{GameState, StackItem, Target};
+use crate::mana::ManaSymbol;
+
+impl GameState {
+    pub(crate) fn evaluate_value(&self, v: &Value, ctx: &EffectContext) -> i32 {
+        match v {
+            Value::Const(n) => *n,
+            Value::CountOf(s) => self.resolve_selector(s, ctx).len() as i32,
+            Value::PowerOf(s) => self.resolve_selector(s, ctx).iter()
+                .find_map(|e| e.as_permanent_id().and_then(|c| self.battlefield_find(c)).map(|c| c.power()))
+                .unwrap_or(0),
+            Value::ToughnessOf(s) => self.resolve_selector(s, ctx).iter()
+                .find_map(|e| e.as_permanent_id().and_then(|c| self.battlefield_find(c)).map(|c| c.toughness()))
+                .unwrap_or(0),
+            Value::LifeOf(p) => self.resolve_player(p, ctx).map(|p| self.players[p].life).unwrap_or(0),
+            Value::HandSizeOf(p) => self.resolve_player(p, ctx).map(|p| self.players[p].hand.len() as i32).unwrap_or(0),
+            Value::GraveyardSizeOf(p) => self.resolve_player(p, ctx).map(|p| self.players[p].graveyard.len() as i32).unwrap_or(0),
+            Value::LibrarySizeOf(p) => self.resolve_player(p, ctx).map(|p| self.players[p].library.len() as i32).unwrap_or(0),
+            Value::XFromCost => ctx.x_value as i32,
+            Value::StormCount => self.spells_cast_this_turn.saturating_sub(1) as i32,
+            Value::CountersOn { what, kind } => self
+                .resolve_selector(what, ctx)
+                .into_iter()
+                .find_map(|e| {
+                    let cid = match e {
+                        EntityRef::Permanent(c) | EntityRef::Card(c) => c,
+                        _ => return None,
+                    };
+                    // CR 122 — counters persist on a card when it moves
+                    // between zones. So a die-trigger that reads "its
+                    // +1/+1 counters" needs to be able to find the
+                    // freshly-died card in its new graveyard zone. The
+                    // battlefield lookup stays first (the common case),
+                    // then we fall through to graveyards and exile —
+                    // matching the cross-zone search shape of
+                    // `evaluate_requirement_static` for WithCounter.
+                    self.battlefield_find(cid)
+                        .or_else(|| self.players.iter().find_map(
+                            |p| p.graveyard.iter().find(|c| c.id == cid)))
+                        .or_else(|| self.exile.iter().find(|c| c.id == cid))
+                        .map(|c| c.counter_count(*kind) as i32)
+                })
+                .unwrap_or(0),
+            Value::Sum(vs) => vs.iter().map(|v| self.evaluate_value(v, ctx)).sum(),
+            Value::Diff(a, b) => self.evaluate_value(a, ctx) - self.evaluate_value(b, ctx),
+            Value::Times(a, b) => self.evaluate_value(a, ctx) * self.evaluate_value(b, ctx),
+            Value::Min(a, b) => self.evaluate_value(a, ctx).min(self.evaluate_value(b, ctx)),
+            Value::Max(a, b) => self.evaluate_value(a, ctx).max(self.evaluate_value(b, ctx)),
+            Value::NonNeg(v) => self.evaluate_value(v, ctx).max(0),
+            Value::SacrificedPower => self.sacrificed_power.unwrap_or(0),
+            Value::ConvergedValue => ctx.converged_value as i32,
+            Value::CastSpellManaSpent => {
+                // Prefer the spell stack item's stored `mana_spent` when
+                // the just-cast spell is still on the stack (trigger
+                // evaluation at cast-time). Falls back to the trigger
+                // context's `mana_spent` (set when
+                // `fire_spell_cast_triggers` pushes the trigger, or when
+                // the spell itself is resolving and reading from its own
+                // resolution context).
+                if let Some(EntityRef::Card(cid)) = ctx.trigger_source
+                    && let Some(ms) = self.stack.iter().find_map(|si| match si {
+                        StackItem::Spell { card, mana_spent, .. } if card.id == cid => {
+                            Some(*mana_spent as i32)
+                        }
+                        _ => None,
+                    })
+                {
+                    return ms;
+                }
+                ctx.mana_spent as i32
+            }
+            Value::LoyaltyOf(s) => self
+                .resolve_selector(s, ctx)
+                .into_iter()
+                .find_map(|e| match e {
+                    EntityRef::Permanent(cid) | EntityRef::Card(cid) => self
+                        .battlefield_find(cid)
+                        .or_else(|| {
+                            self.players.iter().find_map(|p| {
+                                p.graveyard.iter().find(|c| c.id == cid)
+                            })
+                        })
+                        .or_else(|| self.exile.iter().find(|c| c.id == cid))
+                        .map(|c| {
+                            c.counter_count(crate::card::CounterType::Loyalty) as i32
+                        }),
+                    EntityRef::Player(_) => None,
+                })
+                .unwrap_or(0),
+            Value::ManaValueOf(s) => self
+                .resolve_selector(s, ctx)
+                .into_iter()
+                .find_map(|e| match e {
+                    EntityRef::Permanent(cid) | EntityRef::Card(cid) => self
+                        .battlefield_find(cid)
+                        .or_else(|| {
+                            self.players.iter().find_map(|p| {
+                                p.graveyard
+                                    .iter()
+                                    .find(|c| c.id == cid)
+                                    .or_else(|| p.hand.iter().find(|c| c.id == cid))
+                                    .or_else(|| p.library.iter().find(|c| c.id == cid))
+                            })
+                        })
+                        .or_else(|| self.exile.iter().find(|c| c.id == cid))
+                        // Walk the stack last so a SpellCast trigger's
+                        // filter predicate can read the mana value of the
+                        // spell that just went on the stack but hasn't
+                        // resolved yet (Up the Beanstalk, Mind's Desire,
+                        // etc.).
+                        .or_else(|| self.stack.iter().find_map(|si| match si {
+                            StackItem::Spell { card, .. } if card.id == cid => Some(&**card),
+                            _ => None,
+                        }))
+                        .map(|c| c.definition.cost.cmc() as i32),
+                    EntityRef::Player(_) => None,
+                })
+                .unwrap_or(0),
+            Value::DistinctTypesInTopOfLibrary { who, count } => {
+                let Some(p) = self.resolve_player(who, ctx) else { return 0; };
+                let n = self.evaluate_value(count, ctx).max(0) as usize;
+                let mut seen: std::collections::HashSet<CardType> =
+                    std::collections::HashSet::new();
+                for card in self.players[p].library.iter().take(n) {
+                    for t in &card.definition.card_types {
+                        seen.insert(t.clone());
+                    }
+                }
+                seen.len() as i32
+            }
+            Value::CardsDrawnThisTurn(p) => self
+                .resolve_player(p, ctx)
+                .map(|p| self.players[p].cards_drawn_this_turn as i32)
+                .unwrap_or(0),
+            Value::Pow2(inner) => {
+                let exp = self.evaluate_value(inner, ctx).clamp(0, 30);
+                1i32.checked_shl(exp as u32).unwrap_or(i32::MAX)
+            }
+            Value::HalfDown(inner) => self.evaluate_value(inner, ctx) / 2,
+            Value::PermanentCountControlledBy(p) => self
+                .resolve_player(p, ctx)
+                .map(|seat| {
+                    self.battlefield
+                        .iter()
+                        .filter(|c| c.controller == seat)
+                        .count() as i32
+                })
+                .unwrap_or(0),
+        }
+    }
+
+    pub(crate) fn evaluate_predicate(&self, p: &Predicate, ctx: &EffectContext) -> bool {
+        match p {
+            Predicate::True => true,
+            Predicate::False => false,
+            Predicate::Not(q) => !self.evaluate_predicate(q, ctx),
+            Predicate::All(qs) => qs.iter().all(|q| self.evaluate_predicate(q, ctx)),
+            Predicate::Any(qs) => qs.iter().any(|q| self.evaluate_predicate(q, ctx)),
+            Predicate::SelectorExists(s) => !self.resolve_selector(s, ctx).is_empty(),
+            Predicate::SelectorCountAtLeast { sel, n } => {
+                self.resolve_selector(sel, ctx).len() as i32 >= self.evaluate_value(n, ctx)
+            }
+            Predicate::ValueAtLeast(a, b) => self.evaluate_value(a, ctx) >= self.evaluate_value(b, ctx),
+            Predicate::ValueAtMost(a, b) => self.evaluate_value(a, ctx) <= self.evaluate_value(b, ctx),
+            Predicate::IsTurnOf(pref) => self.resolve_player(pref, ctx) == Some(self.active_player_idx),
+            Predicate::EntityMatches { what, filter } => self
+                .resolve_selector(what, ctx)
+                .into_iter()
+                .all(|e| match e {
+                    EntityRef::Permanent(cid) | EntityRef::Card(cid) => {
+                        self.evaluate_requirement_static(filter, &Target::Permanent(cid), ctx.controller)
+                    }
+                    EntityRef::Player(_) => matches!(filter, SelectionRequirement::Player),
+                }),
+            Predicate::LifeGainedThisTurnAtLeast { who, at_least } => {
+                let n = self.evaluate_value(at_least, ctx).max(0) as u32;
+                self.resolve_player(who, ctx)
+                    .map(|p| self.players[p].life_gained_this_turn >= n)
+                    .unwrap_or(false)
+            }
+            Predicate::CardsLeftGraveyardThisTurnAtLeast { who, at_least } => {
+                let n = self.evaluate_value(at_least, ctx).max(0) as u32;
+                self.resolve_player(who, ctx)
+                    .map(|p| self.players[p].cards_left_graveyard_this_turn >= n)
+                    .unwrap_or(false)
+            }
+            Predicate::SpellsCastThisTurnAtLeast { who, at_least } => {
+                let n = self.evaluate_value(at_least, ctx).max(0) as u32;
+                self.resolve_player(who, ctx)
+                    .map(|p| self.players[p].spells_cast_this_turn >= n)
+                    .unwrap_or(false)
+            }
+            Predicate::CreaturesDiedThisTurnAtLeast { who, at_least } => {
+                let n = self.evaluate_value(at_least, ctx).max(0) as u32;
+                self.resolve_player(who, ctx)
+                    .map(|p| self.players[p].creatures_died_this_turn >= n)
+                    .unwrap_or(false)
+            }
+            Predicate::CardsExiledThisTurnAtLeast { who, at_least } => {
+                let n = self.evaluate_value(at_least, ctx).max(0) as u32;
+                self.resolve_player(who, ctx)
+                    .map(|p| self.players[p].cards_exiled_this_turn >= n)
+                    .unwrap_or(false)
+            }
+            Predicate::InstantsOrSorceriesCastThisTurnAtLeast { who, at_least } => {
+                let n = self.evaluate_value(at_least, ctx).max(0) as u32;
+                self.resolve_player(who, ctx)
+                    .map(|p| self.players[p].instants_or_sorceries_cast_this_turn >= n)
+                    .unwrap_or(false)
+            }
+            Predicate::CreaturesCastThisTurnAtLeast { who, at_least } => {
+                let n = self.evaluate_value(at_least, ctx).max(0) as u32;
+                self.resolve_player(who, ctx)
+                    .map(|p| self.players[p].creatures_cast_this_turn >= n)
+                    .unwrap_or(false)
+            }
+            Predicate::CastSpellTargetsMatch(filter) => {
+                // Find the cast spell on the stack via the trigger source.
+                // `fire_spell_cast_triggers` sets `ctx.trigger_source` to
+                // `EntityRef::Card(cast_card_id)` so we can locate the
+                // `StackItem::Spell` that just got pushed.
+                let Some(EntityRef::Card(cid)) = ctx.trigger_source else {
+                    return false;
+                };
+                let target = self.stack.iter().find_map(|si| match si {
+                    StackItem::Spell { card, target, .. } if card.id == cid => Some(target.clone()),
+                    _ => None,
+                });
+                match target {
+                    Some(Some(t)) => self.evaluate_requirement_static(filter, &t, ctx.controller),
+                    _ => false,
+                }
+            }
+            Predicate::CastSpellHasX => {
+                // Locate the just-cast spell via the trigger source and
+                // peek at its printed mana cost. Used by "whenever you
+                // cast a spell with {X} in its cost" Quandrix triggers.
+                let Some(EntityRef::Card(cid)) = ctx.trigger_source else {
+                    return false;
+                };
+                self.stack.iter().any(|si| match si {
+                    StackItem::Spell { card, .. } if card.id == cid => {
+                        card.definition.cost.has_x()
+                    }
+                    _ => false,
+                })
+            }
+            Predicate::CastSpellManaSpentAtLeast(min) => {
+                // First try the most precise read: the just-cast spell's
+                // `StackItem::Spell.mana_spent`. Falls back to
+                // `ctx.mana_spent` (set when this filter runs at
+                // cast-trigger-push time, when the spell hasn't been
+                // popped from the stack yet) so Opus filters at
+                // `fire_spell_cast_triggers` time also see the right
+                // value.
+                if let Some(EntityRef::Card(cid)) = ctx.trigger_source
+                    && let Some(ms) = self.stack.iter().find_map(|si| match si {
+                        StackItem::Spell { card, mana_spent, .. } if card.id == cid => {
+                            Some(*mana_spent)
+                        }
+                        _ => None,
+                    })
+                {
+                    return ms >= *min;
+                }
+                ctx.mana_spent >= *min
+            }
+            Predicate::IncrementSatisfied => {
+                // SOS Increment: "Whenever you cast a spell, if the
+                // amount of mana you spent is greater than this
+                // creature's power or toughness, put a +1/+1 counter on
+                // this creature." Both clauses (P and T) are OR'd —
+                // pumps fire whenever mana_spent strictly exceeds
+                // *either* stat. We evaluate against the listening
+                // permanent (the source whose triggered ability we're
+                // gating).
+                let Some(source_id) = ctx.source else {
+                    return false;
+                };
+                let Some(source_card) = self.battlefield_find(source_id) else {
+                    // If the Increment-bearing creature already left
+                    // the battlefield (e.g. countered cast that resolved
+                    // a removal spell first), the trigger no-ops.
+                    return false;
+                };
+                // Resolve mana_spent the same way as
+                // `CastSpellManaSpentAtLeast` — prefer the stack item
+                // if the spell hasn't resolved yet, otherwise fall back
+                // to `ctx.mana_spent`.
+                let mana_spent = if let Some(EntityRef::Card(cid)) = ctx.trigger_source {
+                    self.stack
+                        .iter()
+                        .find_map(|si| match si {
+                            StackItem::Spell { card, mana_spent, .. } if card.id == cid => {
+                                Some(*mana_spent)
+                            }
+                            _ => None,
+                        })
+                        .unwrap_or(ctx.mana_spent)
+                } else {
+                    ctx.mana_spent
+                };
+                let p = source_card.power();
+                let t = source_card.toughness();
+                (mana_spent as i32 > p) || (mana_spent as i32 > t)
+            }
+        }
+    }
+
+    // ── Requirement evaluation (unchanged API) ──────────────────────────────
+
+    pub(crate) fn evaluate_requirement_static(
+        &self,
+        req: &SelectionRequirement,
+        target: &Target,
+        controller: usize,
+    ) -> bool {
+        use SelectionRequirement as R;
+        match req {
+            R::Any => true,
+            R::Player => matches!(target, Target::Player(_)),
+            R::And(a, b) => self.evaluate_requirement_static(a, target, controller)
+                && self.evaluate_requirement_static(b, target, controller),
+            R::Or(a, b) => self.evaluate_requirement_static(a, target, controller)
+                || self.evaluate_requirement_static(b, target, controller),
+            R::Not(inner) => !self.evaluate_requirement_static(inner, target, controller),
+            R::ControlledByYou => match target {
+                Target::Permanent(cid) => self.battlefield_find(*cid).map(|c| c.controller == controller).unwrap_or(false),
+                Target::Player(p) => *p == controller,
+            },
+            R::ControlledByOpponent => match target {
+                Target::Permanent(cid) => self.battlefield_find(*cid).map(|c| c.controller != controller).unwrap_or(false),
+                Target::Player(p) => *p != controller,
+            },
+            _ => {
+                let Target::Permanent(cid) = target else { return false; };
+                // Look on the battlefield first; fall through to graveyards,
+                // exile, and the stack so reanimate-style spells (Goryo's
+                // Vengeance, Reanimate, Animate Dead) can validate their
+                // targets, and so counter-style spells (Mystical Dispute,
+                // Force of Negation) can read the colors of a target stack
+                // spell.
+                let stack_card = self.stack.iter().find_map(|si| match si {
+                    StackItem::Spell { card, .. } if card.id == *cid => Some(&**card),
+                    _ => None,
+                });
+                let card = self
+                    .battlefield_find(*cid)
+                    .or_else(|| self.players.iter().find_map(|p| p.graveyard.iter().find(|c| c.id == *cid)))
+                    .or_else(|| self.exile.iter().find(|c| c.id == *cid))
+                    .or(stack_card);
+                let Some(card) = card else { return false; };
+                match req {
+                    R::Creature => card.definition.is_creature(),
+                    R::Artifact => card.definition.is_artifact(),
+                    R::Enchantment => card.definition.is_enchantment(),
+                    R::Planeswalker => card.definition.is_planeswalker(),
+                    R::Permanent => card.definition.is_permanent(),
+                    R::Land => card.definition.is_land(),
+                    R::Nonland => !card.definition.is_land(),
+                    R::Noncreature => !card.definition.is_creature(),
+                    R::Tapped => card.tapped,
+                    R::Untapped => !card.tapped,
+                    R::HasColor(c) => card
+                        .definition
+                        .cost
+                        .symbols
+                        .iter()
+                        .any(|s| matches!(s, ManaSymbol::Colored(cc) if cc == c)),
+                    R::HasKeyword(kw) => card.has_keyword(kw),
+                    R::PowerAtMost(n) => card.definition.is_creature() && card.power() <= *n,
+                    R::ToughnessAtMost(n) => card.definition.is_creature() && card.toughness() <= *n,
+                    R::PowerAtLeast(n) => card.definition.is_creature() && card.power() >= *n,
+                    R::ToughnessAtLeast(n) => card.definition.is_creature() && card.toughness() >= *n,
+                    R::WithCounter(k) => card.counter_count(*k) > 0,
+                    R::HasSupertype(st) => card.definition.supertypes.contains(st),
+                    R::HasCreatureType(ct) => card.definition.subtypes.creature_types.contains(ct),
+                    R::HasLandType(lt) => card.definition.subtypes.land_types.contains(lt),
+                    R::HasArtifactSubtype(a) => card.definition.subtypes.artifact_subtypes.contains(a),
+                    R::HasEnchantmentSubtype(e) => card.definition.subtypes.enchantment_subtypes.contains(e),
+                    R::IsToken => card.is_token,
+                    R::NotToken => !card.is_token,
+                    R::IsBasicLand => card.definition.is_land() && card.definition.supertypes.contains(&Supertype::Basic),
+                    R::IsAttacking => self.attacking.iter().any(|a| a.attacker == card.id),
+                    R::IsBlocking => self.block_map.contains_key(&card.id),
+                    R::IsSpellOnStack => self.stack.iter().any(|si| matches!(si, StackItem::Spell { card: c, .. } if c.id == card.id)),
+                    R::ManaValueAtMost(n) => card.definition.cost.cmc() <= *n,
+                    R::ManaValueAtLeast(n) => card.definition.cost.cmc() >= *n,
+                    R::HasCardType(ct) => card.definition.card_types.contains(ct),
+                    R::Multicolored => card.definition.cost.distinct_colors() >= 2,
+                    R::Colorless => card.definition.cost.distinct_colors() == 0,
+                    R::Monocolored => card.definition.cost.distinct_colors() == 1,
+                    R::HasXInCost => card.definition.cost.has_x(),
+                    _ => unreachable!("handled above"),
+                }
+            }
+        }
+    }
+
+    /// Evaluate a `SelectionRequirement` directly against a `CardInstance`
+    /// without requiring it to be on the battlefield. Used for library searches.
+    /// Battlefield-only predicates (Tapped, IsAttacking, etc.) return false.
+    pub(crate) fn evaluate_requirement_on_card(
+        &self,
+        req: &SelectionRequirement,
+        card: &CardInstance,
+        controller: usize,
+    ) -> bool {
+        use SelectionRequirement as R;
+        match req {
+            R::Any => true,
+            R::Player => false,
+            R::And(a, b) => {
+                self.evaluate_requirement_on_card(a, card, controller)
+                    && self.evaluate_requirement_on_card(b, card, controller)
+            }
+            R::Or(a, b) => {
+                self.evaluate_requirement_on_card(a, card, controller)
+                    || self.evaluate_requirement_on_card(b, card, controller)
+            }
+            R::Not(inner) => !self.evaluate_requirement_on_card(inner, card, controller),
+            R::ControlledByYou => card.controller == controller,
+            R::ControlledByOpponent => card.controller != controller,
+            R::Creature => card.definition.is_creature(),
+            R::Artifact => card.definition.is_artifact(),
+            R::Enchantment => card.definition.is_enchantment(),
+            R::Planeswalker => card.definition.is_planeswalker(),
+            R::Permanent => card.definition.is_permanent(),
+            R::Land => card.definition.is_land(),
+            R::Nonland => !card.definition.is_land(),
+            R::Noncreature => !card.definition.is_creature(),
+            R::HasColor(c) => card.definition.cost.symbols.iter().any(|s| {
+                matches!(s, crate::mana::ManaSymbol::Colored(cc) if cc == c)
+            }),
+            R::HasKeyword(kw) => card.has_keyword(kw),
+            R::PowerAtMost(n) => card.definition.is_creature() && card.power() <= *n,
+            R::PowerAtLeast(n) => card.definition.is_creature() && card.power() >= *n,
+            R::ToughnessAtMost(n) => card.definition.is_creature() && card.toughness() <= *n,
+            R::ToughnessAtLeast(n) => card.definition.is_creature() && card.toughness() >= *n,
+            R::HasSupertype(st) => card.definition.supertypes.contains(st),
+            R::HasCreatureType(ct) => card.definition.subtypes.creature_types.contains(ct),
+            R::HasLandType(lt) => card.definition.subtypes.land_types.contains(lt),
+            R::HasArtifactSubtype(a) => card.definition.subtypes.artifact_subtypes.contains(a),
+            R::HasEnchantmentSubtype(e) => card.definition.subtypes.enchantment_subtypes.contains(e),
+            R::IsToken => card.is_token,
+            R::NotToken => !card.is_token,
+            R::IsBasicLand => card.definition.is_land() && card.definition.supertypes.contains(&Supertype::Basic),
+            R::ManaValueAtMost(n) => card.definition.cost.cmc() <= *n,
+            R::ManaValueAtLeast(n) => card.definition.cost.cmc() >= *n,
+            R::HasCardType(ct) => card.definition.card_types.contains(ct),
+            R::Multicolored => card.definition.cost.distinct_colors() >= 2,
+            R::Colorless => card.definition.cost.distinct_colors() == 0,
+            R::Monocolored => card.definition.cost.distinct_colors() == 1,
+            R::HasXInCost => card.definition.cost.has_x(),
+            // Battlefield-state predicates can't be evaluated for library cards.
+            R::Tapped | R::Untapped | R::WithCounter(_)
+            | R::IsAttacking | R::IsBlocking | R::IsSpellOnStack => false,
+        }
+    }
+}

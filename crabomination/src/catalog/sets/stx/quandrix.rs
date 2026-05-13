@@ -114,15 +114,10 @@ pub fn quandrix_pledgemage() -> CardDefinition {
 /// you control deals damage equal to its power to target creature you
 /// don't control."
 ///
-/// ✅ Push XXXIII: both modes wired. Mode 0 ships the classic
-/// counter-noncreature-unless-{2} primitive. Mode 1 promotes from the
-/// prior 🟡 omission to a faithful Fight-style resolution via
-/// `Effect::Fight { attacker: Target(0), defender: EachPermanent(
-/// Creature & ControlledByOpponent) }`. The printed "two target"
-/// prompt is auto-resolved on the defender side (same Chelonian
-/// Tackle pattern, push XXVII); the attacker is the player-chosen
-/// `Target(0)`. Multi-target prompt for the defender remains a
-/// future engine enhancement.
+/// Mode 1 is a Fight resolution; the printed "two target" prompt is
+/// auto-resolved on the defender side, attacker is player-chosen via
+/// `Target(0)`. Multi-target defender prompt remains a future engine
+/// enhancement.
 pub fn decisive_denial() -> CardDefinition {
     use crate::mana::{ManaCost, generic as gen_pip};
     let two = ManaCost { symbols: vec![gen_pip(2)] };

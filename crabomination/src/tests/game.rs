@@ -1,34 +1,11 @@
 use super::*;
+use super::{cast, cast_at, drain_stack, two_player_game};
 use crate::catalog;
 use crate::card::StaticAbility;
 use crate::decision::{DecisionAnswer, ScriptedDecider};
 use crate::effect::{Effect, ManaPayload, PlayerRef, Selector, StaticEffect, Value};
 use crate::game::effects::EffectContext;
 use crate::mana::Color;
-
-fn two_player_game() -> GameState {
-    let players = vec![
-        Player::new(0, "Alice"),
-        Player::new(1, "Bob"),
-    ];
-    let mut g = GameState::new(players);
-    // Start in PreCombatMain so we can take actions without advancing steps
-    g.step = TurnStep::PreCombatMain;
-    g
-}
-
-/// Pass priority for all players until the stack is empty (spells resolve).
-/// Returns all events produced during resolution.
-fn drain_stack(g: &mut GameState) -> Vec<GameEvent> {
-    let mut all_events = Vec::new();
-    while !g.stack.is_empty() {
-        let events = g.perform_action(GameAction::PassPriority).unwrap();
-        all_events.extend(events);
-        let events = g.perform_action(GameAction::PassPriority).unwrap();
-        all_events.extend(events);
-    }
-    all_events
-}
 
 // ── Setup ─────────────────────────────────────────────────────────────────
 
@@ -154,12 +131,7 @@ fn lightning_bolt_deals_3_damage_to_player() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::lightning_bolt());
     g.players[0].mana_pool.add(Color::Red, 1);
-    g.perform_action(GameAction::CastSpell {
-        card_id: id,
-        target: Some(Target::Player(1)),
-        mode: None, x_value: None })
-    .unwrap();
-    drain_stack(&mut g);
+    cast_at(&mut g, id, Target::Player(1));
     assert_eq!(g.players[1].life, 17);
 }
 
@@ -169,12 +141,7 @@ fn lightning_bolt_kills_creature() {
     let bolt_id = g.add_card_to_hand(0, catalog::lightning_bolt());
     let bear_id = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     g.players[0].mana_pool.add(Color::Red, 1);
-    g.perform_action(GameAction::CastSpell {
-        card_id: bolt_id,
-        target: Some(Target::Permanent(bear_id)),
-        mode: None, x_value: None })
-    .unwrap();
-    drain_stack(&mut g);
+    cast_at(&mut g, bolt_id, Target::Permanent(bear_id));
     assert!(!g.battlefield.iter().any(|c| c.id == bear_id));
     assert!(g.players[1].graveyard.iter().any(|c| c.id == bear_id));
 }
@@ -185,12 +152,7 @@ fn giant_growth_pumps_creature() {
     let spell_id = g.add_card_to_hand(0, catalog::giant_growth());
     let bear_id = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.players[0].mana_pool.add(Color::Green, 1);
-    g.perform_action(GameAction::CastSpell {
-        card_id: spell_id,
-        target: Some(Target::Permanent(bear_id)),
-        mode: None, x_value: None })
-    .unwrap();
-    drain_stack(&mut g);
+    cast_at(&mut g, spell_id, Target::Permanent(bear_id));
     let bear = g.battlefield.iter().find(|c| c.id == bear_id).unwrap();
     assert_eq!(bear.power(), 5);
     assert_eq!(bear.toughness(), 5);
@@ -201,9 +163,7 @@ fn dark_ritual_adds_three_black_mana() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::dark_ritual());
     g.players[0].mana_pool.add(Color::Black, 1);
-    g.perform_action(GameAction::CastSpell { card_id: id, target: None, mode: None, x_value: None })
-        .unwrap();
-    drain_stack(&mut g);
+    cast(&mut g, id);
     // Paid 1B, gained BBB → net 2B in pool
     assert_eq!(g.players[0].mana_pool.amount(Color::Black), 3);
 }
@@ -216,9 +176,7 @@ fn ancestral_recall_draws_three_cards() {
     }
     let id = g.add_card_to_hand(0, catalog::ancestral_recall());
     g.players[0].mana_pool.add(Color::Blue, 1);
-    g.perform_action(GameAction::CastSpell { card_id: id, target: None, mode: None, x_value: None })
-        .unwrap();
-    drain_stack(&mut g);
+    cast(&mut g, id);
     // Drew 3 cards (Ancestral Recall has no target in this engine version)
     assert_eq!(g.players[0].hand.len(), 3);
 }
@@ -229,12 +187,7 @@ fn terror_destroys_non_black_creature() {
     let terror_id = g.add_card_to_hand(0, catalog::terror());
     let bear_id = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     g.players[0].mana_pool.add(Color::Black, 2);
-    g.perform_action(GameAction::CastSpell {
-        card_id: terror_id,
-        target: Some(Target::Permanent(bear_id)),
-        mode: None, x_value: None })
-    .unwrap();
-    drain_stack(&mut g);
+    cast_at(&mut g, terror_id, Target::Permanent(bear_id));
     assert!(!g.battlefield.iter().any(|c| c.id == bear_id));
 }
 
@@ -244,9 +197,7 @@ fn terror_destroys_non_black_creature() {
 fn mox_ruby_casts_for_free_and_taps_for_red() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::mox_ruby());
-    // Cast for {0} — no mana needed
-    g.perform_action(GameAction::CastSpell { card_id: id, target: None, mode: None, x_value: None }).unwrap();
-    drain_stack(&mut g);
+    cast(&mut g, id);
     assert!(g.battlefield.iter().any(|c| c.id == id));
     // Tap immediately (not a creature, so no summoning sickness)
     g.perform_action(GameAction::ActivateAbility { card_id: id, ability_index: 0, target: None })
@@ -575,14 +526,7 @@ fn drawing_from_empty_library_eliminates_player() {
     g.priority.player_with_priority = 1;
     g.players[1].mana_pool.add(Color::Blue, 1);
     g.players[1].mana_pool.add_colorless(2);
-    g.perform_action(GameAction::CastSpell {
-        card_id: divination,
-        target: None,
-        mode: None,
-        x_value: None,
-    })
-    .expect("Divination castable for {2}{U}");
-    drain_stack(&mut g);
+    cast(&mut g, divination);
 
     assert!(g.is_game_over(),
         "P1 should lose the game from drawing off an empty library");
@@ -652,11 +596,7 @@ fn cast_one_u_with_dual_and_basic_auto_taps_correctly() {
     g.add_card_to_battlefield(0, catalog::tundra());
     g.add_card_to_battlefield(0, catalog::island());
     let id = g.add_card_to_hand(0, one_u_spell());
-    g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
-    })
-    .expect("Tundra + Island should be enough mana for {1}{U}");
-    drain_stack(&mut g);
+    cast(&mut g, id);
     assert!(g.battlefield.iter().any(|c| c.id == id));
 }
 
@@ -666,11 +606,7 @@ fn cast_one_u_with_two_tundras_auto_taps_correctly() {
     g.add_card_to_battlefield(0, catalog::tundra());
     g.add_card_to_battlefield(0, catalog::tundra());
     let id = g.add_card_to_hand(0, one_u_spell());
-    g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
-    })
-    .expect("Two Tundras should be enough mana for {1}{U}");
-    drain_stack(&mut g);
+    cast(&mut g, id);
     assert!(g.battlefield.iter().any(|c| c.id == id));
 }
 
@@ -685,11 +621,7 @@ fn inquisition_of_kozilek_picks_low_cmc_nonland() {
 
     let inq = g.add_card_to_hand(0, catalog::inquisition_of_kozilek());
     g.players[0].mana_pool.add(Color::Black, 1);
-    g.perform_action(GameAction::CastSpell {
-        card_id: inq, target: None, mode: None, x_value: None,
-    })
-    .unwrap();
-    drain_stack(&mut g);
+    cast(&mut g, inq);
 
     // Lightning Bolt (CMC 1, nonland) should be the pick. Mahamoti is CMC 5
     // (excluded) and the forest is a land (excluded).
@@ -706,11 +638,7 @@ fn thoughtseize_picks_nonland_and_costs_two_life() {
 
     let ts = g.add_card_to_hand(0, catalog::thoughtseize());
     g.players[0].mana_pool.add(Color::Black, 1);
-    g.perform_action(GameAction::CastSpell {
-        card_id: ts, target: None, mode: None, x_value: None,
-    })
-    .unwrap();
-    drain_stack(&mut g);
+    cast(&mut g, ts);
 
     assert!(g.players[1].graveyard.iter().any(|c| c.id == bolt),
         "Thoughtseize should pick the nonland Lightning Bolt");
@@ -760,14 +688,7 @@ fn thud_sacrifices_creature_and_deals_damage_equal_to_its_power() {
     g.players[0].mana_pool.add(Color::Red, 1);
 
     let opp_life_before = g.players[1].life;
-    g.perform_action(GameAction::CastSpell {
-        card_id: thud_id,
-        target: Some(Target::Player(1)),
-        mode: None,
-        x_value: None,
-    })
-    .expect("Thud should be castable");
-    drain_stack(&mut g);
+    cast_at(&mut g, thud_id, Target::Player(1));
 
     // Shivan Dragon (power 5) sacrificed → 5 damage to P1.
     assert!(!g.battlefield.iter().any(|c| c.id == bear_id),
@@ -972,8 +893,7 @@ fn force_of_will_rejects_non_blue_pitch_card() {
 /// total is greater than or equal to the payment. Force of Will's alt
 /// cost is "Pay 1 life and exile a blue card" — the cast path must
 /// reject cleanly when the caster is at 0 life rather than driving
-/// life negative. Push XIX wired the alt-cost pre-flight gate so this
-/// no longer crashes the player's life total below 0.
+/// life negative.
 #[test]
 fn force_of_will_alt_cost_rejected_at_zero_life_per_cr_119_4() {
     let mut g = two_player_game();
@@ -1323,8 +1243,7 @@ fn wrath_of_god_destroys_all_creatures() {
     let bear2 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let wrath_id = g.add_card_to_hand(0, catalog::wrath_of_god());
     g.players[0].mana_pool.add(Color::White, 4);
-    g.perform_action(GameAction::CastSpell { card_id: wrath_id, target: None, mode: None, x_value: None }).unwrap();
-    drain_stack(&mut g);
+    cast(&mut g, wrath_id);
     assert!(!g.battlefield.iter().any(|c| c.id == bear1));
     assert!(!g.battlefield.iter().any(|c| c.id == bear2));
 }
@@ -1470,8 +1389,7 @@ fn wants_ui_opt_suspends_on_scry_and_draws_after_submit() {
     g.add_card_to_library(0, catalog::island());
     let opt_id = g.add_card_to_hand(0, catalog::opt());
     g.players[0].mana_pool.add(Color::Blue, 1);
-    g.perform_action(GameAction::CastSpell { card_id: opt_id, target: None, mode: None, x_value: None }).unwrap();
-    drain_stack(&mut g);
+    cast(&mut g, opt_id);
     assert!(g.pending_decision.is_some(), "Opt should suspend on its Scry half for UI");
     // Scry the undesired card to the bottom. Draw should fire after submission.
     g.perform_action(GameAction::SubmitDecision(DecisionAnswer::ScryOrder {
@@ -1495,8 +1413,7 @@ fn scry_resolves_with_scripted_order() {
     }]));
     let opt_id = g.add_card_to_hand(0, catalog::opt());
     g.players[0].mana_pool.add(Color::Blue, 1);
-    g.perform_action(GameAction::CastSpell { card_id: opt_id, target: None, mode: None, x_value: None }).unwrap();
-    drain_stack(&mut g);
+    cast(&mut g, opt_id);
     assert!(g.pending_decision.is_none(), "scry should have been completed synchronously");
     // `next` was kept on top then drawn by Opt's draw effect → it's now in hand.
     // `top` went to the bottom of the library.
@@ -1534,8 +1451,7 @@ fn opt_scries_then_draws() {
     let opt = catalog::opt();
     let opt_id = g.add_card_to_hand(0, opt);
     g.players[0].mana_pool.add(Color::Blue, 1);
-    g.perform_action(GameAction::CastSpell { card_id: opt_id, target: None, mode: None, x_value: None }).unwrap();
-    drain_stack(&mut g);
+    cast(&mut g, opt_id);
     assert!(g.players[0].hand.iter().any(|c| c.id == keeper),
         "Opt should have drawn the keeper after scrying undesired to bottom");
 }
@@ -1567,11 +1483,7 @@ fn demonic_tutor_fetches_chosen_card_via_decider() {
     g.active_player_idx = 1;
     g.priority.player_with_priority = 1;
     g.players[1].mana_pool.add(Color::Black, 2);
-    g.perform_action(GameAction::CastSpell { card_id: tutor_id, target: None, mode: None, x_value: None }).unwrap();
-    while !g.stack.is_empty() {
-        g.perform_action(GameAction::PassPriority).unwrap();
-        g.perform_action(GameAction::PassPriority).unwrap();
-    }
+    cast(&mut g, tutor_id);
     assert!(g.players[1].hand.iter().any(|c| c.id == wanted),
         "Demonic Tutor should have fetched the wanted card into hand");
     assert!(!g.players[1].library.iter().any(|c| c.id == wanted),
@@ -1592,8 +1504,7 @@ fn preordain_scry_2_then_draws() {
     }]));
     let pre_id = g.add_card_to_hand(0, catalog::preordain());
     g.players[0].mana_pool.add(Color::Blue, 1);
-    g.perform_action(GameAction::CastSpell { card_id: pre_id, target: None, mode: None, x_value: None }).unwrap();
-    drain_stack(&mut g);
+    cast(&mut g, pre_id);
     assert!(g.players[0].hand.iter().any(|c| c.id == island_top),
         "Preordain should draw what was the 3rd card after scrying top 2 to bottom");
 }
@@ -2314,39 +2225,30 @@ fn mystical_dispute_alt_cost_requires_blue_target() {
     .expect("Mystical Dispute alt cost should accept a blue target");
 }
 
-#[test]
-fn mystical_dispute_does_not_counter_when_opponent_can_pay() {
-    // Opponent has 3 colorless to spare → Dispute auto-pays on their
-    // behalf and the spell survives.
+/// Whether the opponent has spare mana decides if Mystical Dispute's {3}
+/// tax saves the targeted spell or counters it.
+fn mystical_dispute_setup(p1_spare_colorless: u32) -> (GameState, CardId) {
     let mut g = two_player_game();
     g.players[0].mana_pool.add_colorless(3);
     g.players[0].mana_pool.add(Color::Blue, 1);
     let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
     g.players[1].mana_pool.add(Color::Red, 1);
-    // Give P1 enough mana to pay the {3} tax.
-    g.players[1].mana_pool.add_colorless(3);
+    g.players[1].mana_pool.add_colorless(p1_spare_colorless);
     g.active_player_idx = 1;
     g.priority.player_with_priority = 1;
+    // Bolt must stay on the stack so Dispute can target it.
     g.perform_action(GameAction::CastSpell {
-        card_id: bolt,
-        target: Some(Target::Player(0)),
-        mode: None,
-        x_value: None,
-    })
-    .expect("Lightning Bolt castable for {R}");
-
+        card_id: bolt, target: Some(Target::Player(0)), mode: None, x_value: None,
+    }).expect("Lightning Bolt castable for {R}");
     g.priority.player_with_priority = 0;
     let dispute = g.add_card_to_hand(0, catalog::mystical_dispute());
-    g.perform_action(GameAction::CastSpell {
-        card_id: dispute,
-        target: Some(Target::Permanent(bolt)),
-        mode: None,
-        x_value: None,
-    })
-    .expect("Mystical Dispute castable for {2}{U}");
-    drain_stack(&mut g);
+    cast_at(&mut g, dispute, Target::Permanent(bolt));
+    (g, bolt)
+}
 
-    // Bolt's controller (P1) paid {3}, so Bolt resolved and dealt damage.
+#[test]
+fn mystical_dispute_does_not_counter_when_opponent_can_pay() {
+    let (g, _bolt) = mystical_dispute_setup(3);
     assert_eq!(g.players[0].life, 17,
         "Bolt should still resolve when P1 pays the dispute tax");
     assert_eq!(g.players[1].mana_pool.colorless_amount(), 0,
@@ -2355,33 +2257,7 @@ fn mystical_dispute_does_not_counter_when_opponent_can_pay() {
 
 #[test]
 fn mystical_dispute_counters_when_opponent_cannot_pay() {
-    // Same scenario but opponent has no spare mana → counter goes through.
-    let mut g = two_player_game();
-    g.players[0].mana_pool.add_colorless(3);
-    g.players[0].mana_pool.add(Color::Blue, 1);
-    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
-    g.players[1].mana_pool.add(Color::Red, 1);
-    g.active_player_idx = 1;
-    g.priority.player_with_priority = 1;
-    g.perform_action(GameAction::CastSpell {
-        card_id: bolt,
-        target: Some(Target::Player(0)),
-        mode: None,
-        x_value: None,
-    })
-    .expect("Lightning Bolt castable for {R}");
-
-    g.priority.player_with_priority = 0;
-    let dispute = g.add_card_to_hand(0, catalog::mystical_dispute());
-    g.perform_action(GameAction::CastSpell {
-        card_id: dispute,
-        target: Some(Target::Permanent(bolt)),
-        mode: None,
-        x_value: None,
-    })
-    .expect("Mystical Dispute castable for {2}{U}");
-    drain_stack(&mut g);
-
+    let (g, bolt) = mystical_dispute_setup(0);
     assert_eq!(g.players[0].life, 20,
         "Bolt should be countered when P1 can't afford the {{3}} tax");
     assert!(g.players[1].graveyard.iter().any(|c| c.id == bolt),

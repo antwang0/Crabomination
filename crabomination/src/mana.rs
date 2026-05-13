@@ -12,6 +12,16 @@ pub enum Color {
 }
 
 impl Color {
+    /// The five colors in WUBRG order. Use this when iterating over all
+    /// colors, rather than rebuilding the array at the call site.
+    pub const ALL: [Color; 5] = [
+        Color::White,
+        Color::Blue,
+        Color::Black,
+        Color::Red,
+        Color::Green,
+    ];
+
     /// Single-letter MTG abbreviation (W/U/B/R/G). Used by the cost
     /// label formatter so `{R}` renders as `{R}` rather than `{Red}`,
     /// and by the cube format's color-pair helper.
@@ -340,7 +350,7 @@ impl ManaPool {
             tmp.snow -= snow_needed;
             // Also drain one mana from any bucket per snow pip
             let mut rem = snow_needed;
-            for color in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] {
+            for color in Color::ALL {
                 if rem == 0 { break; }
                 let drain = rem.min(tmp.amount(color));
                 *tmp.slot_mut(color) -= drain;
@@ -381,7 +391,7 @@ impl ManaPool {
                 });
             }
             let mut rem = generic;
-            for color in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] {
+            for color in Color::ALL {
                 if rem == 0 { break; }
                 let drain = rem.min(tmp.amount(color));
                 *tmp.slot_mut(color) -= drain;

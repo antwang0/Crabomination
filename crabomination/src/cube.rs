@@ -671,7 +671,6 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(blech_loafing_pest);
         v.push(cauldron_of_essence);
         v.push(vicious_rivalry);
-        // Push XV: Lluwen MDFC closes out the Witherbloom school.
         v.push(lluwen_exchange_student);
     }
     if pair_contains(pair, Color::White) {

@@ -254,10 +254,8 @@ fn predicate_short_label(p: &crate::card::Predicate) -> String {
         Predicate::CreaturesDiedThisTurnAtLeast {
             at_least: Value::Const(1), ..
         } => "after creature death".into(),
-        // Push XVI: cast-time spell-shape introspection labels.
         Predicate::CastSpellHasX => "cast spell w/ {X}".into(),
         Predicate::CastSpellTargetsMatch(_) => "cast spell targets match".into(),
-        // Push XVII: mana-spent-on-cast predicates (Increment / Opus).
         Predicate::CastSpellManaSpentAtLeast(n) => format!("if ≥{n} mana spent"),
         Predicate::IncrementSatisfied => "Increment (mana > P or T)".into(),
         // Catch-all: no human-readable form yet.
@@ -770,9 +768,8 @@ mod tests {
         assert_eq!(lifegain.effect_label, "Gain life");
         assert!(!lifegain.gate_label.is_empty(),
             "gate_label should describe the printed condition");
-        // Push XIII: gate now uses `InstantsOrSorceriesCastThisTurnAtLeast`,
-        // labeled "after instant/sorcery cast" — the test accepts either
-        // wording so the label can evolve without breaking.
+        // Accept either "instant/sorcery" or "spell" wording so the label
+        // can evolve without breaking the test.
         let lab = &lifegain.gate_label;
         assert!(lab.contains("instant/sorcery") || lab.contains("spell"),
             "gate_label should describe the predicate (got {:?})", lab);
