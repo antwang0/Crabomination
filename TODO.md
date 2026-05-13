@@ -187,6 +187,52 @@ status tag (✅ wired, 🟡 partial, ⏳ todo) plus a short note.
 
 ## Recent additions
 
+- ✅ **Push XXVII (2026-05-13, `claude/modern_decks` branch)**: 11 new STX
+  cards (full Command cycle + 6 utility cards) + `magecraft_self_untap`
+  helper + CR 700.2 audit. Tests at 1180 (+15 net).
+  - **STX Command cycle (5 cards 🟡)**: Witherbloom Command (mill 4 /
+    destroy MV ≤ 2 / drain 2 / Indestructible EOT), Lorehold Command
+    (4 dmg / -2/-0 / gy → hand / two flying Spirits), Quandrix Command
+    (+1/+1×2 / `CounterAbility` / mill 2 / bounce), Silverquill
+    Command (`CounterAbility` / drain 2 / gy → bf / +1/+1×2), Prismari
+    Command (2 dmg / loot / Treasure / destroy artifact). All five
+    use the standard `ChooseMode` single-mode-pick approximation
+    (multi-mode-pick remains a TODO).
+  - **STX utility cards (4 ✅, 2 🟡)**: Defend the Campus (3× Inkling
+    mint), Hall Monitor (magecraft self-untap), Stonebinder's
+    Familiar (cards-leave-gy +1/+1 counter), Necrotic Fumes (sac +
+    exile), Make Your Mark (pump + cantrip), Containment Breach
+    (destroy enchantment + Surveil 1).
+  - **Engine: `magecraft_self_untap()` shortcut** — sibling to
+    `magecraft_self_pump`, wraps `magecraft(Effect::Untap { what:
+    Selector::This })`. Used by Hall Monitor; future
+    "magecraft → untap this" cards will reuse it.
+  - **Bug found while wiring**: `EventScope::SelfSource` doesn't have
+    a `CardLeftGraveyard` arm in `event_matches_spec`, so wiring
+    Stonebinder's Familiar with `SelfSource` silently no-op'd. The
+    correct scope is `YourControl` (matched against `event_actor`),
+    which is how SOS Spirit Mascot / Owlin Historian / Garrison
+    Excavator wire their analogous gy-leave triggers. Not a code
+    change — just a doc clarification: `SelfSource` for
+    `CardLeftGraveyard` is meaningless (the source can't leave the
+    graveyard while it's on the battlefield triggering).
+  - **CR audit**:
+    - ✅ **CR 700.2 — modal spell mode chosen as you cast**: "If a
+      spell or ability is modal, the player who casts the spell or
+      activates the ability chooses the mode(s) as part of casting
+      that spell or activating that ability." The engine's
+      `GameAction::CastSpell.mode: Option<u8>` field carries the
+      cast-time mode pick directly into the stack item (`StackItem::
+      Spell.mode`) and resolves through `Effect::ChooseMode` at
+      resolution time — the chosen mode index is bound to the
+      resolution context so only that mode's body runs. Tested by
+      every modal card in the Strixhaven Command cycle (5 new tests
+      this push: Witherbloom mode 0/2, Lorehold mode 0/3, Silverquill
+      mode 1/3, Prismari mode 0/2, Quandrix mode 0). 700.2's
+      "choose two/three" rider remains the long-running collapse to
+      single-mode-pick (tracked under "Multi-target action shape" in
+      the next-up tasks).
+
 - ✅ **Push XXVI (2026-05-13, `claude/modern_decks` branch)**: 12 new SOS
   cards out of ⏳, 1 STX promotion (Daemogoth Titan 🟡 → ✅), and the new
   `EventKind::Blocks` engine event for CR 509.1i. Tests at 1165 (+15 net).
@@ -527,6 +573,38 @@ status tag (✅ wired, 🟡 partial, ⏳ todo) plus a short note.
   Aberrant Manawurm, Tackle Artist, Expressive Firedancer, etc.
   Suggested shape: `Value::ManaSpentOnCast(Box<Selector>)` that
   reads from `StackItem::Spell.mana_paid_total`.
+- ⏳ **CR 700.2d — modal "choose two" / "choose more than one"** —
+  Witherbloom Charm, the full Strixhaven Command cycle (Witherbloom /
+  Lorehold / Quandrix / Silverquill / Prismari Commands), Moment of
+  Reckoning, and dozens of multimodal spells collapse to single-mode
+  pick. CR 700.2d explicitly covers this case: "If a player is
+  allowed to choose more than one mode for a modal spell or ability,
+  that player normally can't choose the same mode more than once.
+  However, some modal spells include the instruction 'You may choose
+  the same mode more than once.'" Engine shape: bump
+  `GameAction::CastSpell.mode: Option<u8>` → `modes: Vec<u8>` and
+  thread the multi-mode selection through `Effect::ChooseMode`'s
+  resolution. The auto-decider should pick the two best legal modes
+  given the board state.
+- ⏳ **`SelectionRequirement::OtherThanSource`** — first-class
+  "another creature" / "noncreature, nonland card other than this
+  one" filter. Push XX added a `ctx.source`-aware sort priority for
+  `Effect::Sacrifice` so Daemogoth-style triggers prefer non-source
+  candidates first, but a strict filter would close the remaining
+  edge case (when the source is the only candidate, the effect should
+  no-op cleanly per CR 605). Wiring needs threading `ctx.source` into
+  `evaluate_requirement_static` — a single `&Option<CardId>`
+  parameter, mostly mechanical. Once landed, Lorehold Pledgemage's
+  exile-from-gy cost can use `OtherThanSource` instead of the current
+  lowest-CMC heuristic, and the entire "another creature" family of
+  triggers (Felisa Fang's Inkling generator, Pestbrood Sloth, future
+  similar cards) can be retrofitted.
+- ⏳ **`magecraft_self_untap()` / `magecraft_drain_each_opp(N)`
+  shortcuts** — push XXVII added two new shortcut helpers in
+  `effect::shortcut`. Future STX/SOS Magecraft creatures should
+  prefer these over the verbose inline form for consistency. Hall
+  Monitor (push XXVII) and Witherbloom Apprentice (refactored in
+  push XXVII) demonstrate the pattern.
 
 ## Past additions
 

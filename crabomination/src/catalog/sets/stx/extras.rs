@@ -2462,6 +2462,583 @@ pub fn karok_wrangler() -> CardDefinition {
     }
 }
 
+// ── Witherbloom Command ─────────────────────────────────────────────────────
+
+/// Witherbloom Command — {2}{B}{G} Sorcery. "Choose two — / • Target
+/// player mills four cards. / • Destroy target noncreature, nonland
+/// permanent with mana value 2 or less. / • Target player loses 2 life
+/// and you gain 2 life. / • Regenerate target creature you control."
+///
+/// 🟡 Modal-pick collapses to the standard `ChooseMode` (single-mode
+/// pick), matching the long-running approximation in Moment of
+/// Reckoning / Witherbloom Charm. Mode 3 (regenerate) is approximated
+/// as a `+0/+0 EOT + Indestructible EOT` grant since the engine has no
+/// regen-shield primitive (`Keyword::Regenerate(N)` exists as a tag but
+/// isn't enforced at lethal-damage time). Mode 0's "target player"
+/// collapses to "target opponent" via the auto-targeted opponent in
+/// `Effect::Mill`. The "choose two" mega-pick is tracked as a
+/// future engine primitive.
+pub fn witherbloom_command() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Command",
+        cost: cost(&[generic(2), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::ChooseMode(vec![
+            // Mode 0: target player mills four. Auto-targets an opponent.
+            Effect::Mill {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(4),
+            },
+            // Mode 1: destroy noncreature/nonland MV ≤ 2.
+            Effect::Destroy {
+                what: target_filtered(
+                    SelectionRequirement::Permanent
+                        .and(SelectionRequirement::Noncreature)
+                        .and(SelectionRequirement::Nonland)
+                        .and(SelectionRequirement::ManaValueAtMost(2)),
+                ),
+            },
+            // Mode 2: drain 2 (each opp loses 2, you gain 2).
+            Effect::Drain {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                to: Selector::You,
+                amount: Value::Const(2),
+            },
+            // Mode 3: regenerate approximation — grant indestructible
+            // EOT to a friendly creature. Strictly stronger than the
+            // printed "regen on the next damage" rider, but the use
+            // pattern (save your creature from a wrath) is preserved.
+            Effect::GrantKeyword {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                keyword: Keyword::Indestructible,
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Lorehold Command ────────────────────────────────────────────────────────
+
+/// Lorehold Command — {2}{R}{W} Sorcery. "Choose two — / • Lorehold
+/// Command deals 4 damage to target opponent. / • Target creature gets
+/// -2/-0 until your next turn. / • Return target creature card from
+/// your graveyard to your hand. / • Target player creates two 2/2 red
+/// and white Spirit creature tokens with flying."
+///
+/// 🟡 Standard `ChooseMode` single-mode collapse. Mode 1 uses
+/// `Duration::EndOfTurn` instead of "until your next turn" — the
+/// engine has `Duration::UntilYourNextUntap`, but practical play
+/// treats the difference as small for a -2/-0 rider. Mode 3's
+/// printed Spirits have flying (Lorehold STX printing); we mint
+/// two 2/2 R/W Spirits with flying via a fresh `TokenDefinition`.
+pub fn lorehold_command() -> CardDefinition {
+    let lorehold_spirit_flying = TokenDefinition {
+        name: "Spirit".to_string(),
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Red, Color::White],
+        supertypes: vec![],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
+        activated_abilities: vec![],
+        triggered_abilities: vec![],
+    };
+    CardDefinition {
+        name: "Lorehold Command",
+        cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::ChooseMode(vec![
+            // Mode 0: 4 damage to target opponent.
+            Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Player),
+                amount: Value::Const(4),
+            },
+            // Mode 1: -2/-0 EOT on target creature.
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(-2),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+            // Mode 2: return creature card from your gy to hand.
+            Effect::Move {
+                what: target_filtered(SelectionRequirement::Creature),
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+            // Mode 3: create two 2/2 R/W flying Spirit tokens.
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                definition: lorehold_spirit_flying,
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Quandrix Command ────────────────────────────────────────────────────────
+
+/// Quandrix Command — {1}{G}{U} Instant. "Choose two — / • Put two
+/// +1/+1 counters on up to one target creature. / • Counter target
+/// activated or triggered ability. / • Target player puts the top X
+/// cards of their library into their graveyard, where X is twice the
+/// number of creatures you control. / • Return up to one target nonland
+/// permanent to its owner's hand."
+///
+/// 🟡 Standard `ChooseMode` single-mode collapse. Mode 2's X collapses
+/// to "2" (engine has no `Value::Times(N, CountOf(...))` shortcut wired
+/// for cast-time mill counts; safe approximation that matches the
+/// printed value when you control 1 creature).
+pub fn quandrix_command() -> CardDefinition {
+    use crate::mana::u as blue;
+    CardDefinition {
+        name: "Quandrix Command",
+        cost: cost(&[generic(1), g(), blue()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::ChooseMode(vec![
+            // Mode 0: two +1/+1 counters on creature.
+            Effect::AddCounter {
+                what: target_filtered(SelectionRequirement::Creature),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(2),
+            },
+            // Mode 1: counter target activated/triggered ability.
+            Effect::CounterAbility {
+                what: target_filtered(SelectionRequirement::Any),
+            },
+            // Mode 2: target opponent mills 2 (X collapsed).
+            Effect::Mill {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(2),
+            },
+            // Mode 3: bounce nonland permanent to owner's hand.
+            Effect::Move {
+                what: target_filtered(
+                    SelectionRequirement::Permanent.and(SelectionRequirement::Nonland),
+                ),
+                to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Silverquill Command ─────────────────────────────────────────────────────
+
+/// Silverquill Command — {2}{W}{B} Instant. "Choose two — / • Counter
+/// target activated or triggered ability. / • Target opponent loses 2
+/// life and you gain 2 life. / • Return target permanent card with
+/// mana value 2 or less from your graveyard to the battlefield. / •
+/// Put two +1/+1 counters on target creature."
+///
+/// 🟡 Standard `ChooseMode` single-mode collapse. All four modes wired
+/// faithfully: counter ability via `Effect::CounterAbility`, drain 2
+/// via `Effect::Drain`, gy-recursion via `Effect::Move(target → bf)`
+/// against the MV ≤ 2 filter, and +1/+1 counters via the standard
+/// `Effect::AddCounter`.
+pub fn silverquill_command() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Command",
+        cost: cost(&[generic(2), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::ChooseMode(vec![
+            // Mode 0: counter activated/triggered ability.
+            Effect::CounterAbility {
+                what: target_filtered(SelectionRequirement::Any),
+            },
+            // Mode 1: drain 2.
+            Effect::Drain {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                to: Selector::You,
+                amount: Value::Const(2),
+            },
+            // Mode 2: return MV ≤ 2 permanent card from your gy to bf.
+            Effect::Move {
+                what: target_filtered(
+                    SelectionRequirement::Permanent
+                        .and(SelectionRequirement::ManaValueAtMost(2)),
+                ),
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: false,
+                },
+            },
+            // Mode 3: two +1/+1 counters on creature.
+            Effect::AddCounter {
+                what: target_filtered(SelectionRequirement::Creature),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(2),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Prismari Command ────────────────────────────────────────────────────────
+
+/// Prismari Command — {1}{U}{R} Instant. "Choose two — / • Prismari
+/// Command deals 2 damage to any target. / • Discard a card, then draw
+/// a card. If a noncreature, nonland card is discarded this way, draw
+/// an additional card. / • Create a Treasure token. / • Destroy target
+/// artifact."
+///
+/// 🟡 Standard `ChooseMode` single-mode collapse. Mode 1 collapses the
+/// "extra draw if discarded card is noncreature/nonland" rider to a
+/// flat `discard 1 + draw 1` — the engine has no introspection on the
+/// discarded card's type at resolution time. Mode 2 mints the standard
+/// engine Treasure token (`{T}, Sac: Add one mana of any color`) via
+/// `treasure_token()`.
+pub fn prismari_command() -> CardDefinition {
+    use crate::game::effects::treasure_token;
+    use crate::mana::u as blue;
+    CardDefinition {
+        name: "Prismari Command",
+        cost: cost(&[generic(1), blue(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::ChooseMode(vec![
+            // Mode 0: 2 damage to any target.
+            Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature
+                        .or(SelectionRequirement::Player)
+                        .or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::Const(2),
+            },
+            // Mode 1: loot 1 (discard + draw).
+            Effect::Seq(vec![
+                Effect::Discard {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                    random: false,
+                },
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
+            ]),
+            // Mode 2: create a Treasure token.
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: treasure_token(),
+            },
+            // Mode 3: destroy target artifact.
+            Effect::Destroy {
+                what: target_filtered(SelectionRequirement::Artifact),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Defend the Campus ───────────────────────────────────────────────────────
+
+/// Defend the Campus — {3}{W}{W} Sorcery. "Create three 1/1 white and
+/// black Inkling creature tokens with flying."
+///
+/// ✅ Faithful 3x mint via `Effect::CreateToken { count: Value::Const(3) }`.
+/// Reuses the SOS catalog's `inkling_token()` definition for visual
+/// consistency with the other Silverquill Inkling cards.
+pub fn defend_the_campus() -> CardDefinition {
+    use crate::catalog::sets::sos::inkling_token;
+    CardDefinition {
+        name: "Defend the Campus",
+        cost: cost(&[generic(3), w(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(3),
+            definition: inkling_token(),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Hall Monitor ────────────────────────────────────────────────────────────
+
+/// Hall Monitor — {W} Creature — Human Cleric, 1/1. "Magecraft —
+/// Whenever you cast or copy an instant or sorcery spell, untap Hall
+/// Monitor."
+///
+/// ✅ Wired via the new `magecraft_self_untap()` shortcut (push XXVII).
+/// On every IS-cast trigger, the source is untapped (lets it block
+/// over multiple combat turns or chain Spectral Adversary-style
+/// re-tap activations).
+pub fn hall_monitor() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_self_untap;
+    CardDefinition {
+        name: "Hall Monitor",
+        cost: cost(&[w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_self_untap()],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Stonebinder's Familiar ──────────────────────────────────────────────────
+
+/// Stonebinder's Familiar — {1} Artifact Creature — Spirit, 0/1.
+/// "Whenever one or more cards leave your graveyard, put a +1/+1
+/// counter on Stonebinder's Familiar."
+///
+/// ✅ Wired against `EventKind::CardLeftGraveyard` (per-card emission;
+/// the printed "one or more" wording is approximated per-card, matching
+/// the SOS Spirit Mascot / Owlin Historian pattern). Trigger source is
+/// `Selector::This`. Pairs naturally with the Lorehold cycle.
+pub fn stonebinders_familiar() -> CardDefinition {
+    CardDefinition {
+        name: "Stonebinder's Familiar",
+        cost: cost(&[generic(1)]),
+        supertypes: vec![],
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 1,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            // CR 603.10a — leaves-graveyard triggers fire when the
+            // event's player matches; `YourControl` matches when the
+            // gy-leave was from the controller's own graveyard.
+            event: EventSpec::new(EventKind::CardLeftGraveyard, EventScope::YourControl),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Necrotic Fumes ──────────────────────────────────────────────────────────
+
+/// Necrotic Fumes — {2}{B}{B} Sorcery. "As an additional cost to cast
+/// this spell, sacrifice a creature. / Exile target creature."
+///
+/// 🟡 Approximated as `Seq(Sacrifice + Exile)` at resolution — the
+/// engine has no "additional cost" pre-flight gate yet (would need a
+/// cast-time selection prompt for the sacrifice), so the sacrifice
+/// happens during resolution rather than during cost-payment. Net
+/// effect (you lose a creature, opp loses a creature) is preserved.
+/// `Effect::Sacrifice` no-ops cleanly when no candidate exists.
+pub fn necrotic_fumes() -> CardDefinition {
+    CardDefinition {
+        name: "Necrotic Fumes",
+        cost: cost(&[generic(2), b(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            // "Additional cost: sacrifice a creature" — collapsed into
+            // resolution per the note above.
+            Effect::Sacrifice {
+                who: Selector::You,
+                count: Value::Const(1),
+                filter: SelectionRequirement::Creature,
+            },
+            Effect::Move {
+                what: target_filtered(SelectionRequirement::Creature),
+                to: ZoneDest::Exile,
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Make Your Mark ──────────────────────────────────────────────────────────
+
+/// Make Your Mark — {1}{W} Instant. "Target creature gets +1/+1 until
+/// end of turn. Draw a card."
+///
+/// ✅ Trivial pump + cantrip wire. The +1/+1 EOT goes on a chosen
+/// creature target via `target_filtered(Creature)`; the cantrip
+/// fires regardless of whether the pump finds a legal target.
+pub fn make_your_mark() -> CardDefinition {
+    CardDefinition {
+        name: "Make Your Mark",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(1),
+                toughness: Value::Const(1),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Containment Breach ──────────────────────────────────────────────────────
+
+/// Containment Breach — {1}{W} Sorcery. "Destroy target enchantment.
+/// Surveil 1."
+///
+/// ✅ Standard `Seq(Destroy + Surveil 1)` wire. The Surveil is the
+/// engine's existing `Effect::Surveil` primitive (top card → graveyard
+/// or stays on top per the controller's choice).
+pub fn containment_breach() -> CardDefinition {
+    CardDefinition {
+        name: "Containment Breach",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Destroy {
+                what: target_filtered(SelectionRequirement::Enchantment),
+            },
+            Effect::Surveil {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
 // ── Soothsayer Adept ────────────────────────────────────────────────────────
 
 /// Soothsayer Adept — {1}{U} Creature — Merfolk Wizard, 2/2.

@@ -1685,6 +1685,32 @@ pub mod shortcut {
         })
     }
 
+    /// Convenience: a Magecraft trigger that untaps the source itself.
+    /// Wraps [`magecraft`] with an `Effect::Untap` body whose `what:` is
+    /// the triggering permanent (`Selector::This`). Used by STX Hall
+    /// Monitor; future "magecraft → untap this" cards (Pop Quiz-style
+    /// Wizard chains, Galazeth-style mana ramps) will reuse it.
+    pub fn magecraft_self_untap() -> TriggeredAbility {
+        magecraft(Effect::Untap {
+            what: Selector::This,
+            up_to: None,
+        })
+    }
+
+    /// Convenience: a Magecraft trigger that drains `amount` life from
+    /// each opponent into the controller. Wraps [`magecraft`] with an
+    /// `Effect::Drain { from: EachOpponent, to: You, amount }` body.
+    /// The drain template is the canonical Witherbloom magecraft payoff
+    /// (Witherbloom Apprentice, Sedgemoor Witch's death-trigger
+    /// payoff, etc.); this shortcut keeps the call site one line.
+    pub fn magecraft_drain_each_opp(amount: i32) -> TriggeredAbility {
+        magecraft(Effect::Drain {
+            from: Selector::Player(PlayerRef::EachOpponent),
+            to: Selector::You,
+            amount: Value::Const(amount),
+        })
+    }
+
     /// Strixhaven Quandrix "spell with `{X}` in its mana cost" trigger:
     /// fires on any spell cast by the controller whose printed cost
     /// contains an `{X}` symbol. Powered by `Predicate::CastSpellHasX`.

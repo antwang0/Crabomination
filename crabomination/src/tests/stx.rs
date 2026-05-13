@@ -2708,3 +2708,327 @@ fn quick_study_draws_two_cards_for_target_player() {
     // Library: -2 (drawn).
     assert_eq!(g.players[0].library.len(), lib_before - 2);
 }
+
+// ── Push XXVII: STX Commands + utility cards ────────────────────────────────
+
+#[test]
+fn witherbloom_command_mode_two_drains_two_life() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::witherbloom_command());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let p0_life_before = g.players[0].life;
+    let p1_life_before = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: Some(2), x_value: None,
+    })
+    .expect("Witherbloom Command castable for {2}{B}{G}");
+    drain_stack(&mut g);
+    // Mode 2 drain: P1 -2, P0 +2.
+    assert_eq!(g.players[0].life, p0_life_before + 2,
+        "P0 should gain 2 life from drain mode");
+    assert_eq!(g.players[1].life, p1_life_before - 2,
+        "P1 should lose 2 life from drain mode");
+}
+
+#[test]
+fn witherbloom_command_mode_zero_mills_four() {
+    let mut g = two_player_game();
+    // P1 (target opponent) has at least 4 cards in their library.
+    for _ in 0..6 { g.add_card_to_library(1, catalog::island()); }
+    let id = g.add_card_to_hand(0, catalog::witherbloom_command());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let p1_lib_before = g.players[1].library.len();
+    let p1_gy_before = g.players[1].graveyard.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: Some(0), x_value: None,
+    })
+    .expect("Witherbloom Command castable for {2}{B}{G}");
+    drain_stack(&mut g);
+    // P1 milled 4: lib -4, gy +4.
+    assert_eq!(g.players[1].library.len(), p1_lib_before - 4,
+        "P1 should lose 4 cards from library to mill");
+    assert_eq!(g.players[1].graveyard.len(), p1_gy_before + 4,
+        "P1 graveyard should gain 4 cards from mill");
+}
+
+#[test]
+fn lorehold_command_mode_three_creates_two_flying_spirits() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::lorehold_command());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: Some(3), x_value: None,
+    })
+    .expect("Lorehold Command castable for {2}{R}{W}");
+    drain_stack(&mut g);
+
+    let spirits: Vec<_> = g.battlefield.iter()
+        .filter(|c| c.is_token && c.definition.name == "Spirit"
+            && c.controller == 0)
+        .collect();
+    assert_eq!(spirits.len(), 2, "Should mint exactly two Spirit tokens");
+    for s in &spirits {
+        assert_eq!(s.power(), 2);
+        assert_eq!(s.toughness(), 2);
+        assert!(s.has_keyword(&Keyword::Flying), "Lorehold Spirits have flying");
+    }
+}
+
+#[test]
+fn lorehold_command_mode_zero_deals_4_damage_to_opponent() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::lorehold_command());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let p1_life_before = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Player(1)), mode: Some(0), x_value: None,
+    })
+    .expect("Lorehold Command castable for {2}{R}{W}");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, p1_life_before - 4,
+        "P1 should take 4 damage");
+}
+
+#[test]
+fn quandrix_command_mode_zero_adds_two_counters() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    let id = g.add_card_to_hand(0, catalog::quandrix_command());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)), mode: Some(0), x_value: None,
+    })
+    .expect("Quandrix Command castable for {1}{G}{U}");
+    drain_stack(&mut g);
+    let bear_card = g.battlefield.iter().find(|c| c.id == bear).unwrap();
+    assert_eq!(bear_card.counter_count(CounterType::PlusOnePlusOne), 2,
+        "Bear should have 2 +1/+1 counters");
+}
+
+#[test]
+fn silverquill_command_mode_three_adds_two_counters() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    let id = g.add_card_to_hand(0, catalog::silverquill_command());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)), mode: Some(3), x_value: None,
+    })
+    .expect("Silverquill Command castable for {2}{W}{B}");
+    drain_stack(&mut g);
+    let bear_card = g.battlefield.iter().find(|c| c.id == bear).unwrap();
+    assert_eq!(bear_card.counter_count(CounterType::PlusOnePlusOne), 2,
+        "Bear should have 2 +1/+1 counters from Silverquill Command mode 3");
+}
+
+#[test]
+fn silverquill_command_mode_one_drains_two() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::silverquill_command());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let p0_life_before = g.players[0].life;
+    let p1_life_before = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: Some(1), x_value: None,
+    })
+    .expect("Silverquill Command castable for {2}{W}{B}");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, p0_life_before + 2);
+    assert_eq!(g.players[1].life, p1_life_before - 2);
+}
+
+#[test]
+fn prismari_command_mode_zero_deals_2_damage() {
+    let mut g = two_player_game();
+    // 2-toughness creature dies to 2 damage.
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::prismari_command());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)), mode: Some(0), x_value: None,
+    })
+    .expect("Prismari Command castable for {1}{U}{R}");
+    drain_stack(&mut g);
+    // Bear (2 toughness) takes 2 dmg → dies.
+    assert!(!g.battlefield.iter().any(|c| c.id == bear),
+        "Bear should be dead from 2 damage");
+}
+
+#[test]
+fn prismari_command_mode_two_creates_treasure() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::prismari_command());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: Some(2), x_value: None,
+    })
+    .expect("Prismari Command castable for {1}{U}{R}");
+    drain_stack(&mut g);
+    let treasures: Vec<_> = g.battlefield.iter()
+        .filter(|c| c.is_token && c.definition.name == "Treasure"
+            && c.controller == 0)
+        .collect();
+    assert_eq!(treasures.len(), 1, "Should mint a Treasure");
+}
+
+#[test]
+fn defend_the_campus_creates_three_inkling_tokens() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::defend_the_campus());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Defend the Campus castable for {3}{W}{W}");
+    drain_stack(&mut g);
+    let inklings: Vec<_> = g.battlefield.iter()
+        .filter(|c| c.is_token && c.definition.name == "Inkling"
+            && c.controller == 0)
+        .collect();
+    assert_eq!(inklings.len(), 3, "Should mint exactly three Inkling tokens");
+    for ink in &inklings {
+        assert_eq!(ink.power(), 1);
+        assert_eq!(ink.toughness(), 1);
+        assert!(ink.has_keyword(&Keyword::Flying), "Inklings have flying");
+    }
+}
+
+#[test]
+fn hall_monitor_untaps_self_on_instant_cast() {
+    let mut g = two_player_game();
+    let hm = g.add_card_to_battlefield(0, catalog::hall_monitor());
+    g.clear_sickness(hm);
+    // Tap Hall Monitor manually.
+    g.battlefield.iter_mut().find(|c| c.id == hm).unwrap().tapped = true;
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)), mode: None, x_value: None,
+    })
+    .expect("Bolt castable for {R}");
+    drain_stack(&mut g);
+    // Magecraft fires off the Bolt cast → untap Hall Monitor.
+    let hm_card = g.battlefield.iter().find(|c| c.id == hm).unwrap();
+    assert!(!hm_card.tapped, "Magecraft should untap Hall Monitor");
+}
+
+#[test]
+fn stonebinders_familiar_gains_counter_on_card_leaving_graveyard() {
+    let mut g = two_player_game();
+    // Seed P0 library so Glorious Decay's "draw a card" rider doesn't
+    // deck them out (which would short-circuit the test with GameAlreadyOver).
+    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
+    let sf = g.add_card_to_battlefield(0, catalog::stonebinders_familiar());
+    g.clear_sickness(sf);
+    // Put a card in P0's graveyard, then exile it via Glorious Decay's
+    // mode 2 (exile target card from a graveyard, draw a card).
+    let bait = g.add_card_to_graveyard(0, catalog::island());
+    let decay = g.add_card_to_hand(0, catalog::glorious_decay());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let counters_before = g.battlefield.iter().find(|c| c.id == sf).unwrap()
+        .counter_count(CounterType::PlusOnePlusOne);
+    g.perform_action(GameAction::CastSpell {
+        card_id: decay, target: Some(Target::Permanent(bait)), mode: Some(2), x_value: None,
+    })
+    .expect("Glorious Decay castable for {1}{G}");
+    drain_stack(&mut g);
+    let counters_after = g.battlefield.iter().find(|c| c.id == sf).unwrap()
+        .counter_count(CounterType::PlusOnePlusOne);
+    assert_eq!(counters_after, counters_before + 1,
+        "Stonebinder's Familiar should gain a +1/+1 counter on card leaving graveyard");
+}
+
+#[test]
+fn necrotic_fumes_sacrifices_and_exiles() {
+    let mut g = two_player_game();
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(fodder);
+    let target = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::necrotic_fumes());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(target)), mode: None, x_value: None,
+    })
+    .expect("Necrotic Fumes castable for {2}{B}{B}");
+    drain_stack(&mut g);
+    // P0's bear should be sacrificed (in P0's graveyard).
+    assert!(!g.battlefield.iter().any(|c| c.id == fodder),
+        "Fodder should be sacrificed off the battlefield");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == fodder),
+        "Fodder should be in P0's graveyard");
+    // Target should be exiled (not in graveyard).
+    assert!(!g.battlefield.iter().any(|c| c.id == target),
+        "Target should be exiled off the battlefield");
+    assert!(!g.players[1].graveyard.iter().any(|c| c.id == target),
+        "Target should NOT be in graveyard (exiled, not destroyed)");
+    assert!(g.exile.iter().any(|c| c.id == target),
+        "Target should be in the exile zone");
+}
+
+#[test]
+fn make_your_mark_pumps_creature_and_draws_card() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    let id = g.add_card_to_hand(0, catalog::make_your_mark());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let hand_before = g.players[0].hand.len();
+    let lib_before = g.players[0].library.len();
+    let bear_power_before = g.battlefield.iter().find(|c| c.id == bear).unwrap().power();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)), mode: None, x_value: None,
+    })
+    .expect("Make Your Mark castable for {1}{W}");
+    drain_stack(&mut g);
+    let bear_card = g.battlefield.iter().find(|c| c.id == bear).unwrap();
+    assert_eq!(bear_card.power(), bear_power_before + 1,
+        "Bear should be +1/+1 (now {})", bear_power_before + 1);
+    // Hand: -1 (cast) +1 (draw) = 0 net.
+    assert_eq!(g.players[0].hand.len(), hand_before);
+    assert_eq!(g.players[0].library.len(), lib_before - 1);
+}
+
+#[test]
+fn containment_breach_destroys_enchantment() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    // Use SOS Comforting Counsel as a target enchantment.
+    let ench = g.add_card_to_battlefield(1, catalog::comforting_counsel());
+    let id = g.add_card_to_hand(0, catalog::containment_breach());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(ench)), mode: None, x_value: None,
+    })
+    .expect("Containment Breach castable for {1}{W}");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == ench),
+        "Enchantment should be destroyed");
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == ench),
+        "Enchantment should be in P1's graveyard");
+}

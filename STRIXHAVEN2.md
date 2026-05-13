@@ -47,6 +47,65 @@ All ✅ and 🟡 cards have a corresponding factory in
 `crabomination/src/catalog/sets/sos/`; the audit script reports 0 false
 positives and 0 stale ⏳ rows.
 
+## 2026-05-13 push XXVII: STX Commands cycle + utility cards + magecraft helpers (CR 700.2)
+
+Push XXVII (`claude/modern_decks` branch) — adds the full Strixhaven
+Command cycle (5 cards) plus 6 STX utility cards across the
+Silverquill / Witherbloom / Lorehold / Quandrix / Prismari schools.
+Tests at 1180 (+15 net). All cards land in `catalog::sets::stx::extras`.
+
+### New STX cards
+
+- **Witherbloom Command** (B/G) 🟡 — `{2}{B}{G}` Sorcery. `ChooseMode`
+  collapse: mill 4 / destroy noncreature-nonland MV ≤ 2 / drain 2 /
+  Indestructible EOT (regen approximation).
+- **Lorehold Command** (R/W) 🟡 — `{2}{R}{W}` Sorcery. `ChooseMode`
+  collapse: 4 dmg to opp / -2/-0 EOT / return creature card from gy →
+  hand / mint two 2/2 R/W Spirits **with flying** (Lorehold STX
+  Spirits include Flying).
+- **Quandrix Command** (G/U) 🟡 — `{1}{G}{U}` Instant. `ChooseMode`
+  collapse: two +1/+1 counters / `CounterAbility` / mill 2 / bounce
+  nonland to owner's hand.
+- **Silverquill Command** (W/B) 🟡 — `{2}{W}{B}` Instant. `ChooseMode`
+  collapse: `CounterAbility` / drain 2 / return MV ≤ 2 permanent card
+  from your gy → bf / two +1/+1 counters.
+- **Prismari Command** (U/R) 🟡 — `{1}{U}{R}` Instant. `ChooseMode`
+  collapse: 2 dmg to any target / loot 1 / Treasure token / destroy
+  artifact.
+- **Defend the Campus** (W) ✅ — `{3}{W}{W}` Sorcery. Mints three 1/1
+  W/B Inkling tokens with flying via `Effect::CreateToken { count: 3 }`.
+- **Hall Monitor** (W) ✅ — `{W}` 1/1 Human Cleric. Magecraft: untap
+  this creature.
+- **Stonebinder's Familiar** (Colorless) ✅ — `{1}` 0/1 Artifact
+  Creature — Spirit. Cards-leave-graveyard +1/+1 counter trigger,
+  same shape as SOS Spirit Mascot.
+- **Necrotic Fumes** (B) 🟡 — `{2}{B}{B}` Sorcery. Sacrifice a
+  creature + exile target creature (additional cost collapses into
+  resolution; net effect preserved).
+- **Make Your Mark** (W) ✅ — `{1}{W}` Instant. +1/+1 EOT on creature,
+  draw a card.
+- **Containment Breach** (W) ✅ — `{1}{W}` Sorcery. Destroy enchantment
+  + Surveil 1.
+
+### Engine notes
+
+- The Command cycle uses the standard `ChooseMode` single-mode-pick
+  approximation (matching Witherbloom Charm, Moment of Reckoning, and
+  the existing SOS modal cards). The "choose two" mega-pick is tracked
+  in TODO.md as a future engine primitive.
+- Lorehold Command needed a fresh `TokenDefinition` for the flying
+  R/W Spirit since the SOS catalog's `lorehold_spirit_token()` is the
+  no-flying STX-Lorehold default; both definitions coexist (different
+  printings ship different keyword loadouts).
+- Stonebinder's Familiar caught a subtle bug in my first wiring: I'd
+  used `EventScope::SelfSource` for `EventKind::CardLeftGraveyard`,
+  but `event_matches_spec` only handles `SelfSource` for
+  `PermanentEntered / AttackerDeclared / CreatureDied / Blocks /
+  BecomesBlocked / CounterAdded`. The correct scope for "cards leave
+  YOUR graveyard" is `YourControl` (matched against the
+  `event_actor`'s seat), which is how the existing SOS Spirit Mascot,
+  Owlin Historian, etc. wire their analogous triggers.
+
 ## 2026-05-13 push XXVI: 12 new SOS cards + 1 STX promotion + EventKind::Blocks (CR 509.1i)
 
 Push XXVI (`claude/modern_decks` branch) — wires 12 SOS cards out of ⏳
@@ -1883,6 +1942,13 @@ parity is a matter of porting card factories one at a time.
 | Eager First-Year | {W} | ✅ | 2/1 Human Student. Magecraft: target creature gets +1/+1 EOT. Uses the new `effect::shortcut::magecraft()` helper. |
 | Hunt for Specimens | {3}{B} | 🟡 | Sorcery. Creates a 1/1 black Pest token (death-trigger lifegain now rides on the token via SOS-VI's `TokenDefinition.triggered_abilities`) + draws a card (Learn approx — no Lesson sideboard yet). |
 | Star Pupil | {B} | ✅ | Push XXIII: 0/1 Cat Spirit. ETB +1/+1 counter; dies → put a +1/+1 counter on target creature. Audited against CR 122.8. |
+| Silverquill Command | {2}{W}{B} | 🟡 | Push XXVII: Instant — `ChooseMode` collapse to single-mode pick. Modes wired: counter activated/triggered ability, drain 2, return MV ≤ 2 permanent card from your gy → bf, two +1/+1 counters on creature. The "choose two" mega-pick is the standard Command-cycle approximation tracked in TODO.md. |
+| Defend the Campus | {3}{W}{W} | ✅ | Push XXVII: Sorcery. Creates three 1/1 W/B Inkling tokens with flying via `Effect::CreateToken { count: 3 }`. Reuses the SOS catalog's `inkling_token()` definition. |
+| Hall Monitor | {W} | ✅ | Push XXVII: 1/1 Human Cleric. Magecraft: untap this creature. Wired via `magecraft(Effect::Untap)`. |
+| Stonebinder's Familiar | {1} | ✅ | Push XXVII: 0/1 Artifact Creature — Spirit. "Whenever one or more cards leave your graveyard, put a +1/+1 counter on this creature." Uses the `EventKind::CardLeftGraveyard / YourControl` trigger (per-card emission, same as Spirit Mascot). |
+| Necrotic Fumes | {2}{B}{B} | 🟡 | Push XXVII: Sorcery. As an additional cost, sacrifice a creature. Exile target creature. Wired as `Seq(Sacrifice + Move→Exile)` at resolution time (the engine has no cast-time additional-cost prompt yet, so the sacrifice happens during resolution; net effect is preserved). |
+| Make Your Mark | {1}{W} | ✅ | Push XXVII: Instant. +1/+1 EOT on target creature, draw a card. Trivial pump+cantrip wire. |
+| Containment Breach | {1}{W} | ✅ | Push XXVII: Sorcery. Destroy target enchantment + Surveil 1. |
 
 ### Witherbloom (B/G)
 
@@ -1897,6 +1963,7 @@ parity is a matter of porting card factories one at a time.
 | Daemogoth Woe-Eater | {2}{B}{G} | 🟡 | Push XX: 4/4 Demon Horror. ETB sacrifice ✅; attack-trigger sac-into-+1/+1-counter `Seq` ✅. The "may" optionality on the attack trigger collapses to always-sac (engine's Sacrifice no-ops cleanly when no legal target exists). |
 | Mortality Spear | {3}{B}{G} | ✅ | Push XX: Instant. Destroy target creature or planeswalker (Battle subtype omitted — not modelled in this catalog). |
 | Tempted by the Oriq | {2}{B} | 🟡 | Push XX: Sorcery. Temp-steal + untap + Haste EOT (Threaten template). The printed Magecraft rider on the controlled creature is ⏳. |
+| Witherbloom Command | {2}{B}{G} | 🟡 | Push XXVII: Sorcery — `ChooseMode` collapse to single-mode pick. Modes wired: target opponent mills 4, destroy noncreature/nonland MV ≤ 2, drain 2, grant Indestructible EOT (regenerate approximation — engine has `Keyword::Regenerate(N)` as a tag but no regen-shield enforcement). The "choose two" mega-pick is the standard Command-cycle approximation tracked in TODO.md. |
 
 ### Lorehold (R/W)
 
@@ -1908,6 +1975,7 @@ parity is a matter of porting card factories one at a time.
 | Heated Debate | {2}{R} | ✅ | Instant. 4 damage to target creature. Damage-can't-be-prevented rider is a no-op (engine has no prevention layer). |
 | Storm-Kiln Artist | {2}{R}{W} | 🟡 | 3/3 Human Wizard. Magecraft: 1 damage to each opponent + create a Treasure (printed: "1 damage to any target"; collapsed to each-opponent for the auto-target framework). |
 | Sparring Regimen | {2}{R}{W} | 🟡 | Enchantment. ETB creates a 2/2 R/W Spirit token. The "whenever you attack, +1/+1 counter on each attacker" rider is ⏳ pending a `PlayerAttackedWith` event over all declared attackers. |
+| Lorehold Command | {2}{R}{W} | 🟡 | Push XXVII: Sorcery — `ChooseMode` collapse to single-mode pick. Modes wired: 4 damage to target opponent, -2/-0 EOT on target creature (collapsed from "until your next turn"), return creature card from your gy → hand, create two 2/2 R/W Spirit tokens **with flying** (matching the printed Lorehold STX printing — distinct from the SOS catalog's `lorehold_spirit_token()` no-flying default). |
 
 ### Quandrix (G/U)
 
@@ -1918,6 +1986,7 @@ parity is a matter of porting card factories one at a time.
 | Decisive Denial | {G}{U} | 🟡 | Instant. Mode 0 (counter target noncreature spell unless its controller pays {2}) wired; mode 1 (fight at variable power) ⏳ pending multi-target prompt. |
 | Quandrix Cultivator | {3}{G}{U} | ✅ | Push XX: 3/3 Elf Druid. ETB search basic Forest or Island → battlefield tapped. |
 | Manifestation Sage | {2}{G}{U} | ✅ | Push XXIII: 2/2 Fractal Wizard, Flying. ETB mints 0/0 Fractal + X +1/+1 counters where X = `HandSizeOf(You)`. |
+| Quandrix Command | {1}{G}{U} | 🟡 | Push XXVII: Instant — `ChooseMode` collapse to single-mode pick. Modes wired: two +1/+1 counters on creature, counter target activated/triggered ability via `Effect::CounterAbility`, target opponent mills 2 (X collapsed from "twice your creature count" — engine has no `Value::Times(N, CountOf(...))` for cast-time Mill counts), bounce nonland permanent to owner's hand. |
 | Mentor's Guidance | {1}{G}{U} | ✅ | Push XXIII: Instant. Two-mode `ChooseMode` — damage = creatures you control, or draw = creatures with +1/+1 counters. |
 
 ### Prismari (U/R)
@@ -1932,6 +2001,7 @@ parity is a matter of porting card factories one at a time.
 | Magma Opus | {7}{U}{R} | 🟡 | Push XXIV: Sorcery. 4 dmg + tap opp creatures + 3/3 Elemental token + draw 2. Multi-target divided damage + discard alt-mode omitted. |
 | Sparkmage Apprentice | {1}{R} | ✅ | Push XXIV: 1/2 Human Wizard. ETB: deals 2 damage to any target. |
 | Soothsayer Adept | {1}{U} | ✅ | Push XXIV: 2/2 Merfolk Wizard. Activated `{2}{U}: Surveil 1`. |
+| Prismari Command | {1}{U}{R} | 🟡 | Push XXVII: Instant — `ChooseMode` collapse to single-mode pick. Modes wired: 2 damage to any target, loot 1 (discard + draw, "extra draw if discarded card is noncreature/nonland" rider collapsed to flat draw), create a Treasure token (uses engine's `treasure_token()`), destroy target artifact. |
 
 ### Mono-color staples (`stx::mono`)
 

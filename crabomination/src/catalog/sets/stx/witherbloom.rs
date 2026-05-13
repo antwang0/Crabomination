@@ -12,7 +12,7 @@ use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CreatureType, Effect, EventKind, EventScope,
     EventSpec, Selector, Subtypes, TriggeredAbility, Value,
 };
-use crate::effect::shortcut::magecraft;
+use crate::effect::shortcut::magecraft_drain_each_opp;
 use crate::effect::{ManaPayload, PlayerRef, ZoneDest};
 use crate::mana::{cost, b, g, generic, Color, ManaCost};
 
@@ -22,9 +22,10 @@ use crate::mana::{cost, b, g, generic, Color, ManaCost};
 /// Whenever you cast or copy an instant or sorcery spell, each opponent
 /// loses 1 life and you gain 1 life."
 ///
-/// Wired via the new `EventSpec.filter` + `TriggerSource` binding. The
-/// effect uses `Effect::Drain` over `EachOpponent`, which handles the
-/// life-swap atomically.
+/// Push XXVII: Refactored to use the new `magecraft_drain_each_opp(1)`
+/// shortcut. `Effect::Drain` is the canonical Witherbloom magecraft
+/// payoff — the shortcut keeps the call site one line and the
+/// life-swap is atomic.
 pub fn witherbloom_apprentice() -> CardDefinition {
     CardDefinition {
         name: "Witherbloom Apprentice",
@@ -40,11 +41,7 @@ pub fn witherbloom_apprentice() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![magecraft(Effect::Drain {
-            from: Selector::Player(PlayerRef::EachOpponent),
-            to: Selector::You,
-            amount: Value::Const(1),
-        })],
+        triggered_abilities: vec![magecraft_drain_each_opp(1)],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
