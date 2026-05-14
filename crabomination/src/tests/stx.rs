@@ -5774,3 +5774,361 @@ fn brush_off_alt_cost_counters_instant_on_stack() {
     assert_eq!(g.players[0].life, 20, "Bolt should be countered");
 }
 
+// ── Reconstruct History (NEW, modern_decks push) ────────────────────────────
+
+/// Reconstruct History — {1}{R}{W} sorcery, Lorehold. Choose two or more
+/// modes — return target artifact/instant/Spirit/sorcery card from your
+/// graveyard to your hand. The auto-decider's first viable pair of modes
+/// (artifact + instant) returns those two cards to hand.
+#[test]
+fn reconstruct_history_returns_two_cards_from_graveyard_to_hand() {
+    let mut g = two_player_game();
+    // Seed gy with one artifact (Mind Stone), one instant (Lightning Bolt),
+    // and one sorcery (Day of Judgment). All four printed modes have at
+    // least one matching card.
+    let stone = g.add_card_to_graveyard(0, catalog::mind_stone());
+    let bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    let _doj = g.add_card_to_graveyard(0, catalog::day_of_judgment());
+    let id = g.add_card_to_hand(0, catalog::reconstruct_history());
+    let gy_before = g.players[0].graveyard.len();
+    let hand_before = g.players[0].hand.len();
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: None,
+        mode: None,
+        x_value: None,
+    })
+    .expect("Reconstruct History castable for {1}{R}{W}");
+    drain_stack(&mut g);
+
+    // Hand: -1 (cast spell, moved to stack then gy) + 2 (two gy cards
+    // returned to hand) = +1 net relative to hand_before.
+    assert_eq!(
+        g.players[0].hand.len(),
+        hand_before + 1,
+        "two gy cards returned to hand"
+    );
+    // Graveyard: -2 (two cards moved to hand) + 1 (Reconstruct History
+    // itself enters gy on resolve) = -1 net.
+    assert_eq!(
+        g.players[0].graveyard.len(),
+        gy_before - 1,
+        "two cards returned, Reconstruct History added"
+    );
+    // The two returned cards should now be in hand.
+    let in_hand: Vec<_> = g.players[0]
+        .hand
+        .iter()
+        .map(|c| c.id)
+        .collect();
+    let returned_either = in_hand.contains(&stone) || in_hand.contains(&bolt);
+    assert!(
+        returned_either,
+        "at least one of the matched gy cards should be in hand"
+    );
+}
+
+/// Reconstruct History — sanity test for the card's identity (cost,
+/// type, name).
+#[test]
+fn reconstruct_history_is_a_three_mana_lorehold_sorcery() {
+    let def = catalog::reconstruct_history();
+    assert_eq!(def.name, "Reconstruct History");
+    assert_eq!(def.cost.cmc(), 3);
+    assert!(def.card_types.contains(&crate::card::CardType::Sorcery));
+}
+
+// ── Lorehold Excavation (NEW, modern_decks push) ────────────────────────────
+
+/// Lorehold Excavation enters as a Lorehold dual land that taps for
+/// either {R} or {W}. The mana-ability count exposes both options.
+#[test]
+fn lorehold_excavation_is_a_lorehold_dual_with_two_mana_abilities() {
+    let def = catalog::lorehold_excavation();
+    assert_eq!(def.name, "Lorehold Excavation");
+    assert!(def.card_types.contains(&crate::card::CardType::Land));
+    // Three activated abilities total: {T}: Add {R}, {T}: Add {W}, and
+    // the {2}{R}{W}, {T}: exile gy card activation.
+    assert_eq!(def.activated_abilities.len(), 3);
+}
+
+/// Lorehold Excavation's {2}{R}{W}, {T} activation exiles a target gy
+/// card. When that card is a creature card, the bonus Spirit token
+/// enters under the activator's control as an X/X flier, where X is
+/// the gy creature's power.
+#[test]
+fn lorehold_excavation_exile_creature_mints_flying_spirit_token() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let excavation = g.add_card_to_battlefield(0, catalog::lorehold_excavation());
+    g.clear_sickness(excavation);
+    // Untap the land so it's ready to tap for the activation.
+    if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == excavation) {
+        c.tapped = false;
+        c.summoning_sick = false;
+    }
+    // Seed a creature card in P0's graveyard — Grizzly Bears (2/2 creature).
+    let bear_gy = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    // Pay {2}{R}{W}.
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+
+    // Activate the gy-exile ability (index 2 — the two tap-for-mana
+    // abilities are at indices 0 and 1).
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: excavation,
+        ability_index: 2,
+        target: Some(Target::Permanent(bear_gy)),
+    })
+    .expect("Lorehold Excavation gy-exile activates for {2}{R}{W}, {T}");
+    drain_stack(&mut g);
+
+    // Bear should have moved from P0's graveyard to the exile zone.
+    assert!(
+        !g.players[0].graveyard.iter().any(|c| c.id == bear_gy),
+        "bear no longer in graveyard"
+    );
+    // Bonus token: a Spirit with flying under P0's control. Bear is 2/2,
+    // so the X/X scaling produces a 2/2 (0/0 base + 2 +1/+1 counters
+    // from the new `Value::PowerOf` gy-aware evaluator).
+    let spirits: Vec<_> = g
+        .battlefield
+        .iter()
+        .filter(|c| c.is_token && c.definition.name == "Spirit" && c.controller == 0)
+        .collect();
+    assert_eq!(spirits.len(), 1, "one bonus Spirit token minted");
+    assert_eq!(spirits[0].power(), 2, "Spirit token power = bear's power (2)");
+    assert_eq!(spirits[0].toughness(), 2, "Spirit token toughness = bear's power (2)");
+    assert!(
+        spirits[0].has_keyword(&Keyword::Flying),
+        "the bonus Spirit token has Flying"
+    );
+}
+
+/// Lorehold Excavation: when the exiled creature is bigger (e.g. Serra
+/// Angel, 4/4), the bonus Spirit token mints as X/X = 4/4 — proving
+/// the new `Value::PowerOf` evaluator correctly reads the gy card's
+/// printed power.
+#[test]
+fn lorehold_excavation_token_scales_with_creature_power() {
+    let mut g = two_player_game();
+    let excavation = g.add_card_to_battlefield(0, catalog::lorehold_excavation());
+    if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == excavation) {
+        c.tapped = false;
+        c.summoning_sick = false;
+    }
+    // Serra Angel is 4/4 — the bonus Spirit token should mint at 4/4.
+    let angel_gy = g.add_card_to_graveyard(0, catalog::serra_angel());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: excavation,
+        ability_index: 2,
+        target: Some(Target::Permanent(angel_gy)),
+    })
+    .expect("Lorehold Excavation gy-exile activates");
+    drain_stack(&mut g);
+
+    let spirits: Vec<_> = g
+        .battlefield
+        .iter()
+        .filter(|c| c.is_token && c.definition.name == "Spirit" && c.controller == 0)
+        .collect();
+    assert_eq!(spirits.len(), 1, "one bonus Spirit token minted");
+    assert_eq!(
+        spirits[0].power(),
+        4,
+        "Spirit token power = Serra Angel's power (4)"
+    );
+    assert_eq!(spirits[0].toughness(), 4);
+}
+
+// ── Diamond cycle (STA reprints) ────────────────────────────────────────────
+
+/// All five Diamonds share the same shape: {2} artifact, ETB tapped,
+/// `{T}: Add {<color>}.` Walk the cycle once to verify the cost,
+/// type, ETB-tapped trigger, and color-mana ability.
+#[test]
+fn all_five_diamonds_share_a_common_shape() {
+    let diamonds = [
+        catalog::sky_diamond(),
+        catalog::marble_diamond(),
+        catalog::fire_diamond(),
+        catalog::charcoal_diamond(),
+        catalog::moss_diamond(),
+    ];
+    for d in diamonds {
+        assert_eq!(d.cost.cmc(), 2, "{}: cost should be {{2}}", d.name);
+        assert!(
+            d.card_types.contains(&crate::card::CardType::Artifact),
+            "{}: should be an artifact",
+            d.name
+        );
+        assert_eq!(
+            d.activated_abilities.len(),
+            1,
+            "{}: should have one mana ability",
+            d.name
+        );
+        assert_eq!(
+            d.triggered_abilities.len(),
+            1,
+            "{}: should have one ETB-tapped trigger",
+            d.name
+        );
+    }
+}
+
+/// Sky Diamond enters tapped and taps for {U}. After casting and ETB
+/// resolves the rock is tapped (matching the printed "enters tapped"
+/// clause).
+#[test]
+fn sky_diamond_enters_tapped_then_taps_for_blue() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::sky_diamond());
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: None,
+        mode: None,
+        x_value: None,
+    })
+    .expect("Sky Diamond castable for {2}");
+    drain_stack(&mut g);
+    let card = g.battlefield_find(id).unwrap();
+    assert!(card.tapped, "Sky Diamond should enter tapped");
+}
+
+// ── Goblin Lore (STA reprint) ───────────────────────────────────────────────
+
+/// Goblin Lore draws four and discards three (at random). Net: +1 card
+/// in hand from the spell, modulo the cast itself (so net is 0 after
+/// the spell goes to graveyard).
+#[test]
+fn goblin_lore_draws_four_and_discards_three() {
+    use crate::game::types::TurnStep as TS;
+    let mut g = two_player_game();
+    g.step = TS::PreCombatMain;
+    // Seed library with 4 cards so the draw can succeed.
+    for _ in 0..5 {
+        g.add_card_to_library(0, catalog::mountain());
+    }
+    let id = g.add_card_to_hand(0, catalog::goblin_lore());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let hand_before = g.players[0].hand.len();
+    let lib_before = g.players[0].library.len();
+    let gy_before = g.players[0].graveyard.len();
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: None,
+        mode: None,
+        x_value: None,
+    })
+    .expect("Goblin Lore castable for {R}");
+    drain_stack(&mut g);
+
+    // Hand: -1 (cast) + 4 (draw) - 3 (discard) = 0 net.
+    assert_eq!(
+        g.players[0].hand.len(),
+        hand_before,
+        "hand size unchanged: -1 cast + 4 draw - 3 discard = 0"
+    );
+    // Library: -4 (drew 4).
+    assert_eq!(
+        g.players[0].library.len(),
+        lib_before - 4,
+        "drew 4 from library"
+    );
+    // Graveyard: +3 (discarded 3) + 1 (Goblin Lore on resolve).
+    assert_eq!(
+        g.players[0].graveyard.len(),
+        gy_before + 4,
+        "3 discarded + 1 Goblin Lore went to graveyard"
+    );
+}
+
+// ── Whirlwind Denial (STA reprint) ──────────────────────────────────────────
+
+/// Whirlwind Denial counters target spell unless its controller pays
+/// {4}. When the opp can't afford {4}, the spell is countered.
+#[test]
+fn whirlwind_denial_counters_spell_unless_four_paid() {
+    let mut g = two_player_game();
+    // P1 casts Bolt at P0 first (so it's on the stack).
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(0)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Bolt castable for {R}");
+    // P0 responds with Whirlwind Denial targeting the bolt; opp has no
+    // mana to pay {4} → bolt is countered.
+    g.priority.player_with_priority = 0;
+    let denial = g.add_card_to_hand(0, catalog::whirlwind_denial());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: denial,
+        target: Some(Target::Permanent(bolt)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Whirlwind Denial castable for {3}{U}");
+    drain_stack(&mut g);
+
+    // P0 should still be at 20 (Bolt countered).
+    assert_eq!(g.players[0].life, 20, "Bolt should be countered");
+}
+
+/// Lorehold Excavation's {2}{R}{W}, {T} activation, when targeting a
+/// non-creature card (e.g. a sorcery), exiles the card but mints **no**
+/// Spirit token (the bonus rider gates on "if a creature card was
+/// exiled").
+#[test]
+fn lorehold_excavation_exile_non_creature_no_token() {
+    let mut g = two_player_game();
+    let excavation = g.add_card_to_battlefield(0, catalog::lorehold_excavation());
+    g.clear_sickness(excavation);
+    if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == excavation) {
+        c.tapped = false;
+        c.summoning_sick = false;
+    }
+    // Seed a sorcery in P0's graveyard — Day of Judgment.
+    let doj = g.add_card_to_graveyard(0, catalog::day_of_judgment());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: excavation,
+        ability_index: 2,
+        target: Some(Target::Permanent(doj)),
+    })
+    .expect("Lorehold Excavation gy-exile activates for {2}{R}{W}, {T}");
+    drain_stack(&mut g);
+
+    // No Spirit tokens — the bonus rider gated correctly.
+    let spirits: Vec<_> = g
+        .battlefield
+        .iter()
+        .filter(|c| c.is_token && c.definition.name == "Spirit" && c.controller == 0)
+        .collect();
+    assert_eq!(
+        spirits.len(),
+        0,
+        "no bonus Spirit token when target gy card is a non-creature"
+    );
+}
+

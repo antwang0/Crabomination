@@ -7742,6 +7742,39 @@ fn molten_note_has_flashback_keyword() {
     let has_flashback = m.keywords.iter().any(|k| matches!(k, Keyword::Flashback(_)));
     assert!(has_flashback, "Molten Note should carry Keyword::Flashback");
 }
+
+/// Push (modern_decks): Molten Note now reads `Value::CastSpellManaSpent`
+/// (the actual mana paid for the cast) rather than `Value::XFromCost`,
+/// so a 4-toughness creature dies at X=2 because total mana spent is
+/// 2 + R + W = 4 (which equals the printed "amount of mana spent" Oracle).
+#[test]
+fn molten_note_damage_equals_total_mana_spent_not_just_x() {
+    use crate::game::types::TurnStep as TS;
+    let mut g = two_player_game();
+    g.step = TS::PreCombatMain;
+    // Opp creature with toughness 4 — to kill it, the spell must deal
+    // ≥ 4 damage. Pure X-from-cost at X=2 would deal only 2 (would NOT
+    // kill); CastSpellManaSpent at X=2 paying {2}{R}{W} reads 4 (kills).
+    let target_bear = g.add_card_to_battlefield(1, catalog::serra_angel());
+    let id = g.add_card_to_hand(0, catalog::molten_note());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(target_bear)),
+        mode: None,
+        x_value: Some(2),
+    })
+    .expect("Molten Note castable at X=2 for {2}{R}{W}");
+    drain_stack(&mut g);
+
+    assert!(
+        !g.battlefield.iter().any(|c| c.id == target_bear),
+        "Serra Angel (4 toughness) should die to 4 damage from Molten Note at X=2 (full mana spent)"
+    );
+}
 // ── Increment / Opus tests ──────────────────────────────────────────────────
 
 /// Helper: drop a creature on the battlefield with summoning sickness cleared

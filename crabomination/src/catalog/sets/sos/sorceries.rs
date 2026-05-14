@@ -2457,21 +2457,24 @@ pub fn social_snub() -> CardDefinition {
 /// mana spent to cast this spell. Untap all creatures you control. /
 /// Flashback {6}{R}{W}."
 ///
-/// Both halves of the printed body wired:
+/// Both halves of the printed body wired faithfully:
 ///
 /// - **Damage half**: `Effect::DealDamage` against
-///   `target_filtered(Creature)` with `amount = Value::XFromCost`. The
-///   printed "amount of mana spent" is approximated as the X paid (the
-///   non-X base is {R}{W} = 2 mana, so a strict reading would add `+2`,
-///   but at X=0 the spell already does 0 damage — a no-op — and the
-///   typical SOS Lorehold deploys it at X≥2 where the off-by-two has
-///   negligible play impact).
+///   `target_filtered(Creature)` with `amount = Value::CastSpellManaSpent`
+///   (push: modern_decks doc-promotion to ✅). The amount reads from
+///   `EffectContext.mana_spent`, threaded through
+///   `for_spell_with_source` at cast time — the exact "amount of mana
+///   spent to cast this spell" the printed Oracle calls for. Honors X +
+///   {R}{W} pips together (5 damage at X=3) and any future cost
+///   reductions automatically.
 /// - **Untap half**: `Effect::Untap` against `EachPermanent(Creature &
 ///   ControlledByYou)` with `up_to: None` (untap all matching, matching
 ///   the printed "all creatures you control").
 ///
 /// Flashback {6}{R}{W} wired via `Keyword::Flashback` — graveyard
-/// replay reuses the engine's existing `cast_flashback` path.
+/// replay reuses the engine's existing `cast_flashback` path. Flashback
+/// cast emits its own `mana_spent`, so the damage scales correctly when
+/// flashbacked (8 = 6 + R + W at flashback cost).
 pub fn molten_note() -> CardDefinition {
     use crate::card::Keyword;
     use crate::mana::{r, x, Color, ManaCost, ManaSymbol};
@@ -2494,7 +2497,7 @@ pub fn molten_note() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::DealDamage {
                 to: target_filtered(SelectionRequirement::Creature),
-                amount: Value::XFromCost,
+                amount: Value::CastSpellManaSpent,
             },
             Effect::Untap {
                 what: Selector::EachPermanent(

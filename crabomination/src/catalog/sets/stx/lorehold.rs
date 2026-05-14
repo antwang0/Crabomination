@@ -11,11 +11,11 @@
 use super::no_abilities;
 use crate::card::{
     CardDefinition, CardType, CreatureType, Effect, EventKind, EventScope, EventSpec, Keyword,
-    Selector, SelectionRequirement, Subtypes, TokenDefinition, TriggeredAbility, Value,
+    Selector, SelectionRequirement, Subtypes, TokenDefinition, TriggeredAbility, Value, Zone,
 };
 use crate::effect::shortcut::{magecraft, target_filtered};
 use crate::effect::{PlayerRef, ZoneDest};
-use crate::mana::{cost, generic, r, w, Color};
+use crate::mana::{cost, generic, r, w, Color, ManaCost};
 
 // ── Lorehold spirit token ───────────────────────────────────────────────────
 
@@ -333,6 +333,217 @@ pub fn storm_kiln_artist() -> CardDefinition {
                 definition: treasure_token(),
             },
         ]))],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+    }
+}
+
+// ── Reconstruct History ─────────────────────────────────────────────────────
+
+/// Reconstruct History — {1}{R}{W} Sorcery (Lorehold).
+/// "Choose two or more —
+///   • Return target artifact card from your graveyard to your hand.
+///   • Return target instant card from your graveyard to your hand.
+///   • Return target Spirit card from your graveyard to your hand.
+///   • Return target sorcery card from your graveyard to your hand."
+///
+/// Wired via `Effect::ChooseN { picks: [2, 3, 4], modes }` — the four
+/// printed modes each pull a `target_filtered` graveyard card of the
+/// matching type back to hand. The auto-decider walks the picks
+/// list, so if 2-mode pick is viable it picks the first two modes
+/// with matching cards in the controller's graveyard.
+pub fn reconstruct_history() -> CardDefinition {
+    CardDefinition {
+        name: "Reconstruct History",
+        cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::ChooseN {
+            // Auto-pick: modes 0 (artifact) + 1 (instant). The engine's
+            // `Effect::ChooseN` runs every index listed in `picks`, so
+            // the auto-decider always recurs the first-and-second mode.
+            // Each mode auto-picks the first matching card in the
+            // controller's graveyard via `Selector::one_of(CardsInZone(...))`
+            // — this approximates the printed "target X card" since
+            // the engine has no multi-target prompt for sorceries
+            // (tracked in TODO.md). For deck-builds where the player
+            // wants to recur a Spirit creature card (mode 2) or a
+            // sorcery (mode 3), the picks vec can be re-mapped via a
+            // future mode-pick UI.
+            picks: vec![0, 1],
+            modes: vec![
+                // Mode 0: return an artifact card from your gy → hand.
+                Effect::Move {
+                    what: Selector::one_of(Selector::CardsInZone {
+                        who: PlayerRef::You,
+                        zone: Zone::Graveyard,
+                        filter: SelectionRequirement::HasCardType(CardType::Artifact),
+                    }),
+                    to: ZoneDest::Hand(PlayerRef::You),
+                },
+                // Mode 1: return an instant card from your gy → hand.
+                Effect::Move {
+                    what: Selector::one_of(Selector::CardsInZone {
+                        who: PlayerRef::You,
+                        zone: Zone::Graveyard,
+                        filter: SelectionRequirement::HasCardType(CardType::Instant),
+                    }),
+                    to: ZoneDest::Hand(PlayerRef::You),
+                },
+                // Mode 2: return a Spirit creature card from your gy → hand.
+                Effect::Move {
+                    what: Selector::one_of(Selector::CardsInZone {
+                        who: PlayerRef::You,
+                        zone: Zone::Graveyard,
+                        filter: SelectionRequirement::HasCreatureType(CreatureType::Spirit),
+                    }),
+                    to: ZoneDest::Hand(PlayerRef::You),
+                },
+                // Mode 3: return a sorcery card from your gy → hand.
+                Effect::Move {
+                    what: Selector::one_of(Selector::CardsInZone {
+                        who: PlayerRef::You,
+                        zone: Zone::Graveyard,
+                        filter: SelectionRequirement::HasCardType(CardType::Sorcery),
+                    }),
+                    to: ZoneDest::Hand(PlayerRef::You),
+                },
+            ],
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+    }
+}
+
+// ── Lorehold Excavation ─────────────────────────────────────────────────────
+
+/// Lorehold Excavation — Land (Lorehold).
+/// "{T}: Add {R} or {W}.
+/// {2}{R}{W}, {T}: Exile target card from a graveyard. If a creature
+/// card was exiled this way, create an X/X red and white Spirit
+/// creature token with flying, where X is that card's power."
+///
+/// Wired as a Lorehold dual land: two `{T}: Add {R/W}` mana abilities
+/// (one per color) + a `{2}{R}{W}, {T}` activated ability that exiles
+/// a target card from any graveyard. The "if creature → X/X Spirit
+/// token with flying where X is its power" rider is collapsed: when
+/// the targeted card is a creature card the engine mints a 2/2 R/W
+/// flying Spirit token (the typical play pattern — most Lorehold
+/// targets are 2-power Spirits / creatures). The exact power-of-
+/// exiled-card scaling needs a `Value::PowerOfTarget` primitive that
+/// reads the just-exiled card's stats; tracked in TODO.md.
+///
+/// The two `Add` activations use the engine's standard tap-add
+/// shortcut; the gy-exile activation gates on a creature-card filter
+/// for the bonus token mint.
+pub fn lorehold_excavation() -> CardDefinition {
+    use crate::card::{ActivatedAbility, CounterType};
+    use super::super::tap_add;
+    // 0/0 R/W Spirit Flying token base. The "X = its power" sizing is
+    // applied immediately after creation via `AddCounter` on the
+    // `LastCreatedToken` selector with `Value::PowerOf(Target)`. The
+    // engine's `PowerOf` evaluator now reads the target's printed power
+    // even when the target is in graveyard (the typical evaluation
+    // point for this rider — the gy card is still present at token-
+    // creation time, since the exile-Move runs after the bonus
+    // branch). For a typical 2-power creature in gy → 2/2 Spirit; for
+    // a 5/5 → 5/5 Spirit; for 0-power gy creature → 0/0 dies to SBA.
+    let spirit_flying = TokenDefinition {
+        name: "Spirit".into(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![Keyword::Flying],
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Red, Color::White],
+        supertypes: vec![],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
+        activated_abilities: vec![],
+        triggered_abilities: vec![],
+    };
+    CardDefinition {
+        name: "Lorehold Excavation",
+        cost: ManaCost::default(),
+        supertypes: vec![],
+        card_types: vec![CardType::Land],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: vec![
+            tap_add(Color::Red),
+            tap_add(Color::White),
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: cost(&[generic(2), r(), w()]),
+                effect: Effect::Seq(vec![
+                    // Bonus token first (token mints reading the target
+                    // before the move resolves — the `EntityMatches`
+                    // predicate walks the target's card definition).
+                    Effect::If {
+                        cond: crate::card::Predicate::EntityMatches {
+                            what: Selector::Target(0),
+                            filter: SelectionRequirement::HasCardType(CardType::Creature),
+                        },
+                        then: Box::new(Effect::Seq(vec![
+                            Effect::CreateToken {
+                                who: PlayerRef::You,
+                                count: Value::Const(1),
+                                definition: spirit_flying,
+                            },
+                            // Size the token to X/X where X is the
+                            // gy card's printed power. Reads
+                            // `PowerOf(Target(0))` against the target
+                            // (still in graveyard at this point — the
+                            // exile-Move below hasn't run yet). The
+                            // engine's `Value::PowerOf` evaluator was
+                            // extended to walk graveyards / exile /
+                            // hand for cards not on the battlefield
+                            // (push: modern_decks).
+                            Effect::AddCounter {
+                                what: Selector::LastCreatedToken,
+                                kind: CounterType::PlusOnePlusOne,
+                                amount: Value::PowerOf(Box::new(Selector::Target(0))),
+                            },
+                        ])),
+                        else_: Box::new(Effect::Noop),
+                    },
+                    // Then exile the target gy card.
+                    Effect::Move {
+                        what: target_filtered(SelectionRequirement::Any),
+                        to: ZoneDest::Exile,
+                    },
+                ]),
+                once_per_turn: false,
+                sorcery_speed: false,
+                sac_cost: false,
+                condition: None,
+                life_cost: 0,
+                from_graveyard: false,
+                exile_self_cost: false,
+                exile_other_filter: None,
+            },
+        ],
+        triggered_abilities: vec![],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],

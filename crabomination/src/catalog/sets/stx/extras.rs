@@ -4254,3 +4254,146 @@ pub fn augusta_dean_of_order() -> CardDefinition {
         enters_with_counters: None,
     }
 }
+
+// ── Diamond cycle (Mirage STA reprints) ─────────────────────────────────────
+//
+// The Mirage diamonds (Marble, Sky, Fire, Charcoal, Moss) ship in the
+// Strixhaven Mystical Archive (STA), which slots into Strixhaven
+// boosters. Each is a `{2}` artifact that enters tapped and produces
+// one mana of its color. Classic Bauble-style ramp; useful as
+// utility mana rocks in cube games.
+
+fn diamond(name: &'static str, color: Color) -> CardDefinition {
+    use super::super::{etb_tap, tap_add};
+    CardDefinition {
+        name,
+        cost: cost(&[generic(2)]),
+        supertypes: vec![],
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: vec![tap_add(color)],
+        triggered_abilities: vec![etb_tap()],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+    }
+}
+
+/// Sky Diamond — {2} Artifact (Mirage / STA). "Sky Diamond enters
+/// tapped. {T}: Add {U}." A standard mana rock that taps for blue.
+pub fn sky_diamond() -> CardDefinition {
+    diamond("Sky Diamond", Color::Blue)
+}
+
+/// Marble Diamond — {2} Artifact (Mirage / STA). "Marble Diamond enters
+/// tapped. {T}: Add {W}." A standard mana rock that taps for white.
+pub fn marble_diamond() -> CardDefinition {
+    diamond("Marble Diamond", Color::White)
+}
+
+/// Fire Diamond — {2} Artifact (Mirage / STA). "Fire Diamond enters
+/// tapped. {T}: Add {R}." A standard mana rock that taps for red.
+pub fn fire_diamond() -> CardDefinition {
+    diamond("Fire Diamond", Color::Red)
+}
+
+/// Charcoal Diamond — {2} Artifact (Mirage / STA). "Charcoal Diamond
+/// enters tapped. {T}: Add {B}." A standard mana rock that taps for
+/// black.
+pub fn charcoal_diamond() -> CardDefinition {
+    diamond("Charcoal Diamond", Color::Black)
+}
+
+/// Moss Diamond — {2} Artifact (Mirage / STA). "Moss Diamond enters
+/// tapped. {T}: Add {G}." A standard mana rock that taps for green.
+pub fn moss_diamond() -> CardDefinition {
+    diamond("Moss Diamond", Color::Green)
+}
+
+// ── Goblin Lore (Future Sight / STA reprint) ────────────────────────────────
+
+/// Goblin Lore — {R} Sorcery (Strixhaven Mystical Archive). "Draw four
+/// cards, then discard three cards at random."
+///
+/// A classic Skred-Red staple. Discard-3-at-random is wired via
+/// `Effect::Discard { random: true }` so the engine picks three random
+/// hand cards rather than letting the caster choose — matches the
+/// printed "at random" cost.
+pub fn goblin_lore() -> CardDefinition {
+    CardDefinition {
+        name: "Goblin Lore",
+        cost: cost(&[r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(4),
+            },
+            Effect::Discard {
+                who: Selector::You,
+                amount: Value::Const(3),
+                random: true,
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+    }
+}
+
+// ── Whirlwind Denial (Ravnica Allegiance / STA reprint) ─────────────────────
+
+/// Whirlwind Denial — {3}{U} Instant (Strixhaven Mystical Archive).
+/// "For each spell and ability your opponents control on the stack,
+/// counter it unless its controller pays {4}."
+///
+/// Approximated as a single-target `CounterUnlessPaid { mana_cost: {4} }`
+/// — the printed "each spell/ability" multi-counter primitive is
+/// engine-wide ⏳ (would need a stack-iterating counter effect). The
+/// approximation captures the headline play pattern: a hard tax on the
+/// most-recent opp spell. The auto-target picker picks the topmost
+/// hostile stack item.
+pub fn whirlwind_denial() -> CardDefinition {
+    CardDefinition {
+        name: "Whirlwind Denial",
+        cost: cost(&[generic(3), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::CounterUnlessPaid {
+            what: target_filtered(SelectionRequirement::IsSpellOnStack),
+            mana_cost: cost(&[generic(4)]),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+    }
+}

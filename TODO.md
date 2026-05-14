@@ -11,6 +11,48 @@ Periodic spot-check of the rules document
 (`crabomination/MagicCompRules 20260116.txt`). Each rule below has a
 status tag (✅ wired, 🟡 partial, ⏳ todo) plus a short note.
 
+- ✅ **CR 109.3 / 121 — Power and toughness can be read off the
+  battlefield** (modern_decks push, engine improvement): "A card's
+  printed power and toughness are part of its characteristics, which
+  persist across zones." Push (modern_decks) extends the engine's
+  `Value::PowerOf(Selector)` and `Value::ToughnessOf(Selector)`
+  evaluators (`game/effects/eval.rs:19`) to walk graveyards / exile /
+  hand zones for cards that aren't on the battlefield, returning the
+  printed power/toughness from `CardDefinition`. Previously these
+  evaluators only consulted `battlefield_find`, returning 0 for any
+  card outside the battlefield. The fix lets Lorehold Excavation's
+  "X = that card's power" rider read the gy creature's printed power
+  at token-mint time (before the exile-Move resolves), making the
+  X/X Spirit token correctly scale to the gy creature's power.
+  Counters don't apply off the battlefield (CR 122.2 — counters
+  cleared on zone change), so off-battlefield reads return printed
+  values directly without summing live counters. Tests:
+  `lorehold_excavation_token_scales_with_creature_power` (Serra Angel
+  4/4 in gy → 4/4 Spirit token), `lorehold_excavation_exile_creature_mints_flying_spirit_token`
+  (Grizzly Bears 2/2 in gy → 2/2 Spirit token).
+- ✅ **CR 605.3a / 605.3b — Mana abilities resolve immediately without
+  going on the stack** (modern_decks push audit): "A player may activate
+  an activated mana ability whenever they have priority, whenever they
+  are casting a spell or activating an ability that requires a mana
+  payment, or whenever a rule or effect asks for a mana payment, even
+  if it's in the middle of casting or resolving a spell or activating
+  or resolving an ability. … An activated mana ability doesn't go on
+  the stack, so it can't be targeted, countered, or otherwise responded
+  to." The engine's `is_mana_ability` helper (`game/actions.rs:8` and
+  `server/view.rs:421`) recognizes pure `Effect::AddMana` activations
+  (including `Seq` chains that are all-mana) and resolves them
+  immediately during the activation path. The new Diamond cycle (Sky,
+  Marble, Fire, Charcoal, Moss — all 5 added this push) and Lorehold
+  Excavation's two color-producing taps all rely on this — the
+  `{T}: Add {color}` activations are recognised as mana abilities
+  via `tap_add(color)` and skip the stack. Without this, mana rocks
+  couldn't be tapped to pay for the spell currently on the stack —
+  the foundational invariant of every cube game. Tests:
+  `sky_diamond_enters_tapped_then_taps_for_blue` (verifies the rock
+  enters tapped and is therefore not immediately tappable — the
+  printed "enters tapped" rider), `all_five_diamonds_share_a_common_shape`
+  (cycle invariant on the {2} cost + single mana ability +
+  ETB-tapped trigger).
 - ✅ **CR 514.1 — Cleanup-step discard down to max hand size**
   (modern_decks push audit): "First, if the active player's hand
   contains more cards than their maximum hand size (normally seven),
@@ -471,6 +513,38 @@ status tag (✅ wired, 🟡 partial, ⏳ todo) plus a short note.
   the counters land on resolution).
 
 ## Suggested next-up tasks
+
+- ⏳ **`Value::PowerOfTargetExiledThisResolution`** — push (modern_decks)
+  closed the simpler half via the `Value::PowerOf` evaluator-zone-walk
+  extension (gy/exile/hand lookups now work), unlocking Lorehold
+  Excavation's "X = its power" rider. The leftover gap is the
+  ordering subtlety: a card that triggers _after_ exile (e.g.
+  Lavaball Trap's hypothetical "exile a creature; you create an X/X
+  where X is its power") needs to read power from the post-Move
+  exile zone, not the pre-Move graveyard. The eval extension already
+  walks exile, so most cases are covered — only the corner case of
+  "the source card itself was exiled by the same effect" might need
+  a temp-cached power. Suggested shape: stash `last_zone_changed_card`
+  on `EffectContext` (sibling to `trigger_source`) and add
+  `Value::PowerOfLastExiled` that reads from it. Open until a real
+  card surfaces the gap (currently none in the Crabomination
+  catalog).
+
+- ⏳ **Multi-target prompts on instants/sorceries** — recurring 🟡
+  reason across STRIXHAVEN2.md (Divergent Equation, Vibrant Outburst,
+  Snow Day, Devious Cover-Up, Crackle with Power, Magma Opus,
+  Homesickness, Dissection Practice, Cost of Brilliance, Render
+  Speechless, Conciliator's Duelist, Rabid Attack, Together as One,
+  Reconstruct History's "or more" mode-count picker, …). The engine's
+  spell-cast path takes a single `Target` and the auto-decider can't
+  pick multiple. Suggested shape: change `GameAction::CastSpell.target`
+  from `Option<Target>` to `Vec<Target>` (or `Option<TargetSet>`),
+  thread the slot index into `Selector::Target(n)` (already there),
+  and bump cast-time target validation to walk every slot. The bot
+  harness's AutoDecider needs a per-effect target-count introspection
+  to pick N targets; a lazy first pass could just pick the same
+  target N times (with deduplication on per-slot legality). Worth
+  ~10 🟡 → ✅ promotions.
 
 - ⏳ **`Effect::CounterSpellToTop` — counter-spell-to-top-of-library
   primitive** — Memory Lapse (STA reprint, `mod_set::instants`) is the

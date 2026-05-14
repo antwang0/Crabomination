@@ -17,10 +17,54 @@ impl GameState {
             Value::Const(n) => *n,
             Value::CountOf(s) => self.resolve_selector(s, ctx).len() as i32,
             Value::PowerOf(s) => self.resolve_selector(s, ctx).iter()
-                .find_map(|e| e.as_permanent_id().and_then(|c| self.battlefield_find(c)).map(|c| c.power()))
+                .find_map(|e| {
+                    let cid = e.as_permanent_id()?;
+                    // CR 121 / Lorehold Excavation: read power from the
+                    // battlefield first (live `power()` includes
+                    // counters), then fall through to graveyard / exile /
+                    // hand for cards that have changed zones but whose
+                    // power is still being read (e.g. Lorehold
+                    // Excavation's "X = its power" rider where the
+                    // target is in graveyard at evaluation time, before
+                    // it gets exiled). Non-battlefield zones return the
+                    // printed power from `CardDefinition.power` since
+                    // counters don't apply off the battlefield.
+                    if let Some(c) = self.battlefield_find(cid) {
+                        return Some(c.power());
+                    }
+                    if let Some(c) = self.exile.iter().find(|c| c.id == cid) {
+                        return Some(c.definition.power);
+                    }
+                    for p in &self.players {
+                        if let Some(c) = p.graveyard.iter().find(|c| c.id == cid) {
+                            return Some(c.definition.power);
+                        }
+                        if let Some(c) = p.hand.iter().find(|c| c.id == cid) {
+                            return Some(c.definition.power);
+                        }
+                    }
+                    None
+                })
                 .unwrap_or(0),
             Value::ToughnessOf(s) => self.resolve_selector(s, ctx).iter()
-                .find_map(|e| e.as_permanent_id().and_then(|c| self.battlefield_find(c)).map(|c| c.toughness()))
+                .find_map(|e| {
+                    let cid = e.as_permanent_id()?;
+                    if let Some(c) = self.battlefield_find(cid) {
+                        return Some(c.toughness());
+                    }
+                    if let Some(c) = self.exile.iter().find(|c| c.id == cid) {
+                        return Some(c.definition.toughness);
+                    }
+                    for p in &self.players {
+                        if let Some(c) = p.graveyard.iter().find(|c| c.id == cid) {
+                            return Some(c.definition.toughness);
+                        }
+                        if let Some(c) = p.hand.iter().find(|c| c.id == cid) {
+                            return Some(c.definition.toughness);
+                        }
+                    }
+                    None
+                })
                 .unwrap_or(0),
             Value::LifeOf(p) => self.resolve_player(p, ctx).map(|p| self.players[p].life).unwrap_or(0),
             Value::HandSizeOf(p) => self.resolve_player(p, ctx).map(|p| self.players[p].hand.len() as i32).unwrap_or(0),
