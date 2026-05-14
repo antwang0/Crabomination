@@ -798,18 +798,12 @@ pub fn vicious_rivalry() -> CardDefinition {
 /// hand at resolution time.
 ///
 /// Mode 1: discard your hand, then draw cards equal to the number of
-/// cards discarded this way. This is approximated as **discard then
-/// draw your hand size** — the engine doesn't track "cards discarded
-/// by this effect" yet, so we substitute "cards discarded" ≈ "your
-/// hand size at cast time". Caveat: hand size shrinks during the
-/// discard step, so we read `HandSizeOf(You)` *before* the discard
-/// (via reading at the start of the Seq); this matches the printed
-/// behaviour because cards-discarded-this-effect equals the hand size
-/// at cast time. The `Value::HandSizeOf(You)` evaluator runs at the
-/// start of the draw effect resolution, after the discard has already
-/// emptied the hand, so without engineering a "snapshot" we'd draw 0.
-/// To work around that, mode 1 is collapsed to "discard hand, then
-/// draw 7" (a typical hand size) — playing as a flat-7 reload card.
+/// cards discarded this way. Wired faithfully via the new
+/// `Value::CardsDiscardedThisEffect` reader (push modern_decks): the
+/// Discard handler bumps `state.cards_discarded_this_resolution`, and
+/// the Draw step reads that counter — N matches exactly the number of
+/// cards actually discarded (which equals the hand size at cast time,
+/// since the discard runs first).
 pub fn borrowed_knowledge() -> CardDefinition {
     use crate::mana::r;
     CardDefinition {
@@ -834,8 +828,9 @@ pub fn borrowed_knowledge() -> CardDefinition {
                     amount: Value::HandSizeOf(PlayerRef::Target(0)),
                 },
             ]),
-            // Mode 1: discard hand, then draw 7 (approximation — see
-            // card-level docs).
+            // Mode 1: discard hand, then draw cards equal to the number
+            // discarded this way. `Value::CardsDiscardedThisEffect` reads
+            // the per-resolution counter the Discard handler bumps.
             Effect::Seq(vec![
                 Effect::Discard {
                     who: Selector::You,
@@ -844,7 +839,7 @@ pub fn borrowed_knowledge() -> CardDefinition {
                 },
                 Effect::Draw {
                     who: Selector::You,
-                    amount: Value::Const(7),
+                    amount: Value::CardsDiscardedThisEffect,
                 },
             ]),
         ]),
@@ -2530,12 +2525,11 @@ pub fn molten_note() -> CardDefinition {
 /// Rivalry uses. The main return-each-MV-X clause walks the controller's
 /// graveyard via `ForEach(EachMatching(Graveyard(You), (Artifact ∨
 /// Creature) ∧ Nonland))`, then for each iteration gates on
-/// `ManaValueOf(TriggerSource) == XFromCost` (synthesised as
-/// `All([ValueAtLeast(MV, X), ValueAtMost(MV, X)])` since there's no
-/// `ValueEquals` predicate). The matching cards are moved to the
-/// battlefield under the caster's control. Deviates from the printed
-/// card on costed-vs-resolved ordering, but the auto-decider always
-/// commits to the cast so the deviation has no functional impact.
+/// `Predicate::ValueEquals(ManaValueOf(TriggerSource), XFromCost)`. The
+/// matching cards are moved to the battlefield under the caster's
+/// control. Deviates from the printed card on costed-vs-resolved
+/// ordering, but the auto-decider always commits to the cast so the
+/// deviation has no functional impact.
 pub fn fix_whats_broken() -> CardDefinition {
     use crate::card::Predicate;
     use crate::effect::ZoneDest;
@@ -2560,9 +2554,8 @@ pub fn fix_whats_broken() -> CardDefinition {
                 amount: Value::XFromCost,
             },
             // Return each (artifact ∨ creature) card from your graveyard
-            // whose mana value equals X. We synthesise equality via
-            // `ValueAtLeast ∧ ValueAtMost`; ManaValueOf reads the
-            // iteration entity bound to `TriggerSource` by ForEach.
+            // whose mana value equals X. ManaValueOf reads the iteration
+            // entity bound to `TriggerSource` by ForEach.
             Effect::ForEach {
                 selector: Selector::EachMatching {
                     zone: ZoneRef::Graveyard(PlayerRef::You),
@@ -2572,16 +2565,10 @@ pub fn fix_whats_broken() -> CardDefinition {
                     ),
                 },
                 body: Box::new(Effect::If {
-                    cond: Predicate::All(vec![
-                        Predicate::ValueAtLeast(
-                            Value::ManaValueOf(Box::new(Selector::TriggerSource)),
-                            Value::XFromCost,
-                        ),
-                        Predicate::ValueAtMost(
-                            Value::ManaValueOf(Box::new(Selector::TriggerSource)),
-                            Value::XFromCost,
-                        ),
-                    ]),
+                    cond: Predicate::ValueEquals(
+                        Value::ManaValueOf(Box::new(Selector::TriggerSource)),
+                        Value::XFromCost,
+                    ),
                     then: Box::new(Effect::Move {
                         what: Selector::TriggerSource,
                         to: ZoneDest::Battlefield {

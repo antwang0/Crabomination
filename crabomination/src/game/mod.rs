@@ -64,7 +64,7 @@ pub(crate) fn drain_stack(g: &mut GameState) -> Vec<GameEvent> {
 #[cfg(test)]
 pub(crate) fn cast(g: &mut GameState, id: CardId) -> Vec<GameEvent> {
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("cast spell");
     drain_stack(g)
 }
@@ -73,7 +73,7 @@ pub(crate) fn cast(g: &mut GameState, id: CardId) -> Vec<GameEvent> {
 #[cfg(test)]
 pub(crate) fn cast_at(g: &mut GameState, id: CardId, target: Target) -> Vec<GameEvent> {
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: Some(target), mode: None, x_value: None,
+        card_id: id, target: Some(target), additional_targets: vec![], mode: None, x_value: None,
     }).expect("cast spell at target");
     drain_stack(g)
 }
@@ -167,6 +167,16 @@ pub struct GameState {
     /// independent resolutions.
     #[serde(skip)]
     pub(crate) last_created_token: Option<CardId>,
+    /// Transient: count of cards discarded within the current effect
+    /// resolution. Bumped by every `GameEvent::CardDiscarded` emission
+    /// inside `Effect::Discard` / `Effect::DiscardChosen` (random and
+    /// player-chosen branches). Read by `Value::CardsDiscardedThisEffect`
+    /// so a later step in the same `Effect::Seq` can draw N where N =
+    /// "the number of cards discarded this way" (Borrowed Knowledge
+    /// mode 1, Colossus of the Blood Age, etc.). Reset to 0 between
+    /// independent resolutions.
+    #[serde(skip)]
+    pub(crate) cards_discarded_this_resolution: u32,
     /// Transient: which face / cast path the in-progress cast is using.
     /// Set by `cast_spell_back_face` (`Back`) and `cast_flashback`
     /// (`Flashback`); reset to `Front` after each emitted SpellCast
@@ -223,6 +233,7 @@ impl Clone for GameState {
             delayed_triggers: self.delayed_triggers.clone(),
             sacrificed_power: self.sacrificed_power,
             last_created_token: self.last_created_token,
+            cards_discarded_this_resolution: self.cards_discarded_this_resolution,
             pending_cast_face: self.pending_cast_face,
             decider: self.decider.kind().into_boxed(),
             pending_decision: self.pending_decision.clone(),
@@ -261,6 +272,7 @@ impl GameState {
             delayed_triggers: Vec::new(),
             sacrificed_power: None,
             last_created_token: None,
+            cards_discarded_this_resolution: 0,
             pending_cast_face: CastFace::Front,
             decider: Box::new(AutoDecider),
             pending_decision: None,
@@ -356,73 +368,36 @@ impl GameState {
                     modification: Modification::SetPowerToughness(n, n),
                 });
             }
-            // Honor Troll (STX, push XXVIII): "As long as you've gained life
-            // this turn, this creature has +2/+0 and lifelink." Same compute-
-            // time injection pattern as Cruel Somnophage / Tarmogoyf — we
-            // check the controller's `life_gained_this_turn` tally (reset on
-            // `do_untap`) and inject a +2/+0 PumpPT plus a Lifelink keyword
-            // when the gate is open. The gate evaluation happens every layer
-            // recompute, so a player's "you gain 1 life" mid-turn flips the
-            // troll on for the remainder of that turn — and the troll snaps
-            // back to its vanilla 1/4 trample body next untap step.
-            if name == "Honor Troll"
+            // "As long as you've gained life this turn, +P/+T [and KW]"
+            // self-pump consolidation: name lookup table at
+            // `lifegain_selfpump_for_name`. Adds one helper-table row per
+            // card instead of a new `if name == "..."` branch. Gate
+            // evaluation happens every layer recompute, so mid-turn life
+            // gain flips the pump on for the remainder of that turn and
+            // the body snaps back at the next untap step.
+            if let Some((p, t, kws)) = lifegain_selfpump_for_name(name)
                 && self.players[card.controller].life_gained_this_turn > 0
             {
                 all_effects.push(ContinuousEffect {
                     timestamp: card.id.0 as u64,
                     source: card.id,
                     affected: AffectedPermanents::Source,
-                    layer: Layer::L7PowerTough,
-                    sublayer: Some(PtSublayer::Modify),
-                    duration: EffectDuration::WhileSourceOnBattlefield,
-                    modification: Modification::ModifyPowerToughness(2, 0),
-                });
-                all_effects.push(ContinuousEffect {
-                    timestamp: card.id.0 as u64,
-                    source: card.id,
-                    affected: AffectedPermanents::Source,
-                    layer: Layer::L6Ability,
-                    sublayer: None,
-                    duration: EffectDuration::WhileSourceOnBattlefield,
-                    modification: Modification::AddKeyword(crate::card::Keyword::Lifelink),
-                });
-            }
-            // Ulna Alley Shopkeep (SOS, this push): "Infusion — This
-            // creature gets +2/+0 as long as you gained life this
-            // turn." Same compute-time gate as Honor Troll above, but
-            // only the +2/+0 pump (no Lifelink rider on this body).
-            if name == "Ulna Alley Shopkeep"
-                && self.players[card.controller].life_gained_this_turn > 0
-            {
-                all_effects.push(ContinuousEffect {
-                    timestamp: card.id.0 as u64,
-                    source: card.id,
-                    affected: AffectedPermanents::Source,
-                    layer: Layer::L7PowerTough,
-                    sublayer: Some(PtSublayer::Modify),
-                    duration: EffectDuration::WhileSourceOnBattlefield,
-                    modification: Modification::ModifyPowerToughness(2, 0),
-                });
-            }
-            // Tribal anthems (push XXXI refactor): consolidate the
-            // per-card "Other [type]s you control get +N/+M" pattern
-            // into the helper `tribal_anthem_for_name`. Adding a new
-            // tribal lord now requires one row in the helper table
-            // instead of a new `if name == "..."` branch.
-            if let Some((creature_type, p, t)) = tribal_anthem_for_name(name) {
-                all_effects.push(ContinuousEffect {
-                    timestamp: card.id.0 as u64,
-                    source: card.id,
-                    affected: AffectedPermanents::AllWithCreatureType {
-                        controller: Some(card.controller),
-                        creature_type,
-                        exclude_source: true,
-                    },
                     layer: Layer::L7PowerTough,
                     sublayer: Some(PtSublayer::Modify),
                     duration: EffectDuration::WhileSourceOnBattlefield,
                     modification: Modification::ModifyPowerToughness(p, t),
                 });
+                for kw in kws {
+                    all_effects.push(ContinuousEffect {
+                        timestamp: card.id.0 as u64,
+                        source: card.id,
+                        affected: AffectedPermanents::Source,
+                        layer: Layer::L6Ability,
+                        sublayer: None,
+                        duration: EffectDuration::WhileSourceOnBattlefield,
+                        modification: Modification::AddKeyword(kw.clone()),
+                    });
+                }
             }
         }
         apply_layers(&self.battlefield, &all_effects)
@@ -721,35 +696,40 @@ impl GameState {
             GameAction::CastSpell {
                 card_id,
                 target,
+                additional_targets,
                 mode,
                 x_value,
-            } => self.cast_spell(card_id, target, mode, x_value),
+            } => self.cast_spell(card_id, target, additional_targets, mode, x_value),
             GameAction::CastSpellConvoke {
                 card_id,
                 target,
+                additional_targets,
                 mode,
                 x_value,
                 convoke_creatures,
-            } => self.cast_spell_with_convoke(card_id, target, mode, x_value, &convoke_creatures),
+            } => self.cast_spell_with_convoke(card_id, target, additional_targets, mode, x_value, &convoke_creatures),
             GameAction::CastSpellAlternative {
                 card_id,
                 pitch_card,
                 target,
+                additional_targets,
                 mode,
                 x_value,
-            } => self.cast_spell_alternative(card_id, pitch_card, target, mode, x_value),
+            } => self.cast_spell_alternative(card_id, pitch_card, target, additional_targets, mode, x_value),
             GameAction::CastFlashback {
                 card_id,
                 target,
+                additional_targets,
                 mode,
                 x_value,
-            } => self.cast_flashback(card_id, target, mode, x_value),
+            } => self.cast_flashback(card_id, target, additional_targets, mode, x_value),
             GameAction::CastSpellBack {
                 card_id,
                 target,
+                additional_targets,
                 mode,
                 x_value,
-            } => self.cast_spell_back_face(card_id, target, mode, x_value),
+            } => self.cast_spell_back_face(card_id, target, additional_targets, mode, x_value),
             GameAction::ActivateAbility {
                 card_id,
                 ability_index,
@@ -935,7 +915,7 @@ impl GameState {
         if let Some(tgt) = &target {
             self.check_target_legality(tgt, p)?;
             if let Some(filter) = ability.effect.target_filter_for_slot(0)
-                && !self.evaluate_requirement_static(filter, tgt, p)
+                && !self.evaluate_requirement_static(filter, tgt, p, Some(card_id))
             {
                 return Err(GameError::SelectionRequirementViolated);
             }
@@ -1052,6 +1032,7 @@ impl GameState {
                 card,
                 caster,
                 target,
+                additional_targets,
                 mode,
                 x_value,
                 converged_value,
@@ -1064,6 +1045,7 @@ impl GameState {
                     *card,
                     caster,
                     target,
+                    additional_targets,
                     mode,
                     x_value,
                     converged_value,
@@ -1404,6 +1386,7 @@ impl GameState {
                             player: target_player,
                             card_id,
                         });
+                        self.cards_discarded_this_resolution += 1;
                     }
                 }
                 Ok(events)
@@ -1439,6 +1422,7 @@ impl GameState {
         card: CardInstance,
         caster: usize,
         target: Option<Target>,
+        additional_targets: Vec<Target>,
         mode: usize,
         x_value: u32,
         converged_value: u32,
@@ -1447,7 +1431,7 @@ impl GameState {
     ) -> Result<Vec<GameEvent>, GameError> {
         let effect = override_effect.unwrap_or_else(|| card.definition.effect.clone());
         let ctx = EffectContext::for_spell_with_source(
-            card.id, card.definition.name, caster, target.clone(), mode, x_value, converged_value, mana_spent,
+            card.id, card.definition.name, caster, target.clone(), additional_targets.clone(), mode, x_value, converged_value, mana_spent,
         );
         let events = self.resolve_effect(&effect, &ctx)?;
         if let Some((decision, in_progress, remaining)) = self.suspend_signal.take() {
@@ -1457,6 +1441,7 @@ impl GameState {
                     card: Box::new(card),
                     caster,
                     target,
+                    additional_targets,
                     mode,
                     x_value,
                     converged_value,
@@ -1547,7 +1532,7 @@ impl GameState {
         // exiled by the prior copy), re-pick a fresh target on resolution.
         let resolved_target = match target.as_ref() {
             Some(t) => match effect.target_filter_for_slot(0) {
-                Some(filter) if !self.evaluate_requirement_static(filter, t, controller) => {
+                Some(filter) if !self.evaluate_requirement_static(filter, t, controller, Some(source)) => {
                     self.auto_target_for_effect(&effect, controller)
                 }
                 _ => Some(t.clone()),
@@ -1617,7 +1602,7 @@ impl GameState {
         target: &Target,
         controller: usize,
     ) -> bool {
-        self.evaluate_requirement_static(req, target, controller)
+        self.evaluate_requirement_static(req, target, controller, None)
     }
 
     pub(crate) fn battlefield_find(&self, id: CardId) -> Option<&CardInstance> {
@@ -1726,29 +1711,30 @@ fn is_event_hardcoded(ev: &GameEvent, spec: &crate::effect::EventSpec) -> bool {
     }
 }
 
-// ── Tribal anthem helper ─────────────────────────────────────────────────────
-
-/// Compute-time tribal-anthem table (push XXXI refactor): cards whose
-/// printed Oracle is "Other [creature_type] creatures you control get
-/// +N/+M." The `static_ability_to_effects` path can't naturally express
-/// "Other" because `Selector::EachPermanent` always includes the source;
-/// we piggyback off the `AffectedPermanents::AllWithCreatureType
-/// .exclude_source: true` flag via a compute-time injection in
-/// `GameState::compute_battlefield`.
+/// Compute-time conditional self-pump table: cards whose printed Oracle
+/// is "As long as you've gained life this turn, this creature gets +P/+T
+/// [and gains keyword(s)]." The pump and keyword grants are emitted as
+/// short-lived continuous effects (P/T at layer 7b, keyword grants at
+/// layer 6) every `compute_battlefield` pass when the controller's
+/// `life_gained_this_turn` tally is non-zero.
 ///
-/// Returns `Some((creature_type, power, toughness))` if `name` matches a
-/// known tribal lord, else `None`. To add a new tribal lord, append one
-/// row here. The injection is shared (every entry uses the same layer,
-/// duration, and `exclude_source: true` flag).
+/// Returns `Some((power_bump, toughness_bump, keywords))` if `name`
+/// matches a known lifegain-self-pump card, else `None`. Adding a new
+/// such card requires appending one row here instead of a new `if name
+/// == "..."` branch in `compute_battlefield`.
 ///
 /// Current entries:
-/// - Quintorius, Field Historian (STX Lorehold): Other Spirits +1/+0
-/// - Tenured Inkcaster (STX Silverquill): Other Inklings +2/+2
-fn tribal_anthem_for_name(name: &'static str) -> Option<(crate::card::CreatureType, i32, i32)> {
-    use crate::card::CreatureType;
+/// - Honor Troll (STX): +2/+0 and Lifelink
+/// - Ulna Alley Shopkeep (SOS Infusion): +2/+0 (no keyword)
+fn lifegain_selfpump_for_name(
+    name: &'static str,
+) -> Option<(i32, i32, &'static [crate::card::Keyword])> {
+    use crate::card::Keyword;
+    static HONOR_TROLL_KWS: &[Keyword] = &[Keyword::Lifelink];
+    static NO_KWS: &[Keyword] = &[];
     match name {
-        "Quintorius, Field Historian" => Some((CreatureType::Spirit, 1, 0)),
-        "Tenured Inkcaster" => Some((CreatureType::Inkling, 2, 2)),
+        "Honor Troll" => Some((2, 0, HONOR_TROLL_KWS)),
+        "Ulna Alley Shopkeep" => Some((2, 0, NO_KWS)),
         _ => None,
     }
 }

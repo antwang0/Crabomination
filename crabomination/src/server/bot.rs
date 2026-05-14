@@ -208,6 +208,7 @@ fn main_phase_action(state: &GameState, seat: usize) -> GameAction {
                 Some(GameAction::CastSpell {
                     card_id: c.id,
                     target,
+                    additional_targets: vec![],
                     mode,
                     // For X-cost spells (Banefire, Earthquake, Wrath of the
                     // Skies, Mind Twist, Repeal, …), pump as much generic
@@ -465,7 +466,9 @@ fn effect_uses_x(eff: &Effect) -> bool {
     fn predicate_uses_x(p: &crate::effect::Predicate) -> bool {
         use crate::effect::Predicate as P;
         match p {
-            P::ValueAtLeast(a, b) | P::ValueAtMost(a, b) => value_uses_x(a) || value_uses_x(b),
+            P::ValueAtLeast(a, b) | P::ValueAtMost(a, b) | P::ValueEquals(a, b) => {
+                value_uses_x(a) || value_uses_x(b)
+            }
             P::Not(inner) => predicate_uses_x(inner),
             P::All(parts) | P::Any(parts) => parts.iter().any(predicate_uses_x),
             P::SelectorCountAtLeast { n, .. } => value_uses_x(n),
@@ -861,6 +864,7 @@ mod tests {
             card: Box::new(card),
             caster: 1,
             target: None,
+            additional_targets: vec![],
             mode: None,
             x_value: 0,
             converged_value: 0,

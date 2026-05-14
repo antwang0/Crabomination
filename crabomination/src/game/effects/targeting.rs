@@ -53,7 +53,7 @@ impl GameState {
 
         // Combined check: requirement match + targetable by `controller`.
         let is_legal = |t: &Target| -> bool {
-            self.evaluate_requirement_static(req, t, controller)
+            self.evaluate_requirement_static(req, t, controller, avoid_source)
                 && self.check_target_legality(t, controller).is_ok()
         };
 

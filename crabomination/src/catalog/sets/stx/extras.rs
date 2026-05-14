@@ -519,8 +519,15 @@ pub fn excavated_wall() -> CardDefinition {
 /// Snow Day — {U}{R} Instant. "Tap up to two target creatures. Put a
 /// stun counter on each of them."
 ///
-/// Single-target tap+stun. "Up to two targets" is an engine-wide gap
-/// (shared with Vibrant Outburst, Spell Satchel, Devious Cover-Up).
+/// ✅ Push (modern_decks): wired faithfully as a two-slot spell. Slot 0
+/// is the first creature, slot 1 (passed via
+/// `GameAction::CastSpell.additional_targets[0]`) is the second.
+/// "Up to two" semantics fall out naturally — if the cast supplies
+/// only one target, `Selector::Target(1)` and
+/// `Selector::TargetFiltered { slot: 1, … }` resolve to nothing and
+/// the second tap+stun pair is a no-op. The cast-side AutoDecider
+/// currently doesn't auto-pick slot-1 targets; tests pass them
+/// explicitly via `additional_targets: vec![Target::Permanent(c)]`.
 pub fn snow_day() -> CardDefinition {
     CardDefinition {
         name: "Snow Day",
@@ -532,11 +539,25 @@ pub fn snow_day() -> CardDefinition {
         toughness: 0,
         keywords: vec![],
         effect: Effect::Seq(vec![
+            // Slot 0: tap + stun the first creature.
             Effect::Tap {
                 what: target_filtered(SelectionRequirement::Creature),
             },
             Effect::AddCounter {
                 what: Selector::Target(0),
+                kind: CounterType::Stun,
+                amount: Value::Const(1),
+            },
+            // Slot 1: tap + stun the second creature (optional —
+            // resolves to no-op when only one target was chosen).
+            Effect::Tap {
+                what: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: SelectionRequirement::Creature,
+                },
+            },
+            Effect::AddCounter {
+                what: Selector::Target(1),
                 kind: CounterType::Stun,
                 amount: Value::Const(1),
             },
@@ -1852,16 +1873,19 @@ pub fn dragonsguard_elite() -> CardDefinition {
 ///
 /// ✅ ETB body (exile gy card + mint 3/2 R/W Spirit token) wired via the
 /// EntersBattlefield/SelfSource trigger. The printed static "Other
-/// Spirit creatures you control get +1/+0" anthem is now wired via a
-/// compute-time injection in `GameState::compute_battlefield`, using
-/// the new `AffectedPermanents::AllWithCreatureType.exclude_source`
-/// flag so Quintorius himself doesn't buff himself (he is a Spirit,
-/// matching the printed "Other" gate). The injection scopes to his
-/// controller's Spirit creatures, layer 7b (+1/+0), and re-evaluates
-/// every recompute — so a Spirit minted by his ETB trigger is buffed
-/// immediately when state-based actions next fire.
+/// Spirit creatures you control get +1/+0" anthem is now wired as a
+/// regular `StaticEffect::PumpPT` over
+/// `Selector::EachPermanent(Creature ∧ HasCreatureType(Spirit) ∧
+/// ControlledByYou ∧ OtherThanSource)` — same shape Hofri Ghostforge
+/// uses. The `OtherThanSource` predicate flows through
+/// `affected_from_requirement`, which flips
+/// `AffectedPermanents::AllWithCreatureType.exclude_source: true` so
+/// Quintorius himself doesn't buff himself (he IS a Spirit, matching
+/// the printed "Other" gate). Push (modern_decks) consolidation
+/// retired the `tribal_anthem_for_name` helper table.
 pub fn quintorius_field_historian() -> CardDefinition {
-    use crate::card::Supertype;
+    use crate::card::{SelectionRequirement, StaticAbility, Supertype};
+    use crate::effect::StaticEffect;
     let spirit = TokenDefinition {
         name: "Spirit".to_string(),
         power: 3,
@@ -1913,7 +1937,19 @@ pub fn quintorius_field_historian() -> CardDefinition {
                 },
             ]),
         }],
-        static_abilities: vec![],
+        static_abilities: vec![StaticAbility {
+            description: "Other Spirit creatures you control get +1/+0.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::HasCreatureType(CreatureType::Spirit))
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                power: 1,
+                toughness: 0,
+            },
+        }],
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
@@ -3671,13 +3707,14 @@ pub fn star_pupils_papers() -> CardDefinition {
 /// enters, you may reveal a [C1] or [C2] card from your hand. If you
 /// don't, this land enters tapped."
 ///
-/// 🟡 Approximation: we ship the conservative ("don't reveal") branch
-/// — these always enter tapped. The reveal-from-hand decision is a
-/// non-trivial UI prompt (the engine has no "may reveal" action shape
-/// at ETB time), and a strictly-untapped version would be too strong.
-/// Wiring the optimization (look at hand for the right color and
-/// auto-skip the tap) is tracked under TODO.md as the "Snarl-land
-/// reveal" gap.
+/// ✅ Wired (push modern_decks) via the new `Effect::IfRevealFromHand`
+/// primitive: ETB trigger peeks at the controller's hand for a card
+/// matching `HasLandType(type_a) ∨ HasLandType(type_b)`. If a match
+/// exists, the AutoDecider auto-reveals and the land stays untapped
+/// (Noop branch). Otherwise the `else_` branch taps the land. The
+/// reveal itself isn't surfaced as a separate UI prompt yet — a
+/// future enhancement could surface `Decision::Reveal` so a human
+/// player can bluff "don't reveal" with a matching card in hand.
 fn snarl_land(
     name: &'static str,
     type_a: LandType,
@@ -3685,7 +3722,11 @@ fn snarl_land(
     color_a: Color,
     color_b: Color,
 ) -> CardDefinition {
-    use super::super::{etb_tap, tap_add};
+    use super::super::tap_add;
+    use crate::card::{SelectionRequirement, TriggeredAbility};
+    use crate::effect::{EventKind, EventScope, EventSpec};
+    let reveal_filter = SelectionRequirement::HasLandType(type_a)
+        .or(SelectionRequirement::HasLandType(type_b));
     CardDefinition {
         name,
         cost: ManaCost::default(),
@@ -3700,7 +3741,14 @@ fn snarl_land(
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: vec![tap_add(color_a), tap_add(color_b)],
-        triggered_abilities: vec![etb_tap()],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::IfRevealFromHand {
+                filter: reveal_filter,
+                then: Box::new(Effect::Noop),
+                else_: Box::new(Effect::Tap { what: Selector::This }),
+            },
+        }],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -4526,9 +4574,8 @@ pub fn burst_lightning() -> CardDefinition {
 ///
 /// Wired via a `Seq` of `LoseLife(X)`, `Move(target -> BF tapped=false)`,
 /// `GrantKeyword(Haste, EOT)`, and `DelayUntil(NextEndStep, Move -> Exile)`.
-/// The resolution-time `If` gate compares `Value::ManaValueOf(Target(0))`
-/// against `Value::XFromCost` twice (once `>=`, once `<=`) to synthesize
-/// equality, since the engine has no `ManaValueEquals(N)` predicate. The
+/// The resolution-time `If` gate uses `Predicate::ValueEquals` to compare
+/// `Value::ManaValueOf(Target(0))` against `Value::XFromCost`. The
 /// pre-flight life-cost gate is engine-wide todo for alt-cost-with-life
 /// (life is debited at resolution time). Tracked alongside Vicious Rivalry
 /// and Fix What's Broken in TODO.md.
@@ -4549,16 +4596,10 @@ pub fn postmortem_lunge() -> CardDefinition {
                 amount: Value::XFromCost,
             },
             Effect::If {
-                cond: Predicate::All(vec![
-                    Predicate::ValueAtLeast(
-                        Value::ManaValueOf(Box::new(Selector::Target(0))),
-                        Value::XFromCost,
-                    ),
-                    Predicate::ValueAtMost(
-                        Value::ManaValueOf(Box::new(Selector::Target(0))),
-                        Value::XFromCost,
-                    ),
-                ]),
+                cond: Predicate::ValueEquals(
+                    Value::ManaValueOf(Box::new(Selector::Target(0))),
+                    Value::XFromCost,
+                ),
                 then: Box::new(Effect::Seq(vec![
                     Effect::Move {
                         what: target_filtered(SelectionRequirement::Creature),

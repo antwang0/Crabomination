@@ -90,7 +90,7 @@ pub enum GameAction {
     /// definition before entering the battlefield, so all subsequent abilities
     /// (mana abilities, ETB triggers, land types) come from the back face.
     PlayLandBack(CardId),
-    CastSpell { card_id: CardId, target: Option<Target>, mode: Option<usize>, x_value: Option<u32> },
+    CastSpell { card_id: CardId, target: Option<Target>, additional_targets: Vec<Target>, mode: Option<usize>, x_value: Option<u32> },
     /// Cast a modal-double-faced card via its **back face**. Mirrors
     /// `PlayLandBack` but for non-land back faces (creature/instant/
     /// sorcery). The card's `definition` is swapped to the back face's
@@ -102,6 +102,8 @@ pub enum GameAction {
     CastSpellBack {
         card_id: CardId,
         target: Option<Target>,
+        #[serde(default)]
+        additional_targets: Vec<Target>,
         mode: Option<usize>,
         x_value: Option<u32>,
     },
@@ -114,6 +116,8 @@ pub enum GameAction {
     CastSpellConvoke {
         card_id: CardId,
         target: Option<Target>,
+        #[serde(default)]
+        additional_targets: Vec<Target>,
         mode: Option<usize>,
         x_value: Option<u32>,
         convoke_creatures: Vec<CardId>,
@@ -126,6 +130,8 @@ pub enum GameAction {
         card_id: CardId,
         pitch_card: Option<CardId>,
         target: Option<Target>,
+        #[serde(default)]
+        additional_targets: Vec<Target>,
         mode: Option<usize>,
         x_value: Option<u32>,
     },
@@ -135,7 +141,7 @@ pub enum GameAction {
     DeclareAttackers(Vec<Attack>),
     DeclareBlockers(Vec<(CardId, CardId)>),
     ActivateLoyaltyAbility { card_id: CardId, ability_index: usize, target: Option<Target> },
-    CastFlashback { card_id: CardId, target: Option<Target>, mode: Option<usize>, x_value: Option<u32> },
+    CastFlashback { card_id: CardId, target: Option<Target>, #[serde(default)] additional_targets: Vec<Target>, mode: Option<usize>, x_value: Option<u32> },
     PassPriority,
     SubmitDecision(DecisionAnswer),
 }
@@ -211,6 +217,10 @@ pub(crate) enum ResumeContext {
         card: Box<CardInstance>,
         caster: usize,
         target: Option<Target>,
+        /// Additional targets (slots 1+). Defaults to empty for snapshot
+        /// back-compat with single-target spells.
+        #[serde(default)]
+        additional_targets: Vec<Target>,
         mode: usize,
         x_value: u32,
         converged_value: u32,
@@ -374,6 +384,12 @@ pub enum StackItem {
         card: Box<CardInstance>,
         caster: usize,
         target: Option<Target>,
+        /// Additional targets for slots 1+ (`Selector::Target(n)` with
+        /// `n > 0`). `target` carries slot 0 for back-compat; multi-target
+        /// spells like Crackle with Power / Snow Day populate this Vec
+        /// with the rest. Defaults to empty for snapshot round-trip.
+        #[serde(default)]
+        additional_targets: Vec<Target>,
         /// Chosen mode index for `ChooseMode` effects (0 if `None`).
         mode: Option<usize>,
         /// X paid into the spell's cost. Threaded into `EffectContext.x_value`

@@ -6,7 +6,7 @@
 //! `mod.rs` (and from `auto_target_for_effect_avoiding` in `targeting.rs`).
 
 use super::{EffectContext, EntityRef};
-use crate::card::{CardInstance, CardType, SelectionRequirement, Supertype};
+use crate::card::{CardId, CardInstance, CardType, SelectionRequirement, Supertype};
 use crate::effect::{Predicate, Value};
 use crate::game::{GameState, StackItem, Target};
 use crate::mana::ManaSymbol;
@@ -102,6 +102,7 @@ impl GameState {
             Value::Max(a, b) => self.evaluate_value(a, ctx).max(self.evaluate_value(b, ctx)),
             Value::NonNeg(v) => self.evaluate_value(v, ctx).max(0),
             Value::SacrificedPower => self.sacrificed_power.unwrap_or(0),
+            Value::CardsDiscardedThisEffect => self.cards_discarded_this_resolution as i32,
             Value::ConvergedValue => ctx.converged_value as i32,
             Value::CastSpellManaSpent => {
                 // Prefer the spell stack item's stored `mana_spent` when
@@ -216,13 +217,14 @@ impl GameState {
             }
             Predicate::ValueAtLeast(a, b) => self.evaluate_value(a, ctx) >= self.evaluate_value(b, ctx),
             Predicate::ValueAtMost(a, b) => self.evaluate_value(a, ctx) <= self.evaluate_value(b, ctx),
+            Predicate::ValueEquals(a, b) => self.evaluate_value(a, ctx) == self.evaluate_value(b, ctx),
             Predicate::IsTurnOf(pref) => self.resolve_player(pref, ctx) == Some(self.active_player_idx),
             Predicate::EntityMatches { what, filter } => self
                 .resolve_selector(what, ctx)
                 .into_iter()
                 .all(|e| match e {
                     EntityRef::Permanent(cid) | EntityRef::Card(cid) => {
-                        self.evaluate_requirement_static(filter, &Target::Permanent(cid), ctx.controller)
+                        self.evaluate_requirement_static(filter, &Target::Permanent(cid), ctx.controller, ctx.source)
                     }
                     EntityRef::Player(_) => matches!(filter, SelectionRequirement::Player),
                 }),
@@ -281,7 +283,7 @@ impl GameState {
                     _ => None,
                 });
                 match target {
-                    Some(Some(t)) => self.evaluate_requirement_static(filter, &t, ctx.controller),
+                    Some(Some(t)) => self.evaluate_requirement_static(filter, &t, ctx.controller, ctx.source),
                     _ => false,
                 }
             }
@@ -414,16 +416,17 @@ impl GameState {
         req: &SelectionRequirement,
         target: &Target,
         controller: usize,
+        source: Option<CardId>,
     ) -> bool {
         use SelectionRequirement as R;
         match req {
             R::Any => true,
             R::Player => matches!(target, Target::Player(_)),
-            R::And(a, b) => self.evaluate_requirement_static(a, target, controller)
-                && self.evaluate_requirement_static(b, target, controller),
-            R::Or(a, b) => self.evaluate_requirement_static(a, target, controller)
-                || self.evaluate_requirement_static(b, target, controller),
-            R::Not(inner) => !self.evaluate_requirement_static(inner, target, controller),
+            R::And(a, b) => self.evaluate_requirement_static(a, target, controller, source)
+                && self.evaluate_requirement_static(b, target, controller, source),
+            R::Or(a, b) => self.evaluate_requirement_static(a, target, controller, source)
+                || self.evaluate_requirement_static(b, target, controller, source),
+            R::Not(inner) => !self.evaluate_requirement_static(inner, target, controller, source),
             R::ControlledByYou => match target {
                 Target::Permanent(cid) => self.battlefield_find(*cid).map(|c| c.controller == controller).unwrap_or(false),
                 Target::Player(p) => *p == controller,
@@ -491,17 +494,17 @@ impl GameState {
                     R::Colorless => card.definition.cost.distinct_colors() == 0,
                     R::Monocolored => card.definition.cost.distinct_colors() == 1,
                     R::HasXInCost => card.definition.cost.has_x(),
-                    // OtherThanSource has no source-id context in the
-                    // `evaluate_requirement_static` path — it's used by the
-                    // static-ability `applies_to` selector pipeline, which
-                    // routes through `affected_from_requirement` to flip
-                    // `exclude_source: true` on the resulting
-                    // `AffectedPermanents` variant. When this predicate
-                    // appears in a target-validation context (rare —
-                    // typically printed "another creature" targeting),
-                    // accept any permanent and rely on the cast-site
-                    // anti-self filter to enforce the "another" gate.
-                    R::OtherThanSource => true,
+                    // OtherThanSource: enforce "different from the source"
+                    // when a source CardId is threaded into this call (effect
+                    // resolvers pass `ctx.source`, cast-time validators pass
+                    // `None`). Without source context, falls through to
+                    // permissive (matches the old behavior, leaving the
+                    // static-ability `applies_to` pipeline to handle the
+                    // "Other …" half via `AffectedPermanents.exclude_source`).
+                    R::OtherThanSource => match source {
+                        Some(src_id) => *cid != src_id,
+                        None => true,
+                    },
                     _ => unreachable!("handled above"),
                 }
             }

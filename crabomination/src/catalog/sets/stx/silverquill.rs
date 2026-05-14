@@ -578,19 +578,19 @@ pub fn promising_duskmage() -> CardDefinition {
 /// Tenured Inkcaster — {2}{W}{B}, 3/2 Vampire Warlock. "Other Inkling
 /// creatures you control get +2/+2."
 ///
-/// Tribal anthem on the Inkling creature type. The "Other" gate is
-/// wired via the engine's `AffectedPermanents::AllWithCreatureType
-/// .exclude_source: true` flag (push XXX, Quintorius pattern). The
-/// anthem is layered in via a compute-time injection in
-/// `GameState::compute_battlefield`, so all of the controller's
-/// Inkling creatures (including Inkling tokens from Inkling Summoning,
-/// Defend the Campus) get +2/+2 while Inkcaster is on the battlefield
-/// — Inkcaster himself stays a 3/2 Vampire (he is not an Inkling, so
-/// the exclude-source clause is technically vacuous, but the
-/// CreatureType filter on the layer already excludes non-Inklings
-/// anyway). The +2/+2 makes a 2/1 Inkling token attack as a 4/3
-/// flier, which is a huge Silverquill payoff.
+/// Tribal anthem on the Inkling creature type. Push (modern_decks)
+/// consolidation: wired via a regular `StaticEffect::PumpPT` with
+/// `Selector::EachPermanent(Creature ∧ HasCreatureType(Inkling) ∧
+/// ControlledByYou ∧ OtherThanSource)` — same shape as Hofri / Quintorius
+/// since the `OtherThanSource` target-validation half now works. The
+/// `OtherThanSource` half is technically vacuous here (Inkcaster is a
+/// Vampire, not an Inkling, so the CreatureType filter already
+/// excludes the source), but it's kept for consistency with the
+/// printed "Other" wording. The +2/+2 makes a 2/1 Inkling token
+/// attack as a 4/3 flier, a huge Silverquill payoff.
 pub fn tenured_inkcaster() -> CardDefinition {
+    use crate::card::{SelectionRequirement, StaticAbility};
+    use crate::effect::{Selector, StaticEffect};
     CardDefinition {
         name: "Tenured Inkcaster",
         cost: cost(&[generic(2), w(), b()]),
@@ -606,7 +606,19 @@ pub fn tenured_inkcaster() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
+        static_abilities: vec![StaticAbility {
+            description: "Other Inkling creatures you control get +2/+2.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::HasCreatureType(CreatureType::Inkling))
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                power: 2,
+                toughness: 2,
+            },
+        }],
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,

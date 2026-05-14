@@ -2237,9 +2237,9 @@ pub fn handle_game_input(
                         }
                     } else if let Some(pending_id) = targeting.pending_card_id {
                         let action = if cast_back {
-                            GameAction::CastSpellBack { card_id: pending_id, target: Some(target), mode: None, x_value: None }
+                            GameAction::CastSpellBack { card_id: pending_id, target: Some(target), additional_targets: vec![], mode: None, x_value: None }
                         } else {
-                            GameAction::CastSpell { card_id: pending_id, target: Some(target), mode: None, x_value: None }
+                            GameAction::CastSpell { card_id: pending_id, target: Some(target), additional_targets: vec![], mode: None, x_value: None }
                         };
                         outbox.submit(action);
                         cancel_targeting(&mut commands, targeting, &valid_targets);
@@ -2256,9 +2256,9 @@ pub fn handle_game_input(
                         }
                     } else if let Some(pending_id) = targeting.pending_card_id {
                         let action = if cast_back {
-                            GameAction::CastSpellBack { card_id: pending_id, target: Some(target), mode: None, x_value: None }
+                            GameAction::CastSpellBack { card_id: pending_id, target: Some(target), additional_targets: vec![], mode: None, x_value: None }
                         } else {
-                            GameAction::CastSpell { card_id: pending_id, target: Some(target), mode: None, x_value: None }
+                            GameAction::CastSpell { card_id: pending_id, target: Some(target), additional_targets: vec![], mode: None, x_value: None }
                         };
                         outbox.submit(action);
                         cancel_targeting(&mut commands, targeting, &valid_targets);
@@ -2352,7 +2352,7 @@ pub fn handle_game_input(
                         targeting.back_face_pending = true;
                     } else {
                         outbox.submit(GameAction::CastSpellBack {
-                            card_id: card.id, target: None, mode: None, x_value: None,
+                            card_id: card.id, target: None, additional_targets: vec![], mode: None, x_value: None,
                         });
                     }
                 } else if card.needs_target {
@@ -2360,7 +2360,7 @@ pub fn handle_game_input(
                     targeting.pending_card_id = Some(card.id);
                     targeting.back_face_pending = false;
                 } else {
-                    outbox.submit(GameAction::CastSpell { card_id: card.id, target: None, mode: None, x_value: None });
+                    outbox.submit(GameAction::CastSpell { card_id: card.id, target: None, additional_targets: vec![], mode: None, x_value: None });
                 }
             }
         }
@@ -2738,6 +2738,7 @@ pub fn handle_alt_cast_buttons(
                 card_id: btn.spell,
                 pitch_card: Some(btn.pitch),
                 target: None,
+                additional_targets: vec![],
                 mode: None,
                 x_value: None,
             });

@@ -192,6 +192,15 @@ pub enum Value {
     /// (set by `Effect::SacrificeAndRemember`). Used by Thud / Greater
     /// Gargadon-style sacrifice + damage spells.
     SacrificedPower,
+    /// Number of cards discarded so far within the current effect
+    /// resolution. Bumped by every `GameEvent::CardDiscarded` emission
+    /// in `Effect::Discard` / `Effect::DiscardChosen`. Used by Borrowed
+    /// Knowledge mode 1 ("draw cards equal to the number of cards
+    /// discarded this way"), Colossus of the Blood Age's die trigger,
+    /// and similar "draw what you discarded" payoffs. Reset to 0
+    /// between independent resolutions, so a `Seq([Discard, Draw])`
+    /// reads exactly the discards from this resolution.
+    CardsDiscardedThisEffect,
     /// Mana value (CMC) of the first card the selector resolves to.
     /// Looks the card up across the battlefield, graveyards, exile, and
     /// hands. Used by Wrath of the Skies (destroy each nonland with mana
@@ -275,6 +284,10 @@ pub enum Predicate {
     ValueAtLeast(Value, Value),
     /// lhs ≤ rhs.
     ValueAtMost(Value, Value),
+    /// lhs = rhs. Compresses the previous `All([≥, ≤])` idiom used by
+    /// MV-equals filters (Postmortem Lunge "creature card with mana
+    /// value X", Fix What's Broken "each card with mana value X").
+    ValueEquals(Value, Value),
     /// It's `who`'s turn.
     IsTurnOf(PlayerRef),
     /// The given entity's properties match the filter.
@@ -661,6 +674,30 @@ pub enum Effect {
         body: Box<Effect>,
     },
 
+    /// Reveal-from-hand gate: "you may reveal a [filter] card from your
+    /// hand. If you do, run `then`; otherwise run `else_`." Used by the
+    /// STX Snarl dual-land cycle (Frostboil, Furycalm, Necroblossom,
+    /// Shineshadow, Vineglimmer) — the printed Oracle reads "As ~~~
+    /// enters, you may reveal a [C1] or [C2] card from your hand. If you
+    /// don't, ~~~ enters tapped."
+    ///
+    /// Asked of the effect's *controller* (`ctx.controller`). Filter is
+    /// evaluated against each hand card via `evaluate_requirement_on_card`.
+    /// AutoDecider auto-reveals whenever a matching card exists — the
+    /// bot always wants to keep the land untapped if it can. A future
+    /// UI wire could surface a `Decision::Reveal` shape so a human
+    /// player can decline to reveal (a strategic bluff); not modeled
+    /// here since no test exercises the decline-with-match path.
+    ///
+    /// If no card matches the filter, `else_` runs unconditionally
+    /// (matches printed "if you don't reveal, …" — including the case
+    /// where you can't).
+    IfRevealFromHand {
+        filter: SelectionRequirement,
+        then: Box<Effect>,
+        else_: Box<Effect>,
+    },
+
     // ── Damage / life ────────────────────────────────────────────────────────
     DealDamage { to: Selector, amount: Value },
     /// Two creatures fight: each deals damage equal to its current
@@ -993,9 +1030,9 @@ impl Effect {
                 Predicate::All(v) | Predicate::Any(v) => v.iter().any(pred_has_target),
                 Predicate::SelectorExists(s) => sel_has_target(s),
                 Predicate::SelectorCountAtLeast { sel, n } => sel_has_target(sel) || value_has_target(n),
-                Predicate::ValueAtLeast(a, b) | Predicate::ValueAtMost(a, b) => {
-                    value_has_target(a) || value_has_target(b)
-                }
+                Predicate::ValueAtLeast(a, b)
+                | Predicate::ValueAtMost(a, b)
+                | Predicate::ValueEquals(a, b) => value_has_target(a) || value_has_target(b),
                 Predicate::IsTurnOf(p) => player_has_target(p),
                 Predicate::EntityMatches { what, .. } => sel_has_target(what),
                 _ => false,
@@ -1015,6 +1052,9 @@ impl Effect {
             Effect::ChooseN { modes, .. } => modes.iter().any(|e| e.requires_target()),
             Effect::MayDo { body, .. } => body.requires_target(),
             Effect::MayPay { body, .. } => body.requires_target(),
+            Effect::IfRevealFromHand { then, else_, .. } => {
+                then.requires_target() || else_.requires_target()
+            }
             Effect::DealDamage { to, amount } => sel_has_target(to) || value_has_target(amount),
             Effect::Fight { attacker, defender } => {
                 sel_has_target(attacker) || sel_has_target(defender)
@@ -1175,6 +1215,9 @@ impl Effect {
             // a target (e.g. "you may sacrifice [target permanent]").
             Effect::MayDo { body, .. } => body.primary_target_filter(),
             Effect::MayPay { body, .. } => body.primary_target_filter(),
+            Effect::IfRevealFromHand { then, else_, .. } => then
+                .primary_target_filter()
+                .or_else(|| else_.primary_target_filter()),
             _ => None,
         }
     }
@@ -1406,6 +1449,9 @@ impl Effect {
                     .find_map(|m| eff_find(m, slot, None)),
                 Effect::MayDo { body, .. } | Effect::MayPay { body, .. } => {
                     eff_find(body, slot, mode)
+                }
+                Effect::IfRevealFromHand { then, else_, .. } => {
+                    eff_find(then, slot, mode).or_else(|| eff_find(else_, slot, mode))
                 }
                 Effect::DealDamage { to, .. } => sel_find(to, slot),
                 Effect::Fight { attacker, defender } => {

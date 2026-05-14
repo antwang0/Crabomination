@@ -23,7 +23,7 @@ fn ponder_resolves_and_draws_a_card() {
     let hand_before = g.players[0].hand.len();
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Ponder should be castable for {U}");
     drain_stack(&mut g);
@@ -42,7 +42,7 @@ fn manamorphose_adds_two_mana_and_draws_a_card() {
     let hand_before = g.players[0].hand.len();
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Manamorphose castable for {2}");
     drain_stack(&mut g);
@@ -66,7 +66,7 @@ fn sleight_of_hand_cantrip_resolves() {
     let hand_before = g.players[0].hand.len();
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Sleight of Hand castable for {U}");
     drain_stack(&mut g);
@@ -88,7 +88,7 @@ fn faithless_looting_draws_two_then_discards_two() {
     let grave_before = g.players[0].graveyard.len();
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Faithless Looting castable for {R}");
     drain_stack(&mut g);
@@ -133,7 +133,7 @@ fn flashback_cast_exiles_spell_on_resolution() {
     g.players[0].mana_pool.add_colorless(2);
 
     g.perform_action(GameAction::CastFlashback {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Flashback castable for {2}{R} from graveyard");
     drain_stack(&mut g);
@@ -159,6 +159,7 @@ fn sign_in_blood_draws_two_loses_two_life() {
     g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Player(0)),
+        additional_targets: vec![],
         mode: None,
         x_value: None,
     })
@@ -190,6 +191,7 @@ fn sign_in_blood_can_target_opponent() {
     g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Player(1)),
+        additional_targets: vec![],
         mode: None,
         x_value: None,
     })
@@ -217,7 +219,7 @@ fn nights_whisper_draws_two_loses_two_life() {
     let hand_before = g.players[0].hand.len();
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Night's Whisper castable for {1}{B}");
     drain_stack(&mut g);
@@ -238,7 +240,7 @@ fn duress_picks_noncreature_nonland() {
     g.players[0].mana_pool.add(Color::Black, 1);
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Duress castable for {B}");
     drain_stack(&mut g);
@@ -261,6 +263,7 @@ fn lava_spike_deals_three_damage_to_player() {
     g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Player(1)),
+        additional_targets: vec![],
         mode: None,
         x_value: None,
     })
@@ -281,6 +284,7 @@ fn shock_deals_two_damage_to_creature() {
     g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
         mode: None,
         x_value: None,
     })
@@ -304,6 +308,7 @@ fn lava_dart_deals_one_damage() {
     g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Player(1)),
+        additional_targets: vec![],
         mode: None,
         x_value: None,
     })
@@ -331,6 +336,7 @@ fn unburial_rites_returns_creature_from_graveyard() {
     g.perform_action(GameAction::CastSpell {
         card_id: rites,
         target: Some(Target::Permanent(atraxa)),
+        additional_targets: vec![],
         mode: None,
         x_value: None,
     })
@@ -352,7 +358,7 @@ fn entomb_searches_library_into_graveyard() {
     g.players[0].mana_pool.add(Color::Black, 1);
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Entomb castable for {B}");
     drain_stack(&mut g);
@@ -380,7 +386,7 @@ fn buried_alive_searches_creature_into_graveyard() {
     g.players[0].mana_pool.add_colorless(2);
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Buried Alive castable for {2}{B}");
     drain_stack(&mut g);
@@ -410,7 +416,7 @@ fn buried_alive_pulls_up_to_three_creatures() {
     g.players[0].mana_pool.add_colorless(2);
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Buried Alive castable for {2}{B}");
     drain_stack(&mut g);
@@ -436,6 +442,7 @@ fn exhume_reanimates_creature() {
     g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Permanent(creature)),
+        additional_targets: vec![],
         mode: None,
         x_value: None,
     })
@@ -455,7 +462,7 @@ fn burning_tree_emissary_etb_adds_red_and_green() {
     g.players[0].mana_pool.add_colorless(2);
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Burning-Tree Emissary castable for {2}");
     drain_stack(&mut g);
@@ -525,7 +532,7 @@ fn veil_of_summer_draws_a_card() {
     let hand_before = g.players[0].hand.len();
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Veil of Summer castable for {G}");
     drain_stack(&mut g);
@@ -545,7 +552,7 @@ fn crop_rotation_sacrifices_land_and_searches_for_one() {
     g.players[0].mana_pool.add(Color::Green, 1);
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Crop Rotation castable for {G}");
     drain_stack(&mut g);
@@ -661,6 +668,7 @@ fn path_to_exile_exiles_target_creature() {
     g.perform_action(GameAction::CastSpell {
         card_id: path,
         target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
         mode: None,
         x_value: None,
     })
@@ -679,6 +687,7 @@ fn fatal_push_destroys_low_cmc_creature() {
     g.perform_action(GameAction::CastSpell {
         card_id: push,
         target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
         mode: None,
         x_value: None,
     })
@@ -696,6 +705,7 @@ fn fatal_push_rejects_high_cmc_creature() {
     let err = g.perform_action(GameAction::CastSpell {
         card_id: push,
         target: Some(Target::Permanent(angel)),
+        additional_targets: vec![],
         mode: None,
         x_value: None,
     });
@@ -712,6 +722,7 @@ fn doom_blade_destroys_nonblack_creature() {
     g.perform_action(GameAction::CastSpell {
         card_id: blade,
         target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
         mode: None,
         x_value: None,
     })
@@ -730,6 +741,7 @@ fn doom_blade_rejects_black_creature() {
     let err = g.perform_action(GameAction::CastSpell {
         card_id: blade,
         target: Some(Target::Permanent(specter)),
+        additional_targets: vec![],
         mode: None,
         x_value: None,
     });
@@ -746,6 +758,7 @@ fn vapor_snag_bounces_and_pings() {
     g.perform_action(GameAction::CastSpell {
         card_id: snag,
         target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
         mode: None,
         x_value: None,
     })
@@ -766,6 +779,7 @@ fn blossoming_defense_pumps_and_grants_hexproof() {
     g.perform_action(GameAction::CastSpell {
         card_id: defense,
         target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
         mode: None,
         x_value: None,
     })
@@ -788,6 +802,7 @@ fn spell_pierce_counters_when_unpaid() {
     g.perform_action(GameAction::CastSpell {
         card_id: bolt,
         target: Some(Target::Player(0)),
+        additional_targets: vec![],
         mode: None,
         x_value: None,
     })
@@ -799,6 +814,7 @@ fn spell_pierce_counters_when_unpaid() {
     g.perform_action(GameAction::CastSpell {
         card_id: pierce,
         target: Some(Target::Permanent(bolt)),
+        additional_targets: vec![],
         mode: None,
         x_value: None,
     })
@@ -820,6 +836,7 @@ fn mana_leak_lets_spell_through_when_paid() {
     g.perform_action(GameAction::CastSpell {
         card_id: bolt,
         target: Some(Target::Player(0)),
+        additional_targets: vec![],
         mode: None,
         x_value: None,
     })
@@ -832,6 +849,7 @@ fn mana_leak_lets_spell_through_when_paid() {
     g.perform_action(GameAction::CastSpell {
         card_id: leak,
         target: Some(Target::Permanent(bolt)),
+        additional_targets: vec![],
         mode: None,
         x_value: None,
     })
@@ -854,6 +872,7 @@ fn anger_of_the_gods_burns_each_creature() {
     g.perform_action(GameAction::CastSpell {
         card_id: anger,
         target: None,
+        additional_targets: vec![],
         mode: None,
         x_value: None,
     })
@@ -875,6 +894,7 @@ fn blasphemous_act_kills_each_creature() {
     g.perform_action(GameAction::CastSpell {
         card_id: act,
         target: None,
+        additional_targets: vec![],
         mode: None,
         x_value: None,
     })
@@ -969,6 +989,7 @@ fn disenchant_destroys_artifact() {
     g.perform_action(GameAction::CastSpell {
         card_id: disenchant,
         target: Some(Target::Permanent(sol_ring)),
+        additional_targets: vec![],
         mode: None,
         x_value: None,
     })
@@ -987,6 +1008,7 @@ fn natures_claim_destroys_artifact_and_grants_controller_four_life() {
     g.perform_action(GameAction::CastSpell {
         card_id: claim,
         target: Some(Target::Permanent(sol_ring)),
+        additional_targets: vec![],
         mode: None,
         x_value: None,
     })
@@ -1010,6 +1032,7 @@ fn negate_counters_a_noncreature_spell() {
     g.perform_action(GameAction::CastSpell {
         card_id: bolt,
         target: Some(Target::Player(0)),
+        additional_targets: vec![],
         mode: None,
         x_value: None,
     })
@@ -1022,6 +1045,7 @@ fn negate_counters_a_noncreature_spell() {
     g.perform_action(GameAction::CastSpell {
         card_id: negate,
         target: Some(Target::Permanent(bolt)),
+        additional_targets: vec![],
         mode: None,
         x_value: None,
     })
@@ -1041,6 +1065,7 @@ fn negate_rejects_creature_target_at_cast_time() {
     g.perform_action(GameAction::CastSpell {
         card_id: bear,
         target: None,
+        additional_targets: vec![],
         mode: None,
         x_value: None,
     })
@@ -1054,6 +1079,7 @@ fn negate_rejects_creature_target_at_cast_time() {
         .perform_action(GameAction::CastSpell {
             card_id: negate,
             target: Some(Target::Permanent(bear)),
+            additional_targets: vec![],
             mode: None,
             x_value: None,
         })
@@ -1071,7 +1097,7 @@ fn dispel_targets_only_instants() {
     g.active_player_idx = 1;
     g.priority.player_with_priority = 1;
     g.perform_action(GameAction::CastSpell {
-        card_id: wrath, target: None, mode: None, x_value: None,
+        card_id: wrath, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
     .unwrap();
 
@@ -1082,6 +1108,7 @@ fn dispel_targets_only_instants() {
         .perform_action(GameAction::CastSpell {
             card_id: dispel,
             target: Some(Target::Permanent(wrath)),
+            additional_targets: vec![],
             mode: None,
             x_value: None,
         })
@@ -1101,6 +1128,7 @@ fn dovins_veto_is_uncounterable() {
     g.perform_action(GameAction::CastSpell {
         card_id: bolt,
         target: Some(Target::Player(1)),
+        additional_targets: vec![],
         mode: None,
         x_value: None,
     })
@@ -1113,6 +1141,7 @@ fn dovins_veto_is_uncounterable() {
     g.perform_action(GameAction::CastSpell {
         card_id: veto,
         target: Some(Target::Permanent(bolt)),
+        additional_targets: vec![],
         mode: None,
         x_value: None,
     })
@@ -1124,6 +1153,7 @@ fn dovins_veto_is_uncounterable() {
     g.perform_action(GameAction::CastSpell {
         card_id: cs,
         target: Some(Target::Permanent(veto)),
+        additional_targets: vec![],
         mode: None,
         x_value: None,
     })
@@ -1149,6 +1179,7 @@ fn thalia_taxes_noncreature_spells_after_first() {
     g.perform_action(GameAction::CastSpell {
         card_id: bolt1,
         target: Some(Target::Player(1)),
+        additional_targets: vec![],
         mode: None,
         x_value: None,
     })
@@ -1162,6 +1193,7 @@ fn thalia_taxes_noncreature_spells_after_first() {
         .perform_action(GameAction::CastSpell {
             card_id: bolt2,
             target: Some(Target::Player(1)),
+            additional_targets: vec![],
             mode: None,
             x_value: None,
         })
@@ -1234,6 +1266,7 @@ fn tarfire_deals_two_damage_to_player() {
     g.perform_action(GameAction::CastSpell {
         card_id: tarfire,
         target: Some(Target::Player(1)),
+        additional_targets: vec![],
         mode: None,
         x_value: None,
     })
@@ -1258,6 +1291,7 @@ fn consider_surveils_then_draws() {
     g.perform_action(GameAction::CastSpell {
         card_id: consider,
         target: None,
+        additional_targets: vec![],
         mode: None,
         x_value: None,
     })
@@ -1285,6 +1319,7 @@ fn thought_scour_mills_target_and_draws_for_caster() {
     g.perform_action(GameAction::CastSpell {
         card_id: scour,
         target: Some(Target::Player(1)),
+        additional_targets: vec![],
         mode: None,
         x_value: None,
     })
@@ -1314,6 +1349,7 @@ fn frantic_search_draws_two_discards_two_untaps_lands() {
     g.perform_action(GameAction::CastSpell {
         card_id: fs,
         target: None,
+        additional_targets: vec![],
         mode: None,
         x_value: None,
     })
@@ -1344,6 +1380,7 @@ fn frantic_search_caps_at_three_lands_when_more_are_tapped() {
     g.perform_action(GameAction::CastSpell {
         card_id: fs,
         target: None,
+        additional_targets: vec![],
         mode: None,
         x_value: None,
     })
@@ -1369,6 +1406,7 @@ fn slaughter_pact_destroys_nonblack_creature_and_schedules_upkeep() {
     g.perform_action(GameAction::CastSpell {
         card_id: pact,
         target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
         mode: None,
         x_value: None,
     })
@@ -1391,6 +1429,7 @@ fn pact_of_the_titan_creates_giant_token() {
     g.perform_action(GameAction::CastSpell {
         card_id: pact,
         target: None,
+        additional_targets: vec![],
         mode: None,
         x_value: None,
     })
@@ -1417,6 +1456,7 @@ fn spell_snare_counters_two_mana_value_spell() {
     g.perform_action(GameAction::CastSpell {
         card_id: bears,
         target: None,
+        additional_targets: vec![],
         mode: None,
         x_value: None,
     })
@@ -1428,6 +1468,7 @@ fn spell_snare_counters_two_mana_value_spell() {
     g.perform_action(GameAction::CastSpell {
         card_id: snare,
         target: Some(Target::Permanent(bears)),
+        additional_targets: vec![],
         mode: None,
         x_value: None,
     })
@@ -1450,6 +1491,7 @@ fn disentomb_returns_creature_from_graveyard() {
     g.perform_action(GameAction::CastSpell {
         card_id: disentomb,
         target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
         mode: None,
         x_value: None,
     })
@@ -1469,6 +1511,7 @@ fn vandalblast_destroys_opponent_artifact() {
     g.perform_action(GameAction::CastSpell {
         card_id: vand,
         target: Some(Target::Permanent(opp_ring)),
+        additional_targets: vec![],
         mode: None,
         x_value: None,
     })
@@ -1492,6 +1535,7 @@ fn natures_lore_fetches_a_forest_to_battlefield_untapped() {
     g.perform_action(GameAction::CastSpell {
         card_id: lore,
         target: None,
+        additional_targets: vec![],
         mode: None,
         x_value: None,
     })
@@ -1547,7 +1591,7 @@ fn ornithopter_is_a_zero_cost_flying_creature() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::ornithopter());
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Ornithopter castable for free");
     drain_stack(&mut g);
@@ -1586,6 +1630,7 @@ fn daze_counters_when_unpaid() {
     g.perform_action(GameAction::CastSpell {
         card_id: bolt,
         target: Some(Target::Player(0)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     })
     .expect("Bolt castable");
@@ -1597,6 +1642,7 @@ fn daze_counters_when_unpaid() {
     g.perform_action(GameAction::CastSpell {
         card_id: daze,
         target: Some(Target::Permanent(bolt)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     })
     .expect("Daze castable");
@@ -1618,7 +1664,7 @@ fn swan_song_counters_enchantment_and_makes_a_bird() {
     g.active_player_idx = 1;
     g.priority.player_with_priority = 1;
     g.perform_action(GameAction::CastSpell {
-        card_id: eid, target: None, mode: None, x_value: None,
+        card_id: eid, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Eidolon castable");
     let swan = g.add_card_to_hand(0, catalog::swan_song());
@@ -1628,6 +1674,7 @@ fn swan_song_counters_enchantment_and_makes_a_bird() {
     g.perform_action(GameAction::CastSpell {
         card_id: swan,
         target: Some(Target::Permanent(eid)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     })
     .expect("Swan Song castable");
@@ -1653,6 +1700,7 @@ fn drown_in_ichor_deals_three_damage_and_surveils() {
     g.perform_action(GameAction::CastSpell {
         card_id: drown,
         target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     })
     .expect("Drown in Ichor castable");
@@ -1673,7 +1721,7 @@ fn paradoxical_outcome_bounces_two_artifacts_and_draws_two() {
     g.players[0].mana_pool.add(Color::Blue, 2);
     let hand_before = g.players[0].hand.len();
     g.perform_action(GameAction::CastSpell {
-        card_id: outcome, target: None, mode: None, x_value: None,
+        card_id: outcome, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Paradoxical Outcome castable");
     drain_stack(&mut g);
@@ -1694,7 +1742,7 @@ fn blasphemous_edict_each_player_sacrifices_a_creature() {
     g.players[0].mana_pool.add_colorless(4);
     g.players[0].mana_pool.add(Color::Black, 1);
     g.perform_action(GameAction::CastSpell {
-        card_id: edict, target: None, mode: None, x_value: None,
+        card_id: edict, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Blasphemous Edict castable");
     drain_stack(&mut g);
@@ -1715,6 +1763,7 @@ fn fell_destroys_tapped_creature() {
     g.perform_action(GameAction::CastSpell {
         card_id: fell,
         target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     })
     .expect("Fell castable");
@@ -1734,7 +1783,7 @@ fn big_score_discards_one_creates_two_treasures_draws_two() {
     let yard_before = g.players[0].graveyard.len();
     let bf_before = g.battlefield.len();
     g.perform_action(GameAction::CastSpell {
-        card_id: big, target: None, mode: None, x_value: None,
+        card_id: big, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Big Score castable");
     drain_stack(&mut g);
@@ -1757,7 +1806,7 @@ fn restoration_angel_blinks_a_friendly_non_angel() {
     // Cast — auto-target heuristic picks the bear (the only legal non-Angel
     // creature you control).
     g.perform_action(GameAction::CastSpell {
-        card_id: angel, target: None, mode: None, x_value: None,
+        card_id: angel, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Restoration Angel castable");
     drain_stack(&mut g);
@@ -1777,7 +1826,7 @@ fn flickerwisp_exiles_until_end_of_turn() {
     g.players[0].mana_pool.add_colorless(1);
     g.players[0].mana_pool.add(Color::White, 2);
     g.perform_action(GameAction::CastSpell {
-        card_id: wisp, target: None, mode: None, x_value: None,
+        card_id: wisp, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Flickerwisp castable");
     drain_stack(&mut g);
@@ -1805,6 +1854,7 @@ fn isolate_exiles_one_mana_value_permanent() {
     g.perform_action(GameAction::CastSpell {
         card_id: isolate,
         target: Some(Target::Permanent(elves)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     })
     .expect("Isolate castable on a 1-MV permanent");
@@ -1819,6 +1869,7 @@ fn isolate_exiles_one_mana_value_permanent() {
     let err = g.perform_action(GameAction::CastSpell {
         card_id: isolate2,
         target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     });
     assert!(err.is_err(), "Isolate on 2-MV target should fail");
@@ -1900,6 +1951,7 @@ fn darksteel_citadel_is_indestructible() {
     g.perform_action(GameAction::CastSpell {
         card_id: disenchant,
         target: Some(Target::Permanent(citadel)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     })
     .expect("Disenchant castable");
@@ -1919,7 +1971,7 @@ fn voldaren_epicure_etb_creates_blood_and_pings_each_opponent() {
     let opp_life_before = g.players[1].life;
     let bf_before = g.battlefield.len();
     g.perform_action(GameAction::CastSpell {
-        card_id: epi, target: None, mode: None, x_value: None,
+        card_id: epi, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Voldaren Epicure castable");
     drain_stack(&mut g);
@@ -1982,6 +2034,7 @@ fn tireless_tracker_requires_two_green_mana_sources() {
     let err = g.perform_action(GameAction::CastSpell {
         card_id: tracker,
         target: None,
+        additional_targets: vec![],
         mode: None,
         x_value: None,
     });
@@ -2001,6 +2054,7 @@ fn tireless_tracker_requires_two_green_mana_sources() {
     g.perform_action(GameAction::CastSpell {
         card_id: tracker,
         target: None,
+        additional_targets: vec![],
         mode: None,
         x_value: None,
     })
@@ -2016,7 +2070,7 @@ fn tireless_tracker_does_not_trigger_on_non_land_etb() {
     g.players[0].mana_pool.add_colorless(1);
     g.players[0].mana_pool.add(Color::Green, 1);
     g.perform_action(GameAction::CastSpell {
-        card_id: bear, target: None, mode: None, x_value: None,
+        card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Bears castable");
     drain_stack(&mut g);
@@ -2032,7 +2086,7 @@ fn bloodtithe_harvester_etb_and_attack_each_make_a_blood() {
     g.players[0].mana_pool.add(Color::Black, 1);
     g.players[0].mana_pool.add(Color::Red, 1);
     g.perform_action(GameAction::CastSpell {
-        card_id: harv, target: None, mode: None, x_value: None,
+        card_id: harv, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Bloodtithe Harvester castable");
     drain_stack(&mut g);
@@ -2066,7 +2120,7 @@ fn up_the_beanstalk_etb_draws_a_card() {
     g.players[0].mana_pool.add(Color::Green, 1);
     let hand_before = g.players[0].hand.len();
     g.perform_action(GameAction::CastSpell {
-        card_id: beanstalk, target: None, mode: None, x_value: None,
+        card_id: beanstalk, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Up the Beanstalk castable");
     drain_stack(&mut g);
@@ -2087,6 +2141,7 @@ fn up_the_beanstalk_does_not_trigger_on_low_mana_value_spells() {
     g.perform_action(GameAction::CastSpell {
         card_id: bolt,
         target: Some(Target::Player(1)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     })
     .expect("Bolt castable");
@@ -2106,7 +2161,7 @@ fn up_the_beanstalk_triggers_on_five_plus_mana_value_spells() {
     g.players[0].mana_pool.add(Color::White, 2);
     let hand_before = g.players[0].hand.len();
     g.perform_action(GameAction::CastSpell {
-        card_id: angel, target: None, mode: None, x_value: None,
+        card_id: angel, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Serra Angel castable");
     drain_stack(&mut g);
@@ -2132,7 +2187,7 @@ fn temur_ascendancy_draws_only_for_power_4_plus_etb() {
     g.players[0].mana_pool.add(Color::Green, 1);
     let elves_hand_before = g.players[0].hand.len();
     g.perform_action(GameAction::CastSpell {
-        card_id: elves, target: None, mode: None, x_value: None,
+        card_id: elves, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Llanowar Elves castable");
     drain_stack(&mut g);
@@ -2146,7 +2201,7 @@ fn temur_ascendancy_draws_only_for_power_4_plus_etb() {
     g.players[0].mana_pool.add(Color::White, 2);
     let angel_hand_before = g.players[0].hand.len();
     g.perform_action(GameAction::CastSpell {
-        card_id: angel, target: None, mode: None, x_value: None,
+        card_id: angel, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Serra Angel castable");
     drain_stack(&mut g);
@@ -2170,7 +2225,7 @@ fn treasure_token_taps_and_sacrifices_for_one_color() {
     g.players[0].mana_pool.add_colorless(3);
     g.players[0].mana_pool.add(Color::Red, 1);
     g.perform_action(GameAction::CastSpell {
-        card_id: big, target: None, mode: None, x_value: None,
+        card_id: big, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Big Score castable");
     drain_stack(&mut g);
@@ -2338,7 +2393,7 @@ fn ranger_captain_etb_searches_for_a_one_drop() {
     // Scripted decider picks Llanowar Elves out of the search candidates.
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(elves))]));
     g.perform_action(GameAction::CastSpell {
-        card_id: ranger, target: None, mode: None, x_value: None,
+        card_id: ranger, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Ranger-Captain castable");
     drain_stack(&mut g);
@@ -2355,7 +2410,7 @@ fn upheaval_returns_all_permanents_to_hands() {
     g.players[0].mana_pool.add_colorless(4);
     g.players[0].mana_pool.add(Color::Blue, 2);
     g.perform_action(GameAction::CastSpell {
-        card_id: upheaval, target: None, mode: None, x_value: None,
+        card_id: upheaval, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Upheaval castable");
     drain_stack(&mut g);
@@ -2379,7 +2434,7 @@ fn rakshasas_bargain_pays_4_life_and_draws_4() {
     let life_before = g.players[0].life;
     let hand_before = g.players[0].hand.len();
     g.perform_action(GameAction::CastSpell {
-        card_id: bargain, target: None, mode: None, x_value: None,
+        card_id: bargain, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Rakshasa's Bargain castable");
     drain_stack(&mut g);
@@ -2398,6 +2453,7 @@ fn sundering_eruption_front_face_burns_a_creature() {
     g.perform_action(GameAction::CastSpell {
         card_id: erupt,
         target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     })
     .expect("Sundering Eruption castable");
@@ -2431,7 +2487,7 @@ fn loran_etb_destroys_artifact_and_tap_ability_lets_both_draw() {
     g.players[0].mana_pool.add_colorless(2);
     g.players[0].mana_pool.add(Color::White, 1);
     g.perform_action(GameAction::CastSpell {
-        card_id: loran, target: None, mode: None, x_value: None,
+        card_id: loran, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Loran castable");
     drain_stack(&mut g);
@@ -2472,6 +2528,7 @@ fn reanimate_puts_creature_into_play_and_pays_cmc_life() {
     g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Permanent(atraxa)),
+        additional_targets: vec![],
         mode: None,
         x_value: None,
     })
@@ -2501,6 +2558,7 @@ fn reanimate_life_cost_scales_with_mana_value() {
     g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
         mode: None,
         x_value: None,
     })
@@ -2525,6 +2583,7 @@ fn bone_shards_sacrifices_creature_and_destroys_target() {
     g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Permanent(kill_target)),
+        additional_targets: vec![],
         mode: None,
         x_value: None,
     })
@@ -2555,6 +2614,7 @@ fn bone_shards_can_discard_instead_of_sacrifice() {
     g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Permanent(kill_target)),
+        additional_targets: vec![],
         mode: Some(1),
         x_value: None,
     })
@@ -2581,6 +2641,7 @@ fn pyrokinesis_alt_cost_exiles_red_card_and_deals_four_damage() {
         card_id: id,
         pitch_card: Some(red_card),
         target: Some(Target::Permanent(serra)),
+        additional_targets: vec![],
         mode: None,
         x_value: None,
     })
@@ -2609,6 +2670,7 @@ fn pyrokinesis_alt_cost_rejects_non_red_pitch() {
         card_id: id,
         pitch_card: Some(blue_card),
         target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
         mode: None,
         x_value: None,
     });
@@ -2632,7 +2694,7 @@ fn tishanas_tidebinder_etb_counters_target_ability() {
     g.active_player_idx = 1;
     g.priority.player_with_priority = 1;
     g.perform_action(GameAction::CastSpell {
-        card_id: dev, target: None, mode: None, x_value: None,
+        card_id: dev, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Devourer castable for {7}");
 
@@ -2650,6 +2712,7 @@ fn tishanas_tidebinder_etb_counters_target_ability() {
     g.perform_action(GameAction::CastSpell {
         card_id: tide,
         target: Some(Target::Permanent(dev)),
+        additional_targets: vec![],
         mode: None,
         x_value: None,
     })
@@ -2890,7 +2953,7 @@ fn cathartic_reunion_discards_two_then_draws_three() {
     let hand_before = g.players[0].hand.len();
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Cathartic Reunion castable for {1}{R}");
     drain_stack(&mut g);
@@ -2914,7 +2977,7 @@ fn gitaxian_probe_pays_two_life_and_draws() {
     let life_before = g.players[0].life;
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Gitaxian Probe castable for {0}");
     drain_stack(&mut g);
@@ -2937,6 +3000,7 @@ fn force_spike_counters_when_opponent_cannot_pay() {
     g.perform_action(GameAction::CastSpell {
         card_id: bolt,
         target: Some(Target::Player(0)),
+        additional_targets: vec![],
         mode: None,
         x_value: None,
     })
@@ -2948,6 +3012,7 @@ fn force_spike_counters_when_opponent_cannot_pay() {
     g.perform_action(GameAction::CastSpell {
         card_id: spike,
         target: Some(Target::Permanent(bolt)),
+        additional_targets: vec![],
         mode: None,
         x_value: None,
     })
@@ -2974,6 +3039,7 @@ fn force_spike_does_not_counter_when_opponent_can_pay() {
     g.perform_action(GameAction::CastSpell {
         card_id: bolt,
         target: Some(Target::Player(0)),
+        additional_targets: vec![],
         mode: None,
         x_value: None,
     })
@@ -2985,6 +3051,7 @@ fn force_spike_does_not_counter_when_opponent_can_pay() {
     g.perform_action(GameAction::CastSpell {
         card_id: spike,
         target: Some(Target::Permanent(bolt)),
+        additional_targets: vec![],
         mode: None,
         x_value: None,
     })
@@ -3010,7 +3077,7 @@ fn vampiric_tutor_pays_two_life_and_tutors_to_top_of_library() {
     let life_before = g.players[0].life;
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Vampiric Tutor castable for {B}");
     drain_stack(&mut g);
@@ -3035,7 +3102,7 @@ fn sylvan_scrying_tutors_a_land_to_hand() {
     g.players[0].mana_pool.add(Color::Green, 1);
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Sylvan Scrying castable for {1}{G}");
     drain_stack(&mut g);
@@ -3056,6 +3123,7 @@ fn abrupt_decay_destroys_low_cmc_nonland() {
     g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
         mode: None,
         x_value: None,
     })
@@ -3085,6 +3153,7 @@ fn abrupt_decay_rejects_high_cmc_target() {
     let res = g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Permanent(arena)),
+        additional_targets: vec![],
         mode: None,
         x_value: None,
     });
@@ -3104,6 +3173,7 @@ fn abrupt_decay_cannot_be_countered() {
     g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
         mode: None,
         x_value: None,
     })
@@ -3133,7 +3203,7 @@ fn kodamas_reach_searches_two_basics() {
     g.players[0].mana_pool.add(Color::Green, 1);
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Kodama's Reach castable for {2}{G}");
     drain_stack(&mut g);
@@ -3322,6 +3392,7 @@ fn cryptic_command_counter_plus_bounce_resolves() {
     g.priority.player_with_priority = 1;
     g.perform_action(GameAction::CastSpell {
         card_id: bolt, target: Some(Target::Player(0)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     })
     .expect("Bolt castable");
@@ -3333,6 +3404,7 @@ fn cryptic_command_counter_plus_bounce_resolves() {
     g.perform_action(GameAction::CastSpell {
         card_id: cryptic,
         target: Some(Target::Permanent(bolt)),
+        additional_targets: vec![],
         mode: Some(0), // counter + bounce
         x_value: None,
     })
@@ -3359,6 +3431,7 @@ fn cryptic_command_mode_two_counter_and_draw() {
     g.priority.player_with_priority = 1;
     g.perform_action(GameAction::CastSpell {
         card_id: bolt, target: Some(Target::Player(0)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     })
     .unwrap();
@@ -3371,6 +3444,7 @@ fn cryptic_command_mode_two_counter_and_draw() {
     g.perform_action(GameAction::CastSpell {
         card_id: cryptic,
         target: Some(Target::Permanent(bolt)),
+        additional_targets: vec![],
         mode: Some(2), // counter + draw 1
         x_value: None,
     })
@@ -3395,7 +3469,7 @@ fn deadly_dispute_sacrifices_and_creates_treasure_and_draws_two() {
     let hand_before = g.players[0].hand.len();
 
     g.perform_action(GameAction::CastSpell {
-        card_id: dispute, target: None, mode: None, x_value: None,
+        card_id: dispute, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Deadly Dispute castable for {1}{B}");
     drain_stack(&mut g);
@@ -3420,6 +3494,7 @@ fn bloodchiefs_thirst_destroys_low_cmc_creature() {
     g.perform_action(GameAction::CastSpell {
         card_id: thirst,
         target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     })
     .expect("Bloodchief's Thirst castable for {B}");
@@ -3439,6 +3514,7 @@ fn bloodchiefs_thirst_rejects_high_cmc_target() {
     let err = g.perform_action(GameAction::CastSpell {
         card_id: thirst,
         target: Some(Target::Permanent(mahamoti)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     })
     .unwrap_err();
@@ -3521,7 +3597,7 @@ fn eternal_witness_etb_returns_graveyard_card_via_auto_target() {
     g.players[0].mana_pool.add_colorless(1);
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Eternal Witness castable for {1}{G}{G}");
     drain_stack(&mut g);
 
@@ -3557,6 +3633,7 @@ fn static_prison_etb_taps_target() {
     g.perform_action(GameAction::CastSpell {
         card_id: prison,
         target: Some(Target::Permanent(opp_bear)),
+        additional_targets: vec![],
         mode: None,
         x_value: Some(0),
     })
@@ -3584,6 +3661,7 @@ fn static_prison_x2_etb_adds_two_stun_counters() {
     g.perform_action(GameAction::CastSpell {
         card_id: prison,
         target: Some(Target::Permanent(opp_bear)),
+        additional_targets: vec![],
         mode: None,
         x_value: Some(2),
     })
@@ -3634,7 +3712,7 @@ fn pyroclasm_kills_two_toughness_creatures() {
     g.players[0].mana_pool.add(Color::Red, 1);
 
     g.perform_action(GameAction::CastSpell {
-        card_id: py, target: None, mode: None, x_value: None,
+        card_id: py, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Pyroclasm castable for {1}{R}");
     drain_stack(&mut g);
@@ -3657,7 +3735,7 @@ fn day_of_judgment_destroys_all_creatures() {
     g.players[0].mana_pool.add(Color::White, 2);
 
     g.perform_action(GameAction::CastSpell {
-        card_id: day, target: None, mode: None, x_value: None,
+        card_id: day, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Day of Judgment castable for {2}{W}{W}");
     drain_stack(&mut g);
@@ -3681,7 +3759,7 @@ fn damnation_destroys_all_creatures() {
     g.players[0].mana_pool.add(Color::Black, 2);
 
     g.perform_action(GameAction::CastSpell {
-        card_id: dn, target: None, mode: None, x_value: None,
+        card_id: dn, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Damnation castable for {2}{B}{B}");
     drain_stack(&mut g);
@@ -3704,7 +3782,7 @@ fn mystical_tutor_finds_instant_and_puts_on_top() {
     g.players[0].mana_pool.add(Color::Blue, 1);
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Mystical Tutor castable for {U}");
     drain_stack(&mut g);
@@ -3728,7 +3806,7 @@ fn worldly_tutor_finds_creature_and_puts_on_top() {
     g.players[0].mana_pool.add(Color::Green, 1);
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Worldly Tutor castable for {G}");
     drain_stack(&mut g);
@@ -3749,7 +3827,7 @@ fn enlightened_tutor_finds_artifact_and_puts_on_top() {
     g.players[0].mana_pool.add(Color::White, 1);
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Enlightened Tutor castable for {W}");
     drain_stack(&mut g);
@@ -3770,7 +3848,7 @@ fn diabolic_tutor_finds_any_card_into_hand() {
     g.players[0].mana_pool.add(Color::Black, 2);
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Diabolic Tutor castable for {2}{B}{B}");
     drain_stack(&mut g);
@@ -3793,7 +3871,7 @@ fn imperial_seal_pays_two_life_and_tutors_to_top() {
     let life_before = g.players[0].life;
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Imperial Seal castable for {B}");
     drain_stack(&mut g);
@@ -3816,6 +3894,7 @@ fn lightning_strike_deals_three_to_creature() {
     g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     })
     .expect("Lightning Strike castable for {1}{R} on a creature");
@@ -3838,6 +3917,7 @@ fn lightning_strike_can_target_a_player() {
     g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Player(1)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     })
     .expect("Lightning Strike castable at a player");
@@ -3947,6 +4027,7 @@ fn snuff_out_destroys_nonblack_creature_via_normal_cost() {
     g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     })
     .expect("Snuff Out castable for {3}{B}");
@@ -3968,6 +4049,7 @@ fn snuff_out_alt_cost_pays_four_life() {
         card_id: id,
         pitch_card: None,
         target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
         mode: None,
         x_value: None,
     })
@@ -4016,6 +4098,7 @@ fn snuff_out_rejects_black_creature() {
     let res = g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Permanent(demon)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     });
     assert!(res.is_err(),
@@ -4038,7 +4121,7 @@ fn windfall_discards_both_hands_and_draws_seven() {
     g.players[1].mana_pool.add_colorless(2);
 
     g.perform_action(GameAction::CastSpell {
-        card_id: wf, target: None, mode: None, x_value: None,
+        card_id: wf, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).unwrap();
     drain_stack(&mut g);
     // Both hands were emptied, then redrawn to 7 each.
@@ -4061,7 +4144,7 @@ fn treasure_cruise_draws_three_at_full_cost() {
     let hand_before_cast = g.players[0].hand.len();
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).unwrap();
     drain_stack(&mut g);
 
@@ -4081,6 +4164,7 @@ fn lose_focus_counters_when_controller_cannot_pay_two() {
     g.perform_action(GameAction::CastSpell {
         card_id: bolt,
         target: Some(Target::Player(0)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     }).unwrap();
     // Bob has no mana, so paying {2} is impossible. Alice casts Lose Focus
@@ -4091,6 +4175,7 @@ fn lose_focus_counters_when_controller_cannot_pay_two() {
     g.perform_action(GameAction::CastSpell {
         card_id: lose,
         target: Some(Target::Permanent(bolt)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     }).unwrap();
     drain_stack(&mut g);
@@ -4113,6 +4198,7 @@ fn lose_focus_does_not_counter_when_controller_can_pay_two() {
     g.perform_action(GameAction::CastSpell {
         card_id: bolt,
         target: Some(Target::Player(0)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     }).unwrap();
     g.priority.player_with_priority = 0;
@@ -4121,6 +4207,7 @@ fn lose_focus_does_not_counter_when_controller_can_pay_two() {
     g.perform_action(GameAction::CastSpell {
         card_id: lose,
         target: Some(Target::Permanent(bolt)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     }).unwrap();
     drain_stack(&mut g);
@@ -4140,7 +4227,7 @@ fn stifle_counters_a_triggered_ability_off_the_stack() {
     let dev = g.add_card_to_hand(0, catalog::devourer_of_destiny());
     g.players[0].mana_pool.add_colorless(7);
     g.perform_action(GameAction::CastSpell {
-        card_id: dev, target: None, mode: None, x_value: None,
+        card_id: dev, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).unwrap();
     // P1 stifles the trigger before it resolves.
     g.priority.player_with_priority = 1;
@@ -4149,6 +4236,7 @@ fn stifle_counters_a_triggered_ability_off_the_stack() {
     g.perform_action(GameAction::CastSpell {
         card_id: stifle,
         target: Some(Target::Permanent(dev)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     }).expect("Stifle should accept Devourer as the source target");
     drain_stack(&mut g);
@@ -4170,6 +4258,7 @@ fn memory_lapse_counters_target_spell() {
     g.perform_action(GameAction::CastSpell {
         card_id: bolt,
         target: Some(Target::Player(0)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     }).unwrap();
     g.priority.player_with_priority = 0;
@@ -4179,6 +4268,7 @@ fn memory_lapse_counters_target_spell() {
     g.perform_action(GameAction::CastSpell {
         card_id: lapse,
         target: Some(Target::Permanent(bolt)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     }).expect("Memory Lapse should accept the bolt as a spell target");
     drain_stack(&mut g);
@@ -4195,6 +4285,7 @@ fn vines_of_vastwood_pumps_target_creature_plus_four() {
     g.perform_action(GameAction::CastSpell {
         card_id: vines,
         target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     }).expect("Vines should accept the bear as a target");
     drain_stack(&mut g);
@@ -4213,6 +4304,7 @@ fn reckless_charge_grants_three_power_and_haste() {
     g.perform_action(GameAction::CastSpell {
         card_id: charge,
         target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     }).expect("Reckless Charge castable for {R}");
     drain_stack(&mut g);
@@ -4236,7 +4328,7 @@ fn boil_destroys_all_islands() {
     g.players[0].mana_pool.add(Color::Red, 1);
     g.players[0].mana_pool.add_colorless(2);
     g.perform_action(GameAction::CastSpell {
-        card_id: boil, target: None, mode: None, x_value: None,
+        card_id: boil, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Boil castable for {2}{R}");
     drain_stack(&mut g);
     assert!(!g.battlefield.iter().any(|c| c.id == i1), "P0's Island should be destroyed");
@@ -4254,7 +4346,7 @@ fn compulsive_research_draws_three_discards_two() {
     g.players[0].mana_pool.add_colorless(2);
     let hand_before = g.players[0].hand.len();
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).unwrap();
     drain_stack(&mut g);
     // -1 (cast) + 3 (draw) - 2 (discard) = net 0.
@@ -4273,6 +4365,7 @@ fn demolish_destroys_target_artifact() {
     g.perform_action(GameAction::CastSpell {
         card_id: demo,
         target: Some(Target::Permanent(stone)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     }).expect("Demolish should accept an artifact target");
     drain_stack(&mut g);
@@ -4290,7 +4383,7 @@ fn mind_sculpt_mills_each_opponent_seven() {
     g.players[0].mana_pool.add(Color::Blue, 1);
     g.players[0].mana_pool.add_colorless(2);
     g.perform_action(GameAction::CastSpell {
-        card_id: ms, target: None, mode: None, x_value: None,
+        card_id: ms, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).unwrap();
     drain_stack(&mut g);
     assert_eq!(g.players[1].library.len(), lib_before - 7,
@@ -4307,7 +4400,7 @@ fn cabal_therapy_discards_a_nonland_from_opponent() {
     let ct = g.add_card_to_hand(0, catalog::cabal_therapy());
     g.players[0].mana_pool.add(Color::Black, 1);
     g.perform_action(GameAction::CastSpell {
-        card_id: ct, target: None, mode: None, x_value: None,
+        card_id: ct, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Cabal Therapy castable for {B}");
     drain_stack(&mut g);
     assert!(g.players[1].graveyard.iter().any(|c| c.id == target_card),
@@ -4326,6 +4419,7 @@ fn wear_down_destroys_target_artifact() {
     g.perform_action(GameAction::CastSpell {
         card_id: wd,
         target: Some(Target::Permanent(stone)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     }).expect("Wear Down should accept an artifact target");
     drain_stack(&mut g);
@@ -4342,7 +4436,7 @@ fn memnite_casts_for_zero_mana() {
     let id = g.add_card_to_hand(0, catalog::memnite());
     // Zero pool — Memnite costs nothing.
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Memnite is free");
     drain_stack(&mut g);
     let card = g.battlefield_find(id).expect("Memnite on battlefield");
@@ -4419,6 +4513,7 @@ fn mine_collapse_sacrifices_mountain_and_deals_four() {
     g.perform_action(GameAction::CastSpell {
         card_id: mc,
         target: Some(Target::Player(1)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     }).expect("Mine Collapse castable for {{2}}{{R}}");
     drain_stack(&mut g);
@@ -4441,7 +4536,7 @@ fn satyr_wayfinder_etb_mills_four() {
     g.players[0].mana_pool.add(Color::Green, 1);
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::CastSpell {
-        card_id: sw, target: None, mode: None, x_value: None,
+        card_id: sw, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Satyr Wayfinder castable for {{1}}{{G}}");
     drain_stack(&mut g);
     assert_eq!(g.players[0].library.len(), lib_before - 4,
@@ -4462,6 +4557,7 @@ fn fireblast_deals_four_to_any_target() {
     g.perform_action(GameAction::CastSpell {
         card_id: fb,
         target: Some(Target::Player(1)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     }).expect("Fireblast castable for {{4}}{{R}}{{R}}");
     drain_stack(&mut g);
@@ -4594,7 +4690,7 @@ fn silversmote_ghoul_returns_from_graveyard_on_lifegain() {
     g.players[0].mana_pool.add(Color::White, 1);
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::CastSpell {
-        card_id: mending, target: None, mode: Some(2), x_value: None,
+        card_id: mending, target: None, additional_targets: vec![], mode: Some(2), x_value: None,
     }).expect("Faithful Mending castable for {1}{W}");
     drain_stack(&mut g);
 
@@ -4611,7 +4707,7 @@ fn bitterbloom_bearer_etb_creates_a_faerie_token() {
 
     let bf_before = g.battlefield.len();
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Bitterbloom Bearer castable for {1}{B}");
     drain_stack(&mut g);
 
@@ -4674,7 +4770,7 @@ fn turnabout_mode_four_taps_all_opponent_lands() {
     g.players[0].mana_pool.add(Color::Blue, 2);
     g.players[0].mana_pool.add_colorless(2);
     g.perform_action(GameAction::CastSpell {
-        card_id: ta, target: None, mode: Some(4), x_value: None,
+        card_id: ta, target: None, additional_targets: vec![], mode: Some(4), x_value: None,
     }).expect("Turnabout castable for {2}{U}{U}");
     drain_stack(&mut g);
 
@@ -4698,7 +4794,7 @@ fn heliod_adds_plus_one_counter_when_you_gain_life_with_lifelink() {
     g.players[0].mana_pool.add(Color::White, 1);
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::CastSpell {
-        card_id: mending, target: None, mode: Some(2), x_value: None,
+        card_id: mending, target: None, additional_targets: vec![], mode: Some(2), x_value: None,
     }).expect("Faithful Mending castable");
     drain_stack(&mut g);
 
@@ -4725,6 +4821,7 @@ fn dread_return_reanimates_target_creature_from_graveyard() {
     g.perform_action(GameAction::CastSpell {
         card_id: dr,
         target: Some(Target::Permanent(bear_id)),
+        additional_targets: vec![],
         mode: None,
         x_value: None,
     }).expect("Dread Return castable for {2}{B}{B}");
@@ -4746,7 +4843,7 @@ fn tidehollow_sculler_etb_takes_an_opponent_card() {
     g.players[0].mana_pool.add(Color::White, 1);
     g.players[0].mana_pool.add(Color::Black, 1);
     g.perform_action(GameAction::CastSpell {
-        card_id: sculler, target: None, mode: None, x_value: None,
+        card_id: sculler, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Tidehollow Sculler castable for {W}{B}");
     drain_stack(&mut g);
 
@@ -4820,7 +4917,7 @@ fn forced_sacrifice_picks_lowest_cmc_creature_first() {
     let ib = g.add_card_to_hand(0, catalog::innocent_blood());
     g.players[0].mana_pool.add(Color::Black, 1);
     g.perform_action(GameAction::CastSpell {
-        card_id: ib, target: None, mode: None, x_value: None,
+        card_id: ib, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Innocent Blood castable for {B}");
     drain_stack(&mut g);
 
@@ -4839,7 +4936,7 @@ fn innocent_blood_each_player_sacrifices_a_creature() {
     let ib = g.add_card_to_hand(0, catalog::innocent_blood());
     g.players[0].mana_pool.add(Color::Black, 1);
     g.perform_action(GameAction::CastSpell {
-        card_id: ib, target: None, mode: None, x_value: None,
+        card_id: ib, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Innocent Blood castable for {B}");
     drain_stack(&mut g);
     assert!(!g.battlefield.iter().any(|c| c.id == p0_bear),
@@ -4862,6 +4959,7 @@ fn diabolic_edict_targets_opponent_to_sacrifice_a_creature() {
     g.perform_action(GameAction::CastSpell {
         card_id: de,
         target: Some(Target::Player(1)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     }).expect("Diabolic Edict castable for {1}{B}");
     drain_stack(&mut g);
@@ -4882,6 +4980,7 @@ fn geths_verdict_sacs_target_and_drains_one_life() {
     g.perform_action(GameAction::CastSpell {
         card_id: gv,
         target: Some(Target::Player(1)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     }).expect("Geth's Verdict castable for {1}{B}");
     drain_stack(&mut g);
@@ -4907,6 +5006,7 @@ fn magma_jet_deals_two_and_scries_two() {
     g.perform_action(GameAction::CastSpell {
         card_id: mj,
         target: Some(Target::Player(1)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     }).expect("Magma Jet castable for {1}{R}");
     drain_stack(&mut g);
@@ -4933,6 +5033,7 @@ fn remand_counters_returns_to_hand_and_draws() {
     g.perform_action(GameAction::CastSpell {
         card_id: bolt,
         target: Some(Target::Player(0)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     }).expect("Bolt castable for {R}");
     // P0 Remands the bolt.
@@ -4943,6 +5044,7 @@ fn remand_counters_returns_to_hand_and_draws() {
     g.perform_action(GameAction::CastSpell {
         card_id: rem,
         target: Some(Target::Permanent(bolt)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     }).expect("Remand castable for {1}{U}");
     drain_stack(&mut g);
@@ -4970,7 +5072,7 @@ fn read_the_bones_scry_two_draw_two_lose_two() {
     g.players[0].mana_pool.add(Color::Black, 1);
     g.players[0].mana_pool.add_colorless(2);
     g.perform_action(GameAction::CastSpell {
-        card_id: rb, target: None, mode: None, x_value: None,
+        card_id: rb, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Read the Bones castable for {2}{B}");
     drain_stack(&mut g);
     // hand_before captured before we added Read the Bones; the spell's
@@ -5003,6 +5105,7 @@ fn ancient_grudge_destroys_artifact_with_flashback_available() {
     g.perform_action(GameAction::CastSpell {
         card_id: ag,
         target: Some(Target::Permanent(stone)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     }).expect("Ancient Grudge castable for {1}{R}");
     drain_stack(&mut g);
@@ -5028,6 +5131,7 @@ fn ancient_grudge_flashback_destroys_second_artifact_and_exiles() {
     g.perform_action(GameAction::CastFlashback {
         card_id: ag,
         target: Some(Target::Permanent(stone)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     }).expect("Flashback castable for {G}");
     drain_stack(&mut g);
@@ -5047,6 +5151,7 @@ fn tragic_slip_kills_creature_via_minus_thirteen() {
     g.perform_action(GameAction::CastSpell {
         card_id: ts,
         target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     }).expect("Tragic Slip castable for {B}");
     drain_stack(&mut g);
@@ -5074,7 +5179,7 @@ fn tormenting_voice_discards_one_and_draws_two() {
     let grave_before = g.players[0].graveyard.len();
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Tormenting Voice castable for {1}{R}");
     drain_stack(&mut g);
 
@@ -5098,7 +5203,7 @@ fn wild_guess_discards_one_and_draws_two() {
     let hand_before = g.players[0].hand.len();
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Wild Guess castable for {2}{R}");
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand_before, "Wild Guess nets 0 hand size");
@@ -5124,7 +5229,7 @@ fn thrill_of_possibility_is_an_instant_loot_2() {
     let hand_before = g.players[0].hand.len();
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Thrill castable for {1}{R}");
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand_before, "Thrill nets 0 hand size");
@@ -5142,6 +5247,7 @@ fn volcanic_hammer_deals_three_to_creature() {
     g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Permanent(big)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     }).expect("Volcanic Hammer castable for {1}{R}");
     drain_stack(&mut g);
@@ -5164,7 +5270,7 @@ fn slagstorm_mode_zero_sweeps_creatures() {
     g.players[0].mana_pool.add(Color::Red, 1);
     g.players[0].mana_pool.add_colorless(2);
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: Some(0), x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: Some(0), x_value: None,
     }).expect("Slagstorm castable for {2}{R}");
     drain_stack(&mut g);
 
@@ -5188,7 +5294,7 @@ fn slagstorm_mode_one_burns_each_player() {
     g.players[0].mana_pool.add(Color::Red, 1);
     g.players[0].mana_pool.add_colorless(2);
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: Some(1), x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: Some(1), x_value: None,
     }).expect("Slagstorm castable for {2}{R}");
     drain_stack(&mut g);
 
@@ -5211,6 +5317,7 @@ fn cancel_counters_a_spell() {
     g.perform_action(GameAction::CastSpell {
         card_id: bolt,
         target: Some(Target::Player(0)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     }).unwrap();
 
@@ -5221,6 +5328,7 @@ fn cancel_counters_a_spell() {
     g.perform_action(GameAction::CastSpell {
         card_id: cancel,
         target: Some(Target::Permanent(bolt)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     }).expect("Cancel castable for {1}{U}{U}");
     drain_stack(&mut g);
@@ -5242,6 +5350,7 @@ fn annul_rejects_instant_target_at_cast_time() {
     g.perform_action(GameAction::CastSpell {
         card_id: bolt,
         target: Some(Target::Player(0)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     }).unwrap();
 
@@ -5251,6 +5360,7 @@ fn annul_rejects_instant_target_at_cast_time() {
     let err = g.perform_action(GameAction::CastSpell {
         card_id: annul,
         target: Some(Target::Permanent(bolt)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     });
     assert!(err.is_err(), "Annul shouldn't accept an instant target");
@@ -5268,6 +5378,7 @@ fn heros_downfall_destroys_target_creature() {
     g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Permanent(serra)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     }).expect("Hero's Downfall castable for {1}{B}{B}");
     drain_stack(&mut g);
@@ -5288,6 +5399,7 @@ fn cast_down_rejects_legendary_creature() {
     let err = g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Permanent(gris)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     });
     assert!(err.is_err(), "Cast Down shouldn't accept a legendary target");
@@ -5305,6 +5417,7 @@ fn cast_down_destroys_nonlegendary_creature() {
     g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     }).expect("Cast Down castable for {1}{B}");
     drain_stack(&mut g);
@@ -5327,6 +5440,7 @@ fn mind_rot_discards_two_from_target() {
     g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Player(1)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     }).expect("Mind Rot castable for {2}{B}");
     drain_stack(&mut g);
@@ -5345,6 +5459,7 @@ fn raise_dead_returns_creature_from_graveyard() {
     g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     }).expect("Raise Dead castable for {B}");
     drain_stack(&mut g);
@@ -5364,6 +5479,7 @@ fn healing_salve_gives_three_life() {
     g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Player(0)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     }).expect("Healing Salve castable for {W}");
     drain_stack(&mut g);
@@ -5380,7 +5496,7 @@ fn raise_the_alarm_creates_two_soldier_tokens() {
     let bf_before = g.battlefield.iter().filter(|c| c.controller == 0).count();
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Raise the Alarm castable for {1}{W}");
     drain_stack(&mut g);
 
@@ -5402,7 +5518,7 @@ fn reclamation_sage_etb_destroys_artifact() {
     g.players[0].mana_pool.add_colorless(2);
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Reclamation Sage castable for {2}{G}");
     drain_stack(&mut g);
     assert!(!g.battlefield.iter().any(|c| c.id == stone),
@@ -5426,7 +5542,7 @@ fn acidic_slime_etb_destroys_land() {
     g.players[0].mana_pool.add_colorless(3);
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Acidic Slime castable for {3}{G}{G}");
     drain_stack(&mut g);
     assert!(!g.battlefield.iter().any(|c| c.id == mountain),
@@ -5451,6 +5567,7 @@ fn stoke_the_flames_deals_four_at_full_cost() {
     g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Player(1)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     }).expect("Stoke the Flames castable for {2}{R}{R}");
     drain_stack(&mut g);
@@ -5470,6 +5587,7 @@ fn unsummon_returns_target_creature_to_owners_hand() {
     g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     }).expect("Unsummon castable for {U}");
     drain_stack(&mut g);
@@ -5492,6 +5610,7 @@ fn boomerang_bounces_a_non_creature_permanent() {
     g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Permanent(ring)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     }).expect("Boomerang castable for {U}{U}");
     drain_stack(&mut g);
@@ -5514,6 +5633,7 @@ fn cyclonic_rift_rejects_your_own_permanent() {
     let err = g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Permanent(your_bear)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     });
     assert!(err.is_err(),
@@ -5532,6 +5652,7 @@ fn cyclonic_rift_bounces_opponent_nonland_permanent() {
     g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Permanent(opp_bear)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     }).expect("Cyclonic Rift castable for {1}{U}");
     drain_stack(&mut g);
@@ -5553,6 +5674,7 @@ fn repeal_with_x_two_bounces_two_drop_and_cantrips() {
     g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
         mode: None,
         x_value: Some(2),
     }).expect("Repeal castable for {2}{U} (X=2)");
@@ -5579,6 +5701,7 @@ fn repeal_x_zero_against_two_drop_does_not_bounce() {
     g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
         mode: None,
         x_value: Some(0),
     }).expect("Repeal castable for {U} (X=0)");
@@ -5601,6 +5724,7 @@ fn murder_destroys_any_creature_including_black() {
     g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Permanent(specter)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     }).expect("Murder castable for {1}{B}{B}");
     drain_stack(&mut g);
@@ -5620,6 +5744,7 @@ fn go_for_the_throat_destroys_nonartifact_creature() {
     g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     }).expect("Go for the Throat castable for {1}{B}");
     drain_stack(&mut g);
@@ -5639,6 +5764,7 @@ fn go_for_the_throat_rejects_artifact_creature() {
     let err = g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Permanent(memnite)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     });
     assert!(err.is_err(),
@@ -5656,6 +5782,7 @@ fn disfigure_kills_a_two_two_via_minus_two_minus_two() {
     g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     }).expect("Disfigure castable for {B}");
     drain_stack(&mut g);
@@ -5675,7 +5802,7 @@ fn languish_sweeps_small_but_leaves_big_creatures() {
     g.players[0].mana_pool.add_colorless(2);
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Languish castable for {2}{B}{B}");
     drain_stack(&mut g);
 
@@ -5698,6 +5825,7 @@ fn lay_down_arms_exiles_low_power_creature() {
     g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     }).expect("Lay Down Arms castable for {W}");
     drain_stack(&mut g);
@@ -5719,6 +5847,7 @@ fn lay_down_arms_rejects_high_power_creature() {
     let err = g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Permanent(craw)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     });
     assert!(err.is_err(),
@@ -5736,6 +5865,7 @@ fn smelt_destroys_an_artifact() {
     g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Permanent(ring)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     }).expect("Smelt castable for {R}");
     drain_stack(&mut g);
@@ -5756,6 +5886,7 @@ fn banefire_deals_x_damage_to_creature() {
     g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Permanent(serra)),
+        additional_targets: vec![],
         mode: None,
         x_value: Some(5),
     }).expect("Banefire castable for {5}{R} (X=5)");
@@ -5778,6 +5909,7 @@ fn banefire_burns_a_player_face_for_x() {
     g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Player(1)),
+        additional_targets: vec![],
         mode: None,
         x_value: Some(7),
     }).expect("Banefire castable for {7}{R} (X=7)");
@@ -5802,7 +5934,7 @@ fn spectral_procession_creates_three_flying_spirits() {
         .count();
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Spectral Procession castable for {2}{W}");
     drain_stack(&mut g);
 
@@ -5841,6 +5973,7 @@ fn regrowth_returns_a_land_card_from_graveyard() {
     g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Permanent(mountain)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     }).expect("Regrowth castable for {1}{G}");
     drain_stack(&mut g);
@@ -5863,6 +5996,7 @@ fn beast_within_destroys_and_creates_beast_for_controller() {
     g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Permanent(opp_ring)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     }).expect("Beast Within castable for {2}{G}");
     drain_stack(&mut g);
@@ -5892,6 +6026,7 @@ fn grasp_of_darkness_kills_a_four_four() {
     g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Permanent(serra)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     }).expect("Grasp of Darkness castable for {B}{B}");
     drain_stack(&mut g);
@@ -5911,6 +6046,7 @@ fn shatter_destroys_an_artifact() {
     g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Permanent(ring)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     }).expect("Shatter castable for {1}{R}");
     drain_stack(&mut g);
@@ -5931,6 +6067,7 @@ fn incinerate_deals_three_to_creature() {
     g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     }).expect("Incinerate castable for {1}{R}");
     drain_stack(&mut g);
@@ -5951,6 +6088,7 @@ fn incinerate_burns_a_player_for_three() {
     g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Player(1)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     }).expect("Incinerate can hit a player");
     drain_stack(&mut g);
@@ -5970,6 +6108,7 @@ fn searing_spear_deals_three_damage() {
     g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     }).expect("Searing Spear castable for {1}{R}");
     drain_stack(&mut g);
@@ -5988,6 +6127,7 @@ fn flame_slash_kills_a_four_toughness_creature() {
     g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Permanent(serra)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     }).expect("Flame Slash castable for {R}");
     drain_stack(&mut g);
@@ -6006,6 +6146,7 @@ fn flame_slash_rejects_player_target() {
     let err = g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Player(1)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     });
     assert!(err.is_err(),
@@ -6024,6 +6165,7 @@ fn roast_kills_a_non_flying_creature() {
     g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     }).expect("Roast castable for {1}{R}");
     drain_stack(&mut g);
@@ -6043,6 +6185,7 @@ fn roast_rejects_a_flier() {
     let err = g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Permanent(serra)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     });
     assert!(err.is_err(),
@@ -6061,6 +6204,7 @@ fn smother_destroys_low_cmc_creature() {
     g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     }).expect("Smother castable for {1}{B}");
     drain_stack(&mut g);
@@ -6080,6 +6224,7 @@ fn smother_rejects_high_cmc_target() {
     let err = g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Permanent(craw)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     });
     assert!(err.is_err(),
@@ -6098,6 +6243,7 @@ fn final_reward_exiles_target_creature() {
     g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     }).expect("Final Reward castable for {4}{B}");
     drain_stack(&mut g);
@@ -6119,7 +6265,7 @@ fn holy_light_sweeps_minus_one_minus_one() {
     g.players[0].mana_pool.add_colorless(1);
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Holy Light castable for {1}{W}");
     drain_stack(&mut g);
 
@@ -6143,6 +6289,7 @@ fn mana_tithe_counters_when_controller_cannot_pay_one() {
     g.perform_action(GameAction::CastSpell {
         card_id: bolt,
         target: Some(Target::Player(0)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     }).expect("Lightning Bolt castable for {R}");
 
@@ -6153,6 +6300,7 @@ fn mana_tithe_counters_when_controller_cannot_pay_one() {
     g.perform_action(GameAction::CastSpell {
         card_id: tithe,
         target: Some(Target::Permanent(bolt)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     }).expect("Mana Tithe castable for {W}");
     drain_stack(&mut g);
@@ -6180,7 +6328,7 @@ fn rampant_growth_searches_a_basic_into_play_tapped() {
     g.players[0].mana_pool.add(Color::Green, 1);
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Rampant Growth castable for {1}{G}");
     drain_stack(&mut g);
 
@@ -6207,7 +6355,7 @@ fn cultivate_searches_two_basics() {
     g.players[0].mana_pool.add(Color::Green, 1);
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Cultivate castable for {2}{G}");
     drain_stack(&mut g);
 
@@ -6233,7 +6381,7 @@ fn farseek_searches_a_basic_into_play_tapped() {
     g.players[0].mana_pool.add(Color::Green, 1);
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Farseek castable for {1}{G}");
     drain_stack(&mut g);
 
@@ -6282,7 +6430,7 @@ fn wood_elves_etb_searches_forest_untapped() {
     g.players[0].mana_pool.add(Color::Green, 1);
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Wood Elves castable for {2}{G}");
     drain_stack(&mut g);
 
@@ -6323,7 +6471,7 @@ fn harmonize_draws_three_cards() {
     let hand_before = g.players[0].hand.len();
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Harmonize castable for {2}{G}{G}");
     drain_stack(&mut g);
 
@@ -6343,7 +6491,7 @@ fn concentrate_draws_three_cards() {
     let hand_before = g.players[0].hand.len();
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Concentrate castable for {2}{U}{U}");
     drain_stack(&mut g);
 
@@ -6365,6 +6513,7 @@ fn severed_strands_sacs_and_destroys_for_life() {
     g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Permanent(target)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     }).expect("Severed Strands castable for {1}{B}");
     drain_stack(&mut g);
@@ -6390,7 +6539,7 @@ fn anticipate_resolves_and_draws() {
     let hand_before = g.players[0].hand.len();
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Anticipate castable for {1}{U}");
     drain_stack(&mut g);
 
@@ -6409,7 +6558,7 @@ fn divination_draws_two_cards() {
     let hand_before = g.players[0].hand.len();
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Divination castable for {2}{U}");
     drain_stack(&mut g);
 
@@ -6428,7 +6577,7 @@ fn ambitions_cost_draws_three_loses_three() {
     let life_before = g.players[0].life;
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Ambition's Cost castable for {3}{B}");
     drain_stack(&mut g);
 
@@ -6449,6 +6598,7 @@ fn path_of_peace_destroys_and_gives_opp_four_life() {
     g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Permanent(serra)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     }).expect("Path of Peace castable for {3}{W}");
     drain_stack(&mut g);
@@ -6471,7 +6621,7 @@ fn despise_takes_a_creature_from_opp_hand() {
     g.players[0].mana_pool.add(Color::Black, 1);
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Despise castable for {B}");
     drain_stack(&mut g);
 
@@ -6489,7 +6639,7 @@ fn distress_takes_a_noncreature_nonland_from_opp_hand() {
     g.players[0].mana_pool.add(Color::Black, 2);
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Distress castable for {B}{B}");
     drain_stack(&mut g);
 
@@ -6526,7 +6676,7 @@ fn vryn_wingmare_taxes_noncreature_spells_after_first_cast() {
     g.active_player_idx = 1;
     g.priority.player_with_priority = 1;
     let err = g.perform_action(GameAction::CastSpell {
-        card_id: bolt, target: Some(Target::Player(0)), mode: None, x_value: None,
+        card_id: bolt, target: Some(Target::Player(0)), additional_targets: vec![], mode: None, x_value: None,
     });
     assert!(err.is_err(),
         "Bolt with only {{R}} should be rejected under Vryn Wingmare's tax: {:?}", err);
@@ -6544,6 +6694,7 @@ fn lava_coil_kills_a_four_toughness() {
     g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Permanent(serra)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     }).expect("Lava Coil castable for {1}{R}");
     drain_stack(&mut g);
@@ -6565,6 +6716,7 @@ fn jayas_greeting_deals_three_and_scries() {
     g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     }).expect("Jaya's Greeting castable for {1}{R}");
     drain_stack(&mut g);
@@ -6584,7 +6736,7 @@ fn telling_time_resolves_and_draws() {
     let hand_before = g.players[0].hand.len();
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Telling Time castable for {1}{U}");
     drain_stack(&mut g);
 
@@ -6603,7 +6755,7 @@ fn read_the_tides_draws_three() {
     let hand_before = g.players[0].hand.len();
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Read the Tides castable for {4}{U}{U}");
     drain_stack(&mut g);
 
@@ -6623,6 +6775,7 @@ fn last_gasp_kills_a_three_toughness() {
     g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Permanent(serra)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     }).expect("Last Gasp castable for {1}{B}");
     drain_stack(&mut g);
@@ -6639,6 +6792,7 @@ fn last_gasp_kills_a_three_toughness() {
     g.perform_action(GameAction::CastSpell {
         card_id: id2,
         target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     }).expect("Last Gasp castable second time");
     drain_stack(&mut g);
@@ -6923,6 +7077,7 @@ fn tear_asunder_destroys_target_artifact() {
     g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Permanent(relic)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     })
     .expect("Tear Asunder castable for {1}{B}{G}");
@@ -6944,6 +7099,7 @@ fn tear_asunder_rejects_creature_target() {
     let r = g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     });
     assert!(r.is_err(), "Tear Asunder should reject creature targets at cast time");
@@ -6960,6 +7116,7 @@ fn assassins_trophy_destroys_opp_permanent() {
     g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     })
     .expect("Trophy castable for {B}{G}");
@@ -6982,6 +7139,7 @@ fn assassins_trophy_rejects_your_own_permanent() {
     let r = g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Permanent(mine)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     });
     assert!(r.is_err(), "Trophy should reject caster-controlled targets");
@@ -7000,7 +7158,7 @@ fn volcanic_fallout_deals_two_to_each_creature_and_player() {
     g.players[0].mana_pool.add(Color::Red, 2);
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Volcanic Fallout castable for {1}{R}{R}");
     drain_stack(&mut g);
@@ -7027,7 +7185,7 @@ fn rout_destroys_all_creatures_at_sorcery_speed() {
     g.players[0].mana_pool.add(Color::White, 2);
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Rout castable for {3}{W}{W}");
     drain_stack(&mut g);
@@ -7049,7 +7207,7 @@ fn plague_wind_destroys_only_opponent_creatures() {
     g.players[0].mana_pool.add(Color::Black, 2);
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Plague Wind castable for {8}{B}{B}");
     drain_stack(&mut g);
@@ -7083,7 +7241,7 @@ fn carnage_tyrant_resolves_through_counterspell() {
     g.players[1].mana_pool.add(Color::Blue, 2);
 
     g.perform_action(GameAction::CastSpell {
-        card_id: tyrant, target: None, mode: None, x_value: None,
+        card_id: tyrant, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Tyrant castable for {4}{G}{G}");
     // Opponent tries to counter the spell. Counter targets are addressed
@@ -7094,6 +7252,7 @@ fn carnage_tyrant_resolves_through_counterspell() {
     let _ = g.perform_action(GameAction::CastSpell {
         card_id: counter,
         target: Some(Target::Permanent(tyrant)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     });
     drain_stack(&mut g);
@@ -7224,6 +7383,7 @@ fn stone_rain_destroys_target_land() {
     g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Permanent(mountain)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     }).expect("Stone Rain castable for {2}{R}");
     drain_stack(&mut g);
@@ -7242,6 +7402,7 @@ fn stone_rain_rejects_creature_target() {
     let err = g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     });
     assert!(err.is_err(), "Stone Rain rejects non-land target: {err:?}");
@@ -7258,6 +7419,7 @@ fn bone_splinters_sacrifices_then_destroys_target() {
     g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Permanent(opp_target)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     }).expect("Bone Splinters castable for {B}");
     drain_stack(&mut g);
@@ -7278,7 +7440,7 @@ fn hieroglyphic_illumination_draws_two_cards() {
     let hand_before = g.players[0].hand.len();
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Hieroglyphic Illumination castable for {3}{U}");
     drain_stack(&mut g);
     // Cast (-1) + Draw 2 (+2) = +1 hand size.
@@ -7297,6 +7459,7 @@ fn mortify_destroys_creature() {
     g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     }).expect("Mortify castable for {1}{W}{B}");
     drain_stack(&mut g);
@@ -7317,6 +7480,7 @@ fn mortify_destroys_enchantment() {
     g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Permanent(arena)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     }).expect("Mortify castable on enchantment");
     drain_stack(&mut g);
@@ -7336,6 +7500,7 @@ fn mortify_rejects_land_target() {
     let err = g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Permanent(mountain)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     });
     assert!(err.is_err(), "Mortify rejects a land target: {err:?}");
@@ -7353,6 +7518,7 @@ fn maelstrom_pulse_destroys_nonland_permanent() {
     g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     }).expect("Maelstrom Pulse castable for {1}{B}{G}");
     drain_stack(&mut g);
@@ -7371,6 +7537,7 @@ fn maelstrom_pulse_rejects_land_target() {
     let err = g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Permanent(mountain)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     });
     assert!(err.is_err(), "Maelstrom Pulse rejects land: {err:?}");
@@ -7389,6 +7556,7 @@ fn mind_twist_discards_x_random_cards_from_target_player() {
     g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Player(1)),
+        additional_targets: vec![],
         mode: None,
         x_value: Some(3),
     }).expect("Mind Twist castable for {3}{B} (X=3)");
@@ -7410,6 +7578,7 @@ fn mind_twist_x_zero_does_nothing() {
     g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Player(1)),
+        additional_targets: vec![],
         mode: None,
         x_value: Some(0),
     }).expect("Mind Twist castable at X=0 for {B}");
@@ -7431,6 +7600,7 @@ fn dismember_kills_a_five_toughness_creature() {
     g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Permanent(big)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     }).expect("Dismember castable for {1}{B}{B}");
     drain_stack(&mut g);
@@ -7449,6 +7619,7 @@ fn echoing_truth_bounces_nonland_permanent() {
     g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     }).expect("Echoing Truth castable for {1}{U}");
     drain_stack(&mut g);
@@ -7468,6 +7639,7 @@ fn echoing_truth_rejects_land_target() {
     let err = g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Permanent(mountain)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     });
     assert!(err.is_err(), "Echoing Truth is nonland-only: {err:?}");
@@ -7484,6 +7656,7 @@ fn celestial_purge_exiles_a_black_creature() {
     g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Permanent(specter)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     }).expect("Celestial Purge castable for {1}{W}");
     drain_stack(&mut g);
@@ -7504,6 +7677,7 @@ fn celestial_purge_rejects_a_green_creature() {
     let err = g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     });
     assert!(err.is_err(),
@@ -7522,7 +7696,7 @@ fn earthquake_burns_each_player_and_grounded_creatures() {
     let life_p1 = g.players[1].life;
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None,
         x_value: Some(3),
     }).expect("Earthquake castable for {3}{R} (X=3)");
     drain_stack(&mut g);
@@ -7548,6 +7722,7 @@ fn glimpse_the_unthinkable_mills_ten_from_target() {
     g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Player(1)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     }).expect("Glimpse castable for {U}{B}");
     drain_stack(&mut g);
@@ -7567,6 +7742,7 @@ fn cling_to_dust_exiles_creature_card_and_gains_two_life() {
     g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Permanent(card_id)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     }).expect("Cling to Dust castable for {B}");
     drain_stack(&mut g);
@@ -7590,6 +7766,7 @@ fn cling_to_dust_no_lifegain_for_noncreature_card() {
     g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Permanent(card_id)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     }).expect("Cling to Dust castable for {B}");
     drain_stack(&mut g);
@@ -7614,7 +7791,7 @@ fn lumra_returns_all_lands_from_your_graveyard() {
     g.players[0].mana_pool.add(Color::Green, 2);
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Lumra castable for {4}{G}{G}");
     drain_stack(&mut g);
 
@@ -7641,7 +7818,7 @@ fn lumra_etb_with_empty_graveyard_is_a_noop() {
 
     let bf_before = g.battlefield.len();
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Lumra castable for {4}{G}{G}");
     drain_stack(&mut g);
 
@@ -7664,7 +7841,7 @@ fn crabomination_etb_mills_each_opponent_three_cards() {
     g.players[0].mana_pool.add(Color::Black, 1);
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Crabomination castable for {2}{U}{B}");
     drain_stack(&mut g);
 
@@ -7686,6 +7863,7 @@ fn chaos_warp_sends_target_permanent_to_owners_library() {
     g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     }).expect("Chaos Warp castable for {2}{R}");
     drain_stack(&mut g);
@@ -7749,7 +7927,7 @@ fn biorhythm_drops_each_opponent_to_zero_or_below() {
 
     let opp_life_before = g.players[1].life;
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Biorhythm castable for {6}{G}{G}");
     drain_stack(&mut g);
 
@@ -7859,6 +8037,7 @@ fn greasewrench_goblin_creates_treasure_on_death() {
     g.perform_action(GameAction::CastSpell {
         card_id: bolt,
         target: Some(Target::Permanent(id)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     }).expect("Bolt castable for {R}");
     drain_stack(&mut g);
@@ -7899,7 +8078,7 @@ fn pentad_prism_etb_with_two_charge_counters() {
     let id = g.add_card_to_hand(0, catalog::pentad_prism());
     g.players[0].mana_pool.add_colorless(2);
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Pentad Prism castable for {2}");
     drain_stack(&mut g);
 
@@ -7914,7 +8093,7 @@ fn pentad_prism_removes_counter_to_add_one_mana_of_any_color() {
     let id = g.add_card_to_hand(0, catalog::pentad_prism());
     g.players[0].mana_pool.add_colorless(2);
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Pentad Prism castable");
     drain_stack(&mut g);
 
@@ -7945,6 +8124,7 @@ fn vindicate_destroys_target_permanent() {
     g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     }).expect("Vindicate castable for {1}{W}{B}");
     drain_stack(&mut g);
@@ -7965,6 +8145,7 @@ fn vindicate_can_target_a_land() {
     g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Permanent(land)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     }).expect("Vindicate accepts a land target (Permanent filter)");
     drain_stack(&mut g);
@@ -7986,6 +8167,7 @@ fn anguished_unmaking_exiles_and_caster_loses_three_life() {
     g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     }).expect("Anguished Unmaking castable for {1}{W}{B}");
     drain_stack(&mut g);
@@ -8006,6 +8188,7 @@ fn magma_spray_deals_two_damage_to_creature() {
     g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     }).expect("Magma Spray castable for {R}");
     drain_stack(&mut g);
@@ -8025,6 +8208,7 @@ fn despark_exiles_high_cmc_permanent() {
     g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Permanent(craw)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     }).expect("Despark castable for {W}{B}");
     drain_stack(&mut g);
@@ -8044,6 +8228,7 @@ fn despark_rejects_low_cmc_target() {
     let err = g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     });
     assert!(err.is_err(),
@@ -8062,6 +8247,7 @@ fn crumble_to_dust_exiles_nonbasic_land() {
     g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Permanent(dual)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     }).expect("Crumble to Dust castable for {2}{R}{R}");
     drain_stack(&mut g);
@@ -8081,6 +8267,7 @@ fn crumble_to_dust_rejects_basic_land_target() {
     let err = g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Permanent(basic)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     });
     assert!(err.is_err(),
@@ -8098,6 +8285,7 @@ fn skullcrack_deals_three_damage_to_player() {
     g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Player(1)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     }).expect("Skullcrack castable for {1}{R}");
     drain_stack(&mut g);
@@ -8116,6 +8304,7 @@ fn fiery_impulse_deals_two_damage_to_creature() {
     g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     }).expect("Fiery Impulse castable for {R}");
     drain_stack(&mut g);
@@ -8134,6 +8323,7 @@ fn searing_blood_deals_two_damage_to_creature() {
     g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     }).expect("Searing Blood castable for {R}{R}");
     drain_stack(&mut g);
@@ -8159,7 +8349,7 @@ fn harrow_sacrifices_land_and_searches_two_basics() {
     g.players[0].mana_pool.add(Color::Green, 1);
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Harrow castable for {2}{G}");
     drain_stack(&mut g);
 
@@ -8191,6 +8381,7 @@ fn drown_in_the_loch_mode_zero_counters_a_spell() {
     g.perform_action(GameAction::CastSpell {
         card_id: bolt,
         target: Some(Target::Player(0)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     }).expect("Lightning Bolt cast by opp");
 
@@ -8204,6 +8395,7 @@ fn drown_in_the_loch_mode_zero_counters_a_spell() {
     g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Permanent(bolt)),
+        additional_targets: vec![],
         mode: Some(0),
         x_value: None,
     }).expect("Drown in the Loch mode 0 (counter) castable");
@@ -8227,6 +8419,7 @@ fn drown_in_the_loch_mode_one_destroys_creature() {
     g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
         mode: Some(1),
         x_value: None,
     }).expect("Drown in the Loch mode 1 castable");
@@ -8249,6 +8442,7 @@ fn cremate_exiles_graveyard_card_and_draws() {
     g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Permanent(grave_id)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     }).expect("Cremate castable for {B}");
     drain_stack(&mut g);
@@ -8333,6 +8527,7 @@ fn strangle_deals_three_damage_and_surveils() {
     g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     }).expect("Strangle castable for {R}");
     drain_stack(&mut g);
@@ -8357,6 +8552,7 @@ fn dreadbore_destroys_target_creature() {
     g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     }).expect("Dreadbore castable for {B}{R}");
     drain_stack(&mut g);
@@ -8376,6 +8572,7 @@ fn bedevil_destroys_target_artifact() {
     g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Permanent(stone)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     }).expect("Bedevil castable for {B}{B}{R}");
     drain_stack(&mut g);
@@ -8396,6 +8593,7 @@ fn tome_scour_mills_target_player_five() {
     g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Player(1)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     }).expect("Tome Scour castable for {U}");
     drain_stack(&mut g);
@@ -8419,6 +8617,7 @@ fn repulse_returns_creature_and_draws() {
     g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     }).expect("Repulse castable for {2}{U}");
     drain_stack(&mut g);
@@ -8442,7 +8641,7 @@ fn visions_of_beyond_draws_a_card() {
     let hand_before = g.players[0].hand.len();
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Visions of Beyond castable for {U}");
     drain_stack(&mut g);
 
@@ -8462,6 +8661,7 @@ fn plummet_destroys_target_flying_creature() {
     g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Permanent(angel)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     }).expect("Plummet castable for {1}{G}");
     drain_stack(&mut g);
@@ -8481,6 +8681,7 @@ fn plummet_rejects_non_flying_target() {
     let err = g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     });
     assert!(err.is_err(),
@@ -8499,7 +8700,7 @@ fn strategic_planning_mills_three_and_draws_one() {
     let hand_before = g.players[0].hand.len();
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Strategic Planning castable for {1}{U}");
     drain_stack(&mut g);
 
@@ -8525,7 +8726,7 @@ fn ravenous_rats_etb_makes_each_opponent_discard() {
     g.players[0].mana_pool.add_colorless(1);
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Ravenous Rats castable for {1}{B}");
     drain_stack(&mut g);
 
@@ -8548,7 +8749,7 @@ fn brain_maggot_etb_strips_a_nonland_card() {
     g.players[0].mana_pool.add_colorless(1);
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Brain Maggot castable for {1}{B}");
     drain_stack(&mut g);
 
@@ -8571,7 +8772,7 @@ fn bond_of_discipline_taps_each_opponent_creature_and_grants_lifelink() {
     g.players[0].mana_pool.add_colorless(3);
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Bond of Discipline castable for {3}{W}");
     drain_stack(&mut g);
 
@@ -8598,6 +8799,7 @@ fn sudden_edict_forces_target_player_to_sacrifice() {
     g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Player(1)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     }).expect("Sudden Edict castable for {1}{B}");
     drain_stack(&mut g);
@@ -8646,6 +8848,7 @@ fn sudden_edict_rejects_creature_target() {
     let err = g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     });
     assert!(err.is_err(),
@@ -8702,6 +8905,7 @@ fn tarfire_deals_two_damage_to_creature() {
     g.players[0].mana_pool.add(Color::Red, 1);
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     })
     .expect("Tarfire castable for {R}");

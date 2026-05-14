@@ -174,10 +174,19 @@ mod tests {
                 graveyard: vec![],
                 hand: vec![],
                 lands_played_this_turn: 0,
+                first_spell_tax_charges: 0,
+                life_gained_this_turn: 0,
+                cards_drawn_this_turn: 0,
+                cards_left_graveyard_this_turn: 0,
+                creatures_died_this_turn: 0,
+                cards_exiled_this_turn: 0,
+                instants_or_sorceries_cast_this_turn: 0,
+                creatures_cast_this_turn: 0,
             }],
             battlefield: vec![],
             stack: vec![],
             pending_decision: None,
+            exile: vec![],
             game_over: None,
         }
     }
@@ -231,6 +240,10 @@ mod tests {
             effect: Box::new(Effect::Noop),
             target: None,
             mode: None,
+            x_value: 0,
+            converged_value: 0,
+            trigger_source: None,
+            mana_spent: 0,
         });
 
         let cv = empty_view();

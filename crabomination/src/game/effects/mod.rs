@@ -88,15 +88,22 @@ impl EffectContext {
         spell_name: &'static str,
         caster: usize,
         target: Option<Target>,
+        additional_targets: Vec<Target>,
         mode: usize,
         x_value: u32,
         converged_value: u32,
         mana_spent: u32,
     ) -> Self {
+        // Merge slot 0 (`target`) + slots 1+ (`additional_targets`) into
+        // a single `targets` Vec so `Selector::Target(n)` reads slot n
+        // for any n. Single-target spells leave `additional_targets`
+        // empty.
+        let mut targets: Vec<Target> = target.into_iter().collect();
+        targets.extend(additional_targets);
         Self {
             controller: caster,
             source: Some(spell_card),
-            targets: target.into_iter().collect(),
+            targets,
             trigger_source: None,
             mode,
             x_value,
@@ -175,6 +182,10 @@ impl GameState {
         // Reset last-created-token scratch — `Selector::LastCreatedToken`
         // only refers to a token created by *this* resolution.
         self.last_created_token = None;
+        // Reset cards-discarded scratch — `Value::CardsDiscardedThisEffect`
+        // only counts discards from *this* resolution (Borrowed Knowledge
+        // mode 1's "draw cards equal to the number discarded this way").
+        self.cards_discarded_this_resolution = 0;
         let mut events = vec![];
         self.run_effect(effect, ctx, &mut events)?;
         Ok(events)
@@ -282,6 +293,28 @@ impl GameState {
                 let yes = matches!(answer, DecisionAnswer::Bool(true));
                 if yes {
                     self.run_effect(body, ctx, events)?;
+                }
+                Ok(())
+            }
+
+            Effect::IfRevealFromHand { filter, then, else_ } => {
+                // Peek at the controller's hand for a card matching `filter`.
+                // If any match exists, run `then` (the implicit "yes, I
+                // reveal" branch — AutoDecider always accepts since the
+                // alternative is the printed downside, e.g. enters-tapped
+                // for STX Snarl lands). If no match, run `else_`. The
+                // reveal itself is information-only and isn't modeled as
+                // a separate game event today; a future enhancement could
+                // emit `GameEvent::CardRevealed { player, card_id }` for
+                // replay/log purposes.
+                let has_match = self.players[ctx.controller]
+                    .hand
+                    .iter()
+                    .any(|c| self.evaluate_requirement_on_card(filter, c, ctx.controller));
+                if has_match {
+                    self.run_effect(then, ctx, events)?;
+                } else {
+                    self.run_effect(else_, ctx, events)?;
                 }
                 Ok(())
             }
@@ -455,6 +488,7 @@ impl GameState {
                             let cid = card.id;
                             self.players[p].graveyard.push(card);
                             events.push(GameEvent::CardDiscarded { player: p, card_id: cid });
+                            self.cards_discarded_this_resolution += 1;
                         }
                         continue;
                     }
@@ -1087,7 +1121,7 @@ impl GameState {
                         .filter(|c| c.controller == p)
                         .filter(|c| {
                             let t = Target::Permanent(c.id);
-                            self.evaluate_requirement_static(filter, &t, p)
+                            self.evaluate_requirement_static(filter, &t, p, ctx.source)
                         })
                         .collect();
                     candidates.sort_by_key(|c| {
@@ -1314,7 +1348,7 @@ impl GameState {
                     .iter()
                     .find(|c| {
                         c.controller == p
-                            && self.evaluate_requirement_static(filter, &Target::Permanent(c.id), p)
+                            && self.evaluate_requirement_static(filter, &Target::Permanent(c.id), p, ctx.source)
                     })
                     .map(|c| (c.id, c.power()));
                 if let Some((cid, power)) = candidate {
@@ -1532,14 +1566,15 @@ impl GameState {
                     // copied" flag; this branch is left for future
                     // refinement.
                     // Snapshot the spell, then push `n` copies above it.
-                    let (orig_card_def, caster, target, mode, x_value, converged_value)
+                    let (orig_card_def, caster, target, additional_targets, mode, x_value, converged_value)
                         = if let crate::game::types::StackItem::Spell {
-                            card, caster, target, mode, x_value, converged_value, ..
+                            card, caster, target, additional_targets, mode, x_value, converged_value, ..
                         } = &self.stack[idx] {
                             (
                                 card.definition.clone(),
                                 *caster,
                                 target.clone(),
+                                additional_targets.clone(),
                                 *mode,
                                 *x_value,
                                 *converged_value,
@@ -1561,6 +1596,7 @@ impl GameState {
                             card: Box::new(copy_inst),
                             caster,
                             target: target.clone(),
+                            additional_targets: additional_targets.clone(),
                             mode,
                             x_value,
                             converged_value,
@@ -1670,7 +1706,7 @@ impl GameState {
             Selector::EachPermanent(filter) => self
                 .battlefield
                 .iter()
-                .filter(|c| self.evaluate_requirement_static(filter, &Target::Permanent(c.id), ctx.controller))
+                .filter(|c| self.evaluate_requirement_static(filter, &Target::Permanent(c.id), ctx.controller, ctx.source))
                 .map(|c| EntityRef::Permanent(c.id))
                 .collect(),
 
@@ -1751,7 +1787,7 @@ impl GameState {
                             .into_iter()
                             .filter(|c| if on_bf {
                                 self.evaluate_requirement_static(
-                                    filter, &Target::Permanent(c.id), ctx.controller,
+                                    filter, &Target::Permanent(c.id), ctx.controller, ctx.source,
                                 )
                             } else {
                                 self.evaluate_requirement_on_card(filter, c, ctx.controller)
@@ -1855,7 +1891,7 @@ impl GameState {
             ZoneRef::Battlefield => self
                 .battlefield
                 .iter()
-                .filter(|c| self.evaluate_requirement_static(filter, &Target::Permanent(c.id), ctx.controller))
+                .filter(|c| self.evaluate_requirement_static(filter, &Target::Permanent(c.id), ctx.controller, ctx.source))
                 .map(|c| EntityRef::Permanent(c.id))
                 .collect(),
             ZoneRef::Stack => self
@@ -1892,6 +1928,7 @@ impl GameState {
                                     filter,
                                     &Target::Permanent(c.id),
                                     ctx.controller,
+                                    ctx.source,
                                 )
                             })
                             .map(|c| EntityRef::Card(c.id)),
@@ -1902,7 +1939,7 @@ impl GameState {
             ZoneRef::Exile => self
                 .exile
                 .iter()
-                .filter(|c| self.evaluate_requirement_static(filter, &Target::Permanent(c.id), ctx.controller))
+                .filter(|c| self.evaluate_requirement_static(filter, &Target::Permanent(c.id), ctx.controller, ctx.source))
                 .map(|c| EntityRef::Card(c.id))
                 .collect(),
             ZoneRef::Command => vec![],

@@ -697,45 +697,57 @@ status tag (✅ wired, 🟡 partial, ⏳ todo) plus a short note.
   every "if you discarded a card this turn" payoff would need to
   fire from this event.
 
-- ⏳ **`StaticEffect::ConditionalPumpPT { condition, power, toughness,
+- 🟡 **`StaticEffect::ConditionalPumpPT { condition, power, toughness,
   keywords }` — generalized compute-time conditional anthem** — push
-  XXXVIII wires Ulna Alley Shopkeep's Infusion `+2/+0` rider as a
-  hardcoded `if name == "Ulna Alley Shopkeep" && lifegain > 0` branch
-  in `GameState::compute_battlefield` (same pattern as Honor Troll).
-  Both are duplicated, so a generalized primitive should consolidate.
-  Suggested shape: a new `StaticEffect::ConditionalSelfPump { condition:
-  Predicate, power, toughness, keywords }` that emits the layer-6/7b
-  modifications via the existing `static_ability_to_effects` path,
-  gated on the predicate. Once landed, the Honor Troll and Ulna Alley
-  Shopkeep table entries collapse to a clean static factory; the
-  primitive also unblocks any future "as long as X, this creature has
-  +N/+M and gains Y" cycle (a recurring SOS/STX shape).
+  (modern_decks): consolidated the Honor Troll and Ulna Alley Shopkeep
+  hardcoded `if name == "..." && lifegain > 0` branches in
+  `GameState::compute_battlefield` into the helper-table
+  `lifegain_selfpump_for_name(name) -> Option<(p, t, &[Keyword])>` at
+  `game/mod.rs:1748` (mirroring the `tribal_anthem_for_name` precedent).
+  Adding a new "as long as you've gained life this turn, +P/+T [and
+  KW]" card now takes a single helper-table row instead of a new
+  hardcoded branch. The full generalized primitive
+  (`StaticEffect::ConditionalSelfPump { condition: Predicate, ... }`)
+  is still ⏳ — it requires threading `&GameState` into
+  `static_ability_to_effects` so predicates can read live game state.
+  Today's lifegain-only helper is name-keyed, so non-lifegain
+  conditions (e.g. "as long as you control a Wizard", "as long as
+  it's not your turn") still need their own helper tables or the full
+  primitive.
 
-- ⏳ **`Effect::DiscardThisManyDrawSame` — track-discarded-by-this-effect
-  counter** — Borrowed Knowledge's mode 1 ("Discard your hand, then
-  draw cards equal to the number of cards discarded this way."),
-  Colossus of the Blood Age's die-trigger ("discard any number, draw
-  that many plus one"), and Mind Roots's "the land you discarded"
-  rider all need to know how many cards were just discarded by the
-  current resolution. Suggested shape: stash a per-resolution counter
-  on `EffectContext` that the discard handler bumps, then a paired
-  `Value::CardsDiscardedThisEffect` reader. Same primitive collapses
-  the Borrowed Knowledge mode 1 approximation (currently flat draw 7)
-  to the correct "draw your-hand-at-cast-time" math.
+- ✅ **`Value::CardsDiscardedThisEffect` — track-discarded-by-this-effect
+  counter** — Push (modern_decks): lands the per-resolution discard
+  counter as `GameState.cards_discarded_this_resolution: u32` (scratch
+  field, reset at the top of `resolve_effect` alongside
+  `sacrificed_power` / `last_created_token`). Both `Effect::Discard`
+  branches (random-pick and player-chosen via `DiscardChosenPending`)
+  bump the counter for each discarded card. The new
+  `Value::CardsDiscardedThisEffect` evaluator (`game/effects/eval.rs`)
+  reads the counter. Borrowed Knowledge mode 1 promoted from "draw 7"
+  approximation to `Value::CardsDiscardedThisEffect` — discards hand,
+  draws exactly N where N = cards actually discarded. Tests:
+  `borrowed_knowledge_mode_one_discards_hand_then_draws_same_count`
+  (4 hand cards → 4 discards → 4 draws), `_with_small_hand_draws_
+  proportionally` (1 → 1). Colossus of the Blood Age's "discard any
+  number, draw that many plus one" rider and Mind Roots's "the land
+  you discarded" rider can now wire the same primitive directly.
 
-- ⏳ **Snarl-land reveal mechanic** — push XXXVII added the five
-  Strixhaven Snarl dual lands (Frostboil / Furycalm / Necroblossom /
-  Shineshadow / Vineglimmer) via the `snarl_land()` helper which
-  always-enters-tapped. The printed reveal half ("As [land] enters,
-  you may reveal a [C1] or [C2] card from your hand. If you don't, it
-  enters tapped.") needs an ETB-time hand-peek + reveal-yes-no
-  decision. Engine shape: a new ETB trigger variant
-  `Effect::IfRevealFromHand { filter, then, else_ }` that asks the
-  controller "may reveal a card matching `filter`?", peeks at hand
-  if yes, fires `then`, otherwise fires `else_` (= the existing
-  `Tap { what: Selector::This }`). AutoDecider can default to "yes,
-  reveal" when a matching card is in hand. Same primitive would
-  unblock the Throne of Eldraine Battle Mammoth-style ETB reveals.
+- ✅ **Snarl-land reveal mechanic** — Push (modern_decks) lands the
+  new `Effect::IfRevealFromHand { filter, then, else_ }` primitive
+  (`effect.rs:683`). Handler peeks at the controller's hand via
+  `evaluate_requirement_on_card`; if any card matches `filter`,
+  AutoDecider auto-reveals and runs `then`, else runs `else_`. The
+  five STX Snarl dual lands (Frostboil / Furycalm / Necroblossom /
+  Shineshadow / Vineglimmer) now wire their ETB trigger as
+  `IfRevealFromHand { filter: HasLandType(type_a) ∨ HasLandType(type_b),
+  then: Noop, else_: Tap { Selector::This } }` — matching the printed
+  Oracle exactly. Future enhancement: surface a `Decision::Reveal`
+  shape so a human player can decline to reveal (bluffing); today
+  AutoDecider always reveals when a match exists. Tests:
+  `frostboil_snarl_enters_untapped_with_island_in_hand`,
+  `_with_mountain_in_hand`, `_enters_tapped_with_only_off_color_in_hand`,
+  `_enters_tapped_without_revealable_card`. Same primitive unblocks
+  Throne of Eldraine Battle Mammoth-style ETB reveals.
 
 - ✅ **`Predicate::SameNamedInZoneAtLeast { who, zone, at_least }` —
   graveyard same-name count predicate (Dragon's Approach)** — push
@@ -782,24 +794,22 @@ status tag (✅ wired, 🟡 partial, ⏳ todo) plus a short note.
   "target opponent draws a card" in Baleful Mastery). Workaround
   today is `EachOpponent` which fan-outs in multiplayer.
 
-- ⏳ **`StaticEffect::PumpPTOther` / generalized tribal-anthem
-  primitive** — push XXX added the `exclude_source` flag to
-  `AffectedPermanents::AllWithCreatureType` and used it via a compute-
-  time injection in `compute_battlefield` for Quintorius. Push XXXI
-  consolidated the per-card injection into the
-  `tribal_anthem_for_name` helper table (Quintorius, Tenured
-  Inkcaster). A more general path: extend `StaticEffect::PumpPT` to
-  accept a `Selector::EachOtherPermanent(SelectionRequirement)` shape
-  (or a `SelectionRequirement::OtherThanSource` filter) so card
-  factories can express "Other [type]s you control get +N/+M"
-  directly without the helper table. This would unblock Goblin
-  King-style anthems for other tribes (Goblin / Elf / Zombie /
-  Dragon) and the printed "Other instant and sorcery spells you cast
-  have storm" cycle (Prismari, the Inspiration). Suggested shape:
-  bump `affected_from_requirement` to detect `OtherThanSource` as a
-  predicate combinator and set `exclude_source: true` automatically.
-  Once landed, the `tribal_anthem_for_name` table becomes unused and
-  can be retired.
+- ✅ **`StaticEffect::PumpPTOther` / generalized tribal-anthem
+  primitive** — Push (modern_decks): retired the
+  `tribal_anthem_for_name` helper table entirely. Quintorius and
+  Tenured Inkcaster now declare their tribal anthems as regular
+  `StaticAbility { effect: StaticEffect::PumpPT { applies_to:
+  Selector::EachPermanent(Creature ∧ HasCreatureType(X) ∧
+  ControlledByYou ∧ OtherThanSource), .. } }` — same shape as Hofri
+  Ghostforge. The `affected_from_requirement` selector→layer
+  translator was already handling `HasCreatureType` and
+  `OtherThanSource`; combining them produces
+  `AffectedPermanents::AllWithCreatureType { exclude_source: true }`
+  which is exactly what the helper used to inject. Adding a new
+  "Other [type]s you control get +N/+M" card now requires zero
+  engine changes — just a regular `StaticAbility` declaration.
+  Goblin-King-style anthems for any tribe (Goblin, Elf, Zombie,
+  Dragon, …) are unblocked.
 
 - ✅ **`CardDefinition.enters_with_counters` primitive (CR 614.12
   replacement)** — Push (modern_decks): landed the new
@@ -879,34 +889,66 @@ status tag (✅ wired, 🟡 partial, ⏳ todo) plus a short note.
   Wire into `static_ability_to_effects` to conditionally emit the
   PumpPT + GrantKeyword pair only when `condition` is true.
 
-- ⏳ **Multi-target action shape (Crackle with Power, Devious
-  Cover-Up's "any number")** — the cast-time action shape
-  (`GameAction::CastSpell { target: Option<Target> }`) carries only
-  one target. Bumping to `targets: Vec<Target>` would unblock:
-  Crackle with Power's "divided among any number of targets",
-  Devious Cover-Up's "any number of target cards from graveyards",
-  Decisive Denial's mode 1 fight (two targets), Snow Day's two
-  targets, plus a ton of other STX/SOS cards.
+- 🟡 **Multi-target action shape** — Push (modern_decks) lands the
+  foundational primitive: `GameAction::CastSpell` (and the other four
+  cast variants) gain an `additional_targets: Vec<Target>` field
+  alongside the existing `target: Option<Target>`. Slot 0 stays in
+  `target`, slots 1+ flow through `additional_targets`. The new field
+  has `#[serde(default)]` for snapshot back-compat. Threaded through
+  `StackItem::Spell`, `ResumeContext::Spell`, `cast_spell`,
+  `cast_spell_with_convoke`, `cast_spell_back_face`, `cast_flashback`,
+  `cast_spell_alternative`, `finalize_cast`,
+  `continue_spell_resolution`, `EffectContext::for_spell_with_source`
+  (merges both into `ctx.targets`). Cast-time validation walks every
+  slot via `target_filter_for_slot_in_mode(slot_idx, mode)` and runs
+  hexproof/legality checks on each. **Snow Day promoted** as the
+  first two-slot card: `Effect::Seq([Tap(target_filtered slot 0),
+  AddCounter(Target(0)), Tap(TargetFiltered slot 1), AddCounter(
+  Target(1))])`. "Up to two" semantics fall out naturally — slot-1
+  selectors resolve to nothing when only one target is passed, so
+  the second tap+stun pair is a no-op. Tests:
+  `snow_day_taps_and_stuns_target_creature` (slot 0 only),
+  `snow_day_taps_and_stuns_two_target_creatures` (both slots).
+  **Still 🟡 because the AutoDecider's auto-target picker does not
+  yet populate `additional_targets`** — cards relying on the bot to
+  pick slot-1 targets need manual promotion (Crackle with Power,
+  Render Speechless, Vibrant Outburst, Devious Cover-Up, Decisive
+  Denial mode 1, etc.). The cast API supports them; the bot harness
+  hasn't been updated to drive them. Easy follow-on push: extend
+  `auto_target_for_effect_avoiding` to take a slot count and return
+  `Vec<Target>` with per-slot legality.
 
-- ⏳ **`SelectionRequirement::OtherThanSource`** — first-class "another
-  creature" filter for Sacrifice / Destroy / Exile costs and effects.
-  Push XX added a `ctx.source`-aware *sort priority* to
-  `Effect::Sacrifice` so Daemogoth-style triggers pick non-source
-  candidates first, but a strict filter that excludes the source from
-  the candidate set entirely (so when the source is the only
-  candidate, the effect no-ops cleanly per CR 605) would close the
-  remaining edge case. Wiring needs threading `ctx.source` into
-  `evaluate_requirement_static` — a single `&Option<CardId>`
-  parameter, mostly mechanical.
+- ✅ **`SelectionRequirement::OtherThanSource` — target-validation half**
+  (push modern_decks): Threaded `source: Option<CardId>` into
+  `evaluate_requirement_static` (`game/effects/eval.rs:414`) and all 16
+  external call sites: cast-spell target validation (`actions.rs`),
+  alt-cost target validation, activated/loyalty ability target
+  validation (`mod.rs` / `actions.rs`), trigger-resolve target re-pick
+  (`mod.rs`), auto-target picker (`effects/targeting.rs`), and the
+  selector resolvers for `EachPermanent` / `EachMatching` / zone-walks
+  (`effects/mod.rs`). The `OtherThanSource` arm now reads as
+  `*cid != src_id` when source is known, else falls through to
+  permissive (preserves the static-ability `applies_to` pipeline's
+  pre-existing handling via `AffectedPermanents.exclude_source`).
+  Tests: `other_than_source_strict_filter_excludes_lone_source_target`
+  (auto-target picker returns `None` when only the source matches),
+  `other_than_source_without_source_is_permissive` (the public
+  `evaluate_requirement` API passes `None` and OtherThanSource doesn't
+  reject). Lorehold Pledgemage's exile-from-gy cost / Felisa Fang's
+  Inkling generator can now be retrofitted directly with
+  `OtherThanSource` target filters instead of their existing
+  heuristics — opportunity-of-improvement rather than necessity.
 
-- ⏳ **`EventKind::Blocks` / `BlockerDeclared`** — block-half triggers
+- ✅ **`EventKind::Blocks` / `BlockerDeclared`** — block-half triggers
   (Daemogoth Titan, Wall of Junk, …) need a per-blocker event that
-  fires when `DeclareBlockers` resolves. The engine has
-  `EventKind::Attacks` for the attack half via the combat module's
-  `do_attack`-style hook, but no symmetric path for blockers.
-  Suggested shape: emit `BlockerDeclared { blocker, attacker }` in
-  `combat::declare_blockers` so triggered abilities can subscribe
-  via `EventScope::SelfSource` or `AnotherOfYours`.
+  fires when `DeclareBlockers` resolves. Done in push XXVI:
+  `combat::declare_blockers` emits `GameEvent::BlockerDeclared {
+  blocker, attacker }` and the event dispatcher routes it to both
+  `EventKind::Blocks` (blocker side) and `EventKind::BecomesBlocked`
+  (attacker side) — see `game/effects/events.rs:33-68`. Triggered
+  abilities subscribe via `EventScope::SelfSource` for the blocker
+  half (the blocker is the source) or by matching the `attacker`
+  field for the attacker half.
 
 - ⏳ **Lesson sideboard model** — Learn currently collapses to
   Draw 1. A true Lesson sideboard would let Eyetwitch / Hunt for
@@ -914,12 +956,6 @@ status tag (✅ wired, 🟡 partial, ⏳ todo) plus a short note.
   sideboard of Lesson cards. Needs a per-player Lesson sideboard
   slot plus a search-by-spell-subtype primitive on top of
   `Effect::Search`.
-- ⏳ **Multi-target prompt for sorceries/instants** — Vibrant
-  Outburst, Snow Day, Stress Dream, etc. all collapse "up to two
-  targets" / "two targets" / "any number of targets" into a single
-  required target. The engine's `CastSpell` action shape carries
-  one `target: Option<Target>`; a `targets: Vec<Target>` field
-  would unblock a wide swath of two-target effects.
 - ⏳ **Counter-multiplier primitive** — Already used by Tanazir
   (via the ForEach idiom). Future cards (Vorinclex, Doubling
   Season) want a true multiplier on counter accrual; tracked
@@ -942,19 +978,6 @@ status tag (✅ wired, 🟡 partial, ⏳ todo) plus a short note.
   factory's default — is still ⏳. Engine shape for the UI half:
   bump `GameAction::CastSpell.mode: Option<u8>` → `modes: Vec<u8>`
   and thread it into the `ChooseN`'s `picks` at resolution.
-- ⏳ **`SelectionRequirement::OtherThanSource`** — first-class
-  "another creature" / "noncreature, nonland card other than this
-  one" filter. Push XX added a `ctx.source`-aware sort priority for
-  `Effect::Sacrifice` so Daemogoth-style triggers prefer non-source
-  candidates first, but a strict filter would close the remaining
-  edge case (when the source is the only candidate, the effect should
-  no-op cleanly per CR 605). Wiring needs threading `ctx.source` into
-  `evaluate_requirement_static` — a single `&Option<CardId>`
-  parameter, mostly mechanical. Once landed, Lorehold Pledgemage's
-  exile-from-gy cost can use `OtherThanSource` instead of the current
-  lowest-CMC heuristic, and the entire "another creature" family of
-  triggers (Felisa Fang's Inkling generator, Pestbrood Sloth, future
-  similar cards) can be retrofitted.
 - ⏳ **`magecraft_self_untap()` / `magecraft_drain_each_opp(N)`
   shortcuts** — push XXVII added two new shortcut helpers in
   `effect::shortcut`. Future STX/SOS Magecraft creatures should
@@ -1152,15 +1175,21 @@ on the spell card's own attributes only. Plumbing the cast-time
 target list into the cost-reduction site would unlock this card and
 similar Lorehold/Witherbloom cost-cutters.
 
-### "May Pay" Optionality on Death/ETB Triggers
-Bayou Groff ("may pay {1} to return to hand on death") and several
-Strixhaven cards bake an optional cost into a triggered effect
-("may pay X: do Y"). The current engine has no `Effect::MayPay {
-cost, then }` primitive — neither for life nor mana costs — so all
-these collapse to either "always do" or "always skip". A decision-
-generating `Effect::MayPay` would unblock a chunk of cards across
-SOS Witherbloom and STX Lorehold without surfacing new UI affordances
-beyond a yes/no prompt.
+### "May Pay" Optionality on Death/ETB Triggers ✅ DONE
+~~Bayou Groff ("may pay {1} to return to hand on death") and several
+Strixhaven cards bake an optional cost into a triggered effect ("may
+pay X: do Y"). The current engine has no `Effect::MayPay { cost, then
+}` primitive — neither for life nor mana costs — so all these collapse
+to either "always do" or "always skip".~~ Done in push XVI:
+`Effect::MayPay { description, mana_cost, body }` is now first-class
+(`effect.rs:662`). Handler at `game/effects/mod.rs:289` asks the
+controller's decider yes/no; on "yes" + affordable cost it deducts
+the mana from the pool and runs `body`, otherwise skips. AutoDecider
+defaults to "no", ScriptedDecider can flip via
+`DecisionAnswer::Bool(true)`. Bayou Groff is fully promoted with
+3 passing tests (`bayou_groff_dies_may_pay_*`). Life-cost variants
+(`MayPayLife`) and X-cost variants (`MayPayX`) still ⏳ — neither
+has a blocking card today.
 
 ### Transient Triggered-Ability Grants on Pump Spells
 SOS Root Manipulation ("Until end of turn, creatures you control get
@@ -1394,7 +1423,6 @@ Strixhaven coverage push). Remaining gaps:
 | Card / Feature | Current Approximation | Correct Behaviour |
 |---|---|---|
 | Windfall | draws flat 7 | draw equal to most cards discarded |
-| Frantic Search | untaps all tapped lands | untap up to three |
 | Dark Confidant | fixed 2 life loss | lose life = CMC of revealed card |
 | Biorhythm | drain opponents to 0 | set each player's life to creature count |
 | Coalition Relic | tap for 1 of any color | tap + charge counter → burst WUBRG |
@@ -1404,10 +1432,7 @@ Strixhaven coverage push). Remaining gaps:
 | Spectral Procession | {3}{W}{W}{W} | {2/W}{2/W}{2/W} hybrid (CMC 6) |
 | Grim Lavamancer | {R}{T}: 2 damage | must exile 2 cards as additional cost |
 | Ichorid | no graveyard gate | requires opponent to have a black creature in GY |
-| Pursue the Past | always discards then draws 2 | "you may discard … if you do, draw 2" |
-| Witherbloom Charm (mode 0) | always sacrifices | "you may sacrifice … if you do, draw 2" |
 | Render Speechless | required creature target | optional second creature target |
-| Dina's Guidance | always to hand | choice of hand or graveyard |
 
 ---
 

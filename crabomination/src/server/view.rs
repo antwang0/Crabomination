@@ -515,6 +515,7 @@ mod tests {
             card: Box::new(bolt),
             caster: 0,
             target: None,
+            additional_targets: vec![],
             mode: None,
             x_value: 0,
             converged_value: 0,

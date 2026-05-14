@@ -136,7 +136,7 @@ pub(crate) fn cost_reduction_for_spell(
                         continue;
                     }
                     let Some(tgt) = target else { continue };
-                    if state.evaluate_requirement_static(target_filter, tgt, caster) {
+                    if state.evaluate_requirement_static(target_filter, tgt, caster, Some(card.id)) {
                         reduction += amount;
                     }
                 }
@@ -419,6 +419,7 @@ impl GameState {
         &mut self,
         card_id: CardId,
         target: Option<Target>,
+        additional_targets: Vec<Target>,
         mode: Option<usize>,
         x_value: Option<u32>,
     ) -> Result<Vec<GameEvent>, GameError> {
@@ -454,7 +455,7 @@ impl GameState {
         // type, target filters, and effect now drive validation.
         // Tag the cast face so the SpellCast event surfaces it.
         self.pending_cast_face = CastFace::Back;
-        let result = self.cast_spell(card_id, target, mode, x_value);
+        let result = self.cast_spell(card_id, target, additional_targets, mode, x_value);
         self.pending_cast_face = CastFace::Front;
         result
     }
@@ -463,10 +464,11 @@ impl GameState {
         &mut self,
         card_id: CardId,
         target: Option<Target>,
+        additional_targets: Vec<Target>,
         mode: Option<usize>,
         x_value: Option<u32>,
     ) -> Result<Vec<GameEvent>, GameError> {
-        self.cast_spell_with_convoke(card_id, target, mode, x_value, &[])
+        self.cast_spell_with_convoke(card_id, target, additional_targets, mode, x_value, &[])
     }
 
     /// Internal cast-spell helper with optional convoke creatures. Each
@@ -478,6 +480,7 @@ impl GameState {
         &mut self,
         card_id: CardId,
         target: Option<Target>,
+        additional_targets: Vec<Target>,
         mode: Option<usize>,
         x_value: Option<u32>,
         convoke_creatures: &[CardId],
@@ -534,24 +537,46 @@ impl GameState {
             self.players[p].hand.push(card);
             return Err(e);
         }
+        // Same legality check for each additional target slot (hexproof,
+        // shroud, protection, Leyline-of-Sanctity).
+        for tgt in &additional_targets {
+            if let Err(e) = self.check_target_legality(tgt, p) {
+                self.players[p].hand.push(card);
+                return Err(e);
+            }
+        }
 
         // Enforce the spell's target selection requirement (e.g. Terror's
         // "non-black, non-artifact creature"): if the effect binds a filter to
-        // slot 0 and the chosen target doesn't match, reject the cast.
+        // slot N and the chosen target doesn't match, reject the cast.
         // For modal cards (`ChooseMode`), only look at the chosen mode's
         // filter — Drown in the Loch's mode 0 (counter spell) and mode 1
         // (destroy creature) have incompatible filters, and the legacy
         // "first match across all modes" path picked mode 0's `IsSpellOnStack`
         // even when the caster picked mode 1.
+        // Multi-target spells (Snow Day, Render Speechless, Crackle with
+        // Power) thread additional slots through `additional_targets`.
         if let Some(ref tgt) = target
             && let Some(filter) = card
                 .definition
                 .effect
                 .target_filter_for_slot_in_mode(0, mode)
-            && !self.evaluate_requirement_static(filter, tgt, p)
+            && !self.evaluate_requirement_static(filter, tgt, p, Some(card.id))
         {
             self.players[p].hand.push(card);
             return Err(GameError::SelectionRequirementViolated);
+        }
+        for (idx, tgt) in additional_targets.iter().enumerate() {
+            let slot = (idx + 1) as u8;
+            if let Some(filter) = card
+                .definition
+                .effect
+                .target_filter_for_slot_in_mode(slot, mode)
+                && !self.evaluate_requirement_static(filter, tgt, p, Some(card.id))
+            {
+                self.players[p].hand.push(card);
+                return Err(GameError::SelectionRequirementViolated);
+            }
         }
 
         // Pay the cost (substitute X if present, then add any
@@ -626,6 +651,7 @@ impl GameState {
             p,
             card,
             target,
+            additional_targets,
             mode,
             x_value.unwrap_or(0),
             converged_value,
@@ -660,6 +686,7 @@ impl GameState {
         p: usize,
         card: crate::card::CardInstance,
         target: Option<Target>,
+        additional_targets: Vec<Target>,
         mode: Option<usize>,
         x_value: u32,
         converged_value: u32,
@@ -688,6 +715,7 @@ impl GameState {
             card: Box::new(card),
             caster: p,
             target,
+            additional_targets,
             mode,
             x_value,
             converged_value,
@@ -766,6 +794,7 @@ impl GameState {
         &mut self,
         card_id: CardId,
         target: Option<Target>,
+        additional_targets: Vec<Target>,
         mode: Option<usize>,
         x_value: Option<u32>,
     ) -> Result<Vec<GameEvent>, GameError> {
@@ -837,7 +866,7 @@ impl GameState {
                 face: CastFace::Flashback,
             },
         ];
-        self.finalize_cast(p, card, target, mode, x_value.unwrap_or(0), 0, mana_spent);
+        self.finalize_cast(p, card, target, additional_targets, mode, x_value.unwrap_or(0), 0, mana_spent);
         Ok(events)
     }
 
@@ -851,6 +880,7 @@ impl GameState {
         card_id: CardId,
         pitch_card: Option<CardId>,
         target: Option<Target>,
+        additional_targets: Vec<Target>,
         mode: Option<usize>,
         x_value: Option<u32>,
     ) -> Result<Vec<GameEvent>, GameError> {
@@ -936,7 +966,7 @@ impl GameState {
                 .definition
                 .effect
                 .target_filter_for_slot_in_mode(0, mode)
-            && !self.evaluate_requirement_static(filter, tgt, p)
+            && !self.evaluate_requirement_static(filter, tgt, p, Some(card.id))
         {
             self.players[p].hand.push(card);
             return Err(GameError::SelectionRequirementViolated);
@@ -946,7 +976,7 @@ impl GameState {
         // target filter, only on the alternative-cast path.
         if let Some(ref tgt) = target
             && let Some(ref alt_filter) = alt.target_filter
-            && !self.evaluate_requirement_static(alt_filter, tgt, p)
+            && !self.evaluate_requirement_static(alt_filter, tgt, p, Some(card.id))
         {
             self.players[p].hand.push(card);
             return Err(GameError::SelectionRequirementViolated);
@@ -1016,6 +1046,7 @@ impl GameState {
             p,
             card,
             target,
+            additional_targets,
             mode,
             x_value.unwrap_or(0),
             0,
@@ -1509,7 +1540,7 @@ impl GameState {
         // Wasteland at a Plains. Mirror the cast-side gate for parity.
         if let Some(tgt) = &target
             && let Some(filter) = ability.effect.target_filter_for_slot(0)
-            && !self.evaluate_requirement_static(filter, tgt, p)
+            && !self.evaluate_requirement_static(filter, tgt, p, Some(card_id))
         {
             return Err(GameError::SelectionRequirementViolated);
         }

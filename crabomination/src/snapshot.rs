@@ -118,6 +118,10 @@ pub struct StackItemSnapshot {
     pub card: CardSnapshot,
     pub caster: usize,
     pub target: Option<Target>,
+    /// Additional targets for slots 1+. `#[serde(default)]` keeps older
+    /// single-target snapshots loadable.
+    #[serde(default)]
+    pub additional_targets: Vec<Target>,
     pub mode: Option<usize>,
     pub x_value: u32,
     pub converged_value: u32,
@@ -156,6 +160,7 @@ impl GameSnapshot {
                     card,
                     caster,
                     target,
+                    additional_targets,
                     mode,
                     x_value,
                     converged_value,
@@ -165,6 +170,7 @@ impl GameSnapshot {
                     card: card_snap(card),
                     caster: *caster,
                     target: target.clone(),
+                    additional_targets: additional_targets.clone(),
                     mode: *mode,
                     x_value: *x_value,
                     converged_value: *converged_value,
@@ -302,6 +308,7 @@ impl GameSnapshot {
                 card: Box::new(restore_card(s.card)?),
                 caster: s.caster,
                 target: s.target,
+                additional_targets: s.additional_targets,
                 mode: s.mode,
                 x_value: s.x_value,
                 converged_value: s.converged_value,
@@ -652,6 +659,7 @@ mod tests {
             card: Box::new(bolt_card),
             caster: 0,
             target: None,
+            additional_targets: vec![],
             mode: None,
             x_value: 0,
             converged_value: 0,
