@@ -47,6 +47,7 @@ pub fn pact_of_negation() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -111,6 +112,7 @@ pub fn plunge_into_darkness() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -160,6 +162,7 @@ pub fn serum_powder() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: Some(OpeningHandEffect::MulliganHelper),
+        enters_with_counters: None,
     }
 }
 
@@ -201,6 +204,7 @@ pub fn spoils_of_the_vault() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -241,6 +245,7 @@ pub fn summoners_pact() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -282,6 +287,7 @@ pub fn thud() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -316,6 +322,7 @@ pub fn inquisition_of_kozilek() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -356,6 +363,7 @@ pub fn leyline_of_sanctity() -> CardDefinition {
             tapped: false,
             extra: Effect::Noop,
         }),
+        enters_with_counters: None,
     }
 }
 
@@ -409,6 +417,7 @@ pub fn ephemerate() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -464,6 +473,7 @@ pub fn faithful_mending() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -499,6 +509,7 @@ pub fn force_of_negation() -> CardDefinition {
         }),
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -554,6 +565,7 @@ pub fn goryos_vengeance() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -595,6 +607,7 @@ pub fn prismatic_ending() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -629,6 +642,7 @@ pub fn thoughtseize() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -676,6 +690,7 @@ pub fn consign_to_memory() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -724,6 +739,7 @@ pub fn damping_sphere() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -765,6 +781,7 @@ pub fn mystical_dispute() -> CardDefinition {
         }),
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -807,6 +824,7 @@ pub fn pest_control() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -854,5 +872,6 @@ pub fn wrath_of_the_skies() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }

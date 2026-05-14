@@ -24,6 +24,7 @@ pub fn plains() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -49,6 +50,7 @@ pub fn island() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -74,6 +76,7 @@ pub fn swamp() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -99,6 +102,7 @@ pub fn mountain() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -124,6 +128,7 @@ pub fn forest() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -149,6 +154,7 @@ fn dual(name: &'static str, a: LandType, b: LandType, ca: Color, cb: Color) -> C
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 

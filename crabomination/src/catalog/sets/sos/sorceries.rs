@@ -166,6 +166,7 @@ pub fn dig_site_inventory() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -225,6 +226,7 @@ pub fn daydream() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -289,6 +291,7 @@ pub fn practiced_offense() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -334,6 +337,7 @@ pub fn antiquities_on_the_loose() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -368,6 +372,7 @@ pub fn group_project() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -408,6 +413,7 @@ pub fn procrastinate() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -444,6 +450,7 @@ pub fn mathemagics() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -491,6 +498,7 @@ pub fn oracles_restoration() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -534,6 +542,7 @@ pub fn send_in_the_pest() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -578,6 +587,7 @@ pub fn dinas_guidance() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -614,6 +624,7 @@ pub fn grapple_with_death() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -664,6 +675,7 @@ pub fn pull_from_the_grave() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -704,6 +716,7 @@ pub fn end_of_the_hunt() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -765,6 +778,7 @@ pub fn vicious_rivalry() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -842,6 +856,7 @@ pub fn borrowed_knowledge() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -901,6 +916,7 @@ pub fn pursue_the_past() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -948,6 +964,7 @@ pub fn render_speechless() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -1002,6 +1019,7 @@ pub fn moment_of_reckoning() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -1036,6 +1054,7 @@ pub fn arcane_omens() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -1084,6 +1103,7 @@ pub fn together_as_one() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -1131,6 +1151,7 @@ pub fn wisdom_of_ages() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -1182,6 +1203,7 @@ pub fn rapturous_moment() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -1222,6 +1244,7 @@ pub fn visionarys_dance() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -1262,6 +1285,7 @@ pub fn splatter_technique() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -1309,6 +1333,7 @@ pub fn cost_of_brilliance() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -1346,6 +1371,7 @@ pub fn mind_roots() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -1382,6 +1408,7 @@ pub fn mind_into_matter() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -1431,6 +1458,7 @@ pub fn growth_curve() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -1497,6 +1525,7 @@ pub fn killians_confidence() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -1547,6 +1576,7 @@ pub fn planar_engineering() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -1604,6 +1634,7 @@ pub fn pox_plague() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -1655,6 +1686,7 @@ pub fn withering_curse() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -1707,6 +1739,7 @@ pub fn root_manipulation() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -1764,6 +1797,7 @@ pub fn chelonian_tackle() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -1833,6 +1867,7 @@ pub fn steal_the_show() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -1896,6 +1931,7 @@ pub fn snarl_song() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -1946,6 +1982,7 @@ pub fn wild_hypothesis() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -2031,6 +2068,7 @@ pub fn artistic_process() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -2076,6 +2114,7 @@ pub fn decorum_dissertation() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -2118,6 +2157,7 @@ pub fn germination_practicum() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -2156,6 +2196,7 @@ pub fn restoration_seminar() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -2204,6 +2245,7 @@ pub fn zimones_experiment() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -2271,6 +2313,7 @@ pub fn flow_state() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -2340,6 +2383,7 @@ pub fn follow_the_lumarets() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -2402,6 +2446,7 @@ pub fn social_snub() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -2466,6 +2511,7 @@ pub fn molten_note() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -2552,6 +2598,7 @@ pub fn fix_whats_broken() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -2613,6 +2660,7 @@ pub fn echocasting_symposium() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -2663,6 +2711,7 @@ pub fn archaics_agony() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -2699,5 +2748,6 @@ pub fn applied_geometry() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }

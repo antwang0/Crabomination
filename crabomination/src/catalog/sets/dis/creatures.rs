@@ -25,5 +25,6 @@ pub fn azorius_first_wing() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }

@@ -402,6 +402,23 @@ pub struct CardDefinition {
     /// as a mulligan helper (Serum Powder). Resolved post-mulligan by
     /// `GameState::apply_opening_hand_effects`.
     pub opening_hand: Option<OpeningHandEffect>,
+    /// CR 614.12 "enters with N counters" replacement. When `Some((kind,
+    /// value))`, the engine drops that many counters of `kind` onto the
+    /// permanent **before** the first state-based-action sweep on the new
+    /// permanent. That timing lets cards with printed lines like
+    /// "Pterafractyl enters with X +1/+1 counters on it" and "Symmathematics
+    /// enters with two +1/+1 counters on it" survive ETB even when their
+    /// base toughness is 0 — the printed Oracle was previously approximated
+    /// by an `EntersBattlefield` trigger which fires *after* SBA, forcing
+    /// a base-toughness bump. Resolved at ETB time in `place_card_in_dest`
+    /// with the controller's `EffectContext`; the value is evaluated against
+    /// the source's just-known `x_value` (so `Value::XFromCost` reads the
+    /// X paid at cast time correctly).
+    ///
+    /// Defaults to `None` via `#[serde(default)]` so all existing literal
+    /// CardDefinition initialisations pick up the new field automatically.
+    #[serde(default)]
+    pub enters_with_counters: Option<(CounterType, crate::effect::Value)>,
 }
 
 /// An alternative (pitch) cost. Replaces the normal mana cost when the

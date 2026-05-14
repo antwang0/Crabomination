@@ -322,7 +322,38 @@ impl GameState {
                         .map(|t| t.effect.clone())
                         .collect();
                     let evoked = card.evoked;
+                    // CR 614.12 — capture the "enters with N counters"
+                    // replacement before the card moves to the battlefield;
+                    // we apply the counters immediately after pushing,
+                    // BEFORE the next state-based-action sweep, so a printed
+                    // 0/0 body (Pterafractyl, Symmathematics) survives ETB.
+                    let enters_spec = card.definition.enters_with_counters.clone();
                     self.battlefield.push(card);
+                    if let Some((kind, value)) = enters_spec {
+                        let etb_ctx = crate::game::effects::EffectContext::for_spell_with_source(
+                            card_id,
+                            self.battlefield.last().map(|c| c.definition.name).unwrap_or(""),
+                            caster,
+                            target,
+                            mode.unwrap_or(0),
+                            x_value,
+                            converged_value,
+                            mana_spent,
+                        );
+                        let n = self.evaluate_value(&value, &etb_ctx);
+                        if n > 0 {
+                            if let Some(card_mut) =
+                                self.battlefield.iter_mut().find(|c| c.id == card_id)
+                            {
+                                card_mut.add_counters(kind, n as u32);
+                            }
+                            events.push(GameEvent::CounterAdded {
+                                card_id,
+                                counter_type: kind,
+                                count: n as u32,
+                            });
+                        }
+                    }
                     events.push(GameEvent::PermanentEntered { card_id });
 
                     // Evoke: schedule a self-sacrifice trigger that resolves

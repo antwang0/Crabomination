@@ -43,6 +43,7 @@ pub fn strict_proctor() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -85,6 +86,7 @@ pub fn sedgemoor_witch() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -121,6 +123,7 @@ pub fn spectacle_mage() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -162,5 +165,6 @@ pub fn mage_hunters_onslaught() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }

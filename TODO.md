@@ -11,6 +11,31 @@ Periodic spot-check of the rules document
 (`crabomination/MagicCompRules 20260116.txt`). Each rule below has a
 status tag (✅ wired, 🟡 partial, ⏳ todo) plus a short note.
 
+- ✅ **CR 614.12 — "Enters with N counters" replacement effects** (modern_decks
+  push audit): "Some replacement effects modify how a permanent enters
+  the battlefield. … To determine which replacement effects apply and
+  how they apply, check the characteristics of the permanent as it
+  would exist on the battlefield, taking into account replacement
+  effects that have already modified how it enters the battlefield."
+  Modern_decks push lands the `CardDefinition.enters_with_counters:
+  Option<(CounterType, Value)>` field that captures the printed "enters
+  with N [counters] on it" replacement. The counter spec is applied
+  inside the same battlefield-zone hand-off in both code paths
+  (`stack.rs` spell-resolution path for hard-cast permanents,
+  `effects/movement.rs::place_card_in_dest` for reanimate / flicker /
+  search-to-battlefield), BEFORE state-based actions check toughness
+  and BEFORE the first ETB trigger fires. The spell ctx's `x_value`
+  and `converged_value` are threaded via `EffectContext::for_spell_
+  with_source` so `Value::XFromCost` (Pterafractyl) and
+  `Value::ConvergedValue` (Rancorous Archaic) read the cast-time
+  scalars faithfully. Tests:
+  `pterafractyl_cr_614_12_zero_toughness_base_survives_etb_via_enters_with`
+  (1/0 + 1 +1/+1 counter → 2/1 survives ETB),
+  `symmathematics_enters_with_two_plus_one_counters` (printed 0/0 +
+  2 +1/+1 = 2/2 exact). Closes the Pterafractyl / Symmathematics /
+  Rancorous Archaic base-toughness-bump workaround. Catalog
+  promotions: Pterafractyl (1/0 → 1/0 exact), Symmathematics (1/1
+  → 0/0 exact), Rancorous Archaic (ETB-trigger → CR-614.12 timing).
 - ✅ **CR 701.22b — Scry 0 emits no scry event** (push XXXVIII audit):
   "If a player is instructed to scry 0, no scry event occurs. Abilities
   that trigger whenever a player scries won't trigger." Push XXXVIII
@@ -531,24 +556,27 @@ status tag (✅ wired, 🟡 partial, ⏳ todo) plus a short note.
   Once landed, the `tribal_anthem_for_name` table becomes unused and
   can be retired.
 
-- ⏳ **`Effect::EntersWith` primitive (CR 614.12 replacement)** — push
-  XXXI's Symmathematics and prior push (Pterafractyl, Rancorous
-  Archaic) all approximate "enters with N counters" via an
-  `EntersBattlefield/SelfSource` trigger that fires `AddCounter` post-
-  ETB. The trigger fires **after** state-based actions check
-  toughness, so a 0/0 or 0-toughness body would die to SBAs before
-  any counters arrive — workaround is to bump base toughness to 1
-  (Pterafractyl 1/0 → 1/1, Symmathematics 0/0 → 1/1). True CR 614.12
-  compliance would land the counters at ETB time (before SBAs check
-  the body), letting us drop the toughness bump and match the
-  printed Oracle exactly. Suggested shape:
-  `CardDefinition.enters_with_counters: Option<(CounterType, Value)>`
-  applied during the entering-battlefield resolution path, BEFORE
-  the first SBA check on the new permanent. Wiring needs threading
-  `enters_with_counters` through the resolution-time `move_card_to`
-  to `Battlefield` so the counters land in the same "step" as the
-  zone change. Closes a documented gap on every "enters with N
-  counters" card in the catalog.
+- ✅ **`CardDefinition.enters_with_counters` primitive (CR 614.12
+  replacement)** — Push (modern_decks): landed the new
+  `enters_with_counters: Option<(CounterType, Value)>` field on
+  `CardDefinition`. The counter spec is captured before the new
+  permanent's zone change and applied **inside** the same ETB-zone
+  hand-off in both code paths (`stack.rs` spell-resolution path and
+  `effects/movement.rs::place_card_in_dest` for reanimate / flicker /
+  search-to-battlefield), BEFORE state-based actions check toughness
+  and BEFORE the first ETB trigger fires. Wiring threads the spell's
+  `x_value` / `converged_value` via `EffectContext::for_spell_with_
+  source` so `Value::XFromCost` and `Value::ConvergedValue` resolve
+  faithfully (Pterafractyl X-spell, Rancorous Archaic Converge).
+  Promotions: Pterafractyl drops the 1/0 → 1/1 toughness bump,
+  Symmathematics drops the 0/0 → 1/1 toughness bump, Rancorous
+  Archaic moves its Converge AddCounter from a post-SBA ETB trigger
+  to the pre-SBA replacement (correct timing relative to other ETB
+  triggers / replacement effects). Tests:
+  `pterafractyl_cr_614_12_zero_toughness_base_survives_etb_via_
+  enters_with`, `symmathematics_enters_with_two_plus_one_counters`
+  (printed 0/0 → 2/2 exact), `pterafractyl_etb_with_x_counters_
+  and_gains_two_life` (unchanged behavior at X=2).
 
 - ⏳ **Add Inkling-tribal payoffs to the cube/SOS pools** — push XXXI
   added Tenured Inkcaster as an Inkling lord (+2/+2 to other

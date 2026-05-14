@@ -10,8 +10,8 @@
 
 use super::no_abilities;
 use crate::card::{
-    ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, Effect, EventKind,
-    EventScope, EventSpec, Selector, SelectionRequirement, Subtypes, TriggeredAbility, Value,
+    ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, Effect, Selector,
+    SelectionRequirement, Subtypes, Value,
 };
 use crate::effect::shortcut::{magecraft, target_filtered};
 use crate::effect::Duration;
@@ -56,6 +56,7 @@ pub fn quandrix_apprentice() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -104,6 +105,7 @@ pub fn quandrix_pledgemage() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -159,6 +161,7 @@ pub fn decisive_denial() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -169,27 +172,19 @@ pub fn decisive_denial() -> CardDefinition {
 /// or copy an instant or sorcery spell, double the number of +1/+1
 /// counters on Symmathematics."
 ///
-/// Body is a 0/0 Fractal that comes in as a 2/2 via the ETB +1/+1
-/// counter trigger. Each subsequent instant or sorcery cast fires the
-/// magecraft, doubling the counter pile: 2 → 4 → 8 → 16 …
+/// Body is a 0/0 Fractal that comes in as a 2/2 via the new
+/// `CardDefinition.enters_with_counters` field (CR 614.12 replacement).
+/// The two +1/+1 counters land **before** the new permanent is exposed
+/// to state-based-action sweeps and before any ETB triggers fire, so a
+/// printed 0/0 body survives ETB without the historic base-toughness
+/// bump (was 1/1 base + ETB AddCounter approximation; now exact 0/0
+/// printed with CR-compliant "enters with").
 ///
-/// Approximation (same as Pterafractyl): printed P/T is 0/0 with two
-/// +1/+1 counters from the "enters with" replacement effect. The
-/// engine has no replacement-effect primitive yet, so we model "enters
-/// with" as an ETB trigger that fires *after* state-based actions —
-/// which would lethally check a 0/0 body before any counters arrive.
-/// To keep the card playable, base P/T is bumped to 1/1 (a 1-toughness
-/// over-statement that doesn't matter in practice — once the ETB
-/// resolves, the body is 3/3 instead of the printed 2/2, and the
-/// doubling-magecraft scaling pattern is preserved). The ETB adds two
-/// counters via `AddCounter { amount: 2 }`.
-///
-/// The doubling uses the standard `AddCounter { what: This, amount:
+/// Magecraft is the standard `AddCounter { what: This, amount:
 /// CountersOn(This, +1/+1) }` shape (same as Practical Research, Growth
 /// Curve): adds N more counters where N is the current pile, producing
 /// 2N total. `Selector::This` resolves to the trigger's listening
-/// permanent (Symmathematics itself), not the trigger source (the
-/// spell), matching the printed Oracle exactly.
+/// permanent (Symmathematics itself).
 pub fn symmathematics() -> CardDefinition {
     CardDefinition {
         name: "Symmathematics",
@@ -200,24 +195,14 @@ pub fn symmathematics() -> CardDefinition {
             creature_types: vec![CreatureType::Fractal],
             ..Default::default()
         },
-        power: 1,
-        toughness: 1,
+        // Printed P/T is 0/0 — the +1/+1 counters from the CR 614.12
+        // replacement now land before SBA, so the printed base survives.
+        power: 0,
+        toughness: 0,
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
         triggered_abilities: vec![
-            // ETB: enters with two +1/+1 counters on it. Modeled as a
-            // self-targeting AddCounter on the ETB trigger — the
-            // engine doesn't have an `Effect::EntersWith` primitive
-            // yet, so we approximate via the standard ETB pattern.
-            TriggeredAbility {
-                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-                effect: Effect::AddCounter {
-                    what: Selector::This,
-                    kind: CounterType::PlusOnePlusOne,
-                    amount: Value::Const(2),
-                },
-            },
             // Magecraft: double the +1/+1 counters on Symmathematics.
             magecraft(Effect::AddCounter {
                 what: Selector::This,
@@ -234,6 +219,8 @@ pub fn symmathematics() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        // CR 614.12 "enters with two +1/+1 counters on it" replacement.
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(2))),
     }
 }
 

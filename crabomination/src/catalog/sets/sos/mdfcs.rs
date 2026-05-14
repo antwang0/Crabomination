@@ -68,6 +68,7 @@ fn vanilla_front(
         alternative_cost: None,
         back_face: Some(Box::new(back)),
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -96,6 +97,7 @@ fn spell_back(
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -198,17 +200,16 @@ pub fn honorbound_page() -> CardDefinition {
 /// Front: 2/2 Human Cleric Wizard vanilla. Back: sorcery — each player
 /// draws three cards. (A symmetrical wheel-style card-draw spell.)
 ///
-/// Approximation: collapses "each player" to "you draw 3" because the
-/// engine has no "each player draws N" iteration that survives shuffle
-/// state. A future ForEach Player loop with `Effect::Draw` body would
-/// faithfully fan out.
+/// Push: each-player fan-out now lands faithfully via
+/// `Selector::Player(PlayerRef::EachPlayer)` (same primitive Wheel of
+/// Fortune uses in `lea::sorceries`). Both players draw 3.
 pub fn joined_researchers() -> CardDefinition {
     let back = spell_back(
         "Secret Rendezvous",
         cost(&[generic(1), w(), w()]),
         CardType::Sorcery,
         Effect::Draw {
-            who: Selector::You,
+            who: Selector::Player(PlayerRef::EachPlayer),
             amount: Value::Const(3),
         },
     );
@@ -892,15 +893,15 @@ pub fn jadzi_steward_of_fate() -> CardDefinition {
 /// Sanar, Unfinished Genius // Wild Idea — {U}{R} // {3}{U}{R}.
 ///
 /// Front: 0/4 Legendary Goblin Sorcerer. Back: sorcery — Wild Idea: each
-/// player draws three cards. (Approximated as caster draws 3 — multi-
-/// player iteration on draws is a separate gap.)
+/// player draws three cards. Faithful: each-player fan-out via
+/// `Selector::Player(PlayerRef::EachPlayer)` so every player draws 3.
 pub fn sanar_unfinished_genius() -> CardDefinition {
     let back = spell_back(
         "Wild Idea",
         cost(&[generic(3), u(), r()]),
         CardType::Sorcery,
         Effect::Draw {
-            who: Selector::You,
+            who: Selector::Player(PlayerRef::EachPlayer),
             amount: Value::Const(3),
         },
     );
@@ -1066,19 +1067,20 @@ pub fn lluwen_exchange_student() -> CardDefinition {
 ///
 /// Front: 3/4 Merfolk Bard with `Keyword::Ward(1)` (engine keyword tag;
 /// targeting enforcement still pending). Back: sorcery — Aqueous Aria:
-/// target player draws three cards. (A symmetrical card-draw spell
-/// approximating the printed reveal-and-distribute oracle.)
+/// target player draws three cards.
 ///
-/// 🟡 Body + back-face wired. Was the last ⏳ row in the SOS Blue
-/// section for cards needing the Ward keyword primitive — Ward is now
-/// available as a tag, so the body lands faithfully.
+/// Push: target-player draw now wired faithfully via
+/// `target_filtered(SelectionRequirement::Player)` — the auto-decider
+/// resolves the player target at cast time, so the chosen player draws 3
+/// (not just the caster). Front-face Ward keyword remains a tag pending
+/// the engine-wide Ward enforcement layer (see TODO.md).
 pub fn campus_composer() -> CardDefinition {
     let back = spell_back(
         "Aqueous Aria",
         cost(&[generic(4), u()]),
         CardType::Sorcery,
         Effect::Draw {
-            who: Selector::You,
+            who: target_filtered(SelectionRequirement::Player),
             amount: Value::Const(3),
         },
     );
@@ -1100,16 +1102,18 @@ pub fn campus_composer() -> CardDefinition {
 /// Front: 5/5 Human Wizard with `Keyword::Ward(1)`. Back: instant —
 /// Ancestral Recall: target player draws three cards.
 ///
-/// 🟡 Body + back-face wired. Was a ⏳ row blocked on the Ward keyword
-/// primitive; Ward is now wired as a keyword tag (enforcement is still
-/// pending — see TODO.md "Ward enforcement layer").
+/// Push: back-face is now a faithful target-player Ancestral Recall via
+/// `target_filtered(SelectionRequirement::Player)`. The auto-decider
+/// resolves the target at cast time so the chosen player (caster or
+/// opp) draws 3. Front-face Ward keyword remains a tag pending Ward
+/// enforcement.
 pub fn emeritus_of_ideation() -> CardDefinition {
     let back = spell_back(
         "Ancestral Recall",
         cost(&[u()]),
         CardType::Instant,
         Effect::Draw {
-            who: Selector::You,
+            who: target_filtered(SelectionRequirement::Player),
             amount: Value::Const(3),
         },
     );

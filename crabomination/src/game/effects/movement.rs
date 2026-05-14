@@ -279,7 +279,36 @@ impl GameState {
                 card.toughness_bonus = 0;
                 card.attached_to = None;
                 let cid = card.id;
+                // CR 614.12 — apply "enters with N counters" replacement
+                // BEFORE the new permanent is exposed to state-based-action
+                // sweeps and BEFORE ETB triggers fire. This lets a printed
+                // 0/0 or 1/0 body (Pterafractyl, Symmathematics) survive
+                // without the historic base-toughness bump workaround. The
+                // Value is evaluated against a self-ability ctx anchored
+                // to the new permanent's `CardId` so `Value::XFromCost`
+                // reads via a `for_ability` shim — for spells using
+                // `Value::Const(N)` (Symmathematics) this is exact; for
+                // X-on-cast bodies (Pterafractyl) the x_value would need
+                // additional plumbing through `move_card_to` from the
+                // cast-time ctx, tracked separately.
+                let enters_spec = card.definition.enters_with_counters.clone();
                 self.battlefield.push(card);
+                if let Some((kind, value)) = enters_spec {
+                    let etb_ctx = crate::game::effects::EffectContext::for_ability(cid, p, None);
+                    let n = self.evaluate_value(&value, &etb_ctx);
+                    if n > 0 {
+                        if let Some(card_mut) =
+                            self.battlefield.iter_mut().find(|c| c.id == cid)
+                        {
+                            card_mut.add_counters(kind, n as u32);
+                        }
+                        events.push(GameEvent::CounterAdded {
+                            card_id: cid,
+                            counter_type: kind,
+                            count: n as u32,
+                        });
+                    }
+                }
                 events.push(GameEvent::PermanentEntered { card_id: cid });
                 // Fire self-source ETB triggers so reanimate / flicker /
                 // search-to-battlefield paths trigger creature ETBs the same

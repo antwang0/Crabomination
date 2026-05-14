@@ -25,5 +25,6 @@ pub fn stormchaser_mage() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }

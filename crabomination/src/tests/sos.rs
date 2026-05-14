@@ -146,6 +146,7 @@ fn stand_up_for_yourself_only_targets_power_three_or_more() {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     };
     let mut g = two_player_game();
     let big_id = g.add_card_to_battlefield(1, big);
@@ -1627,6 +1628,31 @@ fn pterafractyl_etb_with_x_counters_and_gains_two_life() {
         "Pterafractyl should gain 2 life on ETB");
 }
 
+// CR 614.12 — "enters with N counters" replacement now lands BEFORE the
+// first state-based-action sweep on the new permanent, so a printed
+// 1/0 body (Pterafractyl) survives ETB when X≥1. Verifies the printed
+// P/T (X+1)/X exactly at X=1.
+#[test]
+fn pterafractyl_cr_614_12_zero_toughness_base_survives_etb_via_enters_with() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::pterafractyl());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: Some(1),
+    })
+    .expect("Pterafractyl castable for X=1 {G}{U}");
+    drain_stack(&mut g);
+
+    let view = g.computed_permanent(id)
+        .expect("Pterafractyl should survive ETB — counters applied before SBA");
+    // Printed 1/0 + 1 +1/+1 counter = 2/1 exact (X=1 path).
+    assert_eq!(view.power, 2, "X=1: 1/0 + 1 +1/+1 = 2/1");
+    assert_eq!(view.toughness, 1);
+}
+
 // ── Fractal Mascot ──────────────────────────────────────────────────────────
 
 #[test]
@@ -1767,6 +1793,7 @@ fn quandrix_charm_mode_1_destroys_enchantment() {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     };
     let mut g = two_player_game();
     let ench = g.add_card_to_battlefield(1, ench_def);
@@ -2093,6 +2120,7 @@ fn arnyn_drains_when_a_one_power_creature_you_control_dies() {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     };
     let weak_id = g.add_card_to_battlefield(0, weak);
 
@@ -6199,15 +6227,17 @@ fn honorbound_page_back_face_pumps_and_gains_life() {
     assert_eq!(g.players[0].life, life_before + 1, "Caster should gain 1 life");
 }
 
-// Joined Researchers // Secret Rendezvous — caster draws 3.
+// Joined Researchers // Secret Rendezvous — each player draws 3.
 #[test]
-fn joined_researchers_back_face_draws_three() {
+fn joined_researchers_back_face_each_player_draws_three() {
     let mut g = two_player_game();
     for _ in 0..5 {
         g.add_card_to_library(0, catalog::lightning_bolt());
+        g.add_card_to_library(1, catalog::lightning_bolt());
     }
     let id = g.add_card_to_hand(0, catalog::joined_researchers());
-    let hand_before = g.players[0].hand.len();
+    let caster_hand_before = g.players[0].hand.len();
+    let opp_hand_before = g.players[1].hand.len();
     g.players[0].mana_pool.add(Color::White, 2);
     g.players[0].mana_pool.add_colorless(1);
 
@@ -6220,8 +6250,10 @@ fn joined_researchers_back_face_draws_three() {
     .expect("Secret Rendezvous castable for {1}{W}{W}");
     drain_stack(&mut g);
 
-    // Hand: started with `hand_before`, lost the cast card (-1), drew 3.
-    assert_eq!(g.players[0].hand.len(), hand_before - 1 + 3);
+    // Caster: lost the cast card (-1), drew 3 → net +2.
+    assert_eq!(g.players[0].hand.len(), caster_hand_before - 1 + 3);
+    // Opp: gained 3 draws.
+    assert_eq!(g.players[1].hand.len(), opp_hand_before + 3);
 }
 
 // Quill-Blade Laureate // Twofold Intent — pump +1/+1 + create Inkling.
@@ -6739,13 +6771,17 @@ fn jadzi_is_legendary() {
     assert!(def.supertypes.contains(&crate::card::Supertype::Legendary));
 }
 
-// Sanar // Wild Idea — draw 3.
+// Sanar // Wild Idea — each player draws 3.
 #[test]
-fn sanar_back_face_draws_three() {
+fn sanar_back_face_each_player_draws_three() {
     let mut g = two_player_game();
-    for _ in 0..5 { g.add_card_to_library(0, catalog::lightning_bolt()); }
+    for _ in 0..5 {
+        g.add_card_to_library(0, catalog::lightning_bolt());
+        g.add_card_to_library(1, catalog::lightning_bolt());
+    }
     let id = g.add_card_to_hand(0, catalog::sanar_unfinished_genius());
-    let hand_before = g.players[0].hand.len();
+    let caster_hand_before = g.players[0].hand.len();
+    let opp_hand_before = g.players[1].hand.len();
     g.players[0].mana_pool.add(Color::Blue, 1);
     g.players[0].mana_pool.add(Color::Red, 1);
     g.players[0].mana_pool.add_colorless(3);
@@ -6756,7 +6792,8 @@ fn sanar_back_face_draws_three() {
     .expect("Wild Idea castable for {3}{U}{R}");
     drain_stack(&mut g);
 
-    assert_eq!(g.players[0].hand.len(), hand_before - 1 + 3);
+    assert_eq!(g.players[0].hand.len(), caster_hand_before - 1 + 3);
+    assert_eq!(g.players[1].hand.len(), opp_hand_before + 3);
 }
 
 // Tam // Deep Sight — Scry 4 + Draw 1.
@@ -8340,6 +8377,30 @@ fn campus_composer_is_three_four_ward_one_merfolk_bard() {
     assert_eq!(back.name, "Aqueous Aria");
 }
 
+// Push: Aqueous Aria back face draws for *target* player (faithful to
+// printed Oracle). Aiming at the opponent makes them draw 3; the caster
+// only loses the cast card itself.
+#[test]
+fn campus_composer_aqueous_aria_targets_player() {
+    let mut g = two_player_game();
+    for _ in 0..5 { g.add_card_to_library(1, catalog::island()); }
+    let id = g.add_card_to_hand(0, catalog::campus_composer());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    let caster_hand_before = g.players[0].hand.len();
+    let opp_hand_before = g.players[1].hand.len();
+
+    g.perform_action(GameAction::CastSpellBack {
+        card_id: id, target: Some(Target::Player(1)), mode: None, x_value: None,
+    })
+    .expect("Aqueous Aria castable for {4}{U}");
+    drain_stack(&mut g);
+
+    // Opp drew 3, caster only lost the cast card.
+    assert_eq!(g.players[1].hand.len(), opp_hand_before + 3);
+    assert_eq!(g.players[0].hand.len(), caster_hand_before - 1);
+}
+
 #[test]
 fn emeritus_of_ideation_back_face_draws_three() {
     let mut g = two_player_game();
@@ -8349,9 +8410,9 @@ fn emeritus_of_ideation_back_face_draws_three() {
     let hand_before = g.players[0].hand.len();
     let lib_before = g.players[0].library.len();
 
-    // Cast the back face Ancestral Recall — costs {U}.
+    // Cast the back face Ancestral Recall — costs {U}. Target self to draw 3.
     g.perform_action(GameAction::CastSpellBack {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: Some(Target::Player(0)), mode: None, x_value: None,
     })
     .expect("Ancestral Recall castable for {U}");
     drain_stack(&mut g);
@@ -8359,6 +8420,31 @@ fn emeritus_of_ideation_back_face_draws_three() {
     // Net: -1 cast +3 draw = +2 hand. Library -3.
     assert_eq!(g.players[0].hand.len(), hand_before - 1 + 3);
     assert_eq!(g.players[0].library.len(), lib_before - 3);
+}
+
+// Push: Ancestral Recall back face draws for the *targeted* player, not the
+// caster. Aiming at the opponent makes them draw 3 (and is rarely the right
+// play, but exercises the target_filtered(Player) wiring).
+#[test]
+fn emeritus_of_ideation_ancestral_recall_targets_opponent() {
+    let mut g = two_player_game();
+    for _ in 0..5 { g.add_card_to_library(1, catalog::island()); }
+    let id = g.add_card_to_hand(0, catalog::emeritus_of_ideation());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    let opp_hand_before = g.players[1].hand.len();
+    let opp_lib_before = g.players[1].library.len();
+    let caster_hand_before = g.players[0].hand.len();
+
+    g.perform_action(GameAction::CastSpellBack {
+        card_id: id, target: Some(Target::Player(1)), mode: None, x_value: None,
+    })
+    .expect("Ancestral Recall castable for {U}");
+    drain_stack(&mut g);
+
+    // Opp drew 3; caster lost the cast card (no draw on their side).
+    assert_eq!(g.players[1].hand.len(), opp_hand_before + 3);
+    assert_eq!(g.players[1].library.len(), opp_lib_before - 3);
+    assert_eq!(g.players[0].hand.len(), caster_hand_before - 1);
 }
 
 #[test]

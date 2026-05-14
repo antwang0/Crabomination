@@ -2642,6 +2642,7 @@ fn eyetwitch_brood_grows_when_another_pest_dies() {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     };
     let pest_id = g.add_card_to_battlefield(0, pest_def);
     g.clear_sickness(pest_id);
@@ -3369,10 +3370,9 @@ fn tenured_inkcaster_anthem_expires_when_inkcaster_leaves_play() {
 
 #[test]
 fn symmathematics_enters_with_two_plus_one_counters() {
-    // ETB AddCounter(+2) brings base 1/1 → 3/3 (1/1 + 2 +1/+1 counters).
-    // (Engine approximation: base bumped 0/0 → 1/1 to avoid SBA death
-    // pre-ETB. The +2 counter ETB then layers on top, matching the
-    // Pterafractyl pattern.)
+    // CR 614.12 enters-with replacement now places counters BEFORE the
+    // first SBA check, so the printed 0/0 base body survives ETB:
+    // 0/0 + 2 +1/+1 counters → 2/2.
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::symmathematics());
     g.players[0].mana_pool.add(Color::Green, 1);
@@ -3384,9 +3384,9 @@ fn symmathematics_enters_with_two_plus_one_counters() {
     .expect("Symmathematics castable for {1}{G}{U}");
     drain_stack(&mut g);
     let card = g.battlefield_find(id).unwrap();
-    assert_eq!(card.power(), 3,
-        "Symmathematics enters as 3/3 (engine-bumped 1/1 base + 2 counters)");
-    assert_eq!(card.toughness(), 3);
+    assert_eq!(card.power(), 2,
+        "Symmathematics enters as 2/2 (printed 0/0 + 2 +1/+1 counters per CR 614.12)");
+    assert_eq!(card.toughness(), 2);
     // Verify the counter count is exactly 2.
     let count = *card.counters.get(&CounterType::PlusOnePlusOne).unwrap_or(&0);
     assert_eq!(count, 2, "ETB places exactly 2 +1/+1 counters");
@@ -3404,8 +3404,8 @@ fn symmathematics_doubles_counters_on_instant_cast() {
     })
     .expect("Symmathematics castable");
     drain_stack(&mut g);
-    assert_eq!(g.battlefield_find(id).unwrap().power(), 3);
-    // Cast a Bolt: magecraft doubles 2 → 4 counters → 5/5 body (1/1 + 4).
+    assert_eq!(g.battlefield_find(id).unwrap().power(), 2);
+    // Cast a Bolt: magecraft doubles 2 → 4 counters → 4/4 body (0/0 + 4).
     let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
     g.players[0].mana_pool.add(Color::Red, 1);
     g.perform_action(GameAction::CastSpell {
@@ -3414,9 +3414,9 @@ fn symmathematics_doubles_counters_on_instant_cast() {
     .expect("Bolt castable for {R}");
     drain_stack(&mut g);
     let after = g.battlefield_find(id).unwrap();
-    assert_eq!(after.power(), 5,
-        "After one magecraft fire, 2 → 4 counters → 1/1 + 4 = 5/5");
-    assert_eq!(after.toughness(), 5);
+    assert_eq!(after.power(), 4,
+        "After one magecraft fire, 2 → 4 counters → 0/0 + 4 = 4/4");
+    assert_eq!(after.toughness(), 4);
 }
 
 #[test]
@@ -5101,6 +5101,7 @@ fn zero_damage_does_not_trigger_damage_events_per_cr_120_8() {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     };
 
     let mut g = two_player_game();
@@ -5179,6 +5180,7 @@ fn zero_scry_does_not_trigger_scry_events_per_cr_701_22b() {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     };
 
     let mut g = two_player_game();

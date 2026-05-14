@@ -207,6 +207,7 @@ fn artifact_land(
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -273,5 +274,6 @@ pub fn darksteel_citadel() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }

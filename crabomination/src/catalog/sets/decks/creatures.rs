@@ -64,6 +64,7 @@ pub fn callous_sell_sword() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -106,6 +107,7 @@ pub fn chancellor_of_the_tangle() -> CardDefinition {
                 pool: ManaPayload::Colors(vec![Color::Green]),
             },
         }),
+        enters_with_counters: None,
     }
 }
 
@@ -140,6 +142,7 @@ pub fn cosmogoyf() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -172,6 +175,7 @@ pub fn devourer_of_destiny() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -228,6 +232,7 @@ pub fn atraxa_grand_unifier() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -274,6 +279,7 @@ pub fn griselbrand() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -353,6 +359,7 @@ pub fn psychic_frog() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -388,6 +395,7 @@ pub fn quantum_riddler() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -441,6 +449,7 @@ pub fn solitude() -> CardDefinition {
         }),
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -491,6 +500,7 @@ pub fn chancellor_of_the_annex() -> CardDefinition {
                 count: Value::Const(1),
             },
         }),
+        enters_with_counters: None,
     }
 }
 
@@ -528,6 +538,7 @@ pub fn elesh_norn_mother_of_machines() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }
 
@@ -604,5 +615,6 @@ pub fn teferi_time_raveler() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        enters_with_counters: None,
     }
 }

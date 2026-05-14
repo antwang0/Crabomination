@@ -170,9 +170,15 @@ for sec in [
     "Lorehold (Red-White)", "Colorless",
 ]:
     counts = per_section_status.get(sec, {})
+    # Priority order: ✅ wins over 🟡 wins over ⏳. A status cell like
+    # "✅ (was 🟡)" counts only as ✅. Same precedence as the doc legend
+    # and matches the STX audit's bucketing logic.
     ok = sum(v for k, v in counts.items() if "✅" in k)
-    prt = sum(v for k, v in counts.items() if "🟡" in k)
-    todo = sum(v for k, v in counts.items() if "⏳" in k)
+    prt = sum(v for k, v in counts.items() if "🟡" in k and "✅" not in k)
+    todo = sum(
+        v for k, v in counts.items()
+        if "⏳" in k and "✅" not in k and "🟡" not in k
+    )
     tot = ok + prt + todo
     total_ok += ok
     total_prt += prt
