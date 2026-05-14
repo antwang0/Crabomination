@@ -48,6 +48,14 @@ pub struct EffectContext {
     /// (Increment / Opus payoffs). Computed at cast time and
     /// threaded through `StackItem::Spell` / `StackItem::Trigger`.
     pub mana_spent: u32,
+    /// The resolving spell's printed name. Stamped by
+    /// `for_spell_with_source` so predicates that need to introspect the
+    /// spell's name (e.g. `Predicate::SameNamedInZoneAtLeast` for
+    /// Dragon's Approach's "same name in your graveyard" rider) can
+    /// read it directly — the card itself is in transient ownership
+    /// during spell resolution and isn't present in any visible zone,
+    /// so a zone-walking lookup wouldn't find it.
+    pub source_name: Option<&'static str>,
 }
 
 impl EffectContext {
@@ -61,11 +69,23 @@ impl EffectContext {
             x_value,
             converged_value: 0,
             mana_spent: 0,
+            source_name: None,
         }
     }
-    /// Spell-resolution context with all cast-time scalars (X, Converge,
-    /// total mana spent) threaded in.
-    pub fn for_spell_with_mana(
+    /// Spell-resolution context with the resolving spell's
+    /// `CardId` + printed name stamped onto `ctx.source` /
+    /// `ctx.source_name` and all cast-time scalars (X, Converge, total
+    /// mana spent) threaded in. Lets predicates that introspect the
+    /// resolving spell (e.g. `Predicate::SameNamedInZoneAtLeast` for
+    /// Dragon's Approach's "same name in your graveyard" rider) read
+    /// the spell's identity without needing to find the card in any
+    /// game zone — during spell resolution the card is in transient
+    /// ownership (popped from the stack, not yet placed in graveyard),
+    /// so a zone-walking lookup would fail.
+    #[allow(clippy::too_many_arguments)]
+    pub fn for_spell_with_source(
+        spell_card: CardId,
+        spell_name: &'static str,
         caster: usize,
         target: Option<Target>,
         mode: usize,
@@ -75,13 +95,14 @@ impl EffectContext {
     ) -> Self {
         Self {
             controller: caster,
-            source: None,
+            source: Some(spell_card),
             targets: target.into_iter().collect(),
             trigger_source: None,
             mode,
             x_value,
             converged_value,
             mana_spent,
+            source_name: Some(spell_name),
         }
     }
     pub fn for_trigger(
@@ -99,6 +120,7 @@ impl EffectContext {
             x_value: 0,
             converged_value: 0,
             mana_spent: 0,
+            source_name: None,
         }
     }
     pub fn for_ability(
@@ -115,6 +137,7 @@ impl EffectContext {
             x_value: 0,
             converged_value: 0,
             mana_spent: 0,
+            source_name: None,
         }
     }
 }
@@ -485,6 +508,15 @@ impl GameState {
                 use crate::decision::Decision;
                 let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
                 let n = self.evaluate_value(amount, ctx).max(0) as usize;
+                // CR 701.22b: "If a player is instructed to scry 0, no
+                // scry event occurs. Abilities that trigger whenever a
+                // player scries won't trigger." (Same wording covers
+                // Surveil 0 via 701.42 by reference.) An instruction
+                // of `n == 0` short-circuits at the top so no decision
+                // / event flows downstream.
+                if n == 0 {
+                    return Ok(());
+                }
                 let peek: Vec<(CardId, String)> = self.players[p]
                     .library
                     .iter()
@@ -492,6 +524,17 @@ impl GameState {
                     .map(|c| (c.id, c.definition.name.to_string()))
                     .collect();
                 let actual = peek.len();
+                // Per CR 701.22a, if the library has fewer cards than
+                // requested, the player looks at and may rearrange the
+                // available cards — the scry instruction still
+                // executes. Only return early when there are literally
+                // no cards to peek at (e.g. empty library + Scry N>0
+                // is still a vacuous-but-real scry; we model that by
+                // proceeding to emit the bookkeeping path). For
+                // simplicity if `actual == 0` we still skip the
+                // decision (no cards to reorder) but acknowledge the
+                // event happened; future scry-counting payoffs would
+                // need an explicit event emission here.
                 if actual == 0 {
                     return Ok(());
                 }

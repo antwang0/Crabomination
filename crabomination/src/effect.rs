@@ -350,6 +350,14 @@ pub enum Predicate {
     /// Evaluated against `ctx.source` (the listening permanent) at
     /// trigger-evaluation time.
     IncrementSatisfied,
+    /// True if `who`'s `zone` contains at least `at_least` cards whose
+    /// `definition.name` matches the resolving spell's name. Used by
+    /// Dragon's Approach's "if you have four or more cards named Dragon's
+    /// Approach in your graveyard, search your library for a Dragon
+    /// creature card" rider. The name is read from
+    /// `EffectContext.source_name` (the resolving spell's name); when no
+    /// source is available the predicate is `False`.
+    SameNamedInZoneAtLeast { who: PlayerRef, zone: Zone, at_least: Value },
 }
 
 // ── Duration ─────────────────────────────────────────────────────────────────

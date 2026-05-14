@@ -11,6 +11,24 @@ Periodic spot-check of the rules document
 (`crabomination/MagicCompRules 20260116.txt`). Each rule below has a
 status tag (✅ wired, 🟡 partial, ⏳ todo) plus a short note.
 
+- ✅ **CR 701.22b — Scry 0 emits no scry event** (push XXXVIII audit):
+  "If a player is instructed to scry 0, no scry event occurs. Abilities
+  that trigger whenever a player scries won't trigger." Push XXXVIII
+  promotes the `Effect::Scry` / `Effect::Surveil` / `Effect::LookAtTop`
+  handler in `game/effects/mod.rs:506` to short-circuit at the top
+  when the evaluated amount is 0 (`if n == 0 { return Ok(()); }`).
+  Previously the handler used `if actual == 0` (peek-result length),
+  which conflated the "instruction-is-0" case with the "library has
+  no cards" case — that conflation is now explicit, with a separate
+  comment noting CR 701.22a (fewer cards than requested still
+  executes a vacuous scry). The promoted short-circuit means no
+  `Decision::Scry` is asked of the decider, no `GameEvent::ScryPerformed`
+  rides out of `drain_stack`, and any "whenever you scry" trigger
+  would not fire. Test:
+  `zero_scry_does_not_trigger_scry_events_per_cr_701_22b` synthesizes
+  a `{U}: Scry 0` instant and asserts no `ScryPerformed` event and
+  unchanged library order.
+
 - ✅ **CR 120.8 — 0-damage event suppression** (push XXXVII audit): "If
   a source would deal 0 damage, it does not deal damage at all. That
   means abilities that trigger on damage being dealt won't trigger. It
@@ -409,6 +427,32 @@ status tag (✅ wired, 🟡 partial, ⏳ todo) plus a short note.
 
 ## Suggested next-up tasks
 
+- ⏳ **`StaticEffect::ConditionalPumpPT { condition, power, toughness,
+  keywords }` — generalized compute-time conditional anthem** — push
+  XXXVIII wires Ulna Alley Shopkeep's Infusion `+2/+0` rider as a
+  hardcoded `if name == "Ulna Alley Shopkeep" && lifegain > 0` branch
+  in `GameState::compute_battlefield` (same pattern as Honor Troll).
+  Both are duplicated, so a generalized primitive should consolidate.
+  Suggested shape: a new `StaticEffect::ConditionalSelfPump { condition:
+  Predicate, power, toughness, keywords }` that emits the layer-6/7b
+  modifications via the existing `static_ability_to_effects` path,
+  gated on the predicate. Once landed, the Honor Troll and Ulna Alley
+  Shopkeep table entries collapse to a clean static factory; the
+  primitive also unblocks any future "as long as X, this creature has
+  +N/+M and gains Y" cycle (a recurring SOS/STX shape).
+
+- ⏳ **`Effect::DiscardThisManyDrawSame` — track-discarded-by-this-effect
+  counter** — Borrowed Knowledge's mode 1 ("Discard your hand, then
+  draw cards equal to the number of cards discarded this way."),
+  Colossus of the Blood Age's die-trigger ("discard any number, draw
+  that many plus one"), and Mind Roots's "the land you discarded"
+  rider all need to know how many cards were just discarded by the
+  current resolution. Suggested shape: stash a per-resolution counter
+  on `EffectContext` that the discard handler bumps, then a paired
+  `Value::CardsDiscardedThisEffect` reader. Same primitive collapses
+  the Borrowed Knowledge mode 1 approximation (currently flat draw 7)
+  to the correct "draw your-hand-at-cast-time" math.
+
 - ⏳ **Snarl-land reveal mechanic** — push XXXVII added the five
   Strixhaven Snarl dual lands (Frostboil / Furycalm / Necroblossom /
   Shineshadow / Vineglimmer) via the `snarl_land()` helper which
@@ -423,18 +467,25 @@ status tag (✅ wired, 🟡 partial, ⏳ todo) plus a short note.
   reveal" when a matching card is in hand. Same primitive would
   unblock the Throne of Eldraine Battle Mammoth-style ETB reveals.
 
-- ⏳ **`Predicate::SameNamedInZoneAtLeast(zone, n)` — graveyard same-
-  name count predicate (Dragon's Approach)** — push XXXVII ships
-  Dragon's Approach as a {B} 3-to-any-target burn spell. The
-  printed "if 4+ copies in your graveyard, tutor a Dragon" rider
-  needs a predicate that walks the controller's graveyard counting
-  cards with the *same name* as the resolving spell. Wiring needs:
-  (a) a new `Predicate::SameNamedInZoneAtLeast { zone, n }` whose
-  filter compares `c.definition.name == ctx.source_name`;
-  (b) the predicate exposed to `Effect::If`'s cond field. Once
-  landed, Dragon's Approach's gy-tutor rider can chain via
-  `Effect::If { cond: SameNamedInZoneAtLeast(Graveyard, 4), then:
-  Search { filter: HasCreatureType(Dragon), to: Battlefield } }`.
+- ✅ **`Predicate::SameNamedInZoneAtLeast { who, zone, at_least }` —
+  graveyard same-name count predicate (Dragon's Approach)** — push
+  XXXVIII lands the predicate + the spell-resolution context channel
+  needed to read the resolving spell's printed name. Wiring landed:
+  (a) new `Predicate::SameNamedInZoneAtLeast { who, zone, at_least }`
+  evaluator in `game/effects/eval.rs` that reads the spell name from
+  `EffectContext.source_name` and counts matches in `who`'s `zone`;
+  (b) new `EffectContext.source_name: Option<&'static str>` field +
+  `for_spell_with_source` constructor that stamps both the spell
+  CardId and printed name at resolution time; (c) `continue_spell_
+  resolution` now uses `for_spell_with_source` so every spell's
+  effect tree can read its own name. Dragon's Approach's gy-tutor
+  rider is wired via `Effect::If { cond: SameNamedInZoneAtLeast(You,
+  Graveyard, 4), then: Search { filter: Creature & Dragon, to:
+  Battlefield } }`. Tests:
+  `dragons_approach_tutors_dragon_with_four_in_graveyard` (scripted
+  decider picks the Dragon),
+  `dragons_approach_does_not_offer_tutor_without_four_named_in_graveyard`
+  (the gate fails the predicate cleanly).
 
 - ⏳ **`Effect::CopyUnlessPaid { what, mana_cost }` — opp-spell tax-or-
   copy gate (Wandering Archaic)** — push XXXVI lands the body of

@@ -2300,6 +2300,7 @@ pub fn hungry_graffalon() -> CardDefinition {
 /// creature, …" rider (oracle previously truncated) stays omitted
 /// pending re-fetch.
 pub fn pensive_professor() -> CardDefinition {
+    use crate::card::CounterType;
     use crate::effect::shortcut::increment_self_plus_one;
     use crate::mana::u;
     CardDefinition {
@@ -2316,7 +2317,28 @@ pub fn pensive_professor() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![increment_self_plus_one()],
+        triggered_abilities: vec![
+            increment_self_plus_one(),
+            // Secondary rider: "Whenever one or more +1/+1 counters are
+            // put on this creature, you may draw a card." Wired via
+            // `EventKind::CounterAdded(PlusOnePlusOne)` + `SelfSource`
+            // event scope so it only fires when counters land on the
+            // Professor itself. Wrapped in `Effect::MayDo` to honor the
+            // printed "you may" optionality.
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::CounterAdded(CounterType::PlusOnePlusOne),
+                    EventScope::SelfSource,
+                ),
+                effect: Effect::MayDo {
+                    description: "Draw a card?".into(),
+                    body: Box::new(Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::Const(1),
+                    }),
+                },
+            },
+        ],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -3248,10 +3270,14 @@ pub fn hydro_channeler() -> CardDefinition {
 /// creatures.) / Infusion — This creature gets +2/+0 as long as you
 /// gained life this turn."
 ///
-/// Body-only wire: menace is keyworded; the static "+2/+0 while you've
-/// gained life this turn" rider needs a continuous-static-on-predicate
-/// primitive (tracked in TODO.md) and is omitted. The 2/3 menace body
-/// alone is still a useful Witherbloom evasion threat.
+/// ✅ Menace keyworded on the body; the conditional Infusion `+2/+0`
+/// rider is wired via a compute-time injection in
+/// `GameState::compute_battlefield` (same pattern as Honor Troll):
+/// when `Player.life_gained_this_turn > 0`, layer 7b adds
+/// `ModifyPowerToughness(+2, +0)` targeting the source. The gate
+/// re-evaluates every recompute, so a mid-turn lifegain flips it on
+/// (Shopkeep goes 2/3 → 4/3) and `do_untap` resets the tally at the
+/// next untap step, dropping back to 2/3.
 pub fn ulna_alley_shopkeep() -> CardDefinition {
     CardDefinition {
         name: "Ulna Alley Shopkeep",
@@ -4635,6 +4661,7 @@ pub fn ral_zarek_guest_lecturer() -> CardDefinition {
 /// omitted (no per-cast mana-spent introspection — same gap as
 /// Pensive Professor / Hungry Graffalon / Tester of the Tangential).
 pub fn textbook_tabulator() -> CardDefinition {
+    use crate::effect::shortcut::increment_self_plus_one;
     use crate::mana::u;
     CardDefinition {
         name: "Textbook Tabulator",
@@ -4650,13 +4677,22 @@ pub fn textbook_tabulator() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::Surveil {
-                who: PlayerRef::You,
-                amount: Value::Const(2),
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: Effect::Surveil {
+                    who: PlayerRef::You,
+                    amount: Value::Const(2),
+                },
             },
-        }],
+            // Increment rider: "Whenever you cast a spell, if the amount
+            // of mana you spent is greater than this creature's power or
+            // toughness, put a +1/+1 counter on this creature." Uses the
+            // shared `increment_self_plus_one()` shortcut so the
+            // SBA-tracked Frog grows into a real 3-toughness wall the
+            // longer the spellslinger game runs.
+            increment_self_plus_one(),
+        ],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],

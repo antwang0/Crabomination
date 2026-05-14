@@ -275,6 +275,52 @@ impl GameState {
                 }
                 ctx.mana_spent >= *min
             }
+            Predicate::SameNamedInZoneAtLeast { who, zone, at_least } => {
+                // Read the resolving spell's printed name from
+                // `ctx.source_name` (stamped by `for_spell_with_source`).
+                // During spell resolution the card is in transient
+                // ownership and not present in any visible zone, so
+                // zone-walking lookups would fail — `source_name` is
+                // the reliable channel. Fall back to `False` when no
+                // name is stashed (an ad-hoc effect resolution without
+                // a spell anchor).
+                let Some(target_name) = ctx.source_name else {
+                    return false;
+                };
+                let Some(seat) = self.resolve_player(who, ctx) else {
+                    return false;
+                };
+                let n = self.evaluate_value(at_least, ctx).max(0) as usize;
+                let count = match zone {
+                    crate::card::Zone::Graveyard => self.players[seat]
+                        .graveyard
+                        .iter()
+                        .filter(|c| c.definition.name == target_name)
+                        .count(),
+                    crate::card::Zone::Hand => self.players[seat]
+                        .hand
+                        .iter()
+                        .filter(|c| c.definition.name == target_name)
+                        .count(),
+                    crate::card::Zone::Library => self.players[seat]
+                        .library
+                        .iter()
+                        .filter(|c| c.definition.name == target_name)
+                        .count(),
+                    crate::card::Zone::Exile => self
+                        .exile
+                        .iter()
+                        .filter(|c| c.owner == seat && c.definition.name == target_name)
+                        .count(),
+                    crate::card::Zone::Battlefield => self
+                        .battlefield
+                        .iter()
+                        .filter(|c| c.controller == seat && c.definition.name == target_name)
+                        .count(),
+                    crate::card::Zone::Stack | crate::card::Zone::Command => 0,
+                };
+                count >= n
+            }
             Predicate::IncrementSatisfied => {
                 // SOS Increment: "Whenever you cast a spell, if the
                 // amount of mana you spent is greater than this

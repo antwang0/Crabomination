@@ -8689,3 +8689,183 @@ fn elemental_mascot_opus_small_body_pumps_one_zero_eot() {
     assert_eq!(c.power(), 2, "Small body adds +1 power EOT (1 → 2)");
     assert_eq!(c.toughness(), 4, "Toughness unchanged (+0)");
 }
+
+// ── Push XXXVIII: Increment / CounterAdded promotions ──────────────────────
+
+/// Pensive Professor's secondary rider: "Whenever one or more +1/+1
+/// counters are put on this creature, you may draw a card." Cast a
+/// 2-mana spell with the 0/2 Professor on the battlefield — Increment
+/// drops a +1/+1 counter (mana_spent 2 > 0 power) → CounterAdded
+/// trigger fires → controller draws (scripted Yes on the `may`).
+#[test]
+fn pensive_professor_secondary_counter_trigger_draws_a_card() {
+    let mut g = two_player_game();
+    // Pre-install a scripted decider that says Yes to the "may draw" prompt.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+
+    let prof = place_creature(&mut g, 0, catalog::pensive_professor());
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_library(0, catalog::island());
+
+    let bears = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let hand_before = g.players[0].hand.len();
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: bears, target: None, mode: None, x_value: None,
+    })
+    .expect("Bears castable for {1}{G}");
+    drain_stack(&mut g);
+
+    // Increment should land a counter (2 > 0 power).
+    let c = g.battlefield_find(prof).expect("Professor alive");
+    assert_eq!(
+        c.counter_count(CounterType::PlusOnePlusOne),
+        1,
+        "Increment should land a +1/+1 counter on Pensive Professor"
+    );
+    // hand_before counts Bears in hand; after cast Bears becomes a
+    // permanent (no longer in hand). CounterAdded MayDo trigger fires
+    // and draws 1 → net hand size = hand_before.
+    assert_eq!(
+        g.players[0].hand.len(),
+        hand_before,
+        "Hand should be net 0 (cast Bears -1, drew +1 from CounterAdded)"
+    );
+}
+
+/// Pensive Professor's secondary rider defaults to no-draw under the
+/// auto-decider (the printed "you may" makes the draw opt-in). The
+/// counter still lands.
+#[test]
+fn pensive_professor_secondary_counter_trigger_skips_under_auto_decider() {
+    let mut g = two_player_game();
+    let prof = place_creature(&mut g, 0, catalog::pensive_professor());
+    g.add_card_to_library(0, catalog::island());
+
+    let bears = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let hand_before = g.players[0].hand.len();
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: bears, target: None, mode: None, x_value: None,
+    })
+    .expect("Bears castable for {1}{G}");
+    drain_stack(&mut g);
+
+    let c = g.battlefield_find(prof).expect("Professor alive");
+    assert_eq!(
+        c.counter_count(CounterType::PlusOnePlusOne),
+        1,
+        "Increment counter still lands without the optional draw"
+    );
+    // Bears moved from hand to battlefield (- 1). No draw under auto.
+    assert_eq!(
+        g.players[0].hand.len(),
+        hand_before - 1,
+        "Default auto-decider declines the optional draw"
+    );
+}
+
+/// Textbook Tabulator's Increment: cast a 4-mana spell with the 0/3
+/// Frog Wizard on the battlefield. mana_spent 4 > toughness 3 → +1/+1
+/// counter lands.
+#[test]
+fn textbook_tabulator_increment_buffs_self_on_big_spell() {
+    let mut g = two_player_game();
+    let tab = place_creature(&mut g, 0, catalog::textbook_tabulator());
+    // 5-mana spell to definitely beat the 0/3.
+    let mascot = g.add_card_to_hand(0, catalog::mascot_exhibition());
+    // {5}{W}{W} = 7 generic + 2 white.
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(5);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: mascot, target: None, mode: None, x_value: None,
+    })
+    .expect("Mascot Exhibition castable for {5}{W}{W}");
+    drain_stack(&mut g);
+
+    let c = g.battlefield_find(tab).expect("Tabulator alive");
+    assert_eq!(
+        c.counter_count(CounterType::PlusOnePlusOne),
+        1,
+        "Increment should fire on 7-mana spell vs 0/3 Tabulator"
+    );
+}
+
+/// Potioner's Trove — `{T}: You gain 2 life. Activate only if you've
+/// cast an instant or sorcery spell this turn.` The conditional gate
+/// rejects the activation before tap is paid when the tally is 0;
+/// after casting any IS spell this turn it succeeds.
+#[test]
+fn potioners_trove_lifegain_requires_is_cast_this_turn() {
+    let mut g = two_player_game();
+    let trove = g.add_card_to_battlefield(0, catalog::potioners_trove());
+    g.clear_sickness(trove);
+    let life_before = g.players[0].life;
+
+    // Ability index 1 = lifegain activation. With 0 IS casts, the
+    // condition rejects.
+    let err = g.perform_action(GameAction::ActivateAbility {
+        card_id: trove, ability_index: 1, target: None,
+    });
+    assert!(err.is_err(), "Lifegain activation should be rejected without an IS cast this turn");
+    assert_eq!(g.players[0].life, life_before, "No life gained on rejected activation");
+
+    // Cast a Bolt to bump the IS-cast tally to 1.
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        mode: None, x_value: None,
+    })
+    .expect("Bolt castable for {R}");
+    drain_stack(&mut g);
+
+    // Now the lifegain activation succeeds.
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: trove, ability_index: 1, target: None,
+    })
+    .expect("Lifegain activation should succeed after casting an IS spell");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.players[0].life, life_before + 2,
+        "Lifegain activation grants 2 life when the gate is open"
+    );
+}
+
+/// Ulna Alley Shopkeep — base body without lifegain is 2/3.
+#[test]
+fn ulna_alley_shopkeep_no_lifegain_is_two_three() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::ulna_alley_shopkeep());
+    let c = g.battlefield_find(id).expect("Shopkeep on battlefield");
+    assert_eq!(c.power(), 2, "Base power 2 without lifegain");
+    assert_eq!(c.toughness(), 3, "Base toughness 3");
+    assert!(c.has_keyword(&Keyword::Menace), "Menace keyword");
+}
+
+/// Ulna Alley Shopkeep — with lifegain this turn, the Infusion +2/+0
+/// rider injects via the compute-time gate, making the Shopkeep a 4/3.
+#[test]
+fn ulna_alley_shopkeep_with_lifegain_is_four_three() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::ulna_alley_shopkeep());
+    // Simulate lifegain this turn by bumping the tally directly.
+    g.players[0].life_gained_this_turn = 1;
+    let c = g.battlefield_find(id).expect("Shopkeep on battlefield");
+    let computed = g.computed_permanent(id).expect("Shopkeep computed");
+    assert_eq!(
+        computed.power, 4,
+        "+2 from Infusion gate (2 base + 2 = 4 computed power), card.power() = {}",
+        c.power()
+    );
+    assert_eq!(computed.toughness, 3, "Toughness unchanged (+0)");
+    assert!(
+        computed.keywords.contains(&Keyword::Menace),
+        "Menace persists"
+    );
+}

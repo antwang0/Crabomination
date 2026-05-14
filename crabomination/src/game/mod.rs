@@ -387,6 +387,23 @@ impl GameState {
                     modification: Modification::AddKeyword(crate::card::Keyword::Lifelink),
                 });
             }
+            // Ulna Alley Shopkeep (SOS, this push): "Infusion — This
+            // creature gets +2/+0 as long as you gained life this
+            // turn." Same compute-time gate as Honor Troll above, but
+            // only the +2/+0 pump (no Lifelink rider on this body).
+            if name == "Ulna Alley Shopkeep"
+                && self.players[card.controller].life_gained_this_turn > 0
+            {
+                all_effects.push(ContinuousEffect {
+                    timestamp: card.id.0 as u64,
+                    source: card.id,
+                    affected: AffectedPermanents::Source,
+                    layer: Layer::L7PowerTough,
+                    sublayer: Some(PtSublayer::Modify),
+                    duration: EffectDuration::WhileSourceOnBattlefield,
+                    modification: Modification::ModifyPowerToughness(2, 0),
+                });
+            }
             // Tribal anthems (push XXXI refactor): consolidate the
             // per-card "Other [type]s you control get +N/+M" pattern
             // into the helper `tribal_anthem_for_name`. Adding a new
@@ -845,6 +862,7 @@ impl GameState {
                     x_value: 0,
                     converged_value: 0,
                     mana_spent: 0,
+                    source_name: None,
                 };
                 if !self.evaluate_predicate(&filter, &ctx) {
                     continue;
@@ -1428,8 +1446,8 @@ impl GameState {
         override_effect: Option<Effect>,
     ) -> Result<Vec<GameEvent>, GameError> {
         let effect = override_effect.unwrap_or_else(|| card.definition.effect.clone());
-        let ctx = EffectContext::for_spell_with_mana(
-            caster, target.clone(), mode, x_value, converged_value, mana_spent,
+        let ctx = EffectContext::for_spell_with_source(
+            card.id, card.definition.name, caster, target.clone(), mode, x_value, converged_value, mana_spent,
         );
         let events = self.resolve_effect(&effect, &ctx)?;
         if let Some((decision, in_progress, remaining)) = self.suspend_signal.take() {
@@ -1608,6 +1626,41 @@ impl GameState {
 
     pub(crate) fn battlefield_find_mut(&mut self, id: CardId) -> Option<&mut CardInstance> {
         self.battlefield.iter_mut().find(|c| c.id == id)
+    }
+
+    /// Look up a card instance by id across every visible zone in
+    /// resolution order — battlefield → each player's graveyard / hand /
+    /// library → exile → stack. General-purpose helper for predicates
+    /// or effects that need to introspect a card regardless of where
+    /// it currently lives. Currently surfaced for the test suite
+    /// (`#[allow(dead_code)]` keeps it warning-free until callers land).
+    #[allow(dead_code)]
+    pub(crate) fn find_card_anywhere(&self, id: CardId) -> Option<&CardInstance> {
+        if let Some(c) = self.battlefield_find(id) {
+            return Some(c);
+        }
+        for p in &self.players {
+            if let Some(c) = p.graveyard.iter().find(|c| c.id == id) {
+                return Some(c);
+            }
+            if let Some(c) = p.hand.iter().find(|c| c.id == id) {
+                return Some(c);
+            }
+            if let Some(c) = p.library.iter().find(|c| c.id == id) {
+                return Some(c);
+            }
+        }
+        if let Some(c) = self.exile.iter().find(|c| c.id == id) {
+            return Some(c);
+        }
+        for si in &self.stack {
+            if let crate::game::types::StackItem::Spell { card, .. } = si
+                && card.id == id
+            {
+                return Some(card);
+            }
+        }
+        None
     }
 
     /// Look up the owner (seat index) of `id` across every public zone:

@@ -5148,6 +5148,63 @@ fn zero_damage_does_not_trigger_damage_events_per_cr_120_8() {
     );
 }
 
+/// CR 701.22b — "If a player is instructed to scry 0, no scry event
+/// occurs. Abilities that trigger whenever a player scries won't
+/// trigger." Validate the `Effect::Scry` short-circuit on
+/// `amount: Value::Const(0)` — no `GameEvent::ScryPerformed` should
+/// be emitted, and the library order is unchanged.
+#[test]
+fn zero_scry_does_not_trigger_scry_events_per_cr_701_22b() {
+    use crate::card::{CardDefinition, CardType, Effect, Subtypes, Value};
+    use crate::effect::PlayerRef;
+    use crate::game::GameEvent;
+    use crate::mana::cost;
+
+    // Synthetic "{U}: scry 0" instant.
+    let zero_scry = CardDefinition {
+        name: "Zero Scry",
+        cost: cost(&[crate::mana::u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Scry { who: PlayerRef::You, amount: Value::Const(0) },
+        activated_abilities: vec![],
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    };
+
+    let mut g = two_player_game();
+    // Seed the library so a Scry 1 would have something to look at.
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_library(0, catalog::island());
+    let lib_snapshot: Vec<_> = g.players[0].library.iter().map(|c| c.id).collect();
+
+    let id = g.add_card_to_hand(0, zero_scry);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Zero Scry castable for {U}");
+    let events = drain_stack(&mut g);
+
+    let any_scry_event = events.iter().any(|e| matches!(e, GameEvent::ScryPerformed { .. }));
+    assert!(
+        !any_scry_event,
+        "CR 701.22b — no ScryPerformed event should fire on Scry 0"
+    );
+    // Library order must be unchanged.
+    let lib_after: Vec<_> = g.players[0].library.iter().map(|c| c.id).collect();
+    assert_eq!(lib_after, lib_snapshot, "Library order unchanged");
+}
+
 /// Cram Session: gain 5 life at instant speed and the card has
 /// Keyword::Flashback({5}{W}).
 #[test]
@@ -5177,3 +5234,90 @@ fn cram_session_gains_five_life_and_has_flashback() {
     let has_flashback = card.keywords.iter().any(|k| matches!(k, Keyword::Flashback(_)));
     assert!(has_flashback, "Cram Session should carry Keyword::Flashback");
 }
+
+// ── Push XXXVIII: Dragon's Approach tutor rider ─────────────────────────────
+
+/// With four copies of Dragon's Approach already in the controller's
+/// graveyard, casting another should hit the gy-tutor rider and pull a
+/// Dragon creature card from the library onto the battlefield. The 3
+/// damage half also fires.
+#[test]
+fn dragons_approach_tutors_dragon_with_four_in_graveyard() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    // Seed graveyard with four named copies.
+    for _ in 0..4 {
+        let cid = g.add_card_to_library(0, catalog::dragons_approach());
+        let pos = g.players[0]
+            .library
+            .iter()
+            .position(|c| c.id == cid)
+            .unwrap();
+        let card = g.players[0].library.remove(pos);
+        g.players[0].graveyard.push(card);
+    }
+    // Seed library with a Dragon creature for the tutor to find.
+    let dragon_id = g.add_card_to_library(0, catalog::lorehold_the_historian());
+    g.add_card_to_library(0, catalog::island());
+
+    let id = g.add_card_to_hand(0, catalog::dragons_approach());
+    g.players[0].mana_pool.add(Color::Black, 1);
+
+    // Scripted decider picks the Dragon during the tutor.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(dragon_id))]));
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Player(1)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Dragon's Approach castable for {B}");
+    drain_stack(&mut g);
+
+    let on_bf = g.battlefield.iter().any(|c| c.id == dragon_id && c.controller == 0);
+    assert!(on_bf, "The chosen Dragon should be on the battlefield after Dragon's Approach tutored it");
+}
+
+/// Pure-vanilla cast — graveyard tally is below 4 → no tutor offered.
+/// The auto-decider doesn't even reach a SearchLibrary decision because
+/// the gating predicate fails first. Just verify damage half fires and
+/// the dragon stays in the library.
+#[test]
+fn dragons_approach_does_not_offer_tutor_without_four_named_in_graveyard() {
+    let mut g = two_player_game();
+    // Only three copies in gy.
+    for _ in 0..3 {
+        let cid = g.add_card_to_library(0, catalog::dragons_approach());
+        let pos = g.players[0]
+            .library
+            .iter()
+            .position(|c| c.id == cid)
+            .unwrap();
+        let card = g.players[0].library.remove(pos);
+        g.players[0].graveyard.push(card);
+    }
+    let dragon_id = g.add_card_to_library(0, catalog::lorehold_the_historian());
+
+    let id = g.add_card_to_hand(0, catalog::dragons_approach());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    let life_before = g.players[1].life;
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Player(1)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Dragon's Approach castable for {B}");
+    drain_stack(&mut g);
+
+    // Damage half always fires.
+    assert_eq!(g.players[1].life, life_before - 3, "3 damage to player still resolves");
+    // Dragon stays in library (no tutor).
+    let on_bf = g.battlefield.iter().any(|c| c.id == dragon_id);
+    assert!(!on_bf, "Tutor rider should not fire with three copies in graveyard");
+    let in_lib = g.players[0].library.iter().any(|c| c.id == dragon_id);
+    assert!(in_lib, "Dragon should still be in the library");
+}
+

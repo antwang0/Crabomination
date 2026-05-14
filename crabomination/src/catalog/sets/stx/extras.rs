@@ -3703,12 +3703,17 @@ pub fn vineglimmer_snarl() -> CardDefinition {
 /// the battlefield, then shuffle. A deck can have any number of cards
 /// named Dragon's Approach."
 ///
-/// 🟡 approximation: the first half (3 damage to any target) is wired
-/// faithfully. The "4+ named-self in gy → tutor a Dragon" rider needs
-/// a per-graveyard same-name count predicate which doesn't yet exist
-/// as a primitive. The headline play pattern (3-mana ping at any
-/// target) ships; the gy-tutor combo body is tracked in TODO.md as a
-/// future enhancement once `Predicate::SameNamedInZoneAtLeast` lands.
+/// ✅ Both halves wired. The 3 damage half uses
+/// `target_filtered(Creature ∨ Planeswalker ∨ Player)`. The "4+ in gy
+/// → tutor a Dragon" rider rides on the new
+/// `Predicate::SameNamedInZoneAtLeast { who: You, zone: Graveyard,
+/// at_least: 4 }` primitive — the engine reads the resolving spell's
+/// printed name from `EffectContext.source` (stamped by
+/// `for_spell_with_source`) and counts matches in the controller's
+/// graveyard. On hit, `Effect::Search` walks the library for a
+/// creature card with the Dragon subtype and drops it onto the
+/// battlefield untapped. The shuffle is handled implicitly by
+/// `Effect::Search` (every successful search auto-shuffles).
 pub fn dragons_approach() -> CardDefinition {
     CardDefinition {
         name: "Dragon's Approach",
@@ -3719,14 +3724,33 @@ pub fn dragons_approach() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![],
-        effect: Effect::DealDamage {
-            to: target_filtered(
-                SelectionRequirement::Creature
-                    .or(SelectionRequirement::Planeswalker)
-                    .or(SelectionRequirement::Player),
-            ),
-            amount: Value::Const(3),
-        },
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature
+                        .or(SelectionRequirement::Planeswalker)
+                        .or(SelectionRequirement::Player),
+                ),
+                amount: Value::Const(3),
+            },
+            Effect::If {
+                cond: Predicate::SameNamedInZoneAtLeast {
+                    who: PlayerRef::You,
+                    zone: crate::card::Zone::Graveyard,
+                    at_least: Value::Const(4),
+                },
+                then: Box::new(Effect::Search {
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::HasCreatureType(CreatureType::Dragon)),
+                    to: ZoneDest::Battlefield {
+                        controller: PlayerRef::You,
+                        tapped: false,
+                    },
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],

@@ -736,6 +736,7 @@ impl GameState {
                     x_value: 0,
                     converged_value: 0,
                     mana_spent: 0,
+                    source_name: None,
                 };
                 if !self.evaluate_predicate(pred, &ctx) {
                     continue;
@@ -1143,6 +1144,7 @@ impl GameState {
                     x_value: 0,
                     converged_value: 0,
                     mana_spent,
+                    source_name: None,
                 };
                 if !self.evaluate_predicate(&filter, &ctx) {
                     continue;
@@ -1486,6 +1488,7 @@ impl GameState {
                 x_value: 0,
                 converged_value: 0,
                 mana_spent: 0,
+                source_name: None,
             };
             if !self.evaluate_predicate(cond, &ctx) {
                 return Err(GameError::AbilityConditionNotMet);
