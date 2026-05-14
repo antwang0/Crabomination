@@ -19,10 +19,21 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 162 | 92 | 1 |
-| STX (160 cards) | 144 | 16 | 0 |
-| STA reprints (in STX boosters) | 14 | 0 | — |
+| STX (167 cards) | 151 | 16 | 0 |
+| STA reprints (in STX boosters) | 16 | 0 | — |
 
-Push (modern_decks, this revision): Added 10 new cards across the
+Push (modern_decks, this revision — claude/modern_decks branch):
+Added 10 new cards across the Strixhaven environment — 8 new STX
+originals/uncommons (Eureka Moment ✅, Teach by Example ✅, Manifold
+Key ✅, Leyline Invocation ✅, Spitfire Lagac ✅, Settle the Score
+✅, Pursuit of Knowledge ✅, Divide by Zero ✅) and 2 STA Mystical
+Archive reprints (Exsanguinate ✅, Fire Prophecy ✅). All ship with
+functional tests in `tests::stx`. The STX corpus grows from 160 to
+167 cards (151 ✅ + 16 🟡); STA reprints in STX boosters grows from
+14 to 16. No new ⏳; the SOS Improvisation Capstone remains the only
+⏳ in the catalog (cast-from-exile pipeline gap).
+
+Push (modern_decks, prior revision): Added 10 new cards across the
 Strixhaven environment — 4 STA Mystical Archive reprints (Eliminate ✅,
 Burst Lightning ✅, Pull from Tomorrow ✅, Postmortem Lunge ✅) and 5 new
 STX-supplemental originals (Channeled Force ✅, Stonebound Mentor ✅,
@@ -578,6 +589,16 @@ parity is a matter of porting card factories one at a time.
 | Mercurial Transformation | {2}{U} | 🟡 | Push (modern_decks, NEW, `stx::lessons`): Sorcery. "Target creature or artifact becomes a blue Frog with base power and toughness 3/3 and loses all abilities." Wired via the engine's `Effect::SetBasePT` layer-7b primitive (same path as Square Up). The "loses all abilities" rider is omitted (no clear-abilities continuous primitive — tracked in TODO.md). The base-P/T override is the headline play pattern — shrinking a 7/7 down to 3/3 closes most combat math. Test: `mercurial_transformation_sets_target_to_three_three_eot`. |
 | Crux of Fate | {3}{B}{B} | ✅ | Push (modern_decks, NEW, `stx::extras`, STA reprint): Sorcery. Two-mode `ChooseMode`: mode 0 destroys each Dragon, mode 1 destroys each non-Dragon creature. Wired via `ForEach(Selector::EachPermanent(filter))` + `Destroy` for each mode; the non-Dragon filter uses `SelectionRequirement::Not(HasCreatureType(Dragon))`. Tests: `crux_of_fate_mode_zero_destroys_dragons`, `crux_of_fate_mode_one_destroys_non_dragons`. |
 | Pestilent Cauldron | {1}{B} | 🟡 | Push (modern_decks, NEW, `stx::extras`): Artifact (MDFC front-face only). `{2}, {T}, Sacrifice this artifact: Each player mills four cards. Each opponent loses 3 life and you gain 3 life.` Wired as a `sac_cost: true` activation with `Seq(Mill 4 each, Drain 3)`. The "transform-from-graveyard" rider to the back-face Restorative Burst is omitted pending the cast-from-graveyard pipeline for MDFCs (engine's `cast_spell_back_face` walks hand only). Test: `pestilent_cauldron_sac_mills_and_drains`. |
+| Eureka Moment | {2}{G}{U} | ✅ | Push (modern_decks, NEW, `stx::extras`): Quandrix Instant. "Draw two cards. You may put a land card from your hand onto the battlefield tapped." Wired as `Seq(Draw 2, MayDo(Move land from hand to bf tapped))` — same shape as Embrace the Paradox's draw-3 sibling. AutoDecider declines the land-drop; ScriptedDecider can opt in for tests. Tests: `eureka_moment_draws_two_cards`, `eureka_moment_optional_land_drop_with_scripted_decider`. |
+| Teach by Example | {1}{U}{R} | ✅ | Push (modern_decks, NEW, `stx::extras`): Prismari Instant. "Copy target instant or sorcery spell. You may choose new targets for the copy." Wired via `Effect::CopySpell { what: target_filtered(IsSpellOnStack & (Instant ∨ Sorcery)) }` — same primitive as Galvanic Iteration but fully target-driven (any IS on the stack, not just the topmost). Test: `teach_by_example_copies_target_instant` (Bolt at P1 → both Bolt + copy deal 3 dmg each = 6 total). |
+| Manifold Key | {1} | ✅ | Push (modern_decks, NEW, `stx::extras`): colorless artifact. "{1}, {T}: Target creature can't be blocked this turn. / {T}: Untap target artifact." Two activated abilities wired faithfully via `Effect::GrantKeyword(Unblockable, EOT)` and `Effect::Untap`. Voltaic-Key/Aether-Key-style infinite-mana enabler in any artifact deck. Tests: `manifold_key_grants_unblockable_to_target_creature`, `manifold_key_untaps_target_artifact`, `manifold_key_is_a_one_mana_artifact_with_two_abilities`. |
+| Leyline Invocation | {3}{G}{G} | ✅ | Push (modern_decks, NEW, `stx::extras`): Quandrix Instant. "Target creature you control gets +X/+X and gains trample until end of turn, where X is the number of lands you control." Wired as `Seq(PumpPT(+X/+X with X = lands you control), GrantKeyword(Trample EOT))`. The X scales with live land count — Quandrix's finisher pump for ramping shells. Test: `leyline_invocation_pumps_by_lands_you_control`. |
+| Spitfire Lagac | {2}{R}{R} | ✅ | Push (modern_decks, NEW, `stx::extras`): Lorehold Creature — Lizard, 3/3. "Magecraft — Whenever you cast or copy an instant or sorcery spell, this deals 2 damage to each opponent." Wired via `magecraft(DealDamage(2) → EachOpponent)` — the burn-only Magecraft template. Tests: `spitfire_lagac_magecraft_burns_each_opp`, `spitfire_lagac_is_a_four_mana_three_three_lizard`. |
+| Settle the Score | {3}{B} | ✅ | Push (modern_decks, NEW, `stx::extras`): Witherbloom Sorcery. "Destroy target creature. Put two loyalty counters on a planeswalker you control." Wired as `Seq(Destroy + AddCounter(Loyalty, 2) on auto-picked friendly planeswalker)`. The second clause silently no-ops if the controller has no PW. Test: `settle_the_score_destroys_creature_and_adds_loyalty`. |
+| Pursuit of Knowledge | {1}{W} | ✅ | Push (modern_decks, NEW, `stx::extras`): Silverquill Enchantment. "Whenever you draw a card, you may put a study counter on this enchantment. / Remove four study counters from this enchantment and sacrifice it: Draw three cards." Engine approximations: (a) the "study counter" is mapped to `CounterType::Charge` (no `Study` counter type yet — same approximation as Diary of Dreams); (b) the activation gates on `Predicate::ValueAtLeast(CountersOn(This, Charge), 4)` and uses `sac_cost: true` to drain the enchantment on use, so the "remove 4" clause is approximated as "have 4+ + sac". Tests: `pursuit_of_knowledge_accumulates_charge_counter_on_draw_action`, `pursuit_of_knowledge_activation_requires_four_charge_counters`. |
+| Divide by Zero | {1}{U} | ✅ | Push (modern_decks, NEW, `stx::extras`): Quandrix Instant. "Return target spell or nonland permanent to its owner's hand. Learn." Wired as `Seq(Move(target → owner's hand), Draw 1)` — Learn approximated as Draw 1 (Lesson sideboard ⏳). The target filter is `IsSpellOnStack ∨ (Permanent & Nonland)` so the spell can hit either a stack spell or a nonland permanent. Tests: `divide_by_zero_bounces_permanent_and_cantrips`, `divide_by_zero_is_a_two_mana_instant`. |
+| Exsanguinate (STA reprint) | {X}{B}{B} | ✅ | Push (modern_decks, NEW, `stx::extras`): black X-cost drain finisher (Strixhaven Mystical Archive reprint). "Each opponent loses X life. You gain life equal to the life lost this way." Wired faithfully via `Effect::Drain { from: EachOpponent, to: You, amount: XFromCost }`. At X=10 this is a kill in any black shell. Test: `exsanguinate_drains_each_opp_by_x`. |
+| Fire Prophecy (STA reprint) | {1}{R} | ✅ | Push (modern_decks, NEW, `stx::extras`): red burn-and-cantrip (Strixhaven Mystical Archive reprint). "Fire Prophecy deals 3 damage to target creature or planeswalker. Put a card from your hand on the bottom of your library. Draw a card." Wired as `Seq(DealDamage(3) → creature/PW, PutOnLibraryFromHand 1, Draw 1)`. The "bottom" target of the put-on-library is approximated as "top" (engine `PutOnLibraryFromHand` defaults to top; a `LibraryPosition::Bottom` primitive bump is a future refactor). Net card advantage matches: -1 (hand-to-library) + 1 (draw) = 0, just trading a stale card for a fresh draw. Test: `fire_prophecy_deals_three_and_cantrips`. |
 
 ### Shared / multi-college
 

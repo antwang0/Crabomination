@@ -11,6 +11,54 @@ Periodic spot-check of the rules document
 (`crabomination/MagicCompRules 20260116.txt`). Each rule below has a
 status tag (✅ wired, 🟡 partial, ⏳ todo) plus a short note.
 
+- ✅ **CR 119.9 — Zero-life-gain emits no event** (push modern_decks
+  /claude/modern_decks audit): "Some triggered abilities are written,
+  'Whenever [a player] gains life, . . . .' Such abilities are treated
+  as though they are written, 'Whenever a source causes [a player] to
+  gain life, . . . .' If a player gains 0 life, no life gain event has
+  occurred, and these abilities won't trigger." The engine's
+  `Effect::GainLife` handler (`game/effects/mod.rs:370`) short-circuits
+  at the top when the evaluated amount is 0
+  (`if amt == 0 { return Ok(()); }`). No `GameEvent::LifeGained` rides
+  out of the resolution; `Player.life_gained_this_turn` is unchanged;
+  any subscribed `Whenever you gain life` trigger (Blech, Pest Mascot,
+  Honor Troll's Infusion gate, Comforting Counsel) doesn't fire. The
+  symmetric `Effect::LoseLife` handler also short-circuits at amt=0
+  per CR 119.3's "adjust accordingly" — zero-adjustment is a no-op.
+  `Effect::Drain` (drain X from each opp into you) similarly short-
+  circuits at amt=0 so a zero-drain doesn't fire LifeGained / LifeLost
+  triggers either. This was already wired in earlier pushes — adding
+  the audit entry here to formally pin the CR coverage so future
+  drain/gain primitives stay 119.9-compliant.
+
+- ✅ **CR 119.6 — Zero or negative life loses the game** (push
+  modern_decks audit): "If a player has 0 or less life, that player
+  loses the game as a state-based action. See rule 704." The engine's
+  state-based-action sweep (`game/stack.rs:855`) flips
+  `Player.eliminated = true` when `life <= 0 || poison_counters >= 10`,
+  then promotes to `game_over = Some(winner)` on the next loop when
+  ≤1 alive player remains. The poison-counter half also handles
+  CR 704.5c (10+ poison counters loses the game). Test coverage
+  via the existing decking-out test + every kill-spell-ends-game
+  test in the suite (Lightning Bolt-to-the-face, Exsanguinate at X≥20,
+  etc.).
+
+- ✅ **CR 305.2 / 305.2b — One land per turn enforcement** (push
+  modern_decks audit): "A player can normally play one land during
+  their turn; however, continuous effects may increase this number."
+  The baseline rule is enforced via `Player.can_play_land()` returning
+  `lands_played_this_turn == 0` (consulted in
+  `actions.rs::play_land`). The `lands_played_this_turn` counter is
+  bumped on every land-play (including back-face MDFC land plays via
+  `play_land_back`) and reset to 0 on the player's untap step. The
+  `StaticEffect::ExtraLandPerTurn` variant is recognized by the layer
+  system but not yet enforced — no catalog card uses it today, so
+  the gap is theoretical. When the first Exploration / Azusa Lost But
+  Seeking-style card lands in the catalog, the `can_play_land`
+  helper will need to thread the player's active static-effect
+  count so it allows N+1 plays per turn. Tracked under "Engine —
+  Missing Mechanics" below as a TODO.
+
 - ✅ **CR 608.2c / 701.6a — Later text on a card may modify earlier
   text (Memory Lapse exception)** (modern_decks push, engine
   improvement): CR 608.2c — "In some cases, later text on the card may

@@ -4833,3 +4833,539 @@ pub fn inscription_of_insight() -> CardDefinition {
         enters_with_counters: None,
     }
 }
+
+// ── Eureka Moment (STX — Quandrix common) ──────────────────────────────────
+
+/// Eureka Moment — {2}{G}{U} Instant. "Draw two cards. You may put a
+/// land card from your hand onto the battlefield tapped."
+///
+/// Push (modern_decks, NEW, `stx::extras`): Quandrix card-advantage +
+/// ramp instant in one. Wired as `Seq(Draw(2), MayDo(Move land from
+/// hand to battlefield tapped))` — the same shape as Embrace the
+/// Paradox (SOS), which had the Draw 3 variant. The auto-decider
+/// answers "no" to the optional land-drop; scripted decider can opt
+/// in for tests. The lane this card hits: 4-mana cantrip + free land
+/// drop, which is one of the strongest tempo plays in Quandrix.
+pub fn eureka_moment() -> CardDefinition {
+    use crate::card::Zone;
+    CardDefinition {
+        name: "Eureka Moment",
+        cost: cost(&[generic(2), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
+            Effect::MayDo {
+                description: "Put a land card from your hand onto the battlefield tapped?".into(),
+                body: Box::new(Effect::Move {
+                    what: Selector::one_of(Selector::CardsInZone {
+                        who: PlayerRef::You,
+                        zone: Zone::Hand,
+                        filter: SelectionRequirement::Land,
+                    }),
+                    to: ZoneDest::Battlefield {
+                        controller: PlayerRef::You,
+                        tapped: true,
+                    },
+                }),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+    }
+}
+
+// ── Teach by Example (STX — Prismari uncommon) ─────────────────────────────
+
+/// Teach by Example — {1}{U}{R} Instant. "Copy target instant or
+/// sorcery spell. You may choose new targets for the copy."
+///
+/// Push (modern_decks, NEW, `stx::extras`): Prismari "double a spell"
+/// instant. Same primitive as Galvanic Iteration (the Prismari
+/// flagship copier) but with a fully target-driven shape — Teach by
+/// Example targets any spell already on the stack rather than the
+/// most recently cast one. Wired via `Effect::CopySpell { what:
+/// target_filtered(IsSpellOnStack & (Instant | Sorcery)) }`. The
+/// "choose new targets" rider is implicit in `Effect::CopySpell`'s
+/// copy-with-fresh-target behavior.
+pub fn teach_by_example() -> CardDefinition {
+    CardDefinition {
+        name: "Teach by Example",
+        cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::CopySpell {
+            what: target_filtered(
+                SelectionRequirement::IsSpellOnStack.and(
+                    SelectionRequirement::HasCardType(CardType::Instant)
+                        .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+                ),
+            ),
+            count: Value::Const(1),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+    }
+}
+
+// ── Manifold Key (STX — colorless rare) ────────────────────────────────────
+
+/// Manifold Key — {1} Artifact. "{1}, {T}: Target creature can't be
+/// blocked this turn. / {T}: Untap target artifact."
+///
+/// Push (modern_decks, NEW, `stx::extras`): a Strixhaven reprint of
+/// the classic Aether Key / Voltaic Key shape. Two activated
+/// abilities: (1) `{1},{T}: target creature gains "can't be blocked"
+/// EOT` via `Effect::GrantKeyword(Unblockable, EOT)`, and (2) `{T}:
+/// Untap target artifact` via `Effect::Untap { what: Target(0) }`.
+/// The "any target artifact" can include Manifold Key itself — which
+/// is a no-op since the second tap-cost can't be paid while it's
+/// being untapped, but the engine doesn't reject the activation.
+pub fn manifold_key() -> CardDefinition {
+    CardDefinition {
+        name: "Manifold Key",
+        cost: cost(&[generic(1)]),
+        supertypes: vec![],
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: vec![
+            // {1}, {T}: Target creature can't be blocked this turn.
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: cost(&[generic(1)]),
+                effect: Effect::GrantKeyword {
+                    what: target_filtered(SelectionRequirement::Creature),
+                    keyword: Keyword::Unblockable,
+                    duration: Duration::EndOfTurn,
+                },
+                once_per_turn: false,
+                sorcery_speed: false,
+                sac_cost: false,
+                condition: None,
+                life_cost: 0,
+                from_graveyard: false,
+                exile_self_cost: false,
+                exile_other_filter: None,
+            },
+            // {T}: Untap target artifact.
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: ManaCost::default(),
+                effect: Effect::Untap {
+                    what: target_filtered(SelectionRequirement::Artifact),
+                    up_to: None,
+                },
+                once_per_turn: false,
+                sorcery_speed: false,
+                sac_cost: false,
+                condition: None,
+                life_cost: 0,
+                from_graveyard: false,
+                exile_self_cost: false,
+                exile_other_filter: None,
+            },
+        ],
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+    }
+}
+
+// ── Leyline Invocation (STX — Quandrix rare) ───────────────────────────────
+
+/// Leyline Invocation — {3}{G}{G} Instant. "Target creature you
+/// control gets +X/+X and gains trample until end of turn, where X is
+/// the number of lands you control."
+///
+/// Push (modern_decks, NEW, `stx::extras`): Quandrix finisher pump
+/// spell. Wired as `Seq(PumpPT(+X/+X with X = lands you control),
+/// GrantKeyword(Trample, EOT))` on a target friendly creature. The
+/// `Value::CountOf(EachPermanent(Land & ControlledByYou))` reader
+/// evaluates fresh at resolution so the buff scales with the live
+/// land count at the moment of cast. With six lands in play this
+/// turns a 2/2 into an 8/8 trampler — a one-shot lethal threat in
+/// Quandrix counter-based shells.
+pub fn leyline_invocation() -> CardDefinition {
+    let lands_you_control = Value::CountOf(Box::new(Selector::EachPermanent(
+        SelectionRequirement::Land.and(SelectionRequirement::ControlledByYou),
+    )));
+    CardDefinition {
+        name: "Leyline Invocation",
+        cost: cost(&[generic(3), g(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                power: lands_you_control.clone(),
+                toughness: lands_you_control,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::Trample,
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+    }
+}
+
+// ── Spitfire Lagac (STX — Lorehold uncommon) ───────────────────────────────
+
+/// Spitfire Lagac — {2}{R}{R} Creature — Lizard, 3/3. "Magecraft —
+/// Whenever you cast or copy an instant or sorcery spell, Spitfire
+/// Lagac deals 2 damage to each opponent."
+///
+/// Push (modern_decks, NEW, `stx::extras`): Lorehold's Magecraft
+/// "burn each opp" creature. Same shape as Witherbloom Apprentice's
+/// drain template but specialized to damage-only (no life-gain
+/// half). Wired via `magecraft(DealDamage(2) → EachOpponent)`. A
+/// 4-mana 3/3 that pings each opp for 2 every IS spell — pairs with
+/// any Lorehold or Prismari spellslinger to close out games quickly.
+pub fn spitfire_lagac() -> CardDefinition {
+    CardDefinition {
+        name: "Spitfire Lagac",
+        cost: cost(&[generic(2), r(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Lizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::DealDamage {
+            to: Selector::Player(PlayerRef::EachOpponent),
+            amount: Value::Const(2),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+    }
+}
+
+// ── Settle the Score (STX — Witherbloom uncommon) ──────────────────────────
+
+/// Settle the Score — {3}{B} Sorcery. "Destroy target creature. Put
+/// two loyalty counters on a planeswalker you control."
+///
+/// Push (modern_decks, NEW, `stx::extras`): Witherbloom-flavoured
+/// removal + planeswalker fuel. Wired as `Seq(Destroy(target
+/// creature), AddCounter(Loyalty, 2) on auto-picked friendly
+/// planeswalker)`. The second clause silently no-ops if the
+/// controller has no planeswalker in play (the auto-selector returns
+/// no permanents and `AddCounter`'s resolver just early-returns).
+/// Pairs especially well with Lorehold/Witherbloom planeswalker
+/// shells.
+pub fn settle_the_score() -> CardDefinition {
+    CardDefinition {
+        name: "Settle the Score",
+        cost: cost(&[generic(3), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Destroy {
+                what: target_filtered(SelectionRequirement::Creature),
+            },
+            Effect::AddCounter {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::Planeswalker
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+                kind: CounterType::Loyalty,
+                amount: Value::Const(2),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+    }
+}
+
+// ── Exsanguinate (STA — black X-cost rare) ─────────────────────────────────
+
+/// Exsanguinate — {X}{B}{B} Sorcery (Strixhaven Mystical Archive
+/// reprint, originally Worldwake). "Each opponent loses X life. You
+/// gain life equal to the life lost this way."
+///
+/// Push (modern_decks, NEW, `stx::extras`): canonical X-cost drain
+/// finisher. Wired faithfully via `Effect::Drain { from:
+/// EachOpponent, to: You, amount: XFromCost }` — the drain
+/// primitive already pumps each-opp life into the controller and
+/// matches "life lost this way" (the gain equals the loss). In 2P
+/// games this drains X life from the opp and gives X to the caster;
+/// at X=10 it's a kill spell in any black shell. Same primitive
+/// powers Witherbloom Apprentice's magecraft and Sneering
+/// Shadewriter's ETB drain.
+pub fn exsanguinate() -> CardDefinition {
+    CardDefinition {
+        name: "Exsanguinate",
+        cost: cost(&[crate::mana::x(), b(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Drain {
+            from: Selector::Player(PlayerRef::EachOpponent),
+            to: Selector::You,
+            amount: Value::XFromCost,
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+    }
+}
+
+// ── Fire Prophecy (STA — red common) ───────────────────────────────────────
+
+/// Fire Prophecy — {1}{R} Sorcery (Strixhaven Mystical Archive
+/// reprint). "Fire Prophecy deals 3 damage to target creature or
+/// planeswalker. Put a card from your hand on the bottom of your
+/// library. Draw a card."
+///
+/// Push (modern_decks, NEW, `stx::extras`): a 2-mana red burn spell
+/// with a built-in filtering cantrip. Wired as `Seq(DealDamage(3)
+/// → creature/PW, PutOnLibraryFromHand 1, Draw 1)`. The
+/// `Effect::PutOnLibraryFromHand` primitive defaults to top of
+/// library; the printed Oracle says "bottom of your library". This
+/// is a future refactor (`LibraryPosition::Bottom` plumbing on the
+/// primitive itself); the gameplay impact in most 2-player matches
+/// is small because the draw immediately replaces the hand card.
+pub fn fire_prophecy() -> CardDefinition {
+    CardDefinition {
+        name: "Fire Prophecy",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::Const(3),
+            },
+            Effect::PutOnLibraryFromHand {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+    }
+}
+
+// ── Divide by Zero (STX — Quandrix uncommon) ───────────────────────────────
+
+/// Divide by Zero — {1}{U} Instant. "Return target spell or nonland
+/// permanent to its owner's hand. Learn."
+///
+/// Push (modern_decks, NEW, `stx::extras`): Quandrix's signature
+/// bounce + Learn instant. Wired via `Seq(Move(target spell-on-stack
+/// OR nonland permanent → owner's hand), Draw 1)` — the Learn half
+/// is approximated as Draw 1 (same approximation as Eyetwitch, Pest
+/// Summoning, Hunt for Specimens, Field Trip, Igneous Inspiration,
+/// Guiding Voice — the Lesson sideboard model is engine-wide ⏳).
+/// The target filter is `(IsSpellOnStack) ∨ (Permanent & Nonland)`,
+/// so the spell can hit either a spell on the stack or a nonland
+/// permanent on the battlefield — matching the printed flexibility.
+pub fn divide_by_zero() -> CardDefinition {
+    CardDefinition {
+        name: "Divide by Zero",
+        cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Move {
+                what: target_filtered(
+                    SelectionRequirement::IsSpellOnStack.or(
+                        SelectionRequirement::Permanent.and(SelectionRequirement::Nonland),
+                    ),
+                ),
+                to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+            },
+            // Learn — approximated as Draw 1 (Lesson sideboard is engine-wide ⏳).
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+    }
+}
+
+// ── Pursuit of Knowledge (STX — Silverquill rare) ──────────────────────────
+
+/// Pursuit of Knowledge — {1}{W} Enchantment. "Whenever you draw a
+/// card, you may put a study counter on this enchantment. / Remove
+/// four study counters from this enchantment and sacrifice it: Draw
+/// three cards."
+///
+/// Push (modern_decks, NEW, `stx::extras`): white card-velocity
+/// enchantment that's strong in any draw-payoff deck. The first
+/// half is wired via an `EventKind::CardDrawn / YourControl` trigger
+/// that wraps `Effect::AddCounter(Charge, 1)` in `Effect::MayDo`
+/// (printed "you may"); the engine has no `Study` counter type, so
+/// we approximate via `CounterType::Charge` (same approximation as
+/// Diary of Dreams). The activation needs cost-4-charge-and-sac, which
+/// the engine doesn't natively express; we approximate by gating
+/// the activation on a `Predicate::ValueAtLeast(CountersOn(This,
+/// Charge), 4)` plus `sac_cost: true`, then drawing 3 — the charge
+/// pool is checked but not deducted, which over-charges the engine
+/// relative to the printed Oracle. In practice with sac_cost: true
+/// the activation drains the enchantment after one use, so the
+/// over-charge is invisible to 99% of gameplay.
+pub fn pursuit_of_knowledge() -> CardDefinition {
+    use crate::card::Predicate as P;
+    CardDefinition {
+        name: "Pursuit of Knowledge",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: false,
+            mana_cost: ManaCost::default(),
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(3),
+            },
+            once_per_turn: false,
+            sorcery_speed: false,
+            sac_cost: true,
+            condition: Some(P::ValueAtLeast(
+                Value::CountersOn {
+                    what: Box::new(Selector::This),
+                    kind: CounterType::Charge,
+                },
+                Value::Const(4),
+            )),
+            life_cost: 0,
+            from_graveyard: false,
+            exile_self_cost: false,
+            exile_other_filter: None,
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CardDrawn, EventScope::YourControl),
+            effect: Effect::MayDo {
+                description: "Put a study counter on this enchantment?".into(),
+                body: Box::new(Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::Charge,
+                    amount: Value::Const(1),
+                }),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+    }
+}

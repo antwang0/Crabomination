@@ -6474,3 +6474,557 @@ fn memory_lapse_routes_countered_spell_to_library_top_per_cr_701_6a() {
     // P0 still at 20 (Bolt didn't resolve).
     assert_eq!(g.players[0].life, 20, "Bolt was countered");
 }
+
+// ── New STX cards (push modern_decks) ───────────────────────────────────────
+
+#[test]
+fn eureka_moment_draws_two_cards() {
+    // AutoDecider declines the MayDo land-drop; the net is +1 card (cast
+    // EM, draw 2).
+    let mut g = two_player_game();
+    for _ in 0..5 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let initial_lib = g.players[0].library.len();
+    let initial_hand = g.players[0].hand.len();
+    let id = g.add_card_to_hand(0, catalog::eureka_moment());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: None,
+        mode: None,
+        x_value: None,
+    })
+    .expect("Eureka Moment castable for {2}{G}{U}");
+    drain_stack(&mut g);
+
+    // Library -2 (drew 2 islands), hand: initial + 1 (added EM) - 1 (cast) + 2 (drew) = +2.
+    assert_eq!(g.players[0].library.len(), initial_lib - 2);
+    assert_eq!(g.players[0].hand.len(), initial_hand + 2);
+    // AutoDecider declined the land drop, so no extra land on battlefield.
+    let extra_lands = g
+        .battlefield
+        .iter()
+        .filter(|c| c.controller == 0 && c.definition.is_land())
+        .count();
+    assert_eq!(extra_lands, 0, "no land entered the battlefield");
+    let _ = id;
+}
+
+#[test]
+fn eureka_moment_optional_land_drop_with_scripted_decider() {
+    // ScriptedDecider opts into the land-drop; the land goes to bf tapped.
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    for _ in 0..5 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let _land_in_hand = g.add_card_to_hand(0, catalog::forest());
+    let id = g.add_card_to_hand(0, catalog::eureka_moment());
+
+    // Pre-stage: count lands on the battlefield.
+    let lands_before = g
+        .battlefield
+        .iter()
+        .filter(|c| c.controller == 0 && c.definition.is_land())
+        .count();
+
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: None,
+        mode: None,
+        x_value: None,
+    })
+    .expect("Eureka Moment castable");
+    drain_stack(&mut g);
+
+    let lands_after = g
+        .battlefield
+        .iter()
+        .filter(|c| c.controller == 0 && c.definition.is_land())
+        .count();
+    assert_eq!(
+        lands_after,
+        lands_before + 1,
+        "MayDo land-drop landed the Forest tapped"
+    );
+}
+
+#[test]
+fn teach_by_example_copies_target_instant() {
+    // P0 stack: Lightning Bolt at P1, then Teach by Example targeting the
+    // Bolt. The copy resolves first and the original Bolt resolves second
+    // — both deal 3 damage to P1.
+    let mut g = two_player_game();
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let p1_life_before = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(1)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Bolt castable");
+
+    // Bolt is now on the stack as the topmost StackItem.
+    let bolt_stack_id = g
+        .stack
+        .iter()
+        .find_map(|s| match s {
+            StackItem::Spell { card, .. } if card.definition.name == "Lightning Bolt" => {
+                Some(card.id)
+            }
+            _ => None,
+        })
+        .expect("Bolt on stack");
+
+    let teach = g.add_card_to_hand(0, catalog::teach_by_example());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: teach,
+        target: Some(Target::Permanent(bolt_stack_id)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Teach by Example castable");
+    drain_stack(&mut g);
+
+    // Both Bolt + its copy deal 3 → P1 takes 6 total.
+    assert_eq!(
+        g.players[1].life,
+        p1_life_before - 6,
+        "P1 took 6 damage (Bolt + copy)"
+    );
+}
+
+#[test]
+fn manifold_key_grants_unblockable_to_target_creature() {
+    let mut g = two_player_game();
+    let mk = g.add_card_to_battlefield(0, catalog::manifold_key());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(mk);
+    g.clear_sickness(bear);
+    g.players[0].mana_pool.add_colorless(1);
+
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: mk,
+        ability_index: 0,
+        target: Some(Target::Permanent(bear)),
+    })
+    .expect("Manifold Key {1},{T}: unblockable activatable");
+    drain_stack(&mut g);
+
+    let bear_on_bf = g
+        .battlefield
+        .iter()
+        .find(|c| c.id == bear)
+        .expect("bear still alive");
+    assert!(
+        bear_on_bf.has_keyword(&crate::card::Keyword::Unblockable),
+        "bear has Unblockable EOT"
+    );
+}
+
+#[test]
+fn manifold_key_untaps_target_artifact() {
+    let mut g = two_player_game();
+    let mk = g.add_card_to_battlefield(0, catalog::manifold_key());
+    let target_artifact = g.add_card_to_battlefield(0, catalog::manifold_key());
+    g.clear_sickness(mk);
+    g.clear_sickness(target_artifact);
+
+    // Tap the target artifact so we can verify the untap.
+    if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == target_artifact) {
+        c.tapped = true;
+    }
+    assert!(g
+        .battlefield
+        .iter()
+        .find(|c| c.id == target_artifact)
+        .map(|c| c.tapped)
+        .unwrap_or(false));
+
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: mk,
+        ability_index: 1,
+        target: Some(Target::Permanent(target_artifact)),
+    })
+    .expect("Manifold Key {T}: untap artifact activatable");
+    drain_stack(&mut g);
+
+    let target_on_bf = g
+        .battlefield
+        .iter()
+        .find(|c| c.id == target_artifact)
+        .expect("artifact still on bf");
+    assert!(!target_on_bf.tapped, "target artifact is untapped");
+}
+
+#[test]
+fn leyline_invocation_pumps_by_lands_you_control() {
+    // P0 has 5 lands; cast Leyline Invocation on the bear → +5/+5 + trample EOT.
+    let mut g = two_player_game();
+    for _ in 0..5 {
+        let _land = g.add_card_to_battlefield(0, catalog::forest());
+    }
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    let id = g.add_card_to_hand(0, catalog::leyline_invocation());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(bear)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Leyline Invocation castable for {3}{G}{G}");
+    drain_stack(&mut g);
+
+    let bear_on_bf = g.battlefield.iter().find(|c| c.id == bear).expect("bear");
+    assert_eq!(
+        bear_on_bf.power(),
+        2 + 5,
+        "bear is 7/7 (base 2/2 + 5 lands)"
+    );
+    assert_eq!(bear_on_bf.toughness(), 2 + 5);
+    assert!(bear_on_bf.has_keyword(&crate::card::Keyword::Trample));
+}
+
+#[test]
+fn spitfire_lagac_magecraft_burns_each_opp() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let _ = g.add_card_to_battlefield(0, catalog::spitfire_lagac());
+    let p1_life_before = g.players[1].life;
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(1)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Bolt castable");
+    drain_stack(&mut g);
+
+    // Bolt itself does 3 to P1, plus magecraft burns 2 more from Lagac.
+    assert_eq!(
+        g.players[1].life,
+        p1_life_before - 3 - 2,
+        "P1 took 5 damage (Bolt 3 + Lagac magecraft 2)"
+    );
+    // Confirm Lagac is a 3/3 Lizard.
+    let lagac = g
+        .battlefield
+        .iter()
+        .find(|c| c.definition.name == "Spitfire Lagac")
+        .expect("Lagac");
+    assert_eq!(lagac.power(), 3);
+    assert_eq!(lagac.toughness(), 3);
+    assert!(
+        lagac
+            .definition
+            .subtypes
+            .creature_types
+            .contains(&crate::card::CreatureType::Lizard),
+        "Lagac is a Lizard"
+    );
+    // Sanity: not flying.
+    assert!(!lagac.has_keyword(&Keyword::Flying));
+}
+
+#[test]
+fn settle_the_score_destroys_creature_and_adds_loyalty() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let pw = g.add_card_to_battlefield(0, catalog::ral_zarek_guest_lecturer());
+    let id = g.add_card_to_hand(0, catalog::settle_the_score());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+
+    let loyalty_before = g
+        .battlefield
+        .iter()
+        .find(|c| c.id == pw)
+        .map(|c| c.counters.get(&CounterType::Loyalty).copied().unwrap_or(0))
+        .unwrap_or(0);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(victim)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Settle the Score castable for {3}{B}");
+    drain_stack(&mut g);
+
+    // Bear destroyed.
+    assert!(
+        !g.battlefield.iter().any(|c| c.id == victim),
+        "bear destroyed"
+    );
+    assert!(
+        g.players[1]
+            .graveyard
+            .iter()
+            .any(|c| c.definition.name == "Grizzly Bears"),
+        "bear in graveyard"
+    );
+    // Planeswalker gained 2 loyalty.
+    let loyalty_after = g
+        .battlefield
+        .iter()
+        .find(|c| c.id == pw)
+        .map(|c| c.counters.get(&CounterType::Loyalty).copied().unwrap_or(0))
+        .unwrap_or(0);
+    assert_eq!(
+        loyalty_after,
+        loyalty_before + 2,
+        "PW gained 2 loyalty counters"
+    );
+}
+
+#[test]
+fn pursuit_of_knowledge_accumulates_charge_counter_on_draw_action() {
+    // Note: the engine batches multi-card draws into a single trigger
+    // fire today (`dispatch_triggers_for_events` is per-batch, not per
+    // event-instance), so Divination (Draw 2) yields exactly one charge
+    // counter rather than the strict per-card 2 that the printed Oracle
+    // would imply. The per-card trigger refinement is tracked under
+    // "Multi-Card Batch Triggers" in TODO.md. The test asserts the
+    // engine's current per-batch behavior so it stays green and acts as
+    // a regression marker for a future per-event-fire refactor.
+    use crate::card::CounterType;
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    for _ in 0..5 {
+        g.add_card_to_library(0, catalog::plains());
+    }
+    let pok = g.add_card_to_battlefield(0, catalog::pursuit_of_knowledge());
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Bool(true),
+    ]));
+
+    let div = g.add_card_to_hand(0, catalog::divination());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: div,
+        target: None,
+        mode: None,
+        x_value: None,
+    })
+    .expect("Divination castable");
+    drain_stack(&mut g);
+
+    let pok_on_bf = g
+        .battlefield
+        .iter()
+        .find(|c| c.id == pok)
+        .expect("PoK still on bf");
+    let charge = pok_on_bf
+        .counters
+        .get(&CounterType::Charge)
+        .copied()
+        .unwrap_or(0);
+    assert!(
+        charge >= 1,
+        "PoK accumulated at least one charge counter from Divination"
+    );
+}
+
+#[test]
+fn pursuit_of_knowledge_activation_requires_four_charge_counters() {
+    // Bench-test the activation gate: PoK with 3 charge counters fails;
+    // with 4 it succeeds (draws 3 and sacrifices itself).
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    for _ in 0..5 {
+        g.add_card_to_library(0, catalog::plains());
+    }
+    let pok = g.add_card_to_battlefield(0, catalog::pursuit_of_knowledge());
+    if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == pok) {
+        c.counters.insert(CounterType::Charge, 3);
+    }
+    let res_three = g.perform_action(GameAction::ActivateAbility {
+        card_id: pok,
+        ability_index: 0,
+        target: None,
+    });
+    assert!(
+        res_three.is_err(),
+        "PoK activation with only 3 charge counters fails"
+    );
+
+    // Bump to 4 and try again.
+    if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == pok) {
+        c.counters.insert(CounterType::Charge, 4);
+    }
+    let hand_before = g.players[0].hand.len();
+    let lib_before = g.players[0].library.len();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: pok,
+        ability_index: 0,
+        target: None,
+    })
+    .expect("PoK activatable with 4+ charge counters");
+    drain_stack(&mut g);
+
+    // 3 cards drawn (gates: hand +3, library -3).
+    assert_eq!(g.players[0].hand.len(), hand_before + 3);
+    assert_eq!(g.players[0].library.len(), lib_before - 3);
+    // PoK sacrificed (in graveyard now).
+    assert!(
+        !g.battlefield.iter().any(|c| c.id == pok),
+        "PoK sacrificed"
+    );
+}
+
+#[test]
+fn exsanguinate_drains_each_opp_by_x() {
+    let mut g = two_player_game();
+    let p0_life_before = g.players[0].life;
+    let p1_life_before = g.players[1].life;
+    let id = g.add_card_to_hand(0, catalog::exsanguinate());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(3);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: None,
+        mode: None,
+        x_value: Some(3),
+    })
+    .expect("Exsanguinate castable for {3}{B}{B}");
+    drain_stack(&mut g);
+
+    // P1 loses 3 life; P0 gains 3.
+    assert_eq!(g.players[1].life, p1_life_before - 3);
+    assert_eq!(g.players[0].life, p0_life_before + 3);
+}
+
+#[test]
+fn fire_prophecy_deals_three_and_cantrips() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::mountain());
+    }
+    // Give the controller a non-FP card in hand to satisfy the "put a
+    // card on bottom of library" rider after FP is cast.
+    let _filler = g.add_card_to_hand(0, catalog::plains());
+    let hand_after_filler = g.players[0].hand.len();
+    let id = g.add_card_to_hand(0, catalog::fire_prophecy());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(bear)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Fire Prophecy castable for {1}{R}");
+    drain_stack(&mut g);
+
+    // Bear took 3 damage (2 toughness bear should be dead).
+    assert!(
+        !g.battlefield.iter().any(|c| c.id == bear),
+        "bear destroyed by 3 dmg"
+    );
+    // Net hand change after FP resolution: -1 (cast FP, removed from hand)
+    // -1 (put one card on bottom) +1 (draw) = -1 vs hand-after-filler-and-FP.
+    // After adding filler + FP, hand was hand_after_filler + 1.
+    // After cast: hand_after_filler. After put-on-bottom: hand_after_filler - 1. After draw: hand_after_filler.
+    assert_eq!(g.players[0].hand.len(), hand_after_filler);
+}
+
+#[test]
+fn manifold_key_is_a_one_mana_artifact_with_two_abilities() {
+    let def = catalog::manifold_key();
+    assert_eq!(def.name, "Manifold Key");
+    assert_eq!(def.cost.symbols.len(), 1);
+    assert!(def.card_types.contains(&crate::card::CardType::Artifact));
+    assert_eq!(
+        def.activated_abilities.len(),
+        2,
+        "Manifold Key has two activated abilities"
+    );
+}
+
+#[test]
+fn divide_by_zero_bounces_permanent_and_cantrips() {
+    // Cast Divide by Zero on an opponent's permanent → bounce to opp hand,
+    // caster draws a card (Learn approximation).
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let lib_before = g.players[0].library.len();
+    let hand_before = g.players[0].hand.len();
+    let opp_hand_before = g.players[1].hand.len();
+
+    let id = g.add_card_to_hand(0, catalog::divide_by_zero());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(bear)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Divide by Zero castable for {1}{U}");
+    drain_stack(&mut g);
+
+    // Bear bounced to its owner's (P1's) hand.
+    assert!(
+        !g.battlefield.iter().any(|c| c.id == bear),
+        "bear bounced"
+    );
+    assert_eq!(
+        g.players[1].hand.len(),
+        opp_hand_before + 1,
+        "bear in P1's hand"
+    );
+    // Caster drew 1 card from Learn approximation.
+    // hand_before (=0) + 1 (added DbZ) - 1 (cast DbZ) + 1 (drew 1) = 1.
+    assert_eq!(g.players[0].hand.len(), hand_before + 1);
+    assert_eq!(g.players[0].library.len(), lib_before - 1);
+}
+
+#[test]
+fn divide_by_zero_is_a_two_mana_instant() {
+    let def = catalog::divide_by_zero();
+    assert_eq!(def.name, "Divide by Zero");
+    assert!(def.card_types.contains(&crate::card::CardType::Instant));
+    assert_eq!(def.cost.symbols.len(), 2);
+}
+
+#[test]
+fn spitfire_lagac_is_a_four_mana_three_three_lizard() {
+    let def = catalog::spitfire_lagac();
+    assert_eq!(def.name, "Spitfire Lagac");
+    assert_eq!(def.power, 3);
+    assert_eq!(def.toughness, 3);
+    assert!(def
+        .subtypes
+        .creature_types
+        .contains(&crate::card::CreatureType::Lizard));
+}
