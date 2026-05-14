@@ -21,7 +21,7 @@
 
 use super::no_abilities;
 use crate::card::{
-    CardDefinition, CardType, CreatureType, Effect, Selector, SelectionRequirement,
+    CardDefinition, CardType, CounterType, CreatureType, Effect, Selector, SelectionRequirement,
     SpellSubtype, Subtypes, TokenDefinition, Value,
 };
 use crate::effect::shortcut::target_filtered;
@@ -253,6 +253,142 @@ pub fn square_up() -> CardDefinition {
                 toughness: Value::Const(4),
                 duration: Duration::EndOfTurn,
             },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Brilliant Plan ──────────────────────────────────────────────────────────
+
+/// Brilliant Plan — {3}{U}{U} Sorcery — Lesson.
+///
+/// "Scry 3, then draw three cards."
+///
+/// Pure card-velocity Lesson. Wired as `Seq(Scry(3) → Draw(3))` so the
+/// Scry resolves first, letting the controller filter the next three
+/// draws. No target needed; the Scry uses `PlayerRef::You` and the Draw
+/// uses `Selector::You`.
+pub fn brilliant_plan() -> CardDefinition {
+    CardDefinition {
+        name: "Brilliant Plan",
+        cost: cost(&[generic(3), u(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes {
+            spell_subtypes: vec![SpellSubtype::Lesson],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(3),
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(3),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Fortifying Draught ──────────────────────────────────────────────────────
+
+/// Fortifying Draught — {2}{W} Sorcery — Lesson.
+///
+/// "Target creature gets +1/+4 until end of turn."
+///
+/// Defensive combat trick Lesson — keeps a Silverquill / Lorehold body
+/// alive through a big swing. Wired as a single `Effect::PumpPT`
+/// against a `Creature` target. The body shape is identical to
+/// `Charge Through` (+1/+1 + trample) and other Strixhaven pump
+/// spells; only the magnitudes differ.
+pub fn fortifying_draught() -> CardDefinition {
+    CardDefinition {
+        name: "Fortifying Draught",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes {
+            spell_subtypes: vec![SpellSubtype::Lesson],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::PumpPT {
+            what: target_filtered(SelectionRequirement::Creature),
+            power: Value::Const(1),
+            toughness: Value::Const(4),
+            duration: Duration::EndOfTurn,
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Guiding Voice ───────────────────────────────────────────────────────────
+
+/// Guiding Voice — {W} Sorcery — Lesson.
+///
+/// "Put a +1/+1 counter on target creature. Learn."
+///
+/// Cheap +1/+1 counter on a creature plus the Learn → `Draw 1`
+/// approximation (no Lesson sideboard model yet). A great early
+/// magecraft enabler that also leaves a body bigger. Wired as the
+/// canonical AddCounter + Learn `Seq` template used by Hunt for
+/// Specimens / Pest Summoning.
+pub fn guiding_voice() -> CardDefinition {
+    CardDefinition {
+        name: "Guiding Voice",
+        cost: cost(&[w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes {
+            spell_subtypes: vec![SpellSubtype::Lesson],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::AddCounter {
+                what: target_filtered(SelectionRequirement::Creature),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+            // Learn approximation: draw a card. Same shortcut every other
+            // STX Learn card uses (Eyetwitch's die-trigger, Hunt for
+            // Specimens's rider, Field Trip's rider, Igneous Inspiration's
+            // rider). Tracked in STRIXHAVEN2.md as the engine-wide Lesson
+            // sideboard gap.
             Effect::Draw {
                 who: Selector::You,
                 amount: Value::Const(1),

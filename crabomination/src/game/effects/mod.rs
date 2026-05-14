@@ -297,7 +297,9 @@ impl GameState {
                 let amt = self.evaluate_value(amount, ctx).max(0) as u32;
                 if amt == 0 { return Ok(()); }
                 for ent in self.resolve_selector(to, ctx) {
-                    self.deal_damage_to(ent, amt, events);
+                    // CR 702.90b — pass the source so infect routes
+                    // player-target damage to poison counters.
+                    self.deal_damage_to_from(ent, amt, ctx.source, events);
                 }
                 let mut sba = self.check_state_based_actions();
                 events.append(&mut sba);

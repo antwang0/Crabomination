@@ -19,7 +19,7 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 123 | 131 | 1 |
-| STX (123 cards) | 113 | 10 | 0 |
+| STX (133 cards) | 122 | 11 | 0 |
 
 The single SOS ⏳ is **Improvisation Capstone** (needs the cast-from-exile
 pipeline + copy-spell primitive). Per-card status and the specific gap on
@@ -516,6 +516,16 @@ parity is a matter of porting card factories one at a time.
 | Square Up | {U}{R} | ✅ | Push XXXII (NEW, `stx::lessons`): Prismari instant. Target creature's base P/T becomes 0/4 EOT; draw a card. First card using the new `Effect::SetBasePT` layer-7b primitive. Counters and +N/+M stack on top per CR 613.7c-f. Tests: `square_up_sets_target_creature_to_zero_four_and_draws`, `square_up_layers_under_plus_one_counters`. |
 | Lash of Malice | {B} | ✅ | Push XXXV (NEW, `stx::mono`): Instant. Target creature gets -2/-2 EOT via negative `PumpPT` (a 2/2 dies to SBA). Flashback {3}{B} wired via `Keyword::Flashback`. Tests: `lash_of_malice_kills_two_two_creature`, `lash_of_malice_has_flashback_keyword`. |
 | Big Play | {3}{R}{W} | ✅ | Push XXXV (NEW, `stx::mono`): Instant. Three-mode `ChooseMode`: (0) Tap+Stun on opp creature (collapsed "must attack"), (1) Tap+Stun (the canonical Frost Trickster shape), (2) Each creature you control gains Trample EOT. Auto-decider picks mode 1; scripted decider can probe modes 0/2. The draw-on-combat-damage rider in printed mode 2 is engine-wide ⏳. Tests: `big_play_auto_picks_tap_and_stun`, `big_play_mode_2_grants_trample_to_friendlies`. |
+| Burrog Befuddler | {1}{U} | ✅ | Push XXXVI (NEW, `stx::extras`): 2/1 Frog Wizard with Flash. ETB: target creature gets -3/-0 until end of turn. Standard combat trick body. Tests: `burrog_befuddler_etb_minus_three_zero`, `burrog_befuddler_has_flash`. |
+| Mage Hunters' Mark | {1}{R} | ✅ | Push XXXVI (NEW, `stx::extras`): Instant. Target creature gets +3/+0 + Menace EOT. Pump-and-menace combat trick wired as `Seq(PumpPT(+3/+0), GrantKeyword(Menace))`. Test: `mage_hunters_mark_pumps_target_and_grants_menace`. |
+| Mage Duel | {1}{R} | ✅ | Push XXXVI (NEW, `stx::extras`): Sorcery. Friendly creature deals damage = its power to a target opp creature. Resolved via `Value::PowerOf(EachPermanent(Creature & ControlledByYou))` (auto-picks the friendly attacker) feeding `Effect::DealDamage` against an opp Creature target. Test: `mage_duel_friendly_burns_opp_creature_by_friendly_power`. |
+| Eccentric Apprentice | {1}{R} | ✅ | Push XXXVI (NEW, `stx::extras`): 1/3 Human Wizard. Magecraft self-pump (+1/+0 EOT) via `magecraft_self_pump(1, 0)`. Each instant or sorcery cast bumps the body to a more relevant attacker. Test: `eccentric_apprentice_pumps_on_instant_cast`. |
+| Illuminate History | {1}{R}{W} | ✅ | Push XXXVI (NEW, `stx::extras`): Sorcery. As an additional cost, discard a card. Mints two 2/2 R/W Spirit tokens with flying. Cost-vs-resolution timing approximated (discard runs as `Effect::Discard(You, 1)` at resolution alongside the token mint). Test: `illuminate_history_discards_and_creates_two_spirits`. |
+| Brilliant Plan | {3}{U}{U} | ✅ | Push XXXVI (NEW, `stx::lessons`): Sorcery — Lesson. Scry 3 + Draw 3. Pure card-velocity Lesson, wired as `Seq(Scry(3), Draw(3))`. Test: `brilliant_plan_scrys_three_and_draws_three`. |
+| Fortifying Draught | {2}{W} | ✅ | Push XXXVI (NEW, `stx::lessons`): Sorcery — Lesson. Target creature gets +1/+4 EOT. Defensive combat trick Lesson, wired as a single `PumpPT(+1/+4, EndOfTurn)`. Test: `fortifying_draught_pumps_target_creature`. |
+| Guiding Voice | {W} | ✅ | Push XXXVI (NEW, `stx::lessons`): Sorcery — Lesson. +1/+1 counter on target creature + Learn (→ Draw 1). Wired as `Seq(AddCounter(+1/+1), Draw(1))`. Test: `guiding_voice_counters_and_draws`. |
+| Tezzeret's Gambit | {U}{B} | ✅ | Push XXXVI (NEW, `stx::extras`): Sorcery. Two-mode `ChooseMode`: (0) Proliferate; (1) Pay 2 life, draw 2 cards. Printed cost {U/P}{B/P} (Phyrexian mana) collapses to strict {U}{B} — pure Phyrexian-life payment is engine-wide ⏳. Tests: `tezzerets_gambit_mode_zero_proliferates`, `tezzerets_gambit_mode_one_pays_two_life_draws_two`. |
+| Wandering Archaic | {2}{W}{W} | 🟡 | Push XXXVI (NEW, `stx::extras`): 4/4 Spirit. Whenever an opp casts an instant or sorcery, this triggers via the new opp-spell-cast wire in `fire_spell_cast_triggers` (`EventScope::OpponentControl`). Copies the opp's spell unconditionally — printed Oracle's "may pay {2}" tax-or-copy gate is engine-wide ⏳ (needs a `CopyUnlessPaid` primitive with opp-side auto-decision). Tests: `wandering_archaic_copies_opp_instant`, `wandering_archaic_is_a_4_4_spirit`. |
 
 ### Shared / multi-college
 

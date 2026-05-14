@@ -12,7 +12,7 @@ use crate::card::{
     EventScope, EventSpec, Keyword, Predicate, Selector, SelectionRequirement, Subtypes,
     TokenDefinition, TriggeredAbility, Value,
 };
-use crate::effect::shortcut::{magecraft, target_filtered};
+use crate::effect::shortcut::{magecraft, magecraft_self_pump, target_filtered};
 use crate::effect::{Duration, ManaPayload, PlayerRef, ZoneDest};
 use crate::mana::{Color, b, cost, g, generic, r, u, w};
 
@@ -3117,6 +3117,369 @@ pub fn containment_breach() -> CardDefinition {
             Effect::Surveil {
                 who: PlayerRef::You,
                 amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Burrog Befuddler ────────────────────────────────────────────────────────
+
+/// Burrog Befuddler — {1}{U} Creature — Frog Wizard, 2/1.
+/// "Flash. When this creature enters, target creature gets -3/-0 until
+/// end of turn."
+///
+/// Flash + ETB combat trick. The -3/-0 takes a 3/3 down to 0/3 which
+/// can no longer profitably attack; the body sticks around as a 2/1
+/// flier-blocker (well, 2/1 ground, but cheap interaction at instant
+/// speed). Standard `EntersBattlefield/SelfSource` trigger with a
+/// negative `Effect::PumpPT` against a `Creature` target.
+pub fn burrog_befuddler() -> CardDefinition {
+    CardDefinition {
+        name: "Burrog Befuddler",
+        cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Frog, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Flash],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(-3),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Mage Hunters' Mark ──────────────────────────────────────────────────────
+
+/// Mage Hunters' Mark — {1}{R} Instant.
+/// "Target creature gets +3/+0 and gains menace until end of turn."
+///
+/// Strixhaven combat trick — a Lava-Coil-curve pump that punches a
+/// blocker out (menace forces double-block). Wired as
+/// `Seq(PumpPT(+3/+0), GrantKeyword(Menace))` against a `Creature`
+/// target. The target's controller doesn't matter (the card lets you
+/// turn an opp's blocker into a forced-2-block headache).
+pub fn mage_hunters_mark() -> CardDefinition {
+    CardDefinition {
+        name: "Mage Hunters' Mark",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(3),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::Menace,
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Mage Duel ───────────────────────────────────────────────────────────────
+
+/// Mage Duel — {1}{R} Sorcery.
+/// "Target creature you control deals damage equal to its power to
+/// target creature you don't control."
+///
+/// Asymmetric fight: only the friendly creature deals damage to the
+/// hostile creature, so the friendly survives untouched (unlike a true
+/// `Effect::Fight` which deals damage both ways). The auto-target
+/// picker picks the highest-power friendly attacker against an opp
+/// blocker by default. Wired via `Effect::DealDamage` with
+/// `Value::PowerOf(Target(0))` and a multi-target prompt approximated
+/// by picking a single opp creature as `Selector::Target(0)` while
+/// the friendly attacker is named via the auto-picker.
+///
+/// 🟡 The "target creature you control deals" rider collapses to a
+/// one-target shape — engine has no multi-target sorcery prompt yet.
+/// We resolve it by reading `Value::PowerOf` off the auto-picked
+/// friendly creature (`Selector::EachPermanent(Creature & You)`'s
+/// first match). The result is a one-shot ping equal to the friendly
+/// creature's effective power.
+pub fn mage_duel() -> CardDefinition {
+    CardDefinition {
+        name: "Mage Duel",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::DealDamage {
+            to: target_filtered(SelectionRequirement::Creature),
+            amount: Value::PowerOf(Box::new(Selector::EachPermanent(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            ))),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Eccentric Apprentice ────────────────────────────────────────────────────
+
+/// Eccentric Apprentice — {1}{R} Creature — Human Wizard, 1/3.
+/// "Magecraft — Whenever you cast or copy an instant or sorcery spell,
+/// this creature gets +1/+0 until end of turn."
+///
+/// Vanilla Prismari/Lorehold magecraft body. The pump applies to the
+/// source itself via `magecraft_self_pump(1, 0)` — same shortcut
+/// Symmetry Sage uses. A 1/3 base body that scales into a 2/3 or 3/3
+/// attacker every time you cast a spell turns into a credible threat
+/// in an instants-and-sorceries deck.
+pub fn eccentric_apprentice() -> CardDefinition {
+    CardDefinition {
+        name: "Eccentric Apprentice",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_self_pump(1, 0)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Tezzeret's Gambit ───────────────────────────────────────────────────────
+
+/// Tezzeret's Gambit — {U}{B} Sorcery.
+/// "Choose one — / • Proliferate. / • Pay 2 life. Draw two cards."
+///
+/// Printed cost is `{U/P}{B/P}` (Phyrexian: pay 2 life instead of each
+/// pip). We use the strict `{U}{B}` mana cost here because the
+/// alternative-cost variant of casting via life payment for **each**
+/// Phyrexian pip would need a per-pip `pay_life_for_pip` walker on
+/// `ManaCost::pay()`. The mainline `{U}{B}` path is exercised; the
+/// pure-life-cost Phyrexian path is engine-wide ⏳.
+///
+/// Two-mode `Effect::ChooseMode`:
+/// * Mode 0 — `Effect::Proliferate` (every permanent and player with a
+///   counter gets one more of any kind they already have, controller
+///   chooses per object).
+/// * Mode 1 — `Seq(LoseLife(2), Draw(2))` (pay 2 life, draw 2 cards).
+///
+/// Auto-decider picks mode 0 by default (Proliferate is the stronger
+/// floor in any counter-having board state — +1/+1 counters, poison,
+/// charge, loyalty all benefit). Scripted decider can probe mode 1.
+pub fn tezzerets_gambit() -> CardDefinition {
+    CardDefinition {
+        name: "Tezzeret's Gambit",
+        cost: cost(&[u(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::ChooseMode(vec![
+            // Mode 0: Proliferate.
+            Effect::Proliferate,
+            // Mode 1: Pay 2 life, draw 2.
+            Effect::Seq(vec![
+                Effect::LoseLife {
+                    who: Selector::You,
+                    amount: Value::Const(2),
+                },
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(2),
+                },
+            ]),
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Wandering Archaic ───────────────────────────────────────────────────────
+
+/// Wandering Archaic — {2}{W}{W} Creature — Spirit, 4/4.
+/// (Front face only; the printed card is reversible with a back face
+/// "Explore the Vastlands" that's omitted here — reversible-card
+/// pipeline is engine-wide ⏳ similar to the back-face MDFC handling.)
+///
+/// "Whenever an opponent casts an instant or sorcery spell, that
+/// player may pay {2}. If they don't, you may copy the spell. You may
+/// choose new targets for the copy."
+///
+/// 🟡 approximation: the printed "may pay {2}" tax is collapsed into
+/// an automatic copy via `Effect::CopySpell` whenever an opponent
+/// casts an instant or sorcery. This is strictly stronger than the
+/// printed Oracle (no opt-out for the opp) but preserves the
+/// "Wandering Archaic punishes spell-heavy decks" play pattern. The
+/// `CounterUnlessPaid`-style "pay or get copied" gate is engine-wide
+/// ⏳ — it needs a new `Effect::CopyUnlessPaid { ... }` primitive that
+/// hooks into the opp's auto-decider at cast time.
+///
+/// The body is a 4/4 Spirit for {2}{W}{W} — a strong wall against
+/// non-spell-heavy decks and a free copy generator against
+/// spell-heavy ones.
+pub fn wandering_archaic() -> CardDefinition {
+    use crate::card::{Predicate, Subtypes};
+    CardDefinition {
+        name: "Wandering Archaic",
+        cost: cost(&[generic(2), w(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::OpponentControl)
+                .with_filter(Predicate::Any(vec![
+                    Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: SelectionRequirement::HasCardType(CardType::Instant),
+                    },
+                    Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: SelectionRequirement::HasCardType(CardType::Sorcery),
+                    },
+                ])),
+            effect: Effect::CopySpell {
+                what: Selector::TriggerSource,
+                count: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Illuminate History ──────────────────────────────────────────────────────
+
+/// Illuminate History — {1}{R}{W} Sorcery.
+/// "As an additional cost to cast this spell, discard a card. Create two
+/// 2/2 red and white Spirit creature tokens with flying."
+///
+/// Lorehold Spirit-token sorcery with discard as an additional cost.
+/// The engine has no general "discard as additional cost" primitive,
+/// so we approximate by running `Effect::Discard(You, 1)` at
+/// resolution time — net behavior matches (one card from hand →
+/// graveyard, two Spirit tokens minted). The cost-vs-resolution
+/// timing difference is invisible to a non-counterspell game state.
+///
+/// Tokens reuse the SOS `spirit_token()` (2/2 R/W, no flying); we
+/// stamp flying via the `flying` token variant inline. Two tokens
+/// per cast — the Lorehold Pillardrop / Sparring Regimen anthem
+/// payoffs benefit handsomely.
+pub fn illuminate_history() -> CardDefinition {
+    let lorehold_spirit_flying = TokenDefinition {
+        name: "Spirit".to_string(),
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Red, Color::White],
+        supertypes: vec![],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
+        activated_abilities: vec![],
+        triggered_abilities: vec![],
+    };
+    CardDefinition {
+        name: "Illuminate History",
+        cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            // "As an additional cost to cast this spell, discard a card."
+            // The engine has no discard-as-additional-cost primitive, so
+            // we run the discard at resolution time — gameplay difference
+            // is invisible to non-counterspell paths.
+            Effect::Discard {
+                who: Selector::You,
+                amount: Value::Const(1),
+                random: false,
+            },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                definition: lorehold_spirit_flying,
             },
         ]),
         activated_abilities: no_abilities(),

@@ -4064,3 +4064,88 @@ fn tend_the_pests_sacrifices_creature_and_creates_x_pests() {
     ).count();
     assert_eq!(pests, 4, "Should create X = 4 Pest tokens (one per sacrificed power)");
 }
+
+// ── CR 702.90b — Infect player damage → poison counters ─────────────────────
+
+/// CR 702.90b: "Damage dealt to a player by a source with infect doesn't
+/// cause that player to lose life. Rather, it causes that source's
+/// controller to give the player that many poison counters." The combat
+/// path in `combat.rs::apply_combat_damage` already honors this for the
+/// attacker-damages-player case (Plague Stinger-style infect attackers).
+/// This test exercises the **non-combat** path (`Effect::DealDamage` →
+/// `deal_damage_to_from`) by manually granting Infect to a Grizzly
+/// Bears, then dealing 2 spell damage from that bear to the opp player.
+/// The opp should gain 2 poison counters and lose 0 life.
+#[test]
+fn infect_spell_damage_to_player_grants_poison_per_cr_702_90b() {
+    use crate::card::Keyword;
+    use crate::effect::{Selector, Value};
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+
+    // Grant Infect EOT to the bear by adding it directly to the
+    // permanent's keyword list. Bypassing the layer system here keeps
+    // the test focused on the damage routing rather than wiring up a
+    // continuous-effect bookkeeping layer.
+    g.battlefield_find_mut(bear)
+        .unwrap()
+        .definition
+        .keywords
+        .push(Keyword::Infect);
+    assert!(
+        g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Infect),
+        "bear should now have Infect"
+    );
+
+    let p1_life_before = g.players[1].life;
+    let p1_poison_before = g.players[1].poison_counters;
+
+    // Spell-damage the opp from a source-with-infect (the bear).
+    let ctx_from_bear = EffectContext::for_ability(bear, 0, None);
+    g.resolve_effect(
+        &Effect::DealDamage {
+            to: Selector::Player(PlayerRef::EachOpponent),
+            amount: Value::Const(2),
+        },
+        &ctx_from_bear,
+    )
+    .unwrap();
+
+    assert_eq!(
+        g.players[1].life, p1_life_before,
+        "infect damage should NOT reduce life"
+    );
+    assert_eq!(
+        g.players[1].poison_counters, p1_poison_before + 2,
+        "infect damage should add 2 poison counters; got {}",
+        g.players[1].poison_counters
+    );
+}
+
+/// Without infect, the same spell-damage should reduce life normally.
+/// This is the control case for the test above — confirms the routing
+/// is gated on the source's effective keywords, not always-on.
+#[test]
+fn non_infect_spell_damage_to_player_reduces_life_per_cr_702_90b_control() {
+    use crate::effect::{Selector, Value};
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+
+    let p1_life_before = g.players[1].life;
+    let p1_poison_before = g.players[1].poison_counters;
+
+    let ctx_from_bear = EffectContext::for_ability(bear, 0, None);
+    g.resolve_effect(
+        &Effect::DealDamage {
+            to: Selector::Player(PlayerRef::EachOpponent),
+            amount: Value::Const(2),
+        },
+        &ctx_from_bear,
+    )
+    .unwrap();
+
+    assert_eq!(g.players[1].life, p1_life_before - 2);
+    assert_eq!(g.players[1].poison_counters, p1_poison_before);
+}

@@ -10,11 +10,47 @@ use crate::game::{GameEvent, GameState};
 
 impl GameState {
     pub(super) fn deal_damage_to(&mut self, ent: EntityRef, amount: u32, events: &mut Vec<GameEvent>) {
+        self.deal_damage_to_from(ent, amount, None, events);
+    }
+
+    /// Damage delivery with the source's identity threaded through, so
+    /// CR 702.90b (Infect) can convert player damage into poison
+    /// counters when the source has the Infect keyword. `source` is
+    /// the `CardId` of the damaging permanent (typically `ctx.source`).
+    /// Combat damage uses a separate path in `combat.rs` that already
+    /// honors infect for combat damage.
+    pub(super) fn deal_damage_to_from(
+        &mut self,
+        ent: EntityRef,
+        amount: u32,
+        source: Option<crate::card::CardId>,
+        events: &mut Vec<GameEvent>,
+    ) {
+        // CR 702.90b — damage dealt to a player by a source with infect
+        // doesn't cause life loss; it gives the player poison counters
+        // equal to that damage. We check the source's effective
+        // keywords via `computed_permanent` so layered grants (e.g.
+        // Triumph of the Hordes-style anthems) are honored.
+        let source_has_infect = source
+            .and_then(|s| self.computed_permanent(s))
+            .map(|cp| cp.keywords.contains(&crate::card::Keyword::Infect))
+            .unwrap_or(false);
         match ent {
             EntityRef::Player(p) => {
-                self.players[p].life -= amount as i32;
-                events.push(GameEvent::DamageDealt { amount, to_player: Some(p), to_card: None });
-                events.push(GameEvent::LifeLost { player: p, amount });
+                if source_has_infect {
+                    self.players[p].poison_counters =
+                        self.players[p].poison_counters.saturating_add(amount);
+                    events.push(GameEvent::PoisonAdded { player: p, amount });
+                    events.push(GameEvent::DamageDealt {
+                        amount,
+                        to_player: Some(p),
+                        to_card: None,
+                    });
+                } else {
+                    self.players[p].life -= amount as i32;
+                    events.push(GameEvent::DamageDealt { amount, to_player: Some(p), to_card: None });
+                    events.push(GameEvent::LifeLost { player: p, amount });
+                }
             }
             EntityRef::Permanent(cid) => {
                 // CR 120.3c — damage dealt to a planeswalker causes that

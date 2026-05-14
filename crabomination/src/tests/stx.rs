@@ -4525,3 +4525,304 @@ fn big_play_mode_2_grants_trample_to_friendlies() {
     assert!(computed.keywords.contains(&Keyword::Trample),
         "Mode 2 should grant trample to the friendly bear");
 }
+
+// ── New STX cards added in modern_decks push ────────────────────────────────
+
+/// Burrog Befuddler: a 2/1 Flash Frog Wizard. The ETB trigger drops
+/// -3/-0 on a target creature for the turn. A 2/2 Grizzly Bears
+/// becomes effectively a -1/2 in damage math — non-lethal but the
+/// pump-down still drains attacker pressure.
+#[test]
+fn burrog_befuddler_etb_minus_three_zero() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 2);
+
+    let id = g.add_card_to_hand(0, catalog::burrog_befuddler());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        mode: None, x_value: None,
+    }).expect("Burrog Befuddler castable for {1}{U}");
+    drain_stack(&mut g);
+
+    let computed = g.computed_permanent(bear).unwrap();
+    assert_eq!(computed.power, -1,
+        "bear should be effectively -1 power after -3/-0; got {}", computed.power);
+    assert_eq!(computed.toughness, 2,
+        "bear toughness unchanged by -3/-0; got {}", computed.toughness);
+}
+
+/// Burrog Befuddler has Flash and is a Frog Wizard.
+#[test]
+fn burrog_befuddler_has_flash() {
+    let card = catalog::burrog_befuddler();
+    assert!(card.keywords.contains(&Keyword::Flash));
+    assert_eq!(card.power, 2);
+    assert_eq!(card.toughness, 1);
+}
+
+/// Mage Hunters' Mark grants +3/+0 + Menace EOT to any creature target.
+#[test]
+fn mage_hunters_mark_pumps_target_and_grants_menace() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+
+    let id = g.add_card_to_hand(0, catalog::mage_hunters_mark());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        mode: None, x_value: None,
+    }).expect("Mage Hunters' Mark castable for {1}{R}");
+    drain_stack(&mut g);
+
+    let computed = g.computed_permanent(bear).unwrap();
+    assert_eq!(computed.power, 5, "bear should be 2+3=5 power");
+    assert!(computed.keywords.contains(&Keyword::Menace),
+        "bear should gain menace");
+}
+
+/// Mage Duel: friendly creature deals damage equal to its power to opp
+/// creature. A 5/5 friendly Wurm (Bookwurm-style) wipes a 2/2 Bear.
+#[test]
+fn mage_duel_friendly_burns_opp_creature_by_friendly_power() {
+    let mut g = two_player_game();
+    let _friendly = g.add_card_to_battlefield(0, catalog::tarmogoyf());
+    // Tarmogoyf without any types in any graveyard is 0/1; let's seed a
+    // graveyard card so its power becomes 1.
+    let _ = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    let opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(opp_bear);
+
+    let id = g.add_card_to_hand(0, catalog::mage_duel());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(opp_bear)),
+        mode: None, x_value: None,
+    }).expect("Mage Duel castable for {1}{R}");
+    drain_stack(&mut g);
+
+    // Tarmogoyf at 1/2 (with 1 type in gy: Instant) deals 1 to the bear;
+    // bear survives but takes 1 damage.
+    let bear_card = g.battlefield.iter().find(|c| c.id == opp_bear)
+        .expect("bear still alive (1 damage on a 2-toughness body)");
+    assert_eq!(bear_card.damage, 1, "bear took 1 damage from friendly power 1");
+}
+
+/// Eccentric Apprentice's magecraft trigger pumps the source +1/+0 EOT
+/// when its controller casts an instant or sorcery. We cast Lightning
+/// Bolt with the apprentice on the battlefield and verify its power.
+#[test]
+fn eccentric_apprentice_pumps_on_instant_cast() {
+    let mut g = two_player_game();
+    let app = g.add_card_to_battlefield(0, catalog::eccentric_apprentice());
+    g.clear_sickness(app);
+    let pre = g.computed_permanent(app).unwrap();
+    assert_eq!(pre.power, 1, "starts at 1");
+
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        mode: None, x_value: None,
+    }).expect("bolt castable");
+    drain_stack(&mut g);
+
+    let post = g.computed_permanent(app).unwrap();
+    assert_eq!(post.power, 2, "after magecraft +1/+0 → 2 power; got {}", post.power);
+}
+
+/// Illuminate History: discard a card from hand and create two 2/2 R/W
+/// Spirit tokens with flying.
+#[test]
+fn illuminate_history_discards_and_creates_two_spirits() {
+    let mut g = two_player_game();
+    // Seed a card in hand to be discarded.
+    let _fodder = g.add_card_to_hand(0, catalog::island());
+    let id = g.add_card_to_hand(0, catalog::illuminate_history());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let hand_before = g.players[0].hand.len();
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    }).expect("Illuminate History castable for {1}{R}{W}");
+    drain_stack(&mut g);
+
+    // Hand: -1 (cast) -1 (discard) = -2 from before.
+    assert_eq!(g.players[0].hand.len(), hand_before - 2,
+        "should cast + discard, net -2 hand cards");
+
+    let spirits: Vec<_> = g.battlefield.iter()
+        .filter(|c| c.is_token && c.definition.name == "Spirit"
+            && c.controller == 0)
+        .collect();
+    assert_eq!(spirits.len(), 2, "should mint two Spirits");
+    for s in &spirits {
+        assert!(s.has_keyword(&Keyword::Flying),
+            "spirit token should have flying");
+        assert_eq!(s.power(), 2);
+        assert_eq!(s.toughness(), 2);
+    }
+}
+
+/// Brilliant Plan: a {3}{U}{U} Sorcery — Lesson. Scry 3 + Draw 3.
+#[test]
+fn brilliant_plan_scrys_three_and_draws_three() {
+    let mut g = two_player_game();
+    // Seed library with 6 cards (Scry 3 + Draw 3 = touches 6 cards).
+    for _ in 0..6 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let id = g.add_card_to_hand(0, catalog::brilliant_plan());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    let hand_before = g.players[0].hand.len();
+    let lib_before = g.players[0].library.len();
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    }).expect("Brilliant Plan castable for {3}{U}{U}");
+    drain_stack(&mut g);
+
+    // Hand: -1 (cast) +3 (draw) = +2 net.
+    assert_eq!(g.players[0].hand.len(), hand_before - 1 + 3);
+    // Library: -3 (drew 3). Scry may keep cards on top, so library size
+    // reduces by 3 net.
+    assert_eq!(g.players[0].library.len(), lib_before - 3);
+}
+
+/// Fortifying Draught: Lesson, +1/+4 EOT to target creature.
+#[test]
+fn fortifying_draught_pumps_target_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+
+    let id = g.add_card_to_hand(0, catalog::fortifying_draught());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        mode: None, x_value: None,
+    }).expect("Fortifying Draught castable for {2}{W}");
+    drain_stack(&mut g);
+
+    let comp = g.computed_permanent(bear).unwrap();
+    assert_eq!(comp.power, 3, "bear at 2+1=3 power");
+    assert_eq!(comp.toughness, 6, "bear at 2+4=6 toughness");
+}
+
+/// Guiding Voice: +1/+1 counter on target creature + Learn (Draw 1).
+#[test]
+fn guiding_voice_counters_and_draws() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    let id = g.add_card_to_hand(0, catalog::guiding_voice());
+    g.players[0].mana_pool.add(Color::White, 1);
+    let hand_before = g.players[0].hand.len();
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        mode: None, x_value: None,
+    }).expect("Guiding Voice castable for {W}");
+    drain_stack(&mut g);
+
+    // The bear should have a +1/+1 counter.
+    let bear_card = g.battlefield.iter().find(|c| c.id == bear).unwrap();
+    assert_eq!(bear_card.counter_count(CounterType::PlusOnePlusOne), 1);
+    // Hand: -1 (cast) +1 (learn → draw) = unchanged.
+    assert_eq!(g.players[0].hand.len(), hand_before);
+}
+
+/// Tezzeret's Gambit mode 0: Proliferate. Bears with +1/+1 counters
+/// get another counter; players with poison get another poison.
+#[test]
+fn tezzerets_gambit_mode_zero_proliferates() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // Seed a +1/+1 counter on the bear so proliferate adds another.
+    g.battlefield_find_mut(bear).unwrap()
+        .add_counters(CounterType::PlusOnePlusOne, 1);
+    assert_eq!(g.battlefield_find(bear).unwrap()
+        .counter_count(CounterType::PlusOnePlusOne), 1);
+
+    let id = g.add_card_to_hand(0, catalog::tezzerets_gambit());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: Some(0), x_value: None,
+    }).expect("Tezzeret's Gambit castable for {U}{B}");
+    drain_stack(&mut g);
+
+    let post = g.battlefield_find(bear).unwrap();
+    assert_eq!(post.counter_count(CounterType::PlusOnePlusOne), 2,
+        "proliferate adds one +1/+1 counter");
+}
+
+/// Tezzeret's Gambit mode 1: pay 2 life, draw 2 cards.
+#[test]
+fn tezzerets_gambit_mode_one_pays_two_life_draws_two() {
+    let mut g = two_player_game();
+    for _ in 0..2 { g.add_card_to_library(0, catalog::island()); }
+    let id = g.add_card_to_hand(0, catalog::tezzerets_gambit());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    let life_before = g.players[0].life;
+    let hand_before = g.players[0].hand.len();
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: Some(1), x_value: None,
+    }).expect("Tezzeret's Gambit mode 1 castable");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[0].life, life_before - 2,
+        "lose 2 life from mode 1");
+    // -1 cast +2 draw = +1 net.
+    assert_eq!(g.players[0].hand.len(), hand_before - 1 + 2);
+}
+
+/// Wandering Archaic copies an opponent's instant/sorcery spell when
+/// they cast one. We seed an opponent's Lightning Bolt and verify a
+/// copy lands on the stack.
+#[test]
+fn wandering_archaic_copies_opp_instant() {
+    let mut g = two_player_game();
+    let _arch = g.add_card_to_battlefield(0, catalog::wandering_archaic());
+
+    // Opp casts Lightning Bolt at us.
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    let life_before = g.players[0].life;
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)),
+        mode: None, x_value: None,
+    }).expect("opp casts Bolt");
+    drain_stack(&mut g);
+
+    // Bolt + copy = 6 damage to P0.
+    assert_eq!(g.players[0].life, life_before - 6,
+        "Bolt (3) + Wandering Archaic copy (3) = 6 damage; got {}",
+        life_before - g.players[0].life);
+}
+
+/// Wandering Archaic is a 4/4 Spirit for {2}{W}{W}.
+#[test]
+fn wandering_archaic_is_a_4_4_spirit() {
+    let card = catalog::wandering_archaic();
+    assert_eq!(card.power, 4);
+    assert_eq!(card.toughness, 4);
+    assert!(card.subtypes.creature_types.contains(&crate::card::CreatureType::Spirit));
+}

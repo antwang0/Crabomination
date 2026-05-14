@@ -1097,29 +1097,45 @@ impl GameState {
         mana_spent: u32,
     ) {
         use crate::effect::{EventKind, EventScope};
-        let candidates: Vec<(CardId, Effect, Option<crate::effect::Predicate>)> = self
+        // Walk every permanent on the battlefield — `YourControl` triggers
+        // fire from the caster's permanents, while `OpponentControl` triggers
+        // fire from non-caster permanents (Wandering Archaic etc.). The
+        // ability's effective controller is its own permanent's controller,
+        // *not* the spell-caster's index.
+        let candidates: Vec<(CardId, usize, Effect, Option<crate::effect::Predicate>)> = self
             .battlefield
             .iter()
-            .filter(|c| c.controller == controller)
             .flat_map(|c| {
+                let c_controller = c.controller;
                 c.definition
                     .triggered_abilities
                     .iter()
-                    .filter(|t| {
-                        t.event.kind == EventKind::SpellCast
-                            && matches!(
-                                t.event.scope,
-                                EventScope::YourControl | EventScope::AnyPlayer
-                            )
+                    .filter(move |t| {
+                        if t.event.kind != EventKind::SpellCast {
+                            return false;
+                        }
+                        match t.event.scope {
+                            // "Whenever you cast …" — listener's controller
+                            // must equal the caster.
+                            EventScope::YourControl => c_controller == controller,
+                            // "Whenever an opponent casts …" — listener's
+                            // controller must differ from the caster.
+                            EventScope::OpponentControl => c_controller != controller,
+                            // "Whenever any player casts …" — always fires
+                            // regardless of caster.
+                            EventScope::AnyPlayer => true,
+                            // Other scopes don't apply to a SpellCast event.
+                            _ => false,
+                        }
                     })
-                    .map(|t| (c.id, t.effect.clone(), t.event.filter.clone()))
+                    .map(move |t| (c.id, c_controller, t.effect.clone(), t.event.filter.clone()))
             })
             .collect();
 
-        for (source, effect, filter) in candidates {
+        for (source, listener_controller, effect, filter) in candidates {
             if let Some(filter) = filter {
                 let ctx = crate::game::effects::EffectContext {
-                    controller,
+                    controller: listener_controller,
                     source: Some(source),
                     targets: vec![],
                     trigger_source: Some(crate::game::effects::EntityRef::Card(cast_card)),
@@ -1132,8 +1148,11 @@ impl GameState {
                     continue;
                 }
             }
-            let auto_target =
-                self.auto_target_for_effect_avoiding(&effect, controller, Some(source));
+            let auto_target = self.auto_target_for_effect_avoiding(
+                &effect,
+                listener_controller,
+                Some(source),
+            );
             // CR 700.2b — pick the mode at push time if the trigger is modal.
             // Powers Prismari Apprentice's modal Magecraft (Scry 1 / +1/+0 EOT):
             // AutoDecider picks mode 0 (Scry); ScriptedDecider::new([Mode(1)])
@@ -1141,7 +1160,7 @@ impl GameState {
             let mode = self.pick_trigger_mode(&effect, source);
             self.stack.push(StackItem::Trigger {
                 source,
-                controller,
+                controller: listener_controller,
                 effect: Box::new(effect),
                 target: auto_target,
                 mode,

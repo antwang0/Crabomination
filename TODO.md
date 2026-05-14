@@ -11,6 +11,31 @@ Periodic spot-check of the rules document
 (`crabomination/MagicCompRules 20260116.txt`). Each rule below has a
 status tag (✅ wired, 🟡 partial, ⏳ todo) plus a short note.
 
+- ✅ **CR 702.90b — Infect damage to a player adds poison counters**
+  (push XXXVI audit): "Damage dealt to a player by a source with infect
+  doesn't cause that player to lose life. Rather, it causes that source's
+  controller to give the player that many poison counters." Push XXXVI
+  closes the non-combat path. The combat path (`combat.rs::apply_
+  combat_damage`) was already correct via `AttackerInfo.has_infect`.
+  The non-combat path (`Effect::DealDamage` → `deal_damage_to`) used
+  to unconditionally reduce life, missing the infect routing for
+  spell-damage / triggered-ability-damage from a source-with-infect
+  creature (the cleanest catalog example is a creature granted Infect
+  via Phyresis-style aura or a Triumph-of-the-Hordes anthem, then
+  dealing non-combat damage via an activated ability like
+  "{1}{R},{T}: This creature deals 1 damage to any target."). Push
+  XXXVI splits `deal_damage_to` into a new `deal_damage_to_from(ent,
+  amount, source, events)` that consults `computed_permanent(source)
+  .keywords.contains(&Keyword::Infect)` and routes player damage to
+  `Player.poison_counters` (firing `GameEvent::PoisonAdded`) instead
+  of `Player.life`. The legacy `deal_damage_to` thunks through with
+  `source: None` so non-cast call sites (Fight back-damage, combat
+  fallbacks) keep their existing behavior. Tests:
+  `infect_spell_damage_to_player_grants_poison_per_cr_702_90b`
+  (granted-Infect bear deals 2 to opp → 2 poison, 0 life loss) +
+  control `non_infect_spell_damage_to_player_reduces_life_per_cr_702_
+  90b_control` (bare bear deals 2 → 2 life loss, 0 poison).
+
 - ✅ **CR 702.34a — Flashback exile-on-resolve** (push XXXV audit):
   "Flashback [cost]" means "You may cast this card from your graveyard
   if the resulting spell is an instant or sorcery spell by paying
@@ -362,6 +387,31 @@ status tag (✅ wired, 🟡 partial, ⏳ todo) plus a short note.
   the counters land on resolution).
 
 ## Suggested next-up tasks
+
+- ⏳ **`Effect::CopyUnlessPaid { what, mana_cost }` — opp-spell tax-or-
+  copy gate (Wandering Archaic)** — push XXXVI lands the body of
+  Wandering Archaic as an unconditional copy of every opp-cast
+  instant/sorcery via the new opp-spell wire in
+  `fire_spell_cast_triggers` (`EventScope::OpponentControl`). The
+  printed Oracle's "that player may pay {2}. If they don't, …" tax-or-
+  copy gate is engine-wide ⏳: it needs the opp's auto-decider to pay
+  {2} from their pool (mid-trigger-push, not at resolution), and a new
+  `Effect::CopyUnlessPaid` that branches on the payment. Wiring needs:
+  (a) a yes/no decision on the opp's side at trigger-push time; (b)
+  the engine's mana-pool pay path used from within the trigger
+  dispatcher; (c) the trigger's `controller` (the listener, not the
+  caster) stays the source's controller — only the `pay` step
+  consults the *caster's* pool. Same primitive could power Mindbreak
+  Trap-style "if your opp casts 3+ spells" tax-or-counter gates if
+  generalized to `IfPaid { cost, then, else }`.
+
+- ⏳ **`PlayerRef::Opponent` (single-opponent helper)** — engine has
+  `EachOpponent` (all opps) and `Target(_)` (cast-time targeting) but
+  no "the singular non-controller opp" ref. In 2-player games these
+  collapse to the same player, but `Selector::Player(PlayerRef::
+  Opponent)` would read more naturally for single-opp effects (e.g.
+  "target opponent draws a card" in Baleful Mastery). Workaround
+  today is `EachOpponent` which fan-outs in multiplayer.
 
 - ⏳ **`StaticEffect::PumpPTOther` / generalized tribal-anthem
   primitive** — push XXX added the `exclude_source` flag to
