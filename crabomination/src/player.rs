@@ -90,6 +90,12 @@ pub struct Player {
     pub sorceries_as_flash: bool,
     /// Poison counters (player loses at 10).
     pub poison_counters: u32,
+    /// True if this player has no maximum hand size for the rest of the
+    /// game. Set by `Effect::SetNoMaxHandSize` (Wisdom of Ages, Reliquary
+    /// Tower-style effects). When true, the cleanup-step CR 514.1 enforcement
+    /// in `do_cleanup` skips the discard-down-to-7 step.
+    #[serde(default)]
+    pub no_maximum_hand_size: bool,
     /// True once this player has lost the game (life ≤ 0, poison ≥ 10, or
     /// drew from an empty library). Eliminated players are skipped by turn
     /// and priority rotation; the game ends when ≤ 1 player remains.
@@ -122,6 +128,7 @@ impl Player {
             first_spell_tax_charges: 0,
             sorceries_as_flash: false,
             poison_counters: 0,
+            no_maximum_hand_size: false,
             eliminated: false,
             wants_ui: false,
         }

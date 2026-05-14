@@ -922,12 +922,11 @@ pub fn pursue_the_past() -> CardDefinition {
 /// That player discards that card. Put two +1/+1 counters on up to one
 /// target creature."
 ///
-/// Approximation: the engine has no two-target prompt for sorceries
-/// today, so the second clause's optional creature target is realised by
-/// requiring a creature target as the spell's primary target — picking
-/// "no creature" is not yet expressible. `DiscardChosen` on the
-/// `EachOpponent` selector handles the reveal-and-discard half (auto-
-/// decider picks the first matching nonland card).
+/// Push (modern_decks): two-slot multi-target shape. Slot 0 = target
+/// opponent (reveal hand + caster picks a nonland to discard). Slot 1 =
+/// optional creature target gets two +1/+1 counters via
+/// `TargetFiltered` (no-op when no slot 1 target). The auto-decider
+/// only fills slot 0; scripted tests can wire both halves.
 pub fn render_speechless() -> CardDefinition {
     use crate::card::CounterType;
     CardDefinition {
@@ -940,13 +939,18 @@ pub fn render_speechless() -> CardDefinition {
         toughness: 0,
         keywords: vec![],
         effect: Effect::Seq(vec![
+            // Slot 0: target opponent reveals + chosen-discard.
             Effect::DiscardChosen {
-                from: Selector::Player(PlayerRef::EachOpponent),
+                from: target_filtered(SelectionRequirement::Player),
                 count: Value::Const(1),
                 filter: SelectionRequirement::Nonland,
             },
+            // Slot 1: optional friendly creature gets two +1/+1 counters.
             Effect::AddCounter {
-                what: target_filtered(SelectionRequirement::Creature),
+                what: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: SelectionRequirement::Creature,
+                },
                 kind: CounterType::PlusOnePlusOne,
                 amount: Value::Const(2),
             },
@@ -1058,10 +1062,11 @@ pub fn arcane_omens() -> CardDefinition {
 /// damage to any target, and you gain X life, where X is the number of
 /// colors of mana spent to cast this spell."
 ///
-/// Approximation: the "target player draws X" half is collapsed to
-/// "you draw X" — same engine multi-target gap that's blocked Cost of
-/// Brilliance. The damage half targets any-target via the spell's
-/// primary target slot. Self-life-gain runs unconditionally.
+/// Push (modern_decks): two-slot multi-target shape — slot 0 = target
+/// player draws X (`Value::ConvergedValue`), slot 1 = any target gets
+/// X damage. Self-life-gain runs unconditionally. AutoDecider points
+/// slot 0 at the caster (self-draw) by default; scripted tests can
+/// aim the draw half at an opponent.
 pub fn together_as_one() -> CardDefinition {
     CardDefinition {
         name: "Together as One",
@@ -1073,16 +1078,19 @@ pub fn together_as_one() -> CardDefinition {
         toughness: 0,
         keywords: vec![],
         effect: Effect::Seq(vec![
+            // Slot 0: target player draws X.
             Effect::Draw {
-                who: Selector::You,
+                who: target_filtered(SelectionRequirement::Player),
                 amount: Value::ConvergedValue,
             },
+            // Slot 1: any target gets X damage.
             Effect::DealDamage {
-                to: target_filtered(
-                    SelectionRequirement::Creature
+                to: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: SelectionRequirement::Creature
                         .or(SelectionRequirement::Player)
                         .or(SelectionRequirement::Planeswalker),
-                ),
+                },
                 amount: Value::ConvergedValue,
             },
             Effect::GainLife {
@@ -1107,15 +1115,15 @@ pub fn together_as_one() -> CardDefinition {
 /// hand. You have no maximum hand size for the rest of the game. /
 /// Exile Wisdom of Ages."
 ///
-/// Approximation: the "no maximum hand size" clause is omitted (the
-/// engine has no hand-size cap or "remove cap" primitive yet — there's
-/// no functional difference in 2-player matches without a discard
-/// trigger that fires off hand size). The graveyard recursion uses
-/// `Selector::CardsInZone { zone: Graveyard }` with a card-type
-/// filter and a `ZoneDest::Hand` destination. The "exile this" rider
-/// is omitted (sorceries already go to graveyard on resolution; the
+/// Push (modern_decks): "no maximum hand size for the rest of the
+/// game" is now wired via the new `Effect::SetNoMaxHandSize` primitive
+/// (sibling to `Player.no_maximum_hand_size: bool`). The cleanup-step
+/// CR 514.1 enforcement in `do_cleanup` (`game/stack.rs`) now respects
+/// the flag — caster keeps every card. The "exile this" rider is still
+/// omitted (sorceries already go to graveyard on resolution; the
 /// special exile clause is for replay-prevention which we don't have
-/// any payoff for yet).
+/// any payoff for yet — see Improvisation Capstone for the related
+/// cast-from-exile pipeline gap).
 pub fn wisdom_of_ages() -> CardDefinition {
     use crate::card::Zone;
     use crate::effect::ZoneDest;
@@ -1129,15 +1137,18 @@ pub fn wisdom_of_ages() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![],
-        effect: Effect::Move {
-            what: Selector::CardsInZone {
-                who: PlayerRef::You,
-                zone: Zone::Graveyard,
-                filter: SelectionRequirement::HasCardType(CardType::Instant)
-                    .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+        effect: Effect::Seq(vec![
+            Effect::Move {
+                what: Selector::CardsInZone {
+                    who: PlayerRef::You,
+                    zone: Zone::Graveyard,
+                    filter: SelectionRequirement::HasCardType(CardType::Instant)
+                        .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+                },
+                to: ZoneDest::Hand(PlayerRef::You),
             },
-            to: ZoneDest::Hand(PlayerRef::You),
-        },
+            Effect::SetNoMaxHandSize { who: Selector::You },
+        ]),
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -1288,14 +1299,16 @@ pub fn splatter_technique() -> CardDefinition {
 /// "Target player draws two cards and loses 2 life. Put a +1/+1 counter
 /// on up to one target creature."
 ///
-/// Approximation: collapses the two-target structure into a single
-/// creature target where the **caster** draws and loses life, plus the
-/// +1/+1 counter goes on the target creature. The two-target prompt
-/// (player + creature with optional creature) is an open engine gap;
-/// using the caster as the "draws/loses life" recipient keeps the card
-/// playable as a self-loot+pump effect.
+/// Push (modern_decks): two-target shape now wired via the multi-target
+/// action shape (push modern_decks: `GameAction::CastSpell.additional_targets`).
+/// Slot 0 = target player (draws 2 + loses 2 life), slot 1 = optional
+/// creature target (gets a +1/+1 counter). Slot 1 uses `TargetFiltered`
+/// so it resolves to no-op when the caster only picks a player target.
+/// AutoDecider currently aims slot 0 at the caster (self-loot pattern);
+/// scripted tests can override.
 pub fn cost_of_brilliance() -> CardDefinition {
     use crate::card::CounterType;
+    use crate::effect::shortcut::target_filtered;
     CardDefinition {
         name: "Cost of Brilliance",
         cost: cost(&[generic(2), b()]),
@@ -1306,16 +1319,22 @@ pub fn cost_of_brilliance() -> CardDefinition {
         toughness: 0,
         keywords: vec![],
         effect: Effect::Seq(vec![
+            // Slot 0: target player draws 2 + loses 2 life.
             Effect::Draw {
-                who: Selector::You,
+                who: target_filtered(SelectionRequirement::Player),
                 amount: Value::Const(2),
             },
             Effect::LoseLife {
-                who: Selector::You,
+                who: Selector::Target(0),
                 amount: Value::Const(2),
             },
+            // Slot 1: optional creature target gets a +1/+1 counter
+            // (resolves to no-op when slot 1 is empty).
             Effect::AddCounter {
-                what: target_filtered(SelectionRequirement::Creature),
+                what: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: SelectionRequirement::Creature,
+                },
                 kind: CounterType::PlusOnePlusOne,
                 amount: Value::Const(1),
             },

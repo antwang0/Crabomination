@@ -581,16 +581,24 @@ impl GameState {
         // ask the player which cards to discard via `Decision::Discard`.
         const MAX_HAND_SIZE: usize = 7;
         let active = self.active_player_idx;
-        while self.players[active].hand.len() > MAX_HAND_SIZE {
-            let card = self.players[active].hand.remove(0);
-            let cid = card.id;
-            self.players[active].graveyard.push(card);
-            // Emit the standard discard event so triggers / payoffs see it.
-            // Cleanup discard is still a discard — CR 419.1 + 514.1.
-            // (No event-buffer threading here since do_cleanup runs in a
-            // priority-less window; the event is recorded for snapshot
-            // tracking but doesn't trigger anything per CR 514.3.)
-            let _ = cid;
+        // CR 402.2 — "Each player's maximum hand size is normally seven
+        // cards. A player may have any number of cards in their hand,
+        // but as part of their cleanup step, the player must discard
+        // excess cards down to the maximum hand size." Wisdom of Ages,
+        // Reliquary Tower, etc. set `Player.no_maximum_hand_size = true`
+        // which skips this discard-down step entirely.
+        if !self.players[active].no_maximum_hand_size {
+            while self.players[active].hand.len() > MAX_HAND_SIZE {
+                let card = self.players[active].hand.remove(0);
+                let cid = card.id;
+                self.players[active].graveyard.push(card);
+                // Emit the standard discard event so triggers / payoffs see it.
+                // Cleanup discard is still a discard — CR 419.1 + 514.1.
+                // (No event-buffer threading here since do_cleanup runs in a
+                // priority-less window; the event is recorded for snapshot
+                // tracking but doesn't trigger anything per CR 514.3.)
+                let _ = cid;
+            }
         }
 
         // CR 514.2 — Second, the following actions happen simultaneously:

@@ -720,6 +720,24 @@ pub enum Effect {
     Draw    { who: Selector, amount: Value },
     /// Discard `amount` cards. If `random`, chosen randomly; else by `who`.
     Discard { who: Selector, amount: Value, random: bool },
+    /// Discard any number of cards (0 to hand-size, player's choice). Used by
+    /// "discard any number of cards, then draw that many cards plus one"
+    /// effects (Colossus of the Blood Age, Mind Roots-style "any number"
+    /// discards). The discarded count is added to
+    /// `state.cards_discarded_this_resolution`, so a follow-up `Draw` step
+    /// in the same `Seq` can reference `Value::CardsDiscardedThisEffect`
+    /// for the "draw equal to discarded" rider. AutoDecider picks 0 (the
+    /// conservative default); ScriptedDecider supplies the exact discard
+    /// list via `DecisionAnswer::Discard(_)`.
+    DiscardAnyNumber { who: Selector },
+    /// Set `Player.no_maximum_hand_size = true` on each resolved player,
+    /// for the rest of the game. Used by Wisdom of Ages ("You have no
+    /// maximum hand size for the rest of the game"), Reliquary Tower's
+    /// static (which actually wires through a layer, but the simpler
+    /// "for the rest of the game" cards can flip the flag directly).
+    /// Skips the cleanup-step CR 514.1 discard-down-to-7 in
+    /// `do_cleanup`.
+    SetNoMaxHandSize { who: Selector },
     Mill    { who: Selector, amount: Value },
     Scry    { who: PlayerRef, amount: Value },
     Surveil { who: PlayerRef, amount: Value },
@@ -1068,6 +1086,8 @@ impl Effect {
             Effect::Draw { who, amount }
             | Effect::Mill { who, amount } => sel_has_target(who) || value_has_target(amount),
             Effect::Discard { who, amount, .. } => sel_has_target(who) || value_has_target(amount),
+            Effect::DiscardAnyNumber { who } => sel_has_target(who),
+            Effect::SetNoMaxHandSize { who } => sel_has_target(who),
             Effect::Scry { who, amount }
             | Effect::Surveil { who, amount }
             | Effect::LookAtTop { who, amount } => {
@@ -1179,6 +1199,8 @@ impl Effect {
             // manual Target. The filter is typically `Player` (Mind Rot,
             // Sign in Blood) but can be narrower (Howling Mine-style "you").
             Effect::Discard { who, .. }
+            | Effect::DiscardAnyNumber { who }
+            | Effect::SetNoMaxHandSize { who }
             | Effect::Draw { who, .. }
             | Effect::Mill { who, .. } => sel_filter(who),
             Effect::Drain { to, .. } => sel_filter(to),
@@ -1317,6 +1339,8 @@ impl Effect {
             | Effect::LoseLife { .. }
             | Effect::Drain { .. }
             | Effect::Discard { .. }
+            | Effect::DiscardAnyNumber { .. }
+            | Effect::SetNoMaxHandSize { .. }
             | Effect::Draw { .. }
             | Effect::Mill { .. }
             | Effect::AddPoison { .. } => true,
@@ -1461,6 +1485,8 @@ impl Effect {
                 Effect::Drain { from, to, .. } => sel_find(from, slot).or_else(|| sel_find(to, slot)),
                 Effect::Draw { who, .. } | Effect::Mill { who, .. } => sel_find(who, slot),
                 Effect::Discard { who, .. } => sel_find(who, slot),
+                Effect::DiscardAnyNumber { who } => sel_find(who, slot),
+                Effect::SetNoMaxHandSize { who } => sel_find(who, slot),
                 Effect::Move { what, .. } => sel_find(what, slot),
                 Effect::Destroy { what }
                 | Effect::Exile { what }

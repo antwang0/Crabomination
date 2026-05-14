@@ -11,6 +11,27 @@ Periodic spot-check of the rules document
 (`crabomination/MagicCompRules 20260116.txt`). Each rule below has a
 status tag (✅ wired, 🟡 partial, ⏳ todo) plus a short note.
 
+- ✅ **CR 402.2 — Maximum hand size enforced at cleanup, opt-out via
+  "no maximum hand size"** (push modern_decks audit, claude/modern_decks
+  branch): "Each player has a maximum hand size, which is normally seven
+  cards. A player may have any number of cards in their hand, but as
+  part of their cleanup step, the player must discard excess cards down
+  to the maximum hand size." The cleanup-step discard (CR 514.1) lands
+  in `do_cleanup` (`game/stack.rs:582`) and runs the while-loop that
+  drops head-of-hand into the graveyard until `hand.len() == 7`. Push
+  (modern_decks) introduces `Player.no_maximum_hand_size: bool` + the
+  new `Effect::SetNoMaxHandSize { who }` primitive — the cleanup-step
+  discard now skips the loop entirely when the active player's flag is
+  set. Wisdom of Ages's "You have no maximum hand size for the rest of
+  the game" rider promotes from 🟡 → ✅ via this primitive. Same flag
+  would gate Reliquary Tower / Spellbook / Library of Leng once those
+  permanents land in the catalog. Tests:
+  `wisdom_of_ages_lets_caster_keep_more_than_seven_cards` (cast Wisdom
+  of Ages, push 10 cards into hand, fire cleanup, assert 10 cards
+  retained), `wisdom_of_ages_returns_all_instants_and_sorceries_from_
+  graveyard` (asserts the flag flips on resolution). Engine sites:
+  `do_cleanup` (game/stack.rs), `Effect::SetNoMaxHandSize` handler
+  (game/effects/mod.rs), `Player::new` default (player.rs).
 - ✅ **CR 119.9 — Zero-life-gain emits no event** (push modern_decks
   /claude/modern_decks audit): "Some triggered abilities are written,
   'Whenever [a player] gains life, . . . .' Such abilities are treated
@@ -586,6 +607,27 @@ status tag (✅ wired, 🟡 partial, ⏳ todo) plus a short note.
 
 ## Suggested next-up tasks
 
+- ✅ **`Effect::DiscardAnyNumber { who }` — "discard any number of cards"
+  primitive** (push modern_decks): new effect variant that asks the
+  player to pick a subset of their hand (0 to all). AutoDecider picks
+  0 (conservative); ScriptedDecider supplies the exact picks via
+  `DecisionAnswer::Discard(_)`. Each discarded card bumps
+  `state.cards_discarded_this_resolution`, so a follow-up `Draw` step
+  in the same `Seq` can read `Value::CardsDiscardedThisEffect`. Colossus
+  of the Blood Age's death trigger is the canonical exerciser ("discard
+  any number, draw that many plus one"). Same primitive unblocks any
+  future "discard any number → do X equal to that many" card.
+
+- ✅ **`Effect::SetNoMaxHandSize { who }` + `Player.no_maximum_hand_size`**
+  (push modern_decks): flips the per-player flag for the rest of the
+  game. The cleanup-step CR 402.2 / 514.1 enforcement in `do_cleanup`
+  (`game/stack.rs`) skips the discard-down-to-7 loop when the flag is
+  set. Wisdom of Ages's "no maximum hand size for the rest of the game"
+  rider is the canonical exerciser. Same primitive unblocks any future
+  Reliquary Tower / Spellbook / Library of Leng-style permanent that
+  grants the same rider via a static effect (those cards would need a
+  `StaticEffect::ControllerNoMaxHandSize` variant on top of this).
+
 - ⏳ **`Effect::DiscardOrSacrifice` — additional-cost picker for "discard
   a card or sacrifice a creature"** — STA Bone Shards (already wired as a
   Sorcery in `mod_set::instants`) uses a `Seq(ChooseMode([Sacrifice 1
@@ -597,6 +639,19 @@ status tag (✅ wired, 🟡 partial, ⏳ todo) plus a short note.
   with two cost branches keyed off a `ChooseAlternativeCost` decision
   shape. Same primitive unlocks "Pay {X}, sacrifice a creature, or
   discard a card" cycles in future sets.
+
+- ⏳ **AutoDecider auto-targeting for additional_targets slots 1+** —
+  push modern_decks promoted 8 SOS cards from single-target to
+  multi-target via the `additional_targets: Vec<Target>` action shape +
+  `Selector::TargetFiltered { slot, filter }`. The cast API + resolution
+  paths read every slot correctly, but `auto_target_for_effect_avoiding`
+  only fills slot 0. Slots 1+ stay empty under AutoDecider, so the
+  optional creature halves on Cost of Brilliance / Vibrant Outburst /
+  Render Speechless / Homesickness / Rabid Attack default to "skip" in
+  bot games. Wiring suggested shape: extend
+  `auto_target_for_effect_avoiding` to walk every slot index used by
+  the effect tree and return `Vec<Target>` for slots 1+. Until landed,
+  scripted tests carry the multi-target end-to-end coverage.
 
 - ⏳ **Burst Lightning kicker / kicker-as-modal** — STA reprint Burst
   Lightning's "Kicker {4} → 4 damage instead of 2" is an alt-cost-
@@ -1432,7 +1487,7 @@ Strixhaven coverage push). Remaining gaps:
 | Spectral Procession | {3}{W}{W}{W} | {2/W}{2/W}{2/W} hybrid (CMC 6) |
 | Grim Lavamancer | {R}{T}: 2 damage | must exile 2 cards as additional cost |
 | Ichorid | no graveyard gate | requires opponent to have a black creature in GY |
-| Render Speechless | required creature target | optional second creature target |
+| ~~Render Speechless~~ | (~~required creature target~~) | **resolved push modern_decks** — slot 1 optional |
 
 ---
 

@@ -538,6 +538,56 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::SetNoMaxHandSize { who } => {
+                for ent in self.resolve_selector(who, ctx) {
+                    if let EntityRef::Player(p) = ent {
+                        self.players[p].no_maximum_hand_size = true;
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::DiscardAnyNumber { who } => {
+                use crate::decision::Decision;
+                for ent in self.resolve_selector(who, ctx) {
+                    let EntityRef::Player(p) = ent else { continue };
+                    if self.players[p].hand.is_empty() { continue; }
+                    let candidates: Vec<(crate::card::CardId, String)> = self
+                        .players[p]
+                        .hand
+                        .iter()
+                        .map(|c| (c.id, c.definition.name.to_string()))
+                        .collect();
+                    // "Any number" — count = hand size; the decider's
+                    // `Discard(picked_ids)` answer can return 0..=hand.len()
+                    // entries. AutoDecider picks 0 by default (it returns
+                    // `iter().take(count).take(0)` semantics — but our
+                    // AutoDecider uses `count` directly so we tell it 0 by
+                    // surfacing `count: 0` with the full hand). For UI seats
+                    // the full hand is surfaced so the player can pick any
+                    // subset.
+                    let count = if self.players[p].wants_ui {
+                        candidates.len() as u32
+                    } else {
+                        0
+                    };
+                    let decision = Decision::Discard {
+                        player: p,
+                        count,
+                        hand: candidates,
+                    };
+                    let pending = PendingEffectState::DiscardChosenPending { target_player: p };
+                    if self.players[p].wants_ui {
+                        self.suspend_signal = Some((decision, pending, Effect::Noop));
+                        return Ok(());
+                    }
+                    let answer = self.decider.decide(&decision);
+                    let mut applied = self.apply_pending_effect_answer(pending, &answer)?;
+                    events.append(&mut applied);
+                }
+                Ok(())
+            }
+
             Effect::Scry { who, amount } | Effect::Surveil { who, amount } | Effect::LookAtTop { who, amount } => {
                 use crate::decision::Decision;
                 let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };

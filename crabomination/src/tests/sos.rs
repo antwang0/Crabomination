@@ -1004,9 +1004,10 @@ fn group_project_creates_2_2_red_white_spirit() {
 
 #[test]
 fn render_speechless_discards_and_pumps() {
+    // Push (modern_decks): now multi-target. Slot 0 = target opponent
+    // (reveal + chosen-discard); slot 1 = optional creature gets two
+    // +1/+1 counters.
     let mut g = two_player_game();
-    // Give opponent two cards (one nonland, one land); the nonland is the
-    // auto-pick.
     g.add_card_to_hand(1, catalog::lightning_bolt());
     g.add_card_to_hand(1, catalog::island());
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
@@ -1016,17 +1017,42 @@ fn render_speechless_discards_and_pumps() {
     g.players[0].mana_pool.add_colorless(2);
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+        card_id: id,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![Target::Permanent(bear)],
+        mode: None,
+        x_value: None,
     })
     .expect("Render Speechless castable for {2}{W}{B}");
     drain_stack(&mut g);
 
-    // Opponent discarded one nonland.
     assert!(g.players[1].graveyard.iter().any(|c| c.definition.name == "Lightning Bolt"),
         "Opponent should have discarded the nonland card");
-    // Bear has 2 +1/+1 counters.
     let pumped = g.battlefield.iter().find(|c| c.id == bear).unwrap();
     assert_eq!(pumped.counter_count(CounterType::PlusOnePlusOne), 2);
+}
+
+#[test]
+fn render_speechless_can_target_opponent_without_creature() {
+    // Slot 0 (opp discard) only — no slot 1 = no counter.
+    let mut g = two_player_game();
+    g.add_card_to_hand(1, catalog::lightning_bolt());
+    let id = g.add_card_to_hand(0, catalog::render_speechless());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Render Speechless castable for {2}{W}{B}");
+    drain_stack(&mut g);
+
+    assert!(g.players[1].graveyard.iter().any(|c| c.definition.name == "Lightning Bolt"));
 }
 
 #[test]
@@ -1496,6 +1522,9 @@ fn inkling_mascot_is_vanilla_inkling_cat() {
 
 #[test]
 fn cost_of_brilliance_draws_two_loses_two_pumps_creature() {
+    // Push (modern_decks): Cost of Brilliance is now multi-target —
+    // slot 0 = target player draws 2 + loses 2 life, slot 1 = optional
+    // creature target gets +1/+1 counter. Caster aims slot 0 at self.
     let mut g = two_player_game();
     for _ in 0..3 {
         g.add_card_to_library(0, catalog::island());
@@ -1508,7 +1537,11 @@ fn cost_of_brilliance_draws_two_loses_two_pumps_creature() {
     let hand_before = g.players[0].hand.len();
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+        card_id: id,
+        target: Some(Target::Player(0)),
+        additional_targets: vec![Target::Permanent(bear)],
+        mode: None,
+        x_value: None,
     })
     .expect("Cost of Brilliance castable for {2}{B}");
     drain_stack(&mut g);
@@ -1521,6 +1554,40 @@ fn cost_of_brilliance_draws_two_loses_two_pumps_creature() {
     let pumped = g.battlefield.iter().find(|c| c.id == bear).unwrap();
     assert_eq!(pumped.counter_count(CounterType::PlusOnePlusOne), 1,
         "Bear should have 1 +1/+1 counter");
+}
+
+#[test]
+fn cost_of_brilliance_can_target_opponent_for_draw() {
+    // The slot 0 draw target can be aimed at an opponent — they draw 2
+    // and lose 2 life. The +1/+1 counter half (slot 1) is optional and
+    // can be skipped.
+    let mut g = two_player_game();
+    for _ in 0..3 {
+        g.add_card_to_library(1, catalog::island());
+    }
+    let id = g.add_card_to_hand(0, catalog::cost_of_brilliance());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let opp_hand_before = g.players[1].hand.len();
+    let opp_life_before = g.players[1].life;
+    let caster_hand_before = g.players[0].hand.len();
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Cost of Brilliance castable aimed at opp");
+    drain_stack(&mut g);
+
+    // Caster hand: -1 cast = -1 net (no draw on caster's side).
+    assert_eq!(g.players[0].hand.len(), caster_hand_before - 1);
+    // Opp hand: +2 draw.
+    assert_eq!(g.players[1].hand.len(), opp_hand_before + 2);
+    // Opp life: -2.
+    assert_eq!(g.players[1].life, opp_life_before - 2);
 }
 
 // ── Mind Roots ──────────────────────────────────────────────────────────────
@@ -1837,6 +1904,33 @@ fn vibrant_outburst_deals_three_damage() {
         "Bear should die to 3 damage");
 }
 
+#[test]
+fn vibrant_outburst_taps_optional_second_target() {
+    // Push (modern_decks): slot 1 = optional creature target tap. Two
+    // creatures: slot 0 = bear1 (3 dmg, dies); slot 1 = bear2 (taps).
+    let mut g = two_player_game();
+    let bear1 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let bear2 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::vibrant_outburst());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(bear1)),
+        additional_targets: vec![Target::Permanent(bear2)],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Vibrant Outburst castable");
+    drain_stack(&mut g);
+
+    // bear1 dies; bear2 stays but is tapped.
+    assert!(!g.battlefield.iter().any(|c| c.id == bear1));
+    let bear2_card = g.battlefield.iter().find(|c| c.id == bear2).expect("bear2 alive");
+    assert!(bear2_card.tapped, "bear2 should be tapped");
+}
+
 // ── Stress Dream ────────────────────────────────────────────────────────────
 
 #[test]
@@ -1897,19 +1991,25 @@ fn arcane_omens_discards_x_cards_using_converged_value() {
 
 #[test]
 fn together_as_one_uses_converged_value_for_each_clause() {
+    // Push (modern_decks): now multi-target — slot 0 = target player
+    // for the draw, slot 1 = any target for the damage. The
+    // ConvergedValue = 0 (mono-colorless cast) zeros all three clauses.
     let mut g = two_player_game();
     for _ in 0..3 {
         g.add_card_to_library(0, catalog::island());
     }
     let id = g.add_card_to_hand(0, catalog::together_as_one());
-    // Pay 6 colorless → ConvergedValue = 0 → all clauses do 0.
     g.players[0].mana_pool.add_colorless(6);
     let opp_life_before = g.players[1].life;
     let life_before = g.players[0].life;
     let hand_before = g.players[0].hand.len();
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+        card_id: id,
+        target: Some(Target::Player(0)),
+        additional_targets: vec![Target::Player(1)],
+        mode: None,
+        x_value: None,
     })
     .expect("Together as One castable for {6}");
     drain_stack(&mut g);
@@ -1919,6 +2019,40 @@ fn together_as_one_uses_converged_value_for_each_clause() {
     assert_eq!(g.players[0].life, life_before);
     // Hand: -1 cast + 0 draw = hand_before - 1.
     assert_eq!(g.players[0].hand.len(), hand_before - 1);
+}
+
+#[test]
+fn together_as_one_three_color_cast_deals_three_to_each_clause() {
+    // With 3 distinct colors spent, ConvergedValue = 3: opp draws 3,
+    // any-target takes 3 damage, you gain 3 life.
+    let mut g = two_player_game();
+    for _ in 0..6 {
+        g.add_card_to_library(1, catalog::island());
+    }
+    let id = g.add_card_to_hand(0, catalog::together_as_one());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    let opp_life_before = g.players[1].life;
+    let life_before = g.players[0].life;
+    let opp_hand_before = g.players[1].hand.len();
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![Target::Player(1)],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Together as One castable for {6}");
+    drain_stack(&mut g);
+
+    // Opp drew 3 cards and took 3 damage (-3 life).
+    assert_eq!(g.players[1].hand.len(), opp_hand_before + 3);
+    assert_eq!(g.players[1].life, opp_life_before - 3);
+    // You gain 3 life.
+    assert_eq!(g.players[0].life, life_before + 3);
 }
 
 // ── Rancorous Archaic ───────────────────────────────────────────────────────
@@ -2023,6 +2157,40 @@ fn wisdom_of_ages_returns_all_instants_and_sorceries_from_graveyard() {
     assert!(g.players[0].hand.iter().any(|c| c.id == wrath));
     assert!(g.players[0].graveyard.iter().any(|c| c.id == isl));
     assert!(g.players[0].graveyard.iter().any(|c| c.id == bears));
+    // Push (modern_decks): the new `Effect::SetNoMaxHandSize` clause
+    // flips `Player.no_maximum_hand_size` so the cleanup-step CR 514.1
+    // enforcement is skipped for the rest of the game.
+    assert!(g.players[0].no_maximum_hand_size,
+        "Wisdom of Ages sets the no-maximum-hand-size flag on the caster");
+}
+
+#[test]
+fn wisdom_of_ages_lets_caster_keep_more_than_seven_cards() {
+    // Functional test: cast Wisdom of Ages so the flag flips, then push
+    // 10 cards into hand and trigger cleanup — none should be discarded.
+    use crate::game::TurnStep;
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::wisdom_of_ages());
+    g.players[0].mana_pool.add(Color::Blue, 3);
+    g.players[0].mana_pool.add_colorless(4);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Wisdom of Ages castable");
+    drain_stack(&mut g);
+    assert!(g.players[0].no_maximum_hand_size);
+
+    // Pile up a 10-card hand and run the cleanup step.
+    for _ in 0..10 {
+        g.add_card_to_hand(0, catalog::island());
+    }
+    let hand_before = g.players[0].hand.len();
+    g.step = TurnStep::Cleanup;
+    g.do_cleanup();
+    // No discards — hand size is unchanged.
+    assert_eq!(g.players[0].hand.len(), hand_before,
+        "no cards discarded under the no-max-hand-size flag");
 }
 
 // ── Rapturous Moment ────────────────────────────────────────────────────────
@@ -2878,27 +3046,63 @@ fn stirring_honormancer_etb_finds_creature_in_top_x() {
 
 #[test]
 fn dissection_practice_drains_one_and_shrinks_target() {
+    // Push (modern_decks): now multi-target — slot 0 = target player
+    // (drain), slot 1 = optional pump +1/+1 EOT, slot 2 = optional
+    // shrink -1/-1 EOT. This test exercises slot 0 (drain opp) +
+    // slot 2 (shrink). To skip slot 1 we point it at the caster (whose
+    // life loss is already 0 since it's a creature filter, no-op).
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let friendly_bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let id = g.add_card_to_hand(0, catalog::dissection_practice());
     g.players[0].mana_pool.add(Color::Black, 1);
     let p0_life = g.players[0].life;
     let p1_life = g.players[1].life;
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: Some(Target::Permanent(bear)),
-        additional_targets: vec![],
-        mode: None, x_value: None,
+        card_id: id,
+        target: Some(Target::Player(1)),
+        // slot 1 = friendly_bear (+1/+1 EOT), slot 2 = bear (-1/-1 EOT)
+        additional_targets: vec![Target::Permanent(friendly_bear), Target::Permanent(bear)],
+        mode: None,
+        x_value: None,
     })
     .expect("Dissection Practice castable for {B}");
     drain_stack(&mut g);
 
     assert_eq!(g.players[0].life, p0_life + 1, "You gain 1 life");
     assert_eq!(g.players[1].life, p1_life - 1, "Opponent loses 1 life");
-    // 2/2 with -1/-1 EOT → 1/1, still alive.
+    // bear gets -1/-1 EOT → 1/1.
     let target = g.battlefield.iter().find(|c| c.id == bear).unwrap();
     assert_eq!(target.power(), 1);
     assert_eq!(target.toughness(), 1);
+    // friendly_bear gets +1/+1 EOT → 3/3.
+    let pumped = g.battlefield.iter().find(|c| c.id == friendly_bear).unwrap();
+    assert_eq!(pumped.power(), 3);
+    assert_eq!(pumped.toughness(), 3);
+}
+
+#[test]
+fn dissection_practice_drain_only_no_creature_targets() {
+    // Slot 0 (drain) only — slots 1/2 empty no-op.
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::dissection_practice());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    let p0_life = g.players[0].life;
+    let p1_life = g.players[1].life;
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Dissection Practice castable for {B}");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[0].life, p0_life + 1);
+    assert_eq!(g.players[1].life, p1_life - 1);
 }
 
 // ── Heated Argument ─────────────────────────────────────────────────────────
@@ -3935,9 +4139,12 @@ fn colossus_etb_drains_three_each_opponent() {
 
 #[test]
 fn colossus_dies_loots_one_for_two() {
+    // Push (modern_decks): with the new DiscardAnyNumber primitive,
+    // AutoDecider picks 0 discards (conservative). The follow-up Draw
+    // reads `CardsDiscardedThisEffect + 1`, so the death trigger draws
+    // exactly 1 card. Net: +1 hand.
     let mut g = two_player_game();
     let cid = g.add_card_to_battlefield(0, catalog::colossus_of_the_blood_age());
-    // Stock library and a discard target.
     for _ in 0..3 {
         let nid = g.next_id();
         g.players[0].add_to_library_top(nid, catalog::grizzly_bears());
@@ -3948,9 +4155,40 @@ fn colossus_dies_loots_one_for_two() {
     let _ = g.remove_to_graveyard_with_triggers(cid);
     drain_stack(&mut g);
 
-    // Death trigger: discard 1 + draw 2 = +1 net hand.
+    // AutoDecider: 0 discarded + 1 drawn = +1 net.
     assert_eq!(g.players[0].hand.len(), hand_before + 1);
     assert!(g.players[0].graveyard.iter().any(|c| c.id == cid));
+}
+
+#[test]
+fn colossus_dies_discard_three_draws_four_via_scripted_decider() {
+    // Push (modern_decks): with ScriptedDecider returning a Discard
+    // answer that picks all 3 hand cards, the death trigger discards 3
+    // and then draws 4 (= 3 discarded + 1).
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let cid = g.add_card_to_battlefield(0, catalog::colossus_of_the_blood_age());
+    // Three cards in hand to discard, four cards in library to draw.
+    let h1 = g.add_card_to_hand(0, catalog::grizzly_bears());
+    let h2 = g.add_card_to_hand(0, catalog::grizzly_bears());
+    let h3 = g.add_card_to_hand(0, catalog::grizzly_bears());
+    for _ in 0..4 {
+        let nid = g.next_id();
+        g.players[0].add_to_library_top(nid, catalog::island());
+    }
+    // Scripted decider: discard all three hand cards.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Discard(vec![h1, h2, h3])]));
+
+    let hand_before = g.players[0].hand.len(); // 3
+    let gy_before = g.players[0].graveyard.len();
+    let _ = g.remove_to_graveyard_with_triggers(cid);
+    drain_stack(&mut g);
+
+    // After: 3 discarded out of hand, 4 drawn → +1 net hand.
+    assert_eq!(g.players[0].hand.len(), hand_before - 3 + 4,
+        "discarded 3 and drew 4 = net +1");
+    // Graveyard gained: 3 discards + the Colossus itself = +4.
+    assert_eq!(g.players[0].graveyard.len(), gy_before + 4);
 }
 
 #[test]
@@ -4172,6 +4410,34 @@ fn rabid_attack_pumps_friendly_creature() {
 
     let view = g.computed_permanent(bear).unwrap();
     assert_eq!(view.power, 3, "2 + 1 pump = 3");
+}
+
+#[test]
+fn rabid_attack_pumps_multiple_creatures_via_multi_target() {
+    // Push (modern_decks): "any number of target creatures" — fill all
+    // three slots with friendly creatures, all three get +1/+0.
+    let mut g = two_player_game();
+    let b1 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b2 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b3 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::rabid_attack());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(b1)),
+        additional_targets: vec![Target::Permanent(b2), Target::Permanent(b3)],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Rabid Attack castable");
+    drain_stack(&mut g);
+
+    for bid in [b1, b2, b3] {
+        let view = g.computed_permanent(bid).expect("creature alive");
+        assert_eq!(view.power, 3, "creature {bid:?} should be 3 power (2 base + 1 pump)");
+    }
 }
 
 #[test]
@@ -4647,30 +4913,61 @@ fn pest_token_attack_trigger_gains_one_life() {
 
 #[test]
 fn homesickness_draws_two_taps_and_stuns() {
+    // Push (modern_decks): now multi-target — slot 0 = target player
+    // (draw 2), slots 1 + 2 = optional creature taps + stun counters.
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let id = g.add_card_to_hand(0, catalog::homesickness());
     g.players[0].mana_pool.add(Color::Blue, 2);
     g.players[0].mana_pool.add_colorless(4);
-    let lib_before = g.players[0].library.len();
     // Seed 2 cards on the library so the draw-2 actually moves them.
     let l1 = g.next_id(); g.players[0].add_to_library_top(l1, catalog::lightning_bolt());
     let l2 = g.next_id(); g.players[0].add_to_library_top(l2, catalog::lightning_bolt());
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+        card_id: id,
+        target: Some(Target::Player(0)),
+        additional_targets: vec![Target::Permanent(bear)],
+        mode: None,
+        x_value: None,
     })
     .expect("Homesickness castable for {4}{U}{U}");
     drain_stack(&mut g);
 
     // Caster drew 2.
     assert_eq!(g.players[0].hand.len(), 2, "drew 2 cards");
-    let _ = lib_before;
-    // Bear is tapped.
+    // Bear (slot 1) is tapped + stunned.
     let bear_card = g.battlefield.iter().find(|c| c.id == bear).expect("bear on bf");
     assert!(bear_card.tapped, "bear tapped");
-    // Stun counter present.
     assert!(bear_card.counter_count(CounterType::Stun) >= 1, "stun counter on bear");
+}
+
+#[test]
+fn homesickness_taps_and_stuns_two_creatures() {
+    // Multi-target with slot 0 + slots 1+2 filled — both bears tapped + stunned.
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let bear2 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::homesickness());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    let l1 = g.next_id(); g.players[0].add_to_library_top(l1, catalog::lightning_bolt());
+    let l2 = g.next_id(); g.players[0].add_to_library_top(l2, catalog::lightning_bolt());
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Player(0)),
+        additional_targets: vec![Target::Permanent(bear), Target::Permanent(bear2)],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Homesickness castable for {4}{U}{U}");
+    drain_stack(&mut g);
+
+    let b1 = g.battlefield.iter().find(|c| c.id == bear).unwrap();
+    let b2 = g.battlefield.iter().find(|c| c.id == bear2).unwrap();
+    assert!(b1.tapped && b1.counter_count(CounterType::Stun) >= 1);
+    assert!(b2.tapped && b2.counter_count(CounterType::Stun) >= 1);
 }
 
 #[test]

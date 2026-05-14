@@ -3758,12 +3758,14 @@ pub fn practiced_scrollsmith() -> CardDefinition {
 /// opponent and you gain 3 life. / When this creature dies, discard
 /// any number of cards, then draw that many cards plus one."
 ///
-/// Approximation: ETB drain (3-to-each-opponent + gain 3) wired
-/// faithfully. The death trigger's "discard any number, draw that
-/// many plus one" is collapsed to a fixed **discard 1 + draw 2** —
-/// the engine has no "discard any number, track count, scale draw"
-/// primitive yet. Net play matches the most common usage (one card
-/// rotated for two fresh cards) within the printed power band.
+/// Push (modern_decks): death trigger now uses the new
+/// `Effect::DiscardAnyNumber` primitive — the player chooses how many
+/// cards to discard (0 to hand size), and the follow-up `Draw` reads
+/// `Value::CardsDiscardedThisEffect + 1` so the draw count matches the
+/// actual discard count plus one. AutoDecider picks 0 (conservative
+/// default — discard nothing, still draw 1). ScriptedDecider can supply
+/// a `DecisionAnswer::Discard(picked_ids)` to opt into discarding any
+/// subset of the hand. Tests: `colossus_of_the_blood_age_death_trigger_*`.
 pub fn colossus_of_the_blood_age() -> CardDefinition {
     use crate::mana::{r, w as wm};
     CardDefinition {
@@ -3797,14 +3799,13 @@ pub fn colossus_of_the_blood_age() -> CardDefinition {
             TriggeredAbility {
                 event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
                 effect: Effect::Seq(vec![
-                    Effect::Discard {
-                        who: Selector::You,
-                        amount: Value::Const(1),
-                        random: false,
-                    },
+                    Effect::DiscardAnyNumber { who: Selector::You },
                     Effect::Draw {
                         who: Selector::You,
-                        amount: Value::Const(2),
+                        amount: Value::Sum(vec![
+                            Value::CardsDiscardedThisEffect,
+                            Value::Const(1),
+                        ]),
                     },
                 ]),
             },

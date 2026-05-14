@@ -519,14 +519,12 @@ pub fn foolish_fate() -> CardDefinition {
 /// creature gets +1/+1 until end of turn. / Up to one target creature
 /// gets -1/-1 until end of turn."
 ///
-/// Approximation: the printed card has three independent target slots
-/// (an opponent for the drain, plus two optional creature targets for
-/// the pump and debuff). The engine has only one target slot per spell,
-/// so the drain half fires unconditionally (caster drains an opponent),
-/// and the spell's single creature target receives -1/-1 EOT (the
-/// removal half), which is the strongest play in 2-player. The +1/+1
-/// half is omitted. Net: the spell behaves like a 1-mana drain-1 +
-/// shrink-1 — within the printed power band.
+/// Push (modern_decks): all three target slots wired via multi-target.
+/// Slot 0 = target opponent (loses 1 life), self gains 1 life. Slot 1 =
+/// optional creature target gets +1/+1 EOT. Slot 2 = optional creature
+/// target gets -1/-1 EOT. Slots 1/2 use `TargetFiltered` so they
+/// resolve to no-op when fewer than three targets are passed.
+/// AutoDecider fills slot 0 only; scripted tests pump and/or shrink.
 pub fn dissection_practice() -> CardDefinition {
     CardDefinition {
         name: "Dissection Practice",
@@ -538,13 +536,31 @@ pub fn dissection_practice() -> CardDefinition {
         toughness: 0,
         keywords: vec![],
         effect: Effect::Seq(vec![
-            Effect::Drain {
-                from: Selector::Player(PlayerRef::EachOpponent),
-                to: Selector::You,
+            // Slot 0: target opponent loses 1, you gain 1.
+            Effect::LoseLife {
+                who: target_filtered(SelectionRequirement::Player),
                 amount: Value::Const(1),
             },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+            // Slot 1: optional creature target gets +1/+1 EOT.
             Effect::PumpPT {
-                what: target_filtered(SelectionRequirement::Creature),
+                what: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: SelectionRequirement::Creature,
+                },
+                power: Value::Const(1),
+                toughness: Value::Const(1),
+                duration: Duration::EndOfTurn,
+            },
+            // Slot 2: optional creature target gets -1/-1 EOT.
+            Effect::PumpPT {
+                what: Selector::TargetFiltered {
+                    slot: 2,
+                    filter: SelectionRequirement::Creature,
+                },
                 power: Value::Const(-1),
                 toughness: Value::Const(-1),
                 duration: Duration::EndOfTurn,
@@ -1156,12 +1172,12 @@ pub fn lorehold_charm() -> CardDefinition {
 /// "Vibrant Outburst deals 3 damage to any target. Tap up to one target
 /// creature."
 ///
-/// Approximation: collapses the two-target structure into a single
-/// "any target" damage hit — the optional second creature target (the
-/// tap half) is dropped. The 3-damage primary mode is the spell's main
-/// pressure use, so the loss is felt mostly in the rare both-halves
-/// usage. A multi-target prompt for sorceries/instants is the
-/// underlying engine gap.
+/// Push (modern_decks): two-target shape now wired via multi-target
+/// (slots 0 + 1). Slot 0 takes any target (creature/player/PW) and
+/// receives 3 damage. Slot 1 is an optional creature target which gets
+/// tapped via `TargetFiltered`. Slot 1 resolves to no-op when fewer
+/// than two targets were chosen. AutoDecider fills only slot 0;
+/// scripted tests can exercise both halves.
 pub fn vibrant_outburst() -> CardDefinition {
     use crate::mana::{r, u};
     CardDefinition {
@@ -1173,14 +1189,23 @@ pub fn vibrant_outburst() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![],
-        effect: Effect::DealDamage {
-            to: target_filtered(
-                SelectionRequirement::Creature
-                    .or(SelectionRequirement::Player)
-                    .or(SelectionRequirement::Planeswalker),
-            ),
-            amount: Value::Const(3),
-        },
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature
+                        .or(SelectionRequirement::Player)
+                        .or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::Const(3),
+            },
+            // Slot 1: optional creature target tapped.
+            Effect::Tap {
+                what: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: SelectionRequirement::Creature,
+                },
+            },
+        ]),
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -1661,13 +1686,14 @@ pub fn suspend_aggression() -> CardDefinition {
 /// "Until end of turn, any number of target creatures you control each
 /// get +1/+0 and gain 'When this creature dies, draw a card.'"
 ///
-/// Approximation: the multi-target prompt collapses to a single chosen
-/// creature target. The "+1/+0 EOT" pump lands on the chosen creature.
-/// The transient triggered-ability grant ("when this creature dies,
-/// draw a card") is omitted — engine has no per-creature "grant
-/// triggered ability for a duration" primitive yet (tracked in TODO.md
-/// under "Transient Triggered-Ability Grants on Pump Spells"). The
-/// pump alone is still a respectable {1}{B} combat trick.
+/// Push (modern_decks): "any number of target creatures" promoted from
+/// single-target to a three-slot multi-target shape — slot 0
+/// (mandatory) + slots 1 + 2 (optional). The pump lands on each filled
+/// slot; the unfilled slots resolve to no-op via `TargetFiltered`.
+/// AutoDecider fills slot 0 only; scripted tests can wire up to three.
+/// The transient die-to-draw rider is still omitted (engine has no
+/// per-creature "grant triggered ability for a duration" primitive —
+/// tracked in TODO.md).
 pub fn rabid_attack() -> CardDefinition {
     CardDefinition {
         name: "Rabid Attack",
@@ -1678,14 +1704,39 @@ pub fn rabid_attack() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![],
-        effect: Effect::PumpPT {
-            what: target_filtered(
-                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
-            ),
-            power: Value::Const(1),
-            toughness: Value::Const(0),
-            duration: Duration::EndOfTurn,
-        },
+        effect: Effect::Seq(vec![
+            // Slot 0 (mandatory): friendly creature gets +1/+0 EOT.
+            Effect::PumpPT {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                power: Value::Const(1),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+            // Slot 1: optional friendly creature gets +1/+0 EOT.
+            Effect::PumpPT {
+                what: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou),
+                },
+                power: Value::Const(1),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+            // Slot 2: optional friendly creature gets +1/+0 EOT.
+            Effect::PumpPT {
+                what: Selector::TargetFiltered {
+                    slot: 2,
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou),
+                },
+                power: Value::Const(1),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+        ]),
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -1788,12 +1839,12 @@ pub fn duel_tactics() -> CardDefinition {
 /// "Target player draws two cards. Tap up to two target creatures. Put a
 /// stun counter on each of them."
 ///
-/// Approximation: the multi-target prompt collapses both halves to a single
-/// target — caster draws 2 (rather than a chosen player) and exactly one
-/// creature gets tapped + a stun counter. The 2-target creature slot is
-/// blocked on the engine's missing multi-target prompt (TODO.md). At the
-/// effective cost (~6 mana for self-draw + a soft removal), this still
-/// plays as a respectable late-game tempo card.
+/// Push (modern_decks): three-slot multi-target shape — slot 0 = target
+/// player draws 2, slot 1 + slot 2 = optional creature targets each get
+/// tapped + a stun counter. Slots 1+2 use `TargetFiltered` so an empty
+/// slot resolves to no-op. AutoDecider fills slot 0 only (caster picks
+/// themselves as the draw target); scripted tests can exercise both
+/// creature halves.
 pub fn homesickness() -> CardDefinition {
     use crate::mana::u;
     CardDefinition {
@@ -1806,15 +1857,38 @@ pub fn homesickness() -> CardDefinition {
         toughness: 0,
         keywords: vec![],
         effect: Effect::Seq(vec![
+            // Slot 0: target player draws 2.
             Effect::Draw {
-                who: Selector::You,
+                who: target_filtered(SelectionRequirement::Player),
                 amount: Value::Const(2),
             },
+            // Slot 1: optional creature tap + stun counter.
             Effect::Tap {
-                what: target_filtered(SelectionRequirement::Creature),
+                what: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: SelectionRequirement::Creature,
+                },
             },
             Effect::AddCounter {
-                what: Selector::Target(0),
+                what: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: SelectionRequirement::Creature,
+                },
+                kind: CounterType::Stun,
+                amount: Value::Const(1),
+            },
+            // Slot 2: optional second creature tap + stun counter.
+            Effect::Tap {
+                what: Selector::TargetFiltered {
+                    slot: 2,
+                    filter: SelectionRequirement::Creature,
+                },
+            },
+            Effect::AddCounter {
+                what: Selector::TargetFiltered {
+                    slot: 2,
+                    filter: SelectionRequirement::Creature,
+                },
                 kind: CounterType::Stun,
                 amount: Value::Const(1),
             },

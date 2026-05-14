@@ -93,6 +93,7 @@ fn project_player(player: &Player, player_seat: usize, viewer_seat: usize) -> Pl
         cards_exiled_this_turn: player.cards_exiled_this_turn,
         instants_or_sorceries_cast_this_turn: player.instants_or_sorceries_cast_this_turn,
         creatures_cast_this_turn: player.creatures_cast_this_turn,
+        no_maximum_hand_size: player.no_maximum_hand_size,
     }
 }
 
