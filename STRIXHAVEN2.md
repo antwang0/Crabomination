@@ -20,6 +20,19 @@ Two adjacent catalogs:
 |---|---|---|---|
 | SOS (255 cards) | 162 | 92 | 1 |
 | STX (160 cards) | 144 | 16 | 0 |
+| STA reprints (in STX boosters) | 14 | 0 | — |
+
+Push (modern_decks, this revision): Added 10 new cards across the
+Strixhaven environment — 4 STA Mystical Archive reprints (Eliminate ✅,
+Burst Lightning ✅, Pull from Tomorrow ✅, Postmortem Lunge ✅) and 5 new
+STX-supplemental originals (Channeled Force ✅, Stonebound Mentor ✅,
+Inscription of Insight ✅, Curious Cryomancer ✅, Verdant Pledgemage ✅).
+Memory Lapse promoted via the new `Effect::CounterSpellToZone {
+OwnerLibraryTop }` primitive (CR 608.2c / 701.6a — printed "instead"
+clause overrides the default counter-to-graveyard zone). New engine
+piece: `CounteredSpellZone` enum with library-top / library-bottom /
+hand / exile variants — opens the road to Spell Crumple, Remand, and
+Hinder.
 
 Push (modern_decks): Promoted 2 SOS 🟡 → ✅ (Ajani's Response, Brush Off)
 via the new alt-cost-with-target-filter wiring; Run Behind's cost half

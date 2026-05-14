@@ -376,6 +376,7 @@ fn ability_effect_label(effect: &Effect) -> &'static str {
         Effect::RemoveCounter { .. } => "Remove counter",
         Effect::CreateToken { .. } => "Create token",
         Effect::CounterSpell { .. } => "Counter spell",
+        Effect::CounterSpellToZone { .. } => "Counter spell (alt zone)",
         Effect::CounterAbility { .. } => "Counter ability",
         Effect::CounterUnlessPaid { .. } => "Counter unless paid",
         Effect::Sacrifice { .. } | Effect::SacrificeAndRemember { .. } => "Sacrifice",

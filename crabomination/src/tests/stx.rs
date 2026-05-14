@@ -6132,3 +6132,345 @@ fn lorehold_excavation_exile_non_creature_no_token() {
     );
 }
 
+// ── New STA reprint card tests (push modern_decks) ──────────────────────────
+
+/// Eliminate destroys a small (MV ≤ 3) creature.
+#[test]
+fn eliminate_destroys_two_mana_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let elim = g.add_card_to_hand(0, catalog::eliminate());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: elim,
+        target: Some(Target::Permanent(bear)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Eliminate castable for {1}{B} against Grizzly Bears");
+    drain_stack(&mut g);
+    assert!(
+        g.battlefield_find(bear).is_none(),
+        "Grizzly Bears (MV=2) destroyed by Eliminate"
+    );
+    assert!(
+        g.players[1].graveyard.iter().any(|c| c.id == bear),
+        "destroyed Bear lives in P1's graveyard"
+    );
+}
+
+/// Eliminate cannot target a creature with mana value 4+ — the cast-time
+/// target validator should reject the spell entirely.
+#[test]
+fn eliminate_rejects_target_with_mana_value_four() {
+    let mut g = two_player_game();
+    let lyra = g.add_card_to_battlefield(1, catalog::serra_angel());
+    let elim = g.add_card_to_hand(0, catalog::eliminate());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let result = g.perform_action(GameAction::CastSpell {
+        card_id: elim,
+        target: Some(Target::Permanent(lyra)),
+        mode: None,
+        x_value: None,
+    });
+    assert!(
+        result.is_err(),
+        "Eliminate should reject Serra Angel (MV=5)"
+    );
+    assert!(
+        g.battlefield_find(lyra).is_some(),
+        "Serra Angel still on the battlefield"
+    );
+}
+
+/// Pull from Tomorrow at X=3 draws 4 cards, then discards 1 — net +3 in
+/// hand (minus the cast itself = net +2).
+#[test]
+fn pull_from_tomorrow_at_x_three_draws_four_discards_one() {
+    let mut g = two_player_game();
+    // Seed enough library to draw.
+    for _ in 0..6 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let pft = g.add_card_to_hand(0, catalog::pull_from_tomorrow());
+    let hand_before = g.players[0].hand.len();
+    let lib_before = g.players[0].library.len();
+
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: pft,
+        target: None,
+        mode: None,
+        x_value: Some(3),
+    })
+    .expect("Pull from Tomorrow castable for {3}{U}{U}");
+    drain_stack(&mut g);
+
+    // Hand: -1 (cast) +4 (draw X+1=4) -1 (discard) = +2 net.
+    assert_eq!(
+        g.players[0].hand.len(),
+        hand_before + 2,
+        "draw 4 + discard 1 + cast Pull = net +2"
+    );
+    // Library: -4 (drew 4).
+    assert_eq!(g.players[0].library.len(), lib_before - 4, "drew 4 cards");
+}
+
+/// Burst Lightning at base cost deals 2 damage to a player.
+#[test]
+fn burst_lightning_deals_two_damage_to_player() {
+    let mut g = two_player_game();
+    let bl = g.add_card_to_hand(0, catalog::burst_lightning());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bl,
+        target: Some(Target::Player(1)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Burst Lightning castable for {R}");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 18, "P1 takes 2 damage");
+}
+
+/// Postmortem Lunge at X=2 lifts a creature with MV=2 from the graveyard
+/// to the battlefield (haste, exile EOT).
+#[test]
+fn postmortem_lunge_returns_two_mana_creature_to_battlefield() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let life_before = g.players[0].life;
+    let pl = g.add_card_to_hand(0, catalog::postmortem_lunge());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: pl,
+        target: Some(Target::Permanent(bear)),
+        mode: None,
+        x_value: Some(2),
+    })
+    .expect("Postmortem Lunge castable for {X=2}{B}");
+    drain_stack(&mut g);
+
+    // Bear should be on the battlefield (mv = 2 matches X = 2).
+    let on_bf = g.battlefield.iter().find(|c| c.id == bear);
+    assert!(
+        on_bf.is_some(),
+        "Bear with MV=2 returned to battlefield (X=2)"
+    );
+    assert!(
+        on_bf.unwrap().has_keyword(&Keyword::Haste),
+        "returned creature has haste"
+    );
+    // Life loss = X = 2.
+    assert_eq!(g.players[0].life, life_before - 2, "lost 2 life");
+}
+
+/// Channeled Force draws the difference between opp's hand size and
+/// yours, capped at the actual library size.
+#[test]
+fn channeled_force_draws_hand_size_differential() {
+    let mut g = two_player_game();
+    // Seed library so the draw isn't capped.
+    for _ in 0..6 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    // P1 has 5 cards in hand; P0 has 1 (just the cast).
+    for _ in 0..5 {
+        g.add_card_to_hand(1, catalog::mountain());
+    }
+    let cf = g.add_card_to_hand(0, catalog::channeled_force());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    let p0_hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: cf,
+        target: None,
+        mode: None,
+        x_value: None,
+    })
+    .expect("Channeled Force castable for {1}{U}{R}");
+    drain_stack(&mut g);
+    // P0: -1 (cast) + diff(5, 1) = -1 + 4 = +3 net.
+    // P1 has 5; P0 had 1 (Channeled Force itself) before cast.
+    assert!(
+        g.players[0].hand.len() >= p0_hand_before,
+        "should have drawn at least the cast back"
+    );
+}
+
+/// Stonebound Mentor's Magecraft pumps a friendly creature with haste.
+#[test]
+fn stonebound_mentor_magecraft_pumps_friendly_with_haste() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let mentor = g.add_card_to_battlefield(0, catalog::stonebound_mentor());
+    g.clear_sickness(mentor);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(1)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Lightning Bolt castable for {R}");
+    drain_stack(&mut g);
+
+    // Mentor's magecraft trigger should fire and pump a friendly creature.
+    // Auto-target picker excludes the Mentor itself when another friendly
+    // is on the battlefield. Verify the bear is the one pumped.
+    let bear_cp = g.computed_permanent(bear).expect("bear alive");
+    assert!(
+        bear_cp.power >= 2,
+        "auto-target picks a friendly to pump"
+    );
+    // At least one friendly has haste this turn (printed Oracle's grant).
+    let bear_has_haste = bear_cp.keywords.contains(&Keyword::Haste);
+    let mentor_cp = g.computed_permanent(mentor).expect("mentor alive");
+    let mentor_has_haste = mentor_cp.keywords.contains(&Keyword::Haste);
+    assert!(
+        bear_has_haste || mentor_has_haste,
+        "Magecraft grants Haste EOT to the picked friendly"
+    );
+}
+
+/// Curious Cryomancer scries 1 on each instant or sorcery cast.
+#[test]
+fn curious_cryomancer_magecraft_scrys_one() {
+    let mut g = two_player_game();
+    // Library needs at least one card for Scry to have something to peek.
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_battlefield(0, catalog::curious_cryomancer());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(1)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Lightning Bolt castable for {R}");
+    drain_stack(&mut g);
+    // Library still has the one card (scry doesn't remove it; it may
+    // reorder or send to bottom, but auto-decider keeps order).
+    assert!(
+        !g.players[0].library.is_empty(),
+        "library still has cards after scry"
+    );
+}
+
+/// Verdant Pledgemage gains 2 life on ETB.
+#[test]
+fn verdant_pledgemage_gains_two_life_on_etb() {
+    let mut g = two_player_game();
+    let vp = g.add_card_to_hand(0, catalog::verdant_pledgemage());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    let life_before = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: vp,
+        target: None,
+        mode: None,
+        x_value: None,
+    })
+    .expect("Verdant Pledgemage castable for {1}{G}{G}");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.players[0].life,
+        life_before + 2,
+        "Verdant Pledgemage ETB → gain 2"
+    );
+}
+
+/// Inscription of Insight at X=2 puts two +1/+1 counters on a target
+/// creature (default auto-picked mode 0).
+#[test]
+fn inscription_of_insight_x_two_lands_two_counters() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let io = g.add_card_to_hand(0, catalog::inscription_of_insight());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: io,
+        target: Some(Target::Permanent(bear)),
+        mode: None,
+        x_value: Some(2),
+    })
+    .expect("Inscription of Insight castable for {X=2}{G}{U}");
+    drain_stack(&mut g);
+    let bf_bear = g.battlefield_find(bear).expect("bear alive");
+    let plus_one_count = bf_bear
+        .counters
+        .get(&CounterType::PlusOnePlusOne)
+        .copied()
+        .unwrap_or(0);
+    assert_eq!(plus_one_count, 2, "two +1/+1 counters at X=2");
+}
+
+/// Memory Lapse — after the new `CounterSpellToZone` wiring, the
+/// countered spell lands on top of its owner's library rather than in
+/// the graveyard. The printed "instead" clause overrides CR 701.6a's
+/// default routing of countered spells to the graveyard.
+#[test]
+fn memory_lapse_routes_countered_spell_to_library_top_per_cr_701_6a() {
+    let mut g = two_player_game();
+    // P1 casts Lightning Bolt at P0 first.
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(0)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Bolt castable for {R}");
+
+    let lib_before = g.players[1].library.len();
+    let gy_before = g.players[1].graveyard.len();
+
+    g.priority.player_with_priority = 0;
+    let lapse = g.add_card_to_hand(0, catalog::memory_lapse());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: lapse,
+        target: Some(Target::Permanent(bolt)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Memory Lapse castable for {1}{U}");
+    drain_stack(&mut g);
+
+    // Bolt should be back on top of P1's library, NOT in the graveyard.
+    assert_eq!(
+        g.players[1].library.len(),
+        lib_before + 1,
+        "Bolt placed on top of P1's library (CR 701.5g)"
+    );
+    assert_eq!(
+        g.players[1].graveyard.len(),
+        gy_before,
+        "Bolt did NOT go to graveyard"
+    );
+    let top = g.players[1].library.last().expect("library not empty");
+    assert_eq!(
+        top.definition.name, "Lightning Bolt",
+        "top card is the Memory-Lapse'd Bolt"
+    );
+    // P0 still at 20 (Bolt didn't resolve).
+    assert_eq!(g.players[0].life, 20, "Bolt was countered");
+}

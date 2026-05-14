@@ -948,6 +948,52 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::CounterSpellToZone { what, zone } => {
+                // Counter target spell and route the lifted card to a
+                // non-graveyard zone. Overrides CR 701.6a's default
+                // (countered spell -> owner's graveyard) via the spell's
+                // printed "instead" clause (CR 608.2c — later text on a
+                // card may modify earlier text). Memory Lapse routes to
+                // top of owner's library; Spell Crumple to exile; Remand
+                // to owner's hand. Spells flagged `uncounterable` (Cavern
+                // of Souls) are skipped — the counter does nothing.
+                use crate::effect::CounteredSpellZone;
+                let targets = self.resolve_selector(what, ctx);
+                let mut to_remove: Vec<usize> = Vec::new();
+                for t in &targets {
+                    if let Some(cid) = t.as_permanent_id()
+                        && let Some(pos) = self.stack.iter().position(|si| matches!(
+                            si,
+                            StackItem::Spell { card, uncounterable: false, .. }
+                                if card.id == cid
+                        ))
+                    {
+                        to_remove.push(pos);
+                    }
+                }
+                to_remove.sort_unstable_by(|a, b| b.cmp(a));
+                for pos in to_remove {
+                    if let StackItem::Spell { card, .. } = self.stack.remove(pos) {
+                        let owner = card.owner;
+                        match zone {
+                            CounteredSpellZone::OwnerLibraryTop => {
+                                self.players[owner].library.push(*card);
+                            }
+                            CounteredSpellZone::OwnerLibraryBottom => {
+                                self.players[owner].library.insert(0, *card);
+                            }
+                            CounteredSpellZone::OwnerHand => {
+                                self.players[owner].hand.push(*card);
+                            }
+                            CounteredSpellZone::Exile => {
+                                self.exile.push(*card);
+                            }
+                        }
+                    }
+                }
+                Ok(())
+            }
+
             Effect::CounterUnlessPaid { what, mana_cost } => {
                 // Counter target spell unless its controller pays `mana_cost`.
                 // Auto-pays on behalf of the spell's controller via the

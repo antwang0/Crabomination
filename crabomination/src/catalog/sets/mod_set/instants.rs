@@ -1060,11 +1060,12 @@ pub fn stifle() -> CardDefinition {
 /// way, put the spell on top of its owner's library instead of into the
 /// graveyard.
 ///
-/// Approximation: just `CounterSpell` — the "place on top of library"
-/// half needs a "send-stack-item-elsewhere-on-counter" hook the engine
-/// doesn't surface. Functionally a one-shot Mana Leak for now; future
-/// engine work can route the countered card through the right zone.
+/// Wired via `Effect::CounterSpellToZone { zone: OwnerLibraryTop }` (push
+/// modern_decks): the on-stack card is lifted off the stack and placed on
+/// top of its owner's library rather than routed to the graveyard. Matches
+/// CR 701.5g's "instead" clause exactly.
 pub fn memory_lapse() -> CardDefinition {
+    use crate::effect::CounteredSpellZone;
     CardDefinition {
         name: "Memory Lapse",
         cost: cost(&[generic(1), u()]),
@@ -1074,8 +1075,9 @@ pub fn memory_lapse() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![],
-        effect: Effect::CounterSpell {
+        effect: Effect::CounterSpellToZone {
             what: target_filtered(SelectionRequirement::IsSpellOnStack),
+            zone: CounteredSpellZone::OwnerLibraryTop,
         },
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],

@@ -4397,3 +4397,439 @@ pub fn whirlwind_denial() -> CardDefinition {
         enters_with_counters: None,
     }
 }
+
+// ── Eliminate (STA reprint — M21) ───────────────────────────────────────────
+
+/// Eliminate — {1}{B} Instant (Strixhaven Mystical Archive). "Destroy
+/// target creature or planeswalker with mana value 3 or less."
+///
+/// Wired via `Effect::Destroy` with a target filter that matches Creature
+/// ∪ Planeswalker AND `ManaValueAtMost(3)`. A clean 2-mana removal spell
+/// that snipes the early threats (Llanowar Elves, Goblin Guide, low-MV
+/// planeswalkers) but whiffs on Tarmogoyf, Tarmogoyf-clones, and big
+/// finishers — the printed Oracle exactly.
+pub fn eliminate() -> CardDefinition {
+    let creature_or_pw = SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker);
+    let small = creature_or_pw.and(SelectionRequirement::ManaValueAtMost(3));
+    CardDefinition {
+        name: "Eliminate",
+        cost: cost(&[generic(1), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Destroy {
+            what: target_filtered(small),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+    }
+}
+
+// ── Pull from Tomorrow (STA reprint — Amonkhet) ─────────────────────────────
+
+/// Pull from Tomorrow — {X}{U}{U} Instant (Strixhaven Mystical Archive).
+/// "Draw X+1 cards, then discard a card."
+///
+/// Wired via `Effect::Draw` with amount `Sum(XFromCost, Const(1))` plus a
+/// trailing `Effect::Discard` of one card. X=0 still nets one card after
+/// the discard.
+pub fn pull_from_tomorrow() -> CardDefinition {
+    CardDefinition {
+        name: "Pull from Tomorrow",
+        cost: cost(&[u(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Sum(vec![Value::XFromCost, Value::Const(1)]),
+            },
+            Effect::Discard {
+                who: Selector::You,
+                amount: Value::Const(1),
+                random: false,
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+    }
+}
+
+// ── Burst Lightning (STA reprint — Zendikar) ────────────────────────────────
+
+/// Burst Lightning — {R} Instant (Strixhaven Mystical Archive). "Kicker
+/// {4} / Burst Lightning deals 2 damage to any target. If this spell was
+/// kicked, it deals 4 damage to that target instead."
+///
+/// Approximation: collapsed to the unkicked mode — 2 damage to any target
+/// at the printed `{R}`. Kicker is engine-wide ⏳ (no alt-cost-implies-mode
+/// primitive that flips the body's damage value). The 2-damage bolt
+/// captures the most common play pattern (efficient removal on a 2-toughness
+/// creature or chip damage to face).
+pub fn burst_lightning() -> CardDefinition {
+    CardDefinition {
+        name: "Burst Lightning",
+        cost: cost(&[r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::DealDamage {
+            to: target_filtered(
+                SelectionRequirement::Creature
+                    .or(SelectionRequirement::Player)
+                    .or(SelectionRequirement::Planeswalker),
+            ),
+            amount: Value::Const(2),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+    }
+}
+
+// ── Postmortem Lunge (STA reprint — Worldwake) ──────────────────────────────
+
+/// Postmortem Lunge — {X}{B} Sorcery (Strixhaven Mystical Archive). "Pay
+/// X life. Return target creature card with mana value X from your
+/// graveyard to the battlefield. It gains haste. Exile it at the
+/// beginning of the next end step."
+///
+/// Wired via a `Seq` of `LoseLife(X)`, `Move(target -> BF tapped=false)`,
+/// `GrantKeyword(Haste, EOT)`, and `DelayUntil(NextEndStep, Move -> Exile)`.
+/// The resolution-time `If` gate compares `Value::ManaValueOf(Target(0))`
+/// against `Value::XFromCost` twice (once `>=`, once `<=`) to synthesize
+/// equality, since the engine has no `ManaValueEquals(N)` predicate. The
+/// pre-flight life-cost gate is engine-wide todo for alt-cost-with-life
+/// (life is debited at resolution time). Tracked alongside Vicious Rivalry
+/// and Fix What's Broken in TODO.md.
+pub fn postmortem_lunge() -> CardDefinition {
+    use crate::card::{Keyword, Predicate};
+    CardDefinition {
+        name: "Postmortem Lunge",
+        cost: cost(&[b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::LoseLife {
+                who: Selector::You,
+                amount: Value::XFromCost,
+            },
+            Effect::If {
+                cond: Predicate::All(vec![
+                    Predicate::ValueAtLeast(
+                        Value::ManaValueOf(Box::new(Selector::Target(0))),
+                        Value::XFromCost,
+                    ),
+                    Predicate::ValueAtMost(
+                        Value::ManaValueOf(Box::new(Selector::Target(0))),
+                        Value::XFromCost,
+                    ),
+                ]),
+                then: Box::new(Effect::Seq(vec![
+                    Effect::Move {
+                        what: target_filtered(SelectionRequirement::Creature),
+                        to: ZoneDest::Battlefield {
+                            controller: PlayerRef::You,
+                            tapped: false,
+                        },
+                    },
+                    Effect::GrantKeyword {
+                        what: Selector::Target(0),
+                        keyword: Keyword::Haste,
+                        duration: Duration::EndOfTurn,
+                    },
+                    Effect::DelayUntil {
+                        kind: crate::effect::DelayedTriggerKind::NextEndStep,
+                        body: Box::new(Effect::Move {
+                            what: Selector::Target(0),
+                            to: ZoneDest::Exile,
+                        }),
+                    },
+                ])),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+    }
+}
+
+// ── Spell Satchel polish — Mavinda's Repartee body (STX original) ──────────
+
+/// Curious Cryomancer — {2}{U} Creature — Human Wizard (Strixhaven
+/// supplemental). 2/3. "Magecraft — Whenever you cast or copy an instant
+/// or sorcery spell, scry 1."
+///
+/// Wired via the `magecraft` shortcut + `Effect::Scry { amount: 1 }`. A
+/// per-cast filtering payoff that smooths every blue spell deck — same
+/// shape as Prismari Apprentice's mode-0 Scry but always-on instead of
+/// modal. Test: `curious_cryomancer_magecraft_scrys_one`.
+pub fn curious_cryomancer() -> CardDefinition {
+    CardDefinition {
+        name: "Curious Cryomancer",
+        cost: cost(&[generic(2), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::Scry {
+            who: PlayerRef::You,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+    }
+}
+
+// ── Verdant Pledgemage — Witherbloom-Quandrix bridge body (STX original) ───
+
+/// Verdant Pledgemage — {1}{G}{G} Creature — Elf Druid (Strixhaven
+/// supplemental). 3/3. "Whenever this creature enters or attacks, you
+/// gain 2 life."
+///
+/// ETB + Attacks lifegain dual trigger via the `EventScope::SelfSource`
+/// scope on both `EntersBattlefield` and `Attacks`. Green-friendly
+/// "lifegain matters" body for SOS Witherbloom and STX Lorehold pools
+/// — pairs nicely with Honor Troll, Pest Mascot, and Blech.
+pub fn verdant_pledgemage() -> CardDefinition {
+    CardDefinition {
+        name: "Verdant Pledgemage",
+        cost: cost(&[generic(1), g(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::Const(2),
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+                effect: Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::Const(2),
+                },
+            },
+        ],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+    }
+}
+
+// ── Channeled Force (STX — base set Quandrix MDFC analog) ──────────────────
+
+/// Channeled Force — {1}{U}{R} Sorcery (Strixhaven base set). "Choose
+/// target opponent and target player. The chosen player draws cards
+/// equal to the difference between their hand size and the chosen
+/// opponent's hand size."
+///
+/// Approximation: collapses to "you draw N cards where N = max(opp_hand -
+/// your_hand, 0)". The two-target prompt is engine-wide ⏳; today the
+/// caster picks one target opponent and the caster is implicitly the
+/// "chosen player". Wired via `Effect::Draw` with `Value::Diff` reading
+/// opp/you hand sizes.
+pub fn channeled_force() -> CardDefinition {
+    CardDefinition {
+        name: "Channeled Force",
+        cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Draw {
+            who: Selector::You,
+            amount: Value::Diff(
+                Box::new(Value::HandSizeOf(PlayerRef::EachOpponent)),
+                Box::new(Value::HandSizeOf(PlayerRef::You)),
+            ),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+    }
+}
+
+// ── Stonebound Mentor (STX — original creature) ────────────────────────────
+
+/// Stonebound Mentor — {2}{R}{W} Creature — Spirit Soldier (Strixhaven
+/// supplemental). 2/4 Vigilance. "Magecraft — Whenever you cast or copy
+/// an instant or sorcery spell, target creature you control gets +1/+0
+/// and gains haste until end of turn."
+///
+/// Wired via the `magecraft` shortcut + `Seq(PumpPT(+1/+0), GrantKeyword(
+/// Haste, EOT))` against a friendly Creature target. The auto-target
+/// picker prefers a non-source friendly creature (typically a finisher
+/// without haste) to maximize tempo.
+pub fn stonebound_mentor() -> CardDefinition {
+    CardDefinition {
+        name: "Stonebound Mentor",
+        cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        keywords: vec![Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                power: Value::Const(1),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::Haste,
+                duration: Duration::EndOfTurn,
+            },
+        ]))],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+    }
+}
+
+// ── Inscription of Insight (STX — base set Quandrix-leaning) ───────────────
+
+/// Inscription of Insight — {X}{G}{U} Sorcery (Strixhaven base set).
+/// "Choose one or more. X can't be 0. / • Put X +1/+1 counters on target
+/// creature. / • Target player draws a card for each 1/1 creature they
+/// control. / • Untap up to X target permanents."
+///
+/// Wired via `Effect::ChooseN { picks: [0], modes }` with three modes
+/// available for future mode-pick UI. AutoDecider picks the +1/+1
+/// counters mode by default. The "one or more" mode-count picker is
+/// engine-wide ⏳; auto-picks one mode at cast time.
+pub fn inscription_of_insight() -> CardDefinition {
+    use crate::card::CounterType;
+    CardDefinition {
+        name: "Inscription of Insight",
+        cost: cost(&[g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::ChooseN {
+            picks: vec![0],
+            modes: vec![
+                // Mode 0: Put X +1/+1 counters on target creature.
+                Effect::AddCounter {
+                    what: target_filtered(SelectionRequirement::Creature),
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::XFromCost,
+                },
+                // Mode 1: Target player draws a card for each 1/1 creature.
+                // Auto-decider: draw X cards (approximated to X — engine has
+                // no "per 1/1 creature" reader yet).
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::XFromCost,
+                },
+                // Mode 2: Untap up to X target permanents.
+                Effect::Untap {
+                    what: target_filtered(SelectionRequirement::Any),
+                    up_to: Some(Value::XFromCost),
+                },
+            ],
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+    }
+}

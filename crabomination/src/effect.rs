@@ -416,6 +416,21 @@ pub enum ZoneDest {
     Battlefield { controller: PlayerRef, tapped: bool },
 }
 
+/// Where a countered spell goes after being lifted off the stack. The
+/// default (graveyard) matches CR 701.5g; Memory Lapse routes to the
+/// owner's library top, Spell Crumple routes to exile, etc.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum CounteredSpellZone {
+    /// Top of the spell-owner's library (Memory Lapse).
+    OwnerLibraryTop,
+    /// Bottom of the spell-owner's library.
+    OwnerLibraryBottom,
+    /// Owner's hand (Remand).
+    OwnerHand,
+    /// Exile (Spell Crumple).
+    Exile,
+}
+
 /// What mana to add to a pool.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ManaPayload {
@@ -725,8 +740,19 @@ pub enum Effect {
     Attach { what: Selector, to: Selector },
 
     // ── Stack interaction ────────────────────────────────────────────────────
-    /// Counter target spell (removes from stack).
+    /// Counter target spell (removes from stack; sends to owner's graveyard).
     CounterSpell { what: Selector },
+    /// Counter target spell and route it to a specific zone instead of the
+    /// owner's graveyard. CR 701.6a's default is "a countered spell is put
+    /// into its owner's graveyard"; cards like Memory Lapse / Remand /
+    /// Spell Crumple print an "instead" clause that overrides this. The
+    /// on-stack card is removed from the stack and placed into `zone`
+    /// (top of library for Memory Lapse; exile for Spell Crumple; owner's
+    /// hand for Remand).
+    CounterSpellToZone {
+        what: Selector,
+        zone: CounteredSpellZone,
+    },
     /// Counter target activated/triggered ability. The selector resolves
     /// to a permanent (the ability's source), and the engine removes the
     /// topmost `StackItem::Trigger` whose `source` matches. Used by
@@ -1024,6 +1050,7 @@ impl Effect {
             | Effect::Tap { what }
             | Effect::Untap { what, .. }
             | Effect::CounterSpell { what }
+            | Effect::CounterSpellToZone { what, .. }
             | Effect::CounterAbility { what }
             | Effect::CounterUnlessPaid { what, .. } => sel_has_target(what),
             Effect::PumpPT { what, power, toughness, .. } => {
@@ -1098,6 +1125,7 @@ impl Effect {
             | Effect::Tap { what }
             | Effect::Untap { what, .. }
             | Effect::CounterSpell { what }
+            | Effect::CounterSpellToZone { what, .. }
             | Effect::CounterAbility { what }
             | Effect::CounterUnlessPaid { what, .. }
             | Effect::GainControl { what, .. } => sel_filter(what),
@@ -1252,6 +1280,7 @@ impl Effect {
             // Stack-targeted counter spells take a permanent slot but the
             // target is a stack item, not a player. Reject player target.
             Effect::CounterSpell { .. }
+            | Effect::CounterSpellToZone { .. }
             | Effect::CounterAbility { .. }
             | Effect::CounterUnlessPaid { .. } => false,
             // Permanent-targeting effects: skip Player.
@@ -1392,6 +1421,7 @@ impl Effect {
                 | Effect::Tap { what }
                 | Effect::Untap { what, .. }
                 | Effect::CounterSpell { what }
+                | Effect::CounterSpellToZone { what, .. }
                 | Effect::CounterAbility { what }
                 | Effect::CounterUnlessPaid { what, .. }
                 | Effect::GainControl { what, .. } => sel_find(what, slot),

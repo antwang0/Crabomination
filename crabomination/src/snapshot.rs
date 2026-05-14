@@ -574,6 +574,36 @@ mod tests {
     }
 
     #[test]
+    fn counter_spell_to_zone_effect_serde_round_trip() {
+        // Memory Lapse / Spell Crumple / Remand all serialize the
+        // `CounterSpellToZone` variant; ensure each zone option survives
+        // a snapshot round-trip.
+        use crate::card::{Effect, Selector, SelectionRequirement};
+        use crate::effect::CounteredSpellZone;
+        use crate::effect::shortcut::target_filtered;
+        for zone in [
+            CounteredSpellZone::OwnerLibraryTop,
+            CounteredSpellZone::OwnerLibraryBottom,
+            CounteredSpellZone::OwnerHand,
+            CounteredSpellZone::Exile,
+        ] {
+            let original = Effect::CounterSpellToZone {
+                what: target_filtered(SelectionRequirement::IsSpellOnStack),
+                zone,
+            };
+            let json = serde_json::to_string(&original).expect("serialize");
+            let parsed: Effect = serde_json::from_str(&json).expect("deserialize");
+            match parsed {
+                Effect::CounterSpellToZone { zone: z, what } => {
+                    assert_eq!(z, zone, "zone preserved across round-trip");
+                    assert!(matches!(what, Selector::TargetFiltered { .. }));
+                }
+                other => panic!("expected CounterSpellToZone, got {:?}", other),
+            }
+        }
+    }
+
+    #[test]
     fn unknown_card_fails_with_clear_error() {
         let cs = CardSnapshot {
             id: CardId(99),

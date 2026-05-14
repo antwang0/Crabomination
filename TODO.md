@@ -11,6 +11,30 @@ Periodic spot-check of the rules document
 (`crabomination/MagicCompRules 20260116.txt`). Each rule below has a
 status tag (✅ wired, 🟡 partial, ⏳ todo) plus a short note.
 
+- ✅ **CR 608.2c / 701.6a — Later text on a card may modify earlier
+  text (Memory Lapse exception)** (modern_decks push, engine
+  improvement): CR 608.2c — "In some cases, later text on the card may
+  modify the meaning of earlier text (for example, … 'Counter target
+  spell. If that spell is countered this way, put it on top of its
+  owner's library instead of into its owner's graveyard.')". CR 701.6a
+  defaults a countered spell to its owner's graveyard; cards like Memory
+  Lapse / Remand / Spell Crumple print an "instead" clause that
+  overrides the default zone. Push (modern_decks) lands the new
+  `Effect::CounterSpellToZone { what, zone: CounteredSpellZone }`
+  primitive (and `CounteredSpellZone` enum with `OwnerLibraryTop` /
+  `OwnerLibraryBottom` / `OwnerHand` / `Exile` variants) in
+  `effect.rs:744`. The resolver in `game/effects/mod.rs::Effect::
+  CounterSpellToZone` lifts the on-stack `StackItem::Spell` and routes
+  the card to the chosen zone (library top via `push`, library bottom
+  via `insert(0, _)`, hand via `players[owner].hand.push`, exile via
+  `self.exile.push`). `Effect::CounterSpell` keeps its existing
+  graveyard routing for back-compat (Counterspell, Negate, etc.).
+  Memory Lapse promoted from `CounterSpell` to `CounterSpellToZone {
+  zone: OwnerLibraryTop }`. Test:
+  `memory_lapse_routes_countered_spell_to_library_top_per_cr_701_6a`
+  (P1 casts Lightning Bolt at P0, P0 Memory Lapses it; assert Bolt is
+  on top of P1's library, not in graveyard; P0 still at 20 life).
+
 - ✅ **CR 109.3 / 121 — Power and toughness can be read off the
   battlefield** (modern_decks push, engine improvement): "A card's
   printed power and toughness are part of its characteristics, which
@@ -514,6 +538,37 @@ status tag (✅ wired, 🟡 partial, ⏳ todo) plus a short note.
 
 ## Suggested next-up tasks
 
+- ⏳ **`Effect::DiscardOrSacrifice` — additional-cost picker for "discard
+  a card or sacrifice a creature"** — STA Bone Shards (already wired as a
+  Sorcery in `mod_set::instants`) uses a `Seq(ChooseMode([Sacrifice 1
+  creature, Discard 1]) + Destroy target creature)` approximation. The
+  Strixhaven Mystical Archive reprint of Bone Shards is an *instant*
+  with the same pick-as-additional-cost rider. Suggested shape: bump
+  the picker into a real cost-time decision (so insufficient resources
+  to pay one option force the other), wire it via `AlternativeCost`
+  with two cost branches keyed off a `ChooseAlternativeCost` decision
+  shape. Same primitive unlocks "Pay {X}, sacrifice a creature, or
+  discard a card" cycles in future sets.
+
+- ⏳ **Burst Lightning kicker / kicker-as-modal** — STA reprint Burst
+  Lightning's "Kicker {4} → 4 damage instead of 2" is an alt-cost-
+  implies-mode shape: paying the kicker changes the spell's behavior at
+  resolution. Currently wired as the unkicked 2-damage body only. The
+  engine's `AlternativeCost` is one cost branch; threading the *paid*
+  alt-cost into resolution-time mode selection would unblock Burst
+  Lightning, Rite of Replication, Aether Vial-style kicker shells.
+  Suggested shape: add `Predicate::CastWithKicker(name)` + thread the
+  kicker payment status into `EffectContext`.
+
+- ⏳ **`Predicate::ManaValueEquals(N)` — exact MV target filter** —
+  Postmortem Lunge's "target creature card with mana value X" target
+  filter (push modern_decks) synthesizes equality as
+  `All([ValueAtLeast(MV, X), ValueAtMost(MV, X)])`. A first-class
+  `ValueEquals` (or `ManaValueEquals`) predicate would compress the
+  expression and let auto-target pickers natively narrow to the exact
+  candidate set. The `If` gate on Postmortem Lunge could then drop to
+  a plain target filter.
+
 - ⏳ **`Value::PowerOfTargetExiledThisResolution`** — push (modern_decks)
   closed the simpler half via the `Value::PowerOf` evaluator-zone-walk
   extension (gy/exile/hand lookups now work), unlocking Lorehold
@@ -546,20 +601,20 @@ status tag (✅ wired, 🟡 partial, ⏳ todo) plus a short note.
   target N times (with deduplication on per-slot legality). Worth
   ~10 🟡 → ✅ promotions.
 
-- ⏳ **`Effect::CounterSpellToTop` — counter-spell-to-top-of-library
+- ✅ **`Effect::CounterSpellToZone` — counter-spell-to-non-graveyard
   primitive** — Memory Lapse (STA reprint, `mod_set::instants`) is the
-  canonical exerciser: "Counter target spell. If that spell is countered
-  this way, put it on top of its owner's library instead of into that
-  player's graveyard." Today both Memory Lapse and the new STX-extras
-  copy fall back to `Effect::CounterSpell` (which routes the countered
-  spell to its owner's graveyard). The rider matters for recursion shells
-  (Tomik / Stifle setups, dredge-style recasts). Suggested shape: extend
-  `Effect::CounterSpell` with an optional `to_zone: Option<ZoneDest>`
-  knob, or add a sibling `Effect::CounterSpellToZone { what, zone }`.
-  The on-stack item is removed from the stack and routed to the given
-  zone (top of library for Memory Lapse; exile for Spell Crumple-style
-  cards; hand for Remand). Wire into `apply_counterspell` in
-  `game/effects/mod.rs` and the existing card factories.
+  canonical exerciser. Push (modern_decks): landed the new
+  `Effect::CounterSpellToZone { what, zone: CounteredSpellZone }` variant
+  with a `CounteredSpellZone` enum (`OwnerLibraryTop`,
+  `OwnerLibraryBottom`, `OwnerHand`, `Exile`). The resolver lifts the
+  matching `StackItem::Spell` off the stack and routes the card to the
+  chosen zone (push for top of library, insert(0, _) for bottom, hand
+  push for Remand, exile push for Spell Crumple). `Effect::CounterSpell`
+  retains its graveyard default for back-compat. Memory Lapse promoted
+  to use the new primitive (`OwnerLibraryTop`). Tracked rule audit row:
+  CR 608.2c / 701.6a. Future Spell Crumple, Remand, Hinder, and
+  Frantic Inventory-recursion shells can wire against the same
+  primitive.
 
 - ⏳ **Partner-pair primitive** — Plargg / Augusta (STX Dean cycle), the
   Battlebond Partner cycle, and the C20 Commander Partners all share a
