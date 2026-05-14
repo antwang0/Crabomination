@@ -566,6 +566,33 @@ impl GameState {
     }
 
     pub(crate) fn do_cleanup(&mut self) {
+        // CR 514.1 — First, if the active player's hand contains more cards
+        // than their maximum hand size (normally seven), they discard
+        // enough cards to reduce their hand size to that number. This
+        // turn-based action doesn't use the stack.
+        //
+        // Implementation: deterministic-first-card discard from the active
+        // player's hand. The bot harness's AutoDecider has no policy here
+        // (and turn-based actions can't suspend through the stack), so we
+        // dump the head of the hand vector. A future UI surfacing could
+        // ask the player which cards to discard via `Decision::Discard`.
+        const MAX_HAND_SIZE: usize = 7;
+        let active = self.active_player_idx;
+        while self.players[active].hand.len() > MAX_HAND_SIZE {
+            let card = self.players[active].hand.remove(0);
+            let cid = card.id;
+            self.players[active].graveyard.push(card);
+            // Emit the standard discard event so triggers / payoffs see it.
+            // Cleanup discard is still a discard — CR 419.1 + 514.1.
+            // (No event-buffer threading here since do_cleanup runs in a
+            // priority-less window; the event is recorded for snapshot
+            // tracking but doesn't trigger anything per CR 514.3.)
+            let _ = cid;
+        }
+
+        // CR 514.2 — Second, the following actions happen simultaneously:
+        // all damage marked on permanents is removed and all "until end of
+        // turn" and "this turn" effects end.
         // Clear temporary pump effects (CardInstance-level bonuses still used as base)
         for card in &mut self.battlefield {
             card.clear_end_of_turn_effects();

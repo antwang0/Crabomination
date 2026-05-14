@@ -11,6 +11,26 @@ Periodic spot-check of the rules document
 (`crabomination/MagicCompRules 20260116.txt`). Each rule below has a
 status tag (✅ wired, 🟡 partial, ⏳ todo) plus a short note.
 
+- ✅ **CR 514.1 — Cleanup-step discard down to max hand size**
+  (modern_decks push audit): "First, if the active player's hand
+  contains more cards than their maximum hand size (normally seven),
+  they discard enough cards to reduce their hand size to that number.
+  This turn-based action doesn't use the stack." Push (modern_decks)
+  wires the discard inside `do_cleanup` (`game/stack.rs:568`). When
+  the active player's hand exceeds `MAX_HAND_SIZE = 7` at the cleanup
+  step, the engine moves head-of-hand cards into the controller's
+  graveyard until hand size = 7. The discard is deterministic-first
+  (matching the random-discard branch in `Effect::Discard`) since
+  cleanup is a turn-based action that doesn't use the stack and the
+  bot harness's AutoDecider has no policy here. A future UI surfacing
+  could ask the player which cards to discard via the existing
+  `Decision::Discard` shape. Tests:
+  `cleanup_step_discards_down_to_seven_per_cr_514_1` (10 cards → 7,
+  3 to graveyard) +
+  `cleanup_step_no_op_when_hand_at_or_below_max_per_cr_514_1` (5
+  cards → unchanged). The CR 514.2 second-half (clear damage, expire
+  EOT effects, empty mana pools) was already correctly wired prior
+  to this push.
 - ✅ **CR 614.12 — "Enters with N counters" replacement effects** (modern_decks
   push audit): "Some replacement effects modify how a permanent enters
   the battlefield. … To determine which replacement effects apply and
@@ -451,6 +471,54 @@ status tag (✅ wired, 🟡 partial, ⏳ todo) plus a short note.
   the counters land on resolution).
 
 ## Suggested next-up tasks
+
+- ⏳ **`Effect::CounterSpellToTop` — counter-spell-to-top-of-library
+  primitive** — Memory Lapse (STA reprint, `mod_set::instants`) is the
+  canonical exerciser: "Counter target spell. If that spell is countered
+  this way, put it on top of its owner's library instead of into that
+  player's graveyard." Today both Memory Lapse and the new STX-extras
+  copy fall back to `Effect::CounterSpell` (which routes the countered
+  spell to its owner's graveyard). The rider matters for recursion shells
+  (Tomik / Stifle setups, dredge-style recasts). Suggested shape: extend
+  `Effect::CounterSpell` with an optional `to_zone: Option<ZoneDest>`
+  knob, or add a sibling `Effect::CounterSpellToZone { what, zone }`.
+  The on-stack item is removed from the stack and routed to the given
+  zone (top of library for Memory Lapse; exile for Spell Crumple-style
+  cards; hand for Remand). Wire into `apply_counterspell` in
+  `game/effects/mod.rs` and the existing card factories.
+
+- ⏳ **Partner-pair primitive** — Plargg / Augusta (STX Dean cycle), the
+  Battlebond Partner cycle, and the C20 Commander Partners all share a
+  printed "Partner with [other Legendary]" rider that searches the
+  library for the named partner on the Partner-carrier's ETB. Engine
+  has no `Keyword::PartnerWith(name)` or `Effect::SearchByName`
+  primitive yet. Suggested shape: add `Keyword::PartnerWith(&'static
+  str)` + an ETB trigger that fires `Effect::Search { filter:
+  HasExactName(name), to: Hand(You) }`. Once landed, the STX Dean
+  cycle (Augusta + Plargg, Embrose + Valentin, Imbraham + Lisette,
+  Lukka + Adrix) and the Battlebond legendaries can wire the partner
+  half faithfully.
+
+- ⏳ **Multi-pick on cleanup-step discard** — CR 514.1 enforcement
+  landed in push (modern_decks) but the discard uses a deterministic
+  first-card pick. A future UI surfacing should ask the active player
+  which cards to discard via the existing `Decision::Discard` shape
+  (the bot's AutoDecider can fall back to "first N"; only real-player
+  seats need to surface the prompt). Cleanup is a turn-based action so
+  it can't directly suspend through the stack; the existing
+  `wants_ui` + `pending_decision` resume path may need extension to
+  cover turn-based-action prompts. Wire site: `do_cleanup` in
+  `game/stack.rs`.
+
+- ⏳ **Cleanup-step discard event emission** — push (modern_decks)'s
+  CR 514.1 wiring moves cards hand → graveyard but doesn't emit
+  `GameEvent::CardDiscarded` (cleanup runs in a priority-less window
+  per CR 514.3). Discard-payoff cards like the SOS Witherbloom
+  death-trigger cycle and Liliana of the Veil's per-discard payoff
+  may want this event. Per CR 419.1 the cards-go-to-graveyard count
+  as discards; the engine's per-turn discard tally (when added) +
+  every "if you discarded a card this turn" payoff would need to
+  fire from this event.
 
 - ⏳ **`StaticEffect::ConditionalPumpPT { condition, power, toughness,
   keywords }` — generalized compute-time conditional anthem** — push

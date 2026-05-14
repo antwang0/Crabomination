@@ -4010,3 +4010,247 @@ pub fn soothsayer_adept() -> CardDefinition {
         enters_with_counters: None,
     }
 }
+
+// ── Crux of Fate ────────────────────────────────────────────────────────────
+
+/// Crux of Fate — {3}{B}{B} Sorcery (STA reprint).
+///
+/// "Choose one — / • Destroy each Dragon. / • Destroy each non-Dragon
+/// creature."
+///
+/// Push (modern_decks): wired via `Effect::ChooseMode` with two
+/// `ForEach + Destroy` modes. Mode 0 destroys each creature with the
+/// Dragon creature type via `SelectionRequirement::HasCreatureType
+/// (Dragon)`; mode 1 destroys each *non-Dragon* creature via the
+/// `Creature & !HasCreatureType(Dragon)` filter, threaded through the
+/// existing `SelectionRequirement::Not` predicate combinator. The
+/// printed "destroy" half cleanly handles indestructible (the engine's
+/// `Destroy` consults `Keyword::Indestructible`). Black's Crux of Fate
+/// is the canonical "Dragons matter" wrath — kills opponent's army
+/// without scratching your own Dragon shell. The {3}{B}{B} cost is
+/// honored exactly.
+pub fn crux_of_fate() -> CardDefinition {
+    CardDefinition {
+        name: "Crux of Fate",
+        cost: cost(&[generic(3), b(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::ChooseMode(vec![
+            // Mode 0: destroy each Dragon.
+            Effect::ForEach {
+                selector: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::HasCreatureType(CreatureType::Dragon)),
+                ),
+                body: Box::new(Effect::Destroy {
+                    what: Selector::TriggerSource,
+                }),
+            },
+            // Mode 1: destroy each non-Dragon creature.
+            Effect::ForEach {
+                selector: Selector::EachPermanent(
+                    SelectionRequirement::Creature.and(
+                        SelectionRequirement::HasCreatureType(CreatureType::Dragon).negate(),
+                    ),
+                ),
+                body: Box::new(Effect::Destroy {
+                    what: Selector::TriggerSource,
+                }),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+    }
+}
+
+// ── Plargg, Dean of Chaos ───────────────────────────────────────────────────
+
+/// Plargg, Dean of Chaos — {1}{R}, 2/2 Legendary Human Cleric.
+///
+/// "{T}: Discard a card, then draw a card. If a creature card was
+/// discarded this way, Plargg, Dean of Chaos deals 2 damage to any
+/// target."
+///
+/// Push (modern_decks): the loot half is wired faithfully as a tap
+/// activation with `Seq(Discard 1, Draw 1)`. The "if a creature card
+/// was discarded → 2 damage" rider is omitted (engine has no
+/// track-card-discarded-by-this-effect tally; same gap as Borrowed
+/// Knowledge mode 1 and Colossus of the Blood Age's death-trigger).
+/// Tracked in TODO.md as the
+/// `Effect::DiscardThisManyDrawSame` suggestion. The "Partner with
+/// Augusta, Dean of Order" rider is also omitted — engine has no
+/// Partner-pair primitive (only the singleton legend constraint is
+/// enforced).
+///
+/// At face value this is a 2-mana 2/2 with a tap-loot — a respectable
+/// curve filler for any Lorehold (R/W) shell.
+pub fn plargg_dean_of_chaos() -> CardDefinition {
+    CardDefinition {
+        name: "Plargg, Dean of Chaos",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![crate::card::Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: ManaCost::default(),
+            effect: Effect::Seq(vec![
+                Effect::Discard {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                    random: false,
+                },
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
+            ]),
+            once_per_turn: false,
+            sorcery_speed: false,
+            sac_cost: false,
+            condition: None,
+            life_cost: 0,
+            from_graveyard: false,
+            exile_self_cost: false,
+            exile_other_filter: None,
+        }],
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+    }
+}
+
+// ── Pestilent Cauldron (front face) ─────────────────────────────────────────
+
+/// Pestilent Cauldron — {1}{B} Artifact (front face of the MDFC).
+///
+/// "{2}, {T}, Sacrifice this artifact: Each player puts the top four
+/// cards of their library into their graveyard. Each opponent loses 3
+/// life and you gain 3 life. If Pestilent Cauldron is in your
+/// graveyard, you may cast it transformed."
+///
+/// Push (modern_decks): front-face-only wire — sac activation that
+/// mills 4 from each player, then drains 3. The transform-from-graveyard
+/// rider (back face: Restorative Burst, returns three creature cards
+/// plus gain 3 life) is omitted pending the cast-from-graveyard
+/// pipeline for MDFCs (engine's `cast_spell_back_face` walks hand only
+/// today).
+///
+/// At face value this is a 2-mana artifact with a powerful self-sac
+/// payoff that puts pressure on the opp's library while resurrecting
+/// the controller's own creatures off the milled cards.
+pub fn pestilent_cauldron() -> CardDefinition {
+    CardDefinition {
+        name: "Pestilent Cauldron",
+        cost: cost(&[generic(1), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[generic(2)]),
+            effect: Effect::Seq(vec![
+                // Each player mills 4.
+                Effect::Mill {
+                    who: Selector::Player(PlayerRef::EachPlayer),
+                    amount: Value::Const(4),
+                },
+                // Drain 3 (each opp loses 3, you gain 3).
+                Effect::Drain {
+                    from: Selector::Player(PlayerRef::EachOpponent),
+                    to: Selector::You,
+                    amount: Value::Const(3),
+                },
+            ]),
+            once_per_turn: false,
+            sorcery_speed: false,
+            sac_cost: true,
+            condition: None,
+            life_cost: 0,
+            from_graveyard: false,
+            exile_self_cost: false,
+            exile_other_filter: None,
+        }],
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+    }
+}
+
+// ── Augusta, Dean of Order ──────────────────────────────────────────────────
+
+/// Augusta, Dean of Order — {2}{W}, 2/3 Legendary Human Cleric.
+///
+/// "Whenever you attack with three or more creatures with the same
+/// power, each of those creatures gets +1/+1 and gains your choice of
+/// flying, first strike, vigilance, or lifelink until end of turn."
+///
+/// Push (modern_decks): body-only wire. The 2/3 Legendary Human Cleric
+/// is a respectable Lorehold (R/W) "go-wide" lord at three mana. The
+/// printed combat-step trigger is omitted (engine has no "attacking
+/// creatures with the same power" predicate, nor a multi-pump-with-
+/// chosen-keyword shape). The "Partner with Plargg, Dean of Chaos"
+/// rider is also omitted (no Partner-pair primitive — only the
+/// singleton legendary rule is enforced). At face value this is a
+/// 3-mana 2/3 legendary that can attack on its own and pairs with
+/// Plargg as part of the printed Augusta + Plargg combo (when both
+/// resolve and Partner is honored).
+///
+/// Tests cover the body, P/T, and creature subtypes.
+pub fn augusta_dean_of_order() -> CardDefinition {
+    CardDefinition {
+        name: "Augusta, Dean of Order",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![crate::card::Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+    }
+}

@@ -412,3 +412,93 @@ pub fn guiding_voice() -> CardDefinition {
         enters_with_counters: None,
     }
 }
+
+// ── Expanded Anatomy ────────────────────────────────────────────────────────
+
+/// Expanded Anatomy — {3}{G} Sorcery — Lesson.
+///
+/// "Put two +1/+1 counters on target creature."
+///
+/// Green's body-Lesson. Wired as a single `AddCounter` of amount `2`
+/// for `PlusOnePlusOne` against a `Creature` target. No Learn rider
+/// (Expanded Anatomy is itself a Lesson, not a Learn enabler). Cleanest
+/// way to use it: cast on a creature you already own to push it to a
+/// real threat (a 2/2 → 4/4, a 3/3 → 5/5). Also a fine target for
+/// Magecraft riders (Karok Wrangler-style payoffs).
+pub fn expanded_anatomy() -> CardDefinition {
+    CardDefinition {
+        name: "Expanded Anatomy",
+        cost: cost(&[generic(3), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes {
+            spell_subtypes: vec![SpellSubtype::Lesson],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::AddCounter {
+            what: target_filtered(SelectionRequirement::Creature),
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(2),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+    }
+}
+
+// ── Mercurial Transformation ────────────────────────────────────────────────
+
+/// Mercurial Transformation — {2}{U} Sorcery.
+///
+/// "Target creature or artifact becomes a blue Frog creature with base
+/// power and toughness 3/3 and loses all abilities until end of turn."
+///
+/// Push (modern_decks): wired via the engine's `Effect::SetBasePT`
+/// layer-7b primitive (same path used by Square Up). The "loses all
+/// abilities" rider is **not yet enforced** (no clear-abilities
+/// continuous effect primitive); the target keeps its printed
+/// abilities, which is a mild over-statement for the +typical use case
+/// (turning a threatening 5/5 menacing-deathtouch creature into a
+/// 3/3 Frog that's still menacing). Tracked in TODO.md as the
+/// `StaticEffect::ClearAbilities` gap. The base-P/T override is the
+/// headline play pattern (shrinking a 7/7 Force of Wills's-target
+/// down to a 3/3, or growing a 1/1 token into a 3/3 attacker), and
+/// resolves cleanly via the same layer-7b code as Square Up.
+pub fn mercurial_transformation() -> CardDefinition {
+    CardDefinition {
+        name: "Mercurial Transformation",
+        cost: cost(&[generic(2), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::SetBasePT {
+            what: target_filtered(
+                SelectionRequirement::Creature.or(SelectionRequirement::Artifact),
+            ),
+            power: Value::Const(3),
+            toughness: Value::Const(3),
+            duration: Duration::EndOfTurn,
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+    }
+}

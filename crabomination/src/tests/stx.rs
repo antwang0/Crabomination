@@ -5323,3 +5323,454 @@ fn dragons_approach_does_not_offer_tutor_without_four_named_in_graveyard() {
     assert!(in_lib, "Dragon should still be in the library");
 }
 
+// ── Push (modern_decks): New STX additions + SOS promotions ─────────────────
+
+/// Expanded Anatomy is a Lesson that lands two +1/+1 counters on a
+/// target creature for {3}{G}.
+#[test]
+fn expanded_anatomy_lands_two_counters_on_target_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::expanded_anatomy());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(bear)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Expanded Anatomy castable for {3}{G}");
+    drain_stack(&mut g);
+
+    let card = g.battlefield.iter().find(|c| c.id == bear).expect("Bear alive");
+    assert_eq!(
+        card.counter_count(CounterType::PlusOnePlusOne),
+        2,
+        "Bear should have two +1/+1 counters from Expanded Anatomy"
+    );
+    assert_eq!(card.power(), 4, "Bear becomes 4/4");
+    assert_eq!(card.toughness(), 4);
+}
+
+/// Selfless Glyphweaver's sac activation grants Indestructible (EOT)
+/// to all of the controller's creatures; the Glyphweaver itself is
+/// sacrificed as cost (so it does not stay around with indestructible).
+#[test]
+fn selfless_glyphweaver_sac_grants_indestructible_to_friendlies() {
+    let mut g = two_player_game();
+    let gw = g.add_card_to_battlefield(0, catalog::selfless_glyphweaver());
+    g.clear_sickness(gw);
+    let buddy = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(buddy);
+
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: gw,
+        ability_index: 0,
+        target: None,
+    })
+    .expect("Selfless Glyphweaver sac activation");
+    drain_stack(&mut g);
+
+    // Glyphweaver is sacrificed.
+    assert!(
+        !g.battlefield.iter().any(|c| c.id == gw),
+        "Glyphweaver should be sacrificed"
+    );
+    assert!(
+        g.players[0].graveyard.iter().any(|c| c.id == gw),
+        "Glyphweaver should be in graveyard"
+    );
+    // Buddy bear is indestructible.
+    let buddy_card = g.battlefield.iter().find(|c| c.id == buddy).expect("Bear alive");
+    assert!(
+        buddy_card.has_keyword(&Keyword::Indestructible),
+        "Buddy creature should have indestructible until end of turn"
+    );
+}
+
+/// Selfless Glyphweaver is a 2/3 Human Cleric Wizard for {1}{W}{W}.
+#[test]
+fn selfless_glyphweaver_is_a_three_mana_two_three_cleric_wizard() {
+    use crate::card::CreatureType;
+    let def = catalog::selfless_glyphweaver();
+    assert_eq!(def.name, "Selfless Glyphweaver");
+    assert_eq!(def.power, 2);
+    assert_eq!(def.toughness, 3);
+    assert!(def.has_creature_type(CreatureType::Cleric));
+    assert!(def.has_creature_type(CreatureType::Wizard));
+}
+
+/// Mercurial Transformation overrides the target creature's base P/T to
+/// 3/3 until end of turn via `Effect::SetBasePT`. Reads through the
+/// layered P/T via `computed_permanent` (the same approach Square Up's
+/// test uses).
+#[test]
+fn mercurial_transformation_sets_target_to_three_three_eot() {
+    let mut g = two_player_game();
+    // Pick a creature with non-3/3 base P/T to verify the rewrite.
+    let dragon = g.add_card_to_battlefield(0, catalog::shivan_dragon()); // 5/5
+    g.clear_sickness(dragon);
+    let id = g.add_card_to_hand(0, catalog::mercurial_transformation());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(dragon)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Mercurial Transformation castable for {2}{U}");
+    drain_stack(&mut g);
+
+    // SetBasePT applies via layer 7b; consult the computed permanent.
+    let computed = g.computed_permanent(dragon).expect("Dragon still on bf");
+    assert_eq!(computed.power, 3, "Dragon should be reduced to base power 3");
+    assert_eq!(computed.toughness, 3, "Dragon should be reduced to base toughness 3");
+}
+
+/// Crux of Fate's mode 0 destroys each Dragon on the battlefield while
+/// leaving non-Dragon creatures alone.
+#[test]
+fn crux_of_fate_mode_zero_destroys_dragons() {
+    let mut g = two_player_game();
+    let dragon = g.add_card_to_battlefield(0, catalog::shivan_dragon()); // Dragon
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // Bear, not Dragon
+    g.clear_sickness(dragon);
+    g.clear_sickness(bear);
+    let id = g.add_card_to_hand(0, catalog::crux_of_fate());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(3);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: None,
+        mode: Some(0), // Destroy Dragons
+        x_value: None,
+    })
+    .expect("Crux of Fate castable for {3}{B}{B}");
+    drain_stack(&mut g);
+
+    assert!(
+        !g.battlefield.iter().any(|c| c.id == dragon),
+        "Dragon should be destroyed"
+    );
+    assert!(
+        g.battlefield.iter().any(|c| c.id == bear),
+        "Non-Dragon bear should survive"
+    );
+}
+
+/// Crux of Fate's mode 1 destroys each non-Dragon creature; Dragons are
+/// safe.
+#[test]
+fn crux_of_fate_mode_one_destroys_non_dragons() {
+    let mut g = two_player_game();
+    let dragon = g.add_card_to_battlefield(0, catalog::shivan_dragon());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(dragon);
+    g.clear_sickness(bear);
+    let id = g.add_card_to_hand(0, catalog::crux_of_fate());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(3);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: None,
+        mode: Some(1), // Destroy non-Dragons
+        x_value: None,
+    })
+    .expect("Crux of Fate castable for {3}{B}{B}");
+    drain_stack(&mut g);
+
+    assert!(
+        g.battlefield.iter().any(|c| c.id == dragon),
+        "Dragon should be safe"
+    );
+    assert!(
+        !g.battlefield.iter().any(|c| c.id == bear),
+        "Non-Dragon bear should be destroyed"
+    );
+}
+
+/// Plargg, Dean of Chaos taps to loot one card.
+#[test]
+fn plargg_dean_of_chaos_taps_to_loot() {
+    let mut g = two_player_game();
+    // Seed library so the draw resolves.
+    g.add_card_to_library(0, catalog::island());
+    // Discard fodder.
+    g.add_card_to_hand(0, catalog::grizzly_bears());
+    let plargg = g.add_card_to_battlefield(0, catalog::plargg_dean_of_chaos());
+    g.clear_sickness(plargg);
+    let hand_before = g.players[0].hand.len();
+    let lib_before = g.players[0].library.len();
+
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: plargg,
+        ability_index: 0,
+        target: None,
+    })
+    .expect("Plargg activation");
+    drain_stack(&mut g);
+
+    // -1 discard, +1 draw → net hand unchanged.
+    assert_eq!(g.players[0].hand.len(), hand_before);
+    assert_eq!(g.players[0].library.len(), lib_before - 1);
+    let on_bf = g.battlefield.iter().find(|c| c.id == plargg).expect("Plargg alive");
+    assert!(on_bf.tapped, "Plargg should be tapped");
+}
+
+/// Plargg is a 2/2 Legendary Human Cleric.
+#[test]
+fn plargg_dean_of_chaos_is_a_two_two_legendary_human_cleric() {
+    use crate::card::{CreatureType, Supertype};
+    let def = catalog::plargg_dean_of_chaos();
+    assert_eq!(def.power, 2);
+    assert_eq!(def.toughness, 2);
+    assert!(def.supertypes.contains(&Supertype::Legendary));
+    assert!(def.has_creature_type(CreatureType::Human));
+    assert!(def.has_creature_type(CreatureType::Cleric));
+}
+
+/// Pestilent Cauldron's sac activation mills 4 from each player and
+/// drains 3.
+#[test]
+fn pestilent_cauldron_sac_mills_and_drains() {
+    let mut g = two_player_game();
+    // Seed both libraries.
+    for _ in 0..5 {
+        g.add_card_to_library(0, catalog::island());
+        g.add_card_to_library(1, catalog::island());
+    }
+    let pc = g.add_card_to_battlefield(0, catalog::pestilent_cauldron());
+    g.clear_sickness(pc);
+    let life0_before = g.players[0].life;
+    let life1_before = g.players[1].life;
+    let gy0_before = g.players[0].graveyard.len();
+    let gy1_before = g.players[1].graveyard.len();
+    g.players[0].mana_pool.add_colorless(2);
+
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: pc,
+        ability_index: 0,
+        target: None,
+    })
+    .expect("Cauldron activation");
+    drain_stack(&mut g);
+
+    // Sacrificed.
+    assert!(!g.battlefield.iter().any(|c| c.id == pc));
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == pc));
+    // Life delta: P0 gains 3, P1 loses 3.
+    assert_eq!(g.players[0].life, life0_before + 3);
+    assert_eq!(g.players[1].life, life1_before - 3);
+    // Each player milled 4.
+    // P0's graveyard contains the Cauldron plus 4 milled cards.
+    assert_eq!(g.players[0].graveyard.len(), gy0_before + 1 /* cauldron */ + 4);
+    assert_eq!(g.players[1].graveyard.len(), gy1_before + 4);
+}
+
+/// Augusta is a 2/3 Legendary Human Cleric.
+#[test]
+fn augusta_dean_of_order_is_a_two_three_legendary_human_cleric() {
+    use crate::card::{CreatureType, Supertype};
+    let def = catalog::augusta_dean_of_order();
+    assert_eq!(def.name, "Augusta, Dean of Order");
+    assert_eq!(def.power, 2);
+    assert_eq!(def.toughness, 3);
+    assert!(def.supertypes.contains(&Supertype::Legendary));
+    assert!(def.has_creature_type(CreatureType::Human));
+    assert!(def.has_creature_type(CreatureType::Cleric));
+}
+
+/// Ajani's Response can be cast via its alternative cost ({1}{W}) when
+/// it targets a *tapped* creature — a {3} mana reduction from the
+/// printed {4}{W} base cost.
+#[test]
+fn ajanis_response_alt_cost_destroys_tapped_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    // Tap the bear.
+    if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == bear) {
+        c.tapped = true;
+    }
+    let id = g.add_card_to_hand(0, catalog::ajanis_response());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    // Alt cost = {1}{W} when target is tapped.
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: id,
+        pitch_card: None,
+        target: Some(Target::Permanent(bear)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Ajani's Response alt-cast should resolve when target is tapped");
+    drain_stack(&mut g);
+
+    assert!(
+        !g.battlefield.iter().any(|c| c.id == bear),
+        "Tapped bear should be destroyed via alt cost"
+    );
+}
+
+/// Alt-cost path rejects an untapped target (the target_filter requires
+/// `Tapped`). Verifies the cast-time validator's filter logic.
+#[test]
+fn ajanis_response_alt_cost_rejects_untapped_target() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    // Bear stays untapped.
+    let id = g.add_card_to_hand(0, catalog::ajanis_response());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    let err = g.perform_action(GameAction::CastSpellAlternative {
+        card_id: id,
+        pitch_card: None,
+        target: Some(Target::Permanent(bear)),
+        mode: None,
+        x_value: None,
+    });
+    assert!(
+        err.is_err(),
+        "Alt-cost cast should reject untapped target (filter requires Tapped)"
+    );
+}
+
+/// Run Behind can be alt-cast at {2}{U} when it targets an attacking
+/// creature.
+#[test]
+fn run_behind_alt_cost_bounces_attacking_creature_to_library_bottom() {
+    let mut g = two_player_game();
+    // Set up: P1's bear attacking P0.
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    g.attacking.push(crate::game::Attack {
+        attacker: bear,
+        target: crate::game::AttackTarget::Player(0),
+    });
+    let id = g.add_card_to_hand(0, catalog::run_behind());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: id,
+        pitch_card: None,
+        target: Some(Target::Permanent(bear)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Run Behind alt-cast at {2}{U} should resolve");
+    drain_stack(&mut g);
+
+    // Bear should be at the bottom of P1's library.
+    assert!(
+        !g.battlefield.iter().any(|c| c.id == bear),
+        "Bear should leave the battlefield"
+    );
+    let lib_bottom = g.players[1].library.first();
+    assert!(
+        lib_bottom.map(|c| c.id) == Some(bear),
+        "Bear should be at the bottom of P1's library"
+    );
+}
+
+/// CR 514.1 — At the cleanup step of the active player's turn, if their
+/// hand is over the max hand size (7), they discard enough cards to
+/// reduce to 7.
+#[test]
+fn cleanup_step_discards_down_to_seven_per_cr_514_1() {
+    let mut g = two_player_game();
+    // Stuff P0's hand with 10 islands.
+    for _ in 0..10 {
+        g.add_card_to_hand(0, catalog::island());
+    }
+    assert_eq!(g.players[0].hand.len(), 10, "Start with 10 cards");
+    assert_eq!(g.active_player_idx, 0);
+    let gy_before = g.players[0].graveyard.len();
+
+    // Step directly to Cleanup; passing priority twice runs do_cleanup.
+    g.step = TurnStep::Cleanup;
+    g.perform_action(GameAction::PassPriority).unwrap();
+    g.perform_action(GameAction::PassPriority).unwrap();
+
+    // P0 should now be at exactly 7 cards (3 discarded into graveyard).
+    assert_eq!(g.players[0].hand.len(), 7, "Hand reduced to max hand size");
+    assert_eq!(
+        g.players[0].graveyard.len(),
+        gy_before + 3,
+        "Three cards moved hand → graveyard"
+    );
+}
+
+/// CR 514.1 — If the active player's hand is already at or below max
+/// hand size, cleanup is a no-op for the hand.
+#[test]
+fn cleanup_step_no_op_when_hand_at_or_below_max_per_cr_514_1() {
+    let mut g = two_player_game();
+    for _ in 0..5 {
+        g.add_card_to_hand(0, catalog::island());
+    }
+    assert_eq!(g.active_player_idx, 0);
+    let hand_before = g.players[0].hand.len();
+    let gy_before = g.players[0].graveyard.len();
+
+    g.step = TurnStep::Cleanup;
+    g.perform_action(GameAction::PassPriority).unwrap();
+    g.perform_action(GameAction::PassPriority).unwrap();
+
+    assert_eq!(
+        g.players[0].hand.len(),
+        hand_before,
+        "Hand unchanged when below max hand size"
+    );
+    assert_eq!(
+        g.players[0].graveyard.len(),
+        gy_before,
+        "No cards discarded"
+    );
+}
+
+/// Brush Off can be cast at {1}{U} (alt cost) when it targets an
+/// instant or sorcery on the stack — verified by P0 alt-casting Brush
+/// Off on P1's Lightning Bolt.
+#[test]
+fn brush_off_alt_cost_counters_instant_on_stack() {
+    let mut g = two_player_game();
+    // P1 casts Bolt at P0.
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(0)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Lightning Bolt castable");
+
+    // P0 responds with Brush Off at alt cost.
+    g.priority.player_with_priority = 0;
+    let id = g.add_card_to_hand(0, catalog::brush_off());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: id,
+        pitch_card: None,
+        target: Some(Target::Permanent(bolt)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Brush Off alt-cost at {1}{U} should resolve");
+    drain_stack(&mut g);
+
+    // P0 should still be at 20 (no Bolt damage).
+    assert_eq!(g.players[0].life, 20, "Bolt should be countered");
+}
+

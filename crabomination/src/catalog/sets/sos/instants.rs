@@ -3,7 +3,7 @@
 use super::no_abilities;
 use super::creatures::inkling_token;
 use crate::card::{
-    CardDefinition, CardType, CounterType, Effect, Keyword, SelectionRequirement, Subtypes,
+    AlternativeCost, CardDefinition, CardType, CounterType, Effect, Keyword, SelectionRequirement, Subtypes,
 };
 use crate::effect::shortcut::target_filtered;
 use crate::effect::{Duration, PlayerRef, Selector, Value, ZoneDest};
@@ -285,7 +285,26 @@ pub fn brush_off() -> CardDefinition {
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
-        alternative_cost: None,
+        // Push (modern_decks): "{1}{U} less if it targets an instant or
+        // sorcery spell" rider wired via `AlternativeCost` with a target
+        // filter restricting to spells on the stack matching IS card type.
+        // Alt cost is {1}{U} (the {1}{U} reduction from printed {2}{U}{U})
+        // — when the caster aims at an IS spell on the stack, they can cast
+        // via the alt path at half the mana. Non-IS spells fall back to the
+        // hard-counter at the full {2}{U}{U} cost.
+        alternative_cost: Some(AlternativeCost {
+            mana_cost: cost(&[generic(1), u()]),
+            life_cost: 0,
+            exile_filter: None,
+            evoke_sacrifice: false,
+            not_your_turn_only: false,
+            target_filter: Some(
+                SelectionRequirement::IsSpellOnStack.and(
+                    SelectionRequirement::HasCardType(CardType::Instant)
+                        .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+                ),
+            ),
+        }),
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
@@ -380,7 +399,25 @@ pub fn run_behind() -> CardDefinition {
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
-        alternative_cost: None,
+        // Push (modern_decks): "{1} less if it targets an attacking
+        // creature" rider wired via `AlternativeCost { mana_cost: {2}{U},
+        // target_filter: Some(Creature + IsAttacking) }`. When the
+        // caster aims at an attacking creature, alt-cost path is
+        // available at {2}{U} (a {1} reduction from printed {3}{U});
+        // otherwise the spell goes off at full cost. The
+        // top-or-bottom owner-choice is still collapsed to bottom-only
+        // (engine has no top-or-bottom prompt for the *owner* of the
+        // moved card — tracked in TODO.md).
+        alternative_cost: Some(AlternativeCost {
+            mana_cost: cost(&[generic(2), u()]),
+            life_cost: 0,
+            exile_filter: None,
+            evoke_sacrifice: false,
+            not_your_turn_only: false,
+            target_filter: Some(
+                SelectionRequirement::Creature.and(SelectionRequirement::IsAttacking),
+            ),
+        }),
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
@@ -1360,10 +1397,16 @@ pub fn quandrix_charm() -> CardDefinition {
 /// "This spell costs {3} less to cast if it targets a tapped creature.
 /// Destroy target creature."
 ///
-/// Approximation: the cost-reduction-when-target-is-tapped rider is omitted
-/// (the engine has no target-aware cost reduction primitive yet — tracked
-/// in TODO under "target-aware cost reduction"). The destroy-creature
-/// half is wired faithfully; it pays the printed {4}{W} unconditionally.
+/// Push (modern_decks): "{3} less if it targets a tapped creature" rider
+/// now wired via `AlternativeCost { mana_cost: {1}{W}, target_filter:
+/// Some(Creature + Tapped) }`. When the caster picks a tapped creature
+/// target, they can use the alt-cost cast path at {1}{W} (a {3} mana
+/// reduction from the printed {4}{W}); when the target is untapped,
+/// the alt-cost target filter fails validation and the spell can only
+/// be cast at its printed cost. The destroy-creature body is unchanged.
+/// Same pattern as Killian's target-aware cost reduction (STX) but on
+/// a per-spell alt-cost rather than a static — cleaner because the
+/// discount is intrinsic to this one card.
 pub fn ajanis_response() -> CardDefinition {
     CardDefinition {
         name: "Ajani's Response",
@@ -1382,7 +1425,16 @@ pub fn ajanis_response() -> CardDefinition {
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
-        alternative_cost: None,
+        alternative_cost: Some(AlternativeCost {
+            mana_cost: cost(&[generic(1), w()]),
+            life_cost: 0,
+            exile_filter: None,
+            evoke_sacrifice: false,
+            not_your_turn_only: false,
+            target_filter: Some(
+                SelectionRequirement::Creature.and(SelectionRequirement::Tapped),
+            ),
+        }),
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,

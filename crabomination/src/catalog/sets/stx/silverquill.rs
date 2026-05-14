@@ -19,12 +19,13 @@
 
 use super::no_abilities;
 use crate::card::{
-    CardDefinition, CardType, CreatureType, Effect, EventKind, EventScope, EventSpec, Keyword,
-    Selector, SelectionRequirement, Subtypes, Supertype, TriggeredAbility, Value,
+    ActivatedAbility, CardDefinition, CardType, CreatureType, Effect, EventKind, EventScope,
+    EventSpec, Keyword, Selector, SelectionRequirement, Subtypes, Supertype, TriggeredAbility,
+    Value,
 };
 use crate::effect::shortcut::{magecraft, magecraft_drain_each_opp, magecraft_self_pump, target_filtered};
 use crate::effect::{Duration, StaticAbility, StaticEffect};
-use crate::mana::{cost, generic, u, w, b, x};
+use crate::mana::{cost, generic, u, w, b, x, ManaCost};
 
 // ── Spirited Companion ──────────────────────────────────────────────────────
 
@@ -604,6 +605,71 @@ pub fn tenured_inkcaster() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+    }
+}
+
+// ── Selfless Glyphweaver ────────────────────────────────────────────────────
+
+/// Selfless Glyphweaver — {1}{W}{W}, 2/3 Human Cleric Wizard.
+///
+/// "Sacrifice this creature: Creatures you control gain indestructible
+/// until end of turn."
+///
+/// Push (modern_decks): front-face only of the MDFC Selfless Glyphweaver
+/// // Deadly Vanity. The back-face mass-sacrifice is too complex (each
+/// opponent picks which creature to keep — no multi-pick decision shape
+/// yet) and is omitted. The front face is a respectable 3-mana 2/3 body
+/// with a one-shot indestructible-all-creatures-EOT activation that
+/// protects the board through a Wrath.
+///
+/// The activation is a `sac_cost` activated ability (mirroring Shattered
+/// Acolyte and similar sac-self payoff cards) whose effect grants
+/// Indestructible (EOT) to each creature the controller owns. Because
+/// the source is sacrificed as part of the cost (before resolution), it
+/// won't grant indestructible to itself — matching the printed Oracle
+/// where the sacrificed Glyphweaver is no longer on the battlefield
+/// when the effect resolves.
+pub fn selfless_glyphweaver() -> CardDefinition {
+    CardDefinition {
+        name: "Selfless Glyphweaver",
+        cost: cost(&[generic(1), w(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: false,
+            mana_cost: ManaCost::default(),
+            effect: Effect::GrantKeyword {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                keyword: Keyword::Indestructible,
+                duration: Duration::EndOfTurn,
+            },
+            once_per_turn: false,
+            sorcery_speed: false,
+            sac_cost: true,
+            condition: None,
+            life_cost: 0,
+            from_graveyard: false,
+            exile_self_cost: false,
+            exile_other_filter: None,
+        }],
         triggered_abilities: vec![],
         static_abilities: vec![],
         base_loyalty: 0,
