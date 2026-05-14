@@ -4826,3 +4826,354 @@ fn wandering_archaic_is_a_4_4_spirit() {
     assert_eq!(card.toughness, 4);
     assert!(card.subtypes.creature_types.contains(&crate::card::CreatureType::Spirit));
 }
+
+// ── New STX cards (claude/modern_decks push) ────────────────────────────────
+
+/// Take Up the Shield: target creature gets +0/+3 and gains
+/// indestructible until end of turn. A 2/2 bear becomes a 2/5 that
+/// survives a Wrath / Lava Coil.
+#[test]
+fn take_up_the_shield_buffs_toughness_and_grants_indestructible() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+
+    let id = g.add_card_to_hand(0, catalog::take_up_the_shield());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(bear)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Take Up the Shield castable for {1}{W}");
+    drain_stack(&mut g);
+
+    let comp = g.computed_permanent(bear).unwrap();
+    assert_eq!(comp.power, 2, "bear power unchanged");
+    assert_eq!(comp.toughness, 5, "bear at 2+3=5 toughness");
+    assert!(
+        comp.keywords.contains(&Keyword::Indestructible),
+        "should grant indestructible EOT"
+    );
+}
+
+/// Star Pupil's Papers ETB triggers Scry 1. We confirm the card is
+/// recognized as an artifact and the activated ability is exposed.
+#[test]
+fn star_pupils_papers_is_a_one_mana_artifact_with_etb_scry() {
+    let card = catalog::star_pupils_papers();
+    assert_eq!(card.cost.cmc(), 1);
+    assert!(card.card_types.contains(&crate::card::CardType::Artifact));
+    assert_eq!(card.triggered_abilities.len(), 1, "has ETB Scry");
+    assert_eq!(card.activated_abilities.len(), 1, "has sac-for-counter activation");
+    assert!(
+        card.activated_abilities[0].sac_cost,
+        "activation sacrifices the artifact as part of its cost"
+    );
+}
+
+/// Star Pupil's Papers activated ability: {2}, sacrifice this artifact:
+/// put a +1/+1 counter on target creature.
+#[test]
+fn star_pupils_papers_sac_activation_grants_counter() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+
+    let papers = g.add_card_to_battlefield(0, catalog::star_pupils_papers());
+    g.clear_sickness(papers);
+    g.players[0].mana_pool.add_colorless(2);
+
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: papers,
+        ability_index: 0,
+        target: Some(Target::Permanent(bear)),
+    })
+    .expect("Sac-for-counter activation should be legal");
+    drain_stack(&mut g);
+
+    // Papers should be in graveyard (sac'd as part of activation cost).
+    assert!(
+        g.battlefield_find(papers).is_none(),
+        "papers should be sac'd off the battlefield"
+    );
+    let bear_card = g.battlefield_find(bear).unwrap();
+    assert_eq!(
+        bear_card.counter_count(CounterType::PlusOnePlusOne),
+        1,
+        "bear should have one +1/+1 counter"
+    );
+}
+
+/// Each of the five Snarl lands is a dual that produces its two
+/// colors and enters tapped (Snarl reveal half is approximated as
+/// always-tap).
+#[test]
+fn frostboil_snarl_is_a_u_r_dual_that_enters_tapped() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::frostboil_snarl());
+    g.perform_action(GameAction::PlayLand(id))
+        .expect("Frostboil Snarl playable as a land");
+    drain_stack(&mut g);
+    let card = g.battlefield_find(id).expect("snarl on bf");
+    assert!(card.tapped, "Frostboil Snarl should enter tapped");
+    let def = catalog::frostboil_snarl();
+    assert!(def.subtypes.land_types.contains(&crate::card::LandType::Island));
+    assert!(def.subtypes.land_types.contains(&crate::card::LandType::Mountain));
+}
+
+/// Spot-check each Snarl land is wired with the correct two land
+/// subtypes — proves the cycle exists.
+#[test]
+fn all_five_snarl_lands_are_dual_subtypes() {
+    use crate::card::LandType::*;
+    type SnarlCheck = (fn() -> crate::card::CardDefinition, crate::card::LandType, crate::card::LandType);
+    let checks: &[SnarlCheck] = &[
+        (catalog::frostboil_snarl, Island, Mountain),
+        (catalog::furycalm_snarl, Mountain, Plains),
+        (catalog::necroblossom_snarl, Swamp, Forest),
+        (catalog::shineshadow_snarl, Plains, Swamp),
+        (catalog::vineglimmer_snarl, Forest, Island),
+    ];
+    for (factory, t_a, t_b) in checks {
+        let card = factory();
+        assert!(card.subtypes.land_types.contains(t_a), "{} should be {:?}", card.name, t_a);
+        assert!(card.subtypes.land_types.contains(t_b), "{} should be {:?}", card.name, t_b);
+        assert_eq!(card.activated_abilities.len(), 2,
+            "{} should have two tap-for-mana abilities", card.name);
+    }
+}
+
+/// Dragon's Approach deals 3 damage to any target. Verify it can
+/// target a player.
+#[test]
+fn dragons_approach_deals_three_to_a_player() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::dragons_approach());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    let life_before = g.players[1].life;
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Player(1)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Dragon's Approach castable for {B}");
+    drain_stack(&mut g);
+
+    assert_eq!(
+        g.players[1].life,
+        life_before - 3,
+        "Dragon's Approach should deal 3 to a player"
+    );
+}
+
+/// Dragon's Approach deals 3 damage to a creature. A 3-toughness
+/// bear dies to SBA after taking 3 marked damage.
+#[test]
+fn dragons_approach_kills_grizzly_bears() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+
+    let id = g.add_card_to_hand(0, catalog::dragons_approach());
+    g.players[0].mana_pool.add(Color::Black, 1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(bear)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Dragon's Approach castable for {B}");
+    drain_stack(&mut g);
+
+    let _ = g.check_state_based_actions();
+    assert!(
+        g.battlefield_find(bear).is_none(),
+        "Bear with 2 toughness dies to 3 damage"
+    );
+}
+
+/// Defiant Strike: +1/+0 on a friendly creature and a cantrip.
+#[test]
+fn defiant_strike_pumps_friendly_and_draws() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    g.add_card_to_library(0, catalog::island());
+
+    let id = g.add_card_to_hand(0, catalog::defiant_strike());
+    g.players[0].mana_pool.add(Color::White, 1);
+    let hand_before = g.players[0].hand.len();
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(bear)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Defiant Strike castable for {W}");
+    drain_stack(&mut g);
+
+    let comp = g.computed_permanent(bear).unwrap();
+    assert_eq!(comp.power, 3, "+1 power → 3");
+    // -1 (cast) +1 (draw) = same hand size.
+    assert_eq!(g.players[0].hand.len(), hand_before);
+}
+
+/// Divine Gambit: exile any nonland permanent. Verify a creature gets
+/// exiled.
+#[test]
+fn divine_gambit_exiles_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+
+    let id = g.add_card_to_hand(0, catalog::divine_gambit());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(bear)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Divine Gambit castable for {2}{W}");
+    drain_stack(&mut g);
+
+    assert!(
+        g.battlefield_find(bear).is_none(),
+        "Bear should be exiled"
+    );
+    let exiled = g.exile.iter().any(|c| c.id == bear);
+    assert!(exiled, "Bear should be in the exile zone");
+}
+
+// ── CR 120.8 — 0-damage event suppression audit ─────────────────────────────
+
+/// CR 120.8: "If a source would deal 0 damage, it does not deal damage at
+/// all. That means abilities that trigger on damage being dealt won't
+/// trigger." We exercise the rule by casting Dragon's Approach with the
+/// damage scaled down to 0 (via a -3/-0 pump on the source... wait,
+/// Dragon's Approach is a sorcery so we can't pump *it*). Easier: cast a
+/// damage spell whose amount evaluates to 0 and assert that the engine
+/// emits no `DamageDealt` event and no LifeLost event.
+///
+/// Setup: the engine's `deal_damage_to_from` (in `game/effects/movement.rs`)
+/// now bails out early when `amount == 0` so no event is emitted. This
+/// test validates the audit via the existing `Effect::DealDamage` path
+/// with `Value::Const(0)` against a player target — the player's life
+/// total stays at 20 and no `LifeLost` event is emitted.
+#[test]
+fn zero_damage_does_not_trigger_damage_events_per_cr_120_8() {
+    use crate::card::{
+        CardDefinition, CardType, Effect, Subtypes, Value,
+    };
+    use crate::effect::shortcut::target_filtered;
+    use crate::game::GameEvent;
+    use crate::mana::cost;
+
+    // Build a synthetic "{R}: deal 0 damage to target player" instant.
+    let zero_damage_burn = CardDefinition {
+        name: "Zero-Damage Burn",
+        cost: cost(&[crate::mana::r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::DealDamage {
+            to: target_filtered(crate::card::SelectionRequirement::Player),
+            amount: Value::Const(0),
+        },
+        activated_abilities: vec![],
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    };
+
+    let mut g = two_player_game();
+    let life_before = g.players[1].life;
+
+    let id = g.add_card_to_hand(0, zero_damage_burn);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Player(1)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Zero-Damage Burn castable for {R}");
+    let events = drain_stack(&mut g);
+
+    // CR 120.8 — player's life is unchanged.
+    assert_eq!(
+        g.players[1].life, life_before,
+        "P1 life should be unchanged after a 0-damage spell"
+    );
+    // No DamageDealt event was emitted (even at amount=0) — abilities
+    // that trigger on damage being dealt should not have fired.
+    let any_damage_event = events.iter().any(|e| {
+        matches!(
+            e,
+            GameEvent::DamageDealt {
+                to_player: Some(1),
+                ..
+            }
+        )
+    });
+    assert!(
+        !any_damage_event,
+        "CR 120.8 — no DamageDealt event should be emitted on 0 damage"
+    );
+    // And no LifeLost event either (the player didn't actually lose
+    // life — the 0 amount short-circuited).
+    let any_life_lost = events
+        .iter()
+        .any(|e| matches!(e, GameEvent::LifeLost { player: 1, .. }));
+    assert!(
+        !any_life_lost,
+        "CR 120.8 — no LifeLost event should be emitted on 0 damage"
+    );
+}
+
+/// Cram Session: gain 5 life at instant speed and the card has
+/// Keyword::Flashback({5}{W}).
+#[test]
+fn cram_session_gains_five_life_and_has_flashback() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::cram_session());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    let life_before = g.players[0].life;
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: None,
+        mode: None,
+        x_value: None,
+    })
+    .expect("Cram Session castable for {3}{W}");
+    drain_stack(&mut g);
+
+    assert_eq!(
+        g.players[0].life,
+        life_before + 5,
+        "Cram Session should gain 5 life"
+    );
+
+    let card = catalog::cram_session();
+    let has_flashback = card.keywords.iter().any(|k| matches!(k, Keyword::Flashback(_)));
+    assert!(has_flashback, "Cram Session should carry Keyword::Flashback");
+}

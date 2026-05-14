@@ -26,6 +26,20 @@ impl GameState {
         source: Option<crate::card::CardId>,
         events: &mut Vec<GameEvent>,
     ) {
+        // CR 120.8 — "If a source would deal 0 damage, it does not deal
+        // damage at all. That means abilities that trigger on damage
+        // being dealt won't trigger. It also means that replacement
+        // effects that would increase the damage dealt by that source,
+        // or would have that source deal that damage to a different
+        // object or player, have no event to replace, so they have no
+        // effect." We bail out of the entire damage-delivery sequence
+        // when `amount == 0`, so no `GameEvent::DamageDealt`,
+        // `LifeLost`, `PoisonAdded`, or `LoyaltyChanged` event is
+        // emitted. Damage-watching triggered abilities won't fire on
+        // 0-damage events.
+        if amount == 0 {
+            return;
+        }
         // CR 702.90b — damage dealt to a player by a source with infect
         // doesn't cause life loss; it gives the player poison counters
         // equal to that damage. We check the source's effective

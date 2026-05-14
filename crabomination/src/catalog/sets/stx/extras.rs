@@ -9,12 +9,12 @@
 use super::no_abilities;
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, Effect, EventKind,
-    EventScope, EventSpec, Keyword, Predicate, Selector, SelectionRequirement, Subtypes,
+    EventScope, EventSpec, Keyword, LandType, Predicate, Selector, SelectionRequirement, Subtypes,
     TokenDefinition, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{magecraft, magecraft_self_pump, target_filtered};
 use crate::effect::{Duration, ManaPayload, PlayerRef, ZoneDest};
-use crate::mana::{Color, b, cost, g, generic, r, u, w};
+use crate::mana::{Color, b, cost, g, generic, r, u, w, ManaCost};
 
 // ── Bookwurm ────────────────────────────────────────────────────────────────
 
@@ -3482,6 +3482,374 @@ pub fn illuminate_history() -> CardDefinition {
                 definition: lorehold_spirit_flying,
             },
         ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Take Up the Shield ──────────────────────────────────────────────────────
+
+/// Take Up the Shield — {1}{W} Instant.
+/// "Target creature gets +0/+3 and gains indestructible until end of turn."
+///
+/// Strixhaven Silverquill defensive combat trick — same shape as
+/// Masterful Flourish (SOS) but white and with a toughness bump instead
+/// of a power bump. Wired as `Seq(PumpPT(+0/+3), GrantKeyword(Indestructible))`
+/// against a generic `Creature` target. The target's controller doesn't
+/// matter; useful as a Fog-style protection spell on a friendly attacker
+/// or as defensive cover on a blocker.
+pub fn take_up_the_shield() -> CardDefinition {
+    CardDefinition {
+        name: "Take Up the Shield",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(0),
+                toughness: Value::Const(3),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::Indestructible,
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Star Pupil's Papers ─────────────────────────────────────────────────────
+
+/// Star Pupil's Papers — {1} Artifact.
+/// "When this artifact enters, scry 1. /
+///  {2}, Sacrifice this artifact: Put a +1/+1 counter on target creature."
+///
+/// Cheap colorless filter + counter payoff. ETB Scry 1 gives any deck
+/// a smoothing tool for a single mana; the sac-for-counter activation
+/// converts the artifact into a permanent body buff once it's
+/// served its filtering purpose. Wired as `Effect::Scry` for the ETB
+/// trigger and an activated ability with `sac_cost: true` for the
+/// counter half.
+pub fn star_pupils_papers() -> CardDefinition {
+    CardDefinition {
+        name: "Star Pupil's Papers",
+        cost: cost(&[generic(1)]),
+        supertypes: vec![],
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: false,
+            mana_cost: cost(&[generic(2)]),
+            effect: Effect::AddCounter {
+                what: target_filtered(SelectionRequirement::Creature),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+            once_per_turn: false,
+            sorcery_speed: false,
+            sac_cost: true,
+            condition: None,
+            life_cost: 0,
+            from_graveyard: false,
+            exile_self_cost: false,
+            exile_other_filter: None,
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Snarl land cycle ────────────────────────────────────────────────────────
+
+/// Build a Strixhaven Snarl dual land. Printed Oracle: "As this land
+/// enters, you may reveal a [C1] or [C2] card from your hand. If you
+/// don't, this land enters tapped."
+///
+/// 🟡 Approximation: we ship the conservative ("don't reveal") branch
+/// — these always enter tapped. The reveal-from-hand decision is a
+/// non-trivial UI prompt (the engine has no "may reveal" action shape
+/// at ETB time), and a strictly-untapped version would be too strong.
+/// Wiring the optimization (look at hand for the right color and
+/// auto-skip the tap) is tracked under TODO.md as the "Snarl-land
+/// reveal" gap.
+fn snarl_land(
+    name: &'static str,
+    type_a: LandType,
+    type_b: LandType,
+    color_a: Color,
+    color_b: Color,
+) -> CardDefinition {
+    use super::super::{etb_tap, tap_add};
+    CardDefinition {
+        name,
+        cost: ManaCost::default(),
+        supertypes: vec![],
+        card_types: vec![CardType::Land],
+        subtypes: Subtypes {
+            land_types: vec![type_a, type_b],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: vec![tap_add(color_a), tap_add(color_b)],
+        triggered_abilities: vec![etb_tap()],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+/// Frostboil Snarl — Izzet (U/R) Snarl land.
+pub fn frostboil_snarl() -> CardDefinition {
+    snarl_land(
+        "Frostboil Snarl",
+        LandType::Island,
+        LandType::Mountain,
+        Color::Blue,
+        Color::Red,
+    )
+}
+
+/// Furycalm Snarl — Boros (R/W) Snarl land.
+pub fn furycalm_snarl() -> CardDefinition {
+    snarl_land(
+        "Furycalm Snarl",
+        LandType::Mountain,
+        LandType::Plains,
+        Color::Red,
+        Color::White,
+    )
+}
+
+/// Necroblossom Snarl — Golgari (B/G) Snarl land.
+pub fn necroblossom_snarl() -> CardDefinition {
+    snarl_land(
+        "Necroblossom Snarl",
+        LandType::Swamp,
+        LandType::Forest,
+        Color::Black,
+        Color::Green,
+    )
+}
+
+/// Shineshadow Snarl — Orzhov (W/B) Snarl land.
+pub fn shineshadow_snarl() -> CardDefinition {
+    snarl_land(
+        "Shineshadow Snarl",
+        LandType::Plains,
+        LandType::Swamp,
+        Color::White,
+        Color::Black,
+    )
+}
+
+/// Vineglimmer Snarl — Simic (G/U) Snarl land.
+pub fn vineglimmer_snarl() -> CardDefinition {
+    snarl_land(
+        "Vineglimmer Snarl",
+        LandType::Forest,
+        LandType::Island,
+        Color::Green,
+        Color::Blue,
+    )
+}
+
+// ── Dragon's Approach ───────────────────────────────────────────────────────
+
+/// Dragon's Approach — {B} Sorcery.
+/// "Dragon's Approach deals 3 damage to any target. Then if you have
+/// four or more cards named Dragon's Approach in your graveyard, you
+/// may search your library for a Dragon creature card, put it onto
+/// the battlefield, then shuffle. A deck can have any number of cards
+/// named Dragon's Approach."
+///
+/// 🟡 approximation: the first half (3 damage to any target) is wired
+/// faithfully. The "4+ named-self in gy → tutor a Dragon" rider needs
+/// a per-graveyard same-name count predicate which doesn't yet exist
+/// as a primitive. The headline play pattern (3-mana ping at any
+/// target) ships; the gy-tutor combo body is tracked in TODO.md as a
+/// future enhancement once `Predicate::SameNamedInZoneAtLeast` lands.
+pub fn dragons_approach() -> CardDefinition {
+    CardDefinition {
+        name: "Dragon's Approach",
+        cost: cost(&[b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::DealDamage {
+            to: target_filtered(
+                SelectionRequirement::Creature
+                    .or(SelectionRequirement::Planeswalker)
+                    .or(SelectionRequirement::Player),
+            ),
+            amount: Value::Const(3),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Defiant Strike ──────────────────────────────────────────────────────────
+
+/// Defiant Strike — {W} Instant (Strixhaven Mystical Archive).
+/// "Target creature you control gets +1/+0 until end of turn. Draw a card."
+///
+/// Classic white cantrip-pump. Wired as `Seq(PumpPT(+1/+0), Draw(1))`
+/// — the pump targets a friendly creature (controller filter), the
+/// draw fires regardless. Clean uses include turning a 2-power
+/// attacker into a 3-power that bashes through small chumps while
+/// replacing the card in hand.
+pub fn defiant_strike() -> CardDefinition {
+    CardDefinition {
+        name: "Defiant Strike",
+        cost: cost(&[w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                power: Value::Const(1),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Divine Gambit ───────────────────────────────────────────────────────────
+
+/// Divine Gambit — {2}{W} Instant (Strixhaven Mystical Archive).
+/// "Exile target nonland permanent. Its controller may put a permanent
+/// card from their hand onto the battlefield."
+///
+/// 🟡 simplification: the "may put a permanent card from hand" gift
+/// half is omitted (engine has no "opp may put a permanent from
+/// hand" decision shape — would need a yes/no decision on the
+/// targeted permanent's controller's side + a permanent-from-hand
+/// selector at their hand zone). Body wires the exile half
+/// faithfully. Net play pattern: white instant-speed removal that
+/// hits any nonland permanent for 3 mana — strictly weaker than the
+/// printed gift back to the opp.
+pub fn divine_gambit() -> CardDefinition {
+    CardDefinition {
+        name: "Divine Gambit",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Move {
+            what: target_filtered(
+                SelectionRequirement::Permanent.and(SelectionRequirement::Nonland),
+            ),
+            to: ZoneDest::Exile,
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Cram Session ────────────────────────────────────────────────────────────
+
+/// Cram Session — {3}{W} Instant.
+/// "Target player gains 5 life. Flashback {5}{W}."
+///
+/// Pure lifegain at instant speed with a Flashback recast. The body
+/// gains 5 life to its controller (`Selector::You` — the multi-target
+/// "target player" prompt collapses to the caster; auto-target picker
+/// has no friendlier candidate). Flashback {5}{W} via the engine's
+/// existing `Keyword::Flashback` keyword (push X) — the cast-from-
+/// graveyard path is the same one used by Pursue the Past, Sacred
+/// Fire, and Tome Blast.
+pub fn cram_session() -> CardDefinition {
+    CardDefinition {
+        name: "Cram Session",
+        cost: cost(&[generic(3), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![Keyword::Flashback(cost(&[generic(5), w()]))],
+        effect: Effect::GainLife {
+            who: Selector::You,
+            amount: Value::Const(5),
+        },
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],

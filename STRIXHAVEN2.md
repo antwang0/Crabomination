@@ -19,7 +19,7 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 123 | 131 | 1 |
-| STX (133 cards) | 122 | 11 | 0 |
+| STX (144 cards) | 131 | 13 | 0 |
 
 The single SOS ⏳ is **Improvisation Capstone** (needs the cast-from-exile
 pipeline + copy-spell primitive). Per-card status and the specific gap on
@@ -526,6 +526,17 @@ parity is a matter of porting card factories one at a time.
 | Guiding Voice | {W} | ✅ | Push XXXVI (NEW, `stx::lessons`): Sorcery — Lesson. +1/+1 counter on target creature + Learn (→ Draw 1). Wired as `Seq(AddCounter(+1/+1), Draw(1))`. Test: `guiding_voice_counters_and_draws`. |
 | Tezzeret's Gambit | {U}{B} | ✅ | Push XXXVI (NEW, `stx::extras`): Sorcery. Two-mode `ChooseMode`: (0) Proliferate; (1) Pay 2 life, draw 2 cards. Printed cost {U/P}{B/P} (Phyrexian mana) collapses to strict {U}{B} — pure Phyrexian-life payment is engine-wide ⏳. Tests: `tezzerets_gambit_mode_zero_proliferates`, `tezzerets_gambit_mode_one_pays_two_life_draws_two`. |
 | Wandering Archaic | {2}{W}{W} | 🟡 | Push XXXVI (NEW, `stx::extras`): 4/4 Spirit. Whenever an opp casts an instant or sorcery, this triggers via the new opp-spell-cast wire in `fire_spell_cast_triggers` (`EventScope::OpponentControl`). Copies the opp's spell unconditionally — printed Oracle's "may pay {2}" tax-or-copy gate is engine-wide ⏳ (needs a `CopyUnlessPaid` primitive with opp-side auto-decision). Tests: `wandering_archaic_copies_opp_instant`, `wandering_archaic_is_a_4_4_spirit`. |
+| Take Up the Shield | {1}{W} | ✅ | Push XXXVII (NEW, `stx::extras`): Instant. Target creature gets +0/+3 and gains indestructible EOT. Wired as `Seq(PumpPT(+0/+3), GrantKeyword(Indestructible))` — same Masterful-Flourish-style template. Defensive combat trick that protects a friendly attacker or a fragile blocker through a Wrath. Test: `take_up_the_shield_buffs_toughness_and_grants_indestructible`. |
+| Star Pupil's Papers | {1} | ✅ | Push XXXVII (NEW, `stx::extras`): Artifact. ETB Scry 1; `{2}, Sacrifice this: Put a +1/+1 counter on target creature.` Pure colorless filtering + counter payoff. ETB trigger uses `Effect::Scry { who: You, amount: 1 }`; the activated ability uses `sac_cost: true` to consume the artifact. Tests: `star_pupils_papers_is_a_one_mana_artifact_with_etb_scry`, `star_pupils_papers_sac_activation_grants_counter`. |
+| Frostboil Snarl | — | ✅ (🟡 reveal half) | Push XXXVII (NEW, `stx::extras`): Izzet (U/R) Snarl dual. Always-enters-tapped approximation of the printed "reveal-from-hand-or-tap" mechanic. Wired via the new `snarl_land()` helper which produces `{T}: Add {U}` and `{T}: Add {R}` activated abilities plus the standard `etb_tap()` trigger. The full reveal-from-hand decision shape is tracked in TODO.md. Test: `frostboil_snarl_is_a_u_r_dual_that_enters_tapped`. |
+| Furycalm Snarl | — | ✅ (🟡 reveal half) | Push XXXVII (NEW, `stx::extras`): Boros (R/W) Snarl dual. Same shape as Frostboil Snarl. |
+| Necroblossom Snarl | — | ✅ (🟡 reveal half) | Push XXXVII (NEW, `stx::extras`): Golgari (B/G) Snarl dual. |
+| Shineshadow Snarl | — | ✅ (🟡 reveal half) | Push XXXVII (NEW, `stx::extras`): Orzhov (W/B) Snarl dual. |
+| Vineglimmer Snarl | — | ✅ (🟡 reveal half) | Push XXXVII (NEW, `stx::extras`): Simic (G/U) Snarl dual. All five Snarls share the `snarl_land()` factory; one parameterised test (`all_five_snarl_lands_are_dual_subtypes`) walks the cycle. |
+| Dragon's Approach | {B} | 🟡 | Push XXXVII (NEW, `stx::extras`): Sorcery. Wired as a simple "3 damage to any target" burn spell. The printed "if 4+ copies in graveyard, tutor a Dragon" rider is omitted — engine has no `Predicate::SameNamedInZoneAtLeast` primitive yet. Tests: `dragons_approach_deals_three_to_a_player`, `dragons_approach_kills_grizzly_bears`. |
+| Defiant Strike | {W} | ✅ | Push XXXVII (NEW, `stx::extras`): Instant. Target creature you control gets +1/+0 EOT + Draw a card. Classic white cantrip-pump, same template as Charge Through (G) and Make Your Mark (W). Test: `defiant_strike_pumps_friendly_and_draws`. |
+| Divine Gambit | {2}{W} | 🟡 | Push XXXVII (NEW, `stx::extras`): Instant. Exile target nonland permanent. The "its controller may put a permanent from hand to the battlefield" gift-back rider is omitted (no "opp may put a permanent from hand" decision shape). Body wires the exile half faithfully — a pure 3-mana white removal spell. Test: `divine_gambit_exiles_creature`. |
+| Cram Session | {3}{W} | ✅ | Push XXXVII (NEW, `stx::extras`): Instant. You gain 5 life. Flashback {5}{W} via `Keyword::Flashback`. The printed "target player" prompt is collapsed to "you" — same multi-target collapse used by most STX lifegain spells. Test: `cram_session_gains_five_life_and_has_flashback`. |
 
 ### Shared / multi-college
 

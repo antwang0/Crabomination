@@ -11,6 +11,27 @@ Periodic spot-check of the rules document
 (`crabomination/MagicCompRules 20260116.txt`). Each rule below has a
 status tag (✅ wired, 🟡 partial, ⏳ todo) plus a short note.
 
+- ✅ **CR 120.8 — 0-damage event suppression** (push XXXVII audit): "If
+  a source would deal 0 damage, it does not deal damage at all. That
+  means abilities that trigger on damage being dealt won't trigger. It
+  also means that replacement effects that would increase the damage
+  dealt by that source, or would have that source deal that damage to
+  a different object or player, have no event to replace, so they
+  have no effect." Push XXXVII closes the gap in `deal_damage_to_from`
+  (`game/effects/movement.rs:22`). Before push XXXVII, a 0-damage
+  spell or ability would emit a `GameEvent::DamageDealt { amount: 0 }`
+  + `GameEvent::LifeLost { amount: 0 }` (player target) or
+  `GameEvent::DamageDealt { amount: 0 }` (creature target). Any
+  `DealsCombatDamageToPlayer` / `DamageDealtToCreature` trigger
+  subscribed to the event would fire spuriously. Now `amount == 0`
+  short-circuits at the top of `deal_damage_to_from` — no event is
+  emitted and no trigger fires. Combat damage already gates 0-damage
+  per-blocker (see `combat.rs:351 if assign > 0`) and per-trample-tail
+  (`remaining_atk_damage > 0`), so the combat path was already
+  CR-120.8-compliant before this push. Test:
+  `zero_damage_does_not_trigger_damage_events_per_cr_120_8` (synth a
+  {R} "deal 0 damage to player" instant; assert no DamageDealt and no
+  LifeLost event ride out of `drain_stack`).
 - ✅ **CR 702.90b — Infect damage to a player adds poison counters**
   (push XXXVI audit): "Damage dealt to a player by a source with infect
   doesn't cause that player to lose life. Rather, it causes that source's
@@ -387,6 +408,33 @@ status tag (✅ wired, 🟡 partial, ⏳ todo) plus a short note.
   the counters land on resolution).
 
 ## Suggested next-up tasks
+
+- ⏳ **Snarl-land reveal mechanic** — push XXXVII added the five
+  Strixhaven Snarl dual lands (Frostboil / Furycalm / Necroblossom /
+  Shineshadow / Vineglimmer) via the `snarl_land()` helper which
+  always-enters-tapped. The printed reveal half ("As [land] enters,
+  you may reveal a [C1] or [C2] card from your hand. If you don't, it
+  enters tapped.") needs an ETB-time hand-peek + reveal-yes-no
+  decision. Engine shape: a new ETB trigger variant
+  `Effect::IfRevealFromHand { filter, then, else_ }` that asks the
+  controller "may reveal a card matching `filter`?", peeks at hand
+  if yes, fires `then`, otherwise fires `else_` (= the existing
+  `Tap { what: Selector::This }`). AutoDecider can default to "yes,
+  reveal" when a matching card is in hand. Same primitive would
+  unblock the Throne of Eldraine Battle Mammoth-style ETB reveals.
+
+- ⏳ **`Predicate::SameNamedInZoneAtLeast(zone, n)` — graveyard same-
+  name count predicate (Dragon's Approach)** — push XXXVII ships
+  Dragon's Approach as a {B} 3-to-any-target burn spell. The
+  printed "if 4+ copies in your graveyard, tutor a Dragon" rider
+  needs a predicate that walks the controller's graveyard counting
+  cards with the *same name* as the resolving spell. Wiring needs:
+  (a) a new `Predicate::SameNamedInZoneAtLeast { zone, n }` whose
+  filter compares `c.definition.name == ctx.source_name`;
+  (b) the predicate exposed to `Effect::If`'s cond field. Once
+  landed, Dragon's Approach's gy-tutor rider can chain via
+  `Effect::If { cond: SameNamedInZoneAtLeast(Graveyard, 4), then:
+  Search { filter: HasCreatureType(Dragon), to: Battlefield } }`.
 
 - ⏳ **`Effect::CopyUnlessPaid { what, mana_cost }` — opp-spell tax-or-
   copy gate (Wandering Archaic)** — push XXXVI lands the body of
