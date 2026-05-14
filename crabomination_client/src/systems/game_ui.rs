@@ -47,6 +47,7 @@ pub struct GameInputResources<'w> {
     pub flipped_hand: ResMut<'w, crate::game::FlippedHandCards>,
     pub card_names: ResMut<'w, crate::game::CardNames>,
     pub export_prompt: ResMut<'w, crate::systems::export_prompt::ExportPromptState>,
+    pub debug_console: ResMut<'w, crate::systems::debug_console::DebugConsoleState>,
 }
 /// Process `SwapFrontMaterial` markers: walk each entity's children,
 /// find the `FrontFaceMesh` child, swap its `MeshMaterial3d` to the
@@ -951,7 +952,7 @@ pub fn update_pass_button(
 
     // Classify the top stack item if any.
     use crabomination::net::{StackItemKind, StackItemView};
-    let top_is_opp_spell = cv.stack.last().map_or(false, |item| {
+    let top_is_opp_spell = cv.stack.last().is_some_and(|item| {
         matches!(item,
             StackItemView::Known(k)
             if k.controller != cv.your_seat && k.kind == StackItemKind::Spell
@@ -2160,6 +2161,13 @@ pub fn handle_game_input(
         return;
     }
 
+    // Same deal while the debug console's card-name field is focused —
+    // typing into the buffer shouldn't fire `KeyCode::KeyA` (Attack All)
+    // or other gameplay shortcuts.
+    if r.debug_console.card_input_focused {
+        return;
+    }
+
     // While a decision is pending for this viewer (mulligan, scry, search,
     // put-on-library, …), drop into decision-handling mode: the dedicated
     // decision UI systems own input — including 3D hand-card clicks for
@@ -2424,8 +2432,12 @@ pub fn handle_export_keypress(
     keyboard: Res<ButtonInput<KeyCode>>,
     btns: Res<ButtonState>,
     mut state: ResMut<crate::systems::export_prompt::ExportPromptState>,
+    debug_console: Res<crate::systems::debug_console::DebugConsoleState>,
 ) {
     if state.active {
+        return;
+    }
+    if debug_console.card_input_focused {
         return;
     }
     if keyboard.just_pressed(KeyCode::KeyX) || btns.export {

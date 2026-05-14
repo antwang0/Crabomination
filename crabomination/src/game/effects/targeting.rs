@@ -116,7 +116,7 @@ impl GameState {
         let mut primary_candidates = collect_legal_on_player(primary_player);
         if prefer_friendly && !primary_candidates.is_empty() {
             // Sort by descending power so the strongest creature wins.
-            primary_candidates.sort_by(|a, b| b.1.cmp(&a.1));
+            primary_candidates.sort_by_key(|c| std::cmp::Reverse(c.1));
         }
         if let Some(&(cid, _)) = primary_candidates.first() {
             return Some(Target::Permanent(cid));

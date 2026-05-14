@@ -33,7 +33,9 @@ pub fn init_shared_assets(
     let card_mesh_handle = card_mesh(meshes, segments);
     let border_mesh_handle = card_border_mesh(meshes, segments);
 
-    let back_texture: Handle<Image> = asset_server.load("cards/cardback.png");
+    // Lives at the asset-dir root rather than under `cards/` because
+    // `cards/` is gitignored (downloaded card art).
+    let back_texture: Handle<Image> = asset_server.load("cardback.png");
     let back_material = materials.add(StandardMaterial {
         base_color_texture: Some(back_texture),
         perceptual_roughness: 0.9,

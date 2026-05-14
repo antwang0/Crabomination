@@ -24,6 +24,27 @@ pub enum ClientMsg {
     JoinMatch { name: String },
     /// A game action (including decision answers wrapped in `GameAction::SubmitDecision`).
     SubmitAction(GameAction),
+    /// Debug-console cheat: bypasses turn order / priority and mutates the
+    /// authoritative state directly. Applied as the *sender's* seat — the
+    /// server routes it to whichever seat owns the originating channel.
+    /// Intended for local single-player debugging only.
+    Debug(DebugAction),
+}
+
+/// Direct-mutation cheats issued by the debug console. Each variant
+/// targets the sending seat. Unlike `GameAction`, these do not flow
+/// through `perform_action` — the server applies them as raw edits and
+/// re-broadcasts the resulting `View`.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum DebugAction {
+    /// Add `amount` mana of the given color to the sender's mana pool.
+    /// `color == None` adds true colorless mana.
+    AddMana { color: Option<Color>, amount: u32 },
+    /// Look the named card up in the catalog and place a fresh instance
+    /// into the sender's hand. Silently dropped if the name is unknown.
+    AddCardToHand { name: String },
+    /// Bump the sender's life total by `delta` (may be negative).
+    AdjustLife { delta: i32 },
 }
 
 // ── Server → client ──────────────────────────────────────────────────────────

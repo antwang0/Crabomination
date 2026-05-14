@@ -1,3 +1,5 @@
+#![allow(clippy::too_many_arguments, clippy::type_complexity)]
+
 use std::f32::consts::PI;
 use std::path::Path;
 
@@ -186,6 +188,7 @@ fn main() {
         .insert_resource(AnimationSpeed::default())
         .insert_resource(ButtonState::default())
         .insert_resource(DecisionUiState::default())
+        .insert_resource(systems::debug_console::DebugConsoleState::default())
         .init_resource::<game::AbilityMenuState>()
         .init_resource::<systems::export_prompt::ExportPromptState>()
         .insert_resource(menu::CliBootHint(load_state_arg))
@@ -300,6 +303,17 @@ fn main() {
                 handle_export_keypress,
                 systems::export_prompt::handle_export_prompt_input,
                 systems::export_prompt::sync_export_prompt_ui,
+            )
+                .chain()
+                .run_if(in_state(AppState::InGame)),
+        )
+        .add_systems(
+            Update,
+            (
+                systems::debug_console::toggle_debug_console,
+                systems::debug_console::handle_debug_console_input,
+                systems::debug_console::handle_debug_console_buttons,
+                systems::debug_console::sync_debug_console_ui,
             )
                 .chain()
                 .run_if(in_state(AppState::InGame)),

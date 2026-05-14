@@ -41,6 +41,7 @@ pub struct CounterCoinAssets {
 /// stacking colours stay consistent across frames.
 #[derive(Component)]
 pub struct CounterCoin {
+    #[allow(dead_code)]
     pub card_id: CardId,
     pub kind: CounterType,
 }

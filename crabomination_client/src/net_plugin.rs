@@ -21,7 +21,7 @@ use bevy::prelude::*;
 
 use crabomination::{
     game::GameAction,
-    net::{ClientMsg, ClientView, GameEventWire, ServerMsg},
+    net::{ClientMsg, ClientView, DebugAction, GameEventWire, ServerMsg},
 };
 
 /// Send game actions to the match server.
@@ -32,6 +32,12 @@ pub struct NetOutbox(pub mpsc::Sender<ClientMsg>);
 impl NetOutbox {
     pub fn submit(&self, action: GameAction) {
         let _ = self.0.send(ClientMsg::SubmitAction(action));
+    }
+
+    /// Send a debug-console cheat. The server applies it to whichever
+    /// seat owns this channel.
+    pub fn submit_debug(&self, action: DebugAction) {
+        let _ = self.0.send(ClientMsg::Debug(action));
     }
 }
 

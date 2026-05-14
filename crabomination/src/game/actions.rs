@@ -118,12 +118,11 @@ pub(crate) fn cost_reduction_for_spell(
     for src in &state.battlefield {
         for sa in &src.definition.static_abilities {
             match &sa.effect {
-                StaticEffect::CostReduction { filter, amount } => {
+                StaticEffect::CostReduction { filter, amount }
                     if src.controller == caster
-                        && state.evaluate_requirement_on_card(filter, card, caster)
-                    {
-                        reduction += amount;
-                    }
+                        && state.evaluate_requirement_on_card(filter, card, caster) =>
+                {
+                    reduction += amount;
                 }
                 StaticEffect::CostReductionTargetingFilter {
                     spell_filter,

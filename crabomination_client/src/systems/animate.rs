@@ -458,6 +458,7 @@ pub const ANIM_SPEED_MAX: f32 = 10.0;
 /// that actually conflict on the same entity in practice — chiefly tap,
 /// play, hand-slide, and graveyard-flight). Adding a new variant is a
 /// one-line append to this enum plus a one-line arm in the dispatcher.
+#[allow(dead_code)]
 pub enum QueuedAnim {
     /// Run a tap/untap rotation animation. The bool is the `TapState`
     /// the card should land in once the animation finishes.
@@ -484,6 +485,7 @@ pub struct AnimQueue {
 }
 
 impl AnimQueue {
+    #[allow(dead_code)]
     pub fn from_one(anim: QueuedAnim) -> Self {
         let mut q = AnimQueue::default();
         q.queue.push_back(anim);

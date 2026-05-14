@@ -16,7 +16,7 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use crate::game::{GameAction, GameState, TurnStep};
-use crate::net::{ClientMsg, GameEventWire, ServerMsg};
+use crate::net::{ClientMsg, DebugAction, GameEventWire, ServerMsg};
 use crate::snapshot::GameSnapshot;
 
 /// Shared snapshot sink. The match actor writes the latest authoritative
@@ -264,6 +264,12 @@ pub fn run_match_full(
                     return;
                 }
             }
+            ClientMsg::Debug(debug) => {
+                if apply_debug(&mut state, seat, debug, &seat_tx, &spectator_tx) {
+                    last_progress_at = Instant::now();
+                    publish_snapshot(&state, &snapshot_sink);
+                }
+            }
         }
     }
 }
@@ -458,6 +464,91 @@ fn handle_action(
             false
         }
     }
+}
+
+/// Look up a card by name for the debug console, tolerant of casing.
+/// Tries an exact match first (cheap), then falls back to a linear
+/// case-insensitive scan over every known factory so users can type
+/// `ghor-clan rampager` instead of `Ghor-Clan Rampager`.
+fn lookup_debug_card(name: &str) -> Option<crate::card::CardDefinition> {
+    if let Some(def) = crate::catalog::lookup_by_name(name) {
+        return Some(def);
+    }
+    let target = name.trim().to_ascii_lowercase();
+    for factory in crate::catalog::all_known_factories() {
+        let def = factory();
+        if def.name.eq_ignore_ascii_case(&target) {
+            return Some(def);
+        }
+        if let Some(back) = def.back_face.as_ref()
+            && back.name.eq_ignore_ascii_case(&target)
+        {
+            return Some(def);
+        }
+    }
+    None
+}
+
+/// Apply a debug-console cheat directly to the authoritative state and
+/// broadcast a fresh view to every seat. Returns `true` on success.
+/// No event stream is emitted — these mutations bypass the engine's
+/// rules and don't have corresponding `GameEvent`s — but every observer
+/// receives the updated `View` so their UI rerenders. Out-of-range
+/// seats and unknown card names are silently dropped (we keep this
+/// best-effort because it's a developer tool, not a player-facing API).
+fn apply_debug(
+    state: &mut GameState,
+    seat: usize,
+    debug: DebugAction,
+    seat_tx: &[Option<mpsc::Sender<ServerMsg>>],
+    spectator_tx: &[mpsc::Sender<ServerMsg>],
+) -> bool {
+    if seat >= state.players.len() {
+        return false;
+    }
+    let changed = match debug {
+        DebugAction::AddMana { color, amount } => {
+            if amount == 0 {
+                return false;
+            }
+            match color {
+                Some(c) => state.players[seat].mana_pool.add(c, amount),
+                None => state.players[seat].mana_pool.add_colorless(amount),
+            }
+            true
+        }
+        DebugAction::AddCardToHand { name } => {
+            match lookup_debug_card(&name) {
+                Some(def) => {
+                    state.add_card_to_hand(seat, def);
+                    true
+                }
+                None => {
+                    report_error(seat, &format!("debug: unknown card '{name}'"), seat_tx);
+                    false
+                }
+            }
+        }
+        DebugAction::AdjustLife { delta } => {
+            if delta == 0 {
+                return false;
+            }
+            state.players[seat].life = state.players[seat].life.saturating_add(delta);
+            true
+        }
+    };
+    if !changed {
+        return false;
+    }
+    for (i, maybe_tx) in seat_tx.iter().enumerate() {
+        if let Some(tx) = maybe_tx {
+            let _ = tx.send(ServerMsg::View(view::project(state, i)));
+        }
+    }
+    for tx in spectator_tx {
+        let _ = tx.send(ServerMsg::View(view::project(state, 0)));
+    }
+    true
 }
 
 fn report_error(seat: usize, err: &str, seat_tx: &[Option<mpsc::Sender<ServerMsg>>]) {

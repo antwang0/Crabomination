@@ -114,7 +114,9 @@ fn is_fictional(name: &str) -> bool {
 pub fn ensure_card_images(specs: &[CardImage], assets_dir: &Path) {
     let cards_dir = assets_dir.join("cards");
     fs::create_dir_all(&cards_dir).expect("failed to create assets/cards/ directory");
-    let cardback_placeholder = cards_dir.join("cardback.png");
+    // `cards/` is gitignored (downloaded card art); the cardback ships
+    // at the asset-dir root so it survives a fresh clone.
+    let cardback_placeholder = assets_dir.join("cardback.png");
 
     for spec in specs {
         let path = cards_dir.join(spec.filename());
@@ -218,7 +220,7 @@ fn download_card_image(spec: &CardImage) -> Result<Vec<u8>, Box<dyn std::error::
             };
             match try_lookup("exact", lookup_name, face_param) {
                 Ok(bytes) => Ok(bytes),
-                Err(e) if matches!(e, LookupError::NotFound) => {
+                Err(LookupError::NotFound) => {
                     try_lookup("fuzzy", lookup_name, face_param).map_err(Into::into)
                 }
                 Err(e) => Err(e.into()),
@@ -384,8 +386,9 @@ mod tests {
         let _ = fs::remove_dir_all(&tmp);
         fs::create_dir_all(tmp.join("cards")).expect("temp setup");
         // Stamp a 1-byte fake cardback so the placeholder logic has
-        // something to copy from.
-        fs::write(tmp.join("cards").join("cardback.png"), b"FAKE").expect("write fake cardback");
+        // something to copy from. Lives at the asset-dir root since
+        // `cards/` is gitignored.
+        fs::write(tmp.join("cardback.png"), b"FAKE").expect("write fake cardback");
 
         let specs = vec![CardImage::Front("Mount Tyrhus")];
         ensure_card_images(&specs, &tmp);
