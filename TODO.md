@@ -416,6 +416,23 @@ status tag (✅ wired, 🟡 partial, ⏳ todo) plus a short note.
   Rancorous Archaic base-toughness-bump workaround. Catalog
   promotions: Pterafractyl (1/0 → 1/0 exact), Symmathematics (1/1
   → 0/0 exact), Rancorous Archaic (ETB-trigger → CR-614.12 timing).
+- ✅ **CR 701.25c — Surveil 0 emits no surveil event** (push modern_decks
+  audit — code was already correct via the shared Scry/Surveil short-
+  circuit, test coverage gap): "If a player is instructed to surveil 0,
+  no surveil event occurs. Abilities that trigger whenever a player
+  surveils won't trigger." Push (modern_decks) verifies the
+  `Effect::Scry / Effect::Surveil / Effect::LookAtTop` shared handler in
+  `game/effects/mod.rs:671` already short-circuits at the top when the
+  evaluated amount is 0 (`if n == 0 { return Ok(()); }`) — the same
+  guard that handles CR 701.22b for Scry 0. Surveil-0 doesn't surface a
+  `Decision::Scry` to the decider, doesn't move any cards between
+  library and graveyard, and doesn't fire any future "whenever a player
+  surveils" trigger. New test:
+  `zero_surveil_does_not_trigger_surveil_events_per_cr_701_25c`
+  synthesizes a `{U}: Surveil 0` instant and asserts library order +
+  graveyard composition is unchanged (only the spell itself enters
+  graveyard). Closes a CR-coverage row tracked alongside CR 701.22b.
+
 - ✅ **CR 701.22b — Scry 0 emits no scry event** (push XXXVIII audit):
   "If a player is instructed to scry 0, no scry event occurs. Abilities
   that trigger whenever a player scries won't trigger." Push XXXVIII

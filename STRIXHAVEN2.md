@@ -19,11 +19,62 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 192 | 62 | 1 |
-| STX (170 cards) | 181 | 15 | 0 |
-| STA reprints (in STX boosters) | 45 | 0 | — |
+| STX (170 cards) | 192 | 15 | 0 |
+| STA reprints (in STX boosters) | 46 | 0 | — |
 
 Push (modern_decks, claude/modern_decks branch — latest revision —
-**newest sub-push**): **10 NEW cards** (3 STX 2021 + 7 STA reprints) +
+**newest sub-push**): **11 NEW cards** (10 STX 2021 + 1 STA reprint) +
+CR 701.25c audit coverage:
+
+**NEW STX 2021 / supplemental cards (10):**
+- **Pigment Storm** ({3}{R} Instant) — 4 damage to target creature.
+  Tests: `pigment_storm_is_a_four_mana_red_instant`,
+  `pigment_storm_deals_four_damage_to_target_creature`.
+- **Inkfathom Witch** ({3}{U}{B}, 2/3 Flying Inkling) — ETB target
+  opp discards a nonland card of your choice. Tests:
+  `inkfathom_witch_is_a_five_mana_inkling_with_flying`,
+  `inkfathom_witch_etb_makes_opp_discard_a_nonland_card`.
+- **Inscription of Ruin** ({2}{B}{B} Sorcery) — `ChooseN` modes: discard
+  2 vs each opp + destroy target creature (Kicker upgrade omitted).
+  Tests: `inscription_of_ruin_is_a_four_mana_black_sorcery`,
+  `_destroys_creature_and_discards`.
+- **Tome of the Infinite** ({1} Legendary Artifact) — ETB Scry 1 +
+  `{2},{T}: Draw a card`. Tests:
+  `tome_of_the_infinite_is_a_one_mana_legendary_artifact`, `_etb_scrys_one`.
+- **Drannith Stinger** ({2}{R}, 2/2 Goblin Wizard) — Whenever you cast
+  a noncreature spell, this deals 1 damage to each opponent. Tests:
+  `drannith_stinger_is_a_three_mana_two_two_goblin_wizard`,
+  `_pings_opp_on_noncreature_spell`, `_does_not_ping_on_creature_cast`.
+- **Mage Mauler** ({2}{R} Sorcery) — 3 damage + 1 life. Tests:
+  `mage_mauler_is_a_three_mana_red_sorcery`,
+  `_deals_three_to_creature_and_gains_one_life`.
+- **Heirloom Mirror** ({3} Artifact) — `{T}: Add one of any` +
+  `{3},{T},Sac: Draw a card`. Tests:
+  `heirloom_mirror_is_a_three_mana_artifact`,
+  `_tap_for_mana_then_sac_to_draw`.
+- **Quandrix Mascot** ({1}{G}{U}, 2/2 Fractal Cat) — ETB doubles +1/+1
+  counters on target friendly creature. Tests:
+  `quandrix_mascot_is_a_three_mana_two_two_fractal`,
+  `_doubles_counters_on_target`.
+- **Witherbloom Mascot** ({1}{B}{G}, 2/2 Pest Beast) — Dies: drain 2
+  from each opp. Tests: `witherbloom_mascot_is_a_three_mana_pest`,
+  `_dies_drains_two`.
+- **Lorehold Mascot** ({2}{R}{W}, 3/2 Spirit) — Attacks: gain 1 life,
+  +1/+0 EOT. Tests: `lorehold_mascot_is_a_four_mana_three_two_spirit`,
+  `_attack_gains_life_and_pumps`.
+
+**NEW STA reprint (1):**
+- **Step Through** ({U} Sorcery) — Tutor an instant or sorcery from
+  library. Tests: `step_through_is_a_one_mana_blue_sorcery`,
+  `_tutors_instant_or_sorcery_from_library`.
+
+**CR audit coverage:**
+- **CR 701.25c — Surveil 0 emits no surveil event** — code was already
+  correct via the shared Scry/Surveil 0-amount short-circuit; pushed a
+  test (`zero_surveil_does_not_trigger_surveil_events_per_cr_701_25c`)
+  to lock in the rule coverage.
+
+Push (modern_decks, **prior sub-push**): **10 NEW cards** (3 STX 2021 + 7 STA reprints) +
 engine improvements:
 
 **NEW STX 2021 cards (3):**

@@ -10133,3 +10133,509 @@ fn sproutback_trudge_with_empty_graveyard_gains_zero_life() {
     assert_eq!(g.players[0].life, life_before,
         "Sproutback Trudge with empty gy gains 0 life");
 }
+
+// ── Pigment Storm ───────────────────────────────────────────────────────────
+
+#[test]
+fn pigment_storm_is_a_four_mana_red_instant() {
+    use crate::card::CardType;
+    let def = catalog::pigment_storm();
+    assert_eq!(def.cost.cmc(), 4);
+    assert!(def.card_types.contains(&CardType::Instant));
+}
+
+#[test]
+fn pigment_storm_deals_four_damage_to_target_creature() {
+    use crate::game::Target;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::pigment_storm());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Pigment Storm castable for {3}{R}");
+    drain_stack(&mut g);
+
+    // Bear (2/2) should die — 4 damage exceeds 2 toughness.
+    assert!(
+        g.battlefield_find(bear).is_none(),
+        "Grizzly Bears killed by 4 damage"
+    );
+    assert!(
+        g.players[1].graveyard.iter().any(|c| c.id == bear),
+        "bear is in graveyard"
+    );
+}
+
+// ── Step Through (STA reprint) ──────────────────────────────────────────────
+
+#[test]
+fn step_through_is_a_one_mana_blue_sorcery() {
+    use crate::card::CardType;
+    let def = catalog::step_through();
+    assert_eq!(def.cost.cmc(), 1);
+    assert!(def.card_types.contains(&CardType::Sorcery));
+}
+
+#[test]
+fn step_through_tutors_instant_or_sorcery_from_library() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let target_card = g.add_card_to_library(0, catalog::lightning_bolt());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::step_through());
+    let hand_before = g.players[0].hand.len();
+
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(target_card))]));
+
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Step Through castable for {U}");
+    drain_stack(&mut g);
+
+    // The Lightning Bolt should land in the caster's hand.
+    assert!(
+        g.players[0].hand.iter().any(|c| c.id == target_card),
+        "tutored Lightning Bolt into hand"
+    );
+    // Hand size: -1 (cast Step Through) +1 (tutored card) = 0 net relative
+    // to pre-cast hand size.
+    assert_eq!(g.players[0].hand.len(), hand_before);
+}
+
+// ── Inkfathom Witch ─────────────────────────────────────────────────────────
+
+#[test]
+fn inkfathom_witch_is_a_five_mana_inkling_with_flying() {
+    use crate::card::{CardType, CreatureType};
+    let def = catalog::inkfathom_witch();
+    assert_eq!(def.cost.cmc(), 5);
+    assert!(def.card_types.contains(&CardType::Creature));
+    assert!(def.subtypes.creature_types.contains(&CreatureType::Inkling));
+    assert!(def.keywords.contains(&Keyword::Flying));
+    assert_eq!(def.power, 2);
+    assert_eq!(def.toughness, 3);
+}
+
+#[test]
+fn inkfathom_witch_etb_makes_opp_discard_a_nonland_card() {
+    let mut g = two_player_game();
+    // Seed opp hand with a creature card so we have something to discard.
+    g.add_card_to_hand(1, catalog::grizzly_bears());
+    let opp_hand_before = g.players[1].hand.len();
+
+    let id = g.add_card_to_hand(0, catalog::inkfathom_witch());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Inkfathom Witch castable for {3}{U}{B}");
+    drain_stack(&mut g);
+
+    assert_eq!(
+        g.players[1].hand.len(),
+        opp_hand_before - 1,
+        "opp discarded one nonland card"
+    );
+}
+
+// ── Inscription of Ruin ─────────────────────────────────────────────────────
+
+#[test]
+fn inscription_of_ruin_is_a_four_mana_black_sorcery() {
+    use crate::card::CardType;
+    let def = catalog::inscription_of_ruin();
+    assert_eq!(def.cost.cmc(), 4);
+    assert!(def.card_types.contains(&CardType::Sorcery));
+}
+
+#[test]
+fn inscription_of_ruin_destroys_creature_and_discards() {
+    use crate::game::Target;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_hand(1, catalog::grizzly_bears());
+    let opp_hand_before = g.players[1].hand.len();
+
+    let id = g.add_card_to_hand(0, catalog::inscription_of_ruin());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Inscription of Ruin castable for {2}{B}{B}");
+    drain_stack(&mut g);
+
+    // Both modes should fire — opp discards 2 + target creature destroyed.
+    assert!(
+        g.battlefield_find(bear).is_none(),
+        "target bear destroyed"
+    );
+    // Discard 2: opp had only 1 card so loses everything available (1 card).
+    assert!(
+        g.players[1].hand.len() < opp_hand_before,
+        "opp discarded at least one card"
+    );
+}
+
+// ── Tome of the Infinite ────────────────────────────────────────────────────
+
+#[test]
+fn tome_of_the_infinite_is_a_one_mana_legendary_artifact() {
+    use crate::card::{CardType, Supertype};
+    let def = catalog::tome_of_the_infinite();
+    assert_eq!(def.cost.cmc(), 1);
+    assert!(def.card_types.contains(&CardType::Artifact));
+    assert!(def.supertypes.contains(&Supertype::Legendary));
+}
+
+#[test]
+fn tome_of_the_infinite_etb_scrys_one() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let id = g.add_card_to_hand(0, catalog::tome_of_the_infinite());
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Tome of the Infinite castable for {1}");
+    drain_stack(&mut g);
+
+    // Tome is on the battlefield.
+    let tome = g.battlefield_find(id).expect("tome on battlefield");
+    assert_eq!(tome.controller, 0);
+}
+
+// ── Drannith Stinger ────────────────────────────────────────────────────────
+
+#[test]
+fn drannith_stinger_is_a_three_mana_two_two_goblin_wizard() {
+    use crate::card::{CardType, CreatureType};
+    let def = catalog::drannith_stinger();
+    assert_eq!(def.cost.cmc(), 3);
+    assert!(def.card_types.contains(&CardType::Creature));
+    assert!(def.subtypes.creature_types.contains(&CreatureType::Goblin));
+    assert!(def.subtypes.creature_types.contains(&CreatureType::Wizard));
+    assert_eq!(def.power, 2);
+    assert_eq!(def.toughness, 2);
+}
+
+#[test]
+fn drannith_stinger_pings_opp_on_noncreature_spell() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::drannith_stinger());
+
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    let opp_life_before = g.players[1].life;
+
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(crate::game::Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Bolt castable");
+    drain_stack(&mut g);
+
+    // Bolt does 3 damage + Stinger does 1 = 4 damage total.
+    assert_eq!(g.players[1].life, opp_life_before - 4,
+        "Stinger pings on Bolt cast for +1 damage");
+}
+
+#[test]
+fn drannith_stinger_does_not_ping_on_creature_cast() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::drannith_stinger());
+
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    let opp_life_before = g.players[1].life;
+
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Bears castable");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[1].life, opp_life_before,
+        "Stinger should NOT ping on creature cast");
+}
+
+// ── Mage Mauler ─────────────────────────────────────────────────────────────
+
+#[test]
+fn mage_mauler_is_a_three_mana_red_sorcery() {
+    use crate::card::CardType;
+    let def = catalog::mage_mauler();
+    assert_eq!(def.cost.cmc(), 3);
+    assert!(def.card_types.contains(&CardType::Sorcery));
+}
+
+#[test]
+fn mage_mauler_deals_three_to_creature_and_gains_one_life() {
+    use crate::game::Target;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::mage_mauler());
+    let life_before = g.players[0].life;
+
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Mage Mauler castable");
+    drain_stack(&mut g);
+
+    assert!(g.battlefield_find(bear).is_none(), "bear destroyed");
+    assert_eq!(g.players[0].life, life_before + 1,
+        "caster gains 1 life");
+}
+
+// ── Heirloom Mirror ─────────────────────────────────────────────────────────
+
+#[test]
+fn heirloom_mirror_is_a_three_mana_artifact() {
+    use crate::card::CardType;
+    let def = catalog::heirloom_mirror();
+    assert_eq!(def.cost.cmc(), 3);
+    assert!(def.card_types.contains(&CardType::Artifact));
+    assert_eq!(def.activated_abilities.len(), 2);
+}
+
+#[test]
+fn heirloom_mirror_tap_for_mana_then_sac_to_draw() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::heirloom_mirror());
+    g.add_card_to_library(0, catalog::island());
+
+    // Tap for mana (any color)
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id,
+        ability_index: 0,
+        target: None,
+    })
+    .expect("first ability is a mana ability");
+
+    // Untap to allow the second activation.
+    let mirror = g.battlefield_find_mut(id).expect("mirror on bf");
+    mirror.tapped = false;
+
+    let hand_before = g.players[0].hand.len();
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id,
+        ability_index: 1,
+        target: None,
+    })
+    .expect("second ability sacs and draws");
+    drain_stack(&mut g);
+
+    assert!(g.battlefield_find(id).is_none(), "mirror sacrificed");
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "drew a card");
+}
+
+// ── Quandrix Mascot ─────────────────────────────────────────────────────────
+
+#[test]
+fn quandrix_mascot_is_a_three_mana_two_two_fractal() {
+    use crate::card::{CardType, CreatureType};
+    let def = catalog::quandrix_mascot();
+    assert_eq!(def.cost.cmc(), 3);
+    assert!(def.card_types.contains(&CardType::Creature));
+    assert!(def.subtypes.creature_types.contains(&CreatureType::Fractal));
+    assert_eq!(def.power, 2);
+    assert_eq!(def.toughness, 2);
+}
+
+#[test]
+fn quandrix_mascot_doubles_counters_on_target() {
+    use crate::game::Target;
+    let mut g = two_player_game();
+    // Friendly creature with a +1/+1 counter on it.
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let card = g.battlefield_find_mut(bear).expect("bear on bf");
+    card.add_counters(CounterType::PlusOnePlusOne, 3);
+
+    let id = g.add_card_to_hand(0, catalog::quandrix_mascot());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Quandrix Mascot castable");
+    drain_stack(&mut g);
+
+    let bear_card = g.battlefield_find(bear).expect("bear still alive");
+    assert_eq!(bear_card.counter_count(CounterType::PlusOnePlusOne), 6,
+        "3 counters doubled to 6");
+}
+
+// ── Witherbloom Mascot ──────────────────────────────────────────────────────
+
+#[test]
+fn witherbloom_mascot_is_a_three_mana_pest() {
+    use crate::card::{CardType, CreatureType};
+    let def = catalog::witherbloom_mascot();
+    assert_eq!(def.cost.cmc(), 3);
+    assert!(def.card_types.contains(&CardType::Creature));
+    assert!(def.subtypes.creature_types.contains(&CreatureType::Pest));
+}
+
+#[test]
+fn witherbloom_mascot_dies_drains_two() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::witherbloom_mascot());
+    let p0_life_before = g.players[0].life;
+    let p1_life_before = g.players[1].life;
+
+    // Mark lethal damage to make it die to SBA.
+    let card = g.battlefield_find_mut(id).expect("mascot on bf");
+    card.damage = 99;
+    let _ = g.check_state_based_actions();
+    drain_stack(&mut g);
+
+    // Drain 2: P1 loses 2, P0 gains 2.
+    assert_eq!(g.players[0].life, p0_life_before + 2);
+    assert_eq!(g.players[1].life, p1_life_before - 2);
+}
+
+// ── Lorehold Mascot ─────────────────────────────────────────────────────────
+
+#[test]
+fn lorehold_mascot_is_a_four_mana_three_two_spirit() {
+    use crate::card::{CardType, CreatureType};
+    let def = catalog::lorehold_mascot();
+    assert_eq!(def.cost.cmc(), 4);
+    assert!(def.card_types.contains(&CardType::Creature));
+    assert!(def.subtypes.creature_types.contains(&CreatureType::Spirit));
+    assert_eq!(def.power, 3);
+    assert_eq!(def.toughness, 2);
+}
+
+/// CR 701.25c — "If a player is instructed to surveil 0, no surveil
+/// event occurs. Abilities that trigger whenever a player surveils
+/// won't trigger." Validate the `Effect::Surveil` short-circuit on
+/// `amount: Value::Const(0)` — no Decision is asked of the decider
+/// and library order is unchanged. Shares the same n==0 short-circuit
+/// path as CR 701.22b (Scry 0) in `game/effects/mod.rs::resolve_effect`.
+#[test]
+fn zero_surveil_does_not_trigger_surveil_events_per_cr_701_25c() {
+    use crate::card::{CardDefinition, CardType, Effect, Subtypes, Value};
+    use crate::effect::PlayerRef;
+    use crate::mana::cost;
+
+    let zero_surveil = CardDefinition {
+        name: "Zero Surveil",
+        cost: cost(&[crate::mana::u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Surveil { who: PlayerRef::You, amount: Value::Const(0) },
+        activated_abilities: vec![],
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    };
+
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_library(0, catalog::island());
+    let lib_snapshot: Vec<_> = g.players[0].library.iter().map(|c| c.id).collect();
+    let gy_before = g.players[0].graveyard.len();
+
+    let id = g.add_card_to_hand(0, zero_surveil);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Zero Surveil castable for {U}");
+    drain_stack(&mut g);
+
+    // Library order is unchanged.
+    let lib_after: Vec<_> = g.players[0].library.iter().map(|c| c.id).collect();
+    assert_eq!(lib_after, lib_snapshot, "Library order unchanged on Surveil 0");
+    // Only Zero Surveil itself is in the graveyard (no surveiled cards).
+    assert_eq!(g.players[0].graveyard.len(), gy_before + 1,
+        "Only the spell itself entered graveyard");
+}
+
+#[test]
+fn lorehold_mascot_attack_gains_life_and_pumps() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::lorehold_mascot());
+    // Skip summoning sickness.
+    let card = g.battlefield_find_mut(id).expect("mascot on bf");
+    card.summoning_sick = false;
+    let life_before = g.players[0].life;
+
+    // Move to declare attackers step.
+    while g.step != crate::game::types::TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass priority");
+    }
+
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: id,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("declare attackers");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[0].life, life_before + 1, "gained 1 on attack");
+    // Power was 3, now 4 after pump.
+    let cp = g.compute_battlefield().iter()
+        .find(|c| c.id == id).cloned()
+        .expect("computed permanent");
+    assert_eq!(cp.power, 4, "Pumped to 4 on attack");
+}

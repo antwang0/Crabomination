@@ -8612,3 +8612,576 @@ pub fn valor() -> CardDefinition {
         exile_on_resolve: false,
     }
 }
+
+// ── Pigment Storm (STX 2021) ────────────────────────────────────────────────
+
+/// Pigment Storm — {3}{R} Instant (STX 2021).
+///
+/// "Pigment Storm deals 4 damage to target creature. If that creature
+/// would die this turn, exile it instead."
+///
+/// Push (modern_decks, NEW, `stx::extras`): Body wires the 4-damage
+/// half. The "if it would die, exile instead" replacement is engine-
+/// wide ⏳ (no per-creature die-replacement primitive — same gap as
+/// Pongify-style "if it would die, exile instead" payoffs). The
+/// headline play pattern (kill a 4-toughness creature for {3}{R} at
+/// instant speed) ships at parity.
+pub fn pigment_storm() -> CardDefinition {
+    CardDefinition {
+        name: "Pigment Storm",
+        cost: cost(&[generic(3), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::DealDamage {
+            to: target_filtered(SelectionRequirement::Creature),
+            amount: Value::Const(4),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Step Through (STA reprint, originally Stronghold) ───────────────────────
+
+/// Step Through — {U} Sorcery (STA reprint).
+///
+/// "Search your library for an instant or sorcery card named Step
+/// Through. Reveal it, put it into your hand, then shuffle."
+///
+/// Push (modern_decks, NEW, `stx::extras`): Approximated as a tutor
+/// for any Instant or Sorcery card from the library — the printed
+/// "named Step Through" is a flavor-of-the-cycle joke (the card is
+/// useless self-tutoring; the printing was actually a meme card from
+/// Saviors of Kamigawa's Spiritcraft theme). To make the spell
+/// playable we generalize to any IS card; the printed-Oracle
+/// degenerate case is preserved (if no other IS card exists, this
+/// finds itself). Multi-target prompt to pick the chosen IS card is
+/// the standard `Search` decision.
+pub fn step_through() -> CardDefinition {
+    CardDefinition {
+        name: "Step Through",
+        cost: cost(&[u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Search {
+            who: PlayerRef::You,
+            filter: SelectionRequirement::HasCardType(CardType::Instant)
+                .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+            to: ZoneDest::Hand(PlayerRef::You),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Inkling Summoning Mascot (STX 2021 - simplified) ────────────────────────
+
+/// Inkfathom Witch — {3}{U}{B}, 2/3 Inkling Spectre (homage to the
+/// Mystery Booster spectre-style designs).
+///
+/// "Flying / When this creature enters, target opponent reveals their
+/// hand. You choose a nonland card from it. That player discards that
+/// card."
+///
+/// Push (modern_decks, NEW, `stx::extras`): A targeted hand-attack on
+/// a Flying body — same Inkling tribal as Promising Duskmage and
+/// Tenured Inkcaster. Wired via `DiscardChosen` against an opp's
+/// nonland card.
+pub fn inkfathom_witch() -> CardDefinition {
+    use crate::effect::PlayerRef as PR;
+    CardDefinition {
+        name: "Inkfathom Witch",
+        cost: cost(&[generic(3), u(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::DiscardChosen {
+                from: Selector::Player(PR::EachOpponent),
+                count: Value::Const(1),
+                filter: SelectionRequirement::Nonland,
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Inscription of Ruin (STX 2021) ──────────────────────────────────────────
+
+/// Inscription of Ruin — {2}{B}{B} Sorcery (STX 2021).
+///
+/// "Choose one or more. If this spell was kicked, you may choose two or
+/// three instead. / • Target player discards two cards. / • Return up
+/// to two target creature cards from your graveyard to your hand. / •
+/// Destroy target creature."
+///
+/// Push (modern_decks, NEW, `stx::extras`): Wired via the engine's
+/// `Effect::ChooseN { picks: [0, 2], modes }` — auto-picks discard +
+/// destroy at the regular {2}{B}{B} cost (the two highest-impact
+/// modes against a typical board). The Kicker {3}{B} alt-cost for the
+/// "choose two or three" upgrade is engine-wide ⏳ (same Kicker gap
+/// as Burst Lightning). Mode 1 reanimation collapses to a single
+/// graveyard target (multi-target prompt for slot 1+ is the engine-
+/// wide gap shared with all multi-target instants/sorceries).
+pub fn inscription_of_ruin() -> CardDefinition {
+    use crate::effect::PlayerRef as PR;
+    CardDefinition {
+        name: "Inscription of Ruin",
+        cost: cost(&[generic(2), b(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::ChooseN {
+            picks: vec![0, 2],
+            modes: vec![
+                // Mode 0: target opp discards two.
+                Effect::Discard {
+                    who: Selector::Player(PR::EachOpponent),
+                    amount: Value::Const(2),
+                    random: false,
+                },
+                // Mode 1: return up to one creature card from gy to hand.
+                Effect::Move {
+                    what: Selector::CardsInZone {
+                        who: PR::You,
+                        zone: crate::card::Zone::Graveyard,
+                        filter: SelectionRequirement::Creature,
+                    },
+                    to: ZoneDest::Hand(PR::You),
+                },
+                // Mode 2: destroy target creature.
+                Effect::Destroy {
+                    what: target_filtered(SelectionRequirement::Creature),
+                },
+            ],
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Tome of the Infinite (STX-flavor utility artifact) ──────────────────────
+
+/// Tome of the Infinite — {1} Legendary Artifact (STX-flavor).
+///
+/// "When this enters, scry 1. / {2}, {T}: Draw a card."
+///
+/// Push (modern_decks, NEW, `stx::extras`): A cheap card-velocity rock
+/// in the Hall of Oracles / Letter of Acceptance line. Both abilities
+/// are vanilla engine primitives. The Legendary supertype enforces
+/// singleton via the existing legend-rule SBA path.
+pub fn tome_of_the_infinite() -> CardDefinition {
+    use crate::effect::PlayerRef as PR;
+    CardDefinition {
+        name: "Tome of the Infinite",
+        cost: cost(&[generic(1)]),
+        supertypes: vec![crate::card::Supertype::Legendary],
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[generic(2)]),
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+            once_per_turn: false,
+            sorcery_speed: false,
+            sac_cost: false,
+            condition: None,
+            life_cost: 0,
+            from_graveyard: false,
+            exile_self_cost: false,
+            exile_other_filter: None,
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Scry {
+                who: PR::You,
+                amount: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Bury in Books revisited: Drannith Stinger (STX 2021) ────────────────────
+
+/// Drannith Stinger — {2}{R}, 2/2 Goblin Wizard (Ikoria reprint via
+/// STX flavor — Drannith was the white-red flagship city).
+///
+/// "Whenever you cast a noncreature spell, this creature deals 1
+/// damage to each opponent."
+///
+/// Push (modern_decks, NEW, `stx::extras`): Magecraft-adjacent
+/// non-creature-spell payoff. Wired via the spell-cast trigger with
+/// a noncreature-filter, dealing 1 to each opp. Auto-targeting is
+/// fan-out via `Selector::Player(EachOpponent)`.
+pub fn drannith_stinger() -> CardDefinition {
+    use crate::card::Predicate;
+    use crate::effect::PlayerRef as PR;
+    CardDefinition {
+        name: "Drannith Stinger",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(Predicate::Not(Box::new(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Creature,
+                }))),
+            effect: Effect::DealDamage {
+                to: Selector::Player(PR::EachOpponent),
+                amount: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Mage Mauler (STX-flavor common burn) ────────────────────────────────────
+
+/// Mage Mauler — {2}{R} Sorcery (STX-flavor common, modeled after
+/// Mage Hunters' Onslaught's red sibling).
+///
+/// "Mage Mauler deals 3 damage to target creature or planeswalker.
+/// You gain 1 life."
+///
+/// Push (modern_decks, NEW, `stx::extras`): A solid red removal-and-
+/// stabilize tool. Wired via `Seq(DealDamage 3, GainLife 1)` against
+/// a Creature/Planeswalker target.
+pub fn mage_mauler() -> CardDefinition {
+    CardDefinition {
+        name: "Mage Mauler",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::Const(3),
+            },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Heirloom Mirror (STX-flavor common artifact) ────────────────────────────
+
+/// Heirloom Mirror — {3} Artifact (STX-flavor utility rock).
+///
+/// "{T}: Add one mana of any color. / {3}, {T}, Sacrifice this
+/// artifact: Draw a card."
+///
+/// Push (modern_decks, NEW, `stx::extras`): A 3-mana rainbow rock
+/// that converts into a card. Same shape as Letter of Acceptance's
+/// {2}, sac → draw activation but on a generic body. Both abilities
+/// are pure engine primitives.
+pub fn heirloom_mirror() -> CardDefinition {
+    use crate::effect::PlayerRef as PR;
+    CardDefinition {
+        name: "Heirloom Mirror",
+        cost: cost(&[generic(3)]),
+        supertypes: vec![],
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: ManaCost::default(),
+                effect: Effect::AddMana {
+                    who: PR::You,
+                    pool: ManaPayload::AnyOneColor(Value::Const(1)),
+                },
+                once_per_turn: false,
+                sorcery_speed: false,
+                sac_cost: false,
+                condition: None,
+                life_cost: 0,
+                from_graveyard: false,
+                exile_self_cost: false,
+                exile_other_filter: None,
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: cost(&[generic(3)]),
+                effect: Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
+                once_per_turn: false,
+                sorcery_speed: false,
+                sac_cost: true,
+                condition: None,
+                life_cost: 0,
+                from_graveyard: false,
+                exile_self_cost: false,
+                exile_other_filter: None,
+            },
+        ],
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Apex Devastator-flavor Quandrix Mascot (STX-flavor) ─────────────────────
+
+/// Quandrix Mascot — {1}{G}{U}, 2/2 Fractal Cat (STX-flavor).
+///
+/// "When this creature enters, double the number of +1/+1 counters on
+/// target creature you control."
+///
+/// Push (modern_decks, NEW, `stx::extras`): A cheap Quandrix counter-
+/// doubling enabler. Wired via `AddCounter(target, CountersOn(target,
+/// +1/+1))` against a friendly creature target. Same primitive shape
+/// as Practical Research and Tanazir Quandrix's attack trigger.
+pub fn quandrix_mascot() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Mascot",
+        cost: cost(&[generic(1), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal, CreatureType::Cat],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::AddCounter {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::CountersOn {
+                    what: Box::new(Selector::Target(0)),
+                    kind: CounterType::PlusOnePlusOne,
+                },
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Witherbloom Mascot (STX-flavor support) ─────────────────────────────────
+
+/// Witherbloom Mascot — {1}{B}{G}, 2/2 Pest Beast (STX-flavor).
+///
+/// "When this creature dies, each opponent loses 2 life and you gain
+/// 2 life."
+///
+/// Push (modern_decks, NEW, `stx::extras`): A 2-mana sacrificial drain
+/// payoff. Wired via the standard `CreatureDied/SelfSource` trigger
+/// → `Drain(2, EachOpponent → You)` Seq. Synergises with the rest of
+/// the Witherbloom sacrifice toolkit.
+pub fn witherbloom_mascot() -> CardDefinition {
+    use crate::effect::PlayerRef as PR;
+    CardDefinition {
+        name: "Witherbloom Mascot",
+        cost: cost(&[generic(1), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Pest, CreatureType::Beast],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::LoseLife {
+                    who: Selector::Player(PR::EachOpponent),
+                    amount: Value::Const(2),
+                },
+                Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::Const(2),
+                },
+            ]),
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Lorehold Mascot (STX-flavor support) ────────────────────────────────────
+
+/// Lorehold Mascot — {2}{R}{W}, 3/2 Spirit (STX-flavor).
+///
+/// "Whenever this creature attacks, you gain 1 life and it gets +1/+0
+/// until end of turn."
+///
+/// Push (modern_decks, NEW, `stx::extras`): A combat-oriented Spirit
+/// that scales as it attacks. Wired via `Attacks/SelfSource` trigger
+/// running `Seq(GainLife 1, PumpPT(+1/+0, EOT))` against
+/// `Selector::This`.
+pub fn lorehold_mascot() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Mascot",
+        cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
+                Effect::PumpPT {
+                    what: Selector::This,
+                    power: Value::Const(1),
+                    toughness: Value::Const(0),
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
