@@ -41,6 +41,7 @@ pub fn anger_of_the_gods() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -75,6 +76,7 @@ pub fn disentomb() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -108,6 +110,7 @@ pub fn vandalblast() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -143,6 +146,7 @@ pub fn natures_lore() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -179,6 +183,7 @@ pub fn fell() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -210,6 +215,7 @@ pub fn blasphemous_edict() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -242,6 +248,7 @@ pub fn upheaval() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -275,6 +282,7 @@ pub fn rakshasas_bargain() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -311,6 +319,7 @@ pub fn sundering_eruption() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     };
     CardDefinition {
         name: "Sundering Eruption",
@@ -337,6 +346,7 @@ pub fn sundering_eruption() -> CardDefinition {
         back_face: Some(Box::new(back)),
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -384,6 +394,7 @@ pub fn big_score() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -423,6 +434,7 @@ pub fn windfall() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -458,6 +470,7 @@ pub fn blasphemous_act() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -506,6 +519,7 @@ pub fn reckless_charge() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -536,6 +550,7 @@ pub fn boil() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -568,6 +583,7 @@ pub fn compulsive_research() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -596,6 +612,7 @@ pub fn demolish() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -623,6 +640,7 @@ pub fn mind_sculpt() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -660,6 +678,7 @@ pub fn cabal_therapy() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -694,6 +713,7 @@ pub fn wear_down() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 

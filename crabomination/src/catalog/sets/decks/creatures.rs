@@ -65,6 +65,7 @@ pub fn callous_sell_sword() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -108,6 +109,7 @@ pub fn chancellor_of_the_tangle() -> CardDefinition {
             },
         }),
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -143,6 +145,7 @@ pub fn cosmogoyf() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -176,6 +179,7 @@ pub fn devourer_of_destiny() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -233,6 +237,7 @@ pub fn atraxa_grand_unifier() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -280,6 +285,7 @@ pub fn griselbrand() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -360,6 +366,7 @@ pub fn psychic_frog() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -396,6 +403,7 @@ pub fn quantum_riddler() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -450,6 +458,7 @@ pub fn solitude() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -501,6 +510,7 @@ pub fn chancellor_of_the_annex() -> CardDefinition {
             },
         }),
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -539,6 +549,7 @@ pub fn elesh_norn_mother_of_machines() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -616,5 +627,6 @@ pub fn teferi_time_raveler() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }

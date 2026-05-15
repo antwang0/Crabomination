@@ -25,5 +25,6 @@ pub fn hymn_to_tourach() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }

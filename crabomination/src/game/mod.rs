@@ -212,6 +212,17 @@ pub struct GameState {
     /// `remaining` carries any sibling effects still queued behind the one that
     /// suspended (e.g. `Draw` after `Scry` in a Seq).
     pub(crate) suspend_signal: Option<(Decision, PendingEffectState, Effect)>,
+    /// True when an effect has flagged "prevent all combat damage this turn"
+    /// (CR 615 — damage prevention as a replacement effect). Wired by
+    /// Owlin Shieldmage's ETB trigger, Holy Day, Hallowed Burial-adjacent
+    /// "fog" patterns. Cleared in `do_cleanup` alongside the other
+    /// until-end-of-turn flags. Combat damage resolution (`resolve_combat_
+    /// damage_with_filter`) consults this flag and skips dealing the
+    /// damage half (lifelink, deathtouch, infect/wither, trigger emission
+    /// for non-damage knock-ons all still resolve — only the damage
+    /// number itself is set to 0 per CR 615.1).
+    #[serde(default)]
+    pub(crate) prevent_combat_damage_this_turn: bool,
 }
 
 /// Manual `Clone` impl so the bot can dry-run an action against a copy
@@ -248,6 +259,7 @@ impl Clone for GameState {
             decider: self.decider.kind().into_boxed(),
             pending_decision: self.pending_decision.clone(),
             suspend_signal: self.suspend_signal.clone(),
+            prevent_combat_damage_this_turn: self.prevent_combat_damage_this_turn,
         }
     }
 }
@@ -288,6 +300,7 @@ impl GameState {
             decider: Box::new(AutoDecider),
             pending_decision: None,
             suspend_signal: None,
+            prevent_combat_damage_this_turn: false,
         }
     }
 
@@ -1537,6 +1550,18 @@ impl GameState {
         if card.kicked
             && card.definition.keywords.iter().any(|k| matches!(k, crate::card::Keyword::Flashback(_)))
         {
+            self.exile.push(card);
+            return Ok(events);
+        }
+        // CR 701.x — "Then exile this spell" rider. Cards with
+        // `exile_on_resolve = true` route to exile after resolution
+        // instead of their owner's graveyard. Used by Awaken the Ages,
+        // Divergent Equation, Settle the Score's printed rider.
+        // Bump the owner's `cards_exiled_this_turn` so the Ennis-style
+        // "cards put into exile this turn" payoffs see the exile.
+        if card.definition.exile_on_resolve {
+            self.players[caster].cards_exiled_this_turn =
+                self.players[caster].cards_exiled_this_turn.saturating_add(1);
             self.exile.push(card);
             return Ok(events);
         }

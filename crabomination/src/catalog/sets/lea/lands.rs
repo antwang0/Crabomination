@@ -25,6 +25,7 @@ pub fn plains() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -51,6 +52,7 @@ pub fn island() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -77,6 +79,7 @@ pub fn swamp() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -103,6 +106,7 @@ pub fn mountain() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -129,6 +133,7 @@ pub fn forest() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -155,6 +160,7 @@ fn dual(name: &'static str, a: LandType, b: LandType, ca: Color, cb: Color) -> C
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 

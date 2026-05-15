@@ -419,6 +419,18 @@ pub struct CardDefinition {
     /// CardDefinition initialisations pick up the new field automatically.
     #[serde(default)]
     pub enters_with_counters: Option<(CounterType, crate::effect::Value)>,
+    /// CR 701.x — "Exile this spell" rider for instants and sorceries that
+    /// route to exile instead of their owner's graveyard after resolution.
+    /// Used by Strixhaven's "Then exile this spell" wording (Awaken the
+    /// Ages MDFC back-face, Divergent Equation, Settle the Score's
+    /// printed rider) and various Mystical Archive cards. When `true`,
+    /// `continue_spell_resolution` places the resolved spell card into
+    /// exile rather than its owner's graveyard. Has no effect on
+    /// permanent spells (those go to the battlefield, not graveyard).
+    ///
+    /// Defaults to `false` via `#[serde(default)]` for snapshot back-compat.
+    #[serde(default)]
+    pub exile_on_resolve: bool,
 }
 
 /// An alternative (pitch) cost. Replaces the normal mana cost when the

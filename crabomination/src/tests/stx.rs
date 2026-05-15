@@ -108,6 +108,66 @@ fn owlin_shieldmage_is_a_flash_flyer() {
 }
 
 #[test]
+fn owlin_shieldmage_etb_prevents_combat_damage_this_turn() {
+    // Push (modern_decks): Owlin Shieldmage's "prevent all combat damage
+    // this turn" ETB now lands via the new Effect::PreventAllCombat
+    // DamageThisTurn primitive. Wire test: cast Shieldmage on opp's
+    // declare-attackers step → opp swings with a 2/2 Bear at the
+    // defending player → combat damage resolves to 0 (no life loss).
+    let mut g = two_player_game();
+    // Opponent has an untapped attacker.
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    let id = g.add_card_to_hand(0, catalog::owlin_shieldmage());
+
+    // P1 declares the attacker.
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: bear,
+        target: AttackTarget::Player(0),
+    }]))
+    .expect("Bear can attack P0");
+    drain_stack(&mut g);
+
+    // P0 flashes in Owlin Shieldmage (it has Flash).
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Owlin Shieldmage castable at instant speed for {3}{W}");
+    drain_stack(&mut g);
+
+    assert!(
+        g.prevent_combat_damage_this_turn,
+        "Owlin Shieldmage's ETB should flag the engine to prevent combat damage this turn"
+    );
+
+    // Combat damage step.
+    g.step = TurnStep::CombatDamage;
+    g.resolve_combat().expect("combat damage resolved");
+
+    // CR 615.1 — combat damage was prevented; P0's life unchanged.
+    assert_eq!(g.players[0].life, 20,
+        "Combat damage from the attacker should be prevented");
+}
+
+#[test]
+fn prevent_combat_damage_flag_clears_in_cleanup() {
+    // Lock in CR 514.2 — the prevent-combat-damage-this-turn flag should
+    // clear on cleanup along with other until-end-of-turn effects.
+    let mut g = two_player_game();
+    g.prevent_combat_damage_this_turn = true;
+    g.step = TurnStep::Cleanup;
+    g.do_cleanup();
+    assert!(!g.prevent_combat_damage_this_turn,
+        "Cleanup should clear prevent_combat_damage_this_turn flag");
+}
+
+#[test]
 fn frost_trickster_taps_and_stuns_target_on_etb() {
     let mut g = two_player_game();
     // Untapped creature on opponent's battlefield.
@@ -2698,6 +2758,7 @@ fn eyetwitch_brood_grows_when_another_pest_dies() {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     };
     let pest_id = g.add_card_to_battlefield(0, pest_def);
     g.clear_sickness(pest_id);
@@ -5311,6 +5372,7 @@ fn zero_damage_does_not_trigger_damage_events_per_cr_120_8() {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     };
 
     let mut g = two_player_game();
@@ -5391,6 +5453,7 @@ fn zero_scry_does_not_trigger_scry_events_per_cr_701_22b() {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     };
 
     let mut g = two_player_game();
@@ -9225,4 +9288,199 @@ fn skywarp_skaab_etb_declines_by_default() {
         p0_hand_before - 1,
         "P0 hand size = before - 1 (cast cost) — no discard since AutoDecider declines"
     );
+}
+
+// ── STA reprint tests (push: modern_decks) ─────────────────────────────────
+
+#[test]
+fn damnable_pact_at_x_three_draws_three_loses_three() {
+    let mut g = two_player_game();
+    // Seed P1's library so it can actually draw 3.
+    for _ in 0..5 {
+        g.add_card_to_library(1, catalog::island());
+    }
+    let id = g.add_card_to_hand(0, catalog::damnable_pact());
+    let p1_hand_before = g.players[1].hand.len();
+    let p1_life_before = g.players[1].life;
+
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: Some(3),
+    })
+    .expect("Damnable Pact castable for {X=3}{B}{B}");
+    drain_stack(&mut g);
+
+    assert_eq!(
+        g.players[1].hand.len() as i32, p1_hand_before as i32 + 3,
+        "Target player drew X=3 cards"
+    );
+    assert_eq!(
+        g.players[1].life, p1_life_before - 3,
+        "Target player lost X=3 life"
+    );
+}
+
+#[test]
+fn shore_up_untaps_and_grants_hexproof() {
+    let mut g = two_player_game();
+    // Tap your own bear so we can verify the untap half.
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    g.battlefield_find_mut(bear).unwrap().tapped = true;
+
+    let id = g.add_card_to_hand(0, catalog::shore_up());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Shore Up castable for {U}");
+    drain_stack(&mut g);
+
+    let bear_card = g.battlefield_find(bear).unwrap();
+    assert!(!bear_card.tapped, "Bear should be untapped");
+    let cp = g.computed_permanent(bear).unwrap();
+    assert!(
+        cp.keywords.contains(&Keyword::Hexproof),
+        "Bear should have Hexproof for the turn"
+    );
+}
+
+#[test]
+fn shore_up_has_flashback_keyword() {
+    // Lock the printed `Flashback {3}{U}` rider on the keyword list.
+    let card = catalog::shore_up();
+    let has_flashback = card.keywords.iter().any(|kw| matches!(kw, Keyword::Flashback(_)));
+    assert!(has_flashback, "Shore Up should carry Keyword::Flashback");
+}
+
+#[test]
+fn symbol_of_strength_pumps_two_two_and_draws() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    let id = g.add_card_to_hand(0, catalog::symbol_of_strength());
+    let hand_before = g.players[0].hand.len();
+
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Symbol of Strength castable for {2}{G}");
+    drain_stack(&mut g);
+
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!(cp.power, 4, "Bear power +2 EOT (2 → 4)");
+    assert_eq!(cp.toughness, 4, "Bear toughness +2 EOT (2 → 4)");
+    // -1 cast + 1 draw = 0 net.
+    assert_eq!(g.players[0].hand.len(), hand_before);
+}
+
+#[test]
+fn magmatic_sinkhole_surveils_and_deals_four_damage() {
+    let mut g = two_player_game();
+    // Seed P0's library so surveil 2 has cards to look at.
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    // 4/4 opp creature — Magmatic Sinkhole's 4 damage should kill it.
+    let target = g.add_card_to_battlefield(1, catalog::serra_angel());
+    g.clear_sickness(target);
+    let id = g.add_card_to_hand(0, catalog::magmatic_sinkhole());
+
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(target)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Magmatic Sinkhole castable for {1}{B}{R}");
+    drain_stack(&mut g);
+
+    // Serra Angel is 4/4 — 4 damage kills it.
+    assert!(
+        !g.battlefield.iter().any(|c| c.id == target),
+        "Serra Angel destroyed by 4 damage"
+    );
+}
+
+#[test]
+fn sevinnes_reclamation_returns_low_mv_permanent_from_graveyard() {
+    let mut g = two_player_game();
+    // Put a 2-MV creature in P0's graveyard.
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::sevinnes_reclamation());
+
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Sevinne's Reclamation castable for {2}{W}");
+    drain_stack(&mut g);
+
+    // Bear should now be on the battlefield.
+    assert!(
+        g.battlefield.iter().any(|c| c.id == bear),
+        "Bear should be on battlefield after Sevinne's Reclamation"
+    );
+    // Graveyard shouldn't still contain it.
+    assert!(
+        !g.players[0].graveyard.iter().any(|c| c.id == bear),
+        "Bear should leave graveyard"
+    );
+}
+
+#[test]
+fn sevinnes_reclamation_rejects_high_mv_target() {
+    // MV-cap is 3 — a 4-MV target like Serra Angel should not be a legal target.
+    let mut g = two_player_game();
+    let angel = g.add_card_to_graveyard(0, catalog::serra_angel());
+    let id = g.add_card_to_hand(0, catalog::sevinnes_reclamation());
+
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let res = g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(angel)), additional_targets: vec![], mode: None, x_value: None,
+    });
+    assert!(res.is_err(), "Should reject 4-MV target (cap is 3)");
+}
+
+#[test]
+fn sevinnes_reclamation_has_flashback_keyword() {
+    let card = catalog::sevinnes_reclamation();
+    let has_flashback = card.keywords.iter().any(|kw| matches!(kw, Keyword::Flashback(_)));
+    assert!(has_flashback, "Sevinne's Reclamation should carry Keyword::Flashback");
+}
+
+#[test]
+fn light_of_promise_is_a_four_mana_white_enchantment() {
+    use crate::card::CardType;
+    let def = catalog::light_of_promise();
+    assert_eq!(def.cost.cmc(), 4);
+    assert!(def.card_types.contains(&CardType::Enchantment));
+}
+
+#[test]
+fn light_of_promise_adds_counter_on_lifegain_event() {
+    // Push (modern_decks): NEW STX card. The printed "Whenever you gain
+    // life, put that many +1/+1 counters on target creature you control"
+    // trigger is approximated as one counter per fire (engine has no
+    // per-event amount value yet). Verify the trigger fires on a real
+    // lifegain event.
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    let _enc = g.add_card_to_battlefield(0, catalog::light_of_promise());
+
+    // Fire a synthetic lifegain event through dispatch_triggers_for_events.
+    g.players[0].life += 1;
+    g.dispatch_triggers_for_events(&[GameEvent::LifeGained { player: 0, amount: 1 }]);
+    drain_stack(&mut g);
+
+    let counters = g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne);
+    assert!(counters >= 1,
+        "Bear should have at least one +1/+1 counter from Light of Promise trigger");
 }

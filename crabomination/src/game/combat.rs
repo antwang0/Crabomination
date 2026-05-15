@@ -304,6 +304,14 @@ impl GameState {
             })
             .collect();
 
+        // CR 615.1 — "Prevent all combat damage this turn" (Owlin
+        // Shieldmage, Holy Day, Constant Mists). When the global flag is
+        // set, every combat damage assignment yields 0; lifelink scales
+        // off actual damage dealt (CR 702.15a), so prevention zeros
+        // lifelink life-gain as well. Triggers that would fire off
+        // "deals combat damage to a player" never see a damage event.
+        let prevent_combat_damage = self.prevent_combat_damage_this_turn;
+
         for atk in &attacker_infos {
             if !atk.should_deal {
                 continue;
@@ -317,7 +325,11 @@ impl GameState {
                 .collect();
 
             if blocker_ids.is_empty() {
-                let amount = atk.power.max(0) as u32;
+                let amount = if prevent_combat_damage {
+                    0
+                } else {
+                    atk.power.max(0) as u32
+                };
                 if amount > 0 {
                     self.deal_combat_damage_to_target(atk, amount, &mut events);
                     if atk.has_lifelink {
@@ -329,7 +341,8 @@ impl GameState {
                     }
                 }
             } else {
-                let mut remaining_atk_damage = atk.power;
+                let mut remaining_atk_damage =
+                    if prevent_combat_damage { 0 } else { atk.power };
                 let mut lifelink_dealt = 0i32;
 
                 for &blocker_id in &blocker_ids {
@@ -386,17 +399,21 @@ impl GameState {
                     events.push(GameEvent::LifeGained { player: a, amount: amt });
                 }
 
-                let blocker_damage_to_attacker: i32 = blocker_ids
-                    .iter()
-                    .filter_map(|&bid| computed_of(bid))
-                    .filter(|bc| {
-                        !bc.keywords.contains(&Keyword::FirstStrike)
-                            || bc.keywords.contains(&Keyword::DoubleStrike)
-                            || atk.has_first_strike
-                            || atk.has_double_strike
-                    })
-                    .map(|c| c.power)
-                    .sum();
+                let blocker_damage_to_attacker: i32 = if prevent_combat_damage {
+                    0
+                } else {
+                    blocker_ids
+                        .iter()
+                        .filter_map(|&bid| computed_of(bid))
+                        .filter(|bc| {
+                            !bc.keywords.contains(&Keyword::FirstStrike)
+                                || bc.keywords.contains(&Keyword::DoubleStrike)
+                                || atk.has_first_strike
+                                || atk.has_double_strike
+                        })
+                        .map(|c| c.power)
+                        .sum()
+                };
 
                 if blocker_damage_to_attacker > 0 {
                     let any_deathtouch_blocker = blocker_ids

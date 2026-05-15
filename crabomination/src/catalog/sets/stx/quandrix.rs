@@ -57,6 +57,7 @@ pub fn quandrix_apprentice() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -106,6 +107,7 @@ pub fn quandrix_pledgemage() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -162,6 +164,7 @@ pub fn decisive_denial() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -221,6 +224,7 @@ pub fn symmathematics() -> CardDefinition {
         opening_hand: None,
         // CR 614.12 "enters with two +1/+1 counters on it" replacement.
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(2))),
+        exile_on_resolve: false,
     }
 }
 

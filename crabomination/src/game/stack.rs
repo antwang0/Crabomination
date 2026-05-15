@@ -614,6 +614,10 @@ impl GameState {
         for card in &mut self.battlefield {
             card.damage = 0;
         }
+        // CR 514.2 / CR 615.1 — "this turn" combat damage prevention
+        // (Owlin Shieldmage's ETB, Holy Day-style fogs) expires at
+        // cleanup along with the other until-end-of-turn flags.
+        self.prevent_combat_damage_this_turn = false;
         // Empty mana pools
         for player in &mut self.players {
             player.mana_pool.empty();

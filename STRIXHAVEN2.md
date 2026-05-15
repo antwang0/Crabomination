@@ -18,12 +18,52 @@ Two adjacent catalogs:
 
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
-| SOS (255 cards) | 186 | 68 | 1 |
-| STX (170 cards) | 176 | 15 | 0 |
-| STA reprints (in STX boosters) | 32 | 0 | — |
+| SOS (255 cards) | 188 | 66 | 1 |
+| STX (170 cards) | 178 | 14 | 0 |
+| STA reprints (in STX boosters) | 37 | 0 | — |
 
-Push (modern_decks, claude/modern_decks branch — current revision,
-latest sub-push): **12 NEW cards** (7 STX 2021 + 4 STA reprints + 1 STX
+Push (modern_decks, claude/modern_decks branch — current revision —
+latest sub-push): **6 NEW cards** (1 STX 2021 + 5 STA reprints) **+ 4
+promotions** (Owlin Shieldmage ✅ via combat damage prevention layer,
+Strife Scholar // Awaken the Ages ✅ via exile_on_resolve flag,
+Divergent Equation ✅ via the same flag, Wisdom of Ages ✅ via the
+same flag) + **2 new engine primitives**:
+- **`Effect::PreventAllCombatDamageThisTurn` + `GameState
+  .prevent_combat_damage_this_turn` flag** (CR 615.1) — combat damage
+  resolver consults the flag and zeroes attacker/blocker damage
+  (lifelink scales off actual damage dealt, so lifelink life-gain is
+  zeroed too). Cleared in `do_cleanup` alongside other
+  until-end-of-turn state. Wires Owlin Shieldmage's ETB.
+- **`CardDefinition.exile_on_resolve: bool`** (CR 701.x) — instants /
+  sorceries with the printed "Then exile this spell" rider now route
+  to exile after resolution instead of their owner's graveyard. Bumps
+  `Player.cards_exiled_this_turn` so Ennis-style payoffs see the
+  exile event. Wires Awaken the Ages (Strife Scholar back-face),
+  Divergent Equation, Wisdom of Ages.
+
+**5 new STA reprints** added in `catalog::sets::stx::extras`:
+- **Damnable Pact** — {X}{B}{B} Sorcery. Target player draws X cards
+  and loses X life. Both clauses read `Value::XFromCost`.
+- **Shore Up** — {U} Instant. Untap target permanent + Hexproof EOT.
+  Flashback {3}{U}.
+- **Symbol of Strength** — {2}{G} Sorcery. +2/+2 EOT + draw 1.
+  Flashback {3}{G}.
+- **Magmatic Sinkhole** — {1}{B}{R} Sorcery. Surveil 2 + 4 damage
+  to a creature or planeswalker.
+- **Sevinne's Reclamation** — {2}{W} Sorcery. Reanimate ≤3-MV
+  permanent card from your graveyard. If cast from a graveyard, copy
+  twice (via the `Predicate::CastFromGraveyard` rider). Flashback {5}{W}.
+
+**1 new STX 2021 card**:
+- **Light of Promise** (🟡) — {3}{W} Enchantment. "Whenever you gain
+  life, put that many +1/+1 counters on target creature you control."
+  Per-fire trigger approximation (engine has no per-event amount value
+  yet, so each lifegain event lands 1 +1/+1 counter rather than "that
+  many"). Body matches printed Oracle for the common 1-life-per-gain
+  case (Pest-style drains, incidental lifegain).
+
+Prior push (modern_decks, claude/modern_decks branch — earlier revision):
+**12 NEW cards** (7 STX 2021 + 4 STA reprints + 1 STX
 Mastery cycle) **+ 2 SOS promotions** (Burrog Barrage ✅, Chelonian
 Tackle ✅ via slot-1 multi-target promotion). All new cards ship with
 at least one functionality test in `tests::stx`.
@@ -554,7 +594,7 @@ each 🟡 row are in the tables below.
 | Campus Composer // Aqueous Aria | {3}{U} // {4}{U} | Creature — Merfolk Bard // Sorcery | 3/4 |  | ✅ (was 🟡) | Push (modern_decks): back-face Aqueous Aria now resolves the "target player draws 3" with the actual player target (was caster-only). Caster aims at self or opp; chosen player draws 3. Front-face `Keyword::Ward(1)` remains a keyword tag (Ward enforcement engine-wide TODO). Test: `campus_composer_aqueous_aria_targets_player`. |
 | Chase Inspiration | {U} | Instant |  | Target creature you control gets +0/+3 and gains hexproof until end of turn. (It can't be the target of spells or abilities your opponents control.) | ✅ | Wired in `catalog::sets::sos::instants`. |
 | Deluge Virtuoso | {2}{U} | Creature — Human Wizard | 2/2 | When this creature enters, tap target creature an opponent controls and put a stun counter on it. (If a permanent with a stun counter would become untapped, remove one from it instead.) / Opus — Whenever you cast an instant or sorcery spell, this creature gets +1/+1 until end of turn. If five or more mana was spent to cast that spell, this creature gets +2/+2 until end of turn instead. | ✅ | Push XXIX: ETB tap+stun wired (same shape as Fractal Mascot). Opus rider **now wired** via `shortcut::opus_trigger(+1/+1 EOT, +2/+2 EOT)`. Mana-spent introspection threads `Predicate::CastSpellManaSpentAtLeast(5)`. Test: `deluge_virtuoso_opus_pumps_one_one_or_two_two`. |
-| Divergent Equation | {X}{X}{U} | Instant |  | Return up to X target instant and/or sorcery cards from your graveyard to your hand. / Exile Divergent Equation. | 🟡 | Wired in `catalog::sets::sos::instants` as a single-target return. The "up to X" multi-target prompt is collapsed to one target (no `Selector::OneOf` / count-bounded pick primitive yet — TODO.md). The "exile this" rider is omitted (no replay-prevention payoff). |
+| Divergent Equation | {X}{X}{U} | Instant |  | Return up to X target instant and/or sorcery cards from your graveyard to your hand. / Exile Divergent Equation. | 🟡 (cost ✅) | Wired in `catalog::sets::sos::instants` as a single-target return. The "up to X" multi-target prompt is collapsed to one target (no `Selector::OneOf` / count-bounded pick primitive yet — TODO.md). Push (modern_decks): the "Exile Divergent Equation" rider is **now wired** via the new `CardDefinition.exile_on_resolve` flag — the resolved instant lands in exile, preventing flashback/Past-in-Flames recursion. Test: `divergent_equation_exiles_itself_via_exile_on_resolve_flag`. |
 | Echocasting Symposium | {4}{U}{U} | Sorcery — Lesson |  | Target player creates a token that's a copy of target creature you control. / Paradigm (Then exile this spell. After you first resolve a spell with this name, you may cast a copy of it from exile without paying its mana cost at the beginning of each of your first main phases.) | 🟡 | Push XXVI: body-only wire — mints a 3/3 blue Wizard "Echocast" placeholder token via `Effect::CreateToken` (since the engine has no permanent-copy primitive yet). Lesson SpellSubtype tagged. Paradigm rider still ⏳ (cast-from-exile pipeline). |
 | Emeritus of Ideation // Ancestral Recall | {3}{U}{U} // {U} | Creature — Human Wizard // Instant | 5/5 |  | ✅ (was 🟡) | Push (modern_decks): back-face Ancestral Recall now targets a player (faithful Oracle) — caster picks self / opp at cast time. Front-face `Keyword::Ward(1)` remains a keyword tag. Tests: `emeritus_of_ideation_back_face_draws_three`, `emeritus_of_ideation_ancestral_recall_targets_opponent`. |
 | Encouraging Aviator // Jump | {2}{U} // {U} | Creature — Bird Wizard // Instant | 2/3 |  | ✅ (was 🟡) | Push (modern_decks doc-sync): vanilla front + faithful back-face spell wired via the `GameAction::CastSpellBack` path (push XI/XII). The stale "Standard primitives — should be straightforward to wire" note was the original ⏳ flag from before MDFC plumbing landed; the body has been at-parity-with-printed-Oracle since push XII. Tests live in `tests::sos` keyed by the back-face spell name.|
@@ -580,7 +620,7 @@ each 🟡 row are in the tables below.
 | Spellbook Seeker // Careful Study | {3}{U} // {U} | Creature — Bird Wizard // Sorcery | 3/3 |  | ✅ (was 🟡) | Push (modern_decks doc-sync): vanilla front + faithful back-face spell wired via the `GameAction::CastSpellBack` path (push XI/XII). The stale "Standard primitives — should be straightforward to wire" note was the original ⏳ flag from before MDFC plumbing landed; the body has been at-parity-with-printed-Oracle since push XII. Tests live in `tests::sos` keyed by the back-face spell name.|
 | Tester of the Tangential | {1}{U} | Creature — Djinn Wizard | 1/1 | Increment (Whenever you cast a spell, if the amount of mana you spent is greater than this creature's power or toughness, put a +1/+1 counter on this creature.) / At the beginning of combat on your turn, you may pay {X}. When you do, move X +1/+1 counters from this creature onto another target creature. | 🟡 | Push XXXVIII (doc-sync): 1/1 Djinn Wizard body + Increment wired via `increment_self_plus_one()`. The combat-step pay-X-to-move-counters trigger is still omitted (no X-cost optional trigger primitive — same gap as Berta's activation). The Increment is the printed engine that turns the small body into a 4/4+ over the game. |
 | Textbook Tabulator | {2}{U} | Creature — Frog Wizard | 0/3 | Increment (Whenever you cast a spell, if the amount of mana you spent is greater than this creature's power or toughness, put a +1/+1 counter on this creature.) / When this creature enters, surveil 2. (Look at the top two cards of your library, then put any number of them into your graveyard and the rest on top of your library in any order.) | ✅ (was 🟡) | Push XXXVIII: both halves wired. ETB Surveil 2 via `Effect::Surveil`; Increment rider via `shortcut::increment_self_plus_one()`. The Frog Wizard's 0/3 body grows into a real attacker as the spellslinger turns pile up. Test: `textbook_tabulator_increment_buffs_self_on_big_spell`. |
-| Wisdom of Ages | {4}{U}{U}{U} | Sorcery |  | Return all instant and sorcery cards from your graveyard to your hand. You have no maximum hand size for the rest of the game. / Exile Wisdom of Ages. | ✅ (was 🟡) | Push (modern_decks): "no maximum hand size for the rest of the game" rider now wired via the new `Effect::SetNoMaxHandSize` primitive (sibling to `Player.no_maximum_hand_size: bool`). The cleanup-step CR 514.1 enforcement in `do_cleanup` (`game/stack.rs`) respects the flag — caster keeps every card. The "exile this" rider is still omitted (sorceries already go to graveyard on resolution; the replay-prevention payoff requires the cast-from-exile pipeline). Tests: `wisdom_of_ages_lets_caster_keep_more_than_seven_cards` (cleanup-step skip verified end-to-end). |
+| Wisdom of Ages | {4}{U}{U}{U} | Sorcery |  | Return all instant and sorcery cards from your graveyard to your hand. You have no maximum hand size for the rest of the game. / Exile Wisdom of Ages. | ✅ (was 🟡) | Push (modern_decks): all three printed clauses now ship. (a) Mass IS-gy-to-hand return. (b) "No max hand size" via `Effect::SetNoMaxHandSize`. (c) "Exile Wisdom of Ages" **now wired** (push: modern_decks current sub-push) via the new `CardDefinition.exile_on_resolve` flag — the resolved sorcery lands in exile, preventing flashback/Past-in-Flames recursion. Tests: `wisdom_of_ages_lets_caster_keep_more_than_seven_cards`, `wisdom_of_ages_exiles_itself_after_resolve_via_exile_on_resolve_flag`. |
 
 ## Black
 
@@ -647,7 +687,7 @@ each 🟡 row are in the tables below.
 | Rearing Embermare | {4}{R} | Creature — Horse Beast | 4/5 | Reach, haste | ✅ | Wired in `catalog::sets::sos::creatures`. |
 | Rubble Rouser | {2}{R} | Creature — Dwarf Sorcerer | 1/4 | When this creature enters, you may discard a card. If you do, draw a card. / {T}, Exile a card from your graveyard: Add {R}. When you do, this creature deals 1 damage to each opponent. | 🟡 | Push XV: ETB rummage now wrapped in `Effect::MayDo` so the "you may discard" optionality is honored. The `{T}, Exile a card from your graveyard:` activated ability is still omitted (engine activated-ability path has no `from-your-graveyard` cost variant — separate from `sac_cost`). |
 | Steal the Show | {2}{R} | Sorcery |  | Choose one or both — / • Target player discards any number of cards, then draws that many cards. / • Steal the Show deals damage equal to the number of instant and sorcery cards in your graveyard to target creature or planeswalker. | ✅ (was 🟡) | Push (modern_decks): mode 0 now uses `Effect::DiscardAnyNumber` (same primitive as Colossus of the Blood Age + Borrowed Knowledge), so the targeted player picks how many cards to discard then draws exactly that many via `Value::CardsDiscardedThisEffect`. Mode 1 reads the IS-graveyard count from the caster's gy and damages a creature/PW. The "choose one or both" rider still collapses to "pick one mode" (no multi-mode-pick primitive that generalises `ChooseN` to per-target slots). Tests: `steal_the_show_mode_zero_discard_any_number_drops_zero_by_default`, `steal_the_show_mode_one_burns_creature_by_is_graveyard_count`. |
-| Strife Scholar // Awaken the Ages | {2}{R} // {5}{R} | Creature — Orc Sorcerer // Sorcery | 3/2 |  | 🟡 | Push XXVI: Front 3/2 Orc Sorcerer with `Keyword::Ward(1)` (keyword tag). Back-face Awaken the Ages at {5}{R} returns all creature cards from your graveyard to the battlefield via `Selector::CardsInZone(Graveyard, Creature)`. The "sacrifice this spell" rider is a no-op (sorceries hit graveyard on resolve anyway). |
+| Strife Scholar // Awaken the Ages | {2}{R} // {5}{R} | Creature — Orc Sorcerer // Sorcery | 3/2 |  | ✅ (was 🟡) | Push (modern_decks): Front 3/2 Orc Sorcerer with `Keyword::Ward(1)` (keyword tag). Back-face Awaken the Ages at {5}{R} returns all creature cards from your graveyard to the battlefield via `Selector::CardsInZone(Graveyard, Creature)`. The "Then exile Awaken the Ages" rider is **now wired** via the new `CardDefinition.exile_on_resolve` flag — the resolved sorcery lands in exile (not graveyard), bumping `cards_exiled_this_turn` for Ennis-style payoffs. Test: `awaken_the_ages_exiles_itself_after_resolve_via_exile_on_resolve_flag`. |
 | Tablet of Discovery | {2}{R} | Artifact |  | When this artifact enters, mill a card. You may play that card this turn. (To mill a card, put the top card of your library into your graveyard.) / {T}: Add {R}. / {T}: Add {R}{R}. Spend this mana only to cast instant and sorcery spells. | 🟡 | Wired in `catalog::sets::sos::artifacts` — ETB Mill 1 + two `{T}: Add {R}` mana abilities. The "may play that card this turn" mill-rider is omitted (no per-card may-play primitive yet). The spend-restriction on the {T}: Add {R}{R} ability is omitted (no spend-restricted mana primitive). |
 | Tackle Artist | {3}{R} | Creature — Orc Sorcerer | 4/3 | Trample / Opus — Whenever you cast an instant or sorcery spell, put a +1/+1 counter on this creature. If five or more mana was spent to cast that spell, put two +1/+1 counters on this creature instead. | ✅ | Push XXIX: Opus rider **now wired** via `shortcut::opus_trigger`. Small body: one +1/+1 counter. Big body (≥5 mana): two +1/+1 counters instead. Tests: `tackle_artist_opus_lands_*_counter*`. |
 | Thunderdrum Soloist | {1}{R} | Creature — Dwarf Bard | 1/3 | Reach / Opus — Whenever you cast an instant or sorcery spell, this creature deals 1 damage to each opponent. If five or more mana was spent to cast that spell, this creature deals 3 damage to each opponent instead. | ✅ | Push XXIX: Opus rider **now wired** via `shortcut::opus_trigger`. Small body: 1 dmg to each opp. Big body (≥5 mana): 3 dmg to each opp. Test: `thunderdrum_soloist_opus_pings_one_at_small_three_at_big`. |
@@ -918,7 +958,7 @@ parity is a matter of porting card factories one at a time.
 | Pop Quiz | {1}{W} | ✅ | Sorcery (Lesson). Draw 2, then put a card from your hand on top of your library. |
 | Mascot Exhibition | {5}{W}{W} | ✅ | Sorcery. Creates a 3/3 Elephant, 2/2 lifelink Cat, and 1/1 flying Bird. |
 | Plumb the Forbidden | {X}{B}{B} | ✅ | Instant. Sacrifice X creatures, draw X cards, lose X life. |
-| Owlin Shieldmage | {3}{W} | 🟡 | 2/3 Bird Wizard, Flash + Flying. Combat-damage prevention ETB is ⏳ (replacement primitive). |
+| Owlin Shieldmage | {3}{W} | ✅ (was 🟡) | Push (modern_decks): 2/3 Bird Wizard with Flash + Flying. The printed "prevent all combat damage this turn" ETB **now lands** via the new `Effect::PreventAllCombatDamageThisTurn` primitive (CR 615.1) + `GameState.prevent_combat_damage_this_turn` flag. Combat damage resolver zeroes attacker→blocker, attacker→player, and blocker→attacker damage; lifelink scales off actual damage dealt so lifelink life-gain zeroes too. The flag clears in `do_cleanup` (CR 514.2). Tests: `owlin_shieldmage_etb_prevents_combat_damage_this_turn` (full e2e: opp swings with bear → flash Shieldmage → 0 damage), `prevent_combat_damage_flag_clears_in_cleanup`. |
 | Frost Trickster | {1}{U} | ✅ | 2/2 Spirit Wizard, Flash + Flying. ETB taps + stuns target opponent's creature. |
 | Body of Research | {4}{G}{U} | ✅ | Push XVI: now uses the new `Value::LibrarySizeOf(You)` primitive — Fractal token enters with one +1/+1 counter per library card, matching the printed Oracle exactly (was approximating via `GraveyardSizeOf` since `LibrarySize` wasn't a primitive). |
 | Show of Confidence | {1}{W} | ✅ | Instant. Adds `StormCount + 1` +1/+1 counters on target creature you control. |
@@ -1025,6 +1065,12 @@ parity is a matter of porting card factories one at a time.
 | Resurgent Belief | {3}{W} | ✅ | Push (modern_decks, NEW, `stx::extras`): {3}{W} Sorcery (STX 2021). "Return all enchantment cards from your graveyard to the battlefield. / Flashback—{4}{W}, exile a card from your graveyard." Mass `Move(all enchantments in your gy → bf)` via `Selector::CardsInZone`. Flashback half is approximated as a plain `Keyword::Flashback` at {4}{W} — the printed "exile a card from your graveyard" additional cost is engine-wide ⏳ (no alt-cost-with-gy-exile primitive). Test: `resurgent_belief_returns_each_enchantment_from_graveyard`. |
 | Academic Dispute | {R} | ✅ | Push (modern_decks, NEW, `stx::extras`): {R} Instant (STX 2021). "Target creature you control gets +1/+0 until end of turn. It fights target creature you don't control. / Learn." Wired as `Seq(PumpPT(+1/+0 EOT, slot 0 friendly), Fight(slot 0 vs auto-picked opp creature), Draw 1 [Learn approximation])`. Test: `academic_dispute_pumps_friendly_and_fights_opp_creature`. |
 | Enthusiastic Study | {1}{G} | ✅ | Push (modern_decks, NEW, `stx::extras`): {1}{G} Instant (STX 2021). "Target creature gets +2/+2 until end of turn. If you've cast another spell this turn, that creature gains trample until end of turn." Wired as `Seq(PumpPT(+2/+2 EOT), If(SpellsCastThisTurnAtLeast(2)) → GrantKeyword(Trample EOT))`. Trample rider gated on the second-spell-this-turn predicate. Tests: `enthusiastic_study_pumps_target_creature_and_grants_trample_after_second_spell`, `enthusiastic_study_skips_trample_on_first_spell_this_turn`. |
+| Light of Promise | {3}{W} | 🟡 | Push (modern_decks, NEW, `stx::extras`): STX 2021. "Whenever you gain life, put that many +1/+1 counters on target creature you control." LifeGained/YourControl trigger drops one +1/+1 counter per fire (engine has no per-event-amount value primitive yet, so the "that many" rider is approximated as one counter per event). For incidental 1-life-per-gain triggers (Pest-style drains) this matches printed Oracle exactly; lump-sum gains (Bookwurm 4-life) under-count. Tests: `light_of_promise_is_a_four_mana_white_enchantment`, `light_of_promise_adds_counter_on_lifegain_event`. |
+| Damnable Pact (STA reprint) | {X}{B}{B} | ✅ | Push (modern_decks, NEW, `stx::extras`): {X}{B}{B} Sorcery (STA reprint, originally Magic Origins). "Target player draws X cards and loses X life." Both clauses read `Value::XFromCost`. At X≥10 this is a kill against a low-life player or a self-mill engine for blue-black control. Test: `damnable_pact_at_x_three_draws_three_loses_three`. |
+| Shore Up (STA reprint) | {U} | ✅ | Push (modern_decks, NEW, `stx::extras`): {U} Instant (STA reprint, originally Modern Horizons). "Untap target permanent. It gains hexproof until end of turn. / Flashback {3}{U}." Combat trick that dodges removal on a critical turn. Tests: `shore_up_untaps_and_grants_hexproof`, `shore_up_has_flashback_keyword`. |
+| Symbol of Strength (STA reprint) | {2}{G} | ✅ | Push (modern_decks, NEW, `stx::extras`): {2}{G} Sorcery (STA reprint, originally Future Sight). "Target creature gets +2/+2 until end of turn. Draw a card. / Flashback {3}{G}." Pump-and-cantrip combat trick. Tests: `symbol_of_strength_pumps_two_two_and_draws`. |
+| Magmatic Sinkhole (STA reprint) | {1}{B}{R} | ✅ | Push (modern_decks, NEW, `stx::extras`): {1}{B}{R} Sorcery (STA reprint). "Surveil 2, then this deals 4 damage to target creature or planeswalker." The Delve alt-cost from some printings is omitted (no exile-from-gy alt-cost-reduction primitive). Body fully ships the printed primary effect. Test: `magmatic_sinkhole_surveils_and_deals_four_damage`. |
+| Sevinne's Reclamation (STA reprint) | {2}{W} | ✅ | Push (modern_decks, NEW, `stx::extras`): {2}{W} Sorcery (STA reprint, originally Commander 2019). "Return target permanent card with mana value 3 or less from your graveyard to the battlefield. If this spell was cast from a graveyard, copy it twice. You may choose new targets for the copies. / Flashback {5}{W}." The "if cast from a graveyard, copy twice" rider is **fully wired** via the existing `Predicate::CastFromGraveyard` primitive (push: modern_decks) — at hand-cast: 1 reanimation; at flashback-cast: 1 reanimation + 2 copies. Tests: `sevinnes_reclamation_returns_low_mv_permanent_from_graveyard`, `sevinnes_reclamation_rejects_high_mv_target`, `sevinnes_reclamation_has_flashback_keyword`. |
 
 ### Shared / multi-college
 

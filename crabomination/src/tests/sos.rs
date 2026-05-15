@@ -147,6 +147,7 @@ fn stand_up_for_yourself_only_targets_power_three_or_more() {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     };
     let mut g = two_player_game();
     let big_id = g.add_card_to_battlefield(1, big);
@@ -1866,6 +1867,7 @@ fn quandrix_charm_mode_1_destroys_enchantment() {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     };
     let mut g = two_player_game();
     let ench = g.add_card_to_battlefield(1, ench_def);
@@ -2221,6 +2223,32 @@ fn wisdom_of_ages_lets_caster_keep_more_than_seven_cards() {
         "no cards discarded under the no-max-hand-size flag");
 }
 
+#[test]
+fn wisdom_of_ages_exiles_itself_after_resolve_via_exile_on_resolve_flag() {
+    // Push (modern_decks): the printed "Exile Wisdom of Ages" rider
+    // now lands via the new `CardDefinition.exile_on_resolve` flag —
+    // the resolved sorcery goes to exile, not graveyard, so it can't
+    // be flashbacked/Past-in-Flames-looped.
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::wisdom_of_ages());
+    g.players[0].mana_pool.add(Color::Blue, 3);
+    g.players[0].mana_pool.add_colorless(4);
+    let exile_before = g.exile.len();
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Wisdom of Ages castable for {4}{U}{U}{U}");
+    drain_stack(&mut g);
+
+    assert!(g.exile.iter().any(|c| c.id == id),
+        "Wisdom of Ages should land in exile after resolve");
+    assert_eq!(g.exile.len(), exile_before + 1,
+        "Exile zone gained one card");
+    assert!(!g.players[0].graveyard.iter().any(|c| c.id == id),
+        "Wisdom of Ages should NOT be in graveyard");
+}
+
 // ── Rapturous Moment ────────────────────────────────────────────────────────
 
 #[test]
@@ -2323,6 +2351,7 @@ fn arnyn_drains_when_a_one_power_creature_you_control_dies() {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     };
     let weak_id = g.add_card_to_battlefield(0, weak);
 
@@ -5229,6 +5258,36 @@ fn divergent_equation_returns_instant_from_graveyard() {
     assert!(g.players[0].hand.iter().any(|c| c.id == bolt_id), "Bolt in hand");
     assert!(!g.players[0].graveyard.iter().any(|c| c.id == bolt_id),
         "Bolt left graveyard");
+}
+
+#[test]
+fn divergent_equation_exiles_itself_via_exile_on_resolve_flag() {
+    // Push (modern_decks): the printed "Exile Divergent Equation" rider
+    // now lands via the new `CardDefinition.exile_on_resolve` flag —
+    // the resolved instant goes to exile, not graveyard, so it can't
+    // be flashbacked / Past-in-Flames-looped.
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::divergent_equation());
+    let bolt_id = g.next_id();
+    let mut bolt = crate::card::CardInstance::new(bolt_id, catalog::lightning_bolt(), 0);
+    bolt.controller = 0;
+    g.players[0].graveyard.push(bolt);
+
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let exile_before = g.exile.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bolt_id)), additional_targets: vec![], mode: None, x_value: Some(1),
+    })
+    .expect("Divergent Equation castable for {X=1}{X=1}{U}");
+    drain_stack(&mut g);
+
+    assert!(g.exile.iter().any(|c| c.id == id),
+        "Divergent Equation should land in exile after resolve");
+    assert_eq!(g.exile.len(), exile_before + 1,
+        "Exile zone gained one card");
+    assert!(!g.players[0].graveyard.iter().any(|c| c.id == id),
+        "Divergent Equation should NOT be in graveyard");
 }
 
 #[test]
@@ -9331,6 +9390,40 @@ fn strife_scholar_back_face_returns_creatures_from_graveyard_to_battlefield() {
         "First bear returned via Awaken the Ages");
     assert!(g.battlefield.iter().any(|c| c.id == bear2),
         "Second bear returned via Awaken the Ages");
+}
+
+#[test]
+fn awaken_the_ages_exiles_itself_after_resolve_via_exile_on_resolve_flag() {
+    // Push (modern_decks): the "Then exile Awaken the Ages" printed rider
+    // now routes the resolved sorcery to exile (not graveyard) via the
+    // new `CardDefinition.exile_on_resolve` flag. The bears reanimate
+    // as expected; the spell card lands in exile.
+    let mut g = two_player_game();
+    let _bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::strife_scholar());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(5);
+    let gy_before = g.players[0].graveyard.len();
+    let exile_before = g.exile.len();
+
+    g.perform_action(GameAction::CastSpellBack {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Awaken the Ages castable for {5}{R}");
+    drain_stack(&mut g);
+
+    // Spell card itself went to exile, not graveyard. Reanimated bear
+    // is now on the battlefield (it was removed from graveyard) — net
+    // graveyard delta = -1 (the bear left).
+    assert!(g.exile.iter().any(|c| c.id == id),
+        "Awaken the Ages should be in the exile zone after resolution");
+    assert_eq!(g.exile.len(), exile_before + 1,
+        "Exile zone gained one card (the spell)");
+    assert_eq!(g.players[0].graveyard.len(), gy_before - 1,
+        "Graveyard lost the reanimated bear; spell did NOT land in gy");
+    // Bump on cards_exiled_this_turn so Ennis-style payoffs see it.
+    assert!(g.players[0].cards_exiled_this_turn >= 1,
+        "cards_exiled_this_turn should bump");
 }
 
 #[test]

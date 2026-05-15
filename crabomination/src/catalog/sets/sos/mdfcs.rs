@@ -69,6 +69,7 @@ fn vanilla_front(
         back_face: Some(Box::new(back)),
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -98,6 +99,7 @@ fn spell_back(
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -1209,7 +1211,7 @@ pub fn grave_researcher() -> CardDefinition {
 /// keyword primitive.
 pub fn strife_scholar() -> CardDefinition {
     use crate::card::Zone;
-    let back = spell_back(
+    let mut back = spell_back(
         "Awaken the Ages",
         cost(&[generic(5), r()]),
         CardType::Sorcery,
@@ -1225,6 +1227,10 @@ pub fn strife_scholar() -> CardDefinition {
             },
         },
     );
+    // Push (modern_decks): "Then exile Awaken the Ages" — the printed
+    // rider now routes the resolved sorcery to exile instead of the
+    // graveyard via the new `CardDefinition.exile_on_resolve` flag.
+    back.exile_on_resolve = true;
     vanilla_front(
         "Strife Scholar",
         cost(&[generic(2), r()]),

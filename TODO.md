@@ -11,6 +11,37 @@ Periodic spot-check of the rules document
 (`crabomination/MagicCompRules 20260116.txt`). Each rule below has a
 status tag (✅ wired, 🟡 partial, ⏳ todo) plus a short note.
 
+- 🟡 **CR 615.1 — Prevention effects** (push modern_decks audit,
+  claude/modern_decks branch): "Some continuous effects are prevention
+  effects. Like replacement effects (see rule 614), prevention effects
+  apply continuously as events happen—they aren't locked in ahead of
+  time. Such effects watch for a damage event that would happen and
+  completely or partially prevent the damage that would be dealt.
+  They act like 'shields' around whatever they're affecting." The
+  engine now has a **partial** prevention layer for combat damage
+  specifically: `Effect::PreventAllCombatDamageThisTurn` sets the
+  `GameState.prevent_combat_damage_this_turn` flag; the combat damage
+  resolver (`game/combat.rs::resolve_combat_damage_with_filter`)
+  reads the flag and zeroes attacker→blocker, attacker→player, and
+  blocker→attacker assignments (lifelink scales off actual damage
+  dealt per CR 702.15a, so lifelink life-gain is zeroed too). The
+  flag clears in `do_cleanup` (CR 514.2) alongside other
+  until-end-of-turn state. Wires Owlin Shieldmage's "When this
+  enters, prevent all combat damage that would be dealt this turn"
+  ETB. Tests: `tests::stx::owlin_shieldmage_etb_prevents_combat_damage_this_turn`,
+  `tests::stx::prevent_combat_damage_flag_clears_in_cleanup`.
+  Gaps still tracked: (a) per-source prevention shields (CR 615.7
+  "next N damage from source") need a list of pending shields per
+  player/creature; (b) "Damage can't be prevented" rider (CR 615.12)
+  on cards like Heated Debate / Skullcrack is currently a no-op
+  because there's no general prevention layer beyond the
+  combat-damage flag; (c) non-combat damage prevention (Holy Day-
+  style fogs hit combat damage only, but Reverse Damage-style cards
+  also intercept ability/spell damage); (d) CR 615.13 "triggered
+  abilities that fire when damage is prevented" need a
+  `DamagePrevented` event emission. The combat-damage flag handles
+  the headline play pattern for fog effects.
+
 - ✅ **CR 120.5 — Damage doesn't destroy a creature directly; SBA
   does** (push modern_decks audit, claude/modern_decks branch):
   "Damage dealt to a creature, planeswalker, or battle doesn't destroy
@@ -1262,13 +1293,46 @@ status tag (✅ wired, 🟡 partial, ⏳ todo) plus a short note.
 ## Engine — Missing Mechanics
 
 ### Replacement Effects
-The engine has no replacement-effect primitive.  Many real cards need one:
+The engine has no general replacement-effect primitive.  Many real cards need one:
 - ETB replacements (Containment Priest, Torpor Orb, Rest in Peace)
-- Damage replacements (protection, preventing damage)
+- Damage replacements (protection, preventing damage):
+  - 🟡 **Combat damage prevention** (Owlin Shieldmage, Holy Day, Constant
+    Mists) is partially supported via the new `Effect::PreventAllCombatDamage
+    ThisTurn` primitive + `GameState.prevent_combat_damage_this_turn` flag
+    (CR 615.1). Per-source / per-N shields (Wojek Apothecary, Stave Off,
+    Lapse of Certainty) are still ⏳. Non-combat damage prevention
+    (Reverse Damage, Mending Hands) is also ⏳.
 - Draw replacements (Leyline of the Void)
 - Death replacements (Kalitas, Oubliette)
 Until this lands, cards with "instead" clauses are either stubbed or collapsed
 into a close approximation.
+
+### Per-Activation Mana-Spent Introspection
+Reckless Amplimancer reads "+X/+X where X is the amount of mana spent to
+activate this ability". The engine tracks per-cast `mana_spent` on
+`StackItem::Spell` and per-trigger on `StackItem::Trigger`, but the
+activated-ability path (`activate_ability`) doesn't capture mana spent.
+Adding this requires:
+1. An `x_value: Option<u32>` field on `GameAction::ActivateAbility` for
+   X-cost activations (parallel to `CastSpell.x_value`).
+2. Threading `mana_spent` through the activation's `StackItem::Trigger`
+   construction in `activate_ability` (the field exists but is always 0).
+3. Wiring `Value::CastSpellManaSpent` to read from the stack item.
+Then Reckless Amplimancer's +3/+3 hardcode can be replaced with
+`Value::CastSpellManaSpent` for printed-Oracle parity. Tracked as engine
+work — same shape would unlock other X-cost activations (Berta's
+{X},{T}: Create Fractal with X counters).
+
+### Exile-on-Resolve for Instants/Sorceries ✅ DONE
+~~Cards like Awaken the Ages, Divergent Equation, and Wisdom of Ages
+print "Then exile this spell" — the resolved instant/sorcery should
+land in exile instead of its owner's graveyard. Currently approximated
+as a no-op (sorceries naturally go to graveyard on resolve).~~ Done in
+push (modern_decks): `CardDefinition.exile_on_resolve: bool` flag —
+`continue_spell_resolution` routes the card to exile when set, bumping
+`cards_exiled_this_turn` so Ennis-style payoffs see it. Wired Awaken
+the Ages (Strife Scholar back-face), Divergent Equation, and Wisdom of
+Ages. Tests in `tests::sos`.
 
 ### Cast-From-Exile Pipeline
 Many cards exile a spell/card temporarily and later cast it (Foretell,

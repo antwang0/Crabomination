@@ -1744,6 +1744,13 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::PreventAllCombatDamageThisTurn => {
+                // CR 615.1 — set the engine-wide flag the combat damage
+                // resolver consults. Cleared in `do_cleanup` (CR 514.2).
+                self.prevent_combat_damage_this_turn = true;
+                Ok(())
+            }
+
             Effect::WinGame { who } => {
                 // CR 104.2a — "you win the game". Resolve `who` to a single
                 // player and eliminate every other (non-eliminated) player.

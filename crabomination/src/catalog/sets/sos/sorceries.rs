@@ -167,6 +167,7 @@ pub fn dig_site_inventory() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -227,6 +228,7 @@ pub fn daydream() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -292,6 +294,7 @@ pub fn practiced_offense() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -375,6 +378,7 @@ pub fn antiquities_on_the_loose() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -410,6 +414,7 @@ pub fn group_project() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -451,6 +456,7 @@ pub fn procrastinate() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -488,6 +494,7 @@ pub fn mathemagics() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -536,6 +543,7 @@ pub fn oracles_restoration() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -580,6 +588,7 @@ pub fn send_in_the_pest() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -625,6 +634,7 @@ pub fn dinas_guidance() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -662,6 +672,7 @@ pub fn grapple_with_death() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -713,6 +724,7 @@ pub fn pull_from_the_grave() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -754,6 +766,7 @@ pub fn end_of_the_hunt() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -816,6 +829,7 @@ pub fn vicious_rivalry() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -889,6 +903,7 @@ pub fn borrowed_knowledge() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -949,6 +964,7 @@ pub fn pursue_the_past() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -1001,6 +1017,7 @@ pub fn render_speechless() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -1056,6 +1073,7 @@ pub fn moment_of_reckoning() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -1091,6 +1109,7 @@ pub fn arcane_omens() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -1144,6 +1163,7 @@ pub fn together_as_one() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -1152,15 +1172,15 @@ pub fn together_as_one() -> CardDefinition {
 /// hand. You have no maximum hand size for the rest of the game. /
 /// Exile Wisdom of Ages."
 ///
-/// Push (modern_decks): "no maximum hand size for the rest of the
-/// game" is now wired via the new `Effect::SetNoMaxHandSize` primitive
-/// (sibling to `Player.no_maximum_hand_size: bool`). The cleanup-step
-/// CR 514.1 enforcement in `do_cleanup` (`game/stack.rs`) now respects
-/// the flag — caster keeps every card. The "exile this" rider is still
-/// omitted (sorceries already go to graveyard on resolution; the
-/// special exile clause is for replay-prevention which we don't have
-/// any payoff for yet — see Improvisation Capstone for the related
-/// cast-from-exile pipeline gap).
+/// ✅ (push: modern_decks) — all three printed clauses now ship.
+/// (a) Mass IS-gy-to-hand return via `Selector::CardsInZone(Graveyard,
+/// Instant | Sorcery)`. (b) "No max hand size" via the
+/// `Effect::SetNoMaxHandSize` primitive — backed by
+/// `Player.no_maximum_hand_size: bool`, honored by `do_cleanup`'s
+/// CR 514.1 discard-down enforcement. (c) "Exile Wisdom of Ages" now
+/// wired via the new `CardDefinition.exile_on_resolve` flag — the
+/// resolved sorcery lands in exile, not the graveyard, preventing
+/// flashback/Past-in-Flames recursion of the spell itself.
 pub fn wisdom_of_ages() -> CardDefinition {
     use crate::card::Zone;
     use crate::effect::ZoneDest;
@@ -1195,6 +1215,7 @@ pub fn wisdom_of_ages() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: true,
     }
 }
 
@@ -1247,6 +1268,7 @@ pub fn rapturous_moment() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -1288,6 +1310,7 @@ pub fn visionarys_dance() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -1329,6 +1352,7 @@ pub fn splatter_technique() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -1385,6 +1409,7 @@ pub fn cost_of_brilliance() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -1423,6 +1448,7 @@ pub fn mind_roots() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -1460,6 +1486,7 @@ pub fn mind_into_matter() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -1510,6 +1537,7 @@ pub fn growth_curve() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -1577,6 +1605,7 @@ pub fn killians_confidence() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -1628,6 +1657,7 @@ pub fn planar_engineering() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -1686,6 +1716,7 @@ pub fn pox_plague() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -1738,6 +1769,7 @@ pub fn withering_curse() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -1791,6 +1823,7 @@ pub fn root_manipulation() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -1856,6 +1889,7 @@ pub fn chelonian_tackle() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -1926,6 +1960,7 @@ pub fn steal_the_show() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -1990,6 +2025,7 @@ pub fn snarl_song() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -2041,6 +2077,7 @@ pub fn wild_hypothesis() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -2127,6 +2164,7 @@ pub fn artistic_process() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -2175,6 +2213,7 @@ pub fn decorum_dissertation() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -2218,6 +2257,7 @@ pub fn germination_practicum() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -2257,6 +2297,7 @@ pub fn restoration_seminar() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -2306,6 +2347,7 @@ pub fn zimones_experiment() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -2374,6 +2416,7 @@ pub fn flow_state() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -2444,6 +2487,7 @@ pub fn follow_the_lumarets() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -2507,6 +2551,7 @@ pub fn social_snub() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -2575,6 +2620,7 @@ pub fn molten_note() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -2654,6 +2700,7 @@ pub fn fix_whats_broken() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -2716,6 +2763,7 @@ pub fn echocasting_symposium() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -2767,6 +2815,7 @@ pub fn archaics_agony() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -2804,5 +2853,6 @@ pub fn applied_geometry() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }

@@ -26,5 +26,6 @@ pub fn gaeas_skyfolk() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }

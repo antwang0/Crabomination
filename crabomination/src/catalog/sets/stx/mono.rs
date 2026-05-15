@@ -57,6 +57,7 @@ pub fn pop_quiz() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -146,6 +147,7 @@ pub fn mascot_exhibition() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -195,6 +197,7 @@ pub fn plumb_the_forbidden() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -202,9 +205,21 @@ pub fn plumb_the_forbidden() -> CardDefinition {
 
 /// Owlin Shieldmage — {3}{W} Creature — Bird Wizard. Flash, flying, 2/3.
 /// "When this enters, prevent all combat damage that would be dealt this
-/// turn." We ship the flash flyer body; damage prevention requires a
-/// replacement primitive the engine doesn't yet have.
+/// turn."
+///
+/// ✅ ETB trigger now wired via the new `Effect::PreventAllCombat
+/// DamageThisTurn` primitive (CR 615.1 replacement effect). The combat
+/// damage resolver consults the `prevent_combat_damage_this_turn` flag
+/// and zeroes both attacker→blocker/player and blocker→attacker damage
+/// (plus the corresponding lifelink). The flag clears in `do_cleanup`
+/// alongside the other until-end-of-turn state. The "this turn"
+/// scoping handles flashing in at end of opponent's combat to prevent
+/// the damage about to be dealt in the **same** combat step (the
+/// `compute_battlefield` + combat-damage resolver reads the live game
+/// state, so the ETB triggered ability resolving before damage zeroes
+/// the assignment).
 pub fn owlin_shieldmage() -> CardDefinition {
+    use crate::card::{EventKind, EventScope, EventSpec, TriggeredAbility};
     CardDefinition {
         name: "Owlin Shieldmage",
         cost: cost(&[generic(3), w()]),
@@ -219,7 +234,10 @@ pub fn owlin_shieldmage() -> CardDefinition {
         keywords: vec![Keyword::Flash, Keyword::Flying],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::PreventAllCombatDamageThisTurn,
+        }],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -227,6 +245,7 @@ pub fn owlin_shieldmage() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -277,6 +296,7 @@ pub fn frost_trickster() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -336,6 +356,7 @@ pub fn body_of_research() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -373,6 +394,7 @@ pub fn show_of_confidence() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -407,6 +429,7 @@ pub fn bury_in_books() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -453,6 +476,7 @@ pub fn test_of_talents() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -539,6 +563,7 @@ pub fn multiple_choice() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -573,6 +598,7 @@ pub fn quick_study() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -618,6 +644,7 @@ pub fn lash_of_malice() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -704,5 +731,6 @@ pub fn big_play() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }

@@ -958,6 +958,16 @@ pub enum Effect {
     /// winner on the next SBA pass. No CR violation: the state-based
     /// action approach matches CR 104.2a's "you win the game" wording.
     WinGame { who: PlayerRef },
+
+    /// "Prevent all combat damage that would be dealt this turn." Sets
+    /// `GameState.prevent_combat_damage_this_turn = true`; combat
+    /// damage resolution (`resolve_combat_damage_with_filter`) reads
+    /// the flag and zeroes every assigned damage value (CR 615.1
+    /// replacement-effect emulation — see the note on the field). The
+    /// flag clears in `do_cleanup` alongside other until-end-of-turn
+    /// state. Used by Owlin Shieldmage's ETB and the Holy Day / fog
+    /// family of effects.
+    PreventAllCombatDamageThisTurn,
 }
 
 /// Lightweight mirror of `crate::game::types::DelayedKind` for use inside
@@ -1186,6 +1196,7 @@ impl Effect {
             }
             Effect::NameCreatureType { what } => sel_has_target(what),
             Effect::WinGame { who } => player_has_target(who),
+            Effect::PreventAllCombatDamageThisTurn => false,
         }
     }
 

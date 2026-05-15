@@ -58,6 +58,7 @@ pub fn bookwurm() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -105,6 +106,7 @@ pub fn field_trip() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -166,6 +168,7 @@ pub fn reduce_to_memory() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -217,6 +220,7 @@ pub fn baleful_mastery() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -259,6 +263,7 @@ pub fn igneous_inspiration() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -311,6 +316,7 @@ pub fn combat_professor() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -349,6 +355,7 @@ pub fn conspiracy_theorist() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -396,6 +403,7 @@ pub fn beaming_defiance() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -470,6 +478,7 @@ pub fn spell_satchel() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -511,6 +520,7 @@ pub fn excavated_wall() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -571,6 +581,7 @@ pub fn snow_day() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -615,6 +626,7 @@ pub fn curate() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -660,6 +672,7 @@ pub fn solve_the_equation() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -719,6 +732,7 @@ pub fn resculpt() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -755,6 +769,7 @@ pub fn mortality_spear() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -807,6 +822,7 @@ pub fn daemogoth_titan() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -874,6 +890,7 @@ pub fn daemogoth_woe_eater() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -909,6 +926,7 @@ pub fn honor_troll() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -958,6 +976,7 @@ pub fn quandrix_cultivator() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -1016,6 +1035,7 @@ pub fn hofri_ghostforge() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -1066,6 +1086,7 @@ pub fn tempted_by_the_oriq() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -1123,6 +1144,7 @@ pub fn confront_the_past() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -1163,6 +1185,7 @@ pub fn specter_of_the_fens() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -1207,6 +1230,7 @@ pub fn mascot_interception() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -1246,6 +1270,7 @@ pub fn twinscroll_shaman() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -1286,6 +1311,7 @@ pub fn practical_research() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -1341,6 +1367,7 @@ pub fn hall_of_oracles() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -1405,6 +1432,7 @@ pub fn star_pupil() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -1439,6 +1467,7 @@ pub fn ageless_guardian() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -1483,6 +1512,7 @@ pub fn returned_pastcaller() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -1538,6 +1568,7 @@ pub fn letter_of_acceptance() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -1582,6 +1613,7 @@ pub fn charge_through() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -1633,6 +1665,7 @@ pub fn devious_cover_up() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -1699,6 +1732,7 @@ pub fn manifestation_sage() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -1746,6 +1780,7 @@ pub fn crackle_with_power() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -1803,6 +1838,7 @@ pub fn mentors_guidance() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -1863,6 +1899,7 @@ pub fn dragonsguard_elite() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -1956,6 +1993,7 @@ pub fn quintorius_field_historian() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -2004,6 +2042,7 @@ pub fn galvanic_iteration() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -2048,6 +2087,7 @@ pub fn expressive_iteration() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -2110,6 +2150,7 @@ pub fn magma_opus() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -2163,6 +2204,7 @@ pub fn reckless_amplimancer() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -2208,6 +2250,7 @@ pub fn crashing_drawbridge() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -2259,6 +2302,7 @@ pub fn eyetwitch_brood() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -2308,6 +2352,7 @@ pub fn first_day_of_class() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -2368,6 +2413,7 @@ pub fn verdant_mastery() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -2420,6 +2466,7 @@ pub fn sacred_fire() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -2463,6 +2510,7 @@ pub fn rip_apart() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -2495,6 +2543,7 @@ pub fn codespell_cleric() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -2539,6 +2588,7 @@ pub fn sparkmage_apprentice() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -2576,6 +2626,7 @@ pub fn karok_wrangler() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -2658,6 +2709,7 @@ pub fn witherbloom_command() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -2749,6 +2801,7 @@ pub fn lorehold_command() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -2821,6 +2874,7 @@ pub fn quandrix_command() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -2896,6 +2950,7 @@ pub fn silverquill_command() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -2979,6 +3034,7 @@ pub fn prismari_command() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -3015,6 +3071,7 @@ pub fn defend_the_campus() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -3052,6 +3109,7 @@ pub fn hall_monitor() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -3098,6 +3156,7 @@ pub fn stonebinders_familiar() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -3144,6 +3203,7 @@ pub fn necrotic_fumes() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -3186,6 +3246,7 @@ pub fn make_your_mark() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -3225,6 +3286,7 @@ pub fn containment_breach() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -3270,6 +3332,7 @@ pub fn burrog_befuddler() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -3315,6 +3378,7 @@ pub fn mage_hunters_mark() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -3364,6 +3428,7 @@ pub fn mage_duel() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -3401,6 +3466,7 @@ pub fn eccentric_apprentice() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -3459,6 +3525,7 @@ pub fn tezzerets_gambit() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -3525,6 +3592,7 @@ pub fn wandering_archaic() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -3595,6 +3663,7 @@ pub fn illuminate_history() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -3641,6 +3710,7 @@ pub fn take_up_the_shield() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -3698,6 +3768,7 @@ pub fn star_pupils_papers() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -3756,6 +3827,7 @@ fn snarl_land(
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -3880,6 +3952,7 @@ pub fn dragons_approach() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -3926,6 +3999,7 @@ pub fn defiant_strike() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -3968,6 +4042,7 @@ pub fn divine_gambit() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -4006,6 +4081,7 @@ pub fn cram_session() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -4056,6 +4132,7 @@ pub fn soothsayer_adept() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -4119,6 +4196,7 @@ pub fn crux_of_fate() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -4209,6 +4287,7 @@ pub fn plargg_dean_of_chaos() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -4275,6 +4354,7 @@ pub fn pestilent_cauldron() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -4321,6 +4401,7 @@ pub fn augusta_dean_of_order() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -4353,6 +4434,7 @@ fn diamond(name: &'static str, color: Color) -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -4426,6 +4508,7 @@ pub fn goblin_lore() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -4464,6 +4547,7 @@ pub fn whirlwind_denial() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -4501,6 +4585,7 @@ pub fn eliminate() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -4542,6 +4627,7 @@ pub fn pull_from_tomorrow() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -4583,6 +4669,7 @@ pub fn burst_lightning() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -4654,6 +4741,7 @@ pub fn postmortem_lunge() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -4693,6 +4781,7 @@ pub fn curious_cryomancer() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -4744,6 +4833,7 @@ pub fn verdant_pledgemage() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -4785,6 +4875,7 @@ pub fn channeled_force() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -4836,6 +4927,7 @@ pub fn stonebound_mentor() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -4893,6 +4985,7 @@ pub fn inscription_of_insight() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -4948,6 +5041,7 @@ pub fn eureka_moment() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -4992,6 +5086,7 @@ pub fn teach_by_example() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -5064,6 +5159,7 @@ pub fn manifold_key() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -5118,6 +5214,7 @@ pub fn leyline_invocation() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -5159,6 +5256,7 @@ pub fn spitfire_lagac() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -5207,6 +5305,7 @@ pub fn settle_the_score() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -5249,6 +5348,7 @@ pub fn exsanguinate() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -5302,6 +5402,7 @@ pub fn fire_prophecy() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -5353,6 +5454,7 @@ pub fn divide_by_zero() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -5424,6 +5526,7 @@ pub fn maelstrom_muse() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -5488,6 +5591,7 @@ pub fn approach_of_the_second_sun() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -5529,6 +5633,7 @@ pub fn resurrection() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -5573,6 +5678,7 @@ pub fn adventurous_impulse() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -5654,6 +5760,7 @@ pub fn pursuit_of_knowledge() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -5691,6 +5798,7 @@ pub fn eladamris_call() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -5732,6 +5840,7 @@ pub fn yawning_fissure() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -5787,6 +5896,7 @@ pub fn cleansing_wildfire() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -5836,6 +5946,7 @@ pub fn tendrils_of_agony() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -5874,6 +5985,7 @@ pub fn saw_it_coming() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -5950,6 +6062,7 @@ pub fn dueling_coach() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -6008,6 +6121,7 @@ pub fn increasing_vengeance() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -6044,6 +6158,7 @@ pub fn quench() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -6117,6 +6232,7 @@ pub fn spined_karok() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -6170,6 +6286,7 @@ pub fn inspiring_veteran() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -6225,6 +6342,7 @@ pub fn snipe() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -6288,6 +6406,7 @@ pub fn witherbloom_pest_eater() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -6334,6 +6453,7 @@ pub fn inkmoth_initiate() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -6375,6 +6495,7 @@ pub fn stoic_tutelage() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -6421,6 +6542,7 @@ pub fn lorehold_recovery() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -6470,6 +6592,7 @@ pub fn quandrix_surge() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -6511,6 +6634,7 @@ pub fn magecraft_insight() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -6555,6 +6679,7 @@ pub fn sparkmages_mantra() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -6592,6 +6717,7 @@ pub fn witherbloom_drainage() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -6635,6 +6761,7 @@ pub fn mizzium_mortars() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -6686,6 +6813,7 @@ pub fn electrolyze() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -6738,6 +6866,7 @@ pub fn show_of_aggression() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -6797,6 +6926,7 @@ pub fn past_in_flames() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -6845,6 +6975,7 @@ pub fn inspired_idea() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -6904,6 +7035,7 @@ pub fn resurgent_belief() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -6964,6 +7096,7 @@ pub fn academic_dispute() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -7020,6 +7153,7 @@ pub fn enthusiastic_study() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -7077,6 +7211,7 @@ pub fn forked_bolt() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -7116,6 +7251,7 @@ pub fn storms_wrath() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -7159,6 +7295,7 @@ pub fn cinderclasm() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -7205,6 +7342,7 @@ pub fn cathartic_pyre() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -7241,6 +7379,7 @@ pub fn stern_dismissal() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -7279,6 +7418,7 @@ pub fn krosan_grip() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -7348,6 +7488,7 @@ pub fn sublime_epiphany() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -7415,6 +7556,7 @@ pub fn persist() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -7456,6 +7598,7 @@ pub fn bone_to_ash() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -7508,6 +7651,7 @@ pub fn ingenious_mastery() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -7561,6 +7705,300 @@ pub fn acolyte_of_affliction() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Damnable Pact (STA reprint, Magic Origins) ─────────────────────────────
+
+/// Damnable Pact — {X}{B}{B} Sorcery (STA reprint, originally Magic Origins).
+/// "Target player draws X cards and loses X life."
+///
+/// ✅ Single multi-effect resolution: target player draws X then loses X life
+/// (with X = `Value::XFromCost`). Both clauses read the same X, so the
+/// spell self-targets at X=0 trivially and scales for the printed
+/// "X = cost X paid" exactly. The body is the textbook printed Oracle.
+pub fn damnable_pact() -> CardDefinition {
+    CardDefinition {
+        name: "Damnable Pact",
+        cost: cost(&[generic(0), b(), b()]), // X is added at cast time via `x_value`
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Draw {
+                who: Selector::Player(PlayerRef::Target(0)),
+                amount: Value::XFromCost,
+            },
+            Effect::LoseLife {
+                who: Selector::Player(PlayerRef::Target(0)),
+                amount: Value::XFromCost,
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Shore Up (STA reprint, Modern Horizons) ────────────────────────────────
+
+/// Shore Up — {U} Instant (STA reprint, originally Modern Horizons).
+/// "Untap target permanent. It gains hexproof until end of turn. /
+/// Flashback {3}{U}."
+///
+/// ✅ Body: `Seq(Untap target permanent, GrantKeyword(Hexproof EOT))`.
+/// Flashback {3}{U} wired via `Keyword::Flashback`. A cheap counterspell-
+/// dodge for an utility creature on a critical turn.
+pub fn shore_up() -> CardDefinition {
+    CardDefinition {
+        name: "Shore Up",
+        cost: cost(&[u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![Keyword::Flashback(cost(&[generic(3), u()]))],
+        effect: Effect::Seq(vec![
+            Effect::Untap {
+                what: target_filtered(SelectionRequirement::Permanent),
+                up_to: None,
+            },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::Hexproof,
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Symbol of Strength (STA reprint, Future Sight) ─────────────────────────
+
+/// Symbol of Strength — {2}{G} Sorcery (STA reprint, originally Future Sight).
+/// "Target creature gets +2/+2 until end of turn. Draw a card. /
+/// Flashback {3}{G}."
+///
+/// ✅ Body: pump +2/+2 EOT + draw 1. Flashback {3}{G} wired via
+/// `Keyword::Flashback`. A pump-and-cantrip that doubles as a graveyard
+/// engine — combo well with Magecraft and Lorehold "cards leave gy" payoffs.
+pub fn symbol_of_strength() -> CardDefinition {
+    CardDefinition {
+        name: "Symbol of Strength",
+        cost: cost(&[generic(2), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![Keyword::Flashback(cost(&[generic(3), g()]))],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(2),
+                toughness: Value::Const(2),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Magmatic Sinkhole (STA reprint, Modern Horizons 2) ─────────────────────
+
+/// Magmatic Sinkhole — {1}{B}{R} Sorcery (STA reprint). "Surveil 2, then
+/// Magmatic Sinkhole deals 4 damage to target creature or planeswalker."
+///
+/// ✅ Wired as `Seq(Surveil 2 → DealDamage 4 to Creature/PW)`. The
+/// "delve" alternative cost rider from the original printing is omitted
+/// (no exile-from-gy alt-cost-cmc-reduction primitive). Body fully ships
+/// the printed primary effect at the base cost.
+///
+/// Note: in some real printings Magmatic Sinkhole has Delve; the STA
+/// reprint exists at {1}{B}{R} without Delve.
+pub fn magmatic_sinkhole() -> CardDefinition {
+    CardDefinition {
+        name: "Magmatic Sinkhole",
+        cost: cost(&[generic(1), b(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Surveil {
+                who: PlayerRef::You,
+                amount: Value::Const(2),
+            },
+            Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::Const(4),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Sevinne's Reclamation (STA reprint, Commander 2019) ────────────────────
+
+/// Sevinne's Reclamation — {2}{W} Sorcery (STA reprint, originally
+/// Commander 2019). "Return target permanent card with mana value 3 or
+/// less from your graveyard to the battlefield. If this spell was cast
+/// from a graveyard, copy it twice. You may choose new targets for the
+/// copies. / Flashback {5}{W}."
+///
+/// ✅ Body: `Move target permanent card (MV ≤ 3, gy → battlefield)`
+/// with the "if cast from a graveyard, copy twice" rider wired via the
+/// `Predicate::CastFromGraveyard` primitive (push: modern_decks).
+/// Auto-target picks the highest-MV qualifying card; the copy-twice
+/// branch fires only when the spell was cast from the graveyard (i.e.
+/// via its Flashback cost), in which case 2 additional copies of the
+/// spell go on the stack. Flashback {5}{W} wired via `Keyword::Flashback`.
+pub fn sevinnes_reclamation() -> CardDefinition {
+    CardDefinition {
+        name: "Sevinne's Reclamation",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![Keyword::Flashback(cost(&[generic(5), w()]))],
+        effect: Effect::Seq(vec![
+            // Mainline: reanimate a ≤3-MV permanent card from your gy.
+            Effect::Move {
+                what: target_filtered(
+                    SelectionRequirement::Permanent.and(SelectionRequirement::ManaValueAtMost(3)),
+                ),
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: false,
+                },
+            },
+            // "If this spell was cast from a graveyard, copy it twice."
+            // (Predicate::CastFromGraveyard reads `EffectContext.cast_from_hand`,
+            // which is false for Flashback casts → graveyard cast → copy twice.)
+            Effect::If {
+                cond: Predicate::CastFromGraveyard,
+                then: Box::new(Effect::CopySpell {
+                    what: Selector::This,
+                    count: Value::Const(2),
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Memory Lapse (STA reprint, Homelands) ──────────────────────────────────
+//
+// `Memory Lapse` is already wired in `catalog::sets::mod_set::instants`
+// at an earlier push. Same factory serves both reprints.
+//
+// `Mystical Dispute` is already wired in `catalog::sets::decks::spells`.
+// No new entry here; documented for the STA reprint table.
+
+// ── Light of Promise (STX) ──────────────────────────────────────────────────
+
+/// Light of Promise — {3}{W} Enchantment (STX 2021).
+/// "Whenever you gain life, put that many +1/+1 counters on target
+/// creature you control."
+///
+/// 🟡 Approximated: trigger fires on each `LifeGained/YourControl`
+/// event and places exactly 1 +1/+1 counter (printed "that many"
+/// reads the per-event amount; the engine has no `Value::Trigger
+/// EventAmount` primitive yet, so the rider scales per *fire* count
+/// not per gained-life count). For incidental Pest-style 1-life
+/// triggers this matches printed Oracle exactly. For lump-sum gains
+/// (Bookwurm's "gain 4 life"), the printed rider would yield 4
+/// counters; we ship 1 counter per fire, an under-count. The body's
+/// printed enchantment ability is otherwise wired.
+pub fn light_of_promise() -> CardDefinition {
+    CardDefinition {
+        name: "Light of Promise",
+        cost: cost(&[generic(3), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::LifeGained, EventScope::YourControl),
+            effect: Effect::AddCounter {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
 
@@ -7613,5 +8051,6 @@ pub fn skywarp_skaab() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        exile_on_resolve: false,
     }
 }
