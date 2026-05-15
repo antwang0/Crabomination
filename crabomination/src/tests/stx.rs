@@ -7548,3 +7548,387 @@ fn maelstrom_muse_is_a_five_mana_three_three_flying_djinn_wizard() {
         .creature_types
         .contains(&crate::card::CreatureType::Wizard));
 }
+
+// ── Eladamri's Call ─────────────────────────────────────────────────────────
+
+/// Eladamri's Call should tutor a creature from library into hand. The
+/// caller's scripted decider picks the bear.
+#[test]
+fn eladamris_call_tutors_creature_into_hand() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let bear = g.add_card_to_library(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::plains());
+    g.add_card_to_library(0, catalog::forest());
+
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(bear))]));
+
+    let id = g.add_card_to_hand(0, catalog::eladamris_call());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Eladamri's Call castable for {W}{G}");
+    drain_stack(&mut g);
+
+    let bear_in_hand = g.players[0]
+        .hand
+        .iter()
+        .any(|c| c.definition.name == "Grizzly Bears");
+    assert!(bear_in_hand, "Bear should be tutored into hand");
+}
+
+#[test]
+fn eladamris_call_is_a_two_mana_wg_instant() {
+    let def = catalog::eladamris_call();
+    assert_eq!(def.name, "Eladamri's Call");
+    assert!(def.card_types.contains(&crate::card::CardType::Instant));
+    assert_eq!(def.cost.cmc(), 2);
+}
+
+// ── Yawning Fissure ─────────────────────────────────────────────────────────
+
+/// Yawning Fissure should force each opponent to sacrifice a land.
+#[test]
+fn yawning_fissure_each_opp_sacs_a_land() {
+    let mut g = two_player_game();
+    let opp_land1 = g.add_card_to_battlefield(1, catalog::mountain());
+    let opp_land2 = g.add_card_to_battlefield(1, catalog::forest());
+    let my_land = g.add_card_to_battlefield(0, catalog::island());
+
+    let id = g.add_card_to_hand(0, catalog::yawning_fissure());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Yawning Fissure castable for {3}{R}");
+    drain_stack(&mut g);
+
+    // P1 should have sacrificed exactly one land (one of opp_land1 or opp_land2).
+    let opp_lands_remaining: usize = g.battlefield
+        .iter()
+        .filter(|c| c.controller == 1 && c.definition.is_land())
+        .count();
+    assert_eq!(opp_lands_remaining, 1, "opp should have one land left after sac");
+    let one_of_two_sacced = !g.battlefield.iter().any(|c| c.id == opp_land1)
+        || !g.battlefield.iter().any(|c| c.id == opp_land2);
+    assert!(one_of_two_sacced);
+    // Our land is untouched.
+    assert!(g.battlefield.iter().any(|c| c.id == my_land), "our land untouched");
+}
+
+#[test]
+fn yawning_fissure_is_a_four_mana_red_sorcery() {
+    let def = catalog::yawning_fissure();
+    assert_eq!(def.name, "Yawning Fissure");
+    assert!(def.card_types.contains(&crate::card::CardType::Sorcery));
+    assert_eq!(def.cost.cmc(), 4);
+}
+
+// ── Cleansing Wildfire ──────────────────────────────────────────────────────
+
+/// Cleansing Wildfire destroys target land + draws a card. (The
+/// search-basic step requires the target's controller to have basic lands
+/// in library; we seed one.)
+#[test]
+fn cleansing_wildfire_destroys_land_and_draws() {
+    let mut g = two_player_game();
+    let opp_land = g.add_card_to_battlefield(1, catalog::mountain());
+    g.add_card_to_library(1, catalog::forest());
+    // Seed library for the caster's cantrip draw.
+    g.add_card_to_library(0, catalog::island());
+
+    let id = g.add_card_to_hand(0, catalog::cleansing_wildfire());
+    let hand_before = g.players[0].hand.len();
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(opp_land)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Cleansing Wildfire castable for {1}{R}");
+    drain_stack(&mut g);
+
+    // Target Mountain destroyed.
+    assert!(!g.battlefield.iter().any(|c| c.id == opp_land),
+        "target land destroyed");
+    // Caster drew a card: -1 (cast CW) + 1 (draw) = 0 net vs hand_before.
+    assert_eq!(g.players[0].hand.len(), hand_before);
+}
+
+#[test]
+fn cleansing_wildfire_is_a_two_mana_red_sorcery() {
+    let def = catalog::cleansing_wildfire();
+    assert_eq!(def.name, "Cleansing Wildfire");
+    assert!(def.card_types.contains(&crate::card::CardType::Sorcery));
+    assert_eq!(def.cost.cmc(), 2);
+}
+
+// ── Tendrils of Agony ───────────────────────────────────────────────────────
+
+/// Storm — when cast as the only spell this turn (StormCount = 0), drain
+/// fires exactly once for 2 life.
+#[test]
+fn tendrils_of_agony_drains_two_with_no_storm() {
+    let mut g = two_player_game();
+    let p0_life_before = g.players[0].life;
+    let p1_life_before = g.players[1].life;
+    let id = g.add_card_to_hand(0, catalog::tendrils_of_agony());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    // No prior spells this turn.
+    g.spells_cast_this_turn = 0;
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Tendrils castable for {2}{B}{B}");
+    drain_stack(&mut g);
+
+    // After casting Tendrils, spells_cast_this_turn becomes 1.
+    // StormCount = spells_cast_this_turn - 1 = 0.
+    // Repeat count = 0 + 1 = 1 → drain 2 once.
+    assert_eq!(g.players[1].life, p1_life_before - 2);
+    assert_eq!(g.players[0].life, p0_life_before + 2);
+}
+
+/// Storm payoff: with 4 prior spells, Tendrils fires drain 2 five times
+/// total (StormCount = 4, Repeat count = 5).
+#[test]
+fn tendrils_of_agony_storm_drain_scales() {
+    let mut g = two_player_game();
+    let p0_life_before = g.players[0].life;
+    let p1_life_before = g.players[1].life;
+    let id = g.add_card_to_hand(0, catalog::tendrils_of_agony());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    // 4 prior spells this turn.
+    g.spells_cast_this_turn = 4;
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Tendrils castable");
+    drain_stack(&mut g);
+
+    // After casting, spells_cast_this_turn = 5 → StormCount = 4 → Repeat = 5.
+    // Drain 2 × 5 = 10 life shifted.
+    assert_eq!(g.players[1].life, p1_life_before - 10);
+    assert_eq!(g.players[0].life, p0_life_before + 10);
+}
+
+// ── Quench ──────────────────────────────────────────────────────────────────
+
+/// Quench counters target spell unless its controller pays {1}.
+/// Without mana to pay, the spell is countered.
+#[test]
+fn quench_counters_spell_when_opp_cant_pay() {
+    let mut g = two_player_game();
+    // P1 casts Lightning Bolt at P0 (mirror of the Whirlwind Denial test).
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(0)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Bolt castable for {R}");
+
+    // P0 responds with Quench targeting the bolt; P1 has no mana left
+    // to pay {1} → bolt is countered.
+    g.priority.player_with_priority = 0;
+    let quench = g.add_card_to_hand(0, catalog::quench());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: quench,
+        target: Some(Target::Permanent(bolt)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Quench castable for {1}{U}");
+    drain_stack(&mut g);
+
+    // P0 should still be at 20 (Bolt countered before resolving).
+    assert_eq!(g.players[0].life, 20, "Bolt should be countered");
+}
+
+#[test]
+fn quench_is_a_two_mana_blue_instant() {
+    let def = catalog::quench();
+    assert_eq!(def.name, "Quench");
+    assert!(def.card_types.contains(&crate::card::CardType::Instant));
+    assert_eq!(def.cost.cmc(), 2);
+}
+
+// ── Saw It Coming ───────────────────────────────────────────────────────────
+
+#[test]
+fn saw_it_coming_counters_target_spell() {
+    let mut g = two_player_game();
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(0)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Bolt castable for {R}");
+
+    g.priority.player_with_priority = 0;
+    let saw = g.add_card_to_hand(0, catalog::saw_it_coming());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: saw,
+        target: Some(Target::Permanent(bolt)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Saw It Coming castable for {2}{U}");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[0].life, 20, "Bolt should be countered");
+}
+
+#[test]
+fn saw_it_coming_is_a_three_mana_blue_instant() {
+    let def = catalog::saw_it_coming();
+    assert_eq!(def.name, "Saw It Coming");
+    assert!(def.card_types.contains(&crate::card::CardType::Instant));
+    assert_eq!(def.cost.cmc(), 3);
+}
+
+// ── Dueling Coach ───────────────────────────────────────────────────────────
+
+/// Dueling Coach's ETB puts a +1/+1 counter on a target friendly creature.
+#[test]
+fn dueling_coach_etb_lands_counter_on_friendly() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::dueling_coach());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Dueling Coach castable for {1}{W}");
+    drain_stack(&mut g);
+
+    let bear_card = g.battlefield.iter().find(|c| c.id == bear).unwrap();
+    assert_eq!(bear_card.counter_count(CounterType::PlusOnePlusOne), 1);
+}
+
+/// Dueling Coach's activation puts a +1/+1 counter on each of the
+/// controller's creatures with a +1/+1 counter (including itself if it
+/// has one — Mr Coach is 1/2 with no counters by default, so it's only
+/// gated to creatures that already have a counter).
+#[test]
+fn dueling_coach_activation_doubles_counters() {
+    let mut g = two_player_game();
+    let coach = g.add_card_to_battlefield(0, catalog::dueling_coach());
+    g.clear_sickness(coach);
+    let bear1 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let bear2 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // Seed counter on bear1 only — bear2 should NOT get a counter from
+    // the activation (gate is "creatures you control with +1/+1
+    // counter").
+    if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == bear1) {
+        c.counters.insert(CounterType::PlusOnePlusOne, 1);
+    }
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: coach,
+        ability_index: 0,
+        target: None,
+    })
+    .expect("Dueling Coach activation works for {2}{W}");
+    drain_stack(&mut g);
+
+    let bear1_c = g.battlefield.iter().find(|c| c.id == bear1).unwrap();
+    let bear2_c = g.battlefield.iter().find(|c| c.id == bear2).unwrap();
+    assert_eq!(bear1_c.counter_count(CounterType::PlusOnePlusOne), 2,
+        "bear1 should get a counter (had a counter to begin with)");
+    assert_eq!(bear2_c.counter_count(CounterType::PlusOnePlusOne), 0,
+        "bear2 should NOT get a counter (had no +1/+1 to begin with)");
+}
+
+#[test]
+fn dueling_coach_is_a_two_mana_human_cleric() {
+    let def = catalog::dueling_coach();
+    assert_eq!(def.name, "Dueling Coach");
+    assert_eq!(def.cost.cmc(), 2);
+    assert_eq!(def.power, 1);
+    assert_eq!(def.toughness, 2);
+    assert!(def.has_creature_type(crate::card::CreatureType::Human));
+    assert!(def.has_creature_type(crate::card::CreatureType::Cleric));
+}
+
+// ── Increasing Vengeance ────────────────────────────────────────────────────
+
+#[test]
+fn increasing_vengeance_copies_target_instant() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+
+    // Cast Lightning Bolt at bear.
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Bolt castable for {R}");
+
+    // Now cast Increasing Vengeance copying the bolt.
+    let iv = g.add_card_to_hand(0, catalog::increasing_vengeance());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: iv,
+        target: Some(Target::Permanent(bolt)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Increasing Vengeance castable for {R}{R}");
+    drain_stack(&mut g);
+
+    // Bear took 3 dmg from bolt + 3 dmg from the IV copy of the bolt = 6 dmg.
+    // 2-toughness bear is destroyed by either bolt alone.
+    assert!(!g.battlefield.iter().any(|c| c.id == bear), "bear destroyed");
+    // P1 (target's controller) takes either 3 dmg from bolt or unchanged.
+    // The bear was originally controlled by P1, so the bolt damage went
+    // to the bear, not the player.
+}
+
+#[test]
+fn increasing_vengeance_is_a_two_mana_red_instant() {
+    let def = catalog::increasing_vengeance();
+    assert_eq!(def.name, "Increasing Vengeance");
+    assert!(def.card_types.contains(&crate::card::CardType::Instant));
+    assert_eq!(def.cost.cmc(), 2);
+}

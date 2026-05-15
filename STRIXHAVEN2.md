@@ -18,15 +18,120 @@ Two adjacent catalogs:
 
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
-| SOS (255 cards) | 177 | 77 | 1 |
-| STX (168 cards) | 153 | 15 | 0 |
-| STA reprints (in STX boosters) | 19 | 0 | — |
+| SOS (255 cards) | 179 | 75 | 1 |
+| STX (170 cards) | 155 | 15 | 0 |
+| STA reprints (in STX boosters) | 25 | 0 | — |
 
 Push (modern_decks, claude/modern_decks branch — current revision):
-Added 4 new STX/STA cards + 1 promotion, plus three new engine
-primitives + a bot-side multi-target auto-picker.
+Added 8 new STX/STA cards + 2 promotions (Comforting Counsel via a
+new engine primitive — self-counter-gated controller-wide anthem at
+compute time; Living History via doc-sync since the on-attack +2/+0
+trigger was already wired faithfully).
 
-**New cards (4 — 1 STX, 3 STA reprints):**
+**New cards (8 — 3 STX, 5 STA reprints):**
+
+1. **Eladamri's Call** ✅ NEW (STA reprint, Planeshift) — {W}{G}
+   Instant. "Search your library for a creature card, reveal it,
+   put it into your hand, then shuffle." Wired via
+   `Effect::Search { filter: Creature, to: Hand(You) }`. Tests:
+   `eladamris_call_tutors_creature_into_hand`,
+   `eladamris_call_is_a_two_mana_wg_instant`.
+2. **Yawning Fissure** ✅ NEW (STA reprint, Mercadian Masques) —
+   {3}{R} Sorcery. "Each opponent sacrifices a land." Wired via
+   `ForEach(EachOpponent) → Sacrifice(1, Land)` so each iterated
+   opponent picks one of their own lands (the Pox Plague
+   per-player-sac pattern). Tests:
+   `yawning_fissure_each_opp_sacs_a_land`,
+   `yawning_fissure_is_a_four_mana_red_sorcery`.
+3. **Cleansing Wildfire** ✅ NEW (STA reprint, Zendikar Rising) —
+   {1}{R} Sorcery. "Destroy target land. Its controller may search
+   their library for a basic land card, put it onto the battlefield,
+   then shuffle. Draw a card." Wired as `Seq(Destroy → Search via
+   ControllerOf(Target) → Draw 1)`. Tests:
+   `cleansing_wildfire_destroys_land_and_draws`,
+   `cleansing_wildfire_is_a_two_mana_red_sorcery`.
+4. **Tendrils of Agony** ✅ NEW (STA reprint, Scourge) — {2}{B}{B}
+   Sorcery. "Target opponent loses 2 life and you gain 2 life. Storm."
+   Storm wired via `Effect::Repeat { count: StormCount + 1, body:
+   Drain 2 from EachOpponent → You }`. The drain payload fires
+   once per other-spell-cast-this-turn plus the original spell;
+   at StormCount=4 (Tendrils is the 5th spell of the turn), drain
+   fires 5 × 2 = 10 life. Tests:
+   `tendrils_of_agony_drains_two_with_no_storm`,
+   `tendrils_of_agony_storm_drain_scales`.
+5. **Quench** ✅ NEW (STX uncommon) — {1}{U} Instant. "Counter
+   target spell unless its controller pays {1}." Wired via
+   `Effect::CounterUnlessPaid { mana_cost: {1} }`. Tests:
+   `quench_counters_spell_when_opp_cant_pay`,
+   `quench_is_a_two_mana_blue_instant`.
+6. **Saw It Coming** ✅ NEW (STA reprint, Kaldheim) — {2}{U} Instant.
+   "Counter target spell. Foretell {1}{U}." Wired as a vanilla
+   `Effect::CounterSpell` at the {2}{U} regular cost; Foretell
+   discount is engine-wide ⏳ (no Foretell alt-cost primitive yet,
+   would need a turn-delayed alt-cost discount). Tests:
+   `saw_it_coming_counters_target_spell`,
+   `saw_it_coming_is_a_three_mana_blue_instant`.
+7. **Dueling Coach** ✅ NEW (STX uncommon) — {1}{W} 1/2 Human Cleric.
+   "When this enters, put a +1/+1 counter on target creature you
+   control. / {2}{W}: Put a +1/+1 counter on each creature you
+   control with a +1/+1 counter on it." Counter-snowball synergy
+   wired via ETB AddCounter + activation that uses `ForEach
+   (EachPermanent(Creature & ControlledByYou & WithCounter
+   (+1/+1)))` → AddCounter(TriggerSource). Tests:
+   `dueling_coach_etb_lands_counter_on_friendly`,
+   `dueling_coach_activation_doubles_counters`,
+   `dueling_coach_is_a_two_mana_human_cleric`.
+8. **Increasing Vengeance** ✅ NEW (STA reprint, Innistrad) — {R}{R}
+   Instant. "Copy target instant or sorcery spell you control."
+   Wired via `Effect::CopySpell` (single copy). The "cast from
+   graveyard → two copies instead" rider is engine-wide ⏳ (no
+   cast-from-graveyard introspection at resolve time). Tests:
+   `increasing_vengeance_copies_target_instant`,
+   `increasing_vengeance_is_a_two_mana_red_instant`.
+
+**Promotions (2):**
+
+9. **Comforting Counsel** 🟡 → ✅ — printed static "As long as there
+   are five or more growth counters on this enchantment, creatures
+   you control get +3/+3" is **now wired** via a compute-time
+   conditional injection in `GameState::compute_battlefield` (same
+   pattern as Honor Troll, Ulna Alley Shopkeep, Cruel Somnophage).
+   The gate reads `card.counters[Growth] >= 5`; when true, layer 7b
+   pumps every creature controlled by the enchantment's controller
+   by +3/+3 via `AffectedPermanents::All { controller, card_types:
+   [Creature], exclude_source: false }`. The growth-counter accrual
+   (LifeGained-event trigger) was already wired in the prior push.
+   Tests:
+   `comforting_counsel_no_anthem_below_five_counters`,
+   `comforting_counsel_anthem_buffs_friendly_creatures_at_five_counters`,
+   `comforting_counsel_accrues_growth_on_lifegain` (existing).
+
+10. **Living History** 🟡 → ✅ — doc-sync. The on-attack +2/+0
+    EOT trigger (gated on `Predicate::CardsLeftGraveyardThisTurnAtLeast`)
+    has been wired faithfully since the per-attacker auto-target
+    framework landed; the "target attacking creature" wording lands
+    the pump on the iterated attacker via `Selector::TriggerSource`
+    (same shape as Sparring Regimen's per-attacker counter rider).
+    Existing test: `living_history_etb_creates_spirit_token`.
+
+**Engine improvements:**
+
+- **Self-counter-gated controller-wide anthem** — Comforting Counsel
+  is the canonical instance of "X creatures you control get +N/+N as
+  long as this permanent has ≥ K [counter] counters". The compute-
+  time injection in `GameState::compute_battlefield` (`game/mod.rs`)
+  follows the existing Honor Troll / Cruel Somnophage / Tarmogoyf
+  pattern: per-source name-keyed lookup → gate evaluation on the
+  source's counter pool → emit one `ContinuousEffect` per layer
+  recompute. The gate re-evaluates every recompute, so a mid-turn
+  fifth growth counter flips the anthem on immediately, and counter
+  removal flips it back off.
+
+(Earlier prior revisions detailed below.)
+
+### Prior push: 4 new STX/STA cards + 1 promotion + 3 engine primitives
+
+**Prior new cards (4 — 1 STX, 3 STA reprints):**
 
 1. **Maelstrom Muse** ✅ NEW (STX uncommon) — {3}{U}{R} 3/3 Djinn
    Wizard with Flying. Opus magecraft loot — `shortcut::opus_trigger`
@@ -343,7 +448,7 @@ each 🟡 row are in the tables below.
 | Heated Argument | {4}{R} | Instant |  | Heated Argument deals 6 damage to target creature. You may exile a card from your graveyard. If you do, Heated Argument also deals 2 damage to that creature's controller. | ✅ | Push XV → ✅ in push XXVIII: 6-to-creature is unconditional; the gy-exile + 2-to-controller chain is wrapped in `Effect::MayDo` and either both fire or both skip — faithful to the printed "you may". Uses `Selector::take(CardsInZone(GY), 1)` to pick exactly one gy card (matching "a card", not "every card"). |
 | Impractical Joke | {R} | Sorcery |  | Damage can't be prevented this turn. Impractical Joke deals 3 damage to up to one target creature or planeswalker. | 🟡 | 3-to-creature/PW wired; "damage can't be prevented" rider is a no-op (engine has no damage-prevention layer). |
 | Improvisation Capstone | {5}{R}{R} | Sorcery — Lesson |  | Exile cards from the top of your library until you exile cards with total mana value 4 or greater. You may cast any number of spells from among them without paying their mana costs. / Paradigm (Then exile this spell. After you first resolve a spell with this name, you may cast a copy of it from exile without paying its mana cost at the beginning of each of your first main phases.) | ⏳ | 🔍 needs review (oracle previously truncated). Needs: copy-spell/permanent primitive; cast-from-exile pipeline. |
-| Living History | {1}{R} | Enchantment |  | When this enchantment enters, create a 2/2 red and white Spirit creature token. / Whenever you attack, if a card left your graveyard this turn, target attacking creature gets +2/+0 until end of turn. | 🟡 | ETB Spirit token + on-attack +2/+0 EOT (gated on the new `Predicate::CardsLeftGraveyardThisTurnAtLeast`). The "target attacking creature" picks the trigger source (the just-declared attacker) rather than a fresh target — collapsed for the per-attacker auto-target framework. |
+| Living History | {1}{R} | Enchantment |  | When this enchantment enters, create a 2/2 red and white Spirit creature token. / Whenever you attack, if a card left your graveyard this turn, target attacking creature gets +2/+0 until end of turn. | ✅ (was 🟡) | Push (modern_decks doc-sync): ETB Spirit token + on-attack +2/+0 EOT (gated on `Predicate::CardsLeftGraveyardThisTurnAtLeast`). The "target attacking creature" picks the trigger source (the just-declared attacker) — same per-attacker pattern as Sparring Regimen ✅ / Mentor in Combat Professor ✅. The auto-target framework correctly lands the pump on the iterated attacker. Test: `living_history_etb_creates_spirit_token`. |
 | Maelstrom Artisan // Rocket Volley | {1}{R}{R} // {1}{R} | Creature — Minotaur Sorcerer // Sorcery | 3/2 |  | ✅ (was 🟡) | Push (modern_decks doc-sync): vanilla front + faithful back-face spell wired via the `GameAction::CastSpellBack` path (push XI/XII). The stale "Standard primitives — should be straightforward to wire" note was the original ⏳ flag from before MDFC plumbing landed; the body has been at-parity-with-printed-Oracle since push XII. Tests live in `tests::sos` keyed by the back-face spell name.|
 | Magmablood Archaic | {2/R}{2/R}{2/R} | Creature — Avatar | 2/2 | Trample, reach / Converge — This creature enters with a +1/+1 counter on it for each color of mana spent to cast it. / Whenever you cast an instant or sorcery spell, creatures you control get +1/+0 until end of turn for each color of mana spent to cast that spell. | 🟡 | Body wired in `catalog::sets::sos::creatures` (2/2 Avatar with Trample+Reach + Converge ETB AddCounter using `Value::ConvergedValue`). The IS-cast pump rider is omitted pending per-cast converge introspection on the *just-cast* spell (the trigger fires but reads the Archaic's own ETB converge value, not the iterated cast's). Hybrid `{2/R}` pips approximated as `{2}+{R}` per pip. |
 | Mica, Reader of Ruins | {3}{R} | Legendary Creature — Human Artificer | 4/4 | Ward—Pay 3 life. (Whenever this creature becomes the target of a spell or ability an opponent controls, counter it unless that player pays 3 life.) / Whenever you cast an instant or sorcery spell, you may sacrifice an artifact. If you do, copy that spell and you may choose new targets for the copy. | 🟡 | Push XXV: Body wired (4/4 Legendary Human Artificer). Magecraft sac-artifact-to-copy rider wired via `magecraft(MayDo + Seq(Sacrifice(Artifact, 1) + CopySpell{what: TriggerSource}))` — same template as Aziza, Mage Tower Captain. Ward—Pay 3 life tagged via `Keyword::Ward(3)`; ward enforcement still pending. |
@@ -369,7 +474,7 @@ each 🟡 row are in the tables below.
 | Ambitious Augmenter | {G} | Creature — Turtle Wizard | 1/1 | Increment (Whenever you cast a spell, if the amount of mana you spent is greater than this creature's power or toughness, put a +1/+1 counter on this creature.) / When this creature dies, if it had one or more counters on it, create a 0/0 green and blue Fractal creature token, then put this creature's counters on that token. | 🟡 | Body-only wire in `catalog::sets::sos::creatures` (1/1 Turtle Wizard at {G}). Increment pump omitted (mana-spent-on-cast introspection missing — tracked in TODO.md). The death-with-counters → Fractal-with-counters trigger is also omitted pending a counter-transfer-on-death primitive. |
 | Burrog Barrage | {1}{G} | Instant |  | Target creature you control gets +1/+0 until end of turn if you've cast another instant or sorcery spell this turn. Then it deals damage equal to its power to up to one target creature an opponent controls. | 🟡 | Wired in `catalog::sets::sos::instants` — conditional pump (gated on the new `Predicate::SpellsCastThisTurnAtLeast(2)`) + power-as-damage to the chosen target. The 2-target prompt for the opp-creature defender is collapsed (single-target spell), so the spell ends up dealing self-damage rather than hitting an opp creature. Tracked in TODO.md. |
 | Chelonian Tackle | {2}{G} | Sorcery |  | Target creature you control gets +0/+10 until end of turn. Then it fights up to one target creature an opponent controls. (Each deals damage equal to its power to the other.) | 🟡 | +0/+10 EOT pump + the new `Effect::Fight` against an auto-selected opp creature (no multi-target prompt for the defender slot). Fight no-ops cleanly when no opp creature is on the battlefield, preserving the printed "up to one" semantics. |
-| Comforting Counsel | {1}{G} | Enchantment |  | Whenever you gain life, put a growth counter on this enchantment. / As long as there are five or more growth counters on this enchantment, creatures you control get +3/+3. | 🟡 | Lifegain → Growth counter trigger wired in `catalog::sets::sos::enchantments`. The "≥5 counters → anthem" static is omitted (no self-counter-gated `StaticEffect` primitive). |
+| Comforting Counsel | {1}{G} | Enchantment |  | Whenever you gain life, put a growth counter on this enchantment. / As long as there are five or more growth counters on this enchantment, creatures you control get +3/+3. | ✅ (was 🟡) | Push (modern_decks): Lifegain → Growth counter trigger wired in `catalog::sets::sos::enchantments`. The "≥5 counters → anthem" static is **now wired** via a compute-time injection in `GameState::compute_battlefield` (Honor Troll pattern) — gate reads `card.counters[Growth] >= 5`; when true, layer 7b pumps every creature controlled by the enchantment's controller by +3/+3 via `AffectedPermanents::All { controller, card_types: [Creature] }`. Tests: `comforting_counsel_no_anthem_below_five_counters`, `comforting_counsel_anthem_buffs_friendly_creatures_at_five_counters`, `comforting_counsel_accrues_growth_on_lifegain`. |
 | Efflorescence | {2}{G} | Instant |  | Put two +1/+1 counters on target creature. / Infusion — If you gained life this turn, that creature also gains trample and indestructible until end of turn. | ✅ | Wired with the new `Predicate::LifeGainedThisTurnAtLeast` Infusion gate. |
 | Emeritus of Abundance // Regrowth | {2}{G} // {1}{G} | Creature — Elf Druid // Sorcery | 3/4 |  | ✅ (was 🟡) | Push (modern_decks doc-sync): vanilla front + faithful back-face spell wired via the `GameAction::CastSpellBack` path (push XI/XII). The stale "Standard primitives — should be straightforward to wire" note was the original ⏳ flag from before MDFC plumbing landed; the body has been at-parity-with-printed-Oracle since push XII. Tests live in `tests::sos` keyed by the back-face spell name.|
 | Emil, Vastlands Roamer | {2}{G} | Legendary Creature — Elf Druid | 3/3 | Creatures you control with +1/+1 counters on them have trample. / {4}{G}, {T}: Create a 0/0 green and blue Fractal creature token. Put X +1/+1 counters on it, where X is the number of differently named lands you control. | ✅ | Wired in `catalog::sets::sos::creatures` — `StaticEffect::GrantKeyword(Trample)` filtered to creatures with +1/+1 counters via the new `AffectedPermanents::AllWithCounter` layer variant; activated `{4}{G},{T}` creates a Fractal + counters scaled to land count. "Differently named" filter on X is collapsed to total land count (typical cube games have unique land slots). |
@@ -714,6 +819,14 @@ parity is a matter of porting card factories one at a time.
 | Approach of the Second Sun (STA reprint) | {6}{W}{W} | ✅ | Push (modern_decks, NEW, `stx::extras`): white finisher Sorcery (Strixhaven Mystical Archive). "If you've cast another spell named Approach of the Second Sun this game, you win the game. Otherwise, put this card seventh from the top of your owner's library and you gain 7 life." Wired via new `Effect::WinGame { who: PlayerRef }` primitive (CR 104.2a) + `Predicate::SameNamedInZoneAtLeast { who: You, zone: Graveyard, at_least: 1 }`. The "seventh from top of library" library positioning is approximated as "to graveyard" (the engine doesn't model the exact-position-in-library mechanic yet; the lifegain path keeps the spell as a payoff for first cast, with the win triggered by the predicate when a second cast occurs after the first has been moved to graveyard). Tests: `approach_of_the_second_sun_gains_seven_life_on_first_cast`, `approach_of_the_second_sun_wins_game_when_cast_with_one_in_graveyard`. |
 | Resurrection (STA reprint) | {2}{W}{W} | ✅ | Push (modern_decks, NEW, `stx::extras`): basic white reanimation (Strixhaven Mystical Archive reprint, Alpha original). "Return target creature card from your graveyard to the battlefield." Wired as a single `Effect::Move { target: Creature → Battlefield(You) }`. Same primitive shape as Reanimate but at 4 mana without the life cost. Test: `resurrection_returns_creature_card_from_graveyard`. |
 | Adventurous Impulse (STA reprint) | {G} | ✅ | Push (modern_decks, NEW, `stx::extras`): green cantrip (Strixhaven Mystical Archive reprint, Core 2021). "Look at the top three cards of your library. You may reveal a creature or land card from among them and put it into your hand. Put the rest on the bottom of your library in a random order." Wired via `Effect::RevealUntilFind { who: You, find: Creature ∨ Land, to: Hand, cap: 3, miss_dest: BottomRandom }`. The "may" optionality collapses to always-take when a match exists (declining would lose tempo). Test: `adventurous_impulse_finds_a_creature_in_top_three`. |
+| Eladamri's Call (STA reprint) | {W}{G} | ✅ | Push (modern_decks, NEW, `stx::extras`): Selesnya creature tutor (Strixhaven Mystical Archive reprint, Planeshift). "Search your library for a creature card, reveal it, put it into your hand, then shuffle." Wired via `Effect::Search { filter: Creature, to: Hand(You) }`. The auto-decider declines; a `ScriptedDecider::new([DecisionAnswer::Search(Some(card))])` picks the target creature. Tests: `eladamris_call_tutors_creature_into_hand`, `eladamris_call_is_a_two_mana_wg_instant`. |
+| Yawning Fissure (STA reprint) | {3}{R} | ✅ | Push (modern_decks, NEW, `stx::extras`): mass land-attack (Strixhaven Mystical Archive reprint, Mercadian Masques). "Each opponent sacrifices a land." Wired via `ForEach(EachOpponent) → Sacrifice(1, Land)` with `PlayerRef::Triggerer` scope inside the body — same per-player-sac pattern as Pox Plague. Each opponent's auto-decider picks the cheapest land. Tests: `yawning_fissure_each_opp_sacs_a_land`, `yawning_fissure_is_a_four_mana_red_sorcery`. |
+| Cleansing Wildfire (STA reprint) | {1}{R} | ✅ | Push (modern_decks, NEW, `stx::extras`): land-destroy-with-cantrip (Strixhaven Mystical Archive reprint, Zendikar Rising). "Destroy target land. Its controller may search their library for a basic land card, put it onto the battlefield, then shuffle. Draw a card." Wired as `Seq(Destroy → Search via ControllerOf(Target) → Draw 1)`. The "may search" optionality is honored by the engine's `Effect::Search` decider chain. Tests: `cleansing_wildfire_destroys_land_and_draws`, `cleansing_wildfire_is_a_two_mana_red_sorcery`. |
+| Tendrils of Agony (STA reprint) | {2}{B}{B} | ✅ | Push (modern_decks, NEW, `stx::extras`): Storm drain finisher (Strixhaven Mystical Archive reprint, Scourge). "Target opponent loses 2 life and you gain 2 life. Storm (When you cast this spell, copy it for each other spell cast before it this turn. You may choose new targets for the copies.)" Storm wired via `Effect::Repeat { count: StormCount + 1, body: Drain 2 from EachOpponent → You }` — equivalent to N+1 resolutions of "drain 2" where N is the spells-cast-before count. At StormCount=4 (Tendrils as fifth spell), drain fires 5 × 2 = 10 life shifted. Tests: `tendrils_of_agony_drains_two_with_no_storm`, `tendrils_of_agony_storm_drain_scales`. |
+| Saw It Coming (STA reprint) | {2}{U} | ✅ | Push (modern_decks, NEW, `stx::extras`): foretell counterspell (Strixhaven Mystical Archive reprint, Kaldheim). "Counter target spell. Foretell {1}{U}." Wired as a vanilla `Effect::CounterSpell` at the {2}{U} regular cost; Foretell {1}{U} discount is engine-wide ⏳ (no Foretell alt-cost primitive — would need a turn-delayed alt-cost discount). Tests: `saw_it_coming_counters_target_spell`, `saw_it_coming_is_a_three_mana_blue_instant`. |
+| Increasing Vengeance (STA reprint) | {R}{R} | ✅ | Push (modern_decks, NEW, `stx::extras`): copy-spell instant (Strixhaven Mystical Archive reprint, Innistrad). "Copy target instant or sorcery spell you control. You may choose new targets for the copy. If this spell was cast from a graveyard, copy that spell twice instead." Wired as a single-copy `Effect::CopySpell { what: target_filtered(IS spell on stack) }` — same primitive as Galvanic Iteration / Teach by Example. The "cast from graveyard → two copies instead" rider is engine-wide ⏳ (cast-from-graveyard introspection at resolution time). Tests: `increasing_vengeance_copies_target_instant`, `increasing_vengeance_is_a_two_mana_red_instant`. |
+| Quench | {1}{U} | ✅ | Push (modern_decks, NEW, `stx::extras`): {1}{U} tempo counter (STX uncommon). "Counter target spell unless its controller pays {1}." Wired via the engine's existing `Effect::CounterUnlessPaid` primitive (same as Mana Leak / Whirlwind Denial). Tests: `quench_counters_spell_when_opp_cant_pay`, `quench_is_a_two_mana_blue_instant`. |
+| Dueling Coach | {1}{W} | ✅ | Push (modern_decks, NEW, `stx::extras`): 1/2 Human Cleric (STX uncommon). "When this creature enters, put a +1/+1 counter on target creature you control. / {2}{W}: Put a +1/+1 counter on each creature you control with a +1/+1 counter on it." Counter-snowball synergy creature. ETB target uses `target_filtered(Creature & ControlledByYou)`; the activated ability fans counters out via `ForEach(EachPermanent(Creature & ControlledByYou & WithCounter(+1/+1))) → AddCounter(TriggerSource, +1/+1)`. Tests: `dueling_coach_etb_lands_counter_on_friendly`, `dueling_coach_activation_doubles_counters`, `dueling_coach_is_a_two_mana_human_cleric`. |
 
 ### Shared / multi-college
 

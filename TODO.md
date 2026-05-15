@@ -11,6 +11,31 @@ Periodic spot-check of the rules document
 (`crabomination/MagicCompRules 20260116.txt`). Each rule below has a
 status tag (✅ wired, 🟡 partial, ⏳ todo) plus a short note.
 
+- ✅ **CR 700.4 — Definition of "dies"** (push modern_decks audit,
+  claude/modern_decks branch): "The term dies means 'is put into a
+  graveyard from the battlefield.'" The engine emits a
+  `GameEvent::CreatureDied { card_id }` precisely when a creature
+  moves from the battlefield to a graveyard. The emission sites are:
+  (a) the SBA legendary-rule sweep (`game/stack.rs:683`) when a
+  legendary duplicate goes to the graveyard, (b) the SBA
+  toughness/lethal-damage sweep (`game/stack.rs:713`) when a creature
+  dies to combat or toughness ≤ 0, and (c) the combat-damage
+  resolution path (`game/actions.rs:1649`) when a creature is killed
+  by combat damage outside of SBA. Sacrifice effects feed through the
+  same remove-to-graveyard path, so a sacrificed creature also fires
+  `CreatureDied`. The corresponding `EventKind::CreatureDied`
+  (`effect.rs:482`) is the trigger handle used by every "When this
+  creature dies, …" / "Whenever a creature dies, …" rider in the
+  catalog (Ambitious Augmenter, Bayou Groff, Pestbrood Sloth,
+  Cauldron of Essence, Arnyn Deathbloom Botanist, Daemogoth Woe-Eater
+  attack-sac, Star Pupil, etc.). The
+  `EventKind::PermanentLeavesBattlefield` event also matches a
+  `CreatureDied` GameEvent (per `events.rs:21`) so "when this leaves
+  the battlefield" wording captures the same transitions. This
+  faithfully implements CR 700.4's wording — the engine doesn't treat
+  "dies" as anything other than the bf→graveyard transition for
+  creatures.
+
 - ✅ **CR 104.2b — "An effect may state that a player wins the game"**
   (push modern_decks audit, claude/modern_decks branch): "An effect
   may state that a player wins the game." Push (modern_decks) lands

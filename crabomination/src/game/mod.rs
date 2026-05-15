@@ -410,6 +410,35 @@ impl GameState {
                     });
                 }
             }
+            // Comforting Counsel (SOS): "As long as there are five or more
+            // growth counters on this enchantment, creatures you control get
+            // +3/+3." Engine has no `StaticEffect` whose toggle is gated on
+            // the source's own counter count, so we inject the controller-
+            // wide creature anthem at compute time when the gate is met.
+            // The "growth counter" maps to `CounterType::Growth` — accrued
+            // by the LifeGained-event trigger on the enchantment itself.
+            if name == "Comforting Counsel" {
+                let growth = card
+                    .counters
+                    .get(&crate::card::CounterType::Growth)
+                    .copied()
+                    .unwrap_or(0);
+                if growth >= 5 {
+                    all_effects.push(ContinuousEffect {
+                        timestamp: card.id.0 as u64,
+                        source: card.id,
+                        affected: AffectedPermanents::All {
+                            controller: Some(card.controller),
+                            card_types: vec![CardType::Creature],
+                            exclude_source: false,
+                        },
+                        layer: Layer::L7PowerTough,
+                        sublayer: Some(PtSublayer::Modify),
+                        duration: EffectDuration::WhileSourceOnBattlefield,
+                        modification: Modification::ModifyPowerToughness(3, 3),
+                    });
+                }
+            }
         }
         apply_layers(&self.battlefield, &all_effects)
     }

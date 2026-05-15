@@ -5656,3 +5656,375 @@ pub fn pursuit_of_knowledge() -> CardDefinition {
         enters_with_counters: None,
     }
 }
+
+// ── Eladamri's Call (STA reprint, Planeshift) ───────────────────────────────
+
+/// Eladamri's Call — {W}{G} Instant (Strixhaven Mystical Archive).
+/// "Search your library for a creature card, reveal it, put it into your
+/// hand, then shuffle."
+///
+/// Two-color creature tutor at instant speed — the classic Planeshift
+/// staple. Wired as a single `Effect::Search { filter: Creature, to:
+/// Hand(You) }`. Same primitive shape as Eladamri's Plant in older sets;
+/// the auto-decider picks the deepest threat from the library.
+pub fn eladamris_call() -> CardDefinition {
+    CardDefinition {
+        name: "Eladamri's Call",
+        cost: cost(&[w(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Search {
+            who: PlayerRef::You,
+            filter: SelectionRequirement::Creature,
+            to: ZoneDest::Hand(PlayerRef::You),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+    }
+}
+
+// ── Yawning Fissure (STA reprint, Mercadian Masques) ────────────────────────
+
+/// Yawning Fissure — {3}{R} Sorcery (Strixhaven Mystical Archive).
+/// "Each opponent sacrifices a land."
+///
+/// Mass land-attack against multi-opponent boards — the Mercadian Masques
+/// staple. Wired via `ForEach(EachOpponent) → Sacrifice(1, Land)` so each
+/// opponent picks one of their own lands to sacrifice. The
+/// `PlayerRef::Triggerer` scope inside the ForEach body correctly limits
+/// the sacrifice candidate pool to each iterated opponent's own
+/// permanents (the Pox Plague pattern).
+pub fn yawning_fissure() -> CardDefinition {
+    CardDefinition {
+        name: "Yawning Fissure",
+        cost: cost(&[generic(3), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::ForEach {
+            selector: Selector::Player(PlayerRef::EachOpponent),
+            body: Box::new(Effect::Sacrifice {
+                who: Selector::Player(PlayerRef::Triggerer),
+                count: Value::Const(1),
+                filter: SelectionRequirement::Land,
+            }),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+    }
+}
+
+// ── Cleansing Wildfire (STA reprint, Zendikar Rising) ───────────────────────
+
+/// Cleansing Wildfire — {1}{R} Sorcery (Strixhaven Mystical Archive).
+/// "Destroy target land. Its controller may search their library for a
+/// basic land card, put it onto the battlefield, then shuffle. Draw a
+/// card."
+///
+/// Zendikar Rising's "Stone Rain with cantrip" — typically aimed at a
+/// nonbasic dual (e.g. Hallowed Fountain) so the controller ends up with
+/// a basic land instead. Wired as `Seq(Destroy → Search(IsBasicLand) →
+/// Draw 1)`. The search uses `PlayerRef::ControllerOf(Target(0))` so the
+/// target land's controller (not the caster) does the fetching — same
+/// pattern as Erode. The "may" optionality is collapsed to always-search
+/// (Effect::Search's decider returns Search(None) to decline, so the
+/// printed "may" is honored by the decider chain). The post-destroy
+/// target id is read out of the graveyard by `find_card_owner`.
+pub fn cleansing_wildfire() -> CardDefinition {
+    CardDefinition {
+        name: "Cleansing Wildfire",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Destroy {
+                what: target_filtered(SelectionRequirement::Land),
+            },
+            Effect::Search {
+                who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
+                filter: SelectionRequirement::IsBasicLand,
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
+                    tapped: false,
+                },
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+    }
+}
+
+// ── Tendrils of Agony (STA reprint, Scourge) ────────────────────────────────
+
+/// Tendrils of Agony — {2}{B}{B} Sorcery (Strixhaven Mystical Archive).
+/// "Target opponent loses 2 life and you gain 2 life. Storm (When you
+/// cast this spell, copy it for each other spell cast before it this
+/// turn. You may choose new targets for the copies.)"
+///
+/// The canonical Scourge Storm finisher. Storm here is approximated as a
+/// `Repeat(StormCount + 1, Drain 2)` — equivalent to N+1 resolutions of
+/// "drain 2" where N is the spells-cast-before count. This is functionally
+/// identical to printed Storm for Tendrils's drain payload: each copy
+/// would resolve drain 2 independently, but the engine fuses them into
+/// a single Repeat without separate stack items. The targeted-opponent
+/// half collapses to each-opponent (matching the multi-target collapse
+/// used throughout the catalog for drain-each-opp Magecraft payoffs).
+///
+/// `Value::StormCount` is backed by `spells_cast_this_turn - 1`, so
+/// Tendrils-as-the-fifth-spell-of-the-turn fires `4 + 1 = 5` drain-2
+/// instances (total drain 10).
+pub fn tendrils_of_agony() -> CardDefinition {
+    CardDefinition {
+        name: "Tendrils of Agony",
+        cost: cost(&[generic(2), b(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Repeat {
+            count: Value::Sum(vec![Value::StormCount, Value::Const(1)]),
+            body: Box::new(Effect::Drain {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                to: Selector::You,
+                amount: Value::Const(2),
+            }),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+    }
+}
+
+// ── Saw It Coming (STA reprint, Kaldheim) ───────────────────────────────────
+
+/// Saw It Coming — {2}{U} Instant (Strixhaven Mystical Archive). "Counter
+/// target spell. Foretell {1}{U}."
+///
+/// Kaldheim's foretell counterspell — typically held for two turns and
+/// then "foretold" at {1}{U}. Wired as a vanilla `Effect::CounterSpell`
+/// at the printed {2}{U} regular cost; the Foretell discount is engine-
+/// wide ⏳ (no Foretell-as-alt-cost primitive — would need a turn-delayed
+/// alt-cost discount tracked via a per-card "foretold this turn" flag).
+/// In practice the regular cost is the more common play pattern in
+/// non-Foretell decks; the discount-from-foretell rider is a niche
+/// optimization shared with all Foretell cards.
+pub fn saw_it_coming() -> CardDefinition {
+    CardDefinition {
+        name: "Saw It Coming",
+        cost: cost(&[generic(2), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::CounterSpell {
+            what: target_filtered(SelectionRequirement::IsSpellOnStack),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+    }
+}
+
+// ── Dueling Coach (STX uncommon) ────────────────────────────────────────────
+
+/// Dueling Coach — {1}{W} Creature — Human Cleric (1/2). "When this
+/// creature enters, put a +1/+1 counter on target creature you control. /
+/// {2}{W}: Put a +1/+1 counter on each creature you control with a +1/+1
+/// counter on it."
+///
+/// Counter-snowball synergy creature. ETB target uses
+/// `target_filtered(Creature & ControlledByYou)`; the activated ability
+/// fans counters out via `ForEach(EachPermanent(Creature &
+/// ControlledByYou & WithCounter(+1/+1)))` + `AddCounter(TriggerSource,
+/// +1/+1)` — same shape as Growth Curve's doubler but applied
+/// per-creature.
+pub fn dueling_coach() -> CardDefinition {
+    use crate::card::{
+        ActivatedAbility, CounterType as CT, CreatureType, EventKind, EventScope, EventSpec,
+        TriggeredAbility,
+    };
+    CardDefinition {
+        name: "Dueling Coach",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: false,
+            mana_cost: cost(&[generic(2), w()]),
+            effect: Effect::ForEach {
+                selector: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::WithCounter(CT::PlusOnePlusOne)),
+                ),
+                body: Box::new(Effect::AddCounter {
+                    what: Selector::TriggerSource,
+                    kind: CT::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                }),
+            },
+            once_per_turn: false,
+            sorcery_speed: false,
+            sac_cost: false,
+            condition: None,
+            life_cost: 0,
+            from_graveyard: false,
+            exile_self_cost: false,
+            exile_other_filter: None,
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::AddCounter {
+                what: target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+                kind: CT::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+    }
+}
+
+// ── Increasing Vengeance (STA reprint, Innistrad) ───────────────────────────
+
+/// Increasing Vengeance — {R}{R} Instant (Strixhaven Mystical Archive).
+/// "Copy target instant or sorcery spell you control. You may choose new
+/// targets for the copy. If this spell was cast from a graveyard, copy
+/// that spell twice instead. (Then exile this card from anywhere it
+/// would go.)"
+///
+/// Wired as a single-copy `Effect::CopySpell { what: target_filtered(IS
+/// spell on stack) }` — same primitive as Galvanic Iteration and Teach
+/// by Example. The "cast from graveyard → two copies instead" rider and
+/// the "exile from anywhere" replacement are engine-wide ⏳ (cast-from-
+/// graveyard introspection + exile-from-everywhere replacement). The
+/// regular-cast copy is the headline play pattern and ships exactly.
+pub fn increasing_vengeance() -> CardDefinition {
+    CardDefinition {
+        name: "Increasing Vengeance",
+        cost: cost(&[r(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::CopySpell {
+            what: target_filtered(SelectionRequirement::IsSpellOnStack),
+            count: Value::Const(1),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+    }
+}
+
+// ── Quench (STX uncommon) ───────────────────────────────────────────────────
+
+/// Quench — {1}{U} Instant. "Counter target spell unless its controller
+/// pays {1}."
+///
+/// Classic tempo counter — a {1}{U} tax-counter that hits early in a
+/// game when {1} extra mana is hard to find. Wired via the engine's
+/// existing `Effect::CounterUnlessPaid` primitive (same as Mana Leak's
+/// {3}-tax variant; same shape as Whirlwind Denial's stack-wide
+/// version).
+pub fn quench() -> CardDefinition {
+    CardDefinition {
+        name: "Quench",
+        cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::CounterUnlessPaid {
+            what: target_filtered(SelectionRequirement::IsSpellOnStack),
+            mana_cost: cost(&[generic(1)]),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+    }
+}

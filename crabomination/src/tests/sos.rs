@@ -2985,6 +2985,47 @@ fn comforting_counsel_accrues_growth_on_lifegain() {
     );
 }
 
+/// At <5 growth counters, the anthem is dormant — friendly creatures
+/// keep their base P/T.
+#[test]
+fn comforting_counsel_no_anthem_below_five_counters() {
+    let mut g = two_player_game();
+    let cc = g.add_card_to_battlefield(0, catalog::comforting_counsel());
+    // Manually seed 4 growth counters (one short of the gate).
+    if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == cc) {
+        c.counters.insert(CounterType::Growth, 4);
+    }
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+
+    let computed = g.compute_battlefield();
+    let bear_pt = computed.iter().find(|c| c.id == bear).unwrap();
+    assert_eq!(bear_pt.power, 2);
+    assert_eq!(bear_pt.toughness, 2);
+}
+
+/// At ≥5 growth counters, the +3/+3 anthem fires for all controller's
+/// creatures (Grizzly Bears 2/2 → 5/5).
+#[test]
+fn comforting_counsel_anthem_buffs_friendly_creatures_at_five_counters() {
+    let mut g = two_player_game();
+    let cc = g.add_card_to_battlefield(0, catalog::comforting_counsel());
+    if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == cc) {
+        c.counters.insert(CounterType::Growth, 5);
+    }
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+
+    let computed = g.compute_battlefield();
+    let bear_pt = computed.iter().find(|c| c.id == bear).unwrap();
+    assert_eq!(bear_pt.power, 5, "friendly bear +3 power");
+    assert_eq!(bear_pt.toughness, 5, "friendly bear +3 toughness");
+
+    // Opp's bear is unaffected.
+    let opp_pt = computed.iter().find(|c| c.id == opp_bear).unwrap();
+    assert_eq!(opp_pt.power, 2);
+    assert_eq!(opp_pt.toughness, 2);
+}
+
 // ── Moment of Reckoning ─────────────────────────────────────────────────────
 
 #[test]
