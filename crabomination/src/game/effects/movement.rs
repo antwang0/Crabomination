@@ -196,6 +196,15 @@ impl GameState {
                         who.clone()
                     }
                 }
+                // Flatten `PlayerRef::You` to the caster's seat now —
+                // `place_card_in_dest` builds its own context anchored to
+                // the card's *origin owner* (which is the graveyard owner
+                // for gy-to-bf moves like Mind Roots, not the caster). If
+                // we don't flatten here, "controller: PlayerRef::You" on a
+                // ZoneDest::Battlefield would end up resolving to the
+                // graveyard's owner instead of the caster, putting the
+                // stolen land back under the opp's control.
+                PlayerRef::You => PlayerRef::Seat(ctx.controller),
                 _ => who.clone(),
             }
         };

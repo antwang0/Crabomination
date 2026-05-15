@@ -1615,6 +1615,60 @@ fn mind_roots_makes_opponent_discard_two() {
         "Opponent should have discarded 2 cards");
 }
 
+#[test]
+fn mind_roots_steals_a_discarded_land_to_caster_battlefield() {
+    // Push (modern_decks): the "Put up to one land card discarded this way
+    // onto the battlefield tapped under your control" rider now wires
+    // via `Selector::DiscardedThisResolution` + `Selector::Take(1)`.
+    // Seed opp hand with one land + two non-land cards; cast Mind Roots,
+    // both are discarded; the land should land on the caster's
+    // battlefield tapped.
+    let mut g = two_player_game();
+    g.add_card_to_hand(1, catalog::lightning_bolt());
+    let opp_island = g.add_card_to_hand(1, catalog::island());
+    let id = g.add_card_to_hand(0, catalog::mind_roots());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let bf_before = g.battlefield.len();
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Mind Roots castable for {1}{B}{G}");
+    drain_stack(&mut g);
+
+    // The discarded Island should now be on the caster's battlefield, tapped.
+    let stolen = g.battlefield_find(opp_island)
+        .expect("opp's Island should be on the battlefield after Mind Roots resolves");
+    assert_eq!(stolen.controller, 0,
+        "Mind Roots steals the discarded land to the caster's side");
+    assert!(stolen.tapped, "Stolen land should be tapped");
+    assert_eq!(g.battlefield.len(), bf_before + 1);
+}
+
+#[test]
+fn mind_roots_does_not_steal_a_nonland_discarded_card() {
+    // No land in opp's hand → no land discarded → nothing moves to bf.
+    let mut g = two_player_game();
+    g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.add_card_to_hand(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::mind_roots());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let bf_before = g.battlefield.len();
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Mind Roots castable for {1}{B}{G}");
+    drain_stack(&mut g);
+
+    assert_eq!(g.battlefield.len(), bf_before,
+        "No lands discarded → no land-grab — battlefield should be unchanged");
+}
+
 // ── Stadium Tidalmage ───────────────────────────────────────────────────────
 
 #[test]

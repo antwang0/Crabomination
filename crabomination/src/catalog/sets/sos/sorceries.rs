@@ -1417,13 +1417,18 @@ pub fn cost_of_brilliance() -> CardDefinition {
 /// "Target player discards two cards. Put up to one land card discarded
 /// this way onto the battlefield tapped under your control."
 ///
-/// Approximation: the "land card discarded this way → battlefield" half
-/// is omitted (the engine has no "track a card discarded by this
-/// effect" handle yet). The discard half uses `EachOpponent` so the
-/// caster never targets themselves — keeps the spell aligned with its
-/// hand-disruption role even though the printed card lets the caster
-/// target any player.
+/// Push (modern_decks): the "land card discarded this way → battlefield"
+/// half is **now wired** via the new `Selector::DiscardedThisResolution`
+/// primitive + `discarded_card_ids_this_resolution` tracker on
+/// `GameState`. The selector walks the IDs captured during
+/// `Effect::Discard` resolution, looks them up in their owner's
+/// graveyard, and filters by Land. Wrapped in `Selector::Take { count: 1 }`
+/// to match the printed "up to one land" cap. The discard half still
+/// uses `EachOpponent` for auto-target safety; the printed card lets
+/// the caster choose any player but the caster never has an incentive
+/// to discard from themselves.
 pub fn mind_roots() -> CardDefinition {
+    use crate::effect::ZoneDest;
     use crate::mana::g;
     CardDefinition {
         name: "Mind Roots",
@@ -1434,11 +1439,31 @@ pub fn mind_roots() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![],
-        effect: Effect::Discard {
-            who: Selector::Player(PlayerRef::EachOpponent),
-            amount: Value::Const(2),
-            random: false,
-        },
+        effect: Effect::Seq(vec![
+            // Each opponent discards 2 cards. The Discard handler stamps
+            // every discarded card's id onto
+            // `state.discarded_card_ids_this_resolution`.
+            Effect::Discard {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(2),
+                random: false,
+            },
+            // Walk the captured discarded-card-ids list, filter by Land,
+            // take at most one, and move it onto the battlefield tapped
+            // under the caster's control.
+            Effect::Move {
+                what: Selector::Take {
+                    inner: Box::new(Selector::DiscardedThisResolution {
+                        filter: SelectionRequirement::HasCardType(CardType::Land),
+                    }),
+                    count: Box::new(Value::Const(1)),
+                },
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: true,
+                },
+            },
+        ]),
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],

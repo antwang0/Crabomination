@@ -121,6 +121,16 @@ pub enum Selector {
     /// Every card in `who`'s zone matching `filter`.
     CardsInZone { who: PlayerRef, zone: Zone, filter: SelectionRequirement },
 
+    /// Cards discarded earlier in this same resolution (across all players)
+    /// matching `filter`. Backed by
+    /// `GameState.discarded_card_ids_this_resolution`. Used by Mind Roots's
+    /// "Put up to one land card discarded this way onto the battlefield
+    /// tapped under your control" rider — at resolution time the discarded
+    /// cards have already moved into their owner's graveyard, and this
+    /// selector walks `discarded_card_ids_this_resolution` then filters in
+    /// the gy zone.
+    DiscardedThisResolution { filter: SelectionRequirement },
+
     /// A single player, lifted to selector form.
     Player(PlayerRef),
 

@@ -245,6 +245,7 @@ impl GameState {
         // mode 1's "draw cards equal to the number discarded this way").
         self.cards_discarded_this_resolution = 0;
         self.creature_cards_discarded_this_resolution = 0;
+        self.discarded_card_ids_this_resolution.clear();
         let mut events = vec![];
         self.run_effect(effect, ctx, &mut events)?;
         Ok(events)
@@ -552,6 +553,7 @@ impl GameState {
                             self.players[p].graveyard.push(card);
                             events.push(GameEvent::CardDiscarded { player: p, card_id: cid });
                             self.cards_discarded_this_resolution += 1;
+                            self.discarded_card_ids_this_resolution.push(cid);
                             if was_creature {
                                 self.creature_cards_discarded_this_resolution += 1;
                             }
@@ -1966,6 +1968,26 @@ impl GameState {
                                 EntityRef::Card(c.id)
                             }),
                     );
+                }
+                out
+            }
+
+            Selector::DiscardedThisResolution { filter } => {
+                // Walk the IDs captured in `discarded_card_ids_this_resolution`
+                // and look them up in their owner's graveyard (where
+                // `Effect::Discard` moves them). Filter via the card-level
+                // evaluator since the discarded cards aren't on the
+                // battlefield.
+                let ids = self.discarded_card_ids_this_resolution.clone();
+                let mut out: Vec<EntityRef> = Vec::new();
+                for cid in ids {
+                    let card = self.players.iter()
+                        .find_map(|p| p.graveyard.iter().find(|c| c.id == cid));
+                    if let Some(c) = card
+                        && self.evaluate_requirement_on_card(filter, c, ctx.controller)
+                    {
+                        out.push(EntityRef::Card(cid));
+                    }
                 }
                 out
             }
