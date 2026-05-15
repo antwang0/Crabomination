@@ -9830,3 +9830,69 @@ fn transcendent_archaic_etb_may_draw_accepts_via_scripted_decider() {
         "No discard fires when ConvergedValue=0 (gate fails)"
     );
 }
+
+// ── Steal the Show — DiscardAnyNumber promotion ─────────────────────────────
+
+#[test]
+fn steal_the_show_mode_zero_discard_any_number_drops_zero_by_default() {
+    // Mode 0 — target player discards any number, draws that many.
+    // AutoDecider picks 0 (no discard, no draw).
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    // Give P0 a few hand cards so a non-zero pick would be observable.
+    for _ in 0..3 {
+        g.add_card_to_hand(0, catalog::lightning_bolt());
+    }
+    let id = g.add_card_to_hand(0, catalog::steal_the_show());
+    let hand_before = g.players[0].hand.len();
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Player(0)),
+        additional_targets: vec![],
+        mode: Some(0),
+        x_value: None,
+    })
+    .expect("Steal the Show castable for {2}{R} mode 0");
+    drain_stack(&mut g);
+
+    // AutoDecider picked 0 to discard → 0 to draw. Net hand: -1 (cast).
+    assert_eq!(
+        g.players[0].hand.len(),
+        hand_before - 1,
+        "AutoDecider picks 0 cards to discard → no draw → hand only loses the cast Steal the Show"
+    );
+}
+
+#[test]
+fn steal_the_show_mode_one_burns_creature_by_is_graveyard_count() {
+    // Mode 1 — damage = # of IS cards in your graveyard.
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    // Seed 3 IS cards in P0's gy.
+    for _ in 0..3 {
+        g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    }
+    let id = g.add_card_to_hand(0, catalog::steal_the_show());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: Some(1),
+        x_value: None,
+    })
+    .expect("Steal the Show castable for {2}{R} mode 1");
+    drain_stack(&mut g);
+
+    // 3 IS cards in gy → 3 damage → bear dies (toughness 2).
+    assert!(
+        !g.battlefield.iter().any(|c| c.id == bear),
+        "Bear destroyed by 3 damage from Steal the Show mode 1"
+    );
+}

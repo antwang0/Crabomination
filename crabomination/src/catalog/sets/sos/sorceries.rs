@@ -1860,14 +1860,14 @@ pub fn chelonian_tackle() -> CardDefinition {
 /// • Steal the Show deals damage equal to the number of instant and
 ///   sorcery cards in your graveyard to target creature or planeswalker.
 ///
-/// Approximation: the engine has no "choose one or both" multi-mode
-/// primitive, so this is wired as a normal `ChooseMode` (pick one).
-/// Mode 0 collapses "any number of cards" to "discard 2, draw 2" — the
-/// engine has no controller-picks-N-from-hand affordance for the
-/// targeted player; the most common play pattern is "discard your
-/// hand to refill". Mode 1 reads the IS-graveyard count from the
-/// caster's graveyard via `Value::CountOf(EachMatching)` and damages
-/// the target creature/PW.
+/// Push (modern_decks): mode 0 now uses the new `Effect::DiscardAnyNumber`
+/// primitive (same as Colossus of the Blood Age + Borrowed Knowledge),
+/// so the targeted player chooses how many cards to discard, then draws
+/// that many cards (read via `Value::CardsDiscardedThisEffect`).
+/// AutoDecider picks 0 (no discard → no draw); ScriptedDecider can
+/// supply specific picks. The "choose one or both" rider still
+/// collapses to "pick one mode" (no multi-mode-pick primitive that
+/// generalises ChooseN to per-target slots).
 pub fn steal_the_show() -> CardDefinition {
     use crate::card::Zone;
     use crate::mana::r;
@@ -1887,17 +1887,17 @@ pub fn steal_the_show() -> CardDefinition {
         toughness: 0,
         keywords: vec![],
         effect: Effect::ChooseMode(vec![
-            // Mode 0: target player discards 2, then draws 2 ("any
-            // number of cards" approximation).
+            // Mode 0: target player discards any number, then draws
+            // exactly that many. Each discard bumps
+            // `cards_discarded_this_resolution`, so the follow-up
+            // Draw(CardsDiscardedThisEffect) reads the exact count.
             Effect::Seq(vec![
-                Effect::Discard {
+                Effect::DiscardAnyNumber {
                     who: target_filtered(SelectionRequirement::Player),
-                    amount: Value::Const(2),
-                    random: false,
                 },
                 Effect::Draw {
                     who: Selector::Target(0),
-                    amount: Value::Const(2),
+                    amount: Value::CardsDiscardedThisEffect,
                 },
             ]),
             // Mode 1: damage = # of instant/sorcery cards in your
