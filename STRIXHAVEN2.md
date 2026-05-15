@@ -18,14 +18,30 @@ Two adjacent catalogs:
 
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
-| SOS (255 cards) | 184 | 70 | 1 |
-| STX (170 cards) | 175 | 15 | 0 |
-| STA reprints (in STX boosters) | 33 | 0 | — |
+| SOS (255 cards) | 186 | 68 | 1 |
+| STX (170 cards) | 176 | 15 | 0 |
+| STA reprints (in STX boosters) | 32 | 0 | — |
 
 Push (modern_decks, claude/modern_decks branch — current revision,
-latest sub-push): **10 NEW cards** (5 STX 2021 + 4 STA reprints + 1 STX
-Mastery cycle). All new cards ship with at least one functionality test
-in `tests::stx`.
+latest sub-push): **12 NEW cards** (7 STX 2021 + 4 STA reprints + 1 STX
+Mastery cycle) **+ 2 SOS promotions** (Burrog Barrage ✅, Chelonian
+Tackle ✅ via slot-1 multi-target promotion). All new cards ship with
+at least one functionality test in `tests::stx`.
+
+**SOS promotions (2):**
+
+1. **Burrog Barrage** 🟡 → ✅ — Doc-sync: the slot-1 multi-target
+   promotion (`Selector::TargetFiltered { slot: 1 }`) for the opp-
+   creature defender shipped earlier (push modern_decks). Existing
+   tests cover both slot 0-only and slots 0+1.
+2. **Chelonian Tackle** 🟡 → ✅ — Promoted `Effect::Fight`'s defender
+   from auto-pick `EachPermanent(Opp creature)` to slot-1
+   `Selector::TargetFiltered { slot: 1, filter: Creature & ControlledBy
+   Opponent }`. The cast path's `auto_targets_for_effect_all_slots`
+   fills slot 1 when an opp creature exists. Tests:
+   `chelonian_tackle_pumps_toughness` (slot 0 only — fight no-ops),
+   `chelonian_tackle_fights_opp_creature` (both slots → opp creature
+   dies).
 
 **New cards added in this push (10):**
 
@@ -72,6 +88,16 @@ in `tests::stx`.
     card. The {1}{U}{U} alt-cost-implies-mode is engine-wide ⏳ (same
     as Baleful / Devastating / Verdant Mastery). Test:
     `ingenious_mastery_draws_three_stacks_two_and_opp_draws`.
+11. **Acolyte of Affliction** ✅ NEW (STX 2021) — {3}{B}{B} 4/3 Zombie
+    Cleric. ETB: each player mills three; return up to one target
+    permanent card from any graveyard to its owner's hand. Tests:
+    `acolyte_of_affliction_mills_each_player_three`,
+    `acolyte_of_affliction_is_a_five_mana_zombie_cleric`.
+12. **Skywarp Skaab** ✅ NEW (STX 2021) — {1}{U}{U} 2/3 Zombie Wizard
+    with Flying. ETB: optional discard 1 + bounce target creature (via
+    `Effect::MayDo`). Tests:
+    `skywarp_skaab_is_a_three_mana_flying_zombie_wizard`,
+    `skywarp_skaab_etb_declines_by_default`.
 
 Prior push (modern_decks, claude/modern_decks branch — earlier sub-push):
 Added 8 NEW STX cards + 2 SOS promotions (Transcendent Archaic ✅,
@@ -636,8 +662,8 @@ each 🟡 row are in the tables below.
 | Aberrant Manawurm | {3}{G} | Creature — Wurm | 2/5 | Trample / Whenever you cast an instant or sorcery spell, this creature gets +X/+0 until end of turn, where X is the amount of mana spent to cast that spell. | ✅ | Push XXIX: Magecraft-style trigger **now wired** via `shortcut::magecraft(PumpPT{power: CastSpellManaSpent})`. The pump reads the just-cast spell's mana_spent so a 5-mana spell gives the wurm +5/+0 EOT. Test: `aberrant_manawurm_pumps_by_mana_spent_eot`. |
 | Additive Evolution | {3}{G}{G} | Enchantment |  | When this enchantment enters, create a 0/0 green and blue Fractal creature token. Put three +1/+1 counters on it. / At the beginning of combat on your turn, put a +1/+1 counter on target creature you control. It gains vigilance until end of turn. | ✅ | Wired in `catalog::sets::sos::enchantments`. ETB Fractal-with-3-counters via the existing `fractal_token()` helper + `Selector::LastCreatedToken` AddCounter. Begin-combat +1/+1 counter + Vigilance (EOT) on a friendly creature, gated through the active-player StepBegins(BeginCombat) trigger. |
 | Ambitious Augmenter | {G} | Creature — Turtle Wizard | 1/1 | Increment (Whenever you cast a spell, if the amount of mana you spent is greater than this creature's power or toughness, put a +1/+1 counter on this creature.) / When this creature dies, if it had one or more counters on it, create a 0/0 green and blue Fractal creature token, then put this creature's counters on that token. | 🟡 | Body-only wire in `catalog::sets::sos::creatures` (1/1 Turtle Wizard at {G}). Increment pump omitted (mana-spent-on-cast introspection missing — tracked in TODO.md). The death-with-counters → Fractal-with-counters trigger is also omitted pending a counter-transfer-on-death primitive. |
-| Burrog Barrage | {1}{G} | Instant |  | Target creature you control gets +1/+0 until end of turn if you've cast another instant or sorcery spell this turn. Then it deals damage equal to its power to up to one target creature an opponent controls. | 🟡 | Wired in `catalog::sets::sos::instants` — conditional pump (gated on the new `Predicate::SpellsCastThisTurnAtLeast(2)`) + power-as-damage to the chosen target. The 2-target prompt for the opp-creature defender is collapsed (single-target spell), so the spell ends up dealing self-damage rather than hitting an opp creature. Tracked in TODO.md. |
-| Chelonian Tackle | {2}{G} | Sorcery |  | Target creature you control gets +0/+10 until end of turn. Then it fights up to one target creature an opponent controls. (Each deals damage equal to its power to the other.) | 🟡 | +0/+10 EOT pump + the new `Effect::Fight` against an auto-selected opp creature (no multi-target prompt for the defender slot). Fight no-ops cleanly when no opp creature is on the battlefield, preserving the printed "up to one" semantics. |
+| Burrog Barrage | {1}{G} | Instant |  | Target creature you control gets +1/+0 until end of turn if you've cast another instant or sorcery spell this turn. Then it deals damage equal to its power to up to one target creature an opponent controls. | ✅ (was 🟡) | Push (modern_decks doc-sync): both halves wired and exercised. Conditional pump (gated on `Predicate::SpellsCastThisTurnAtLeast(2)`); power-as-damage uses `Selector::TargetFiltered { slot: 1, .. }` so the optional opp-creature defender slot is passed via `additional_targets` at cast time. AutoDecider fills slot 0 only (typical bot play); the scripted-test suite covers both slot 0-only (no damage) and slots 0+1 (damage = friendly's pumped power → opp bear dies). Tests: `burrog_barrage_no_pump_on_first_spell_skips_damage_with_no_opp_target`, `burrog_barrage_kills_opp_bear_with_second_target_filled`. |
+| Chelonian Tackle | {2}{G} | Sorcery |  | Target creature you control gets +0/+10 until end of turn. Then it fights up to one target creature an opponent controls. (Each deals damage equal to its power to the other.) | ✅ (was 🟡) | Push (modern_decks): slot-1 multi-target promotion. Slot 0 = friendly creature to pump +0/+10 EOT; slot 1 = optional opp creature defender (via `Selector::TargetFiltered { slot: 1 }`). Fight no-ops cleanly when slot 1 isn't filled — preserving the printed "up to one" semantics. AutoDecider's `auto_targets_for_effect_all_slots` (server/bot.rs) fills slot 1 when an opp creature is on the battlefield. Tests: `chelonian_tackle_pumps_toughness` (slot 0 only — fight no-ops), `chelonian_tackle_fights_opp_creature` (both slots — opp creature dies). |
 | Comforting Counsel | {1}{G} | Enchantment |  | Whenever you gain life, put a growth counter on this enchantment. / As long as there are five or more growth counters on this enchantment, creatures you control get +3/+3. | ✅ (was 🟡) | Push (modern_decks): Lifegain → Growth counter trigger wired in `catalog::sets::sos::enchantments`. The "≥5 counters → anthem" static is **now wired** via a compute-time injection in `GameState::compute_battlefield` (Honor Troll pattern) — gate reads `card.counters[Growth] >= 5`; when true, layer 7b pumps every creature controlled by the enchantment's controller by +3/+3 via `AffectedPermanents::All { controller, card_types: [Creature] }`. Tests: `comforting_counsel_no_anthem_below_five_counters`, `comforting_counsel_anthem_buffs_friendly_creatures_at_five_counters`, `comforting_counsel_accrues_growth_on_lifegain`. |
 | Efflorescence | {2}{G} | Instant |  | Put two +1/+1 counters on target creature. / Infusion — If you gained life this turn, that creature also gains trample and indestructible until end of turn. | ✅ | Wired with the new `Predicate::LifeGainedThisTurnAtLeast` Infusion gate. |
 | Emeritus of Abundance // Regrowth | {2}{G} // {1}{G} | Creature — Elf Druid // Sorcery | 3/4 |  | ✅ (was 🟡) | Push (modern_decks doc-sync): vanilla front + faithful back-face spell wired via the `GameAction::CastSpellBack` path (push XI/XII). The stale "Standard primitives — should be straightforward to wire" note was the original ⏳ flag from before MDFC plumbing landed; the body has been at-parity-with-printed-Oracle since push XII. Tests live in `tests::sos` keyed by the back-face spell name.|

@@ -4664,10 +4664,14 @@ fn chelonian_tackle_pumps_toughness() {
 
 #[test]
 fn chelonian_tackle_fights_opp_creature() {
-    // With an opp creature, Fight resolves: friendly bear (2 power)
-    // damages opp bear (2 power, 2 toughness) and the opp bear
-    // damages friendly bear back. Friendly bear is 2/12 after pump
-    // so survives 2 damage; opp bear dies to 2 damage.
+    // With an opp creature passed in `additional_targets[0]`, Fight
+    // resolves: friendly bear (2 power) damages opp bear (2 toughness)
+    // and the opp bear damages friendly bear back. Friendly bear is
+    // 2/12 after pump so survives 2 damage; opp bear dies to 2 damage.
+    //
+    // Push (modern_decks): Chelonian Tackle now uses a two-slot
+    // multi-target shape — slot 0 = the friendly attacker, slot 1 =
+    // the optional opp defender. The test now supplies both.
     let mut g = two_player_game();
     let friendly = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let opp = g.add_card_to_battlefield(1, catalog::grizzly_bears());
@@ -4676,7 +4680,11 @@ fn chelonian_tackle_fights_opp_creature() {
     g.players[0].mana_pool.add_colorless(2);
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: Some(Target::Permanent(friendly)), additional_targets: vec![], mode: None, x_value: None,
+        card_id: id,
+        target: Some(Target::Permanent(friendly)),
+        additional_targets: vec![Target::Permanent(opp)],
+        mode: None,
+        x_value: None,
     })
     .expect("Chelonian Tackle castable for {2}{G}");
     drain_stack(&mut g);

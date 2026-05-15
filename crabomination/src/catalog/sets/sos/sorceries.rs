@@ -1822,6 +1822,12 @@ pub fn chelonian_tackle() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![],
+        // Push (modern_decks): slot-0 = friendly creature to pump +0/+10
+        // EOT; slot-1 = optional opp creature defender (picked via the
+        // multi-target prompt — `Selector::TargetFiltered { slot: 1 }`).
+        // AutoDecider fills both slots when an opp creature is on the
+        // battlefield. With no opp creature, slot 1 is empty and Fight
+        // no-ops — preserving the printed "up to one" semantics.
         effect: Effect::Seq(vec![
             Effect::PumpPT {
                 what: target_filtered(
@@ -1834,10 +1840,11 @@ pub fn chelonian_tackle() -> CardDefinition {
             },
             Effect::Fight {
                 attacker: Selector::Target(0),
-                defender: Selector::EachPermanent(
-                    SelectionRequirement::Creature
+                defender: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: SelectionRequirement::Creature
                         .and(SelectionRequirement::ControlledByOpponent),
-                ),
+                },
             },
         ]),
         activated_abilities: no_abilities(),

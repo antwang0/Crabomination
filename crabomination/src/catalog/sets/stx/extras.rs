@@ -7514,3 +7514,104 @@ pub fn ingenious_mastery() -> CardDefinition {
 // ── Defend the Campus enhancement note ─────────────────────────────────────
 //
 // Defend the Campus is already wired (3 Inkling tokens).
+
+// ── Acolyte of Affliction (STX) ────────────────────────────────────────────
+
+/// Acolyte of Affliction — {3}{B}{B} Creature — Zombie Cleric, 4/3 (STX
+/// 2021). "When this creature enters, each player mills three cards.
+/// Return up to one target permanent card from a graveyard to its
+/// owner's hand."
+///
+/// ✅ ETB wired as `Seq(Mill 3 → EachPlayer, Move(target perm card in
+/// any graveyard → owner's hand))`. The "up to one" rider is honored by
+/// the target being optional at cast time (a single-target spell can
+/// be cast without picking a target creature card).
+pub fn acolyte_of_affliction() -> CardDefinition {
+    CardDefinition {
+        name: "Acolyte of Affliction",
+        cost: cost(&[generic(3), b(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::Mill {
+                    who: Selector::Player(PlayerRef::EachPlayer),
+                    amount: Value::Const(3),
+                },
+                Effect::Move {
+                    what: target_filtered(SelectionRequirement::Permanent),
+                    to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+                },
+            ]),
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+    }
+}
+
+// ── Skywarp Skaab (STX) ────────────────────────────────────────────────────
+
+/// Skywarp Skaab — {1}{U}{U} Creature — Zombie Wizard, 2/3 (STX 2021).
+/// "Flying / When this creature enters, you may discard a card. If you
+/// do, return up to one target creature to its owner's hand."
+///
+/// ✅ ETB body wired via `MayDo(Seq(Discard 1, Move target Creature →
+/// owner's hand))`. The "may" optionality is honored — AutoDecider
+/// declines by default; ScriptedDecider can opt into the discard +
+/// bounce line.
+pub fn skywarp_skaab() -> CardDefinition {
+    CardDefinition {
+        name: "Skywarp Skaab",
+        cost: cost(&[generic(1), u(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::MayDo {
+                description: "Skywarp Skaab ETB: discard a card to bounce target creature?".into(),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::Discard {
+                        who: Selector::You,
+                        amount: Value::Const(1),
+                        random: false,
+                    },
+                    Effect::Move {
+                        what: target_filtered(SelectionRequirement::Creature),
+                        to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+                    },
+                ])),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+    }
+}

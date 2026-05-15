@@ -9140,3 +9140,89 @@ fn ingenious_mastery_draws_three_stacks_two_and_opp_draws() {
         "opp drew a card from Ingenious Mastery"
     );
 }
+
+// ── Acolyte of Affliction (STX) ────────────────────────────────────────────
+
+#[test]
+fn acolyte_of_affliction_mills_each_player_three() {
+    let mut g = two_player_game();
+    for _ in 0..10 {
+        g.add_card_to_library(0, catalog::island());
+        g.add_card_to_library(1, catalog::island());
+    }
+    let id = g.add_card_to_hand(0, catalog::acolyte_of_affliction());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    let p0_lib_before = g.players[0].library.len();
+    let p1_lib_before = g.players[1].library.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Acolyte of Affliction castable for {3}{B}{B}");
+    drain_stack(&mut g);
+
+    assert_eq!(
+        g.players[0].library.len(),
+        p0_lib_before - 3,
+        "Acolyte ETB mills P0 three cards"
+    );
+    assert_eq!(
+        g.players[1].library.len(),
+        p1_lib_before - 3,
+        "Acolyte ETB mills P1 three cards"
+    );
+}
+
+#[test]
+fn acolyte_of_affliction_is_a_five_mana_zombie_cleric() {
+    let def = catalog::acolyte_of_affliction();
+    assert_eq!(def.name, "Acolyte of Affliction");
+    assert_eq!(def.cost.cmc(), 5);
+    assert_eq!(def.power, 4);
+    assert_eq!(def.toughness, 3);
+    assert!(def.subtypes.creature_types.contains(&crate::card::CreatureType::Zombie));
+    assert!(def.subtypes.creature_types.contains(&crate::card::CreatureType::Cleric));
+}
+
+// ── Skywarp Skaab (STX) ────────────────────────────────────────────────────
+
+#[test]
+fn skywarp_skaab_is_a_three_mana_flying_zombie_wizard() {
+    let def = catalog::skywarp_skaab();
+    assert_eq!(def.name, "Skywarp Skaab");
+    assert_eq!(def.cost.cmc(), 3);
+    assert_eq!(def.power, 2);
+    assert_eq!(def.toughness, 3);
+    assert!(def.keywords.contains(&Keyword::Flying));
+    assert!(def.subtypes.creature_types.contains(&crate::card::CreatureType::Zombie));
+}
+
+#[test]
+fn skywarp_skaab_etb_declines_by_default() {
+    // AutoDecider declines the "you may discard" — Skywarp Skaab just
+    // enters as a vanilla 2/3 flier.
+    let mut g = two_player_game();
+    let opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_hand(0, catalog::island());
+    let id = g.add_card_to_hand(0, catalog::skywarp_skaab());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    // Hand size before cast — should be -1 cast + 0 discard = -1.
+    let p0_hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Skywarp Skaab castable for {1}{U}{U}");
+    drain_stack(&mut g);
+
+    // AutoDecider declines: opp bear stays on battlefield, P0 hand size = before - 1 (cast cost).
+    assert!(
+        g.battlefield.iter().any(|c| c.id == opp_bear),
+        "Opp bear stays on battlefield when Skywarp Skaab declines"
+    );
+    assert_eq!(
+        g.players[0].hand.len(),
+        p0_hand_before - 1,
+        "P0 hand size = before - 1 (cast cost) — no discard since AutoDecider declines"
+    );
+}
