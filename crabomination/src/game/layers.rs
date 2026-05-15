@@ -136,8 +136,18 @@ pub enum AffectedPermanents {
         #[serde(default)]
         exclude_source: bool,
     },
-    /// All permanents controlled by any player *other* than `source_controller`.
-    AllOpponents { source_controller: usize, card_types: Vec<CardType> },
+    /// All permanents controlled by any player on a team other than the
+    /// source's. In 1v1 / free-for-all this is "everyone but the source's
+    /// controller" — but in team formats (2HG) teammates of the source
+    /// must not be hit. `friendly_seats` lists the source's team; empty
+    /// means "use the legacy single-seat `source_controller` check"
+    /// (snapshots predating push-XLIII).
+    AllOpponents {
+        source_controller: usize,
+        card_types: Vec<CardType>,
+        #[serde(default)]
+        friendly_seats: Vec<usize>,
+    },
     /// A specific set of permanents.
     Specific(Vec<CardId>),
     /// All creatures with the given creature type (lord effect).
@@ -347,8 +357,14 @@ fn affects(effect: &ContinuousEffect, card: &crate::card::CardInstance) -> bool 
                 || card_types.iter().any(|t| card.definition.card_types.contains(t));
             ctrl_ok && type_ok
         }
-        AffectedPermanents::AllOpponents { source_controller, card_types } => {
-            let ctrl_ok = card.controller != *source_controller;
+        AffectedPermanents::AllOpponents { source_controller, card_types, friendly_seats } => {
+            // Empty `friendly_seats` → legacy 1v1 check (snapshots from
+            // before push-XLIII didn't populate it).
+            let ctrl_ok = if friendly_seats.is_empty() {
+                card.controller != *source_controller
+            } else {
+                !friendly_seats.contains(&card.controller)
+            };
             let type_ok = card_types.is_empty()
                 || card_types.iter().any(|t| card.definition.card_types.contains(t));
             ctrl_ok && type_ok

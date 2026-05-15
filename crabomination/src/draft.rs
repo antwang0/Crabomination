@@ -272,17 +272,28 @@ pub fn suggest_main_deck(picks: &[CardFactory], target_spells: usize) -> (Vec<Ca
         }
     }
     on_color.sort_by_key(|(_, score)| std::cmp::Reverse(*score));
-    let take = target_spells.min(on_color.len());
-    let mut main: Vec<CardFactory> = on_color.iter().take(take).map(|(f, _)| *f).collect();
-    // Apply the 4-copy cap defensively (extremely unlikely with random
-    // draft picks, but keeps the deck legal).
-    main = enforce_copy_cap(main);
-    let leftovers: Vec<CardFactory> = on_color
-        .iter()
-        .skip(take)
-        .map(|(f, _)| *f)
-        .chain(other)
-        .collect();
+    // Walk on-color picks in score order. A card joins the main deck if it
+    // fits both the target size and the 4-copy cap; over-cap or over-target
+    // copies fall through to leftovers (sideboard) so the player still sees
+    // them and the slot can go to the next-best on-color card. Previously
+    // the cap was applied with `enforce_copy_cap` after slicing, which
+    // silently dropped over-cap copies entirely (e.g. 6 Lightning Bolts →
+    // main capped to 4, leftovers built via `.skip(take)` which missed the
+    // 2 dropped copies).
+    let mut counts: HashMap<usize, u32> = HashMap::new();
+    let mut main: Vec<CardFactory> = Vec::new();
+    let mut leftovers: Vec<CardFactory> = Vec::new();
+    for (factory, _score) in on_color {
+        let key = factory as usize;
+        let count = counts.entry(key).or_insert(0);
+        if main.len() < target_spells && *count < COPY_CAP {
+            *count += 1;
+            main.push(factory);
+        } else {
+            leftovers.push(factory);
+        }
+    }
+    leftovers.extend(other);
     (main, leftovers)
 }
 
@@ -574,8 +585,33 @@ mod tests {
         // 6 copies of the same card → 4 in main, the rest move to
         // the sideboard via the copy-cap pass.
         let picks: Vec<CardFactory> = vec![crate::catalog::lightning_bolt; 6];
-        let (main, _sb) = suggest_main_deck(&picks, 23);
+        let (main, sb) = suggest_main_deck(&picks, 23);
         assert_eq!(main.len(), 4, "main capped at four copies");
+        // Regression: previously the over-cap copies were silently dropped
+        // because `leftovers` was built via `.skip(target_spells)` over the
+        // pre-cap pile. The 5th and 6th Bolts must end up in the sideboard
+        // pile so the player can still see them when deckbuilding.
+        assert_eq!(main.len() + sb.len(), picks.len(),
+            "no cards lost — over-cap copies must move to sideboard");
+        assert_eq!(sb.len(), 2, "two over-cap copies sit in the sideboard");
+        assert!(sb.iter().all(|f| *f as usize == crate::catalog::lightning_bolt as usize),
+            "sideboard holds the dropped Bolts");
+    }
+
+    #[test]
+    fn suggest_main_deck_fills_main_past_capped_card() {
+        // 6 Bolts (over-cap) plus enough other on-color spells. With the
+        // bug, the 6 Bolts consumed 6 main-deck slots before being capped
+        // back to 4, leaving the next-best card stranded in the sideboard
+        // even though main had room. After the fix, the cap rejection
+        // frees the slot for the next on-color pick.
+        let mut picks: Vec<CardFactory> = vec![crate::catalog::lightning_bolt; 6];
+        picks.push(crate::catalog::counterspell);
+        let (main, sb) = suggest_main_deck(&picks, 5);
+        assert_eq!(main.len(), 5, "main fills to target after the cap kicks in");
+        assert!(main.iter().any(|f| *f as usize == crate::catalog::counterspell as usize),
+            "Counterspell takes the slot freed by the 5th Bolt being capped");
+        assert_eq!(main.len() + sb.len(), picks.len(), "no cards lost");
     }
 
     #[test]
@@ -665,3 +701,4 @@ mod tests {
         assert_eq!(history.len(), PACK_SIZE);
     }
 }
+// touch

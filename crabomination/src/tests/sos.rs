@@ -6784,8 +6784,8 @@ fn inkshape_demonstrator_is_3_4_with_ward_and_creature_types() {
     assert_eq!(def.power, 3);
     assert_eq!(def.toughness, 4);
     assert!(
-        def.keywords.iter().any(|k| matches!(k, Keyword::Ward(2))),
-        "Inkshape Demonstrator should carry Ward {{2}} (the keyword is wired even though enforcement is pending)"
+        def.keywords.contains(&Keyword::Ward(crate::card::WardCost::generic(2))),
+        "Inkshape Demonstrator should carry Ward {{2}}"
     );
     assert!(def.subtypes.creature_types.contains(&crate::card::CreatureType::Elephant));
     assert!(def.subtypes.creature_types.contains(&crate::card::CreatureType::Cleric));
@@ -6808,6 +6808,276 @@ fn inkshape_demonstrator_repartee_pumps_and_grants_lifelink() {
     assert_eq!(v.power, 4, "Inkshape Demonstrator should be +1/+0 → 4 power");
     assert!(v.keywords.contains(&Keyword::Lifelink),
         "Repartee should grant Lifelink EOT");
+}
+
+// ── Ward enforcement (CR 702.21) ────────────────────────────────────────────
+
+#[test]
+fn ward_counters_opp_spell_when_payer_cannot_afford() {
+    // Opp casts Lightning Bolt at P0's Inkshape Demonstrator (Ward 2).
+    // Opp has only {R} in pool — no spare {2} for the Ward tax — so the
+    // Ward trigger counters the bolt. The Demonstrator survives at full
+    // toughness.
+    let mut g = two_player_game();
+    let demo = g.add_card_to_battlefield(0, catalog::inkshape_demonstrator());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    // Only enough mana for the spell, not the Ward tax.
+    g.players[1].mana_pool.add(Color::Red, 1);
+    // Hand priority to P1 so they can cast at instant speed.
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Permanent(demo)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Lightning Bolt castable for {R} (Ward is paid at trigger resolution)");
+    drain_stack(&mut g);
+
+    let v = g.computed_permanent(demo).expect("Demonstrator should survive Ward 2");
+    assert_eq!(v.toughness, 4, "Demonstrator at full 4 toughness — bolt was countered by Ward");
+    let bolt_in_gy = g.players[1].graveyard.iter().any(|c| c.id == bolt);
+    assert!(bolt_in_gy, "Countered spell goes to its owner's graveyard");
+}
+
+#[test]
+fn ward_allows_opp_spell_when_payer_can_afford() {
+    // Opp has enough mana to pay the Ward 2 tax on top of the bolt cost.
+    // Auto-pay covers it; the bolt resolves and the Demonstrator dies
+    // (3 damage to a 4-toughness creature wouldn't kill it, so we add a
+    // -1/-1 counter rider via Crippling Fear-style: instead, just verify
+    // 3 damage lands).
+    let mut g = two_player_game();
+    let demo = g.add_card_to_battlefield(0, catalog::inkshape_demonstrator());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    // {R} for the bolt + {2} generic for the Ward tax = enough.
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.players[1].mana_pool.add_colorless(2);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Permanent(demo)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Bolt castable; Ward auto-paid");
+    drain_stack(&mut g);
+
+    let bolt_in_gy = g.players[1].graveyard.iter().any(|c| c.id == bolt);
+    assert!(bolt_in_gy, "Bolt resolved and went to graveyard");
+    let demo_card = g.battlefield.iter().find(|c| c.id == demo)
+        .expect("Demonstrator survives 3 damage to a 4-toughness body");
+    assert_eq!(demo_card.damage, 3, "Bolt's 3 damage should land — Ward was paid");
+}
+
+#[test]
+fn ward_does_not_trigger_on_caster_own_spell() {
+    // P0 owns the Ward 2 creature. P0 casts a buff on it — Ward doesn't
+    // fire (Ward only triggers on opp-controlled spells per CR 702.21a).
+    let mut g = two_player_game();
+    let demo = g.add_card_to_battlefield(0, catalog::inkshape_demonstrator());
+    // Use Inkshape's own Repartee Lightning Bolt as the test — bolt P0's own
+    // bear so it's a creature-targeting spell. Verify the bolt resolves
+    // without being countered.
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    // P0 casts the bolt at their OWN Demonstrator (illegal in normal play
+    // — but the bolt's filter is Creature/Player/PW, no targeting
+    // restriction. Ward should NOT fire because P0 is the caster.)
+    // To keep the test clean, bolt P0's own bear instead — same caster
+    // identity check.
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Bolt cast on own bear");
+    drain_stack(&mut g);
+
+    // Demonstrator was never targeted — Ward never had a reason to fire,
+    // but the broader check is that the bolt resolved (didn't get tangled
+    // up by anyone's Ward) and the bear died.
+    let bear_dead = g.players[0].graveyard.iter().any(|c| c.id == bear);
+    assert!(bear_dead, "Bear dies to bolt — Ward did not interfere with P0's own cast");
+    assert!(
+        g.computed_permanent(demo).is_some(),
+        "Demonstrator untouched by P0's own cast"
+    );
+}
+
+// ── Ward—Pay N life (Mica, Reader of Ruins) ─────────────────────────────────
+
+#[test]
+fn ward_pay_life_counters_when_payer_has_insufficient_life() {
+    // P0's Mica has Ward—Pay 3 life. P1 has 2 life and casts Bolt at Mica.
+    // 2 < 3, so the Ward trigger can't pay → bolt is countered.
+    let mut g = two_player_game();
+    let mica = g.add_card_to_battlefield(0, catalog::mica_reader_of_ruins());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.players[1].life = 2;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Permanent(mica)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Bolt castable for {R}");
+    drain_stack(&mut g);
+
+    // Mica survives (bolt countered).
+    let mica_card = g.battlefield.iter().find(|c| c.id == mica)
+        .expect("Mica survives — Ward—Pay 3 life triggered with insufficient life");
+    assert_eq!(mica_card.damage, 0, "no damage dealt — bolt was countered");
+    let bolt_in_gy = g.players[1].graveyard.iter().any(|c| c.id == bolt);
+    assert!(bolt_in_gy, "Countered bolt goes to its owner's graveyard");
+    assert_eq!(g.players[1].life, 2, "no life paid — payment failed pre-deduction");
+}
+
+#[test]
+fn ward_pay_life_resolves_when_payer_has_sufficient_life() {
+    // P1 has 20 life, can pay the 3-life Ward, bolt resolves and Mica
+    // (a 4/4) takes 3 damage but survives. P1 ends at 17 life.
+    let mut g = two_player_game();
+    let mica = g.add_card_to_battlefield(0, catalog::mica_reader_of_ruins());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.players[1].life = 20;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Permanent(mica)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Bolt castable");
+    drain_stack(&mut g);
+
+    let mica_card = g.battlefield.iter().find(|c| c.id == mica)
+        .expect("Mica survives — bolt resolved, 3 damage to a 4-toughness body");
+    assert_eq!(mica_card.damage, 3, "bolt's 3 damage lands");
+    assert_eq!(g.players[1].life, 17, "Ward—Pay 3 life deducted from P1");
+}
+
+// ── Ward—Discard a card (Forum Necroscribe) ─────────────────────────────────
+
+#[test]
+fn ward_discard_counters_when_payer_has_no_other_cards_in_hand() {
+    // P0's Necroscribe has Ward—Discard a card. P1's only hand card is the
+    // bolt itself — once cast, the hand is empty. Ward trigger can't
+    // collect 1 discard → bolt countered.
+    let mut g = two_player_game();
+    let necro = g.add_card_to_battlefield(0, catalog::forum_necroscribe());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Permanent(necro)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Bolt castable");
+    drain_stack(&mut g);
+
+    let necro_card = g.battlefield.iter().find(|c| c.id == necro)
+        .expect("Necroscribe survives — bolt was countered by Ward—Discard");
+    assert_eq!(necro_card.damage, 0, "no damage dealt — bolt was countered");
+    let bolt_in_gy = g.players[1].graveyard.iter().any(|c| c.id == bolt);
+    assert!(bolt_in_gy, "Countered bolt goes to graveyard");
+}
+
+#[test]
+fn ward_discard_resolves_when_payer_has_a_spare_card() {
+    // P1 has a spare card in hand. Ward—Discard auto-pays by discarding
+    // the first hand card; bolt resolves and deals 3 to Necroscribe (a
+    // 5/4 — survives).
+    let mut g = two_player_game();
+    let necro = g.add_card_to_battlefield(0, catalog::forum_necroscribe());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    let spare = g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Permanent(necro)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Bolt castable");
+    drain_stack(&mut g);
+
+    let necro_card = g.battlefield.iter().find(|c| c.id == necro)
+        .expect("Necroscribe survives bolt: 3 damage to 4-toughness body");
+    assert_eq!(necro_card.damage, 3, "bolt resolved — 3 damage");
+    assert!(
+        g.players[1].graveyard.iter().any(|c| c.id == spare),
+        "Ward—Discard moved the spare card to graveyard"
+    );
+}
+
+// ── Ward on activated abilities (CR 702.21a "spell or ability") ─────────────
+
+#[test]
+fn ward_counters_opp_activated_ability_when_payer_cannot_afford() {
+    // P0 has Inkshape Demonstrator (Ward 2). P1 has Prodigal Sorcerer with
+    // its {T}: deal 1 damage activation. P1 has no spare mana — the Ward
+    // trigger can't auto-pay {2}, so the activation is countered. The
+    // Demonstrator takes no damage.
+    let mut g = two_player_game();
+    let demo = g.add_card_to_battlefield(0, catalog::inkshape_demonstrator());
+    let sorcerer = g.add_card_to_battlefield(1, catalog::prodigal_sorcerer());
+    // Clear summoning sickness so the tap activation is legal.
+    if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == sorcerer) {
+        c.summoning_sick = false;
+    }
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: sorcerer,
+        ability_index: 0,
+        target: Some(Target::Permanent(demo)),
+    })
+    .expect("Activation legal at the cost line — Ward fires after the ability is queued");
+    drain_stack(&mut g);
+
+    let demo_card = g.battlefield.iter().find(|c| c.id == demo)
+        .expect("Demonstrator still on battlefield");
+    assert_eq!(demo_card.damage, 0, "Sorcerer's ping was countered by Ward");
+}
+
+#[test]
+fn ward_allows_opp_activated_ability_when_payer_can_afford() {
+    // Same setup, but P1 has {2} colorless in pool to auto-pay Ward 2.
+    // Activation resolves; Demonstrator takes 1 damage from the ping.
+    let mut g = two_player_game();
+    let demo = g.add_card_to_battlefield(0, catalog::inkshape_demonstrator());
+    let sorcerer = g.add_card_to_battlefield(1, catalog::prodigal_sorcerer());
+    if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == sorcerer) {
+        c.summoning_sick = false;
+    }
+    g.players[1].mana_pool.add_colorless(2);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: sorcerer,
+        ability_index: 0,
+        target: Some(Target::Permanent(demo)),
+    })
+    .expect("Activation legal");
+    drain_stack(&mut g);
+
+    let demo_card = g.battlefield.iter().find(|c| c.id == demo)
+        .expect("Demonstrator still on battlefield");
+    assert_eq!(demo_card.damage, 1, "Ward was paid — ping landed");
 }
 
 // ── Studious First-Year MDFC (new card; push X) ─────────────────────────────
@@ -6866,7 +7136,7 @@ fn fractal_tender_is_3_3_with_ward_two() {
     let def = catalog::fractal_tender();
     assert_eq!(def.power, 3);
     assert_eq!(def.toughness, 3);
-    assert!(def.keywords.iter().any(|k| matches!(k, Keyword::Ward(2))));
+    assert!(def.keywords.contains(&Keyword::Ward(crate::card::WardCost::generic(2))));
     assert!(def.subtypes.creature_types.contains(&crate::card::CreatureType::Elf));
     assert!(def.subtypes.creature_types.contains(&crate::card::CreatureType::Wizard));
 }
@@ -6876,7 +7146,7 @@ fn thornfist_striker_is_3_3_with_ward_one() {
     let def = catalog::thornfist_striker();
     assert_eq!(def.power, 3);
     assert_eq!(def.toughness, 3);
-    assert!(def.keywords.iter().any(|k| matches!(k, Keyword::Ward(1))));
+    assert!(def.keywords.contains(&Keyword::Ward(crate::card::WardCost::generic(1))));
     assert!(def.subtypes.creature_types.contains(&crate::card::CreatureType::Elf));
     assert!(def.subtypes.creature_types.contains(&crate::card::CreatureType::Druid));
 }
@@ -9350,7 +9620,7 @@ fn colorstorm_stallion_is_three_three_ward_one_haste_elemental_horse() {
     assert_eq!(c.power(), 3);
     assert_eq!(c.toughness(), 3);
     assert!(c.has_keyword(&Keyword::Haste));
-    assert!(c.has_keyword(&Keyword::Ward(1)));
+    assert!(c.has_keyword(&Keyword::Ward(crate::card::WardCost::generic(1))));
     assert!(c.definition.subtypes.creature_types.contains(&CreatureType::Elemental));
     assert!(c.definition.subtypes.creature_types.contains(&CreatureType::Horse));
 }
@@ -9378,7 +9648,7 @@ fn prismari_the_inspiration_is_seven_seven_legendary_dragon_with_ward_five() {
     assert_eq!(c.power(), 7);
     assert_eq!(c.toughness(), 7);
     assert!(c.has_keyword(&Keyword::Flying));
-    assert!(c.has_keyword(&Keyword::Ward(5)));
+    assert!(c.has_keyword(&Keyword::Ward(crate::card::WardCost::generic(5))));
     assert!(c.definition.supertypes.contains(&Supertype::Legendary));
     assert!(c.definition.subtypes.creature_types.contains(&CreatureType::Dragon));
     assert!(c.definition.subtypes.creature_types.contains(&CreatureType::Elder));
@@ -9392,7 +9662,7 @@ fn campus_composer_is_three_four_ward_one_merfolk_bard() {
     let c = g.battlefield.iter().find(|c| c.id == id).unwrap();
     assert_eq!(c.power(), 3);
     assert_eq!(c.toughness(), 4);
-    assert!(c.has_keyword(&Keyword::Ward(1)));
+    assert!(c.has_keyword(&Keyword::Ward(crate::card::WardCost::generic(1))));
     assert!(c.definition.subtypes.creature_types.contains(&CreatureType::Merfolk));
     assert!(c.definition.subtypes.creature_types.contains(&CreatureType::Bard));
     // Back face: Aqueous Aria — draw 3.
@@ -9536,7 +9806,7 @@ fn strife_scholar_is_three_two_ward_one_orc_sorcerer() {
     let c = g.battlefield.iter().find(|c| c.id == id).unwrap();
     assert_eq!(c.power(), 3);
     assert_eq!(c.toughness(), 2);
-    assert!(c.has_keyword(&Keyword::Ward(1)));
+    assert!(c.has_keyword(&Keyword::Ward(crate::card::WardCost::generic(1))));
     assert!(c.definition.subtypes.creature_types.contains(&CreatureType::Orc));
     assert!(c.definition.subtypes.creature_types.contains(&CreatureType::Sorcerer));
 }

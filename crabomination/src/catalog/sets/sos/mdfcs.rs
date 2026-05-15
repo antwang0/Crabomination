@@ -1067,7 +1067,7 @@ pub fn lluwen_exchange_student() -> CardDefinition {
 
 /// Campus Composer // Aqueous Aria — {3}{U} // {4}{U}.
 ///
-/// Front: 3/4 Merfolk Bard with `Keyword::Ward(1)` (engine keyword tag;
+/// Front: 3/4 Merfolk Bard with `Keyword::Ward(crate::card::WardCost::generic(1))` (engine keyword tag;
 /// targeting enforcement still pending). Back: sorcery — Aqueous Aria:
 /// target player draws three cards.
 ///
@@ -1092,7 +1092,7 @@ pub fn campus_composer() -> CardDefinition {
         vec![CreatureType::Merfolk, CreatureType::Bard],
         3,
         4,
-        vec![Keyword::Ward(1)],
+        vec![Keyword::Ward(crate::card::WardCost::generic(1))],
         back,
     )
 }
@@ -1101,7 +1101,7 @@ pub fn campus_composer() -> CardDefinition {
 
 /// Emeritus of Ideation // Ancestral Recall — {3}{U}{U} // {U}.
 ///
-/// Front: 5/5 Human Wizard with `Keyword::Ward(1)`. Back: instant —
+/// Front: 5/5 Human Wizard with `Keyword::Ward(crate::card::WardCost::generic(1))`. Back: instant —
 /// Ancestral Recall: target player draws three cards.
 ///
 /// Push: back-face is now a faithful target-player Ancestral Recall via
@@ -1125,7 +1125,7 @@ pub fn emeritus_of_ideation() -> CardDefinition {
         vec![CreatureType::Human, CreatureType::Wizard],
         5,
         5,
-        vec![Keyword::Ward(1)],
+        vec![Keyword::Ward(crate::card::WardCost::generic(1))],
         back,
     )
 }
@@ -1199,7 +1199,7 @@ pub fn grave_researcher() -> CardDefinition {
 
 /// Strife Scholar // Awaken the Ages — {2}{R} // {5}{R}.
 ///
-/// Front: 3/2 Orc Sorcerer with `Keyword::Ward(1)`. Back: sorcery — Awaken
+/// Front: 3/2 Orc Sorcerer with `Keyword::Ward(crate::card::WardCost::generic(1))`. Back: sorcery — Awaken
 /// the Ages: return all creature cards from your graveyard to the
 /// battlefield, then sacrifice this spell. (Approximation: the printed
 /// "for each creature card in your graveyard, return it" mass-recursion
@@ -1237,7 +1237,7 @@ pub fn strife_scholar() -> CardDefinition {
         vec![CreatureType::Orc, CreatureType::Sorcerer],
         3,
         2,
-        vec![Keyword::Ward(1)],
+        vec![Keyword::Ward(crate::card::WardCost::generic(1))],
         back,
     )
 }

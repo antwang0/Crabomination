@@ -215,20 +215,13 @@ fn apply_cli_boot_hint(
 
 // ── UI setup ─────────────────────────────────────────────────────────────────
 
-const PANEL_BG: Color = Color::srgba(0.06, 0.06, 0.12, 0.96);
-const FIELD_BG_OFF: Color = Color::srgba(0.16, 0.16, 0.22, 1.0);
-const FIELD_BG_ON: Color = Color::srgba(0.28, 0.28, 0.50, 1.0);
-const PLAY_BG: Color = Color::srgba(0.18, 0.45, 0.20, 1.0);
-const HOST_BG: Color = Color::srgba(0.20, 0.30, 0.55, 1.0);
-const JOIN_BG: Color = Color::srgba(0.45, 0.30, 0.15, 1.0);
+use crate::theme::{
+    self, UiFonts, BUTTON_ACCENT_BG, BUTTON_DANGER_BG, BUTTON_INFO_BG, BUTTON_PRIMARY_BG,
+    BUTTON_WARN_BG, FIELD_BG, FIELD_BG_FOCUSED, PANEL_BG,
+};
 
-fn spawn_menu(mut commands: Commands, asset_server: Res<AssetServer>) {
-    let font = asset_server.load("fonts/MiranoExtendedFreebie-Light.ttf");
-    let tf = |size: f32| TextFont {
-        font: font.clone(),
-        font_size: size,
-        ..default()
-    };
+fn spawn_menu(mut commands: Commands, ui_fonts: Res<UiFonts>) {
+    let tf = |size: f32| ui_fonts.tf(size);
 
     commands
         .spawn((
@@ -242,7 +235,7 @@ fn spawn_menu(mut commands: Commands, asset_server: Res<AssetServer>) {
                 align_items: AlignItems::Center,
                 ..default()
             },
-            BackgroundColor(Color::srgba(0.0, 0.0, 0.0, 0.7)),
+            BackgroundColor(theme::OVERLAY_BG),
             MenuRoot,
         ))
         .with_children(|root| {
@@ -261,7 +254,7 @@ fn spawn_menu(mut commands: Commands, asset_server: Res<AssetServer>) {
                 p.spawn((
                     Text::new("Crabomination"),
                     tf(28.0),
-                    TextColor(Color::srgb(1.0, 0.85, 0.55)),
+                    TextColor(theme::ACCENT_GOLD),
                 ));
 
                 // Format selector — Modern (BRG / Goryo's demo decks) vs
@@ -276,7 +269,7 @@ fn spawn_menu(mut commands: Commands, asset_server: Res<AssetServer>) {
                     fmt.spawn((
                         Text::new("Format"),
                         tf(13.0),
-                        TextColor(Color::srgba(0.85, 0.85, 0.85, 1.0)),
+                        TextColor(theme::TEXT_BODY),
                     ));
                     fmt.spawn(Node {
                         flex_direction: FlexDirection::Row,
@@ -291,14 +284,14 @@ fn spawn_menu(mut commands: Commands, asset_server: Res<AssetServer>) {
                 });
 
                 // Play vs Bot
-                button(p, &tf, "Play vs Bot", PLAY_BG, PlayBotButton);
+                button(p, &tf, "Play vs Bot", BUTTON_PRIMARY_BG, PlayBotButton);
 
                 // Spectate Bot vs Bot
                 button(
                     p,
                     &tf,
                     "Spectate Bot vs Bot",
-                    Color::srgba(0.30, 0.20, 0.45, 1.0),
+                    BUTTON_ACCENT_BG,
                     SpectateBotsButton,
                 );
 
@@ -307,7 +300,7 @@ fn spawn_menu(mut commands: Commands, asset_server: Res<AssetServer>) {
                     p,
                     &tf,
                     "Load Latest Debug State",
-                    Color::srgba(0.45, 0.20, 0.20, 1.0),
+                    BUTTON_DANGER_BG,
                     LoadDebugStateButton,
                 );
 
@@ -320,7 +313,7 @@ fn spawn_menu(mut commands: Commands, asset_server: Res<AssetServer>) {
                     ..default()
                 })
                 .with_children(|host| {
-                    button(host, &tf, "Host LAN Game", HOST_BG, HostButton);
+                    button(host, &tf, "Host LAN Game", BUTTON_INFO_BG, HostButton);
                     field(
                         host,
                         &tf,
@@ -338,7 +331,7 @@ fn spawn_menu(mut commands: Commands, asset_server: Res<AssetServer>) {
                     ..default()
                 })
                 .with_children(|join| {
-                    button(join, &tf, "Join LAN Game", JOIN_BG, JoinButton);
+                    button(join, &tf, "Join LAN Game", BUTTON_WARN_BG, JoinButton);
                     field(
                         join,
                         &tf,
@@ -350,7 +343,7 @@ fn spawn_menu(mut commands: Commands, asset_server: Res<AssetServer>) {
                 p.spawn((
                     Text::new("Click a text field to edit. Backspace deletes."),
                     tf(11.0),
-                    TextColor(Color::srgba(0.65, 0.65, 0.65, 1.0)),
+                    TextColor(theme::TEXT_PLACEHOLDER),
                 ));
             });
         });
@@ -379,7 +372,7 @@ fn button<M: Component>(
             b.spawn((
                 Text::new(label),
                 tf(16.0),
-                TextColor(Color::WHITE),
+                TextColor(theme::TEXT_PRIMARY),
                 Pickable::IGNORE,
             ));
         });
@@ -402,7 +395,7 @@ fn field(
             row.spawn((
                 Text::new(label.to_string()),
                 tf(13.0),
-                TextColor(Color::srgba(0.85, 0.85, 0.85, 1.0)),
+                TextColor(theme::TEXT_BODY),
             ));
             row.spawn((
                 Button,
@@ -411,14 +404,14 @@ fn field(
                     padding: UiRect::axes(Val::Px(8.0), Val::Px(6.0)),
                     ..default()
                 },
-                BackgroundColor(FIELD_BG_OFF),
+                BackgroundColor(FIELD_BG),
                 FieldButton(which),
             ))
             .with_children(|btn| {
                 btn.spawn((
                     Text::new(""),
                     tf(13.0),
-                    TextColor(Color::WHITE),
+                    TextColor(theme::TEXT_PRIMARY),
                     Pickable::IGNORE,
                     FieldText(which),
                 ));
@@ -438,14 +431,14 @@ fn format_toggle(
                 padding: UiRect::axes(Val::Px(14.0), Val::Px(6.0)),
                 ..default()
             },
-            BackgroundColor(FIELD_BG_OFF),
+            BackgroundColor(FIELD_BG),
             FormatToggleButton(format),
         ))
         .with_children(|b| {
             b.spawn((
                 Text::new(format.label()),
                 tf(13.0),
-                TextColor(Color::WHITE),
+                TextColor(theme::TEXT_PRIMARY),
                 Pickable::IGNORE,
             ));
         });
@@ -468,7 +461,7 @@ fn handle_field_focus(
             fields.focused = fb.0;
         }
         let on = fields.focused == fb.0 && fb.0 != FocusedField::None;
-        *bg = BackgroundColor(if on { FIELD_BG_ON } else { FIELD_BG_OFF });
+        *bg = BackgroundColor(if on { FIELD_BG_FOCUSED } else { FIELD_BG });
     }
 }
 
@@ -575,9 +568,9 @@ fn refresh_format_toggle_visuals(
     }
     for (toggle, mut bg) in &mut buttons {
         *bg = BackgroundColor(if toggle.0 == fields.format {
-            FIELD_BG_ON
+            FIELD_BG_FOCUSED
         } else {
-            FIELD_BG_OFF
+            FIELD_BG
         });
     }
 }

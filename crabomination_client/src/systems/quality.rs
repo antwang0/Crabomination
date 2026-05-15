@@ -4,13 +4,15 @@ use bevy::prelude::*;
 
 use crate::render_quality::{ChangeQuality, RenderQuality};
 use crate::systems::animate::{AnimationSpeed, ANIM_SPEED_MAX, ANIM_SPEED_MIN};
+use crate::theme::{self, UiFonts};
 
+/// Selected quality tier (green = "active").
 const QUALITY_BTN_ACTIVE: Color = Color::srgb(0.15, 0.45, 0.15);
-const QUALITY_BTN_INACTIVE: Color = Color::srgb(0.12, 0.12, 0.18);
 
 const SPEED_SLIDER_WIDTH: f32 = 180.0;
 const SPEED_SLIDER_HEIGHT: f32 = 16.0;
 const SPEED_TRACK_BG: Color = Color::srgb(0.10, 0.10, 0.14);
+/// Blue fill bar inside the speed-slider track.
 const SPEED_TRACK_FILL: Color = Color::srgb(0.30, 0.55, 0.85);
 
 #[derive(Component)]
@@ -31,16 +33,11 @@ pub struct SpeedSliderLabel;
 
 pub fn setup_quality_panel(
     mut commands: Commands,
-    asset_server: Res<AssetServer>,
+    ui_fonts: Res<UiFonts>,
     quality: Res<RenderQuality>,
     speed: Res<AnimationSpeed>,
 ) {
-    let font = asset_server.load("fonts/MiranoExtendedFreebie-Light.ttf");
-    let tf = |size: f32| TextFont {
-        font: font.clone(),
-        font_size: size,
-        ..default()
-    };
+    let tf = |size: f32| ui_fonts.tf(size);
 
     commands
         .spawn((
@@ -53,7 +50,7 @@ pub fn setup_quality_panel(
                 row_gap: Val::Px(6.0),
                 ..default()
             },
-            BackgroundColor(Color::srgba(0.0, 0.0, 0.0, 0.72)),
+            BackgroundColor(theme::HUD_BG),
             crate::systems::game_ui::InGameRoot,
         ))
         .with_children(|p| {
@@ -61,7 +58,7 @@ pub fn setup_quality_panel(
             p.spawn((
                 Text::new(format_speed(speed.0)),
                 tf(11.0),
-                TextColor(Color::srgba(0.7, 0.7, 0.7, 1.0)),
+                TextColor(theme::TEXT_SECONDARY),
                 SpeedSliderLabel,
             ));
             // The track itself is a clickable Button so Bevy reports
@@ -95,7 +92,7 @@ pub fn setup_quality_panel(
             p.spawn((
                 Text::new("Quality"),
                 tf(11.0),
-                TextColor(Color::srgba(0.7, 0.7, 0.7, 1.0)),
+                TextColor(theme::TEXT_SECONDARY),
             ));
             p.spawn(Node {
                 flex_direction: FlexDirection::Row,
@@ -104,7 +101,7 @@ pub fn setup_quality_panel(
             })
             .with_children(|p| {
                 for q in RenderQuality::ALL {
-                    let bg = if q == *quality { QUALITY_BTN_ACTIVE } else { QUALITY_BTN_INACTIVE };
+                    let bg = if q == *quality { QUALITY_BTN_ACTIVE } else { theme::BUTTON_NEUTRAL_BG };
                     p.spawn((
                         Node {
                             padding: UiRect::axes(Val::Px(8.0), Val::Px(5.0)),
@@ -115,7 +112,7 @@ pub fn setup_quality_panel(
                         QualityButton(q),
                     ))
                     .with_children(|p| {
-                        p.spawn((Text::new(q.label()), tf(12.0), TextColor(Color::WHITE)));
+                        p.spawn((Text::new(q.label()), tf(12.0), TextColor(theme::TEXT_PRIMARY)));
                     });
                 }
             });
@@ -230,7 +227,7 @@ pub fn handle_quality_buttons(
             *bg = if btn.0 == active {
                 BackgroundColor(QUALITY_BTN_ACTIVE)
             } else {
-                BackgroundColor(QUALITY_BTN_INACTIVE)
+                BackgroundColor(theme::BUTTON_NEUTRAL_BG)
             };
         }
     }

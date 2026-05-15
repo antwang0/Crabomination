@@ -18,9 +18,55 @@ Two adjacent catalogs:
 
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
-| SOS (255 cards) | 192 | 62 | 1 |
+| SOS (255 cards) | 195 | 59 | 1 |
 | STX (170 cards) | 196 | 15 | 0 |
 | STA reprints (in STX boosters) | 46 | 0 | — |
+
+Push (modern_decks, claude/modern_decks branch — latest revision —
+**Ward enum + activated-ability Ward**): expanded Ward enforcement
+(CR 702.21) along two axes. (1) Cost variants:
+`Keyword::Ward(u32)` is now `Keyword::Ward(WardCost)` where `WardCost`
+is an enum of `Mana(ManaCost) | Life(u32) | Discard(u32) |
+SacrificeCreature`. New `Effect::CounterUnless { what, cost }` is the
+trigger body — its resolver walks the stack for a matching `Spell`
+(by `card.id`) or `Trigger` (by `source`) and tries to auto-pay the
+cost on the affected controller's behalf. (2) Activated abilities:
+new `push_ward_triggers_for_activated_ability` is hooked into
+`activate_ability` right after the ability is queued, so Ward fires
+on activated-ability targeting too (the "or ability" half of CR
+702.21a). Both paths share `push_ward_triggers_for_targets`.
+Promotes **Mica, Reader of Ruins** 🟡 → ✅ (Ward—Pay 3 life via
+`WardCost::Life(3)`) and **Forum Necroscribe** 🟡 → ✅ (Ward—Discard
+a card via `WardCost::Discard(1)`). All ~20 prior `Keyword::Ward(N)`
+catalog/test sites migrated to `WardCost::generic(N)`. SOS counts:
+193 → **195 ✅** (61 → 59 🟡, 1 ⏳). Tests: 6 new — `ward_pay_life_*`,
+`ward_discard_*`, `ward_*_opp_activated_ability_*`.
+
+Push (modern_decks, claude/modern_decks branch — latest revision —
+**Ward enforcement (CR 702.21)**): engine-wide Ward enforcement for
+mana-cost Ward on spells. New helper
+`push_ward_triggers_for_cast` in `game/actions.rs` runs at the end of
+`finalize_cast`: walks the just-cast spell's slot-0 + additional
+targets, and for each target permanent controlled by a player other
+than the caster with `Keyword::Ward(N)` (N>0), pushes a
+`StackItem::Trigger` whose body is
+`Effect::CounterUnlessPaid { what: Selector::Target(0), mana_cost: {N} }`
+aimed at the just-cast spell. The trigger goes on top of the caster's
+own SpellCast triggers (Magecraft / Prowess) — APNAP-correct, since
+the caster is the active player and Ward belongs to a nonactive
+player. At trigger resolution `CounterUnlessPaid` auto-pays on the
+spell controller's behalf via the existing `try_pay_with_auto_tap`
+path; if affordable, the spell stays, otherwise it's countered to the
+caster's graveyard. Promotes **Inkshape Demonstrator** 🟡 → ✅ — the
+sole 🟡 where Ward enforcement was the only remaining gap. Mica /
+Forum Necroscribe / Prismari (the Inspiration) / Fractal Tender stay
+🟡 — they need either a non-mana Ward variant (Pay 3 life, Discard a
+card) or other engine work (storm static, Increment introspection).
+Activated-ability-side Ward (the "or ability" half of CR 702.21a) is
+a follow-up. Tests: `ward_counters_opp_spell_when_payer_cannot_afford`,
+`ward_allows_opp_spell_when_payer_can_afford`,
+`ward_does_not_trigger_on_caster_own_spell`. SOS counts: 192 → **193 ✅**
+(62 → 61 🟡, 1 ⏳).
 
 Push (modern_decks, claude/modern_decks branch — latest revision —
 **newest sub-push #2**): **4 NEW cards** added on top of the prior batch:
@@ -700,8 +746,19 @@ each 🟡 row are in the tables below.
 - **Multi-target prompts on instants/sorceries** — recurring 🟡 reason
   across SOS/STX (Divergent Equation, Vibrant Outburst, Snow Day,
   Devious Cover-Up, Crackle with Power, Magma Opus, …).
-- **Ward enforcement** — keyword is tagged on cards but not yet
-  enforced as a counter-unless-pay trigger.
+- **Ward enforcement (CR 702.21)** — full coverage for spells **and**
+  activated abilities, with all four standard cost variants. The
+  `Keyword::Ward(WardCost)` enum carries `Mana(ManaCost) | Life(u32) |
+  Discard(u32) | SacrificeCreature`. The new `Effect::CounterUnless
+  { what, cost }` resolver walks the stack for either a matching
+  `Spell` (by `card.id`) or `Trigger` (by `source`), then auto-pays
+  the cost on the affected controller's behalf. `push_ward_triggers_for_cast`
+  (post-`finalize_cast`) and `push_ward_triggers_for_activated_ability`
+  (post-`activate_ability`-push) both share a `push_ward_triggers_for_targets`
+  core. Auto-pay for Discard picks the first hand-card; auto-pay for
+  Sacrifice picks the first matching creature. An interactive surface
+  should later prompt the controller for both Discard and Sacrifice
+  choices, but bot games run end-to-end as-is.
 
 ## White
 
@@ -722,7 +779,7 @@ each 🟡 row are in the tables below.
 | Harsh Annotation | {1}{W} | Instant |  | Destroy target creature. Its controller creates a 1/1 white and black Inkling creature token with flying. | ✅ | Push XVII: token now goes to the target creature's owner via `PlayerRef::OwnerOf(Target(0))`. `place_card_in_dest` resolves the player against cast-time ctx (the target id stays valid through `find_card_owner`'s zone walk after the destroy step). |
 | Honorbound Page // Forum's Favor | {3}{W} // {W} | Creature — Cat Cleric // Sorcery | 3/3 |  | ✅ (was 🟡) | Push (modern_decks doc-sync): vanilla front + faithful back-face spell wired via the `GameAction::CastSpellBack` path (push XI/XII). The stale "Standard primitives — should be straightforward to wire" note was the original ⏳ flag from before MDFC plumbing landed; the body has been at-parity-with-printed-Oracle since push XII. Tests live in `tests::sos` keyed by the back-face spell name.|
 | Informed Inkwright | {1}{W} | Creature — Human Wizard | 2/2 | Vigilance / Repartee — Whenever you cast an instant or sorcery spell that targets a creature, create a 1/1 white and black Inkling creature token with flying. | ✅ | Vigilance body + Repartee Inkling token wired via `repartee()` + `inkling_token()`. |
-| Inkshape Demonstrator | {3}{W} | Creature — Elephant Cleric | 3/4 | Ward {2} (Whenever this creature becomes the target of a spell or ability an opponent controls, counter it unless that player pays {2}.) / Repartee — Whenever you cast an instant or sorcery spell that targets a creature, this creature gets +1/+0 and gains lifelink until end of turn. | 🟡 | Body + `Keyword::Ward(2)` wired in `catalog::sets::sos::creatures` (Ward keyword tagged for future enforcement; not yet a counter-the-spell trigger). Repartee body wired faithfully via the `repartee()` shortcut: pump +1/+0 on the source + grant Lifelink (EOT). |
+| Inkshape Demonstrator | {3}{W} | Creature — Elephant Cleric | 3/4 | Ward {2} (Whenever this creature becomes the target of a spell or ability an opponent controls, counter it unless that player pays {2}.) / Repartee — Whenever you cast an instant or sorcery spell that targets a creature, this creature gets +1/+0 and gains lifelink until end of turn. | ✅ (was 🟡) | Push (modern_decks): Ward enforcement landed engine-wide (CR 702.21). `push_ward_triggers_for_cast` in `game/actions.rs` runs at the end of `finalize_cast` — walks the spell's slot 0 + additional targets and pushes one `StackItem::Trigger` per Ward(N) opp permanent. Trigger body is `Effect::CounterUnlessPaid { what: Selector::Target(0), mana_cost: {N} }` aimed at the just-cast spell. APNAP-correct push order (Ward goes on top of caster's Magecraft / Prowess triggers). Tests: `ward_counters_opp_spell_when_payer_cannot_afford`, `ward_allows_opp_spell_when_payer_can_afford`, `ward_does_not_trigger_on_caster_own_spell`. Repartee body unchanged. Ward enforcement only fires on spells today; activated-ability targeting (CR 702.21a "spell or ability") is a follow-up. |
 | Interjection | {W} | Instant |  | Target creature gets +2/+2 and gains first strike until end of turn. | ✅ | Wired in `catalog::sets::sos::instants`. |
 | Joined Researchers // Secret Rendezvous | {1}{W} // {1}{W}{W} | Creature — Human Cleric Wizard // Sorcery | 2/2 |  | ✅ (was 🟡) | Push (modern_decks): vanilla front + back-face Secret Rendezvous now resolves with each-player fan-out via `Selector::Player(PlayerRef::EachPlayer)` so both players draw 3 (printed Oracle exact). Was approximating "each player" as "caster draws 3". Test: `joined_researchers_back_face_each_player_draws_three`. |
 | Owlin Historian | {2}{W} | Creature — Bird Cleric | 2/3 | Flying / When this creature enters, surveil 1. (Look at the top card of your library. You may put it into your graveyard.) / Whenever one or more cards leave your graveyard, this creature gets +1/+1 until end of turn. | ✅ | All three abilities wired. The cards-leave-graveyard pump uses the SOS-V `EventKind::CardLeftGraveyard` event (per-card emission; the printed "one or more" wording approximates as per-card). |
@@ -793,7 +850,7 @@ each 🟡 row are in the tables below.
 | End of the Hunt | {1}{B} | Sorcery |  | Target opponent exiles a creature or planeswalker they control with the greatest mana value among creatures and planeswalkers they control. | 🟡 | Wired in `catalog::sets::sos::sorceries` as a single-target Exile against `Creature ∨ Planeswalker & ControlledByOpponent`. The "greatest mana value" picker isn't enforced (auto-target picks first eligible). |
 | Eternal Student | {3}{B} | Creature — Zombie Warlock | 4/2 | {1}{B}, Exile this card from your graveyard: Create two 1/1 white and black Inkling creature tokens with flying. | ✅ | Push XVII: graveyard-exile activation wired via the new `from_graveyard: bool` + `exile_self_cost: bool` fields. Cost `{1}{B}` + exile-self-as-cost + effect creates 2 Inkling tokens. |
 | Foolish Fate | {2}{B} | Instant |  | Destroy target creature. / Infusion — If you gained life this turn, that creature's controller loses 3 life. | ✅ | Wired with the new `Predicate::LifeGainedThisTurnAtLeast` Infusion gate. |
-| Forum Necroscribe | {5}{B} | Creature — Troll Warlock | 5/4 | Ward—Discard a card. / Repartee — Whenever you cast an instant or sorcery spell that targets a creature, return target creature card from your graveyard to the battlefield. | 🟡 | Wired in `catalog::sets::sos::creatures` (5/4 Troll Warlock body + Repartee gy-creature-recursion via the `repartee()` shortcut chained with `Effect::Move(target Creature → Battlefield(You))`). Ward—Discard a card omitted (no Ward keyword primitive yet — tracked in TODO.md). |
+| Forum Necroscribe | {5}{B} | Creature — Troll Warlock | 5/4 | Ward—Discard a card. / Repartee — Whenever you cast an instant or sorcery spell that targets a creature, return target creature card from your graveyard to the battlefield. | ✅ (was 🟡) | Push (modern_decks): Ward—Discard a card now wired via `Keyword::Ward(WardCost::Discard(1))` and the new `Effect::CounterUnless` resolver — auto-pays by discarding the first card in the spell controller's hand. Insufficient cards in hand → spell countered. Repartee body unchanged. Tests: `ward_discard_counters_when_payer_has_no_other_cards_in_hand`, `ward_discard_resolves_when_payer_has_a_spare_card`. |
 | Grave Researcher // Reanimate | {2}{B} // {B} | Creature — Troll Warlock // Sorcery | 3/3 |  | ✅ (was 🟡) | Push (modern_decks): All three printed clauses now ship. Front 3/3 Troll Warlock with ETB Surveil 1. Back-face Reanimate at {B} — `target_filtered(Creature)` graveyard pick → Move to Battlefield(You) → `LoseLife(ManaValueOf(Target(0)))`. The lose-life-equal-to-MV clause reads off the post-Move target's CardId via `Value::ManaValueOf`'s zone walk (battlefield / graveyard / exile / hand). Tests: `grave_researcher_back_face_reanimates_creature_from_graveyard` (asserts both reanimation and -CMC life loss), `grave_researcher_front_etb_surveils_one`. |
 | Lecturing Scornmage | {B} | Creature — Human Warlock | 1/1 | Repartee — Whenever you cast an instant or sorcery spell that targets a creature, put a +1/+1 counter on this creature. | ✅ | Repartee +1/+1 counter via `effect::shortcut::repartee()`. |
 | Leech Collector // Bloodletting | {1}{B} // {B} | Creature — Human Warlock // Sorcery | 2/2 |  | ✅ (was 🟡) | Push (modern_decks doc-sync): vanilla front + faithful back-face spell wired via the `GameAction::CastSpellBack` path (push XI/XII). The stale "Standard primitives — should be straightforward to wire" note was the original ⏳ flag from before MDFC plumbing landed; the body has been at-parity-with-printed-Oracle since push XII. Tests live in `tests::sos` keyed by the back-face spell name.|
@@ -836,7 +893,7 @@ each 🟡 row are in the tables below.
 | Living History | {1}{R} | Enchantment |  | When this enchantment enters, create a 2/2 red and white Spirit creature token. / Whenever you attack, if a card left your graveyard this turn, target attacking creature gets +2/+0 until end of turn. | ✅ (was 🟡) | Push (modern_decks doc-sync): ETB Spirit token + on-attack +2/+0 EOT (gated on `Predicate::CardsLeftGraveyardThisTurnAtLeast`). The "target attacking creature" picks the trigger source (the just-declared attacker) — same per-attacker pattern as Sparring Regimen ✅ / Mentor in Combat Professor ✅. The auto-target framework correctly lands the pump on the iterated attacker. Test: `living_history_etb_creates_spirit_token`. |
 | Maelstrom Artisan // Rocket Volley | {1}{R}{R} // {1}{R} | Creature — Minotaur Sorcerer // Sorcery | 3/2 |  | ✅ (was 🟡) | Push (modern_decks doc-sync): vanilla front + faithful back-face spell wired via the `GameAction::CastSpellBack` path (push XI/XII). The stale "Standard primitives — should be straightforward to wire" note was the original ⏳ flag from before MDFC plumbing landed; the body has been at-parity-with-printed-Oracle since push XII. Tests live in `tests::sos` keyed by the back-face spell name.|
 | Magmablood Archaic | {2/R}{2/R}{2/R} | Creature — Avatar | 2/2 | Trample, reach / Converge — This creature enters with a +1/+1 counter on it for each color of mana spent to cast it. / Whenever you cast an instant or sorcery spell, creatures you control get +1/+0 until end of turn for each color of mana spent to cast that spell. | 🟡 | Body wired in `catalog::sets::sos::creatures` (2/2 Avatar with Trample+Reach + Converge ETB AddCounter using `Value::ConvergedValue`). The IS-cast pump rider is omitted pending per-cast converge introspection on the *just-cast* spell (the trigger fires but reads the Archaic's own ETB converge value, not the iterated cast's). Hybrid `{2/R}` pips approximated as `{2}+{R}` per pip. |
-| Mica, Reader of Ruins | {3}{R} | Legendary Creature — Human Artificer | 4/4 | Ward—Pay 3 life. (Whenever this creature becomes the target of a spell or ability an opponent controls, counter it unless that player pays 3 life.) / Whenever you cast an instant or sorcery spell, you may sacrifice an artifact. If you do, copy that spell and you may choose new targets for the copy. | 🟡 | Push XXV: Body wired (4/4 Legendary Human Artificer). Magecraft sac-artifact-to-copy rider wired via `magecraft(MayDo + Seq(Sacrifice(Artifact, 1) + CopySpell{what: TriggerSource}))` — same template as Aziza, Mage Tower Captain. Ward—Pay 3 life tagged via `Keyword::Ward(3)`; ward enforcement still pending. |
+| Mica, Reader of Ruins | {3}{R} | Legendary Creature — Human Artificer | 4/4 | Ward—Pay 3 life. (Whenever this creature becomes the target of a spell or ability an opponent controls, counter it unless that player pays 3 life.) / Whenever you cast an instant or sorcery spell, you may sacrifice an artifact. If you do, copy that spell and you may choose new targets for the copy. | ✅ (was 🟡) | Push (modern_decks): Ward—Pay 3 life now wired via `Keyword::Ward(WardCost::Life(3))` and the new `Effect::CounterUnless` resolver — auto-pays by deducting 3 life from the spell controller (CR 119.4: payment fails if the controller doesn't have ≥3 life, countering the spell). Magecraft sac-artifact-to-copy rider unchanged. Tests: `ward_pay_life_counters_when_payer_has_insufficient_life`, `ward_pay_life_resolves_when_payer_has_sufficient_life`. |
 | Molten-Core Maestro | {1}{R} | Creature — Goblin Bard | 2/2 | Menace / Opus — Whenever you cast an instant or sorcery spell, put a +1/+1 counter on this creature. If five or more mana was spent to cast that spell, add an amount of {R} equal to this creature's power. | ✅ | Push XXIX: Opus rider **now wired** via `shortcut::opus_trigger`. Small body: +1/+1 counter on this creature. Big body (≥5 mana): counter + add {R}×power via `ManaPayload::OfColor(Red, PowerOf(This))`. |
 | Pigment Wrangler // Striking Palette | {4}{R} // {R} | Creature — Orc Sorcerer // Sorcery | 4/4 |  | ✅ (was 🟡) | Push (modern_decks doc-sync): vanilla front + faithful back-face spell wired via the `GameAction::CastSpellBack` path (push XI/XII). The stale "Standard primitives — should be straightforward to wire" note was the original ⏳ flag from before MDFC plumbing landed; the body has been at-parity-with-printed-Oracle since push XII. Tests live in `tests::sos` keyed by the back-face spell name.|
 | Rearing Embermare | {4}{R} | Creature — Horse Beast | 4/5 | Reach, haste | ✅ | Wired in `catalog::sets::sos::creatures`. |

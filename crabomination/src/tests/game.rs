@@ -423,6 +423,103 @@ fn blocked_combat_both_die() {
     assert_eq!(g.players[1].life, 20);
 }
 
+/// Regression: a `BecomesBlocked` trigger must bind the **attacker** as
+/// `Selector::TriggerSource`, not the blocker. Both kinds (`Blocks` /
+/// `BecomesBlocked`) come off the same `BlockerDeclared` event, so
+/// `event_subject` has to disambiguate via the trigger's `EventKind`.
+/// No catalog card uses this kind today; the test pins the wiring so
+/// the next one that does won't silently target the wrong creature.
+#[test]
+fn becomes_blocked_trigger_resolves_against_attacker_not_blocker() {
+    use crate::card::{CardDefinition, CardType, CounterType, Subtypes, TriggeredAbility};
+    use crate::effect::{EventKind, EventScope, EventSpec};
+
+    // 3/3 attacker that puts a +1/+1 counter on itself when it becomes
+    // blocked. With the bug, `TriggerSource` resolved to the blocker
+    // and the counter would land on the blocker instead.
+    let counted_attacker = || CardDefinition {
+        name: "Test BecomesBlocked Attacker",
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::BecomesBlocked, EventScope::SelfSource),
+            effect: Effect::AddCounter {
+                what: Selector::TriggerSource,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        }],
+        ..Default::default()
+    };
+
+    let mut g = two_player_game();
+    let attacker_id = setup_attacker(&mut g, 0, counted_attacker);
+    let blocker_id = setup_attacker(&mut g, 1, catalog::grizzly_bears);
+
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: attacker_id,
+        target: AttackTarget::Player(1),
+    }]))
+    .unwrap();
+
+    g.step = TurnStep::DeclareBlockers;
+    g.perform_action(GameAction::DeclareBlockers(vec![(blocker_id, attacker_id)]))
+        .unwrap();
+    drain_stack(&mut g);
+
+    let attacker = g.battlefield.iter().find(|c| c.id == attacker_id)
+        .expect("attacker still on battlefield");
+    let blocker = g.battlefield.iter().find(|c| c.id == blocker_id)
+        .expect("blocker still on battlefield");
+    assert_eq!(attacker.counter_count(CounterType::PlusOnePlusOne), 1,
+        "BecomesBlocked trigger should put the counter on the attacker");
+    assert_eq!(blocker.counter_count(CounterType::PlusOnePlusOne), 0,
+        "blocker must NOT receive the counter");
+}
+
+/// Regression: the first-strike combat damage step must only allow
+/// blockers whose own keywords say they deal damage in that step.
+/// Previously the inline blocker filter short-circuited to `true`
+/// whenever the attacker had FirstStrike/DoubleStrike, which let a
+/// regular blocker hit the FS attacker before being killed by SBA —
+/// erasing first strike's protective effect entirely.
+#[test]
+fn first_strike_attacker_kills_regular_blocker_before_being_struck() {
+    let mut g = two_player_game();
+    // 2/2 First Strike attacker vs. 2/2 vanilla blocker.
+    let attacker_id = setup_attacker(&mut g, 0, catalog::white_knight);
+    let blocker_id = setup_attacker(&mut g, 1, catalog::grizzly_bears);
+
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: attacker_id,
+        target: AttackTarget::Player(1),
+    }]))
+    .unwrap();
+
+    g.step = TurnStep::DeclareBlockers;
+    g.perform_action(GameAction::DeclareBlockers(vec![(blocker_id, attacker_id)]))
+        .unwrap();
+
+    // First-strike step: White Knight deals 2 to Bears, Bears dies in SBA.
+    g.step = TurnStep::FirstStrikeDamage;
+    g.resolve_first_strike_damage().unwrap();
+    assert!(!g.battlefield.iter().any(|c| c.id == blocker_id),
+        "Bears should die to first-strike damage before regular damage step");
+    assert!(g.battlefield.iter().any(|c| c.id == attacker_id),
+        "White Knight should be unharmed — Bears never gets to strike back");
+
+    // Regular step: no blockers left, no damage.
+    g.step = TurnStep::CombatDamage;
+    g.resolve_combat().unwrap();
+    let knight = g.battlefield.iter().find(|c| c.id == attacker_id)
+        .expect("White Knight survives combat");
+    assert_eq!(knight.damage, 0, "White Knight should take 0 damage from a dead blocker");
+}
+
 #[test]
 fn vigilance_creature_does_not_tap_when_attacking() {
     let mut g = two_player_game();

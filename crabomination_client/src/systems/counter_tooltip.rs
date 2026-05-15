@@ -18,6 +18,7 @@ use crabomination::card::{CardId, CardType, CounterType};
 
 use crate::card::{BattlefieldCard, CardHovered, GameCardId};
 use crate::net_plugin::CurrentView;
+use crate::theme::UiFonts;
 
 /// Root marker for the floating tooltip panel.
 #[derive(Component)]
@@ -33,7 +34,7 @@ pub fn update_alt_tooltip(
     mut commands: Commands,
     keys: Res<ButtonInput<KeyCode>>,
     view: Res<CurrentView>,
-    asset_server: Res<AssetServer>,
+    ui_fonts: Res<UiFonts>,
     hovered: Query<(&GameCardId, &Transform), (With<BattlefieldCard>, With<CardHovered>)>,
     cameras: Query<(&Camera, &GlobalTransform), With<Camera3d>>,
     mut tooltip_q: Query<(Entity, &mut Node), With<AltTooltip>>,
@@ -88,7 +89,6 @@ pub fn update_alt_tooltip(
     }
 
     // Spawn fresh tooltip.
-    let font = asset_server.load("fonts/MiranoExtendedFreebie-Light.ttf");
     let panel = commands
         .spawn((
             Node {
@@ -107,7 +107,7 @@ pub fn update_alt_tooltip(
     commands.entity(panel).with_children(|p| {
         p.spawn((
             Text::new(body),
-            TextFont { font, font_size: 13.0, ..default() },
+            ui_fonts.tf(13.0),
             TextColor(Color::srgba(0.95, 0.95, 1.0, 1.0)),
             AltTooltipText,
             Pickable::IGNORE,

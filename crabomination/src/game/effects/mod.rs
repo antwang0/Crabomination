@@ -1185,6 +1185,135 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::CounterUnless { what, cost } => {
+                // CR 702.21 — Ward body. Resolve `what` to a card-id, walk
+                // the stack for the topmost matching `Spell` (by `card.id`)
+                // or `Trigger` (by `source`), and try to auto-pay `cost`
+                // on the affected controller's behalf. If they can't pay,
+                // the stack item is removed (spells fall into their
+                // owner's graveyard; abilities just vanish).
+                use crate::card::WardCost;
+
+                let targets = self.resolve_selector(what, ctx);
+                let target_id = targets.into_iter().find_map(|t| match t {
+                    EntityRef::Permanent(cid) | EntityRef::Card(cid) => Some(cid),
+                    _ => None,
+                });
+                let Some(cid) = target_id else { return Ok(()); };
+
+                // Find the topmost matching stack item — prefer Spell, then
+                // Trigger. CR 702.21a: Ward fires on "spell or ability";
+                // the stack carries spells as `StackItem::Spell` and
+                // activated/triggered abilities as `StackItem::Trigger`.
+                let mut spell_pos: Option<usize> = None;
+                let mut trigger_pos: Option<usize> = None;
+                for (i, si) in self.stack.iter().enumerate().rev() {
+                    match si {
+                        StackItem::Spell { card, uncounterable: false, .. }
+                            if card.id == cid && spell_pos.is_none() =>
+                        {
+                            spell_pos = Some(i);
+                        }
+                        StackItem::Trigger { source, .. }
+                            if *source == cid && trigger_pos.is_none() =>
+                        {
+                            trigger_pos = Some(i);
+                        }
+                        _ => {}
+                    }
+                    if spell_pos.is_some() && trigger_pos.is_some() {
+                        break;
+                    }
+                }
+                // Prefer Spell if both exist — a card on the stack as a
+                // spell can't simultaneously be the source of an ability
+                // (the permanent doesn't exist yet).
+                let (pos, affected_controller, is_spell) = match (spell_pos, trigger_pos) {
+                    (Some(p), _) => {
+                        let StackItem::Spell { caster, .. } = &self.stack[p] else {
+                            unreachable!()
+                        };
+                        (p, *caster, true)
+                    }
+                    (None, Some(p)) => {
+                        let StackItem::Trigger { controller, .. } = &self.stack[p] else {
+                            unreachable!()
+                        };
+                        (p, *controller, false)
+                    }
+                    (None, None) => return Ok(()),
+                };
+
+                // Attempt auto-pay on the affected controller's behalf.
+                let paid = match cost {
+                    WardCost::Mana(mc) => {
+                        let saved_priority = self.priority.player_with_priority;
+                        self.priority.player_with_priority = affected_controller;
+                        let ok = self.try_pay_with_auto_tap(affected_controller, mc).is_ok();
+                        self.priority.player_with_priority = saved_priority;
+                        ok
+                    }
+                    WardCost::Life(n) => {
+                        // Ward—Pay N life. CR 119.4 forbids paying more
+                        // life than you have, so insufficient life means
+                        // payment fails.
+                        let n = *n as i32;
+                        if self.players[affected_controller].life >= n {
+                            self.players[affected_controller].life -= n;
+                            true
+                        } else {
+                            false
+                        }
+                    }
+                    WardCost::Discard(n) => {
+                        // Ward—Discard N cards. Payable only if the
+                        // controller has ≥ N cards in hand. Auto-pay
+                        // picks the first N cards. An interactive
+                        // surface should prompt.
+                        let n = *n as usize;
+                        if self.players[affected_controller].hand.len() >= n {
+                            for _ in 0..n {
+                                let card = self.players[affected_controller].hand.remove(0);
+                                let card_id = card.id;
+                                self.players[affected_controller].graveyard.push(card);
+                                self.cards_discarded_this_resolution =
+                                    self.cards_discarded_this_resolution.saturating_add(1);
+                                self.discarded_card_ids_this_resolution.push(card_id);
+                            }
+                            true
+                        } else {
+                            false
+                        }
+                    }
+                    WardCost::SacrificeCreature => {
+                        let pick = self
+                            .battlefield
+                            .iter()
+                            .find(|c| {
+                                c.controller == affected_controller && c.definition.is_creature()
+                            })
+                            .map(|c| c.id);
+                        if let Some(sac_id) = pick {
+                            let _ = self.remove_to_graveyard_with_triggers(sac_id);
+                            true
+                        } else {
+                            false
+                        }
+                    }
+                };
+
+                if !paid {
+                    let removed = self.stack.remove(pos);
+                    if is_spell
+                        && let StackItem::Spell { card, caster, .. } = removed
+                    {
+                        self.players[caster].send_to_graveyard(*card);
+                    }
+                    // Trigger items just drop off — nothing else to clean up.
+                }
+                Ok(())
+            }
+
             Effect::CounterAbility { what } => {
                 // Counter target activated/triggered ability. The selector
                 // resolves to a permanent (the ability's source); we remove
@@ -2021,8 +2150,10 @@ impl GameState {
     /// seat (or empty if the reference can't be resolved).
     pub(crate) fn resolve_players(&self, pref: &PlayerRef, ctx: &EffectContext) -> Vec<usize> {
         match pref {
-            PlayerRef::EachOpponent => (0..self.players.len())
-                .filter(|i| *i != ctx.controller && self.players[*i].is_alive())
+            PlayerRef::EachOpponent => self
+                .opponents_of(ctx.controller)
+                .into_iter()
+                .filter(|i| self.players[*i].is_alive())
                 .collect(),
             PlayerRef::EachPlayer => (0..self.players.len())
                 .filter(|i| self.players[*i].is_alive())
@@ -2046,8 +2177,9 @@ impl GameState {
             }),
             PlayerRef::EachOpponent => {
                 // Singular fallback — `resolve_players` returns the full set.
-                (0..self.players.len())
-                    .find(|i| *i != ctx.controller && self.players[*i].is_alive())
+                self.opponents_of(ctx.controller)
+                    .into_iter()
+                    .find(|i| self.players[*i].is_alive())
             }
             PlayerRef::EachPlayer => (0..self.players.len()).find(|i| self.players[*i].is_alive()),
             PlayerRef::DefendingPlayer => ctx

@@ -16,6 +16,7 @@ use crabomination::{
 use crate::game::{GameLog};
 use crate::net_plugin::{CurrentView, NetOutbox};
 use crate::scryfall;
+use crate::theme::{self, UiFonts};
 
 #[derive(Component)]
 pub struct DecisionModal;
@@ -118,14 +119,13 @@ fn decision_key(decision: &DecisionWire) -> Option<DecisionKey> {
     }
 }
 
-const PANEL_BG: Color = Color::srgba(0.08, 0.08, 0.12, 0.97);
-const OVERLAY_BG: Color = Color::srgba(0.0, 0.0, 0.0, 0.7);
 const CARD_ASPECT_RATIO: f32 = 88.0 / 63.0;
 const CARD_W: f32 = 180.0;
 const CARD_H: f32 = CARD_W * CARD_ASPECT_RATIO;
-const BTN_BG_OFF: Color = Color::srgba(0.20, 0.20, 0.24, 0.95);
-const BTN_BG_ON: Color = Color::srgba(0.60, 0.25, 0.25, 0.95);
-const CONFIRM_BG: Color = Color::srgba(0.20, 0.45, 0.25, 0.98);
+/// Modal "card tile / row" background — used for un-selected entries in a
+/// grid of cards. (Selected entries use `theme::BUTTON_SELECTED_BG`.)
+const MODAL_TILE_BG: Color = Color::srgba(0.20, 0.20, 0.24, 0.95);
+/// Tertiary action background (Scry reorder arrows, Serum Powder).
 const REORDER_BG: Color = Color::srgba(0.25, 0.30, 0.40, 0.95);
 const REORDER_BG_DISABLED: Color = Color::srgba(0.15, 0.15, 0.18, 0.6);
 
@@ -137,6 +137,7 @@ pub fn spawn_decision_ui(
     mut state: ResMut<DecisionUiState>,
     existing: Query<Entity, With<DecisionModal>>,
     asset_server: Res<AssetServer>,
+    ui_fonts: Res<UiFonts>,
 ) {
     let Some(cv) = &view.0 else {
         // Mulligan / no view yet — tear down any existing modal.
@@ -199,23 +200,24 @@ pub fn spawn_decision_ui(
                 .iter()
                 .map(|(id, bottom)| (*id, name_map[id].to_string(), *bottom))
                 .collect();
-            spawn_scry_modal(&mut commands, &asset_server, &ordered);
+            spawn_scry_modal(&mut commands, &asset_server, &ui_fonts, &ordered);
         }
         DecisionWire::SearchLibrary { candidates, .. } => {
             state.search_selected = None;
             state.spawned_for = Some(key);
-            spawn_search_modal(&mut commands, &asset_server, candidates);
+            spawn_search_modal(&mut commands, &asset_server, &ui_fonts, candidates);
         }
         DecisionWire::PutOnLibrary { count, hand, .. } => {
             state.put_on_library.clear();
             state.spawned_for = Some(key);
-            spawn_put_on_library_modal(&mut commands, &asset_server, hand, *count);
+            spawn_put_on_library_modal(&mut commands, &asset_server, &ui_fonts, hand, *count);
         }
         DecisionWire::Mulligan { hand, mulligans_taken, serum_powders, .. } => {
             state.spawned_for = Some(key);
             spawn_mulligan_modal(
                 &mut commands,
                 &asset_server,
+                &ui_fonts,
                 hand,
                 *mulligans_taken,
                 serum_powders,
@@ -223,12 +225,12 @@ pub fn spawn_decision_ui(
         }
         DecisionWire::ChooseColor { legal, .. } => {
             state.spawned_for = Some(key);
-            spawn_choose_color_modal(&mut commands, legal);
+            spawn_choose_color_modal(&mut commands, &ui_fonts, legal);
         }
         DecisionWire::Discard { count, hand, .. } => {
             state.discard_selected.clear();
             state.spawned_for = Some(key);
-            spawn_discard_modal(&mut commands, &asset_server, hand, *count);
+            spawn_discard_modal(&mut commands, &asset_server, &ui_fonts, hand, *count);
         }
         _ => {}
     }
@@ -237,6 +239,7 @@ pub fn spawn_decision_ui(
 fn spawn_scry_modal(
     commands: &mut Commands,
     asset_server: &AssetServer,
+    ui_fonts: &UiFonts,
     ordered: &[(CardId, String, bool)],
 ) {
     let root = commands
@@ -251,7 +254,7 @@ fn spawn_scry_modal(
                 align_items: AlignItems::Center,
                 ..default()
             },
-            BackgroundColor(OVERLAY_BG),
+            BackgroundColor(theme::OVERLAY_BG),
             Button,
             DecisionModal,
         ))
@@ -266,7 +269,7 @@ fn spawn_scry_modal(
                 align_items: AlignItems::Center,
                 ..default()
             },
-            BackgroundColor(PANEL_BG),
+            BackgroundColor(theme::PANEL_BG),
         ))
         .id();
 
@@ -278,8 +281,8 @@ fn spawn_scry_modal(
             Text::new(format!(
                 "Scry {n}: click card to toggle Bottom  ·  ← → to reorder  ·  left = top of library"
             )),
-            TextFont { font_size: 16.0, ..default() },
-            TextColor(Color::WHITE),
+            ui_fonts.tf(16.0),
+            TextColor(theme::TEXT_PRIMARY),
         ));
 
         panel
@@ -312,7 +315,7 @@ fn spawn_scry_modal(
                                 align_items: AlignItems::Center,
                                 ..default()
                             },
-                            BackgroundColor(if *is_bottom { BTN_BG_ON } else { BTN_BG_OFF }),
+                            BackgroundColor(if *is_bottom { theme::BUTTON_SELECTED_BG } else { MODAL_TILE_BG }),
                             ScryToggleButton { card_id: *card_id },
                         ))
                         .with_children(|cb| {
@@ -327,8 +330,8 @@ fn spawn_scry_modal(
                             ));
                             cb.spawn((
                                 Text::new(if *is_bottom { "Bottom" } else { "Top" }),
-                                TextFont { font_size: 14.0, ..default() },
-                                TextColor(Color::WHITE),
+                                ui_fonts.tf(14.0),
+                                TextColor(theme::TEXT_PRIMARY),
                                 Pickable::IGNORE,
                             ));
                         });
@@ -361,11 +364,11 @@ fn spawn_scry_modal(
                                 .with_children(|b| {
                                     b.spawn((
                                         Text::new(label),
-                                        TextFont { font_size: 16.0, ..default() },
+                                        ui_fonts.tf(16.0),
                                         TextColor(if disabled {
-                                            Color::srgba(0.5, 0.5, 0.5, 0.6)
+                                            theme::TEXT_MUTED
                                         } else {
-                                            Color::WHITE
+                                            theme::TEXT_PRIMARY
                                         }),
                                         Pickable::IGNORE,
                                     ));
@@ -383,14 +386,14 @@ fn spawn_scry_modal(
                     padding: UiRect::axes(Val::Px(20.0), Val::Px(10.0)),
                     ..default()
                 },
-                BackgroundColor(CONFIRM_BG),
+                BackgroundColor(theme::BUTTON_PRIMARY_BG),
                 DecisionConfirmButton,
             ))
             .with_children(|b| {
                 b.spawn((
                     Text::new("Confirm"),
-                    TextFont { font_size: 18.0, ..default() },
-                    TextColor(Color::WHITE),
+                    ui_fonts.tf(18.0),
+                    TextColor(theme::TEXT_PRIMARY),
                     Pickable::IGNORE,
                 ));
             });
@@ -400,6 +403,7 @@ fn spawn_scry_modal(
 fn spawn_search_modal(
     commands: &mut Commands,
     asset_server: &AssetServer,
+    ui_fonts: &UiFonts,
     candidates: &[(CardId, String)],
 ) {
     // Search candidates are typically the entire library (60 cards). The
@@ -420,7 +424,7 @@ fn spawn_search_modal(
                 align_items: AlignItems::Center,
                 ..default()
             },
-            BackgroundColor(OVERLAY_BG),
+            BackgroundColor(theme::OVERLAY_BG),
             Button,
             DecisionModal,
         ))
@@ -437,7 +441,7 @@ fn spawn_search_modal(
                 max_height: Val::Percent(90.0),
                 ..default()
             },
-            BackgroundColor(PANEL_BG),
+            BackgroundColor(theme::PANEL_BG),
         ))
         .id();
 
@@ -450,8 +454,8 @@ fn spawn_search_modal(
                 "Search your library — click a card to select it ({count} card{s})",
                 s = if count == 1 { "" } else { "s" }
             )),
-            TextFont { font_size: 16.0, ..default() },
-            TextColor(Color::WHITE),
+            ui_fonts.tf(16.0),
+            TextColor(theme::TEXT_PRIMARY),
         ));
 
         // Scrollable grid: bounded height + Overflow::scroll_y so the
@@ -486,7 +490,7 @@ fn spawn_search_modal(
                             align_items: AlignItems::Center,
                             ..default()
                         },
-                        BackgroundColor(BTN_BG_OFF),
+                        BackgroundColor(MODAL_TILE_BG),
                         SearchSelectButton { card_id: *card_id },
                     ))
                     .with_children(|cb| {
@@ -501,8 +505,8 @@ fn spawn_search_modal(
                         ));
                         cb.spawn((
                             Text::new(name.clone()),
-                            TextFont { font_size: 10.0, ..default() },
-                            TextColor(Color::WHITE),
+                            ui_fonts.tf(10.0),
+                            TextColor(theme::TEXT_PRIMARY),
                             Pickable::IGNORE,
                         ));
                     });
@@ -516,14 +520,14 @@ fn spawn_search_modal(
                     padding: UiRect::axes(Val::Px(20.0), Val::Px(10.0)),
                     ..default()
                 },
-                BackgroundColor(CONFIRM_BG),
+                BackgroundColor(theme::BUTTON_PRIMARY_BG),
                 DecisionConfirmButton,
             ))
             .with_children(|b| {
                 b.spawn((
                     Text::new("Confirm"),
-                    TextFont { font_size: 18.0, ..default() },
-                    TextColor(Color::WHITE),
+                    ui_fonts.tf(18.0),
+                    TextColor(theme::TEXT_PRIMARY),
                     Pickable::IGNORE,
                 ));
             });
@@ -540,6 +544,7 @@ fn spawn_search_modal(
 fn spawn_discard_modal(
     commands: &mut Commands,
     asset_server: &AssetServer,
+    ui_fonts: &UiFonts,
     candidates: &[(CardId, String)],
     count: u32,
 ) {
@@ -555,7 +560,7 @@ fn spawn_discard_modal(
                 align_items: AlignItems::Center,
                 ..default()
             },
-            BackgroundColor(OVERLAY_BG),
+            BackgroundColor(theme::OVERLAY_BG),
             Button,
             DecisionModal,
         ))
@@ -571,7 +576,7 @@ fn spawn_discard_modal(
                 max_width: Val::Percent(90.0),
                 ..default()
             },
-            BackgroundColor(PANEL_BG),
+            BackgroundColor(theme::PANEL_BG),
         ))
         .id();
     commands.entity(root).add_child(panel);
@@ -579,8 +584,8 @@ fn spawn_discard_modal(
     commands.entity(panel).with_children(|panel| {
         panel.spawn((
             Text::new(format!("Choose {count} card(s) to discard")),
-            TextFont { font_size: 16.0, ..default() },
-            TextColor(Color::WHITE),
+            ui_fonts.tf(16.0),
+            TextColor(theme::TEXT_PRIMARY),
         ));
         panel
             .spawn(Node {
@@ -604,7 +609,7 @@ fn spawn_discard_modal(
                             align_items: AlignItems::Center,
                             ..default()
                         },
-                        BackgroundColor(BTN_BG_OFF),
+                        BackgroundColor(MODAL_TILE_BG),
                         DiscardSelectButton { card_id: *card_id },
                     ))
                     .with_children(|cb| {
@@ -619,8 +624,8 @@ fn spawn_discard_modal(
                         ));
                         cb.spawn((
                             Text::new(name.clone()),
-                            TextFont { font_size: 12.0, ..default() },
-                            TextColor(Color::WHITE),
+                            ui_fonts.tf(12.0),
+                            TextColor(theme::TEXT_PRIMARY),
                             Pickable::IGNORE,
                         ));
                     });
@@ -633,14 +638,14 @@ fn spawn_discard_modal(
                     padding: UiRect::axes(Val::Px(20.0), Val::Px(10.0)),
                     ..default()
                 },
-                BackgroundColor(CONFIRM_BG),
+                BackgroundColor(theme::BUTTON_PRIMARY_BG),
                 DecisionConfirmButton,
             ))
             .with_children(|b| {
                 b.spawn((
                     Text::new("Confirm"),
-                    TextFont { font_size: 18.0, ..default() },
-                    TextColor(Color::WHITE),
+                    ui_fonts.tf(18.0),
+                    TextColor(theme::TEXT_PRIMARY),
                     Pickable::IGNORE,
                 ));
             });
@@ -653,6 +658,7 @@ fn spawn_discard_modal(
 fn spawn_put_on_library_modal(
     commands: &mut Commands,
     _asset_server: &AssetServer,
+    ui_fonts: &UiFonts,
     _hand: &[(CardId, String)],
     count: usize,
 ) {
@@ -684,7 +690,7 @@ fn spawn_put_on_library_modal(
                 align_items: AlignItems::Center,
                 ..default()
             },
-            BackgroundColor(PANEL_BG),
+            BackgroundColor(theme::PANEL_BG),
         ))
         .id();
 
@@ -697,13 +703,13 @@ fn spawn_put_on_library_modal(
                 ,
                 if count == 1 { "" } else { "s" }
             )),
-            TextFont { font_size: 16.0, ..default() },
-            TextColor(Color::WHITE),
+            ui_fonts.tf(16.0),
+            TextColor(theme::TEXT_PRIMARY),
         ));
         panel.spawn((
             Text::new(format!("0 / {count} selected")),
-            TextFont { font_size: 14.0, ..default() },
-            TextColor(Color::srgb(1.0, 0.85, 0.4)),
+            ui_fonts.tf(14.0),
+            TextColor(theme::ACCENT_GOLD),
             PutOnLibraryCountText,
         ));
 
@@ -714,14 +720,14 @@ fn spawn_put_on_library_modal(
                     padding: UiRect::axes(Val::Px(20.0), Val::Px(10.0)),
                     ..default()
                 },
-                BackgroundColor(CONFIRM_BG),
+                BackgroundColor(theme::BUTTON_PRIMARY_BG),
                 DecisionConfirmButton,
             ))
             .with_children(|b| {
                 b.spawn((
                     Text::new("Confirm"),
-                    TextFont { font_size: 16.0, ..default() },
-                    TextColor(Color::WHITE),
+                    ui_fonts.tf(16.0),
+                    TextColor(theme::TEXT_PRIMARY),
                     Pickable::IGNORE,
                 ));
             });
@@ -731,9 +737,6 @@ fn spawn_put_on_library_modal(
 /// Marker for the live "X / N selected" text inside the PutOnLibrary banner.
 #[derive(Component)]
 pub struct PutOnLibraryCountText;
-
-const KEEP_BG: Color = Color::srgba(0.15, 0.45, 0.18, 0.97);
-const MULL_BG: Color = Color::srgba(0.48, 0.12, 0.10, 0.97);
 
 /// One Serum-Powder-style helper button. Carries the powder card's ID so
 /// the click handler can submit `DecisionAnswer::SerumPowder(id)`.
@@ -747,6 +750,7 @@ pub struct MulliganSerumPowderButton(pub CardId);
 fn spawn_mulligan_modal(
     commands: &mut Commands,
     _asset_server: &AssetServer,
+    ui_fonts: &UiFonts,
     _hand: &[(CardId, String)],
     mulligans_taken: usize,
     serum_powders: &[CardId],
@@ -778,7 +782,7 @@ fn spawn_mulligan_modal(
             align_items: AlignItems::Center,
             ..default()
         },
-        BackgroundColor(PANEL_BG),
+        BackgroundColor(theme::PANEL_BG),
     )).id();
     commands.entity(root).add_child(panel);
 
@@ -789,24 +793,24 @@ fn spawn_mulligan_modal(
     };
 
     commands.entity(panel).with_children(|p| {
-        p.spawn((Text::new(title), TextFont { font_size: 18.0, ..default() }, TextColor(Color::WHITE)));
+        p.spawn((Text::new(title), ui_fonts.tf(18.0), TextColor(theme::TEXT_PRIMARY)));
         p.spawn(Node { flex_direction: FlexDirection::Row, column_gap: Val::Px(16.0), ..default() })
         .with_children(|btns| {
             btns.spawn((
                 Button,
                 Node { padding: UiRect::axes(Val::Px(24.0), Val::Px(12.0)), ..default() },
-                BackgroundColor(KEEP_BG),
+                BackgroundColor(theme::BUTTON_PRIMARY_BG),
                 MulliganKeepButton,
             ))
-            .with_children(|b| { b.spawn((Text::new("Keep (K)"), TextFont { font_size: 16.0, ..default() }, TextColor(Color::WHITE))); });
+            .with_children(|b| { b.spawn((Text::new("Keep (K)"), ui_fonts.tf(16.0), TextColor(theme::TEXT_PRIMARY))); });
 
             btns.spawn((
                 Button,
                 Node { padding: UiRect::axes(Val::Px(24.0), Val::Px(12.0)), ..default() },
-                BackgroundColor(MULL_BG),
+                BackgroundColor(theme::BUTTON_DANGER_BG),
                 MulliganTakeButton,
             ))
-            .with_children(|b| { b.spawn((Text::new("Mulligan (M)"), TextFont { font_size: 16.0, ..default() }, TextColor(Color::WHITE))); });
+            .with_children(|b| { b.spawn((Text::new("Mulligan (M)"), ui_fonts.tf(16.0), TextColor(theme::TEXT_PRIMARY))); });
 
             // One button per Serum-Powder-style helper currently in hand.
             // Clicking submits DecisionAnswer::SerumPowder(id) — exiles the
@@ -830,8 +834,8 @@ fn spawn_mulligan_modal(
                 .with_children(|b| {
                     b.spawn((
                         Text::new(label),
-                        TextFont { font_size: 14.0, ..default() },
-                        TextColor(Color::WHITE),
+                        ui_fonts.tf(14.0),
+                        TextColor(theme::TEXT_PRIMARY),
                     ));
                 });
             }
@@ -860,10 +864,10 @@ pub fn handle_put_on_library_select(
         let id = btn.card_id;
         if let Some(pos) = state.put_on_library.iter().position(|&x| x == id) {
             state.put_on_library.remove(pos);
-            *bg = BackgroundColor(BTN_BG_OFF);
+            *bg = BackgroundColor(MODAL_TILE_BG);
         } else if state.put_on_library.len() < required_count {
             state.put_on_library.push(id);
-            *bg = BackgroundColor(BTN_BG_ON);
+            *bg = BackgroundColor(theme::BUTTON_SELECTED_BG);
         }
     }
 }
@@ -871,7 +875,7 @@ pub fn handle_put_on_library_select(
 /// Handle clicks on Inquisition/Thoughtseize discard candidate cards.
 /// Toggles inclusion in the selection up to `count` cards (taken from
 /// the live `DecisionWire::Discard` count). Selected cards highlight in
-/// `BTN_BG_ON`; clicking a selected card unselects it.
+/// `theme::BUTTON_SELECTED_BG`; clicking a selected card unselects it.
 #[allow(clippy::type_complexity)]
 pub fn handle_discard_select(
     view: Res<CurrentView>,
@@ -897,10 +901,10 @@ pub fn handle_discard_select(
         let id = btn.card_id;
         if let Some(pos) = state.discard_selected.iter().position(|&x| x == id) {
             state.discard_selected.remove(pos);
-            *bg = BackgroundColor(BTN_BG_OFF);
+            *bg = BackgroundColor(MODAL_TILE_BG);
         } else if state.discard_selected.len() < required_count {
             state.discard_selected.push(id);
-            *bg = BackgroundColor(BTN_BG_ON);
+            *bg = BackgroundColor(theme::BUTTON_SELECTED_BG);
         }
     }
 }
@@ -922,9 +926,9 @@ pub fn handle_search_select(
     state.search_selected = Some(picked);
     for (_, btn, mut bg) in buttons.iter_mut() {
         *bg = BackgroundColor(if btn.card_id == picked {
-            BTN_BG_ON
+            theme::BUTTON_SELECTED_BG
         } else {
-            BTN_BG_OFF
+            MODAL_TILE_BG
         });
     }
 }
@@ -949,7 +953,7 @@ pub fn handle_scry_toggles(
         };
         entry.1 = !entry.1;
         let going_bottom = entry.1;
-        *bg = BackgroundColor(if going_bottom { BTN_BG_ON } else { BTN_BG_OFF });
+        *bg = BackgroundColor(if going_bottom { theme::BUTTON_SELECTED_BG } else { MODAL_TILE_BG });
         for child in children.iter() {
             if let Ok(mut text) = texts.get_mut(child) {
                 **text = if going_bottom { "Bottom".into() } else { "Top".into() };
@@ -1207,6 +1211,7 @@ pub struct ChooseColorButton(pub crabomination::mana::Color);
 
 fn spawn_choose_color_modal(
     commands: &mut Commands,
+    ui_fonts: &UiFonts,
     legal: &[crabomination::mana::Color],
 ) {
     use crabomination::mana::Color as ManaColor;
@@ -1235,7 +1240,7 @@ fn spawn_choose_color_modal(
                 align_items: AlignItems::Center,
                 ..default()
             },
-            BackgroundColor(PANEL_BG),
+            BackgroundColor(theme::PANEL_BG),
         ))
         .id();
     commands.entity(root).add_child(panel);
@@ -1243,8 +1248,8 @@ fn spawn_choose_color_modal(
     commands.entity(panel).with_children(|p| {
         p.spawn((
             Text::new("Choose a color"),
-            TextFont { font_size: 18.0, ..default() },
-            TextColor(Color::WHITE),
+            ui_fonts.tf(18.0),
+            TextColor(theme::TEXT_PRIMARY),
         ));
         p.spawn(Node {
             flex_direction: FlexDirection::Row,
@@ -1277,7 +1282,7 @@ fn spawn_choose_color_modal(
                 .with_children(|b| {
                     b.spawn((
                         Text::new(label),
-                        TextFont { font_size: 14.0, ..default() },
+                        ui_fonts.tf(14.0),
                         TextColor(text_color),
                         bevy::picking::Pickable::IGNORE,
                     ));

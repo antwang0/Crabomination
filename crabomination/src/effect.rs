@@ -866,6 +866,21 @@ pub enum Effect {
         what: Selector,
         mana_cost: crate::mana::ManaCost,
     },
+    /// CR 702.21 — Ward's "counter that spell or ability unless its
+    /// controller pays [cost]" trigger body. Walks the stack for the
+    /// topmost `Spell` with `card.id == target` or `Trigger` with
+    /// `source == target`, then tries to auto-pay the `cost` on behalf
+    /// of that item's controller. If unpaid, the item is removed
+    /// (spells go to graveyard; abilities just vanish off the stack).
+    ///
+    /// Distinct from `CounterUnlessPaid` because (a) it also counters
+    /// activated/triggered abilities (for the "or ability" half of CR
+    /// 702.21a), and (b) the cost menu is the broader
+    /// `WardCost` (mana / life / discard / sacrifice creature).
+    CounterUnless {
+        what: Selector,
+        cost: crate::card::WardCost,
+    },
     /// Copy target spell/ability `count` times.
     CopySpell    { what: Selector, count: Value },
 
@@ -1176,7 +1191,8 @@ impl Effect {
             | Effect::CounterSpell { what }
             | Effect::CounterSpellToZone { what, .. }
             | Effect::CounterAbility { what }
-            | Effect::CounterUnlessPaid { what, .. } => sel_has_target(what),
+            | Effect::CounterUnlessPaid { what, .. }
+            | Effect::CounterUnless { what, .. } => sel_has_target(what),
             Effect::PumpPT { what, power, toughness, .. } => {
                 sel_has_target(what) || value_has_target(power) || value_has_target(toughness)
             }
@@ -1254,6 +1270,7 @@ impl Effect {
             | Effect::CounterSpellToZone { what, .. }
             | Effect::CounterAbility { what }
             | Effect::CounterUnlessPaid { what, .. }
+            | Effect::CounterUnless { what, .. }
             | Effect::GainControl { what, .. } => sel_filter(what),
             Effect::AddCounter { what, .. } | Effect::RemoveCounter { what, .. } => sel_filter(what),
             Effect::PumpPT { what, .. } => sel_filter(what),
@@ -1415,7 +1432,8 @@ impl Effect {
             Effect::CounterSpell { .. }
             | Effect::CounterSpellToZone { .. }
             | Effect::CounterAbility { .. }
-            | Effect::CounterUnlessPaid { .. } => false,
+            | Effect::CounterUnlessPaid { .. }
+            | Effect::CounterUnless { .. } => false,
             // Permanent-targeting effects: skip Player.
             Effect::Destroy { .. }
             | Effect::Exile { .. }
@@ -1562,6 +1580,7 @@ impl Effect {
                 | Effect::CounterSpellToZone { what, .. }
                 | Effect::CounterAbility { what }
                 | Effect::CounterUnlessPaid { what, .. }
+                | Effect::CounterUnless { what, .. }
                 | Effect::GainControl { what, .. } => sel_find(what, slot),
                 Effect::PumpPT { what, .. } => sel_find(what, slot),
                 Effect::SetBasePT { what, .. } => sel_find(what, slot),

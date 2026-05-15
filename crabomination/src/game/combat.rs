@@ -233,13 +233,14 @@ impl GameState {
 
     pub(crate) fn resolve_first_strike_damage(&mut self) -> Result<Vec<GameEvent>, GameError> {
         let computed = self.compute_battlefield();
-        let mut events = self.resolve_combat_damage_with_filter(
-            &computed,
-            |kws: &[Keyword]| {
-                kws.contains(&Keyword::FirstStrike) || kws.contains(&Keyword::DoubleStrike)
-            },
-            |_kws: &[Keyword]| false,
-        )?;
+        // CR 510.4: in the first-strike combat damage step, only creatures
+        // with first strike or double strike deal combat damage. The same
+        // gate applies to attackers (who deals?) and blockers (who strikes
+        // back at the attacker?).
+        let fs_or_ds = |kws: &[Keyword]| {
+            kws.contains(&Keyword::FirstStrike) || kws.contains(&Keyword::DoubleStrike)
+        };
+        let mut events = self.resolve_combat_damage_with_filter(&computed, fs_or_ds, fs_or_ds)?;
         let mut sba = self.check_state_based_actions();
         events.append(&mut sba);
         events.push(GameEvent::FirstStrikeDamageResolved);
@@ -248,13 +249,15 @@ impl GameState {
 
     pub(crate) fn resolve_combat(&mut self) -> Result<Vec<GameEvent>, GameError> {
         let computed = self.compute_battlefield();
-        let mut events = self.resolve_combat_damage_with_filter(
-            &computed,
-            |kws: &[Keyword]| {
-                !kws.contains(&Keyword::FirstStrike) || kws.contains(&Keyword::DoubleStrike)
-            },
-            |_kws: &[Keyword]| true,
-        )?;
+        // CR 510.5: in the regular combat damage step, every attacking and
+        // blocking creature that didn't deal damage in the first-strike step
+        // deals damage now — i.e. anyone without first strike, plus double
+        // strikers (who strike in both steps).
+        let regular_or_ds = |kws: &[Keyword]| {
+            !kws.contains(&Keyword::FirstStrike) || kws.contains(&Keyword::DoubleStrike)
+        };
+        let mut events =
+            self.resolve_combat_damage_with_filter(&computed, regular_or_ds, regular_or_ds)?;
 
         let mut sba = self.check_state_based_actions();
         events.append(&mut sba);
@@ -274,7 +277,7 @@ impl GameState {
         &mut self,
         computed: &[ComputedPermanent],
         attacker_filter: impl Fn(&[Keyword]) -> bool,
-        _blocker_filter: impl Fn(&[Keyword]) -> bool,
+        blocker_filter: impl Fn(&[Keyword]) -> bool,
     ) -> Result<Vec<GameEvent>, GameError> {
         let mut events = vec![];
 
@@ -296,8 +299,6 @@ impl GameState {
                     has_trample: kws.contains(&Keyword::Trample),
                     has_lifelink: kws.contains(&Keyword::Lifelink),
                     has_deathtouch: kws.contains(&Keyword::Deathtouch),
-                    has_first_strike: kws.contains(&Keyword::FirstStrike),
-                    has_double_strike: kws.contains(&Keyword::DoubleStrike),
                     has_infect: kws.contains(&Keyword::Infect),
                     has_wither: kws.contains(&Keyword::Wither),
                     should_deal: attacker_filter(kws),
@@ -400,28 +401,34 @@ impl GameState {
                     events.push(GameEvent::LifeGained { player: a, amount: amt });
                 }
 
+                // Only blockers whose own keywords say they deal damage in
+                // this step strike back at the attacker. Per CR 510.4/510.5
+                // the attacker's keywords don't gate the blocker's strike
+                // step — a regular blocker must wait for the regular step
+                // even if the attacker has first strike.
+                let dealing_blocker_ids: Vec<CardId> = blocker_ids
+                    .iter()
+                    .copied()
+                    .filter(|&bid| computed_of(bid)
+                        .is_some_and(|bc| blocker_filter(&bc.keywords)))
+                    .collect();
+
                 let blocker_damage_to_attacker: i32 = if prevent_combat_damage {
                     0
                 } else {
-                    blocker_ids
+                    dealing_blocker_ids
                         .iter()
                         .filter_map(|&bid| computed_of(bid))
-                        .filter(|bc| {
-                            !bc.keywords.contains(&Keyword::FirstStrike)
-                                || bc.keywords.contains(&Keyword::DoubleStrike)
-                                || atk.has_first_strike
-                                || atk.has_double_strike
-                        })
                         .map(|c| c.power)
                         .sum()
                 };
 
                 if blocker_damage_to_attacker > 0 {
-                    let any_deathtouch_blocker = blocker_ids
+                    let any_deathtouch_blocker = dealing_blocker_ids
                         .iter()
                         .filter_map(|&bid| computed_of(bid))
                         .any(|c| c.keywords.contains(&Keyword::Deathtouch));
-                    let any_infect_blocker = blocker_ids
+                    let any_infect_blocker = dealing_blocker_ids
                         .iter()
                         .filter_map(|&bid| computed_of(bid))
                         .any(|c| {
@@ -457,10 +464,11 @@ impl GameState {
 
                     // Blocker lifelink — gained by each blocker's controller
                     // (different blockers can have different controllers in
-                    // multiplayer).
+                    // multiplayer). Only blockers actually striking back in
+                    // this step gain life from it.
                     let mut lifelink_by_controller: std::collections::HashMap<usize, i32> =
                         std::collections::HashMap::new();
-                    for &bid in &blocker_ids {
+                    for &bid in &dealing_blocker_ids {
                         let Some(bc) = computed_of(bid) else { continue };
                         if !bc.keywords.contains(&Keyword::Lifelink) {
                             continue;
@@ -637,8 +645,6 @@ struct AttackerInfo {
     has_trample: bool,
     has_lifelink: bool,
     has_deathtouch: bool,
-    has_first_strike: bool,
-    has_double_strike: bool,
     has_infect: bool,
     has_wither: bool,
     should_deal: bool,

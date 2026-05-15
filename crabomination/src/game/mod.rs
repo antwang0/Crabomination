@@ -31,16 +31,37 @@ mod tests_sos;
 #[cfg(test)]
 #[path = "../tests/stx.rs"]
 mod tests_stx;
+#[cfg(test)]
+#[path = "../tests/multiplayer.rs"]
+mod tests_multiplayer;
 pub mod types;
 
 #[cfg(test)]
 pub(crate) fn two_player_game() -> GameState {
-    let players = vec![
-        crate::player::Player::new(0, "Alice"),
-        crate::player::Player::new(1, "Bob"),
-    ];
+    multi_player_game(2)
+}
+
+/// `n`-player game (n ≥ 1), pre-advanced to the active player's pre-combat
+/// main phase. Players are named "P0", "P1", …. Use for free-for-all
+/// multiplayer tests; for format-specific life totals call
+/// `game_with_format(format, n)`.
+#[cfg(test)]
+pub(crate) fn multi_player_game(n: usize) -> GameState {
+    let players: Vec<_> = (0..n)
+        .map(|i| crate::player::Player::new(i, format!("P{i}")))
+        .collect();
     let mut g = GameState::new(players);
     g.step = TurnStep::PreCombatMain;
+    g
+}
+
+/// `n`-player game with format-specific setup applied (starting life, draw-on-
+/// turn-1 rule). Pre-advanced to the pre-combat main phase like
+/// `two_player_game`.
+#[cfg(test)]
+pub(crate) fn game_with_format(format: crate::format::Format, n: usize) -> GameState {
+    let mut g = multi_player_game(n);
+    g.apply_format(format);
     g
 }
 
@@ -120,6 +141,15 @@ fn deserialize_decider<'de, D: serde::Deserializer<'de>>(
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct GameState {
     pub players: Vec<Player>,
+    /// Partition of seats into teams. Every seat appears in exactly one
+    /// entry; free-for-all formats have one singleton team per seat,
+    /// team formats (Two-Headed Giant) have multiple seats per team.
+    /// Populated by `GameState::new`; reshape with `assign_teams`.
+    /// Defaults to empty for snapshots predating the field — helpers
+    /// (`team_of`, `teammates`, `opponents_of`) treat empty as "each
+    /// seat is its own singleton team".
+    #[serde(default)]
+    pub teams: Vec<crate::team::Team>,
     /// All permanents currently in play.
     pub battlefield: Vec<CardInstance>,
     /// Cards that have been exiled.
@@ -249,6 +279,7 @@ impl Clone for GameState {
     fn clone(&self) -> Self {
         Self {
             players: self.players.clone(),
+            teams: self.teams.clone(),
             battlefield: self.battlefield.clone(),
             exile: self.exile.clone(),
             stack: self.stack.clone(),
@@ -288,8 +319,17 @@ impl GameState {
     /// for a specific format or player count.
     pub fn new(players: Vec<Player>) -> Self {
         let n = players.len();
+        // Default: one singleton team per seat (free-for-all semantics).
+        // Team formats reshape this via `assign_teams`.
+        let teams = (0..n)
+            .map(|i| crate::team::Team {
+                id: crate::team::TeamId(i),
+                members: vec![i],
+            })
+            .collect();
         Self {
             players,
+            teams,
             battlefield: Vec::new(),
             exile: Vec::new(),
             stack: Vec::new(),
@@ -355,6 +395,98 @@ impl GameState {
         from
     }
 
+    // ── Team partitioning ─────────────────────────────────────────────────────
+
+    /// Team that contains `seat`. Falls back to a virtual singleton
+    /// `TeamId(seat)` when `teams` is empty (e.g. snapshots from before
+    /// the field was added).
+    pub fn team_of(&self, seat: usize) -> crate::team::TeamId {
+        for t in &self.teams {
+            if t.members.contains(&seat) {
+                return t.id;
+            }
+        }
+        crate::team::TeamId(seat)
+    }
+
+    /// Seats sharing a team with `seat`, excluding `seat` itself. Empty
+    /// for singleton-team seats.
+    pub fn teammates(&self, seat: usize) -> Vec<usize> {
+        let my_team = self.team_of(seat);
+        for t in &self.teams {
+            if t.id == my_team {
+                return t.members.iter().copied().filter(|&s| s != seat).collect();
+            }
+        }
+        Vec::new()
+    }
+
+    /// Seats on every team other than `seat`'s. Includes eliminated
+    /// players; callers that need a live-only list should filter on
+    /// `players[s].is_alive()` themselves.
+    pub fn opponents_of(&self, seat: usize) -> Vec<usize> {
+        if self.teams.is_empty() {
+            // No teams declared — treat every other seat as an opponent.
+            return (0..self.players.len()).filter(|&s| s != seat).collect();
+        }
+        let my_team = self.team_of(seat);
+        let mut out = Vec::new();
+        for t in &self.teams {
+            if t.id != my_team {
+                out.extend(t.members.iter().copied());
+            }
+        }
+        out
+    }
+
+    /// True when `a` and `b` are on the same team. A seat is always its
+    /// own teammate (returns true for `a == b`).
+    pub fn same_team(&self, a: usize, b: usize) -> bool {
+        self.team_of(a) == self.team_of(b)
+    }
+
+    /// Replace the current team partition. Every seat must appear in
+    /// exactly one entry; partitions must be non-empty. Used by team
+    /// formats (2HG) after `new()` to group seats.
+    pub fn assign_teams(
+        &mut self,
+        partitions: Vec<Vec<usize>>,
+    ) -> Result<(), crate::team::TeamError> {
+        let n = self.players.len();
+        let mut seen = vec![false; n];
+        for (i, part) in partitions.iter().enumerate() {
+            if part.is_empty() {
+                return Err(crate::team::TeamError::EmptyTeam(i));
+            }
+            for &seat in part {
+                if seat >= n {
+                    return Err(crate::team::TeamError::UnknownSeat {
+                        seat,
+                        num_players: n,
+                    });
+                }
+                if seen[seat] {
+                    return Err(crate::team::TeamError::DuplicateSeat(seat));
+                }
+                seen[seat] = true;
+            }
+        }
+        for (seat, was_seen) in seen.iter().enumerate() {
+            if !was_seen {
+                return Err(crate::team::TeamError::MissingSeat(seat));
+            }
+        }
+        self.teams = partitions
+            .into_iter()
+            .enumerate()
+            .map(|(i, members)| crate::team::Team {
+                id: crate::team::TeamId(i),
+                members,
+            })
+            .collect();
+        Ok(())
+    }
+
     /// The player who currently holds priority.
     pub fn player_with_priority(&self) -> usize {
         self.priority.player_with_priority
@@ -375,7 +507,29 @@ impl GameState {
         let mut all_effects: Vec<ContinuousEffect> = self.continuous_effects.clone();
         for card in &self.battlefield {
             let ts = card.id.0 as u64; // stable ordering by card id for static abilities
-            let effects = static_ability_to_effects(card, ts);
+            let mut effects = static_ability_to_effects(card, ts);
+            // Team-aware static abilities: `static_ability_to_effects` is a
+            // free function with no GameState handle, so it can't fill in
+            // `AllOpponents.friendly_seats` itself. Patch them now using
+            // the source's actual team membership — in 1v1 / FFA this is
+            // `[source_controller]` and behaves identically to the legacy
+            // single-seat check; in team formats (2HG) it lists every
+            // teammate so a Crackling Drake-style "creatures opponents
+            // control" anthem doesn't accidentally buff the source's
+            // partner.
+            for e in &mut effects {
+                if let AffectedPermanents::AllOpponents {
+                    source_controller,
+                    friendly_seats,
+                    ..
+                } = &mut e.affected
+                    && friendly_seats.is_empty()
+                {
+                    let mut seats = self.teammates(*source_controller);
+                    seats.push(*source_controller);
+                    *friendly_seats = seats;
+                }
+            }
             all_effects.extend(effects);
         }
         // Tarmogoyf-style dynamic P/T: a few cards' power/toughness depend on
@@ -932,7 +1086,7 @@ impl GameState {
                             effect: ta.effect.clone(),
                             controller: card.controller,
                             filter: ta.event.filter.clone(),
-                            subject: crate::game::effects::event_subject(ev),
+                            subject: crate::game::effects::event_subject(ev, &ta.event.kind),
                             event_amount: event_amount(ev),
                         });
                         break;
@@ -960,7 +1114,7 @@ impl GameState {
                                 effect: ta.effect.clone(),
                                 controller: card.owner,
                                 filter: ta.event.filter.clone(),
-                                subject: crate::game::effects::event_subject(ev),
+                                subject: crate::game::effects::event_subject(ev, &ta.event.kind),
                                 event_amount: event_amount(ev),
                             });
                             break;
@@ -1326,7 +1480,10 @@ impl GameState {
 
     fn advance_mulligan(&mut self, next_player: Option<usize>) {
         match next_player {
-            Some(p) => self.set_mulligan_decision(p, 0, None),
+            Some(p) => {
+                let after = (p + 1 < self.players.len()).then_some(p + 1);
+                self.set_mulligan_decision(p, 0, after);
+            }
             None => {
                 // All players kept — apply opening-hand effects (Leyline of
                 // Sanctity / Gemstone Caverns start in play; Chancellor reveals
@@ -2136,6 +2293,9 @@ fn affected_from_requirement(
                 return Some(AffectedPermanents::AllOpponents {
                     source_controller,
                     card_types: if types.is_empty() { vec![] } else { types.clone() },
+                    // Populated by `compute_battlefield` once the source's
+                    // team is known (this helper has no GameState handle).
+                    friendly_seats: Vec::new(),
                 });
             }
             R::Creature => types.push(CardType::Creature),

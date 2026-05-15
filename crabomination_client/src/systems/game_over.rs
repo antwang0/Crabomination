@@ -76,17 +76,14 @@ pub struct AutoRematchState {
     pub focused: bool,
 }
 
-const ACCENT: Color = Color::srgb(1.0, 0.85, 0.55);
-const REMATCH_BG: Color = Color::srgba(0.18, 0.45, 0.20, 1.0);
-const NEW_GAME_BG: Color = Color::srgba(0.20, 0.30, 0.55, 1.0);
-const SET_BG: Color = Color::srgba(0.32, 0.20, 0.45, 1.0);
-const FIELD_BG: Color = Color::srgba(0.16, 0.16, 0.22, 1.0);
-const FIELD_BG_FOCUSED: Color = Color::srgba(0.28, 0.28, 0.50, 1.0);
+use crate::theme::{
+    self, UiFonts, BUTTON_ACCENT_BG, BUTTON_INFO_BG, BUTTON_PRIMARY_BG, FIELD_BG, FIELD_BG_FOCUSED,
+};
 
 #[allow(clippy::too_many_arguments)]
 pub fn sync_game_over_modal(
     view: Res<CurrentView>,
-    asset_server: Res<AssetServer>,
+    ui_fonts: Res<UiFonts>,
     existing: Query<Entity, With<GameOverModalRoot>>,
     auto: Res<AutoRematchState>,
     kind: Res<ActiveMatchKind>,
@@ -119,7 +116,7 @@ pub fn sync_game_over_modal(
         }
         None => "Draw.".to_string(),
     };
-    let font = asset_server.load("fonts/MiranoExtendedFreebie-Light.ttf");
+    let tf = |size: f32| ui_fonts.tf(size);
     let show_auto_rematch = matches!(*kind, ActiveMatchKind::SpectateBotVsBot);
 
     commands
@@ -134,7 +131,7 @@ pub fn sync_game_over_modal(
                 align_items: AlignItems::Center,
                 ..default()
             },
-            BackgroundColor(Color::srgba(0.0, 0.0, 0.0, 0.65)),
+            BackgroundColor(theme::OVERLAY_BG),
             GameOverModalRoot,
         ))
         .with_children(|root| {
@@ -147,18 +144,18 @@ pub fn sync_game_over_modal(
                     min_width: Val::Px(440.0),
                     ..default()
                 },
-                BackgroundColor(Color::srgba(0.06, 0.06, 0.12, 0.97)),
+                BackgroundColor(theme::PANEL_BG),
             ))
             .with_children(|p| {
                 p.spawn((
                     Text::new("Game Over"),
-                    TextFont { font: font.clone(), font_size: 36.0, ..default() },
-                    TextColor(ACCENT),
+                    tf(36.0),
+                    TextColor(theme::ACCENT_GOLD),
                 ));
                 p.spawn((
                     Text::new(title),
-                    TextFont { font: font.clone(), font_size: 22.0, ..default() },
-                    TextColor(Color::WHITE),
+                    tf(22.0),
+                    TextColor(theme::TEXT_PRIMARY),
                 ));
 
                 // Action buttons row: Rematch + New Game.
@@ -171,28 +168,28 @@ pub fn sync_game_over_modal(
                     row.spawn((
                         Button,
                         Node { padding: UiRect::axes(Val::Px(24.0), Val::Px(11.0)), ..default() },
-                        BackgroundColor(REMATCH_BG),
+                        BackgroundColor(BUTTON_PRIMARY_BG),
                         RematchButton,
                     ))
                     .with_children(|b| {
                         b.spawn((
                             Text::new("Rematch"),
-                            TextFont { font: font.clone(), font_size: 18.0, ..default() },
-                            TextColor(Color::WHITE),
+                            tf(18.0),
+                            TextColor(theme::TEXT_PRIMARY),
                             Pickable::IGNORE,
                         ));
                     });
                     row.spawn((
                         Button,
                         Node { padding: UiRect::axes(Val::Px(24.0), Val::Px(11.0)), ..default() },
-                        BackgroundColor(NEW_GAME_BG),
+                        BackgroundColor(BUTTON_INFO_BG),
                         NewGameButton,
                     ))
                     .with_children(|b| {
                         b.spawn((
                             Text::new("New Game"),
-                            TextFont { font: font.clone(), font_size: 18.0, ..default() },
-                            TextColor(Color::WHITE),
+                            tf(18.0),
+                            TextColor(theme::TEXT_PRIMARY),
                             Pickable::IGNORE,
                         ));
                     });
@@ -202,8 +199,8 @@ pub fn sync_game_over_modal(
                 if show_auto_rematch {
                     p.spawn((
                         Text::new("Auto-rematch (bot vs bot only)"),
-                        TextFont { font: font.clone(), font_size: 13.0, ..default() },
-                        TextColor(Color::srgba(0.85, 0.85, 0.85, 1.0)),
+                        tf(13.0),
+                        TextColor(theme::TEXT_BODY),
                     ));
                     p.spawn(Node {
                         flex_direction: FlexDirection::Row,
@@ -226,8 +223,8 @@ pub fn sync_game_over_modal(
                         .with_children(|b| {
                             b.spawn((
                                 Text::new(format_auto_input(&auto)),
-                                TextFont { font: font.clone(), font_size: 16.0, ..default() },
-                                TextColor(Color::WHITE),
+                                tf(16.0),
+                                TextColor(theme::TEXT_PRIMARY),
                                 Pickable::IGNORE,
                                 AutoRematchInputText,
                             ));
@@ -235,14 +232,14 @@ pub fn sync_game_over_modal(
                         row.spawn((
                             Button,
                             Node { padding: UiRect::axes(Val::Px(16.0), Val::Px(7.0)), ..default() },
-                            BackgroundColor(SET_BG),
+                            BackgroundColor(BUTTON_ACCENT_BG),
                             AutoRematchSetButton,
                         ))
                         .with_children(|b| {
                             b.spawn((
                                 Text::new("Set"),
-                                TextFont { font, font_size: 14.0, ..default() },
-                                TextColor(Color::WHITE),
+                                tf(14.0),
+                                TextColor(theme::TEXT_PRIMARY),
                                 Pickable::IGNORE,
                             ));
                         });

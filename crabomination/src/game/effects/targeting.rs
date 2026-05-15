@@ -35,7 +35,14 @@ impl GameState {
         avoid_source: Option<CardId>,
     ) -> Option<Target> {
         let req = eff.primary_target_filter()?;
-        let opp = (controller + 1) % self.players.len();
+        // First opponent on a different team. Falls back to the next
+        // seat in singleton-team / unknown-team cases so the legacy 1v1
+        // pick (`(controller + 1) % n`) is preserved.
+        let opp = self
+            .opponents_of(controller)
+            .first()
+            .copied()
+            .unwrap_or((controller + 1) % self.players.len());
         let prefer_friendly = eff.prefers_friendly_target();
         // `prefers_graveyard_target` is the broader classifier — it covers
         // both reanimate (friendly graveyard) and graveyard hate (Ghost
@@ -217,7 +224,11 @@ impl GameState {
             // constructing a small Effect::PumpPT-style probe and calling
             // the picker against that filter. Simpler approach: walk
             // battlefield + players, return first legal.
-            let opp = (controller + 1) % self.players.len();
+            let opp = self
+                .opponents_of(controller)
+                .first()
+                .copied()
+                .unwrap_or((controller + 1) % self.players.len());
             let is_legal = |t: &Target| -> bool {
                 self.evaluate_requirement_static(&req, t, controller, None)
                     && self.check_target_legality(t, controller).is_ok()

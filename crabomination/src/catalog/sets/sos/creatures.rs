@@ -277,7 +277,7 @@ pub fn inkshape_demonstrator() -> CardDefinition {
         },
         power: 3,
         toughness: 4,
-        keywords: vec![Keyword::Ward(2)],
+        keywords: vec![Keyword::Ward(crate::card::WardCost::generic(2))],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
         triggered_abilities: vec![repartee(Effect::Seq(vec![
@@ -2299,7 +2299,7 @@ pub fn fractal_tender() -> CardDefinition {
         },
         power: 3,
         toughness: 3,
-        keywords: vec![Keyword::Ward(2)],
+        keywords: vec![Keyword::Ward(crate::card::WardCost::generic(2))],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
         triggered_abilities: vec![increment_self_plus_one()],
@@ -2318,7 +2318,7 @@ pub fn fractal_tender() -> CardDefinition {
 /// "Ward {1}. Infusion — Creatures you control get +1/+0 and have
 /// trample as long as you gained life this turn."
 ///
-/// Approximation: body + `Keyword::Ward(1)` wired. The Infusion
+/// Approximation: body + `Keyword::Ward(crate::card::WardCost::generic(1))` wired. The Infusion
 /// continuous static (+1/+0 + trample for your creatures while you've
 /// gained life this turn) is omitted (no continuous-static-on-predicate
 /// primitive yet — same gap as Tenured Concocter, Ulna Alley
@@ -2337,7 +2337,7 @@ pub fn thornfist_striker() -> CardDefinition {
         },
         power: 3,
         toughness: 3,
-        keywords: vec![Keyword::Ward(1)],
+        keywords: vec![Keyword::Ward(crate::card::WardCost::generic(1))],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
@@ -4290,7 +4290,7 @@ pub fn tragedy_feaster() -> CardDefinition {
         },
         power: 7,
         toughness: 6,
-        keywords: vec![Keyword::Trample, Keyword::Ward(0)],
+        keywords: vec![Keyword::Trample, Keyword::Ward(crate::card::WardCost::generic(0))],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
@@ -4348,7 +4348,7 @@ pub fn forum_necroscribe() -> CardDefinition {
         },
         power: 5,
         toughness: 4,
-        keywords: vec![],
+        keywords: vec![Keyword::Ward(crate::card::WardCost::Discard(1))],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
         triggered_abilities: vec![repartee(Effect::Move {
@@ -5441,7 +5441,7 @@ pub fn mica_reader_of_ruins() -> CardDefinition {
         },
         power: 4,
         toughness: 4,
-        keywords: vec![Keyword::Ward(3)],
+        keywords: vec![Keyword::Ward(crate::card::WardCost::Life(3))],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::MayDo {
@@ -5504,7 +5504,7 @@ pub fn colorstorm_stallion() -> CardDefinition {
         },
         power: 3,
         toughness: 3,
-        keywords: vec![Keyword::Ward(1), Keyword::Haste],
+        keywords: vec![Keyword::Ward(crate::card::WardCost::generic(1)), Keyword::Haste],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
         // 🟡 Opus small body (<5 mana) wired: +1/+1 EOT. Big body
@@ -5588,7 +5588,7 @@ pub fn elemental_mascot() -> CardDefinition {
 /// 7/7. "Flying / Ward—Pay 5 life. / Instant and sorcery spells you cast
 /// have storm."
 ///
-/// 🟡 Body wired: 7/7 Flying Legendary Elder Dragon with `Keyword::Ward(5)`.
+/// 🟡 Body wired: 7/7 Flying Legendary Elder Dragon with `Keyword::Ward(crate::card::WardCost::generic(5))`.
 /// The "your IS spells have storm" static is omitted — storm grants
 /// would need a per-cast trigger that fans out copies for each prior
 /// spell cast this turn, which is a sibling of `Effect::CopySpell` but
@@ -5606,7 +5606,7 @@ pub fn prismari_the_inspiration() -> CardDefinition {
         },
         power: 7,
         toughness: 7,
-        keywords: vec![Keyword::Flying, Keyword::Ward(5)],
+        keywords: vec![Keyword::Flying, Keyword::Ward(crate::card::WardCost::generic(5))],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],

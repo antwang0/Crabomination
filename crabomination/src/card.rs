@@ -158,6 +158,30 @@ pub enum Zone {
     Command,
 }
 
+/// The "unless [...]" payment menu for `Keyword::Ward`. Each printed
+/// variant maps to a cost the spell/ability controller may pay to
+/// dodge the Ward trigger.
+///
+/// `Mana` carries a full `ManaCost` so colored Ward (e.g. "Ward—{U}")
+/// works alongside the common generic `{N}` shape. The convenience
+/// constructor `WardCost::generic(n)` covers the generic case.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum WardCost {
+    Mana(crate::mana::ManaCost),
+    Life(u32),
+    Discard(u32),
+    SacrificeCreature,
+}
+
+impl WardCost {
+    /// `Ward {N}` — pay {N} generic mana. The common printed shape.
+    pub fn generic(n: u32) -> Self {
+        Self::Mana(crate::mana::ManaCost::new(vec![
+            crate::mana::ManaSymbol::Generic(n),
+        ]))
+    }
+}
+
 /// Keyword abilities supported by the engine.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Keyword {
@@ -208,7 +232,7 @@ pub enum Keyword {
     Morph(crate::mana::ManaCost),
     Megamorph(crate::mana::ManaCost),
     Prowess,
-    Ward(u32),
+    Ward(WardCost),
     Changeling,
     Storm,
     Inspired,

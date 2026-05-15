@@ -73,7 +73,7 @@ pub fn sedgemoor_witch() -> CardDefinition {
         },
         power: 3,
         toughness: 2,
-        keywords: vec![Keyword::Menace, Keyword::Ward(1)],
+        keywords: vec![Keyword::Menace, Keyword::Ward(crate::card::WardCost::generic(1))],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::CreateToken {

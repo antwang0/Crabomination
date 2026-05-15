@@ -780,7 +780,7 @@ fn sedgemoor_witch_magecraft_creates_pest_token() {
 fn sedgemoor_witch_has_menace_and_ward_one() {
     let w = catalog::sedgemoor_witch();
     assert!(w.keywords.contains(&Keyword::Menace));
-    assert!(w.keywords.contains(&Keyword::Ward(1)));
+    assert!(w.keywords.contains(&Keyword::Ward(crate::card::WardCost::generic(1))));
     assert_eq!(w.power, 3);
     assert_eq!(w.toughness, 2);
 }
@@ -10734,11 +10734,12 @@ fn cogwork_archivist_is_a_six_mana_artifact_creature_construct() {
 }
 
 #[test]
-fn cogwork_archivist_etb_mills_four_from_self() {
+fn cogwork_archivist_etb_mills_four_from_target_opponent() {
     let mut g = two_player_game();
-    for _ in 0..8 { g.add_card_to_library(0, catalog::island()); }
-    let gy_before = g.players[0].graveyard.len();
-    let lib_before = g.players[0].library.len();
+    for _ in 0..8 { g.add_card_to_library(1, catalog::island()); }
+    let opp_gy_before = g.players[1].graveyard.len();
+    let opp_lib_before = g.players[1].library.len();
+    let self_lib_before = g.players[0].library.len();
 
     let id = g.add_card_to_hand(0, catalog::cogwork_archivist());
     g.players[0].mana_pool.add_colorless(6);
@@ -10752,8 +10753,12 @@ fn cogwork_archivist_etb_mills_four_from_self() {
     .expect("Archivist castable for {6}");
     drain_stack(&mut g);
 
-    assert_eq!(g.players[0].library.len(), lib_before - 4, "4 cards milled");
-    assert_eq!(g.players[0].graveyard.len(), gy_before + 4, "4 cards added to graveyard");
+    // Auto-target picks the opponent (mill is a hostile player-side effect).
+    assert_eq!(g.players[1].library.len(), opp_lib_before - 4, "opponent milled 4");
+    assert_eq!(g.players[1].graveyard.len(), opp_gy_before + 4,
+        "opponent's graveyard gained 4");
+    assert_eq!(g.players[0].library.len(), self_lib_before,
+        "controller's own library untouched");
 }
 
 #[test]

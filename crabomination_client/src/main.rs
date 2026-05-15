@@ -17,6 +17,7 @@ mod net_plugin;
 mod render_quality;
 mod scryfall;
 mod systems;
+mod theme;
 
 use menu::{AppState, MenuPlugin, start_net_session_from_menu};
 use net_plugin::SinglePlayerPlugin;
@@ -171,7 +172,7 @@ fn main() {
         .init_gizmo_group::<AttackerGizmos>()
         .init_gizmo_group::<StackGizmos>()
         .init_gizmo_group::<PtModifiedGizmos>()
-        .add_systems(Startup, configure_gizmos)
+        .add_systems(Startup, (configure_gizmos, theme::init_ui_fonts))
         .insert_resource(DirectionalLightShadowMap { size: gfx.shadow_map_size })
         .insert_resource(gfx)
         .insert_resource(RenderQuality::default())

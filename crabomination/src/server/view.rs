@@ -380,6 +380,7 @@ fn ability_effect_label(effect: &Effect) -> &'static str {
         Effect::CounterSpellToZone { .. } => "Counter spell (alt zone)",
         Effect::CounterAbility { .. } => "Counter ability",
         Effect::CounterUnlessPaid { .. } => "Counter unless paid",
+        Effect::CounterUnless { .. } => "Ward (counter unless cost paid)",
         Effect::Sacrifice { .. } | Effect::SacrificeAndRemember { .. } => "Sacrifice",
         Effect::DiscardChosen { .. } => "Discard chosen",
         Effect::PayOrLoseGame { .. } => "Pay or lose",

@@ -3,6 +3,21 @@ use crate::card::{CardType, Keyword};
 use crate::effect::{Effect, ManaPayload};
 use crate::mana::{Color as ManaColor, ManaSymbol};
 
+/// Skip-Ward check. Ward variants whose payment is trivially affordable
+/// (free mana, 0 life, 0 discard) would always auto-pay and produce no
+/// visible difference from no Ward at all — so we skip the stack-churn
+/// of pushing the trigger. `SacrificeCreature` is never trivial since
+/// the controller might have no creatures to sacrifice.
+fn ward_cost_is_trivial(cost: &crate::card::WardCost) -> bool {
+    use crate::card::WardCost;
+    match cost {
+        WardCost::Mana(c) => c.cmc() == 0,
+        WardCost::Life(n) => *n == 0,
+        WardCost::Discard(n) => *n == 0,
+        WardCost::SacrificeCreature => false,
+    }
+}
+
 /// Returns true if the given effect is purely a mana ability — only adds
 /// mana and uses no targets. Mana abilities resolve immediately without the stack.
 fn is_mana_ability(effect: &Effect) -> bool {
@@ -735,7 +750,135 @@ impl GameState {
         // so Increment / Opus payoffs reading `Value::CastSpellManaSpent`
         // observe the actual amount paid for *this* spell.
         self.fire_spell_cast_triggers(p, card_id, !was_creature_spell, mana_spent);
+        // CR 702.21: Ward triggers on each chosen target permanent the caster
+        // doesn't control. Pushed last so Ward sits on top of the caster's
+        // own SpellCast triggers (Magecraft, Prowess) — correct APNAP order
+        // since the caster is the active player and Ward belongs to a
+        // nonactive player. Ward resolves first and may counter the spell
+        // unless the caster pays the Ward cost.
+        self.push_ward_triggers_for_cast(p, card_id);
         self.give_priority_to_active();
+    }
+
+    /// CR 702.21 — push a Ward triggered ability onto the stack for each
+    /// target permanent (controlled by another player) that has
+    /// `Keyword::Ward(WardCost)`. Each trigger is `Effect::CounterUnless`
+    /// aimed at the just-cast spell. At resolution the engine auto-pays
+    /// on the spell controller's behalf if affordable; otherwise the
+    /// spell is countered.
+    ///
+    /// Reads slot 0 + every `additional_targets` slot off the just-pushed
+    /// `StackItem::Spell` (so this must run after `finalize_cast`'s push).
+    /// Trivial Ward variants (e.g. `WardCost::Mana` with an empty/zero
+    /// cost) are skipped — a $0 pay is always affordable and the visible
+    /// outcome is identical to no Ward at all, so we save the stack churn.
+    pub(crate) fn push_ward_triggers_for_cast(&mut self, caster: usize, cast_card_id: CardId) {
+        // Locate the just-pushed spell and pull its targets out as owned
+        // values — we can't hold an immutable borrow while we push new
+        // stack items below.
+        let (target, additional_targets): (Option<Target>, Vec<Target>) = match self
+            .stack
+            .iter()
+            .rev()
+            .find_map(|si| match si {
+                StackItem::Spell { card, target, additional_targets, .. }
+                    if card.id == cast_card_id =>
+                {
+                    Some((target.clone(), additional_targets.clone()))
+                }
+                _ => None,
+            }) {
+            Some(t) => t,
+            // Spell isn't on the stack (e.g. countered before this hook).
+            None => return,
+        };
+
+        let all_targets: Vec<Target> = target
+            .into_iter()
+            .chain(additional_targets.into_iter())
+            .collect();
+        self.push_ward_triggers_for_targets(caster, cast_card_id, &all_targets);
+    }
+
+    /// Shared core for Ward enforcement: walk `targets`, and for each
+    /// permanent target controlled by a player other than `actor` whose
+    /// `Keyword::Ward(WardCost)` is non-trivial, push a Ward trigger
+    /// above whatever is currently on top of the stack. The trigger's
+    /// `target` carries `target_for_trigger` — the spell card-id (for
+    /// casts) or the source permanent's id (for activated abilities) —
+    /// so `Effect::CounterUnless` can walk the stack for the topmost
+    /// matching `Spell` or `Trigger`.
+    pub(crate) fn push_ward_triggers_for_targets(
+        &mut self,
+        actor: usize,
+        target_for_trigger: CardId,
+        targets: &[Target],
+    ) {
+        use crate::card::{Keyword, WardCost};
+        use crate::effect::Selector;
+
+        for tgt in targets {
+            let perm_id = match tgt {
+                Target::Permanent(id) => *id,
+                _ => continue,
+            };
+            let (ward_cost, ward_controller) = match self
+                .battlefield
+                .iter()
+                .find(|c| c.id == perm_id)
+            {
+                Some(c) if c.controller != actor => {
+                    let computed = self.computed_permanent(perm_id);
+                    let cost: Option<WardCost> = computed
+                        .as_ref()
+                        .map(|cp| cp.keywords.as_slice())
+                        .unwrap_or(&c.definition.keywords)
+                        .iter()
+                        .find_map(|k| match k {
+                            Keyword::Ward(cost) => Some(cost.clone()),
+                            _ => None,
+                        });
+                    match cost {
+                        Some(cc) if !ward_cost_is_trivial(&cc) => (cc, c.controller),
+                        _ => continue,
+                    }
+                }
+                _ => continue,
+            };
+
+            let effect = Effect::CounterUnless {
+                what: Selector::Target(0),
+                cost: ward_cost,
+            };
+            self.stack.push(StackItem::Trigger {
+                source: perm_id,
+                controller: ward_controller,
+                effect: Box::new(effect),
+                target: Some(Target::Permanent(target_for_trigger)),
+                mode: None,
+                x_value: 0,
+                converged_value: 0,
+                trigger_source: None,
+                mana_spent: 0,
+                event_amount: 0,
+            });
+        }
+    }
+
+    /// CR 702.21 — Ward enforcement on activated-ability targeting. Hooked
+    /// into `activate_ability` immediately after the ability is pushed
+    /// onto the stack as a `StackItem::Trigger`. The Ward trigger's
+    /// `Effect::CounterUnless` walks the stack for the topmost matching
+    /// `Trigger` whose `source` is the activating permanent (identifying
+    /// the ability to counter).
+    pub(crate) fn push_ward_triggers_for_activated_ability(
+        &mut self,
+        activator: usize,
+        ability_source: CardId,
+        target: Option<Target>,
+    ) {
+        let targets: Vec<Target> = target.into_iter().collect();
+        self.push_ward_triggers_for_targets(activator, ability_source, &targets);
     }
 
     /// Push pre-collected `SpellCast`/`SelfSource` triggers from the
@@ -1720,6 +1863,7 @@ impl GameState {
             events.append(&mut ability_events);
         } else {
             // Non-mana activated ability goes on the stack.
+            let ability_target = target.clone();
             self.stack.push(StackItem::Trigger {
                 source: card_id,
                 controller: p,
@@ -1728,10 +1872,15 @@ impl GameState {
                 mode: None,
                 x_value: 0,
                 converged_value: 0,
-            trigger_source: None,
+                trigger_source: None,
                 mana_spent: 0,
                 event_amount: 0,
             });
+            // CR 702.21: Ward also fires on activated abilities targeting
+            // an opp's Ward permanent (the "or ability" half of 702.21a).
+            // Push Ward triggers above the just-queued ability so they
+            // resolve first.
+            self.push_ward_triggers_for_activated_ability(p, card_id, ability_target);
             self.give_priority_to_active();
         }
 

@@ -1021,18 +1021,35 @@ status tag (✅ wired, 🟡 partial, ⏳ todo) plus a short note.
   shape. Same primitive unlocks "Pay {X}, sacrifice a creature, or
   discard a card" cycles in future sets.
 
-- ⏳ **AutoDecider auto-targeting for additional_targets slots 1+** —
-  push modern_decks promoted 8 SOS cards from single-target to
-  multi-target via the `additional_targets: Vec<Target>` action shape +
-  `Selector::TargetFiltered { slot, filter }`. The cast API + resolution
-  paths read every slot correctly, but `auto_target_for_effect_avoiding`
-  only fills slot 0. Slots 1+ stay empty under AutoDecider, so the
-  optional creature halves on Cost of Brilliance / Vibrant Outburst /
-  Render Speechless / Homesickness / Rabid Attack default to "skip" in
-  bot games. Wiring suggested shape: extend
-  `auto_target_for_effect_avoiding` to walk every slot index used by
-  the effect tree and return `Vec<Target>` for slots 1+. Until landed,
-  scripted tests carry the multi-target end-to-end coverage.
+- ✅ **AutoDecider auto-targeting for additional_targets slots 1+** —
+  shipped as `GameState::auto_targets_for_effect_all_slots`
+  (`game/effects/targeting.rs`). Walks every `Selector::TargetFiltered
+  { slot }` index in the effect tree (via `target_filter_for_slot_in_mode`)
+  and returns `(Option<Target>, Vec<Target>)` — slot 0 plus
+  `additional_targets` for slots 1+. Wired into the bot harness in
+  `server/bot.rs`. Cards promoted via this path: Snow Day, Homesickness,
+  Cost of Brilliance, Render Speechless, Vibrant Outburst, Dissection
+  Practice, Rabid Attack, Together as One, Borrowed Knowledge (doc-sync),
+  Magma Opus. Cap of 16 slots; deduplicates against earlier-filled slots.
+
+- ✅ **Ward enforcement — full coverage (CR 702.21)** — both halves
+  shipped: (a) `push_ward_triggers_for_cast` runs at the end of
+  `finalize_cast` and pushes one Ward trigger per opp-controlled
+  Ward permanent the spell targets; (b)
+  `push_ward_triggers_for_activated_ability` runs after
+  `activate_ability` queues the ability as a `StackItem::Trigger`,
+  closing the "or ability" half of CR 702.21a. Both paths funnel
+  through `push_ward_triggers_for_targets`. The cost enum
+  `Keyword::Ward(WardCost)` carries `Mana(ManaCost) | Life(u32) |
+  Discard(u32) | SacrificeCreature`. The new
+  `Effect::CounterUnless { what, cost }` resolver walks the stack
+  for a matching `Spell` (by `card.id`) or `Trigger` (by `source`)
+  and auto-pays the cost on the affected controller's behalf
+  (Discard auto-picks the first hand-card; Sacrifice auto-picks the
+  first matching creature — interactive prompting is a UI follow-up).
+  Promoted: Inkshape Demonstrator (Ward 2 generic), Mica (Ward—Pay
+  3 life), Forum Necroscribe (Ward—Discard a card). Six tests
+  cover the new variants and the activated-ability path.
 
 - ⏳ **Burst Lightning kicker / kicker-as-modal** — STA reprint Burst
   Lightning's "Kicker {4} → 4 damage instead of 2" is an alt-cost-
@@ -1498,7 +1515,10 @@ target → battlefield-token-copy path is not yet wired.
   Stirring Hopesinger, Rehearsed Debater, Informed Inkwright, Inkling
   Mascot, Snooping Page, Lecturing Scornmage, Melancholic Poet, and
   Graduation Day all use it. Remaining Repartee cards are blocked on
-  separate primitives (Ward, exile-until-X, copy-spell).
+  separate primitives (exile-until-X, copy-spell). Ward enforcement
+  (mana-cost variant) shipped in push (modern_decks) — see Inkshape
+  Demonstrator promotion + `push_ward_triggers_for_cast` in
+  `game/actions.rs`.
 - ~~`CardLeftGraveyard` — needed for Lorehold "cards leave your
   graveyard" payoffs.~~ **Done** in push V: see
   `EventKind::CardLeftGraveyard` + `Predicate::CardsLeftGraveyardThisTurnAtLeast`.
@@ -1963,6 +1983,57 @@ Token cards in the 3D view use the Scryfall-fetched art path, which often
 resolves to a generic back image.  A text overlay (name + P/T) on token cards
 would disambiguate multiple different tokens on the battlefield.
 
+### Theme System (colors + fonts) ✅ DONE
+~~UI color literals and `TextFont { font_size: X, ..default() }` were duplicated
+across 13 files (~161 srgba/srgb literals, 57 bare `TextFont` calls falling
+back to Bevy's default sans).~~ Introduced `crabomination_client/src/theme.rs`
+with named color constants (panel/overlay/HUD/field/button/accent/text) and
+a `UiFonts` resource carrying the loaded Mirano font handle. All 2-D UI
+surfaces (menu, decision modals, draft, game HUD, game-over, quality panel,
+debug console, tooltips, export prompt) now source colors from `theme::*`
+and text from `ui_fonts.tf(size)`. Closes the long-standing "fonts and
+colors drift between files" problem.
+
+### Win/Loss Banner Color Cue
+The game-over modal (`game_over.rs::sync_game_over_modal`) shows "Victory!
+…" and "Defeat. …" in identical white text on identical dark panels — no
+emotional cue for the result. Color the panel border / subtitle / accent
+based on `winner == cv.your_seat`, optionally add a small icon.
+
+### Card Art on the Stack
+The stack panel (`game_ui.rs::update_stack_panel`) shows only a "SPELL /
+TRIGGER" badge + name + controller text. Add a small card thumbnail
+(~70×100 px) per row using `scryfall::card_asset_path` — the scry/search
+modals (`decision_ui.rs:293-334`) already follow the exact `ImageNode`
+pattern. MTG players read the stack by visual recognition; text-only is
+a big information-density loss in critical priority decisions.
+
+### Life-Total Animation + Damage Feedback
+Life changes are instantaneous text mutations in `update_player_text` /
+`update_p1_text`. Lerp the displayed life toward the true value over
+~0.5s and spawn a floating "−4" / "+2" near the player portrait that
+drifts up and fades. Hook off `GameEventWire::DamageDealt`, `LifeLost`,
+`LifeGained`. Pulse the life text red on lethal threat.
+
+### Mana Symbol Rendering (Costs + Pool)
+Mana is rendered as text codes (`W:1 R:2`) in the player status, ability
+costs, alt-cast modal, and decision modals. Adopt a mana-symbol font or
+PNG atlas plus a text segmenter that splits `{2}{R}{R}` into icons +
+numerals. Subsumes the existing "Mana Pool HUD" entry above — once the
+glyph primitive exists every mana surface benefits.
+
+### Phase Chart Progress Indicator
+`update_phase_chart` highlights only the current step in yellow. Add a
+filled vertical bar growing through the steps (or a left-edge arrow) so
+turn progression is visible at a glance. Optional: tint the chart
+differently when it's the opponent's turn vs yours.
+
+### Card Hover Polish
+`animate_hover_lift` currently only translates the card on Y. Modern MTG
+clients combine the lift with a small scale-up (×1.03–1.05), a tilt-
+toward-camera (~5°), and a shadow boost — much more tactile. The
+`CardHovered` marker is already tracked; just extend the animation.
+
 ---
 
 ## Client — UX
@@ -1989,6 +2060,156 @@ Next Turn (N).
 A pre-game or in-game panel listing the full deck composition (name + count
 for each unique card) would help players understand the randomly-assembled cube
 deck they are playing.
+
+### Game Log Scrollback + Event Color-Coding
+`GameLog::push` caps entries at 16 (`game.rs:13-19`) and the panel joins them
+with `\n` into a single `Text` widget. A real game produces hundreds of
+events. Switch to `VecDeque<LogEntry>`, raise the cap to ~200, wrap the
+panel in `Overflow::scroll_y()`, and color-code entries by `GameEventWire`
+variant (damage = red, mana = mana-color, step = dim gray, etc.). The
+`format_event` match in `game_ui.rs` already pattern-matches every variant,
+so adding a per-variant color is cheap.
+
+### Button Hover + Pressed Feedback
+Action buttons (Pass / End Turn / Next Turn / Export plus modal buttons) have
+no `Interaction::Hovered` / `Pressed` tinting and no tooltips. Introduce a
+generic `interactive_button` helper that wires hover/press background changes
+and tooltip strings, and apply it across `game_ui.rs` HUD buttons,
+`decision_ui.rs` modal buttons, and `draft.rs` tab buttons. The current pass
+button hard-codes 4 srgb branches per priority state with no hover feedback.
+
+### Selective Attacker Picking
+The only attack option today is "Attack All" sending every untapped
+non-defender at `next_opp` (`game_ui.rs:2370-2396`). Inline comment at
+line 2369 admits "multi-defender targeting has no UI yet". Quick win:
+per-attacker click-to-opt-out before submitting the attack. Bigger lift:
+drag an arrow from attacker to defender / planeswalker. Restricts core
+MTG gameplay until done.
+
+### Hover-Dwell Card Preview
+Today the only way to read full rules text is to hold Alt while hovering
+(`ui.rs::peek_popup`). Add a hover-dwell state machine (~300ms over a card
+→ fade in large preview near cursor, with viewport-edge clamping). Reuse
+`scryfall::card_asset_path`. Extends "Card Tooltip with Full Oracle Text"
+above but specifically calls out the dwell-timer + cursor-relative
+placement that brings the UX in line with Arena / MTGO.
+
+### Decision Modal vs 3-D Hand Consistency
+Mulligan and PutOnLibrary modals are transparent overlays over the 3-D
+hand (player clicks the 3-D cards). Scry / Search / Discard render their
+own 2-D card grid. No design rule says which decisions go which way, so
+users can't predict whether to click the 2-D modal cards or the 3-D table
+cards. Pick one rule (e.g., "decisions on the viewer's own hand → 3-D +
+banner; decisions on hidden zones → 2-D modal grid") and migrate.
+
+### Right-Click Action Hint
+`game_ui.rs::handle_game_input` dispatches right-click on a hand card to
+either the alt-cast modal (`has_alternative_cost`), the MDFC flip
+(`back_face_name`), or the ability menu (battlefield card). The user has
+no visual hint about which their right-click will trigger. Add a small
+corner glyph on the card or a cursor-change to signal "right-click for
+alt cost" / "right-click to flip".
+
+### Hand-Fan Spacing for Large Hands
+`card/layout.rs:18` sets `HAND_CARD_SPACING = CARD_WIDTH * 0.85`. A
+15-card hand (Frantic Search loops, no-mulligan shenanigans) spreads
+off-screen. Clamp total fan width to a viewport-relative target and
+reduce spacing proportionally when hand size > 7.
+
+### Drag-and-Drop for Hand → Battlefield
+Hand cards play via click. Drag-to-position or drag-to-target would add
+tactile feel for both casting and selecting targets. Lower priority than
+the in-place fixes; capture the intent here.
+
+### Settings Menu
+The animation-speed slider is currently wedged into the quality panel
+(`quality.rs::setup_quality_panel`). A proper Settings panel (audio,
+key rebinds, UI scale, accessibility) would cleanly separate these and
+give a natural home for future global preferences.
+
+### Auto-Pass Toggle
+`auto_advance_p0` (`game_ui.rs:2000+`) decides for the player when to pass
+priority. A toolbar toggle ("Auto-pass: On/Off") lets new players step
+through their own turn priority-by-priority instead of having the engine
+fast-forward.
+
+### Tooltip Viewport Clamping
+`counter_tooltip.rs:80-82` and the `pile_tooltip` system use fixed
+`Val::Px` offsets without a viewport bounds check. Tooltips on cards
+near the upper-right or bottom edge clip off-screen. Clamp `node.left` /
+`node.top` to `[0, window_size - tooltip_size]`.
+
+### Alt-Peek Inside Decision Modals
+Scry / search / discard modal cards are 180×250 (`decision_ui.rs:124`) —
+fine for art, illegible for rules text. The Alt-hold peek-popup
+(`ui.rs:90-92`, 340×475) works on 3-D cards but doesn't fire on 2-D
+modal cards. Wire Alt-hover inside `decision_ui` modals to spawn the
+same large preview.
+
+---
+
+## Client — Engineering / Refactor
+
+These don't change the player-visible UI but unblock parallel work and
+reduce ongoing churn. Sequence them when scope or merge conflicts on the
+Client UI layer become a recurring problem.
+
+### Split `game_ui.rs`
+2,850 lines mixing setup, view→entity sync (~1,000 lines), input,
+ability menu, alt-cast modal, and HUD updates. Inline comment at line 38
+admits `handle_game_input` is bumping Bevy's 16-param `SystemParam`
+limit. Split into `game_ui/hud.rs` (setup + `update_*` text/buttons),
+`game_ui/sync.rs` (`sync_game_visuals` only), `game_ui/input.rs`
+(`handle_game_input` + `auto_advance`), `game_ui/modals.rs` (ability
+menu, alt-cast). Keep `GameLogicSet` + `ButtonState` in `mod.rs`.
+Prerequisite for several upcoming features but invisible to users.
+
+### Modal Builder Helper
+`decision_ui.rs` has 6+ near-identical "overlay root + panel + close-on-
+escape" spawn functions (`spawn_scry_modal`, `spawn_search_modal`,
+`spawn_discard_modal`, `spawn_put_on_library_modal`,
+`spawn_mulligan_modal`, `spawn_choose_color_modal`). Each new decision
+requires ~30 lines of root/panel boilerplate. Introduce a builder:
+`modal(commands, ui_fonts, title).body(|panel| {…}).buttons(|btns| {…}).spawn()`.
+Could halve `decision_ui.rs`.
+
+### Stable-Children for Stack Panel + Pile Tooltip
+`update_stack_panel` (`game_ui.rs::update_stack_panel`) and the pile
+tooltip (`ui.rs::pile_tooltip`) `despawn_children()` + rebuild on every
+change. The pile tooltip has a TODO comment explicitly admitting "we
+can't easily update the child text here, so just leave it" — i.e., the
+tooltip shows stale data. Give children stable marker components
+(`StackPanelRow(idx)`, `PileTooltipText`) and update text in place.
+Also fixes visible tearing when unrelated `view` fields change.
+
+### `DecisionView` Trait
+`spawn_decision_ui` matches every `DecisionWire` variant and dispatches
+to a separate `spawn_*_modal`; `handle_confirm`,
+`handle_put_on_library_select`, etc. repeat the same per-variant
+dispatch. A `trait DecisionView { fn spawn(...); fn confirm(...);
+fn cancel(...); }` implemented per variant would centralize. Roll up
+under the Modal Builder above when you tackle it.
+
+### Move `format_event` to Engine Crate
+`format_event` (`game_ui.rs:91-167`) is a 75-line match on
+`GameEventWire`. Every new event type requires editing this client-side
+function. Move to a `Display` / `fmt_for_log` impl on the wire type
+itself in `crabomination/src/net.rs` so new event variants stay
+self-contained. Pairs with the log-color-coding work above.
+
+### Relocate `stack_card_transform`
+`stack_card_transform` lives in `game_ui.rs:2752` but is a pure math /
+layout helper. Move to `card/layout.rs` next to the other transform
+helpers (`hand_card_transform`, `bf_card_transform`, `deck_position`).
+
+### Responsive HUD Layout
+Most HUD panels use hardcoded `Val::Px` margins and widths
+(`game_ui.rs:295-575`: `max_width: 560`, `min_width: 420`,
+`BROWSER_CARD_WIDTH: 220` × 4 cols = ~960 px island). At 720p the
+bottom player panel collides with the stack panel + AttackAllPanel;
+at 1440p+ everything sits in a small island. Audit `Val::Px` →
+`Val::Percent` / `Val::Vw` / `Val::Vh` per panel and add a `UiScale`
+resource. Subsumes the existing "Responsive Stack Display" entry above.
 
 ---
 
@@ -2072,13 +2293,207 @@ the game playable in a browser without installation.
 
 ## Formats
 
-### Commander (1v1 or 4-player)
-- 100-card singleton decks built around a legendary creature commander
-- Command zone with commander-tax mechanic
-- 40 starting life
-- Commander damage loss condition
-- Color-identity deck-construction enforcement
-- Multiplayer turn order and attack direction
+### Commander + Two-Headed Giant — phased rollout
+
+Roadmap for the `Format::Commander` and `Format::TwoHeadedGiant` variants
+already declared in `format.rs`. Strategy: build the multiplayer
+foundation first (any-N seats, teams, opponent semantics), then add
+shared resources for 2HG, then layer Commander-specific mechanics on
+top. The `Format` enum entries currently only affect deck validation
+and starting life; everything below is the runtime engine work.
+
+**Status legend:** ✅ done, 🟡 partial, ⏳ todo.
+
+#### Phase A — N-player game construction ✅
+- ✅ Mulligan chain fixed to step through all N seats (`game/mod.rs:1327`
+  `advance_mulligan` now computes the next seat instead of always
+  passing `None`).
+- ✅ Test helpers `multi_player_game(n)` and `game_with_format(format, n)`
+  next to `two_player_game()`.
+- ✅ 8 tests in `tests/multiplayer.rs` (4-player default life, Commander/
+  2HG life across all seats, 4-seat turn rotation, elimination skip,
+  4-step priority cycle, mulligan chain).
+- Engine was already N-player aware (`pass_priority` uses
+  `alive_count`, turn rotation uses `next_alive_seat`, attack target
+  validation is bounds-checked).
+
+#### Phase B — Teams abstraction ✅
+- ✅ New module `crabomination/src/team.rs` with `TeamId`, `Team`, and
+  `TeamError`.
+- ✅ `GameState.teams: Vec<Team>` (`#[serde(default)]` for snapshot
+  back-compat); auto-populated by `GameState::new` with one singleton
+  team per seat so existing 1v1 behavior is unchanged.
+- ✅ Helpers `team_of`, `teammates`, `opponents_of`, `same_team`,
+  `assign_teams` in `game/mod.rs`. Empty-`teams` snapshots gracefully
+  fall back to singleton-per-seat semantics.
+- ✅ 9 tests (singleton defaults, 2v2 partitioning, 2-1-1 mixed FFA,
+  all four `assign_teams` error paths, empty-teams snapshot fallback).
+
+#### Phase C — Team-aware opponent semantics 🟡 (code complete, untested)
+**Code complete; suite blocked by an unrelated in-progress `WardCost`
+refactor — see "Blockers" below.**
+- ✅ `PlayerRef::EachOpponent` routes through `opponents_of(controller)`
+  instead of `i != controller` (`game/effects/mod.rs:2024, 2049`).
+- ✅ `SelectionRequirement::ControlledByOpponent` predicate now uses
+  `!same_team(card.controller, controller)` for both the static-permanent
+  path and the on-card path (`game/effects/eval.rs:449, 552`).
+- ✅ `AffectedPermanents::AllOpponents` gained a
+  `friendly_seats: Vec<usize>` field (`#[serde(default)]`); the
+  `affects()` check uses it when non-empty, else falls back to the
+  legacy single-seat compare. Populated at compute-time by
+  `compute_battlefield` since the construction helper has no
+  `GameState` handle.
+- ✅ Auto-targeter's `(controller + 1) % n` "the opponent" picker now
+  uses `opponents_of(controller).first()` (`game/effects/targeting.rs:38,
+  220`).
+- ✅ 7 new tests in `tests/multiplayer.rs` (2v2 EachOpponent excludes
+  teammate; 1v1 baseline preserved; eliminated opponent filtered;
+  ControlledByOpponent predicate on both permanent and player targets;
+  auto-targeter avoids teammates).
+
+#### Phase D — Multiplayer combat ⏳
+Each attacking creature chooses a defending player or a planeswalker
+controlled by one of them; in 2HG the choice is the defending *team*
+and damage may be assigned to either teammate's creatures/planeswalkers.
+The `AttackTarget` enum already supports `Player(usize)` /
+`Planeswalker(CardId)` (`game/types.rs:73`) and
+`declare_attackers` already bounds-checks the target
+(`game/combat.rs:24-28`).
+- ⏳ Validate the chosen defender is an *opponent* (use
+  `opponents_of(attacker_controller)`), not just "not self."
+- ⏳ Block declaration: any creature controlled by a defending-team
+  player may block (covers 2HG without code changes once the team
+  abstraction is consulted).
+- ⏳ Tests: 3-player FFA attack, 2v2 attack where partner blocks for
+  the targeted player.
+
+#### Phase E — Priority & APNAP for N players ⏳
+- ⏳ Audit `pass_priority` for any 2-player assumptions in trigger
+  ordering (the rotation itself already iterates via `next_alive_seat`).
+- ⏳ Simultaneous triggers from one event must be sorted in APNAP order
+  (CR 603.3b), each player ordering their own triggers.
+- ⏳ Test: 4-player "deals damage to each player" event produces
+  triggers from each player's permanents, resolved AP-first.
+
+#### Phase F — Shared life pool & shared turns (2HG) ⏳
+The 2HG-specific consumer of the teams abstraction. Depends on Phase E.
+- ⏳ `Team.shared_life: Option<i32>` — `Some(30)` for 2HG, `None` for
+  solo teams (each player keeps their own life).
+- ⏳ Route all life mutations through a single helper that writes to
+  the team's shared pool when set, otherwise the player's own life.
+- ⏳ Shared turn: one *team* takes a turn; both members get priority
+  in seat order during each priority window (CR 810.5). The active
+  "player" for "you"-effects remains a specific seat — the partner
+  acts on the active player's turn via timing rules.
+- ⏳ Mulligan: each player mulligans independently (current 2HG rules
+  per CR 103.5).
+- ⏳ Tests: shared life updates from either teammate's damage; life-gain
+  by one teammate triggers "whenever you gain life" for both (CR 810.8).
+
+#### Phase G — Team-aware loss & game end ⏳
+- ⏳ Player elimination still happens per-player on their own loss
+  condition; team elimination triggers when all members have lost
+  (in 2HG, also when shared life ≤ 0 even with players "in").
+- ⏳ Game ends when only one *team* remains, not one player. Update
+  `check_state_based_actions` (`game/stack.rs:899`).
+- ⏳ Test: 2v2 ends correctly when shared life hits 0; 3p FFA continues
+  with 2 after one elimination.
+
+#### Phase H — Replacement-effect framework (Commander prerequisite) ⏳
+Phase I's "commander goes to command zone instead of [graveyard | exile
+| hand | library]" is the first true replacement effect. Build the
+infrastructure here rather than as a one-off.
+- ⏳ `ReplacementEffect` registry keyed on event
+  (`ZoneChange { from, to, card_filter }`, `DamageDealt {…}`, etc.).
+- ⏳ Resolve at the point of state change with a "would do X" hook
+  returning a (possibly modified) event.
+- ⏳ Scope tight initially — zone-change replacements only; expand as
+  more cards demand it.
+
+#### Phase I — Command zone runtime ⏳
+- ⏳ Instantiate the already-declared `Zone::Command` (`card.rs:151`,
+  `ZoneRef::Command` in `effect.rs:56`). Add
+  `command: Vec<CardId>` to `Player` (per-player; `ZoneRef::Command`
+  already expects a `player` field).
+- ⏳ Zone-search & move-to-zone handling for `Zone::Command` in stack/
+  effect resolution.
+
+#### Phase J — Deck model with commander slot ⏳
+- ⏳ Introduce `Deck { main, commanders: Vec<CardDefinition>,
+  sideboard }`. `Vec` for commanders supports Partner / Background.
+- ⏳ `Deck::load(format, …)` validates via existing `validate_deck()`
+  plus the Commander-specific checks below.
+- ⏳ On `GameState::new`, push each player's commander(s) into their
+  command zone before opening hand draw.
+
+#### Phase K — Color identity & deck validation ⏳
+- ⏳ `color_identity(card) -> ColorSet` — union of mana-cost colors,
+  mana symbols in rules text, and color indicators.
+- ⏳ Commander legality: every card's color identity ⊆ commander's
+  color identity; commander must be legendary creature (or carry a
+  `can_be_commander` attribute).
+- ⏳ Validation tests.
+
+#### Phase L — Cast from command zone with tax ⏳
+Depends on Phase H (replacement framework).
+- ⏳ New action `CastFromCommandZone { card }` paying
+  `mana_cost + {2} × prior_casts_this_game`.
+- ⏳ Per-player counter `commander_cast_count: HashMap<CardId, u32>`.
+- ⏳ Replacement effect: when commander would leave the battlefield to
+  any of {graveyard, exile, hand, library}, owner *may* redirect it
+  to the command zone instead (CR 903.9).
+- ⏳ Reuses the `CastSpellAlternative` plumbing (`game/actions.rs:129`).
+
+#### Phase M — Commander damage SBA ⏳
+- ⏳ `commander_damage: HashMap<(victim, source), u32>` somewhere
+  (on `GameState` or per-player).
+- ⏳ Combat / direct damage from a commander accumulates here in
+  addition to normal life loss.
+- ⏳ New SBA in `check_state_based_actions`: if any entry ≥ 21, victim
+  loses (CR 704.5v).
+
+#### Phase N — Polish ⏳
+- ⏳ Audit any remaining `PlayerRef::EachOpponent` / "your"/"opponent"
+  effects in card catalog text for team-awareness (Phase C handles
+  the engine layer; some cards may have bespoke logic).
+- ⏳ CLI / deck-loader entry points should accept format.
+- ⏳ Update format coverage tests after Phase J/K land.
+
+---
+
+#### Blockers
+- **Unfinished `WardCost` refactor** (branch `claude/modern_decks`,
+  unstaged WIP): `card.rs` introduced `enum WardCost` and changed
+  `Keyword::Ward(u32)` → `Keyword::Ward(WardCost)`. ~9 call sites
+  still pass `u32` and don't compile:
+  `crabomination/src/catalog/sets/sos/creatures.rs:5444, 5609`,
+  `crabomination/src/catalog/sets/sos/mdfcs.rs:1095, 1128, 1240`,
+  `crabomination/src/catalog/sets/stx/iconic.rs:76`,
+  `crabomination/src/game/actions.rs:809, 818`. The 7 catalog sites
+  are mechanical (`Keyword::Ward(N)` → `Keyword::Ward(WardCost::generic(N))`);
+  the two `game/actions.rs` sites need real API decisions on how the
+  Ward trigger consumes the new variant. Phase C's tests cannot run
+  until this is resolved.
+
+#### Dependency graph
+```
+A → B → C → D → E
+        ↓
+        F → G   (2HG-specific consumers of teams)
+        ↓
+        H → I → J → K → L → M   (Commander mechanics on the multiplayer base)
+```
+
+#### Open design questions
+1. **Partner / Background commanders** — in scope, or v2? `Deck.commanders:
+   Vec<…>` accommodates either way.
+2. **Brawl / Oathbreaker** — same machinery as Commander; opportunistic
+   to plan in once L/M land.
+3. **CR 810.5 priority timing within a team** — strict per-CR, or start
+   with a simplified "active team's primary player has priority first,
+   can pass to teammate"?
+4. **Range of influence** — Commander uses unlimited (everyone in range).
+   Default to unlimited; skip the option unless explicitly requested.
 
 ### Draft
 - 8-player booster draft simulation

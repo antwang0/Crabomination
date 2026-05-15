@@ -9328,7 +9328,7 @@ pub fn cogwork_archivist() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Mill {
-                who: Selector::You,
+                who: target_filtered(SelectionRequirement::Player),
                 amount: Value::Const(4),
             },
         }],

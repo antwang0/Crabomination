@@ -157,13 +157,20 @@ fn event_player(event: &GameEvent) -> Option<usize> {
 /// discard) it's the player. Used by `dispatch_triggers_for_events` so
 /// filters like `Predicate::ValueAtLeast(ManaValueOf(TriggerSource), 5)`
 /// can pin-point the cast spell on the stack.
-pub(crate) fn event_subject(event: &GameEvent) -> Option<EntityRef> {
+///
+/// `kind` is the matching trigger's `EventKind`. For `BlockerDeclared`
+/// the underlying event is shared between two trigger kinds — `Blocks`
+/// fires on the blocker side (subject = blocker), while `BecomesBlocked`
+/// fires on the attacker side (subject = attacker). The kind disambiguates.
+pub(crate) fn event_subject(event: &GameEvent, kind: &EventKind) -> Option<EntityRef> {
     match event {
         GameEvent::SpellCast { card_id, .. } => Some(EntityRef::Card(*card_id)),
         GameEvent::PermanentEntered { card_id } => Some(EntityRef::Permanent(*card_id)),
         GameEvent::CreatureDied { card_id } => Some(EntityRef::Card(*card_id)),
         GameEvent::AttackerDeclared(card_id) => Some(EntityRef::Permanent(*card_id)),
-        GameEvent::BlockerDeclared { blocker, .. } => Some(EntityRef::Permanent(*blocker)),
+        GameEvent::BlockerDeclared { blocker, attacker } => Some(EntityRef::Permanent(
+            if matches!(kind, EventKind::BecomesBlocked) { *attacker } else { *blocker },
+        )),
         GameEvent::LandPlayed { card_id, .. } => Some(EntityRef::Permanent(*card_id)),
         GameEvent::PermanentTapped { card_id } => Some(EntityRef::Permanent(*card_id)),
         GameEvent::PermanentUntapped { card_id } => Some(EntityRef::Permanent(*card_id)),

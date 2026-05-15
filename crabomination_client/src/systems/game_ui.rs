@@ -21,6 +21,7 @@ use crate::card::{
 };
 use crate::game::{AbilityMenuState, BlockingState, GameLog, TargetingState, format_mana_pool_from_pool};
 use crate::net_plugin::{CurrentView, LatestServerEvents, NetOutbox};
+use crate::theme::{self, UiFonts};
 
 /// System set label for the ordered game-logic chain (mulligan → advance → input).
 #[derive(bevy::ecs::schedule::SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
@@ -283,13 +284,8 @@ pub fn poll_action_buttons(
 
 // ── HUD setup ─────────────────────────────────────────────────────────────────
 
-pub fn setup_game_hud(mut commands: Commands, asset_server: Res<AssetServer>) {
-    let font = asset_server.load("fonts/MiranoExtendedFreebie-Light.ttf");
-    let tf = |size: f32| TextFont {
-        font: font.clone(),
-        font_size: size,
-        ..default()
-    };
+pub fn setup_game_hud(mut commands: Commands, ui_fonts: Res<UiFonts>) {
+    let tf = |size: f32| ui_fonts.tf(size);
 
     // Top-left: turn / step info
     commands
@@ -301,14 +297,14 @@ pub fn setup_game_hud(mut commands: Commands, asset_server: Res<AssetServer>) {
                 padding: UiRect::all(Val::Px(8.0)),
                 ..default()
             },
-            BackgroundColor(Color::srgba(0.0, 0.0, 0.0, 0.78)),
+            BackgroundColor(theme::HUD_BG),
             InGameRoot,
         ))
         .with_children(|p| {
             p.spawn((
                 Text::new(""),
                 tf(16.0),
-                TextColor(Color::WHITE),
+                TextColor(theme::TEXT_PRIMARY),
                 TurnInfoText,
             ));
         });
@@ -340,7 +336,7 @@ pub fn setup_game_hud(mut commands: Commands, asset_server: Res<AssetServer>) {
                 min_width: Val::Px(110.0),
                 ..default()
             },
-            BackgroundColor(Color::srgba(0.0, 0.0, 0.0, 0.72)),
+            BackgroundColor(theme::HUD_BG),
             InGameRoot,
         ))
         .with_children(|p| {
@@ -348,7 +344,7 @@ pub fn setup_game_hud(mut commands: Commands, asset_server: Res<AssetServer>) {
                 p.spawn((
                     Text::new(*label),
                     tf(12.0),
-                    TextColor(Color::srgba(0.55, 0.55, 0.55, 0.8)),
+                    TextColor(theme::TEXT_MUTED),
                     PhaseStepLabel(*step),
                 ));
             }
@@ -814,11 +810,12 @@ fn target_display(cv: &crabomination::net::ClientView, tgt: &Target) -> String {
 
 /// Rebuild the `StackPanel` children whenever the view changes.
 /// Stack is LIFO: the last element resolves next.  We show top-of-stack first.
+#[allow(clippy::too_many_arguments)]
 pub fn update_stack_panel(
     view: Res<CurrentView>,
     mut commands: Commands,
     mut panel_q: Query<(Entity, &mut Node), With<StackPanel>>,
-    asset_server: Res<AssetServer>,
+    ui_fonts: Res<UiFonts>,
 ) {
     if !view.is_changed() {
         return;
@@ -840,8 +837,7 @@ pub fn update_stack_panel(
 
     node.display = Display::Flex;
 
-    let font = asset_server.load("fonts/MiranoExtendedFreebie-Light.ttf");
-    let tf = |size: f32| TextFont { font: font.clone(), font_size: size, ..default() };
+    let tf = |size: f32| ui_fonts.tf(size);
 
     let your_priority = cv.priority == cv.your_seat;
     let priority_name = if your_priority {
@@ -860,7 +856,7 @@ pub fn update_stack_panel(
         p.spawn((
             Text::new(header),
             tf(12.0),
-            TextColor(Color::srgb(0.72, 0.72, 0.8)),
+            TextColor(theme::TEXT_BODY),
         ));
         // Divider
         p.spawn(Node {
@@ -876,8 +872,8 @@ pub fn update_stack_panel(
             let (kind_str, kind_color, name, ctrl_str, tgt_str) = match item {
                 StackItemView::Known(k) => {
                     let (kstr, kcol) = match k.kind {
-                        StackItemKind::Spell   => ("SPELL",   Color::srgb(1.0,  0.65, 0.2)),
-                        StackItemKind::Trigger => ("TRIGGER", Color::srgb(0.45, 0.75, 1.0)),
+                        StackItemKind::Spell   => ("SPELL",   theme::ACCENT_ORANGE),
+                        StackItemKind::Trigger => ("TRIGGER", theme::ACCENT_BLUE),
                     };
                     let ctrl = if k.controller == cv.your_seat {
                         "You".to_string()
@@ -895,7 +891,7 @@ pub fn update_stack_panel(
                     } else {
                         player_name(cv, *controller)
                     };
-                    ("?", Color::srgb(0.55, 0.55, 0.55), "Hidden card".to_string(), ctrl, String::new())
+                    ("?", theme::TEXT_MUTED, "Hidden card".to_string(), ctrl, String::new())
                 }
             };
 
@@ -927,7 +923,7 @@ pub fn update_stack_panel(
 
                 // Name  ·  controller  →  target
                 let label = format!("{}  ·  {}{}", name, ctrl_str, tgt_str);
-                row.spawn((Text::new(label), tf(12.0), TextColor(Color::WHITE)));
+                row.spawn((Text::new(label), tf(12.0), TextColor(theme::TEXT_PRIMARY)));
             });
         }
     });
@@ -2464,6 +2460,7 @@ fn cancel_targeting(
 pub fn spawn_ability_menu(
     mut commands: Commands,
     view: Res<CurrentView>,
+    ui_fonts: Res<UiFonts>,
     menu_state: Res<AbilityMenuState>,
     existing: Query<Entity, With<AbilityMenu>>,
 ) {
@@ -2506,14 +2503,14 @@ pub fn spawn_ability_menu(
                 padding: UiRect::all(Val::Px(8.0)),
                 ..default()
             },
-            BackgroundColor(Color::srgba(0.08, 0.08, 0.14, 0.97)),
+            BackgroundColor(theme::PANEL_BG_SUNKEN),
             AbilityMenu,
         ))
         .with_children(|menu| {
             menu.spawn((
                 Text::new(card_name),
-                TextFont { font_size: 13.0, ..default() },
-                TextColor(Color::srgba(0.8, 0.8, 1.0, 1.0)),
+                ui_fonts.tf(13.0),
+                TextColor(theme::ACCENT_BLUE),
             ));
             for (ability_index, label, used) in abilities {
                 let bg = if used {
@@ -2526,9 +2523,9 @@ pub fn spawn_ability_menu(
                     Color::srgba(0.20, 0.22, 0.32, 0.95)
                 };
                 let fg = if used {
-                    Color::srgba(0.55, 0.55, 0.55, 1.0)
+                    theme::TEXT_MUTED
                 } else {
-                    Color::WHITE
+                    theme::TEXT_PRIMARY
                 };
                 menu.spawn((
                     Button,
@@ -2542,7 +2539,7 @@ pub fn spawn_ability_menu(
                 .with_children(|b| {
                     b.spawn((
                         Text::new(label),
-                        TextFont { font_size: 13.0, ..default() },
+                        ui_fonts.tf(13.0),
                         TextColor(fg),
                         Pickable::IGNORE,
                     ));
@@ -2602,6 +2599,7 @@ pub struct AltCastCancelButton;
 pub fn spawn_alt_cast_modal(
     mut commands: Commands,
     view: Res<CurrentView>,
+    ui_fonts: Res<UiFonts>,
     state: Res<crate::game::AltCastState>,
     existing: Query<Entity, With<AltCastModal>>,
 ) {
@@ -2660,19 +2658,19 @@ pub fn spawn_alt_cast_modal(
                     min_width: Val::Px(360.0),
                     ..default()
                 },
-                BackgroundColor(Color::srgba(0.08, 0.08, 0.12, 0.97)),
+                BackgroundColor(theme::PANEL_BG),
             ))
             .with_children(|panel| {
                 panel.spawn((
                     Text::new("Cast for alternative cost — pick a card to exile:"),
-                    TextFont { font_size: 15.0, ..default() },
-                    TextColor(Color::WHITE),
+                    ui_fonts.tf(15.0),
+                    TextColor(theme::TEXT_PRIMARY),
                 ));
                 if candidates.is_empty() {
                     panel.spawn((
                         Text::new("(no other cards in hand to pitch)"),
-                        TextFont { font_size: 13.0, ..default() },
-                        TextColor(Color::srgba(0.7, 0.7, 0.7, 1.0)),
+                        ui_fonts.tf(13.0),
+                        TextColor(theme::TEXT_SECONDARY),
                     ));
                 }
                 for (pid, name) in candidates {
@@ -2683,14 +2681,14 @@ pub fn spawn_alt_cast_modal(
                                 padding: UiRect::axes(Val::Px(14.0), Val::Px(8.0)),
                                 ..default()
                             },
-                            BackgroundColor(Color::srgba(0.20, 0.30, 0.50, 1.0)),
+                            BackgroundColor(theme::BUTTON_INFO_BG),
                             AltCastPitchButton { spell: spell_id, pitch: pid },
                         ))
                         .with_children(|b| {
                             b.spawn((
                                 Text::new(name),
-                                TextFont { font_size: 13.0, ..default() },
-                                TextColor(Color::WHITE),
+                                ui_fonts.tf(13.0),
+                                TextColor(theme::TEXT_PRIMARY),
                                 bevy::picking::Pickable::IGNORE,
                             ));
                         });
@@ -2703,14 +2701,14 @@ pub fn spawn_alt_cast_modal(
                             margin: UiRect::top(Val::Px(8.0)),
                             ..default()
                         },
-                        BackgroundColor(Color::srgba(0.30, 0.10, 0.10, 1.0)),
+                        BackgroundColor(theme::BUTTON_DANGER_BG),
                         AltCastCancelButton,
                     ))
                     .with_children(|b| {
                         b.spawn((
                             Text::new("Cancel"),
-                            TextFont { font_size: 13.0, ..default() },
-                            TextColor(Color::WHITE),
+                            ui_fonts.tf(13.0),
+                            TextColor(theme::TEXT_PRIMARY),
                             bevy::picking::Pickable::IGNORE,
                         ));
                     });

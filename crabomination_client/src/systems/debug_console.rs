@@ -48,9 +48,10 @@ pub struct DebugAddCardButton;
 #[derive(Component)]
 pub struct DebugCardInputBox;
 
-const PANEL_BG: Color = Color::srgba(0.05, 0.05, 0.10, 0.92);
-const BTN_BG: Color = Color::srgb(0.18, 0.18, 0.26);
-const BTN_BG_HOT: Color = Color::srgb(0.30, 0.30, 0.42);
+use crate::theme::{self, UiFonts};
+
+/// Inactive text-input background inside the debug console (darker than
+/// the general field bg to fit this panel's more compact, terminal-ish feel).
 const INPUT_BG: Color = Color::srgb(0.10, 0.10, 0.16);
 const INPUT_BG_FOCUSED: Color = Color::srgb(0.20, 0.20, 0.34);
 
@@ -128,14 +129,14 @@ pub fn handle_debug_console_input(
 /// card-name text/background when the buffer or focus state changes.
 pub fn sync_debug_console_ui(
     state: Res<DebugConsoleState>,
-    asset_server: Res<AssetServer>,
+    ui_fonts: Res<UiFonts>,
     existing: Query<Entity, With<DebugConsoleRoot>>,
     mut text_q: Query<&mut Text, With<DebugConsoleCardText>>,
     mut box_q: Query<&mut BackgroundColor, With<DebugCardInputBox>>,
     mut commands: Commands,
 ) {
     if state.open && existing.is_empty() {
-        spawn_panel(&mut commands, &asset_server, &state);
+        spawn_panel(&mut commands, &ui_fonts, &state);
     } else if !state.open {
         for e in &existing {
             commands.entity(e).despawn();
@@ -168,15 +169,10 @@ fn render_card_text(state: &DebugConsoleState) -> String {
 
 fn spawn_panel(
     commands: &mut Commands,
-    asset_server: &AssetServer,
+    ui_fonts: &UiFonts,
     state: &DebugConsoleState,
 ) {
-    let font = asset_server.load("fonts/MiranoExtendedFreebie-Light.ttf");
-    let tf = |size: f32| TextFont {
-        font: font.clone(),
-        font_size: size,
-        ..default()
-    };
+    let tf = |size: f32| ui_fonts.tf(size);
 
     commands
         .spawn((
@@ -190,7 +186,7 @@ fn spawn_panel(
                 min_width: Val::Px(280.0),
                 ..default()
             },
-            BackgroundColor(PANEL_BG),
+            BackgroundColor(theme::PANEL_BG),
             DebugConsoleRoot,
             crate::systems::game_ui::InGameRoot,
         ))
@@ -198,11 +194,11 @@ fn spawn_panel(
             p.spawn((
                 Text::new("Debug Console  (` to close)"),
                 tf(14.0),
-                TextColor(Color::srgb(1.0, 0.85, 0.55)),
+                TextColor(theme::ACCENT_GOLD),
             ));
 
             // ── Mana row ─────────────────────────────────────────────
-            p.spawn((Text::new("Mana (+1 to your pool)"), tf(11.0), TextColor(Color::srgba(0.7, 0.7, 0.7, 1.0))));
+            p.spawn((Text::new("Mana (+1 to your pool)"), tf(11.0), TextColor(theme::TEXT_SECONDARY)));
             p.spawn(Node {
                 flex_direction: FlexDirection::Row,
                 column_gap: Val::Px(4.0),
@@ -223,18 +219,18 @@ fn spawn_panel(
                             padding: UiRect::axes(Val::Px(10.0), Val::Px(5.0)),
                             ..default()
                         },
-                        BackgroundColor(BTN_BG),
+                        BackgroundColor(theme::BUTTON_NEUTRAL_BG),
                         Button,
                         DebugManaButton(color),
                     ))
                     .with_children(|b| {
-                        b.spawn((Text::new(label), tf(13.0), TextColor(Color::WHITE)));
+                        b.spawn((Text::new(label), tf(13.0), TextColor(theme::TEXT_PRIMARY)));
                     });
                 }
             });
 
             // ── Life row ─────────────────────────────────────────────
-            p.spawn((Text::new("Life"), tf(11.0), TextColor(Color::srgba(0.7, 0.7, 0.7, 1.0))));
+            p.spawn((Text::new("Life"), tf(11.0), TextColor(theme::TEXT_SECONDARY)));
             p.spawn(Node {
                 flex_direction: FlexDirection::Row,
                 column_gap: Val::Px(4.0),
@@ -247,18 +243,18 @@ fn spawn_panel(
                             padding: UiRect::axes(Val::Px(10.0), Val::Px(5.0)),
                             ..default()
                         },
-                        BackgroundColor(BTN_BG),
+                        BackgroundColor(theme::BUTTON_NEUTRAL_BG),
                         Button,
                         DebugLifeButton(delta),
                     ))
                     .with_children(|b| {
-                        b.spawn((Text::new(label), tf(13.0), TextColor(Color::WHITE)));
+                        b.spawn((Text::new(label), tf(13.0), TextColor(theme::TEXT_PRIMARY)));
                     });
                 }
             });
 
             // ── Card-name input ──────────────────────────────────────
-            p.spawn((Text::new("Add card to hand (Enter to submit)"), tf(11.0), TextColor(Color::srgba(0.7, 0.7, 0.7, 1.0))));
+            p.spawn((Text::new("Add card to hand (Enter to submit)"), tf(11.0), TextColor(theme::TEXT_SECONDARY)));
             p.spawn((
                 Node {
                     padding: UiRect::axes(Val::Px(8.0), Val::Px(6.0)),
@@ -273,7 +269,7 @@ fn spawn_panel(
                 b.spawn((
                     Text::new(render_card_text(state)),
                     tf(12.0),
-                    TextColor(Color::WHITE),
+                    TextColor(theme::TEXT_PRIMARY),
                     DebugConsoleCardText,
                     Pickable::IGNORE,
                 ));
@@ -284,12 +280,12 @@ fn spawn_panel(
                     align_self: AlignSelf::FlexStart,
                     ..default()
                 },
-                BackgroundColor(BTN_BG),
+                BackgroundColor(theme::BUTTON_NEUTRAL_BG),
                 Button,
                 DebugAddCardButton,
             ))
             .with_children(|b| {
-                b.spawn((Text::new("Add Card"), tf(12.0), TextColor(Color::WHITE)));
+                b.spawn((Text::new("Add Card"), tf(12.0), TextColor(theme::TEXT_PRIMARY)));
             });
         });
 }
@@ -313,10 +309,10 @@ pub fn handle_debug_console_buttons(
                     color: btn.0,
                     amount: 1,
                 });
-                *bg = BackgroundColor(BTN_BG_HOT);
+                *bg = BackgroundColor(theme::BUTTON_NEUTRAL_HOT);
             }
-            Interaction::Hovered => *bg = BackgroundColor(BTN_BG_HOT),
-            Interaction::None => *bg = BackgroundColor(BTN_BG),
+            Interaction::Hovered => *bg = BackgroundColor(theme::BUTTON_NEUTRAL_HOT),
+            Interaction::None => *bg = BackgroundColor(theme::BUTTON_NEUTRAL_BG),
         }
     }
 
@@ -324,10 +320,10 @@ pub fn handle_debug_console_buttons(
         match interaction {
             Interaction::Pressed => {
                 outbox.submit_debug(DebugAction::AdjustLife { delta: btn.0 });
-                *bg = BackgroundColor(BTN_BG_HOT);
+                *bg = BackgroundColor(theme::BUTTON_NEUTRAL_HOT);
             }
-            Interaction::Hovered => *bg = BackgroundColor(BTN_BG_HOT),
-            Interaction::None => *bg = BackgroundColor(BTN_BG),
+            Interaction::Hovered => *bg = BackgroundColor(theme::BUTTON_NEUTRAL_HOT),
+            Interaction::None => *bg = BackgroundColor(theme::BUTTON_NEUTRAL_BG),
         }
     }
 
@@ -340,10 +336,10 @@ pub fn handle_debug_console_buttons(
                 }
                 state.card_name.clear();
                 state.card_input_focused = false;
-                *bg = BackgroundColor(BTN_BG_HOT);
+                *bg = BackgroundColor(theme::BUTTON_NEUTRAL_HOT);
             }
-            Interaction::Hovered => *bg = BackgroundColor(BTN_BG_HOT),
-            Interaction::None => *bg = BackgroundColor(BTN_BG),
+            Interaction::Hovered => *bg = BackgroundColor(theme::BUTTON_NEUTRAL_HOT),
+            Interaction::None => *bg = BackgroundColor(theme::BUTTON_NEUTRAL_BG),
         }
     }
 

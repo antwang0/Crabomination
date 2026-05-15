@@ -6,6 +6,7 @@ use crate::card::{
 };
 use crate::game::GraveyardBrowserState;
 use crate::net_plugin::CurrentView;
+use crate::theme::{self, UiFonts};
 
 /// Tracks a pending top-card reveal popup.
 #[derive(Resource, Default)]
@@ -116,7 +117,7 @@ pub fn peek_popup(
                         align_items: AlignItems::Center,
                         ..default()
                     },
-                    BackgroundColor(Color::srgba(0.0, 0.0, 0.0, 0.5)),
+                    BackgroundColor(theme::OVERLAY_BG_LIGHT),
                     Pickable::IGNORE,
                     PeekPopup,
                 ))
@@ -151,6 +152,7 @@ pub fn graveyard_browser(
     mut state: ResMut<GraveyardBrowserState>,
     view: Res<CurrentView>,
     asset_server: Res<AssetServer>,
+    ui_fonts: Res<UiFonts>,
     existing: Query<Entity, With<GraveyardBrowser>>,
     keyboard: Res<ButtonInput<KeyCode>>,
     overlay_interaction: Query<&Interaction, (With<GraveyardBrowser>, With<Button>)>,
@@ -197,7 +199,7 @@ pub fn graveyard_browser(
                     align_items: AlignItems::Center,
                     ..default()
                 },
-                BackgroundColor(Color::srgba(0.0, 0.0, 0.0, 0.7)),
+                BackgroundColor(theme::OVERLAY_BG),
                 Button,
                 GraveyardBrowser,
             ))
@@ -214,7 +216,7 @@ pub fn graveyard_browser(
                     overflow: Overflow::scroll_y(),
                     ..default()
                 },
-                BackgroundColor(Color::srgba(0.08, 0.08, 0.12, 0.97)),
+                BackgroundColor(theme::PANEL_BG),
             ))
             .id();
 
@@ -237,8 +239,8 @@ pub fn graveyard_browser(
                     .with_children(|row| {
                         row.spawn((
                             Text::new(format!("{owner_label} Graveyard ({count} cards)")),
-                            TextFont { font_size: 18.0, ..default() },
-                            TextColor(Color::WHITE),
+                            ui_fonts.tf(18.0),
+                            TextColor(theme::TEXT_PRIMARY),
                             Pickable::IGNORE,
                         ));
                     });
@@ -247,8 +249,8 @@ pub fn graveyard_browser(
                 if card_names.is_empty() {
                     panel.spawn((
                         Text::new("Empty"),
-                        TextFont { font_size: 14.0, ..default() },
-                        TextColor(Color::srgb(0.6, 0.6, 0.6)),
+                        ui_fonts.tf(14.0),
+                        TextColor(theme::TEXT_SECONDARY),
                         Pickable::IGNORE,
                     ));
                 } else {
@@ -305,8 +307,8 @@ pub fn graveyard_browser(
                 // Close hint
                 panel.spawn((
                     Text::new("Click outside or press Esc to close"),
-                    TextFont { font_size: 11.0, ..default() },
-                    TextColor(Color::srgba(0.6, 0.6, 0.6, 0.8)),
+                    ui_fonts.tf(11.0),
+                    TextColor(theme::TEXT_MUTED),
                     Pickable::IGNORE,
                 ));
             });
@@ -320,6 +322,7 @@ pub fn graveyard_browser(
 pub fn pile_tooltip(
     mut commands: Commands,
     view: Res<CurrentView>,
+    ui_fonts: Res<UiFonts>,
     deck_hovered: Query<(), (With<DeckCard>, With<CardHovered>)>,
     pile_hovered: Query<&DeckPile, With<PileHovered>>,
     gy_hovered: Query<&GraveyardPile, With<PileHovered>>,
@@ -367,14 +370,14 @@ pub fn pile_tooltip(
                     padding: UiRect::axes(Val::Px(12.0), Val::Px(6.0)),
                     ..default()
                 },
-                BackgroundColor(Color::srgba(0.0, 0.0, 0.0, 0.82)),
+                BackgroundColor(theme::OVERLAY_BG_HEAVY),
                 PileTooltip,
             ))
             .with_children(|p| {
                 p.spawn((
                     Text::new(msg),
-                    TextFont { font_size: 14.0, ..default() },
-                    TextColor(Color::WHITE),
+                    ui_fonts.tf(14.0),
+                    TextColor(theme::TEXT_PRIMARY),
                     Pickable::IGNORE,
                 ));
             });
@@ -394,6 +397,7 @@ pub fn pile_tooltip(
 /// the cursor leaves all card tiles, or when the browser closes.
 pub fn graveyard_card_hover_name(
     mut commands: Commands,
+    ui_fonts: Res<UiFonts>,
     items: Query<(&Interaction, &GraveyardCardItem)>,
     existing: Query<Entity, With<GraveyardCardNameTooltip>>,
     browser: Query<(), With<GraveyardBrowser>>,
@@ -444,11 +448,11 @@ pub fn graveyard_card_hover_name(
                 justify_content: JustifyContent::Center,
                 ..default()
             },
-            BackgroundColor(Color::srgba(0.0, 0.0, 0.0, 0.92)),
+            BackgroundColor(theme::OVERLAY_BG_HEAVY),
             Pickable::IGNORE,
             Text::new(name),
-            TextFont { font_size: 16.0, ..default() },
-            TextColor(Color::srgb(1.0, 0.85, 0.55)),
+            ui_fonts.tf(16.0),
+            TextColor(theme::ACCENT_GOLD),
             GraveyardCardNameTooltip,
         ));
 }
@@ -459,6 +463,7 @@ pub fn reveal_popup(
     mut state: ResMut<RevealPopupState>,
     existing: Query<Entity, With<RevealPopup>>,
     asset_server: Res<AssetServer>,
+    ui_fonts: Res<UiFonts>,
     mouse: Res<ButtonInput<MouseButton>>,
 ) {
     if state.card_path.is_some() {
@@ -484,15 +489,15 @@ pub fn reveal_popup(
                         padding: UiRect::all(Val::Px(10.0)),
                         ..default()
                     },
-                    BackgroundColor(Color::srgba(0.0, 0.0, 0.0, 0.75)),
+                    BackgroundColor(theme::OVERLAY_BG_HEAVY),
                     Pickable::IGNORE,
                     RevealPopup,
                 ))
                 .with_children(|p| {
                     p.spawn((
                         Text::new("Goblin Guide reveals: (click to dismiss)"),
-                        TextFont { font_size: 14.0, ..default() },
-                        TextColor(Color::srgb(1.0, 0.65, 0.2)),
+                        ui_fonts.tf(14.0),
+                        TextColor(theme::ACCENT_ORANGE),
                         Pickable::IGNORE,
                     ));
                     p.spawn((

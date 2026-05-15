@@ -12,14 +12,43 @@ use std::io::{self, Read, Write};
 use std::net::TcpStream;
 use std::sync::mpsc;
 use std::thread;
+use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
+use socket2::{SockRef, TcpKeepalive};
 
 use crate::net::{ClientMsg, ServerMsg};
 
 use super::{ClientChannel, SeatChannel};
 
 const MAX_FRAME_BYTES: usize = 16 * 1024 * 1024;
+
+/// TCP keepalive parameters. With these defaults the OS detects a peer that
+/// stops responding (process killed, machine crash, NAT eviction, cable
+/// pulled) within roughly two minutes of the last successful read/write,
+/// rather than letting a match thread block forever on a dead socket.
+///
+/// - Idle: probes begin after 60s of no traffic in either direction.
+/// - Interval: subsequent probes are 15s apart.
+/// - Retries: after 4 unanswered probes the connection is reported dead.
+///
+/// Total worst-case detection time after the peer disappears:
+/// `idle + interval * retries` ≈ 60s + 60s = ~2 min.
+const KEEPALIVE_IDLE: Duration = Duration::from_secs(60);
+const KEEPALIVE_INTERVAL: Duration = Duration::from_secs(15);
+const KEEPALIVE_RETRIES: u32 = 4;
+
+/// Enable OS-level TCP keepalive with aggressive defaults so dead peers are
+/// detected within ~2 minutes instead of indefinitely. Best-effort: individual
+/// `with_*` fields are silently unsupported on some platforms, so we apply
+/// them through `socket2` which handles that portably.
+fn enable_keepalive(stream: &TcpStream) -> io::Result<()> {
+    let ka = TcpKeepalive::new()
+        .with_time(KEEPALIVE_IDLE)
+        .with_interval(KEEPALIVE_INTERVAL)
+        .with_retries(KEEPALIVE_RETRIES);
+    SockRef::from(stream).set_tcp_keepalive(&ka)
+}
 
 /// Read one length-prefixed JSON frame and decode it as `T`.
 pub fn read_frame<T: for<'de> Deserialize<'de>>(stream: &mut TcpStream) -> io::Result<T> {
@@ -51,6 +80,7 @@ pub fn write_frame<T: Serialize>(stream: &mut TcpStream, value: &T) -> io::Resul
 /// socket). When either side disconnects, both threads exit.
 pub fn tcp_seat(stream: TcpStream) -> io::Result<SeatChannel> {
     stream.set_nodelay(true)?;
+    enable_keepalive(&stream)?;
     let read_stream = stream.try_clone()?;
     let mut write_stream = stream;
 
@@ -87,6 +117,7 @@ pub fn tcp_seat(stream: TcpStream) -> io::Result<SeatChannel> {
 /// inbox, writer thread serializes outbound `ClientMsg`s.
 pub fn tcp_client(stream: TcpStream) -> io::Result<ClientChannel> {
     stream.set_nodelay(true)?;
+    enable_keepalive(&stream)?;
     let read_stream = stream.try_clone()?;
     let mut write_stream = stream;
 
@@ -326,6 +357,34 @@ mod tests {
             "server seat rx should disconnect after peer shutdown"
         );
         peer_thread.join().unwrap();
+    }
+
+    /// `tcp_seat` must enable OS-level TCP keepalive on the socket. Without
+    /// it, a peer that disappears silently (process killed, NAT eviction)
+    /// would leave the reader thread blocked in `read_exact` forever — the
+    /// match thread would never observe the disconnect.
+    #[test]
+    fn tcp_seat_enables_keepalive() {
+        use socket2::SockRef;
+
+        let listener = TcpListener::bind("127.0.0.1:0").expect("bind");
+        let addr = listener.local_addr().expect("addr");
+
+        let client_thread = std::thread::spawn(move || {
+            TcpStream::connect(addr).expect("connect")
+        });
+        let (server_stream, _) = listener.accept().expect("accept");
+        let _client = client_thread.join().expect("client");
+
+        // Clone first so the wrapper can take ownership of the original.
+        let probe = server_stream.try_clone().expect("clone");
+        let _seat = tcp_seat(server_stream).expect("wrap seat");
+
+        let sock = SockRef::from(&probe);
+        assert!(
+            sock.keepalive().expect("read keepalive"),
+            "SO_KEEPALIVE should be enabled after tcp_seat"
+        );
     }
 
     /// The reader thread inside `tcp_client` must keep up with a tight burst

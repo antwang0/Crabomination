@@ -13,3 +13,4 @@ pub mod server;
 pub mod snapshot;
 pub mod sos_mode;
 pub mod static_str_serde;
+pub mod team;

@@ -40,17 +40,10 @@ use crabomination::mana::Color as ManaColor;
 
 use crate::menu::{AppState, DraftedDecks};
 use crate::scryfall;
+use crate::theme::{self, UiFonts};
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
-const PANEL_BG: Color = Color::srgba(0.06, 0.06, 0.12, 0.97);
-const HEADER_BG: Color = Color::srgba(0.10, 0.10, 0.18, 1.0);
-const STATS_BG: Color = Color::srgba(0.08, 0.08, 0.14, 1.0);
-const TILE_BG: Color = Color::srgba(0.16, 0.16, 0.22, 1.0);
-const TAB_BG_OFF: Color = Color::srgba(0.16, 0.16, 0.22, 1.0);
-const TAB_BG_ON: Color = Color::srgba(0.45, 0.30, 0.15, 1.0);
-const ACCENT_GOLD: Color = Color::srgb(1.0, 0.85, 0.55);
-const ACCENT_GREEN: Color = Color::srgb(0.30, 0.70, 0.35);
 const PICK_CARD_W: f32 = 170.0;
 const PICK_CARD_H: f32 = PICK_CARD_W * (88.0 / 63.0);
 const PICKS_TAB_CARD_W: f32 = 120.0;
@@ -386,6 +379,7 @@ fn refresh_phase_ui(
     mut commands: Commands,
     session: Option<Res<DraftSession>>,
     asset_server: Res<AssetServer>,
+    ui_fonts: Res<UiFonts>,
     existing: Query<Entity, With<DraftRoot>>,
 ) {
     let Some(session) = session else { return };
@@ -396,12 +390,14 @@ fn refresh_phase_ui(
         commands.entity(e).despawn();
     }
     match session.phase {
-        DraftPhase::Drafting => spawn_drafting_screen(&mut commands, &asset_server, &session),
+        DraftPhase::Drafting => {
+            spawn_drafting_screen(&mut commands, &asset_server, &ui_fonts, &session)
+        }
         DraftPhase::Deckbuilding => {
-            spawn_deckbuilding_screen(&mut commands, &asset_server, &session)
+            spawn_deckbuilding_screen(&mut commands, &asset_server, &ui_fonts, &session)
         }
         DraftPhase::OpponentSelect => {
-            spawn_opponent_select_screen(&mut commands, &asset_server, &session)
+            spawn_opponent_select_screen(&mut commands, &asset_server, &ui_fonts, &session)
         }
     }
 }
@@ -411,6 +407,7 @@ fn refresh_phase_ui(
 fn spawn_drafting_screen(
     commands: &mut Commands,
     asset_server: &AssetServer,
+    ui_fonts: &UiFonts,
     session: &DraftSession,
 ) {
     let root = spawn_root(commands);
@@ -429,7 +426,7 @@ fn spawn_drafting_screen(
                     column_gap: Val::Px(20.0),
                     ..default()
                 },
-                BackgroundColor(HEADER_BG),
+                BackgroundColor(theme::PANEL_BG_RAISED),
                 Pickable::IGNORE,
             ))
             .with_children(|h| {
@@ -450,14 +447,14 @@ fn spawn_drafting_screen(
                             session.pick_in_round,
                             PACK_SIZE,
                         )),
-                        TextFont { font_size: 22.0, ..default() },
-                        TextColor(ACCENT_GOLD),
+                        ui_fonts.tf(22.0),
+                        TextColor(theme::ACCENT_GOLD),
                         Pickable::IGNORE,
                     ));
                     col.spawn((
                         Text::new(format!("Picked {} cards", user_picks.len())),
-                        TextFont { font_size: 14.0, ..default() },
-                        TextColor(Color::srgba(0.85, 0.85, 0.85, 1.0)),
+                        ui_fonts.tf(14.0),
+                        TextColor(theme::TEXT_BODY),
                         Pickable::IGNORE,
                     ));
                 });
@@ -472,9 +469,10 @@ fn spawn_drafting_screen(
                     Pickable::IGNORE,
                 ))
                 .with_children(|tabs| {
-                    spawn_tab_button(tabs, "Pack", DraftTab::Pack, session.current_tab);
+                    spawn_tab_button(tabs, ui_fonts, "Pack", DraftTab::Pack, session.current_tab);
                     spawn_tab_button(
                         tabs,
+                        ui_fonts,
                         &format!("Picks ({})", user_picks.len()),
                         DraftTab::Picks,
                         session.current_tab,
@@ -500,12 +498,12 @@ fn spawn_drafting_screen(
             .with_children(|body| {
                 match session.current_tab {
                     DraftTab::Pack => spawn_pack_grid(body, asset_server, session),
-                    DraftTab::Picks => spawn_picks_grid(body, asset_server, user_picks),
+                    DraftTab::Picks => spawn_picks_grid(body, asset_server, ui_fonts, user_picks),
                 }
             });
 
             // ── Stats footer: always visible, summarises user's picks ──
-            spawn_stats_footer(root, user_picks);
+            spawn_stats_footer(root, ui_fonts, user_picks);
         });
 }
 
@@ -538,6 +536,7 @@ fn spawn_pack_grid(
 fn spawn_picks_grid(
     body: &mut ChildSpawnerCommands,
     asset_server: &AssetServer,
+    ui_fonts: &UiFonts,
     picks: &[CardFactory],
 ) {
     if picks.is_empty() {
@@ -553,8 +552,8 @@ fn spawn_picks_grid(
         .with_children(|p| {
             p.spawn((
                 Text::new("No picks yet — pick a card from the Pack tab to start."),
-                TextFont { font_size: 16.0, ..default() },
-                TextColor(Color::srgba(0.7, 0.7, 0.7, 1.0)),
+                ui_fonts.tf(16.0),
+                TextColor(theme::TEXT_SECONDARY),
                 Pickable::IGNORE,
             ));
         });
@@ -604,6 +603,7 @@ fn spawn_picks_grid(
 
 fn spawn_tab_button(
     parent: &mut ChildSpawnerCommands,
+    ui_fonts: &UiFonts,
     label: &str,
     tab: DraftTab,
     current: DraftTab,
@@ -616,17 +616,17 @@ fn spawn_tab_button(
                 padding: UiRect::axes(Val::Px(18.0), Val::Px(8.0)),
                 ..default()
             },
-            BackgroundColor(if on { TAB_BG_ON } else { TAB_BG_OFF }),
+            BackgroundColor(if on { theme::BUTTON_WARN_BG } else { theme::FIELD_BG }),
             DraftTabButton(tab),
         ))
         .with_children(|b| {
             b.spawn((
                 Text::new(label),
-                TextFont { font_size: 14.0, ..default() },
+                ui_fonts.tf(14.0),
                 TextColor(if on {
-                    Color::WHITE
+                    theme::TEXT_PRIMARY
                 } else {
-                    Color::srgba(0.85, 0.85, 0.85, 1.0)
+                    theme::TEXT_BODY
                 }),
                 Pickable::IGNORE,
             ));
@@ -649,7 +649,7 @@ fn spawn_pack_card_tile(
                 height: Val::Px(PICK_CARD_H),
                 ..default()
             },
-            BackgroundColor(TILE_BG),
+            BackgroundColor(theme::FIELD_BG),
             PackCardButton { pack_index },
         ))
         .with_children(|tile| {
@@ -672,7 +672,7 @@ fn spawn_pack_card_tile(
 /// and card-type breakdown (Creature / Spell / Land / Other).
 /// Always visible across both tabs so the player can monitor their
 /// shape while picking.
-fn spawn_stats_footer(root: &mut ChildSpawnerCommands, picks: &[CardFactory]) {
+fn spawn_stats_footer(root: &mut ChildSpawnerCommands, ui_fonts: &UiFonts, picks: &[CardFactory]) {
     let stats = compute_pick_stats(picks);
     root.spawn((
         Node {
@@ -684,7 +684,7 @@ fn spawn_stats_footer(root: &mut ChildSpawnerCommands, picks: &[CardFactory]) {
             column_gap: Val::Px(24.0),
             ..default()
         },
-        BackgroundColor(STATS_BG),
+        BackgroundColor(theme::PANEL_BG_SUNKEN),
         Pickable::IGNORE,
     ))
     .with_children(|footer| {
@@ -702,8 +702,8 @@ fn spawn_stats_footer(root: &mut ChildSpawnerCommands, picks: &[CardFactory]) {
             .with_children(|col| {
                 col.spawn((
                     Text::new("Colors"),
-                    TextFont { font_size: 12.0, ..default() },
-                    TextColor(Color::srgba(0.7, 0.7, 0.7, 1.0)),
+                    ui_fonts.tf(12.0),
+                    TextColor(theme::TEXT_SECONDARY),
                     Pickable::IGNORE,
                 ));
                 col.spawn((
@@ -724,7 +724,7 @@ fn spawn_stats_footer(root: &mut ChildSpawnerCommands, picks: &[CardFactory]) {
                     ] {
                         row.spawn((
                             Text::new(format!("{label}:{count}")),
-                            TextFont { font_size: 14.0, ..default() },
+                            ui_fonts.tf(14.0),
                             TextColor(color),
                             Pickable::IGNORE,
                         ));
@@ -746,8 +746,8 @@ fn spawn_stats_footer(root: &mut ChildSpawnerCommands, picks: &[CardFactory]) {
             .with_children(|col| {
                 col.spawn((
                     Text::new("Curve"),
-                    TextFont { font_size: 12.0, ..default() },
-                    TextColor(Color::srgba(0.7, 0.7, 0.7, 1.0)),
+                    ui_fonts.tf(12.0),
+                    TextColor(theme::TEXT_SECONDARY),
                     Pickable::IGNORE,
                 ));
                 col.spawn((
@@ -770,8 +770,8 @@ fn spawn_stats_footer(root: &mut ChildSpawnerCommands, picks: &[CardFactory]) {
                     ] {
                         row.spawn((
                             Text::new(format!("{label}:{count}")),
-                            TextFont { font_size: 14.0, ..default() },
-                            TextColor(Color::srgba(0.95, 0.95, 0.95, 1.0)),
+                            ui_fonts.tf(14.0),
+                            TextColor(theme::TEXT_PRIMARY),
                             Pickable::IGNORE,
                         ));
                     }
@@ -792,8 +792,8 @@ fn spawn_stats_footer(root: &mut ChildSpawnerCommands, picks: &[CardFactory]) {
             .with_children(|col| {
                 col.spawn((
                     Text::new("Types"),
-                    TextFont { font_size: 12.0, ..default() },
-                    TextColor(Color::srgba(0.7, 0.7, 0.7, 1.0)),
+                    ui_fonts.tf(12.0),
+                    TextColor(theme::TEXT_SECONDARY),
                     Pickable::IGNORE,
                 ));
                 col.spawn((
@@ -813,8 +813,8 @@ fn spawn_stats_footer(root: &mut ChildSpawnerCommands, picks: &[CardFactory]) {
                     ] {
                         row.spawn((
                             Text::new(format!("{label}:{count}")),
-                            TextFont { font_size: 14.0, ..default() },
-                            TextColor(Color::srgba(0.95, 0.95, 0.95, 1.0)),
+                            ui_fonts.tf(14.0),
+                            TextColor(theme::TEXT_PRIMARY),
                             Pickable::IGNORE,
                         ));
                     }
@@ -898,6 +898,7 @@ fn compute_pick_stats(picks: &[CardFactory]) -> PickStats {
 fn spawn_deckbuilding_screen(
     commands: &mut Commands,
     asset_server: &AssetServer,
+    ui_fonts: &UiFonts,
     session: &DraftSession,
 ) {
     let root = spawn_root(commands);
@@ -914,14 +915,14 @@ fn spawn_deckbuilding_screen(
                     align_items: AlignItems::Center,
                     ..default()
                 },
-                BackgroundColor(HEADER_BG),
+                BackgroundColor(theme::PANEL_BG_RAISED),
                 Pickable::IGNORE,
             ))
             .with_children(|h| {
                 h.spawn((
                     Text::new("Build Your Deck"),
-                    TextFont { font_size: 22.0, ..default() },
-                    TextColor(ACCENT_GOLD),
+                    ui_fonts.tf(22.0),
+                    TextColor(theme::ACCENT_GOLD),
                     Pickable::IGNORE,
                 ));
                 let total = session.main_total();
@@ -934,8 +935,8 @@ fn spawn_deckbuilding_screen(
                 );
                 h.spawn((
                     Text::new(label),
-                    TextFont { font_size: 14.0, ..default() },
-                    TextColor(Color::srgba(0.85, 0.85, 0.85, 1.0)),
+                    ui_fonts.tf(14.0),
+                    TextColor(theme::TEXT_BODY),
                     Pickable::IGNORE,
                 ));
             });
@@ -964,15 +965,15 @@ fn spawn_deckbuilding_screen(
                         overflow: Overflow::scroll_y(),
                         ..default()
                     },
-                    BackgroundColor(Color::srgba(0.10, 0.14, 0.18, 1.0)),
+                    BackgroundColor(theme::PANEL_BG_RAISED),
                     ScrollPosition::default(),
                     DraftScrollable,
                 ))
                 .with_children(|main| {
                     main.spawn((
                         Text::new("Main deck — click a card to move it to the sideboard"),
-                        TextFont { font_size: 14.0, ..default() },
-                        TextColor(Color::srgba(0.85, 0.85, 0.85, 1.0)),
+                        ui_fonts.tf(14.0),
+                        TextColor(theme::TEXT_BODY),
                         Pickable::IGNORE,
                     ));
                     main.spawn((
@@ -987,7 +988,7 @@ fn spawn_deckbuilding_screen(
                     ))
                     .with_children(|grid| {
                         for (i, factory) in session.main.iter().enumerate() {
-                            spawn_deckbuild_tile(grid, asset_server, factory().name, true, i);
+                            spawn_deckbuild_tile(grid, asset_server, ui_fonts, factory().name, true, i);
                         }
                     });
                 });
@@ -1011,21 +1012,21 @@ fn spawn_deckbuilding_screen(
                             padding: UiRect::all(Val::Px(10.0)),
                             ..default()
                         },
-                        BackgroundColor(Color::srgba(0.10, 0.14, 0.18, 1.0)),
+                        BackgroundColor(theme::PANEL_BG_RAISED),
                         Pickable::IGNORE,
                     ))
                     .with_children(|panel| {
                         panel.spawn((
                             Text::new("Basic lands"),
-                            TextFont { font_size: 14.0, ..default() },
-                            TextColor(ACCENT_GOLD),
+                            ui_fonts.tf(14.0),
+                            TextColor(theme::ACCENT_GOLD),
                             Pickable::IGNORE,
                         ));
                         for color in
                             [ManaColor::White, ManaColor::Blue, ManaColor::Black, ManaColor::Red, ManaColor::Green]
                         {
                             let count = session.basics.get(&color).copied().unwrap_or(0);
-                            spawn_basic_row(panel, color, count);
+                            spawn_basic_row(panel, ui_fonts, color, count);
                         }
                     });
 
@@ -1039,15 +1040,15 @@ fn spawn_deckbuilding_screen(
                             overflow: Overflow::scroll_y(),
                             ..default()
                         },
-                        BackgroundColor(Color::srgba(0.10, 0.14, 0.18, 1.0)),
+                        BackgroundColor(theme::PANEL_BG_RAISED),
                         ScrollPosition::default(),
                         DraftScrollable,
                     ))
                     .with_children(|sb| {
                         sb.spawn((
                             Text::new("Sideboard — click a card to move it to the main deck"),
-                            TextFont { font_size: 13.0, ..default() },
-                            TextColor(Color::srgba(0.85, 0.85, 0.85, 1.0)),
+                            ui_fonts.tf(13.0),
+                            TextColor(theme::TEXT_BODY),
                             Pickable::IGNORE,
                         ));
                         sb.spawn((
@@ -1062,7 +1063,7 @@ fn spawn_deckbuilding_screen(
                         ))
                         .with_children(|grid| {
                             for (i, factory) in session.sideboard.iter().enumerate() {
-                                spawn_deckbuild_tile(grid, asset_server, factory().name, false, i);
+                                spawn_deckbuild_tile(grid, asset_server, ui_fonts, factory().name, false, i);
                             }
                         });
                     });
@@ -1085,7 +1086,7 @@ fn spawn_deckbuilding_screen(
                             ..default()
                         },
                         BackgroundColor(if confirm_enabled {
-                            ACCENT_GREEN
+                            theme::ACCENT_GREEN
                         } else {
                             Color::srgba(0.30, 0.30, 0.35, 0.8)
                         }),
@@ -1094,8 +1095,8 @@ fn spawn_deckbuilding_screen(
                     .with_children(|b| {
                         b.spawn((
                             Text::new(confirm_label),
-                            TextFont { font_size: 16.0, ..default() },
-                            TextColor(Color::WHITE),
+                            ui_fonts.tf(16.0),
+                            TextColor(theme::TEXT_PRIMARY),
                             Pickable::IGNORE,
                         ));
                     });
@@ -1107,6 +1108,7 @@ fn spawn_deckbuilding_screen(
 fn spawn_deckbuild_tile(
     parent: &mut ChildSpawnerCommands,
     asset_server: &AssetServer,
+    _ui_fonts: &UiFonts,
     card_name: &str,
     in_main: bool,
     index: usize,
@@ -1121,7 +1123,7 @@ fn spawn_deckbuild_tile(
                 height: Val::Px(DECKBUILD_CARD_H),
                 ..default()
             },
-            BackgroundColor(TILE_BG),
+            BackgroundColor(theme::FIELD_BG),
             DeckbuildCardButton { in_main, index },
         ))
         .with_children(|tile| {
@@ -1137,7 +1139,7 @@ fn spawn_deckbuild_tile(
         });
 }
 
-fn spawn_basic_row(parent: &mut ChildSpawnerCommands, color: ManaColor, count: u32) {
+fn spawn_basic_row(parent: &mut ChildSpawnerCommands, ui_fonts: &UiFonts, color: ManaColor, count: u32) {
     let label = match color {
         ManaColor::White => "Plains",
         ManaColor::Blue => "Island",
@@ -1158,8 +1160,8 @@ fn spawn_basic_row(parent: &mut ChildSpawnerCommands, color: ManaColor, count: u
         .with_children(|row| {
             row.spawn((
                 Text::new(format!("{label}:")),
-                TextFont { font_size: 14.0, ..default() },
-                TextColor(Color::srgba(0.85, 0.85, 0.85, 1.0)),
+                ui_fonts.tf(14.0),
+                TextColor(theme::TEXT_BODY),
                 Node { min_width: Val::Px(70.0), ..default() },
                 Pickable::IGNORE,
             ));
@@ -1178,16 +1180,16 @@ fn spawn_basic_row(parent: &mut ChildSpawnerCommands, color: ManaColor, count: u
             .with_children(|b| {
                 b.spawn((
                     Text::new("−"),
-                    TextFont { font_size: 16.0, ..default() },
-                    TextColor(Color::WHITE),
+                    ui_fonts.tf(16.0),
+                    TextColor(theme::TEXT_PRIMARY),
                     Pickable::IGNORE,
                 ));
             });
             // Count.
             row.spawn((
                 Text::new(format!("{count}")),
-                TextFont { font_size: 14.0, ..default() },
-                TextColor(Color::WHITE),
+                ui_fonts.tf(14.0),
+                TextColor(theme::TEXT_PRIMARY),
                 Node { min_width: Val::Px(28.0), ..default() },
                 Pickable::IGNORE,
             ));
@@ -1206,8 +1208,8 @@ fn spawn_basic_row(parent: &mut ChildSpawnerCommands, color: ManaColor, count: u
             .with_children(|b| {
                 b.spawn((
                     Text::new("+"),
-                    TextFont { font_size: 16.0, ..default() },
-                    TextColor(Color::WHITE),
+                    ui_fonts.tf(16.0),
+                    TextColor(theme::TEXT_PRIMARY),
                     Pickable::IGNORE,
                 ));
             });
@@ -1219,6 +1221,7 @@ fn spawn_basic_row(parent: &mut ChildSpawnerCommands, color: ManaColor, count: u
 fn spawn_opponent_select_screen(
     commands: &mut Commands,
     _asset_server: &AssetServer,
+    ui_fonts: &UiFonts,
     session: &DraftSession,
 ) {
     let root = spawn_root(commands);
@@ -1235,20 +1238,20 @@ fn spawn_opponent_select_screen(
                     row_gap: Val::Px(6.0),
                     ..default()
                 },
-                BackgroundColor(HEADER_BG),
+                BackgroundColor(theme::PANEL_BG_RAISED),
                 Pickable::IGNORE,
             ))
             .with_children(|h| {
                 h.spawn((
                     Text::new("Pick Your Opponent"),
-                    TextFont { font_size: 24.0, ..default() },
-                    TextColor(ACCENT_GOLD),
+                    ui_fonts.tf(24.0),
+                    TextColor(theme::ACCENT_GOLD),
                     Pickable::IGNORE,
                 ));
                 h.spawn((
                     Text::new("Each bot drafted its own deck. Click one to play against them."),
-                    TextFont { font_size: 14.0, ..default() },
-                    TextColor(Color::srgba(0.85, 0.85, 0.85, 1.0)),
+                    ui_fonts.tf(14.0),
+                    TextColor(theme::TEXT_BODY),
                     Pickable::IGNORE,
                 ));
             });
@@ -1288,14 +1291,14 @@ fn spawn_opponent_select_screen(
                             align_items: AlignItems::Center,
                             ..default()
                         },
-                        BackgroundColor(TILE_BG),
+                        BackgroundColor(theme::FIELD_BG),
                         OpponentChoiceButton { seat },
                     ))
                     .with_children(|tile| {
                         tile.spawn((
                             Text::new(label),
-                            TextFont { font_size: 16.0, ..default() },
-                            TextColor(Color::WHITE),
+                            ui_fonts.tf(16.0),
+                            TextColor(theme::TEXT_PRIMARY),
                             Pickable::IGNORE,
                         ));
                     });
@@ -1322,8 +1325,8 @@ fn spawn_opponent_select_screen(
                             color_short(colors[0]),
                             color_short(colors[1]),
                         )),
-                        TextFont { font_size: 18.0, ..default() },
-                        TextColor(ACCENT_GOLD),
+                        ui_fonts.tf(18.0),
+                        TextColor(theme::ACCENT_GOLD),
                         Pickable::IGNORE,
                     ));
                     row.spawn((
@@ -1332,14 +1335,14 @@ fn spawn_opponent_select_screen(
                             padding: UiRect::axes(Val::Px(28.0), Val::Px(12.0)),
                             ..default()
                         },
-                        BackgroundColor(ACCENT_GREEN),
+                        BackgroundColor(theme::ACCENT_GREEN),
                         PlayMatchButton,
                     ))
                     .with_children(|b| {
                         b.spawn((
                             Text::new("Play Match →"),
-                            TextFont { font_size: 18.0, ..default() },
-                            TextColor(Color::WHITE),
+                            ui_fonts.tf(18.0),
+                            TextColor(theme::TEXT_PRIMARY),
                             Pickable::IGNORE,
                         ));
                     });
@@ -1369,8 +1372,8 @@ fn spawn_opponent_select_screen(
                 .with_children(|b| {
                     b.spawn((
                         Text::new("Back to Menu"),
-                        TextFont { font_size: 14.0, ..default() },
-                        TextColor(Color::WHITE),
+                        ui_fonts.tf(14.0),
+                        TextColor(theme::TEXT_PRIMARY),
                         Pickable::IGNORE,
                     ));
                 });
@@ -1610,7 +1613,7 @@ fn spawn_root(commands: &mut Commands) -> Entity {
                 flex_direction: FlexDirection::Column,
                 ..default()
             },
-            BackgroundColor(PANEL_BG),
+            BackgroundColor(theme::PANEL_BG),
             DraftRoot,
         ))
         .id()

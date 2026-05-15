@@ -10,6 +10,7 @@ use bevy::prelude::*;
 use crate::debug_export;
 use crate::game::GameLog;
 use crate::net_plugin::CurrentView;
+use crate::theme::{self, UiFonts};
 
 /// Drives the export prompt's lifecycle. `active` toggles the modal;
 /// `message` accumulates typed characters.
@@ -119,13 +120,12 @@ pub fn handle_export_prompt_input(
 /// `ExportPromptState` for changes so this only does work on transitions.
 pub fn sync_export_prompt_ui(
     state: Res<ExportPromptState>,
-    asset_server: Res<AssetServer>,
+    ui_fonts: Res<UiFonts>,
     existing: Query<Entity, With<ExportPromptRoot>>,
     mut text_q: Query<&mut Text, With<ExportPromptText>>,
     mut commands: Commands,
 ) {
     if state.active && existing.is_empty() {
-        let font = asset_server.load("fonts/MiranoExtendedFreebie-Light.ttf");
         commands
             .spawn((
                 Node {
@@ -138,7 +138,7 @@ pub fn sync_export_prompt_ui(
                     align_items: AlignItems::Center,
                     ..default()
                 },
-                BackgroundColor(Color::srgba(0.0, 0.0, 0.0, 0.8)),
+                BackgroundColor(theme::OVERLAY_BG_HEAVY),
                 ExportPromptRoot,
             ))
             .with_children(|root| {
@@ -151,42 +151,30 @@ pub fn sync_export_prompt_ui(
                         min_width: Val::Px(420.0),
                         ..default()
                     },
-                    BackgroundColor(Color::srgba(0.06, 0.06, 0.12, 0.97)),
+                    BackgroundColor(theme::PANEL_BG),
                 ))
                 .with_children(|p| {
                     p.spawn((
                         Text::new("Describe the bug"),
-                        TextFont {
-                            font: font.clone(),
-                            font_size: 22.0,
-                            ..default()
-                        },
-                        TextColor(Color::srgb(1.0, 0.85, 0.55)),
+                        ui_fonts.tf(22.0),
+                        TextColor(theme::ACCENT_GOLD),
                     ));
                     p.spawn((
                         Text::new(format!("{}_", state.message)),
-                        TextFont {
-                            font: font.clone(),
-                            font_size: 14.0,
-                            ..default()
-                        },
-                        TextColor(Color::WHITE),
+                        ui_fonts.tf(14.0),
+                        TextColor(theme::TEXT_PRIMARY),
                         Node {
                             min_width: Val::Px(380.0),
                             padding: UiRect::axes(Val::Px(10.0), Val::Px(8.0)),
                             ..default()
                         },
-                        BackgroundColor(Color::srgba(0.16, 0.16, 0.22, 1.0)),
+                        BackgroundColor(theme::FIELD_BG),
                         ExportPromptText,
                     ));
                     p.spawn((
                         Text::new("Enter to save · Esc to cancel"),
-                        TextFont {
-                            font,
-                            font_size: 12.0,
-                            ..default()
-                        },
-                        TextColor(Color::srgba(0.7, 0.7, 0.7, 1.0)),
+                        ui_fonts.tf(12.0),
+                        TextColor(theme::TEXT_SECONDARY),
                     ));
                 });
             });
