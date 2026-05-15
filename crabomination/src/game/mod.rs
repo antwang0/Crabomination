@@ -410,20 +410,18 @@ impl GameState {
                     });
                 }
             }
-            // Comforting Counsel (SOS): "As long as there are five or more
-            // growth counters on this enchantment, creatures you control get
-            // +3/+3." Engine has no `StaticEffect` whose toggle is gated on
-            // the source's own counter count, so we inject the controller-
-            // wide creature anthem at compute time when the gate is met.
-            // The "growth counter" maps to `CounterType::Growth` — accrued
-            // by the LifeGained-event trigger on the enchantment itself.
-            if name == "Comforting Counsel" {
-                let growth = card
-                    .counters
-                    .get(&crate::card::CounterType::Growth)
-                    .copied()
-                    .unwrap_or(0);
-                if growth >= 5 {
+            // "As long as this permanent has ≥ K [counter] counters on
+            // it, [your] creatures get +P/+T" anthem consolidation. The
+            // gate evaluates the source's own counter pool every layer
+            // recompute, so a freshly added/removed counter flips the
+            // anthem on/off immediately. Lookup table at
+            // `self_counter_anthem_for_name`; adds one row per card
+            // instead of new `if name == "..."` branches.
+            if let Some((threshold, counter, p, t)) =
+                self_counter_anthem_for_name(name)
+            {
+                let actual = card.counters.get(&counter).copied().unwrap_or(0);
+                if actual >= threshold {
                     all_effects.push(ContinuousEffect {
                         timestamp: card.id.0 as u64,
                         source: card.id,
@@ -435,7 +433,7 @@ impl GameState {
                         layer: Layer::L7PowerTough,
                         sublayer: Some(PtSublayer::Modify),
                         duration: EffectDuration::WhileSourceOnBattlefield,
-                        modification: Modification::ModifyPowerToughness(3, 3),
+                        modification: Modification::ModifyPowerToughness(p, t),
                     });
                 }
             }
@@ -1782,6 +1780,31 @@ fn lifegain_selfpump_for_name(
     match name {
         "Honor Troll" => Some((2, 0, HONOR_TROLL_KWS)),
         "Ulna Alley Shopkeep" => Some((2, 0, NO_KWS)),
+        _ => None,
+    }
+}
+
+/// Compute-time conditional self-counter anthem table: cards whose
+/// printed Oracle is "As long as this permanent has [N] or more
+/// [counter] counters on it, creatures you control get +P/+T."
+/// The anthem is emitted as a short-lived continuous effect (P/T at
+/// layer 7b, affecting `AffectedPermanents::All { controller: Some
+/// (source.controller), card_types: [Creature], exclude_source: false
+/// }`) every `compute_battlefield` pass when the source's own
+/// counter pool meets the threshold. Adding a new such card requires
+/// appending one row here instead of a new `if name == "..."` branch.
+///
+/// Returns `Some((threshold, counter_kind, power_bump, toughness_bump))`
+/// if `name` matches a known counter-gated anthem card, else `None`.
+///
+/// Current entries:
+/// - Comforting Counsel (SOS): ≥5 Growth → +3/+3 to your creatures
+fn self_counter_anthem_for_name(
+    name: &'static str,
+) -> Option<(u32, crate::card::CounterType, i32, i32)> {
+    use crate::card::CounterType;
+    match name {
+        "Comforting Counsel" => Some((5, CounterType::Growth, 3, 3)),
         _ => None,
     }
 }
