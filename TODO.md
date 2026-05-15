@@ -657,6 +657,31 @@ status tag (✅ wired, 🟡 partial, ⏳ todo) plus a short note.
 
 ## Suggested next-up tasks
 
+- ⏳ **Foretell alt-cost primitive** (suggested by push modern_decks's
+  Saw It Coming addition) — Foretell ({2} on cast, alt cost {1}{U} on
+  the turn after it's foretold from hand for {2}). Wiring shape:
+  (a) a new `ActivatedAbility`-style "Foretell" action that exiles
+  the card face-down from hand for {2}; (b) a per-card "foretold
+  this turn" flag tracked on the exiled card; (c) an `AlternativeCost`
+  variant with `not_this_turn_only: bool` that gates the alt cost on
+  the prior-turn foretell. Currently Saw It Coming ships as a
+  vanilla {2}{U} counter — the Foretell discount path is engine-wide
+  ⏳.
+
+- ⏳ **Cast-from-graveyard introspection at resolution time** (suggested
+  by push modern_decks's Increasing Vengeance addition + Antiquities
+  on the Loose's stale 🟡) — cards like Increasing Vengeance ("if
+  this was cast from graveyard, copy twice"), Antiquities on the
+  Loose ("if cast from anywhere other than hand, +1/+1 counter on
+  each Spirit"), and Goryo's Vengeance (Flashback-from-grave rider)
+  need to read the spell's cast-source zone at resolution time. The
+  engine already tracks `Card.cast_from_hand: bool` on the resolving
+  spell. The gap is a `Predicate::CastFromHand` / `Predicate::
+  CastFromZone(zone)` and a wiring of `EffectContext.cast_zone` so
+  triggers and conditionals can read it. Adding these unlocks the
+  "if cast from graveyard" rider on at least three current 🟡 cards
+  + future Flashback-cared payoffs.
+
 - ✅ **`Effect::DiscardAnyNumber { who }` — "discard any number of cards"
   primitive** (push modern_decks): new effect variant that asks the
   player to pick a subset of their hand (0 to all). AutoDecider picks
