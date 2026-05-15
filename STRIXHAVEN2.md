@@ -18,8 +18,8 @@ Two adjacent catalogs:
 
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
-| SOS (255 cards) | 188 | 66 | 1 |
-| STX (170 cards) | 178 | 14 | 0 |
+| SOS (255 cards) | 187 | 67 | 1 |
+| STX (170 cards) | 177 | 16 | 0 |
 | STA reprints (in STX boosters) | 37 | 0 | — |
 
 Push (modern_decks, claude/modern_decks branch — current revision —
