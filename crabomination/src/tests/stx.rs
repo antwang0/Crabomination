@@ -9568,3 +9568,568 @@ fn anger_only_grants_haste_to_its_owners_creatures() {
     assert!(!theirs.keywords.contains(&Keyword::Haste),
         "opp bear does not get haste (not Anger's owner)");
 }
+
+// ── Wonder (STA reprint, gy-anthem) ─────────────────────────────────────────
+
+#[test]
+fn wonder_is_a_four_mana_two_two_flying_incarnation() {
+    use crate::card::CardType;
+    let def = catalog::wonder();
+    assert_eq!(def.cost.cmc(), 4);
+    assert_eq!(def.power, 2);
+    assert_eq!(def.toughness, 2);
+    assert!(def.card_types.contains(&CardType::Creature));
+    assert!(def.keywords.contains(&Keyword::Flying));
+    assert!(def.subtypes.creature_types.contains(&crate::card::CreatureType::Incarnation));
+}
+
+#[test]
+fn wonder_in_graveyard_grants_flying_with_island() {
+    // Push (modern_decks): NEW STA reprint. Wonder's graveyard-resident
+    // anthem grants Flying to your creatures while you control an Island.
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+
+    let base = g.computed_permanent(bear).unwrap();
+    assert!(!base.keywords.contains(&Keyword::Flying),
+        "bear has no flying without Wonder in gy");
+
+    g.add_card_to_graveyard(0, catalog::wonder());
+    g.add_card_to_battlefield(0, catalog::island());
+    let with_wonder = g.computed_permanent(bear).unwrap();
+    assert!(with_wonder.keywords.contains(&Keyword::Flying),
+        "bear gains flying from Wonder in gy + Island controlled");
+}
+
+#[test]
+fn wonder_in_graveyard_requires_island_to_grant_flying() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_graveyard(0, catalog::wonder());
+    // Only Plains — no Island.
+    g.add_card_to_battlefield(0, catalog::plains());
+
+    let cp = g.computed_permanent(bear).unwrap();
+    assert!(!cp.keywords.contains(&Keyword::Flying),
+        "Wonder anthem requires an Island — Plains doesn't trigger it");
+}
+
+// ── Brawn (STA reprint, gy-anthem) ──────────────────────────────────────────
+
+#[test]
+fn brawn_is_a_three_mana_three_three_trample_incarnation() {
+    use crate::card::CardType;
+    let def = catalog::brawn();
+    assert_eq!(def.cost.cmc(), 3);
+    assert_eq!(def.power, 3);
+    assert_eq!(def.toughness, 3);
+    assert!(def.card_types.contains(&CardType::Creature));
+    assert!(def.keywords.contains(&Keyword::Trample));
+    assert!(def.subtypes.creature_types.contains(&crate::card::CreatureType::Incarnation));
+}
+
+#[test]
+fn brawn_in_graveyard_grants_trample_with_forest() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+
+    let base = g.computed_permanent(bear).unwrap();
+    assert!(!base.keywords.contains(&Keyword::Trample),
+        "bear has no trample without Brawn in gy");
+
+    g.add_card_to_graveyard(0, catalog::brawn());
+    g.add_card_to_battlefield(0, catalog::forest());
+    let with_brawn = g.computed_permanent(bear).unwrap();
+    assert!(with_brawn.keywords.contains(&Keyword::Trample),
+        "bear gains trample from Brawn in gy + Forest controlled");
+}
+
+#[test]
+fn brawn_in_graveyard_requires_forest_to_grant_trample() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_graveyard(0, catalog::brawn());
+    g.add_card_to_battlefield(0, catalog::mountain());
+
+    let cp = g.computed_permanent(bear).unwrap();
+    assert!(!cp.keywords.contains(&Keyword::Trample),
+        "Brawn anthem requires a Forest — Mountain doesn't trigger it");
+}
+
+// ── Valor (STA reprint, gy-anthem) ──────────────────────────────────────────
+
+#[test]
+fn valor_is_a_two_mana_two_two_first_strike_incarnation() {
+    use crate::card::CardType;
+    let def = catalog::valor();
+    assert_eq!(def.cost.cmc(), 2);
+    assert_eq!(def.power, 2);
+    assert_eq!(def.toughness, 2);
+    assert!(def.card_types.contains(&CardType::Creature));
+    assert!(def.keywords.contains(&Keyword::FirstStrike));
+    assert!(def.subtypes.creature_types.contains(&crate::card::CreatureType::Incarnation));
+}
+
+#[test]
+fn valor_in_graveyard_grants_first_strike_with_plains() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+
+    let base = g.computed_permanent(bear).unwrap();
+    assert!(!base.keywords.contains(&Keyword::FirstStrike),
+        "bear has no first strike without Valor in gy");
+
+    g.add_card_to_graveyard(0, catalog::valor());
+    g.add_card_to_battlefield(0, catalog::plains());
+    let with_valor = g.computed_permanent(bear).unwrap();
+    assert!(with_valor.keywords.contains(&Keyword::FirstStrike),
+        "bear gains first strike from Valor in gy + Plains controlled");
+}
+
+#[test]
+fn valor_in_graveyard_requires_plains_to_grant_first_strike() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_graveyard(0, catalog::valor());
+    g.add_card_to_battlefield(0, catalog::island());
+
+    let cp = g.computed_permanent(bear).unwrap();
+    assert!(!cp.keywords.contains(&Keyword::FirstStrike),
+        "Valor anthem requires a Plains — Island doesn't trigger it");
+}
+
+// ── Triskaidekaphile (STX 2021) ────────────────────────────────────────────
+
+#[test]
+fn triskaidekaphile_is_a_three_mana_three_four_human_wizard() {
+    use crate::card::{CardType, CreatureType};
+    let def = catalog::triskaidekaphile();
+    assert_eq!(def.cost.cmc(), 3);
+    assert_eq!(def.power, 3);
+    assert_eq!(def.toughness, 4);
+    assert!(def.card_types.contains(&CardType::Creature));
+    assert!(def.subtypes.creature_types.contains(&CreatureType::Human));
+    assert!(def.subtypes.creature_types.contains(&CreatureType::Wizard));
+}
+
+#[test]
+fn triskaidekaphile_etb_draws_a_card_and_lifts_max_hand_size() {
+    // ETB body: draw 1 + flip Player.no_maximum_hand_size flag.
+    // Cast via the spell pipeline so the ETB trigger fires.
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
+    let id = g.add_card_to_hand(0, catalog::triskaidekaphile());
+    let hand_before = g.players[0].hand.len();
+    let max_before = g.players[0].no_maximum_hand_size;
+    assert!(!max_before, "default max-hand-size flag is false");
+
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Triskaidekaphile castable for {1}{U}{U}");
+    drain_stack(&mut g);
+
+    assert!(g.players[0].no_maximum_hand_size,
+        "Triskaidekaphile ETB should flip the no-max-hand-size flag");
+    // Hand: -1 (cast) + 1 (ETB draw) = 0 net.
+    assert_eq!(g.players[0].hand.len(), hand_before);
+    assert!(g.battlefield.iter().any(|c| c.id == id),
+        "Triskaidekaphile stays on the battlefield");
+}
+
+#[test]
+fn triskaidekaphile_does_not_win_at_upkeep_with_other_hand_size() {
+    // If hand size != 13, the trigger predicate fails and no win fires.
+    // Cast via the spell pipeline so the trigger is registered.
+    let mut g = two_player_game();
+    // Seed libraries so both players don't deck out across the turn loop.
+    for _ in 0..100 { g.add_card_to_library(0, catalog::island()); }
+    for _ in 0..100 { g.add_card_to_library(1, catalog::island()); }
+    for _ in 0..7 { g.add_card_to_hand(0, catalog::island()); }
+    let id = g.add_card_to_hand(0, catalog::triskaidekaphile());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Triskaidekaphile castable for {1}{U}{U}");
+    drain_stack(&mut g);
+
+    // After ETB, P0 has at most 8 cards in hand. Walk to next upkeep.
+    assert!(g.players[0].hand.len() < 13);
+    use crate::game::types::TurnStep;
+    let mut iters = 0;
+    while !(g.active_player_idx == 0 && g.step == TurnStep::Upkeep && g.turn_number >= 2)
+        && iters < 200
+    {
+        let _ = g.pass_priority();
+        drain_stack(&mut g);
+        iters += 1;
+        if g.game_over.is_some() { break; }
+    }
+    drain_stack(&mut g);
+
+    assert!(g.game_over.is_none(),
+        "Triskaidekaphile shouldn't fire on P0's upkeep without 13 cards");
+}
+
+#[test]
+fn triskaidekaphile_wins_at_upkeep_with_exactly_thirteen_cards() {
+    // Cast Triskaidekaphile, then force P0's hand to 13 cards via a
+    // direct hand-push before the next upkeep step, and confirm the
+    // engine recognises the predicate and wins the game.
+    let mut g = two_player_game();
+    for _ in 0..100 { g.add_card_to_library(0, catalog::island()); }
+    for _ in 0..100 { g.add_card_to_library(1, catalog::island()); }
+    let id = g.add_card_to_hand(0, catalog::triskaidekaphile());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Triskaidekaphile castable for {1}{U}{U}");
+    drain_stack(&mut g);
+
+    // Top up P0's hand to exactly 13.
+    while g.players[0].hand.len() < 13 {
+        g.add_card_to_hand(0, catalog::island());
+    }
+    assert_eq!(g.players[0].hand.len(), 13);
+
+    use crate::game::types::TurnStep;
+    let mut iters = 0;
+    while !(g.active_player_idx == 0 && g.step == TurnStep::Upkeep && g.turn_number >= 2)
+        && iters < 200
+    {
+        // Keep P0 hand at exactly 13 — the draw step would push it to 14
+        // and break the predicate; we want the upkeep trigger on T2 P0
+        // to see exactly 13 cards.
+        let _ = g.pass_priority();
+        drain_stack(&mut g);
+        iters += 1;
+        if g.game_over.is_some() { break; }
+        // After P0's T2 untap-step, refresh hand to 13 if it changed.
+        if g.active_player_idx == 0 && g.turn_number >= 2 {
+            while g.players[0].hand.len() < 13 {
+                g.add_card_to_hand(0, catalog::island());
+            }
+            while g.players[0].hand.len() > 13 {
+                g.players[0].hand.pop();
+            }
+        }
+    }
+    drain_stack(&mut g);
+
+    assert!(g.game_over.is_some(),
+        "Triskaidekaphile should fire on P0's upkeep with exactly 13 cards");
+    assert_eq!(g.game_over, Some(Some(0)),
+        "P0 should be declared the winner");
+}
+
+// ── Excellent Education (STX 2021) ──────────────────────────────────────────
+
+#[test]
+fn excellent_education_gives_target_player_life_and_draw() {
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
+    let id = g.add_card_to_hand(0, catalog::excellent_education());
+    let hand_before = g.players[0].hand.len();
+    let life_before = g.players[0].life;
+
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Player(0)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Excellent Education castable for {2}{W}");
+    drain_stack(&mut g);
+
+    // -1 hand for cast, +1 hand for draw. Net 0.
+    assert_eq!(g.players[0].hand.len(), hand_before);
+    // +4 life.
+    assert_eq!(g.players[0].life, life_before + 4);
+}
+
+#[test]
+fn excellent_education_can_target_opponent() {
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_library(1, catalog::island()); }
+    let id = g.add_card_to_hand(0, catalog::excellent_education());
+    let p1_hand_before = g.players[1].hand.len();
+    let p1_life_before = g.players[1].life;
+
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Excellent Education castable targeting opp");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[1].hand.len(), p1_hand_before + 1, "opp drew 1");
+    assert_eq!(g.players[1].life, p1_life_before + 4, "opp gained 4 life");
+}
+
+#[test]
+fn excellent_education_is_a_three_mana_white_sorcery() {
+    use crate::card::CardType;
+    let def = catalog::excellent_education();
+    assert_eq!(def.cost.cmc(), 3);
+    assert!(def.card_types.contains(&CardType::Sorcery));
+}
+
+// ── Sproutback Trudge (STX 2021) ────────────────────────────────────────────
+
+#[test]
+fn sproutback_trudge_is_a_five_mana_five_six_plant() {
+    use crate::card::{CardType, CreatureType};
+    let def = catalog::sproutback_trudge();
+    assert_eq!(def.cost.cmc(), 5);
+    assert_eq!(def.power, 5);
+    assert_eq!(def.toughness, 6);
+    assert!(def.card_types.contains(&CardType::Creature));
+    assert!(def.subtypes.creature_types.contains(&CreatureType::Plant));
+}
+
+#[test]
+fn sproutback_trudge_gains_life_per_creature_in_graveyard() {
+    let mut g = two_player_game();
+    // Seed three creature cards in P0's graveyard.
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    // Plus one non-creature for control — shouldn't count.
+    g.add_card_to_graveyard(0, catalog::island());
+
+    let life_before = g.players[0].life;
+    let id = g.add_card_to_hand(0, catalog::sproutback_trudge());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Sproutback Trudge castable for {3}{G}{G}");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[0].life, life_before + 3,
+        "Sproutback Trudge gains life equal to creature cards in your graveyard (3)");
+}
+
+// ── Deep Analysis (STA reprint) ─────────────────────────────────────────────
+
+#[test]
+fn deep_analysis_is_a_four_mana_blue_sorcery_with_flashback() {
+    use crate::card::CardType;
+    let def = catalog::deep_analysis();
+    assert_eq!(def.cost.cmc(), 4);
+    assert!(def.card_types.contains(&CardType::Sorcery));
+    let has_flashback = def
+        .keywords
+        .iter()
+        .any(|k| matches!(k, Keyword::Flashback(_)));
+    assert!(has_flashback, "Deep Analysis has Flashback");
+}
+
+#[test]
+fn deep_analysis_draws_two_and_loses_two_life() {
+    let mut g = two_player_game();
+    for _ in 0..5 { g.add_card_to_library(0, catalog::island()); }
+    let id = g.add_card_to_hand(0, catalog::deep_analysis());
+    let hand_before = g.players[0].hand.len();
+    let life_before = g.players[0].life;
+
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Player(0)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Deep Analysis castable for {3}{U}");
+    drain_stack(&mut g);
+
+    // Hand: -1 (cast) + 2 (draw) = +1.
+    assert_eq!(g.players[0].hand.len(), hand_before + 1);
+    // Life: -2.
+    assert_eq!(g.players[0].life, life_before - 2);
+}
+
+#[test]
+fn deep_analysis_can_target_opponent() {
+    // The target player half — caster aims at opp to drain 2 life with
+    // a small card-draw downside for the opp.
+    let mut g = two_player_game();
+    for _ in 0..5 { g.add_card_to_library(1, catalog::island()); }
+    let id = g.add_card_to_hand(0, catalog::deep_analysis());
+    let p1_hand_before = g.players[1].hand.len();
+    let p1_life_before = g.players[1].life;
+
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Deep Analysis castable targeting opp");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[1].hand.len(), p1_hand_before + 2, "opp drew 2");
+    assert_eq!(g.players[1].life, p1_life_before - 2, "opp lost 2 life");
+}
+
+// ── Tribute to Hunger (STA reprint) ─────────────────────────────────────────
+
+#[test]
+fn tribute_to_hunger_is_a_three_mana_black_instant() {
+    use crate::card::CardType;
+    let def = catalog::tribute_to_hunger();
+    assert_eq!(def.cost.cmc(), 3);
+    assert!(def.card_types.contains(&CardType::Instant));
+}
+
+#[test]
+fn tribute_to_hunger_sacrifices_opp_creature_and_gains_life_equal_to_toughness() {
+    use crate::game::Target;
+    let mut g = two_player_game();
+    // P1 controls a Serra Angel (4/4 flying-vigilance). Sac it; gain 4 life.
+    let _angel = g.add_card_to_battlefield(1, catalog::serra_angel());
+    let id = g.add_card_to_hand(0, catalog::tribute_to_hunger());
+    let life_before = g.players[0].life;
+    let opp_bf_before = g.battlefield.iter().filter(|c| c.controller == 1).count();
+
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Tribute to Hunger castable for {2}{B}");
+    drain_stack(&mut g);
+
+    // P1's creature should be sacrificed.
+    let opp_bf_after = g.battlefield.iter().filter(|c| c.controller == 1).count();
+    assert_eq!(opp_bf_after, opp_bf_before - 1, "opp sacrificed a creature");
+    // P0 gains life equal to sacrificed creature's toughness (4 for Serra Angel).
+    assert_eq!(g.players[0].life, life_before + 4,
+        "caster gains 4 life = sacrificed creature's toughness");
+}
+
+// ── Kasmina's Transmutation (STA reprint) ───────────────────────────────────
+
+#[test]
+fn kasminas_transmutation_is_a_three_mana_blue_sorcery() {
+    use crate::card::CardType;
+    let def = catalog::kasminas_transmutation();
+    assert_eq!(def.cost.cmc(), 3);
+    assert!(def.card_types.contains(&CardType::Sorcery));
+}
+
+#[test]
+fn kasminas_transmutation_sets_target_to_one_one_eot() {
+    // Use Serra Angel (4/4 flying-vigilance) as a target. After Kasmina's,
+    // it should become 1/1 EOT.
+    use crate::game::Target;
+    let mut g = two_player_game();
+    let angel = g.add_card_to_battlefield(1, catalog::serra_angel());
+
+    let id = g.add_card_to_hand(0, catalog::kasminas_transmutation());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(angel)),
+        additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Kasmina's Transmutation castable for {1}{U}{U}");
+    drain_stack(&mut g);
+
+    let cp = g.computed_permanent(angel).expect("Serra Angel still on bf");
+    assert_eq!(cp.power, 1, "power becomes 1");
+    assert_eq!(cp.toughness, 1, "toughness becomes 1");
+}
+
+// ── Crippling Fear (STA reprint) ────────────────────────────────────────────
+
+#[test]
+fn crippling_fear_is_a_four_mana_black_sorcery() {
+    use crate::card::CardType;
+    let def = catalog::crippling_fear();
+    assert_eq!(def.cost.cmc(), 4);
+    assert!(def.card_types.contains(&CardType::Sorcery));
+}
+
+#[test]
+fn crippling_fear_kills_two_toughness_creatures() {
+    // All creatures get -3/-3 EOT. 2/2 Grizzly Bears (toughness 2) dies
+    // (toughness goes to -1, SBA puts in graveyard).
+    let mut g = two_player_game();
+    let _b1 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let _b2 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let _b3 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+
+    let id = g.add_card_to_hand(0, catalog::crippling_fear());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Crippling Fear castable for {3}{B}");
+    drain_stack(&mut g);
+
+    let bears_left = g.battlefield.iter().filter(|c| c.definition.is_creature()).count();
+    assert_eq!(bears_left, 0,
+        "all three 2/2 Grizzly Bears die to -3/-3 EOT");
+}
+
+#[test]
+fn crippling_fear_does_not_kill_high_toughness_creatures() {
+    let mut g = two_player_game();
+    let _angel = g.add_card_to_battlefield(0, catalog::serra_angel());
+
+    let id = g.add_card_to_hand(0, catalog::crippling_fear());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Crippling Fear castable");
+    drain_stack(&mut g);
+
+    // Serra Angel is 4/4. After -3/-3 it becomes 1/1, still alive.
+    let creatures_left = g.battlefield.iter().filter(|c| c.definition.is_creature()).count();
+    assert_eq!(creatures_left, 1, "4/4 Serra Angel survives -3/-3 EOT");
+}
+
+#[test]
+fn tribute_to_hunger_no_creature_to_sac_gives_no_life() {
+    // If opp has no creatures, the sac fails silently and no life is gained.
+    use crate::game::Target;
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::tribute_to_hunger());
+    let life_before = g.players[0].life;
+
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Tribute to Hunger castable");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[0].life, life_before,
+        "no creature to sac → no life gained");
+}
+
+#[test]
+fn sproutback_trudge_with_empty_graveyard_gains_zero_life() {
+    let mut g = two_player_game();
+    let life_before = g.players[0].life;
+    let id = g.add_card_to_hand(0, catalog::sproutback_trudge());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Sproutback Trudge castable for {3}{G}{G}");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[0].life, life_before,
+        "Sproutback Trudge with empty gy gains 0 life");
+}

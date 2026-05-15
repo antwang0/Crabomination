@@ -11,6 +11,31 @@ Periodic spot-check of the rules document
 (`crabomination/MagicCompRules 20260116.txt`). Each rule below has a
 status tag (✅ wired, 🟡 partial, ⏳ todo) plus a short note.
 
+- 🟡 **CR 603.4 — Intervening 'if' clause (trigger-time half)**
+  (push modern_decks audit, claude/modern_decks branch): "A triggered
+  ability may read 'When/Whenever/At [trigger event], if [condition],
+  [effect].' When the trigger event occurs, the ability checks
+  whether the stated condition is true. The ability triggers only if
+  it is; otherwise it does nothing. If the ability triggers, it
+  checks the stated condition again as it resolves. If the condition
+  isn't true at that time, the ability is removed from the stack and
+  does nothing." Push (modern_decks) fixes a long-standing bug in
+  `fire_step_triggers` (`game/stack.rs`) where the `EventSpec.filter`
+  predicate was **not** evaluated for step-begin triggers — only the
+  trigger's `kind` and `scope` were checked. Now every step-begin
+  trigger re-evaluates its filter predicate against the current game
+  state before being pushed onto the stack. **Half-implemented** —
+  the "check again at resolve time" half of CR 603.4 is still ⏳;
+  mid-resolve state changes between fire and resolve aren't
+  re-checked. Wires Triskaidekaphile's "if you have exactly 13 cards
+  in your hand, you win the game" upkeep gate exactly, plus future
+  Felidar Sovereign's "if you have 40 or more life" gate. Engine
+  site: `fire_step_triggers` splits candidate gathering from
+  filter-check + push so the predicate can call
+  `&self.evaluate_predicate` without holding the iter borrow. Tests:
+  `triskaidekaphile_wins_at_upkeep_with_exactly_thirteen_cards`,
+  `triskaidekaphile_does_not_win_at_upkeep_with_other_hand_size`.
+
 - 🟡 **CR 115.3 / 115.5 — Target distinctness + self-targeting**
   (push modern_decks audit, claude/modern_decks branch): "The same
   target can't be chosen multiple times for any one instance of the
@@ -846,6 +871,24 @@ status tag (✅ wired, 🟡 partial, ⏳ todo) plus a short note.
   continuous `AddKeyword` effect on the gy owner's creatures.
   Currently only Anger is wired; the other Judgment Incarnations
   can plug in via single-row additions.
+
+- ⏳ **CR 603.4 — Intervening 'if' clause "check again at resolve
+  time"** (push modern_decks suggested) — push (modern_decks) lands
+  the trigger-time half of the rule (predicate evaluated when
+  pushing the trigger onto the stack via `fire_step_triggers`'s new
+  filter-check). The second half of CR 603.4 — "if the ability
+  triggers, it checks the stated condition again as it resolves. If
+  the condition isn't true at that time, the ability is removed from
+  the stack" — is still ⏳. Wiring shape: add a `filter:
+  Option<Predicate>` to `StackItem::Trigger` and re-evaluate it in
+  `continue_trigger_resolution_with_source` before applying the body
+  (removing the trigger from the stack as a no-op when false).
+  Today the only catalog card exercising the resolve-time gap is
+  Triskaidekaphile (player could discard between upkeep-fire and
+  upkeep-resolve to drop hand below 13; engine wouldn't catch it).
+  Felidar Sovereign's "if you have 40 or more life" would have the
+  same gap once added. Low-priority until a real card surfaces a
+  meaningful resolve-time state change.
 
 - ⏳ **`Predicate::ManaValueAtMostV(Value)` — value-keyed mana-value
   filter** (suggested by push modern_decks's Mind into Matter +

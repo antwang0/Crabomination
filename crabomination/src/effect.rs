@@ -202,6 +202,11 @@ pub enum Value {
     /// (set by `Effect::SacrificeAndRemember`). Used by Thud / Greater
     /// Gargadon-style sacrifice + damage spells.
     SacrificedPower,
+    /// Toughness of the most recently sacrificed creature this
+    /// resolution (set by `Effect::SacrificeAndRemember`). Used by
+    /// Tribute to Hunger (gain life equal to sacrificed creature's
+    /// toughness) and similar sacrifice + lifegain spells.
+    SacrificedToughness,
     /// Number of cards discarded so far within the current effect
     /// resolution. Bumped by every `GameEvent::CardDiscarded` emission
     /// in `Effect::Discard` / `Effect::DiscardChosen`. Used by Borrowed

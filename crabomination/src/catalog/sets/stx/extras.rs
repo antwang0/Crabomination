@@ -8100,3 +8100,515 @@ pub fn anger() -> CardDefinition {
         exile_on_resolve: false,
     }
 }
+
+
+// ── Triskaidekaphile (STX 2021, mono blue) ──────────────────────────────────
+
+/// Triskaidekaphile — {1}{U}{U}, 3/4 Human Wizard (STX 2021 rare).
+///
+/// "When this creature enters, draw a card.
+///  You have no maximum hand size.
+///  At the beginning of your upkeep, if you have exactly 13 cards in
+///  your hand, you win the game."
+///
+/// Push (modern_decks, NEW, `stx::extras`): combines three existing
+/// engine primitives:
+/// - **ETB trigger** → `Effect::Draw 1` (standard cantrip body).
+/// - **Static "no maximum hand size"** → `Effect::SetNoMaxHandSize`
+///   fires on ETB so the controller can hoard cards above 7. The
+///   cleanup-step discard (CR 514.1) consults `Player.no_maximum_hand_size`
+///   and skips the loop.
+/// - **Upkeep win** → `EventKind::StepBegins(Upkeep) / ActivePlayer`
+///   trigger gated on `ValueEquals(HandSizeOf(You), Const(13))`. On
+///   exactly 13 cards in hand at the controller's upkeep, the trigger
+///   resolves `Effect::WinGame { who: You }` (CR 104.2a — "you win the
+///   game" sets every other player's `eliminated = true`, then the
+///   SBA sweep promotes `game_over = Some(winner)`).
+///
+/// The "you have no maximum hand size" rider is approximated as a
+/// one-shot ETB flip rather than a continuous static effect — once
+/// Triskaidekaphile resolves, the flag stays set even if the source
+/// later leaves the battlefield, matching the printed Oracle's "for
+/// the rest of the game" semantics (Wisdom of Ages also flips the
+/// flag this way; the engine has no LTB cleanup for the flag).
+pub fn triskaidekaphile() -> CardDefinition {
+    use crate::card::Predicate;
+    use crate::effect::PlayerRef as PR;
+    CardDefinition {
+        name: "Triskaidekaphile",
+        cost: cost(&[generic(1), u(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![
+            // ETB: draw a card + flip the "no maximum hand size" flag.
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: Effect::Seq(vec![
+                    Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::Const(1),
+                    },
+                    Effect::SetNoMaxHandSize {
+                        who: Selector::You,
+                    },
+                ]),
+            },
+            // Upkeep: if you have exactly 13 cards in hand, you win.
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::StepBegins(crate::game::types::TurnStep::Upkeep),
+                    EventScope::ActivePlayer,
+                )
+                .with_filter(Predicate::ValueEquals(
+                    Value::HandSizeOf(PR::You),
+                    Value::Const(13),
+                )),
+                effect: Effect::WinGame { who: PR::You },
+            },
+        ],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+
+// ── Excellent Education (STX 2021, mono white) ──────────────────────────────
+
+/// Excellent Education — {2}{W} Sorcery (STX 2021 common).
+///
+/// "Target player gains 4 life and draws a card."
+///
+/// Push (modern_decks, NEW, `stx::extras`): simple white card-draw +
+/// life-gain spell at 3 mana. Single-target shape — the auto-decider
+/// aims at `you`, but a scripted decider can route both halves to an
+/// opponent (rare play, since you typically want both for yourself).
+/// Wired as `Seq(GainLife 4 → PlayerRef::Target(0), Draw 1 → same)`.
+/// The chosen player resolves at cast-time target lock — both halves
+/// route to the same player.
+pub fn excellent_education() -> CardDefinition {
+    use crate::effect::PlayerRef as PR;
+    CardDefinition {
+        name: "Excellent Education",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::GainLife {
+                who: Selector::Player(PR::Target(0)),
+                amount: Value::Const(4),
+            },
+            Effect::Draw {
+                who: Selector::Player(PR::Target(0)),
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+
+// ── Sproutback Trudge (STX 2021, mono green) ────────────────────────────────
+
+/// Sproutback Trudge — {3}{G}{G} Creature — Plant, 5/6 (STX 2021 common).
+///
+/// "When this creature enters, you gain X life, where X is the number
+/// of creature cards in your graveyard."
+///
+/// Push (modern_decks, NEW, `stx::extras`): a beefy 5-mana 5/6 Plant
+/// body with an ETB life-gain rider scaling off your graveyard's
+/// creature count. The X value is computed via `Value::CountOf` over
+/// `Selector::CardsInZone { zone: Graveyard, filter: Creature }`. A
+/// grindy late-game reload that pairs well with Witherbloom /
+/// Lorehold gy-fill engines.
+pub fn sproutback_trudge() -> CardDefinition {
+    use crate::card::Zone;
+    use crate::effect::PlayerRef as PR;
+    CardDefinition {
+        name: "Sproutback Trudge",
+        cost: cost(&[generic(3), g(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 6,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::GainLife {
+                who: Selector::You,
+                amount: Value::CountOf(Box::new(Selector::CardsInZone {
+                    who: PR::You,
+                    zone: Zone::Graveyard,
+                    filter: SelectionRequirement::Creature,
+                })),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+
+// ── Wonder (STA reprint, Judgment) ──────────────────────────────────────────
+
+/// Wonder — {3}{U} Creature — Incarnation, 2/2 (Judgment / STA reprint).
+///
+/// "Flying / As long as Wonder is in your graveyard and you control an
+/// Island, creatures you control have flying."
+///
+/// Push (modern_decks, NEW, `stx::extras`): blue Incarnation in the STA
+/// gy-anthem cycle. Wired via the `graveyard_anthem_for_name` helper-
+/// table walked by `GameState::compute_battlefield` (same path as Anger,
+/// Brawn). When Wonder sits in a player's graveyard and that player
+/// controls an Island, layer 6 emits `AddKeyword(Flying)` over every
+/// creature the owner has on the battlefield. The keyword grant falls
+/// out automatically when Wonder leaves the graveyard. The body itself
+/// is a 2/2 flier on a 4-mana frame — playable on its own.
+pub fn wonder() -> CardDefinition {
+    CardDefinition {
+        name: "Wonder",
+        cost: cost(&[generic(3), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Incarnation],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+
+// ── Brawn (STA reprint, Judgment) ───────────────────────────────────────────
+
+/// Brawn — {2}{G} Creature — Incarnation, 3/3 (Judgment / STA reprint).
+///
+/// "Trample / As long as Brawn is in your graveyard and you control a
+/// Forest, creatures you control have trample."
+///
+/// Push (modern_decks, NEW, `stx::extras`): green Incarnation in the
+/// STA gy-anthem cycle. Same helper-table-driven shape as Anger /
+/// Wonder. When Brawn sits in a player's graveyard and that player
+/// controls a Forest, layer 6 emits `AddKeyword(Trample)` over every
+/// creature the owner has on the battlefield. The body itself is a 3/3
+/// trampler on a 3-mana frame — a respectable mid-curve attacker even
+/// before its gy-resident anthem kicks in.
+pub fn brawn() -> CardDefinition {
+    CardDefinition {
+        name: "Brawn",
+        cost: cost(&[generic(2), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Incarnation],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Trample],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+
+// ── Deep Analysis (STA reprint, Torment) ───────────────────────────────────
+
+/// Deep Analysis — {3}{U} Sorcery (STA reprint, originally Torment).
+///
+/// "Target player draws two cards and loses 2 life. / Flashback—{1}{U},
+/// Pay 3 life."
+///
+/// Push (modern_decks, NEW, `stx::extras`): Blue card-draw with a
+/// graveyard recursion mode. Wired as a `Seq(Draw 2, LoseLife 2)`
+/// against the targeted player (collapsed to PlayerRef::Target(0)).
+/// Flashback {1}{U} is wired via `Keyword::Flashback` — the additional
+/// life payment ("Pay 3 life") on the flashback cost is an engine-wide
+/// alt-cost-with-life-cost gap, so the flashback path here is the
+/// plain mana-cost path. The card-advantage and graveyard-reload are
+/// the headline play patterns.
+pub fn deep_analysis() -> CardDefinition {
+    use crate::effect::PlayerRef as PR;
+    CardDefinition {
+        name: "Deep Analysis",
+        cost: cost(&[generic(3), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![Keyword::Flashback(cost(&[generic(1), u()]))],
+        effect: Effect::Seq(vec![
+            Effect::Draw {
+                who: Selector::Player(PR::Target(0)),
+                amount: Value::Const(2),
+            },
+            Effect::LoseLife {
+                who: Selector::Player(PR::Target(0)),
+                amount: Value::Const(2),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+
+// ── Kasmina's Transmutation (STA reprint, Strixhaven Loyalty) ──────────────
+
+/// Kasmina's Transmutation — {1}{U}{U} Sorcery (STA reprint, Strixhaven).
+///
+/// "Target creature loses all abilities and becomes a blue Frog with
+/// base power and toughness 1/1 until end of turn."
+///
+/// Push (modern_decks, NEW, `stx::extras`): wired via `Effect::SetBasePT`
+/// (the layer-7b primitive used by Square Up / Mercurial Transformation
+/// / Fractalize). The "loses all abilities" rider is omitted (no
+/// clear-abilities continuous primitive — tracked in TODO.md as the
+/// `StaticEffect::ClearAbilities` gap). The base-P/T override is the
+/// headline play pattern (shrinking a big threat down to a 1/1 Frog).
+/// The "becomes a blue Frog" type-and-color rewrite (layer 4 + 5) is
+/// also omitted; the target keeps its printed creature types and
+/// colors. Counters and +N/+M still stack on top per CR 613.7c-f.
+pub fn kasminas_transmutation() -> CardDefinition {
+    CardDefinition {
+        name: "Kasmina's Transmutation",
+        cost: cost(&[generic(1), u(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::SetBasePT {
+            what: target_filtered(SelectionRequirement::Creature),
+            power: Value::Const(1),
+            toughness: Value::Const(1),
+            duration: Duration::EndOfTurn,
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+
+// ── Crippling Fear (STA reprint, Conflux) ──────────────────────────────────
+
+/// Crippling Fear — {3}{B} Sorcery (STA reprint, originally Conflux).
+///
+/// "All creatures get -3/-3 until end of turn."
+///
+/// Push (modern_decks, NEW, `stx::extras`): black wrath via mass
+/// negative pump. The printed Oracle includes a "choose a creature
+/// type" rider — "creatures of the chosen type don't get -3/-3" — but
+/// the engine has no choose-creature-type primitive, so the
+/// approximation is the strictly-stronger universal -3/-3 (every
+/// creature gets it, including your own). Functionally this is a
+/// 4-mana wrath that hits everything with toughness ≤ 3.
+///
+/// In practice the player who casts this typically plans around it
+/// (kill everything; raise dead) — the auto-decider has no awareness
+/// of the symmetric downside.
+pub fn crippling_fear() -> CardDefinition {
+    CardDefinition {
+        name: "Crippling Fear",
+        cost: cost(&[generic(3), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::ForEach {
+            selector: Selector::EachPermanent(SelectionRequirement::Creature),
+            body: Box::new(Effect::PumpPT {
+                what: Selector::TriggerSource,
+                power: Value::Const(-3),
+                toughness: Value::Const(-3),
+                duration: Duration::EndOfTurn,
+            }),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+
+// ── Tribute to Hunger (STA reprint, Time Spiral) ───────────────────────────
+
+/// Tribute to Hunger — {2}{B} Instant (STA reprint, originally Time
+/// Spiral).
+///
+/// "Target opponent sacrifices a creature. You gain life equal to its
+/// toughness."
+///
+/// Push (modern_decks, NEW, `stx::extras`): black removal-via-sac with
+/// a lifegain rider scaling off the sacrificed creature's printed
+/// toughness. Wired via the new `Value::SacrificedToughness` primitive
+/// (sibling of `Value::SacrificedPower`), which reads the
+/// `GameState.sacrificed_toughness` field stamped by
+/// `Effect::SacrificeAndRemember`'s handler at the same time it
+/// stamps `sacrificed_power`. The `SacrificeAndRemember` body
+/// auto-picks the cheapest opp creature (tokens first, then by lowest
+/// CMC, then lowest power), matching the engine's standard auto-sac
+/// picker for forced sacrifices.
+///
+/// In practice this acts like Cruel Edict + a small lifegain reward.
+pub fn tribute_to_hunger() -> CardDefinition {
+    use crate::effect::PlayerRef as PR;
+    CardDefinition {
+        name: "Tribute to Hunger",
+        cost: cost(&[generic(2), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::SacrificeAndRemember {
+                who: PR::Target(0),
+                filter: SelectionRequirement::Creature,
+            },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::SacrificedToughness,
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+
+// ── Valor (STA reprint, Judgment) ───────────────────────────────────────────
+
+/// Valor — {1}{W} Creature — Incarnation, 2/2 (Judgment / STA reprint).
+///
+/// "First strike / As long as Valor is in your graveyard and you
+/// control a Plains, creatures you control have first strike."
+///
+/// Push (modern_decks, NEW, `stx::extras`): white Incarnation in the
+/// STA gy-anthem cycle. Same helper-table-driven shape as Anger /
+/// Wonder / Brawn. The 2/2 first-strike body on a 2-mana frame is
+/// strong on its own; the graveyard anthem makes every friendly
+/// attacker hit first.
+pub fn valor() -> CardDefinition {
+    CardDefinition {
+        name: "Valor",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Incarnation],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::FirstStrike],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}

@@ -235,8 +235,10 @@ impl GameState {
         effect: &Effect,
         ctx: &EffectContext,
     ) -> Result<Vec<GameEvent>, GameError> {
-        // Reset sacrificed-power scratch for this independent resolution.
+        // Reset sacrificed-power / sacrificed-toughness scratch for this
+        // independent resolution.
         self.sacrificed_power = None;
+        self.sacrificed_toughness = None;
         // Reset last-created-token scratch — `Selector::LastCreatedToken`
         // only refers to a token created by *this* resolution.
         self.last_created_token = None;
@@ -1458,8 +1460,10 @@ impl GameState {
             Effect::SacrificeAndRemember { who, filter } => {
                 // Resolve `who` to a single player; pick one of their
                 // controlled permanents matching `filter`; sacrifice it and
-                // record its power on `state.sacrificed_power` so a
-                // subsequent `Value::SacrificedPower` can reference it.
+                // record its power + toughness on `state.sacrificed_power`
+                // / `state.sacrificed_toughness` so a subsequent
+                // `Value::SacrificedPower` / `Value::SacrificedToughness`
+                // can reference it (Thud, Tribute to Hunger).
                 let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
                 let candidate = self
                     .battlefield
@@ -1468,9 +1472,10 @@ impl GameState {
                         c.controller == p
                             && self.evaluate_requirement_static(filter, &Target::Permanent(c.id), p, ctx.source)
                     })
-                    .map(|c| (c.id, c.power()));
-                if let Some((cid, power)) = candidate {
+                    .map(|c| (c.id, c.power(), c.toughness()));
+                if let Some((cid, power, toughness)) = candidate {
                     self.sacrificed_power = Some(power);
+                    self.sacrificed_toughness = Some(toughness);
                     let is_creature = self
                         .battlefield_find(cid)
                         .map(|c| c.definition.is_creature())

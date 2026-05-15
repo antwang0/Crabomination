@@ -19,11 +19,72 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 192 | 62 | 1 |
-| STX (170 cards) | 178 | 15 | 0 |
-| STA reprints (in STX boosters) | 38 | 0 | — |
+| STX (170 cards) | 181 | 15 | 0 |
+| STA reprints (in STX boosters) | 45 | 0 | — |
 
 Push (modern_decks, claude/modern_decks branch — latest revision —
-latest sub-push): **1 NEW card** (Anger, STA reprint) **+ 6 promotions**
+**newest sub-push**): **10 NEW cards** (3 STX 2021 + 7 STA reprints) +
+engine improvements:
+
+**NEW STX 2021 cards (3):**
+- **Triskaidekaphile** ({1}{U}{U}, 3/4 Human Wizard) — ETB Draw + flip
+  no-max-hand-size + upkeep "you win the game" trigger gated on
+  `ValueEquals(HandSizeOf(You), 13)` (CR 603.4 intervening 'if'
+  clause). Tests: `triskaidekaphile_is_a_three_mana_three_four_human_wizard`,
+  `_etb_draws_a_card_and_lifts_max_hand_size`,
+  `_wins_at_upkeep_with_exactly_thirteen_cards`,
+  `_does_not_win_at_upkeep_with_other_hand_size`.
+- **Excellent Education** ({2}{W} sorcery) — Target player gains 4 life
+  and draws a card. Tests:
+  `excellent_education_gives_target_player_life_and_draw`,
+  `_can_target_opponent`, `_is_a_three_mana_white_sorcery`.
+- **Sproutback Trudge** ({3}{G}{G}, 5/6 Plant) — ETB gain life equal to
+  creature cards in your graveyard. Reads
+  `Value::CountOf(CardsInZone(You, Graveyard, Creature))`. Tests:
+  `sproutback_trudge_is_a_five_mana_five_six_plant`,
+  `_gains_life_per_creature_in_graveyard`,
+  `_with_empty_graveyard_gains_zero_life`.
+
+**NEW STA reprints (7):**
+- **Wonder** ({3}{U}, 2/2 Incarnation, Flying) — STA-cycle Incarnation,
+  Island gy-anthem grants Flying. Three tests.
+- **Brawn** ({2}{G}, 3/3 Incarnation, Trample) — STA-cycle Incarnation,
+  Forest gy-anthem grants Trample. Three tests.
+- **Valor** ({1}{W}, 2/2 Incarnation, First Strike) — STA-cycle
+  Incarnation, Plains gy-anthem grants First Strike. Three tests.
+- **Deep Analysis** ({3}{U} sorcery, Flashback {1}{U}) — Target player
+  draws 2 + loses 2 life. Three tests.
+- **Tribute to Hunger** ({2}{B} instant) — Target opp sacrifices a
+  creature; you gain life equal to its toughness. Three tests, lands the
+  new `Value::SacrificedToughness` primitive (sibling of
+  `SacrificedPower`).
+- **Kasmina's Transmutation** ({1}{U}{U} sorcery) — Target creature
+  becomes 1/1 EOT via `Effect::SetBasePT` (loses-all-abilities rider is
+  engine-wide ⏳, same as Mercurial Transformation). Two tests.
+- **Crippling Fear** ({3}{B} sorcery) — All creatures get -3/-3 EOT
+  (the choose-creature-type rider is engine-wide ⏳; the
+  approximation is the strictly-stronger universal -3/-3). Three tests.
+
+**NEW engine primitives + bug fixes:**
+- **`Value::SacrificedToughness` + `GameState.sacrificed_toughness`** —
+  per-resolution scratch field stamped by `Effect::SacrificeAndRemember`
+  alongside `sacrificed_power`. Powers Tribute to Hunger.
+- **CR 603.2 bug fix** — `fire_step_triggers` (`game/stack.rs`) now
+  honors `EventSpec.filter` predicates. Previously, step-begin
+  triggers (Pact-style "if it's your turn", Triskaidekaphile's "if you
+  have exactly 13 cards", Felidar Sovereign's "if you have ≥40 life")
+  fired unconditionally — only the trigger's `kind` + `scope` were
+  checked. Now the filter predicate is re-evaluated against the
+  current game state before the trigger is pushed onto the stack
+  (CR 603.4 intervening-'if' clause, half-implemented — the "check
+  again at resolve time" half is still ⏳).
+- **`graveyard_anthem_for_name` helper-table extension** — added
+  Wonder (Island → Flying), Brawn (Forest → Trample), Valor (Plains
+  → First Strike) alongside the existing Anger (Mountain → Haste).
+  All four STA-cycle Incarnations share one helper-table row each.
+
+Prior sub-push (still on modern_decks): **1 NEW card** (Anger, STA
+reprint) **+ 6 promotions**
 (Conciliator's Duelist ✅ via DelayUntil + CastSpellTarget fallback,
 Light of Promise ✅ via the new `Value::TriggerEventAmount` primitive,
 Thornfist Striker ✅ via the new `lifegain_anthem_for_name` helper,
@@ -1105,6 +1166,16 @@ parity is a matter of porting card factories one at a time.
 | Magmatic Sinkhole (STA reprint) | {1}{B}{R} | ✅ | Push (modern_decks, NEW, `stx::extras`): {1}{B}{R} Sorcery (STA reprint). "Surveil 2, then this deals 4 damage to target creature or planeswalker." The Delve alt-cost from some printings is omitted (no exile-from-gy alt-cost-reduction primitive). Body fully ships the printed primary effect. Test: `magmatic_sinkhole_surveils_and_deals_four_damage`. |
 | Sevinne's Reclamation (STA reprint) | {2}{W} | ✅ | Push (modern_decks, NEW, `stx::extras`): {2}{W} Sorcery (STA reprint, originally Commander 2019). "Return target permanent card with mana value 3 or less from your graveyard to the battlefield. If this spell was cast from a graveyard, copy it twice. You may choose new targets for the copies. / Flashback {5}{W}." The "if cast from a graveyard, copy twice" rider is **fully wired** via the existing `Predicate::CastFromGraveyard` primitive (push: modern_decks) — at hand-cast: 1 reanimation; at flashback-cast: 1 reanimation + 2 copies. Tests: `sevinnes_reclamation_returns_low_mv_permanent_from_graveyard`, `sevinnes_reclamation_rejects_high_mv_target`, `sevinnes_reclamation_has_flashback_keyword`. |
 | Anger (STA reprint) | {2}{R} | ✅ | Push (modern_decks, NEW, `stx::extras`): {2}{R} Creature — Incarnation, 2/2 (Judgment / STA reprint). "Haste / As long as Anger is in your graveyard and you control a Mountain, creatures you control have haste." The graveyard-resident static anthem is **wired** via the new `graveyard_anthem_for_name` helper-table walked by `GameState::compute_battlefield`. While Anger sits in a player's graveyard, the engine emits a layer-6 `AddKeyword(Haste)` continuous effect on every creature the gy-owner controls — but only when the owner also controls at least one Mountain on the battlefield. The Mountainwalk evasion is omitted (no landwalk primitive). Tests: `anger_is_a_three_mana_two_two_incarnation_with_haste`, `anger_in_graveyard_grants_haste_with_mountain`, `anger_in_graveyard_requires_mountain_to_grant_haste`, `anger_only_grants_haste_to_its_owners_creatures`. |
+| Wonder (STA reprint) | {3}{U} | ✅ | Push (modern_decks, NEW, `stx::extras`): {3}{U} Creature — Incarnation, 2/2 (Judgment / STA reprint). "Flying / As long as Wonder is in your graveyard and you control an Island, creatures you control have flying." Same `graveyard_anthem_for_name` helper-table path as Anger — Island → Flying. Tests: `wonder_is_a_four_mana_two_two_flying_incarnation`, `wonder_in_graveyard_grants_flying_with_island`, `wonder_in_graveyard_requires_island_to_grant_flying`. |
+| Brawn (STA reprint) | {2}{G} | ✅ | Push (modern_decks, NEW, `stx::extras`): {2}{G} Creature — Incarnation, 3/3 (Judgment / STA reprint). "Trample / As long as Brawn is in your graveyard and you control a Forest, creatures you control have trample." Same helper-table path as Anger — Forest → Trample. Tests: `brawn_is_a_three_mana_three_three_trample_incarnation`, `brawn_in_graveyard_grants_trample_with_forest`, `brawn_in_graveyard_requires_forest_to_grant_trample`. |
+| Valor (STA reprint) | {1}{W} | ✅ | Push (modern_decks, NEW, `stx::extras`): {1}{W} Creature — Incarnation, 2/2 (Judgment / STA reprint). "First strike / As long as Valor is in your graveyard and you control a Plains, creatures you control have first strike." Same helper-table path as Anger — Plains → First Strike. Tests: `valor_is_a_two_mana_two_two_first_strike_incarnation`, `valor_in_graveyard_grants_first_strike_with_plains`, `valor_in_graveyard_requires_plains_to_grant_first_strike`. |
+| Deep Analysis (STA reprint) | {3}{U} | ✅ | Push (modern_decks, NEW, `stx::extras`): {3}{U} Sorcery (STA reprint, originally Torment). "Target player draws two cards and loses 2 life. / Flashback—{1}{U}, Pay 3 life." Body draws 2 + loses 2 life against the target player. Flashback {1}{U} wired via `Keyword::Flashback`. The "Pay 3 life" additional cost on the flashback path is an engine-wide alt-cost-with-life-cost gap. Tests: `deep_analysis_is_a_four_mana_blue_sorcery_with_flashback`, `_draws_two_and_loses_two_life`, `_can_target_opponent`. |
+| Tribute to Hunger (STA reprint) | {2}{B} | ✅ | Push (modern_decks, NEW, `stx::extras`): {2}{B} Instant (STA reprint, originally Time Spiral). "Target opponent sacrifices a creature. You gain life equal to its toughness." Wired via `Effect::SacrificeAndRemember` + the new `Value::SacrificedToughness` primitive (which reads the `GameState.sacrificed_toughness` scratch field stamped alongside `sacrificed_power`). The auto-picker chooses the opp's cheapest creature. Tests: `tribute_to_hunger_is_a_three_mana_black_instant`, `_sacrifices_opp_creature_and_gains_life_equal_to_toughness`, `_no_creature_to_sac_gives_no_life`. |
+| Kasmina's Transmutation (STA reprint) | {1}{U}{U} | 🟡 | Push (modern_decks, NEW, `stx::extras`): {1}{U}{U} Sorcery (STA reprint, Strixhaven Loyalty). "Target creature loses all abilities and becomes a blue Frog with base power and toughness 1/1 until end of turn." Wired via `Effect::SetBasePT` (same layer-7b primitive as Square Up / Mercurial Transformation). The "loses all abilities" rider is omitted (no clear-abilities continuous primitive — tracked in TODO.md as the `StaticEffect::ClearAbilities` gap, shared with Mercurial Transformation). Tests: `kasminas_transmutation_is_a_three_mana_blue_sorcery`, `_sets_target_to_one_one_eot`. |
+| Crippling Fear (STA reprint) | {3}{B} | 🟡 | Push (modern_decks, NEW, `stx::extras`): {3}{B} Sorcery (STA reprint, originally Conflux). "Choose a creature type. Creatures other than creatures of the chosen type get -3/-3 until end of turn." Approximated as the strictly-stronger universal -3/-3 (every creature gets it, including your own) since the engine has no choose-creature-type primitive. The headline play pattern is a 4-mana wrath that hits everything with toughness ≤ 3. Tests: `crippling_fear_is_a_four_mana_black_sorcery`, `_kills_two_toughness_creatures`, `_does_not_kill_high_toughness_creatures`. |
+| Triskaidekaphile | {1}{U}{U} | ✅ | Push (modern_decks, NEW, `stx::extras`): {1}{U}{U} Creature — Human Wizard, 3/4 (STX 2021). "When this creature enters, draw a card. / You have no maximum hand size. / At the beginning of your upkeep, if you have exactly 13 cards in your hand, you win the game." Wired via three engine primitives: ETB Draw 1 + `Effect::SetNoMaxHandSize` (flips `Player.no_maximum_hand_size`) + upkeep trigger gated on `Predicate::ValueEquals(HandSizeOf(You), Const(13))` resolving `Effect::WinGame { who: You }`. The `EventSpec.filter` predicate is now enforced by `fire_step_triggers` (engine bug fix — CR 603.2 intervening 'if' clause, half-implemented). Tests: `triskaidekaphile_is_a_three_mana_three_four_human_wizard`, `_etb_draws_a_card_and_lifts_max_hand_size`, `_wins_at_upkeep_with_exactly_thirteen_cards`, `_does_not_win_at_upkeep_with_other_hand_size`. |
+| Excellent Education | {2}{W} | ✅ | Push (modern_decks, NEW, `stx::extras`): {2}{W} Sorcery (STX 2021). "Target player gains 4 life and draws a card." Wired as `Seq(GainLife 4 → Target(0), Draw 1 → Target(0))`. Both clauses target the same chosen player. Tests: `excellent_education_gives_target_player_life_and_draw`, `_can_target_opponent`, `_is_a_three_mana_white_sorcery`. |
+| Sproutback Trudge | {3}{G}{G} | ✅ | Push (modern_decks, NEW, `stx::extras`): {3}{G}{G} Creature — Plant, 5/6 (STX 2021). "When this creature enters, you gain X life, where X is the number of creature cards in your graveyard." ETB body reads `Value::CountOf(CardsInZone(You, Graveyard, Creature))`. Tests: `sproutback_trudge_is_a_five_mana_five_six_plant`, `_gains_life_per_creature_in_graveyard`, `_with_empty_graveyard_gains_zero_life`. |
 
 ### Shared / multi-college
 

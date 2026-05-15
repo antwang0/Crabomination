@@ -183,7 +183,13 @@ impl GameState {
     pub(crate) fn fire_step_triggers(&mut self, step: TurnStep) {
         let active = self.active_player_idx;
         let kind = EventKind::StepBegins(step);
-        let mut triggers: Vec<(CardId, Effect, usize)> = self
+        // Collect candidate (source, effect, controller, filter) tuples for
+        // each battlefield permanent's matching trigger. We snapshot the
+        // optional `event.filter` predicate alongside the effect so we can
+        // re-check it after gathering — predicate evaluation needs
+        // `&self.evaluate_predicate(...)` which can't run inside the inner
+        // closure due to the `iter` borrow.
+        let mut candidates: Vec<(CardId, Effect, usize, Option<crate::card::Predicate>)> = self
             .battlefield
             .iter()
             .flat_map(|c| {
@@ -200,7 +206,7 @@ impl GameState {
                         EventScope::AnotherOfYours => false,
                         EventScope::FromYourGraveyard => false, // walked separately below
                     })
-                    .map(|t| (c.id, t.effect.clone(), c.controller))
+                    .map(|t| (c.id, t.effect.clone(), c.controller, t.event.filter.clone()))
             })
             .collect();
         // Walk the active player's graveyard for `FromYourGraveyard`
@@ -211,11 +217,32 @@ impl GameState {
                     if t.event.kind == kind
                         && matches!(t.event.scope, EventScope::FromYourGraveyard)
                     {
-                        triggers.push((c.id, t.effect.clone(), c.owner));
+                        candidates.push((c.id, t.effect.clone(), c.owner, t.event.filter.clone()));
                     }
                 }
             }
         }
+        // CR 603.4 — Intervening 'if' clause: "When the trigger event
+        // occurs, the ability checks whether the stated condition is
+        // true. The ability triggers only if it is; otherwise it does
+        // nothing." Evaluate each trigger's optional `event.filter`
+        // predicate now, before pushing to the stack. Triggers whose
+        // filter fails are dropped (Triskaidekaphile's "if you have
+        // exactly 13 cards in your hand", Felidar Sovereign's "if you
+        // have 40 or more life", Pact-style "if it's your turn", etc.).
+        // The second-half of CR 603.4 — re-check the condition as the
+        // ability resolves — is still ⏳ (tracked in TODO.md).
+        let triggers: Vec<(CardId, Effect, usize)> = candidates
+            .into_iter()
+            .filter(|(src, _eff, ctrl, filter)| {
+                let Some(pred) = filter else { return true };
+                let ctx = crate::game::effects::EffectContext::for_trigger(
+                    *src, *ctrl, None, 0,
+                );
+                self.evaluate_predicate(pred, &ctx)
+            })
+            .map(|(s, e, c, _)| (s, e, c))
+            .collect();
 
         // Drain matching delayed triggers off the queue and queue them up
         // alongside the regular battlefield triggers. Fires-once triggers

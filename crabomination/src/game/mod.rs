@@ -159,6 +159,12 @@ pub struct GameState {
     /// read by `Value::SacrificedPower` (e.g. Thud). Reset between
     /// independent spell/ability resolutions.
     pub(crate) sacrificed_power: Option<i32>,
+    /// Transient: toughness of the most recently sacrificed creature within
+    /// the current effect resolution. Set by `Effect::SacrificeAndRemember`
+    /// alongside `sacrificed_power`; read by `Value::SacrificedToughness`
+    /// (Tribute to Hunger). Reset between independent resolutions.
+    #[serde(default)]
+    pub(crate) sacrificed_toughness: Option<i32>,
     /// Transient: id of the most-recently-created token within the current
     /// effect resolution. Set by `Effect::CreateToken` and read by
     /// `Selector::LastCreatedToken` so a follow-up `AddCounter` /
@@ -261,6 +267,7 @@ impl Clone for GameState {
             spells_cast_this_turn: self.spells_cast_this_turn,
             delayed_triggers: self.delayed_triggers.clone(),
             sacrificed_power: self.sacrificed_power,
+            sacrificed_toughness: self.sacrificed_toughness,
             last_created_token: self.last_created_token,
             cards_discarded_this_resolution: self.cards_discarded_this_resolution,
             creature_cards_discarded_this_resolution: self.creature_cards_discarded_this_resolution,
@@ -303,6 +310,7 @@ impl GameState {
             spells_cast_this_turn: 0,
             delayed_triggers: Vec::new(),
             sacrificed_power: None,
+            sacrificed_toughness: None,
             last_created_token: None,
             cards_discarded_this_resolution: 0,
             creature_cards_discarded_this_resolution: 0,
@@ -1956,12 +1964,18 @@ fn lifegain_selfpump_for_name(
 ///
 /// Current entries:
 /// - Anger (STA reprint, Judgment): controls Mountain → Haste anthem
+/// - Wonder (STA reprint, Judgment): controls Island → Flying anthem
+/// - Brawn (STA reprint, Judgment): controls Forest → Trample anthem
+/// - Valor (STA reprint, Judgment): controls Plains → First Strike anthem
 fn graveyard_anthem_for_name(
     name: &'static str,
 ) -> Option<(crate::card::LandType, crate::card::Keyword)> {
     use crate::card::{Keyword, LandType};
     match name {
         "Anger" => Some((LandType::Mountain, Keyword::Haste)),
+        "Wonder" => Some((LandType::Island, Keyword::Flying)),
+        "Brawn" => Some((LandType::Forest, Keyword::Trample)),
+        "Valor" => Some((LandType::Plains, Keyword::FirstStrike)),
         _ => None,
     }
 }
