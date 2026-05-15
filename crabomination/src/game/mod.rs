@@ -423,6 +423,44 @@ impl GameState {
                     });
                 }
             }
+            // "Infusion — Creatures you control get +P/+T [and gain
+            // keyword] as long as you gained life this turn." anthem
+            // table: lookup at `lifegain_anthem_for_name`. Applies to
+            // every creature the controller has on the battlefield
+            // (including the source — printed "creatures you control"
+            // is inclusive). Same recompute gate as the selfpump table.
+            if let Some((p, t, kws)) = lifegain_anthem_for_name(name)
+                && self.players[card.controller].life_gained_this_turn > 0
+            {
+                all_effects.push(ContinuousEffect {
+                    timestamp: card.id.0 as u64,
+                    source: card.id,
+                    affected: AffectedPermanents::All {
+                        controller: Some(card.controller),
+                        card_types: vec![CardType::Creature],
+                        exclude_source: false,
+                    },
+                    layer: Layer::L7PowerTough,
+                    sublayer: Some(PtSublayer::Modify),
+                    duration: EffectDuration::WhileSourceOnBattlefield,
+                    modification: Modification::ModifyPowerToughness(p, t),
+                });
+                for kw in kws {
+                    all_effects.push(ContinuousEffect {
+                        timestamp: card.id.0 as u64,
+                        source: card.id,
+                        affected: AffectedPermanents::All {
+                            controller: Some(card.controller),
+                            card_types: vec![CardType::Creature],
+                            exclude_source: false,
+                        },
+                        layer: Layer::L6Ability,
+                        sublayer: None,
+                        duration: EffectDuration::WhileSourceOnBattlefield,
+                        modification: Modification::AddKeyword(kw.clone()),
+                    });
+                }
+            }
             // "As long as this permanent has ≥ K [counter] counters on
             // it, [your] creatures get +P/+T" anthem consolidation. The
             // gate evaluates the source's own counter pool every layer
@@ -1848,6 +1886,29 @@ fn lifegain_selfpump_for_name(
     match name {
         "Honor Troll" => Some((2, 0, HONOR_TROLL_KWS)),
         "Ulna Alley Shopkeep" => Some((2, 0, NO_KWS)),
+        "Tenured Concocter" => Some((2, 0, NO_KWS)),
+        _ => None,
+    }
+}
+
+/// Compute-time conditional "Infusion anthem" table: cards whose
+/// printed Oracle is "Infusion — Creatures you control get +P/+T
+/// [and gain keyword(s)] as long as you've gained life this turn."
+/// Different from `lifegain_selfpump_for_name` in that the pump
+/// applies to every creature the controller has on the battlefield
+/// (including the source — matching the printed "creatures you
+/// control" wording, which is inclusive). The gate evaluates the
+/// controller's `life_gained_this_turn` tally every layer recompute.
+///
+/// Current entries:
+/// - Thornfist Striker (SOS): +1/+0 and Trample
+fn lifegain_anthem_for_name(
+    name: &'static str,
+) -> Option<(i32, i32, &'static [crate::card::Keyword])> {
+    use crate::card::Keyword;
+    static TRAMPLE_KWS: &[Keyword] = &[Keyword::Trample];
+    match name {
+        "Thornfist Striker" => Some((1, 0, TRAMPLE_KWS)),
         _ => None,
     }
 }

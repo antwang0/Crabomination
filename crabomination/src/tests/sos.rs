@@ -2580,6 +2580,27 @@ fn tenured_concocter_is_vigilant_4_5_troll_druid() {
     assert!(card.has_creature_type(crate::card::CreatureType::Druid));
 }
 
+#[test]
+fn tenured_concocter_infusion_pumps_self_when_life_gained() {
+    // Push (modern_decks): the Infusion "+2/+0 as long as you gained life
+    // this turn" self-pump is now wired via the `lifegain_selfpump_for_name`
+    // helper table (same pattern as Honor Troll / Ulna Alley Shopkeep).
+    let mut g = two_player_game();
+    let conc = g.add_card_to_battlefield(0, catalog::tenured_concocter());
+    g.clear_sickness(conc);
+
+    // No lifegain: stays at base 4/5.
+    let base = g.computed_permanent(conc).unwrap();
+    assert_eq!(base.power, 4);
+    assert_eq!(base.toughness, 5);
+
+    // With lifegain: 6/5.
+    g.players[0].life_gained_this_turn = 3;
+    let pumped = g.computed_permanent(conc).unwrap();
+    assert_eq!(pumped.power, 6, "Tenured Concocter Infusion: +2/+0 when life gained");
+    assert_eq!(pumped.toughness, 5);
+}
+
 // ── Traumatic Critique ──────────────────────────────────────────────────────
 
 #[test]
@@ -6804,6 +6825,51 @@ fn thornfist_striker_is_3_3_with_ward_one() {
     assert!(def.keywords.iter().any(|k| matches!(k, Keyword::Ward(1))));
     assert!(def.subtypes.creature_types.contains(&crate::card::CreatureType::Elf));
     assert!(def.subtypes.creature_types.contains(&crate::card::CreatureType::Druid));
+}
+
+#[test]
+fn thornfist_striker_infusion_pumps_friendly_creatures_when_life_gained() {
+    // Push (modern_decks): Infusion lifegain-anthem now wired via the new
+    // `lifegain_anthem_for_name` compute-time injection. When the controller
+    // has gained life this turn, the Striker grants +1/+0 and Trample to
+    // every creature they control (including the Striker itself).
+    let mut g = two_player_game();
+    let striker = g.add_card_to_battlefield(0, catalog::thornfist_striker());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(striker);
+    g.clear_sickness(bear);
+
+    // Without lifegain: bear is a vanilla 2/2 with no trample.
+    let bear_base = g.computed_permanent(bear).unwrap();
+    assert_eq!(bear_base.power, 2, "bear is 2/2 without lifegain");
+    assert!(!bear_base.keywords.contains(&Keyword::Trample),
+        "bear has no trample without lifegain");
+
+    // After lifegain: bear is 3/2 with trample.
+    g.players[0].life_gained_this_turn = 1;
+    let bear_pumped = g.computed_permanent(bear).unwrap();
+    assert_eq!(bear_pumped.power, 3, "bear is 3/2 with lifegain");
+    assert!(bear_pumped.keywords.contains(&Keyword::Trample),
+        "bear gains trample with lifegain");
+    let striker_pumped = g.computed_permanent(striker).unwrap();
+    assert_eq!(striker_pumped.power, 4, "striker is 4/3 with lifegain (3+1)");
+    assert!(striker_pumped.keywords.contains(&Keyword::Trample),
+        "striker also gets trample (inclusive 'creatures you control')");
+}
+
+#[test]
+fn thornfist_striker_infusion_does_not_buff_opponent_creatures() {
+    // The anthem is keyed off the controller's life_gained_this_turn and
+    // only buffs the Striker controller's creatures.
+    let mut g = two_player_game();
+    let _striker = g.add_card_to_battlefield(0, catalog::thornfist_striker());
+    let opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.players[0].life_gained_this_turn = 5;
+
+    let opp_pt = g.computed_permanent(opp_bear).unwrap();
+    assert_eq!(opp_pt.power, 2, "opp bear unaffected by friendly anthem");
+    assert!(!opp_pt.keywords.contains(&Keyword::Trample),
+        "opp bear does not gain trample");
 }
 
 #[test]
