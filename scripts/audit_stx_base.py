@@ -121,12 +121,18 @@ doc_card_names = set(status_by_card)
 
 def doc_name_matches_catalog(name: str) -> bool:
     """A doc row matches the catalog if either the full row name or any
-    `//`-separated half (MDFC) is present in the catalog source."""
-    if name in catalog_strings:
-        return True
-    for half in name.split("//"):
-        if half.strip() in catalog_strings:
+    `//`-separated half (MDFC) is present in the catalog source. Also
+    strips trailing parenthetical annotations like "(STA reprint)" so
+    that doc rows with provenance notes still match the catalog string."""
+    # Strip trailing parenthetical (e.g., "Mizzium Mortars (STA reprint)").
+    bare = re.sub(r"\s*\([^)]*\)\s*$", "", name).strip()
+    candidates = [name, bare]
+    for n in candidates:
+        if n in catalog_strings:
             return True
+        for half in n.split("//"):
+            if half.strip() in catalog_strings:
+                return True
     return False
 
 

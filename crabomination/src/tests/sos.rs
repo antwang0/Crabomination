@@ -5149,7 +5149,11 @@ fn homesickness_taps_and_stuns_two_creatures() {
 }
 
 #[test]
-fn fractalize_pumps_target_creature() {
+fn fractalize_sets_target_to_x_plus_one_base() {
+    // Push (modern_decks): Fractalize now uses `Effect::SetBasePT` to
+    // overwrite the target's base P/T to (X+1)/(X+1) for the turn —
+    // not a +N pump. So a Grizzly Bears (2/2) at X=3 becomes a
+    // 4/4 (base 0/0 → set to 4/4) until end of turn.
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let id = g.add_card_to_hand(0, catalog::fractalize());
@@ -5163,10 +5167,37 @@ fn fractalize_pumps_target_creature() {
     .expect("Fractalize castable for {X=3}{U}");
     drain_stack(&mut g);
 
-    let bear_card = g.battlefield.iter().find(|c| c.id == bear).expect("bear on bf");
-    // Base 2/2 + (X+1)/(X+1) = +4/+4 -> 6/6.
-    assert_eq!(bear_card.power(), 6, "bear pumped to 6 power");
-    assert_eq!(bear_card.toughness(), 6, "bear pumped to 6 toughness");
+    let cv = g.computed_permanent(bear).expect("bear computed");
+    // Base reset to 4/4 (X+1 = 4) — Square-Up-style base override.
+    assert_eq!(cv.power, 4, "bear's base P set to X+1 = 4");
+    assert_eq!(cv.toughness, 4, "bear's base T set to X+1 = 4");
+}
+
+#[test]
+fn fractalize_layers_under_plus_one_counters() {
+    // A creature with a +1/+1 counter, after Fractalize at X=2, should
+    // be 3/3 base + 1/1 counter = 4/4 (layers: 7b SetBasePT applies
+    // first, then 7c counters add on top per CR 613.7c-f).
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // Place a +1/+1 counter on the bear directly.
+    if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == bear) {
+        c.add_counters(CounterType::PlusOnePlusOne, 1);
+    }
+    let id = g.add_card_to_hand(0, catalog::fractalize());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: Some(2),
+    })
+    .expect("Fractalize castable for {X=2}{U}");
+    drain_stack(&mut g);
+
+    let cv = g.computed_permanent(bear).expect("bear computed");
+    // Base set to 3/3 (X+1 = 3) + 1/1 counter = 4/4.
+    assert_eq!(cv.power, 4, "bear at base 3 + 1 counter = 4 power");
+    assert_eq!(cv.toughness, 4, "bear at base 3 + 1 counter = 4 toughness");
 }
 
 #[test]
