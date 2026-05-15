@@ -807,6 +807,46 @@ status tag (✅ wired, 🟡 partial, ⏳ todo) plus a short note.
 
 ## Suggested next-up tasks
 
+- ✅ **`Selector::DiscardedThisResolution { filter }` — discarded-card
+  tracker** (push modern_decks): tracks discarded card ids in
+  `GameState.discarded_card_ids_this_resolution` and exposes them as a
+  selector for follow-up effects. Both `Effect::Discard` branches
+  (random + player-chosen) append to the list; reset at the start of
+  each resolution. Wires Mind Roots's "Put up to one land card
+  discarded this way onto the battlefield tapped" rider exactly. Same
+  primitive unlocks any future "exile/draw/play a card discarded this
+  way" effect (Eldraine's Charming Princess, the Trash for Treasure
+  cycle, etc.).
+
+- ✅ **`Value::TriggerEventAmount` — per-event amount in trigger
+  bodies** (push modern_decks): the trigger dispatcher
+  (`dispatch_triggers_for_events`) extracts the firing event's
+  `amount` (LifeGained, LifeLost, DamageDealt, PoisonAdded,
+  CounterAdded), threads it onto `StackItem::Trigger.event_amount`,
+  and pipes it to `EffectContext.event_amount`. Resolving trigger
+  bodies read it via `Value::TriggerEventAmount`. Wires Light of
+  Promise's "that many" rider faithfully. Same primitive unblocks
+  any "that many"-style trigger payoff (Crested Sunmare-class,
+  Aetherflux-with-damage-Reservoir variants).
+
+- ✅ **`Effect::DelayUntil` fallback to `Selector::CastSpellTarget(0)`**
+  (push modern_decks): when the trigger context has empty
+  `ctx.targets` (the Repartee / spell-cast-trigger shape), the
+  DelayUntil capture walks the stack for the just-cast spell's
+  slot-0 target. Wires Conciliator's Duelist's "return at next end
+  step" delayed-Repartee rider.
+
+- ✅ **Graveyard-resident static-anthem helper-table**
+  (push modern_decks): `graveyard_anthem_for_name` returns
+  `(LandType, Keyword)` for cards like Anger / Wonder / Filth whose
+  printed Oracle is "As long as [this card] is in your graveyard and
+  you control a [Land subtype], creatures you control have
+  [keyword]." `compute_battlefield` walks each player's graveyard,
+  looks up matches, gates on land-subtype control, and emits a
+  continuous `AddKeyword` effect on the gy owner's creatures.
+  Currently only Anger is wired; the other Judgment Incarnations
+  can plug in via single-row additions.
+
 - ⏳ **`Predicate::ManaValueAtMostV(Value)` — value-keyed mana-value
   filter** (suggested by push modern_decks's Mind into Matter +
   Sundering Archaic gaps) — both cards want a target / candidate
