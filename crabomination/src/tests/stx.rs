@@ -8425,3 +8425,352 @@ fn witherbloom_drainage_drains_each_opp_two() {
     assert_eq!(g.players[1].life, p1_before - 2, "opp loses 2 life");
     assert_eq!(g.players[0].life, p0_before + 2, "you gain 2 life");
 }
+
+// ── Mizzium Mortars (STA reprint, RTR) ─────────────────────────────────────
+
+#[test]
+fn mizzium_mortars_burns_target_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::mizzium_mortars());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Mizzium Mortars castable for {1}{R}");
+    drain_stack(&mut g);
+
+    assert!(
+        !g.battlefield.iter().any(|c| c.id == bear),
+        "Bear destroyed by 4 damage from Mizzium Mortars"
+    );
+}
+
+#[test]
+fn mizzium_mortars_is_a_two_mana_red_sorcery() {
+    use crate::card::CardType;
+    let def = catalog::mizzium_mortars();
+    assert_eq!(def.name, "Mizzium Mortars");
+    assert!(def.card_types.contains(&CardType::Sorcery));
+    assert_eq!(def.cost.cmc(), 2, "{{1}}{{R}} has mana value 2");
+}
+
+// ── Electrolyze (STA reprint, Guildpact) ───────────────────────────────────
+
+#[test]
+fn electrolyze_deals_two_damage_and_draws() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::island());
+    let id = g.add_card_to_hand(0, catalog::electrolyze());
+    let hand_before = g.players[0].hand.len();
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Electrolyze castable for {1}{U}{R}");
+    drain_stack(&mut g);
+
+    // Bear took 2 damage — a 2/2 dies to 2.
+    assert!(
+        !g.battlefield.iter().any(|c| c.id == bear),
+        "Bear destroyed by 2 damage from Electrolyze"
+    );
+    // Caster drew a card: hand went from before+1(electrolyze) → before
+    // (cast removed) +1 (draw) = before+0. We need to net -1 (cast) +1
+    // (draw) = +0 vs hand_before which includes the card itself.
+    assert_eq!(
+        g.players[0].hand.len(),
+        hand_before,
+        "Electrolyze trades the cast card for a draw"
+    );
+}
+
+#[test]
+fn electrolyze_targets_a_player_for_two_damage() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let id = g.add_card_to_hand(0, catalog::electrolyze());
+    let p1_life_before = g.players[1].life;
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Electrolyze targetable at a player");
+    drain_stack(&mut g);
+
+    assert_eq!(
+        g.players[1].life,
+        p1_life_before - 2,
+        "Opp loses 2 life from Electrolyze"
+    );
+}
+
+// ── Show of Aggression (STX 2021) ──────────────────────────────────────────
+
+#[test]
+fn show_of_aggression_pumps_each_friendly_creature_and_grants_haste() {
+    let mut g = two_player_game();
+    let bear1 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let bear2 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::show_of_aggression());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(2);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Show of Aggression castable for {2}{R}{R}");
+    drain_stack(&mut g);
+
+    // Both friendly bears now 4/2 with haste.
+    for bid in [bear1, bear2] {
+        let bv = g.battlefield_find(bid).expect("bear still alive");
+        let cv = g.computed_permanent(bid).expect("bear computed");
+        assert_eq!(
+            cv.power, 4,
+            "bear {:?} should be 4/2 (+2/+0 from Show of Aggression), got P/T {}/{}",
+            bid, bv.power(), bv.toughness()
+        );
+        assert!(
+            cv.keywords.contains(&Keyword::Haste),
+            "bear {:?} should have Haste from Show of Aggression",
+            bid
+        );
+    }
+    // Opp bear unchanged.
+    let opp = g.computed_permanent(opp_bear).expect("opp bear computed");
+    assert_eq!(opp.power, 2, "opp bear stays 2/2");
+    assert!(!opp.keywords.contains(&Keyword::Haste), "no haste for opp");
+}
+
+// ── Past in Flames (STA reprint, Innistrad) ────────────────────────────────
+
+#[test]
+fn past_in_flames_returns_instants_and_sorceries_from_graveyard_to_hand() {
+    let mut g = two_player_game();
+    // Two instants in graveyard.
+    let _bolt1 = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    let _bolt2 = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    // A non-IS card (creature) in gy — should NOT come back.
+    let _bear_in_gy = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::past_in_flames());
+    let hand_before = g.players[0].hand.len();
+    let gy_before = g.players[0].graveyard.len();
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Past in Flames castable for {3}{R}");
+    drain_stack(&mut g);
+
+    // -1 (cast) + 2 (bolts returned) = +1 vs hand_before.
+    assert_eq!(g.players[0].hand.len(), hand_before + 1);
+    // gy: -2 (bolts left) +1 (Past in Flames went to gy after resolving) = -1.
+    assert_eq!(g.players[0].graveyard.len(), gy_before - 1);
+    // Verify bear stayed in graveyard.
+    let bear_in_zone = g
+        .players[0]
+        .graveyard
+        .iter()
+        .any(|c| c.definition.name == "Grizzly Bears");
+    assert!(bear_in_zone, "Grizzly Bears (non-IS) stays in graveyard");
+}
+
+#[test]
+fn past_in_flames_has_flashback_keyword() {
+    use crate::card::Keyword;
+    let def = catalog::past_in_flames();
+    assert!(
+        def.keywords.iter().any(|k| matches!(k, Keyword::Flashback(_))),
+        "Past in Flames has Flashback"
+    );
+}
+
+// ── Inspired Idea ──────────────────────────────────────────────────────────
+
+#[test]
+fn inspired_idea_draws_three_then_stacks_two_on_top() {
+    let mut g = two_player_game();
+    for _ in 0..5 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let id = g.add_card_to_hand(0, catalog::inspired_idea());
+    let hand_before = g.players[0].hand.len();
+    let lib_before = g.players[0].library.len();
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Inspired Idea castable for {1}{U}{U}");
+    drain_stack(&mut g);
+
+    // Hand: -1 (cast) +3 (draw) -2 (top of library) = +0 vs hand_before.
+    assert_eq!(
+        g.players[0].hand.len(),
+        hand_before,
+        "Net hand: -1 cast + 3 draws - 2 to top of library"
+    );
+    // Library: -3 (drawn) +2 (returned) = -1 vs lib_before.
+    assert_eq!(g.players[0].library.len(), lib_before - 1);
+}
+
+// ── Resurgent Belief ───────────────────────────────────────────────────────
+
+#[test]
+fn resurgent_belief_returns_each_enchantment_from_graveyard() {
+    let mut g = two_player_game();
+    // Two enchantment cards in graveyard.
+    // Living History is enchantment with an ETB Spirit-token trigger.
+    let _ench1 = g.add_card_to_graveyard(0, catalog::living_history());
+    let _ench2 = g.add_card_to_graveyard(0, catalog::living_history());
+    // A non-enchantment in gy.
+    let _bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::resurgent_belief());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+
+    let gy_size_before = g.players[0].graveyard.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Resurgent Belief castable for {3}{W}");
+    drain_stack(&mut g);
+
+    // Both enchantments left graveyard (Living History each has an ETB
+    // Spirit token rider, so the battlefield can grow by 2 to 4). We
+    // assert via graveyard delta: gy lost 2 enchantments and gained
+    // Resurgent Belief itself (sorcery), net -1.
+    assert_eq!(
+        g.players[0].graveyard.len(),
+        gy_size_before - 1,
+        "gy size: -2 enchantments + 1 sorcery (Resurgent Belief) = -1"
+    );
+    // Bear stayed in graveyard.
+    assert!(
+        g.players[0]
+            .graveyard
+            .iter()
+            .any(|c| c.definition.name == "Grizzly Bears"),
+        "Grizzly Bears (non-enchantment) stays in graveyard"
+    );
+    // Both enchantments are on the battlefield now.
+    let ench_on_bf = g
+        .battlefield
+        .iter()
+        .filter(|c| c.controller == 0 && c.definition.name == "Living History")
+        .count();
+    assert_eq!(ench_on_bf, 2, "both Living History copies returned to bf");
+}
+
+// ── Academic Dispute ───────────────────────────────────────────────────────
+
+#[test]
+fn academic_dispute_pumps_friendly_and_fights_opp_creature() {
+    let mut g = two_player_game();
+    let friendly = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(friendly);
+    let _opp = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::island());
+    let id = g.add_card_to_hand(0, catalog::academic_dispute());
+    g.players[0].mana_pool.add(Color::Red, 1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(friendly)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Academic Dispute castable for {R}");
+    drain_stack(&mut g);
+
+    // Both bears took damage — opp's 2/2 took 3 (friendly with +1/+0 = 3 power)
+    // and dies; friendly took 2 (opp's 2 power) and dies.
+    let friendly_alive = g.battlefield.iter().any(|c| c.id == friendly);
+    assert!(!friendly_alive, "Friendly bear (2/2 + 1/0 = 3/2) dies to 2 dmg");
+}
+
+// ── Enthusiastic Study ─────────────────────────────────────────────────────
+
+#[test]
+fn enthusiastic_study_pumps_target_creature_and_grants_trample_after_second_spell() {
+    // After casting Enthusiastic Study as the second spell of the turn,
+    // the +2/+2 lands AND the trample rider fires.
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.players[0].spells_cast_this_turn = 1; // Pretend we already cast something
+    let id = g.add_card_to_hand(0, catalog::enthusiastic_study());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Enthusiastic Study castable for {1}{G}");
+    drain_stack(&mut g);
+
+    let cv = g.computed_permanent(bear).expect("bear computed");
+    assert_eq!(cv.power, 4, "bear pumped to 4/4 (+2/+2)");
+    assert_eq!(cv.toughness, 4, "bear pumped to 4/4 (+2/+2)");
+    assert!(
+        cv.keywords.contains(&Keyword::Trample),
+        "trample granted (second spell this turn)"
+    );
+}
+
+#[test]
+fn enthusiastic_study_skips_trample_on_first_spell_this_turn() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // spells_cast_this_turn = 0 — Enthusiastic Study is the first spell.
+    let id = g.add_card_to_hand(0, catalog::enthusiastic_study());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Enthusiastic Study castable for {1}{G}");
+    drain_stack(&mut g);
+
+    let cv = g.computed_permanent(bear).expect("bear computed");
+    assert_eq!(cv.power, 4, "bear still pumped to 4/4 (+2/+2)");
+    assert!(
+        !cv.keywords.contains(&Keyword::Trample),
+        "no trample on the first spell of the turn"
+    );
+}

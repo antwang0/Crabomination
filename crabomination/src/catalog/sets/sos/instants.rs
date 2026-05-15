@@ -1533,13 +1533,15 @@ pub fn silverquill_charm() -> CardDefinition {
 ///    "another instant or sorcery"). Pumps the chosen target friendly
 ///    creature +1/+0 EOT.
 /// 2. Power-as-damage: deal `Value::PowerOf(target)` damage to the
-///    *same* target slot. The 2-target prompt for an opponent's
-///    creature is collapsed to "self-damage" — auto-targeter prefers
-///    the friendly creature pump first; the spell ends up dealing its
-///    new power as damage to itself rather than to an opp creature.
-///    The single-target gap is logged in TODO.md under "Multi-Target
-///    Prompt for Sorceries / Instants" and matches the Cost of
-///    Brilliance / Render Speechless approximation pattern.
+///    chosen opp creature target (slot 1). The optional opp-creature
+///    slot uses `Selector::TargetFiltered { slot: 1, ... }` so when
+///    only slot 0 is provided, the damage half resolves to no-op.
+///
+/// Push (modern_decks): promoted from "self-damage approximation" to
+/// the printed two-slot shape via `Selector::TargetFiltered`. Slot 0 =
+/// the friendly creature to pump; slot 1 = the opp creature to take
+/// the power-as-damage. AutoDecider currently fills slot 0 only; the
+/// scripted tests can supply slot 1.
 pub fn burrog_barrage() -> CardDefinition {
     use crate::card::Predicate;
     use crate::mana::g;
@@ -1569,8 +1571,16 @@ pub fn burrog_barrage() -> CardDefinition {
                 }),
                 else_: Box::new(Effect::Noop),
             },
+            // Slot 1: optional opp creature target gets damage equal to
+            // slot 0's power. When slot 1 isn't provided the damage half
+            // resolves to no-op via TargetFiltered's empty-selector
+            // behaviour.
             Effect::DealDamage {
-                to: Selector::Target(0),
+                to: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByOpponent),
+                },
                 amount: Value::PowerOf(Box::new(Selector::Target(0))),
             },
         ]),

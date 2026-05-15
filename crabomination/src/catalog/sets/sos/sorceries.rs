@@ -2129,15 +2129,17 @@ pub fn artistic_process() -> CardDefinition {
 /// you may cast a copy of it from exile without paying its mana cost
 /// at the beginning of each of your first main phases.)"
 ///
-/// Approximation: the printed effect is "*target player* draws two and
-/// loses 2 life" — Diabolic Sleight-style asymmetric lesson. Today the
-/// engine has no multi-target prompt, so we collapse the target slot
-/// to **the caster** (you draw two; you lose 2 — same net "draw 2 lose
-/// 2"). The Paradigm rider is omitted (no copy-spell-from-exile-at-
-/// upkeep primitive). The Lesson tag is informational; learn pulls in
-/// SOS just exile the lesson and resolve it as a sorcery, which is
-/// exactly the same flow as casting it from hand.
+/// Push (modern_decks): now targets a player via `target_filtered(Player)`
+/// — same pattern as Cost of Brilliance. The caster's auto-decider aims
+/// at self by default for the draw-2 + 2-life-loss net (matching the
+/// printed asymmetric symmetric: you eat the life cost but cash in two
+/// cards; or aim at an opp to drain 2 life from them at the cost of
+/// giving them two cards — rarely correct). The Paradigm rider is
+/// omitted (no copy-spell-from-exile-at-upkeep primitive yet — same gap
+/// as Germination Practicum, Improvisation Capstone, Echocasting
+/// Symposium).
 pub fn decorum_dissertation() -> CardDefinition {
+    use crate::effect::shortcut::target_filtered;
     CardDefinition {
         name: "Decorum Dissertation",
         cost: cost(&[generic(3), b(), b()]),
@@ -2149,11 +2151,11 @@ pub fn decorum_dissertation() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::Draw {
-                who: Selector::You,
+                who: target_filtered(SelectionRequirement::Player),
                 amount: Value::Const(2),
             },
             Effect::LoseLife {
-                who: Selector::You,
+                who: Selector::Target(0),
                 amount: Value::Const(2),
             },
         ]),

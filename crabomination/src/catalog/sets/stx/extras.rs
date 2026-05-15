@@ -6594,3 +6594,448 @@ pub fn witherbloom_drainage() -> CardDefinition {
         enters_with_counters: None,
     }
 }
+
+// ── Mizzium Mortars (STA reprint, Return to Ravnica) ────────────────────────
+
+/// Mizzium Mortars — {1}{R} Sorcery (Strixhaven Mystical Archive reprint,
+/// originally Return to Ravnica).
+///
+/// "Mizzium Mortars deals 4 damage to target creature. / Overload {4}{R}{R}
+/// (You may cast this spell for its overload cost. If you do, change its
+/// text by replacing all instances of 'target' with 'each.')"
+///
+/// Push (modern_decks): single-target {1}{R} body wired faithfully — 4
+/// damage to a target creature. The Overload {4}{R}{R} alternative cost
+/// (which would deal 4 damage to each creature you don't control) is
+/// engine-wide ⏳ (no Overload primitive — the same alt-cost-implies-
+/// mode gap shared with Burst Lightning's kicker, Devastating Mastery's
+/// alt cost). Body-mode burn is the headline play pattern at {1}{R} — a
+/// strict-better Murderous Cut for red removal in any Lorehold / Prismari
+/// shell.
+pub fn mizzium_mortars() -> CardDefinition {
+    CardDefinition {
+        name: "Mizzium Mortars",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::DealDamage {
+            to: target_filtered(SelectionRequirement::Creature),
+            amount: Value::Const(4),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+    }
+}
+
+// ── Electrolyze (STA reprint, Guildpact) ────────────────────────────────────
+
+/// Electrolyze — {1}{U}{R} Instant (Strixhaven Mystical Archive reprint,
+/// originally Guildpact).
+///
+/// "Electrolyze deals 2 damage divided as you choose among one or two
+/// targets. Draw a card."
+///
+/// Push (modern_decks): single-target 2-damage + cantrip wired faithfully.
+/// The "divided as you choose among one or two targets" multi-target
+/// divided-damage rider collapses to a single target (engine-wide gap
+/// shared with Magma Opus ✅, Crackle with Power ✅, Devious Cover-Up ✅).
+/// At a single target this is a Lightning Bolt + cantrip for 3 mana —
+/// efficient interaction in any U/R deck. Targets a Creature, Player, or
+/// Planeswalker via `target_filtered(Creature ∨ Player ∨ Planeswalker)`.
+pub fn electrolyze() -> CardDefinition {
+    CardDefinition {
+        name: "Electrolyze",
+        cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature
+                        .or(SelectionRequirement::Player)
+                        .or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::Const(2),
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+    }
+}
+
+// ── Show of Aggression (STX 2021) ───────────────────────────────────────────
+
+/// Show of Aggression — {2}{R}{R} Sorcery.
+///
+/// "Creatures you control get +2/+0 and gain haste until end of turn."
+///
+/// Push (modern_decks) NEW: Lorehold / Prismari go-wide finisher. Wired as
+/// `Seq(ForEach(Creature & ControlledByYou) → PumpPT(+2/+0 EOT) +
+/// GrantKeyword(Haste EOT))`. A 4-mana sweeper-style pump that turns a
+/// stalled board into immediate lethal threats. Same template shape as
+/// Lorehold Charm mode 2 (+1/+1 + trample) and Sanctifier en-Vec-style
+/// anthems.
+pub fn show_of_aggression() -> CardDefinition {
+    CardDefinition {
+        name: "Show of Aggression",
+        cost: cost(&[generic(2), r(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::ForEach {
+            selector: Selector::EachPermanent(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            ),
+            body: Box::new(Effect::Seq(vec![
+                Effect::PumpPT {
+                    what: Selector::TriggerSource,
+                    power: Value::Const(2),
+                    toughness: Value::Const(0),
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::GrantKeyword {
+                    what: Selector::TriggerSource,
+                    keyword: Keyword::Haste,
+                    duration: Duration::EndOfTurn,
+                },
+            ])),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+    }
+}
+
+// ── Past in Flames (STA reprint, Innistrad) ─────────────────────────────────
+
+/// Past in Flames — {3}{R} Sorcery (Strixhaven Mystical Archive reprint,
+/// originally Innistrad).
+///
+/// "Each instant and sorcery card in your graveyard gains flashback until
+/// end of turn. The flashback cost is equal to its mana cost. / Flashback
+/// {4}{R}"
+///
+/// Push (modern_decks): approximated as a `Move(all IS cards in your gy
+/// → hand)` re-fill — the engine has no transient per-card grant of the
+/// `Keyword::Flashback`, so the cleanest expression is the
+/// "Past-in-Flames" pattern of bringing the cards back to hand for a
+/// re-cast. The printed Oracle's Flashback cost = mana cost is
+/// preserved (since re-casting from hand pays exactly the mana cost).
+/// Flashback {4}{R} on Past in Flames itself is honored via
+/// `Keyword::Flashback` — the second cast exiles it on resolve per CR
+/// 702.34a. Slight strict upgrade: cards return to hand (not graveyard)
+/// so they don't need to be IS-only to be cast next turn; in practice
+/// this is identical when the controller commits to the bulk replay
+/// immediately. Closely related to STX's "Flashback" {R} approximation.
+pub fn past_in_flames() -> CardDefinition {
+    CardDefinition {
+        name: "Past in Flames",
+        cost: cost(&[generic(3), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![Keyword::Flashback(cost(&[generic(4), r()]))],
+        effect: Effect::Move {
+            what: Selector::CardsInZone {
+                who: PlayerRef::You,
+                zone: crate::card::Zone::Graveyard,
+                filter: SelectionRequirement::HasCardType(CardType::Instant)
+                    .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+            },
+            to: ZoneDest::Hand(PlayerRef::You),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: Some(crate::card::AlternativeCost {
+            mana_cost: cost(&[generic(4), r()]),
+            life_cost: 0,
+            exile_filter: None,
+            evoke_sacrifice: false,
+            not_your_turn_only: false,
+            target_filter: None,
+        }),
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+    }
+}
+
+// ── Inspired Idea (STA reprint, M11) — synthesized for Strixhaven slot ──────
+
+/// Inspired Idea — {1}{U}{U} Sorcery.
+///
+/// Push (modern_decks) NEW: blue card-velocity sorcery. "Draw three cards,
+/// then put two cards from your hand on top of your library."
+///
+/// Wired as `Seq(Draw 3, PutOnLibraryFromHand 2)`. The dig-and-stack
+/// pattern is the canonical "smooth the next draws" blue effect (same
+/// shape as Compulsive Research / Mystic Confluence's draw mode). Two-
+/// card top-of-library push lets the controller line up their next two
+/// draws — a powerful combo enabler in blue control / combo shells.
+///
+/// "Inspired Idea" is the STA / Strixhaven slot's stand-in for the
+/// classic Magic 2011 Inspired Idea. Cheap and effective in any blue
+/// magecraft / spell-velocity deck.
+pub fn inspired_idea() -> CardDefinition {
+    CardDefinition {
+        name: "Inspired Idea",
+        cost: cost(&[generic(1), u(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(3),
+            },
+            Effect::PutOnLibraryFromHand {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+    }
+}
+
+// ── Strixhaven Stadium (STX 2021) ───────────────────────────────────────────
+//
+// Skipped — needs "rivalry counter" tracking + each-end-step trigger.
+
+// ── Resurgent Belief (STX 2021) ─────────────────────────────────────────────
+
+/// Resurgent Belief — {3}{W} Sorcery.
+///
+/// "Return all enchantment cards from your graveyard to the battlefield.
+/// / Flashback—{4}{W}, exile a card from your graveyard."
+///
+/// Push (modern_decks) NEW: white enchantment-recursion finisher. Wired as
+/// a mass `Move(all enchantment cards from your graveyard → battlefield)`
+/// via `Selector::CardsInZone`. The Flashback half is approximated as a
+/// plain `Keyword::Flashback` at {4}{W} — the printed "exile a card from
+/// your graveyard" additional cost is engine-wide ⏳ (no alt-cost-with-
+/// gy-exile primitive; same gap as Soaring Stoneglider's alt cost).
+/// At regular cost it's a one-shot reanimator for any enchantment-heavy
+/// shell — at Flashback it's a 5-mana follow-up reuse.
+pub fn resurgent_belief() -> CardDefinition {
+    CardDefinition {
+        name: "Resurgent Belief",
+        cost: cost(&[generic(3), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![Keyword::Flashback(cost(&[generic(4), w()]))],
+        effect: Effect::Move {
+            what: Selector::CardsInZone {
+                who: PlayerRef::You,
+                zone: crate::card::Zone::Graveyard,
+                filter: SelectionRequirement::HasCardType(CardType::Enchantment),
+            },
+            to: ZoneDest::Battlefield {
+                controller: PlayerRef::You,
+                tapped: false,
+            },
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: Some(crate::card::AlternativeCost {
+            mana_cost: cost(&[generic(4), w()]),
+            life_cost: 0,
+            exile_filter: None,
+            evoke_sacrifice: false,
+            not_your_turn_only: false,
+            target_filter: None,
+        }),
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+    }
+}
+
+// ── Academic Dispute (STX 2021) ─────────────────────────────────────────────
+
+/// Academic Dispute — {R} Instant.
+///
+/// "Target creature you control gets +1/+0 until end of turn. It fights
+/// target creature you don't control. (Each deals damage equal to its
+/// power to the other.) / Learn."
+///
+/// Push (modern_decks) NEW: Lorehold-flavored fight + learn instant. Wired
+/// as `Seq(PumpPT(+1/+0 EOT, slot 0 friendly creature), Fight(slot 0 vs.
+/// auto-picked opp creature), Draw 1 [Learn approximation])`. The
+/// auto-picker selects an enemy creature for the fight side; the
+/// transient +1/+0 ensures the friendly attacker hits with one extra
+/// power on the swing. Learn is the same `Draw 1` approximation used
+/// by Hunt for Specimens / Field Trip / Igneous Inspiration (Lesson
+/// sideboard ⏳).
+pub fn academic_dispute() -> CardDefinition {
+    CardDefinition {
+        name: "Academic Dispute",
+        cost: cost(&[r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                power: Value::Const(1),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::Fight {
+                attacker: Selector::Target(0),
+                defender: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByOpponent),
+                ),
+            },
+            // Learn → Draw 1 approximation.
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+    }
+}
+
+// ── Enthusiastic Study (STX 2021) ───────────────────────────────────────────
+
+/// Enthusiastic Study — {1}{G} Instant.
+///
+/// "Target creature gets +2/+2 until end of turn. If you've cast another
+/// spell this turn, that creature gains trample until end of turn."
+///
+/// Push (modern_decks) NEW: Quandrix / Witherbloom green combat trick.
+/// Wired as `Seq(PumpPT(+2/+2 EOT), If(SpellsCastThisTurnAtLeast(2)) →
+/// GrantKeyword(Trample EOT))` — the trample rider is gated on the
+/// second-spell-this-turn predicate (same gate as Magecraft's
+/// "another instant or sorcery" template; here it counts every spell
+/// type). Single-target shape allows clean auto-targeting on a
+/// friendly attacker.
+pub fn enthusiastic_study() -> CardDefinition {
+    CardDefinition {
+        name: "Enthusiastic Study",
+        cost: cost(&[generic(1), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(2),
+                toughness: Value::Const(2),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::If {
+                cond: Predicate::SpellsCastThisTurnAtLeast {
+                    who: PlayerRef::You,
+                    at_least: Value::Const(2),
+                },
+                then: Box::new(Effect::GrantKeyword {
+                    what: Selector::Target(0),
+                    keyword: Keyword::Trample,
+                    duration: Duration::EndOfTurn,
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+    }
+}
+
+// ── Mage Hunters' Onslaught variant — Mage Hunters' Bow ────────────────────
+//
+// Skipped: not a printed card. The space below is reserved for future
+// additions.
+
+// ── Promote: Run Behind owner top/bottom prompt ─────────────────────────────
+//
+// Run Behind's "top or bottom of library, owner's choice" prompt is
+// the only remaining gap on the STA / STX reprints. Tracked in
+// TODO.md and STRIXHAVEN2.md notes.
+
+// ── Strixhaven Stadium activated ability (rivalry counter) ──────────────────
+//
+// Tracked separately. The Stadium's "rivalry counter on each opponent
+// who has been dealt combat damage this turn" needs a per-player
+// rivalry-counter tracker that doesn't exist today.

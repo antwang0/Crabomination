@@ -4583,7 +4583,11 @@ fn rabid_attack_pumps_multiple_creatures_via_multi_target() {
 }
 
 #[test]
-fn burrog_barrage_no_pump_on_first_spell_kills_bear() {
+fn burrog_barrage_no_pump_on_first_spell_skips_damage_with_no_opp_target() {
+    // Push (modern_decks): Burrog Barrage now uses a two-slot multi-target
+    // shape. Slot 0 = friendly creature to pump; slot 1 = optional opp
+    // creature to take power-as-damage. When only slot 0 is filled the
+    // damage half no-ops (the printed "up to one target" semantics).
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let id = g.add_card_to_hand(0, catalog::burrog_barrage());
@@ -4596,11 +4600,43 @@ fn burrog_barrage_no_pump_on_first_spell_kills_bear() {
     .expect("Burrog Barrage castable for {1}{G}");
     drain_stack(&mut g);
 
-    // No prior spell → no pump → bear deals its base power (2) to itself
-    // and dies (2 toughness, 2 damage = lethal).
+    // No prior spell → no pump. No slot-1 target → no damage. Bear lives.
     assert!(
-        g.players[0].graveyard.iter().any(|c| c.id == bear),
-        "bear should die from self-fight (2 power vs 2 toughness)"
+        g.battlefield.iter().any(|c| c.id == bear),
+        "bear should survive — no slot-1 opp creature, no damage half fires"
+    );
+}
+
+#[test]
+fn burrog_barrage_kills_opp_bear_with_second_target_filled() {
+    // With both slots filled and Barrage being the second spell of the
+    // turn, friendly bear pumps to 3 power and deals 3 damage to opp bear.
+    let mut g = two_player_game();
+    let friendly = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let opp = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.players[0].spells_cast_this_turn = 1; // pretend we already cast a spell
+    let id = g.add_card_to_hand(0, catalog::burrog_barrage());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(friendly)),
+        additional_targets: vec![Target::Permanent(opp)],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Burrog Barrage castable for {1}{G}");
+    drain_stack(&mut g);
+
+    // Friendly bear pumped to 3 power. Opp bear took 3 damage and died.
+    assert!(
+        g.players[1].graveyard.iter().any(|c| c.id == opp),
+        "opp bear should die from 3 damage (friendly's pumped power)"
+    );
+    assert!(
+        g.battlefield.iter().any(|c| c.id == friendly),
+        "friendly bear survives (no opp damage back — not Fight, just damage out)"
     );
 }
 
@@ -5514,6 +5550,7 @@ fn artistic_process_mode2_creates_haste_elemental() {
 
 #[test]
 fn decorum_dissertation_draws_two_loses_two() {
+    use crate::game::types::Target;
     let mut g = two_player_game();
     g.add_card_to_library(0, catalog::lightning_bolt());
     g.add_card_to_library(0, catalog::lightning_bolt());
@@ -5523,8 +5560,15 @@ fn decorum_dissertation_draws_two_loses_two() {
     let hand_before = g.players[0].hand.len();
     let life_before = g.players[0].life;
 
+    // Push (modern_decks): Decorum Dissertation now uses
+    // `target_filtered(Player)` — target self for the printed asymmetric
+    // "you draw 2, you lose 2" trade.
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+        card_id: id,
+        target: Some(Target::Player(0)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
     })
     .expect("Decorum Dissertation castable for {3}{B}{B}");
     drain_stack(&mut g);
@@ -5532,6 +5576,41 @@ fn decorum_dissertation_draws_two_loses_two() {
     // Hand: -1 cast + 2 drawn = +1.
     assert_eq!(g.players[0].hand.len(), hand_before + 1);
     assert_eq!(g.players[0].life, life_before - 2);
+}
+
+/// Decorum Dissertation can also target an opponent — letting the caster
+/// asymmetrically give the opp 2 cards in exchange for draining them
+/// 2 life. Push (modern_decks) multi-target promotion.
+#[test]
+fn decorum_dissertation_can_target_opponent() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    g.add_card_to_library(1, catalog::lightning_bolt());
+    g.add_card_to_library(1, catalog::lightning_bolt());
+    let id = g.add_card_to_hand(0, catalog::decorum_dissertation());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    let opp_hand_before = g.players[1].hand.len();
+    let opp_life_before = g.players[1].life;
+    let self_hand_before = g.players[0].hand.len();
+    let self_life_before = g.players[0].life;
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Decorum Dissertation castable for {3}{B}{B}");
+    drain_stack(&mut g);
+
+    // Opp drew 2 + lost 2 life.
+    assert_eq!(g.players[1].hand.len(), opp_hand_before + 2);
+    assert_eq!(g.players[1].life, opp_life_before - 2);
+    // Caster's hand and life unchanged (apart from the cast).
+    assert_eq!(g.players[0].hand.len(), self_hand_before - 1);
+    assert_eq!(g.players[0].life, self_life_before);
 }
 
 #[test]
@@ -9647,5 +9726,76 @@ fn ulna_alley_shopkeep_with_lifegain_is_four_three() {
     assert!(
         computed.keywords.contains(&Keyword::Menace),
         "Menace persists"
+    );
+}
+
+// ── Transcendent Archaic — MayDo around the ETB Converge draw ──────────────
+//
+// Push (modern_decks): wraps the ETB Converge draw + conditional discard 2
+// in `Effect::MayDo` so the printed "you may draw X cards" optionality is
+// honored. AutoDecider declines by default (no draw, no discard); a
+// ScriptedDecider can opt in (draw X, discard 2 if X≥1).
+
+#[test]
+fn transcendent_archaic_etb_may_draw_declines_by_default() {
+    // Default AutoDecider says "no" to MayDo prompts — so the ETB draw
+    // and the conditional discard 2 are both skipped. We test by placing
+    // the Archaic directly onto the battlefield (firing its ETB) instead
+    // of routing through the cast path (which is awkward to set up at
+    // {7} mana cost).
+    let mut g = two_player_game();
+    // Stuff the library with 5 known cards so we'd see the draw if it ran.
+    for _ in 0..5 {
+        g.add_card_to_library(0, catalog::grizzly_bears());
+    }
+    let hand_before = g.players[0].hand.len();
+    let gy_before = g.players[0].graveyard.len();
+    // Place Transcendent Archaic on the battlefield (triggers its ETB
+    // via the universal ETB trigger fire). With no cast context the
+    // ConvergedValue defaults to 0 — so even if the MayDo were accepted
+    // the draw would be 0 and the discard gate would fail.
+    g.add_card_to_battlefield(0, catalog::transcendent_archaic());
+    drain_stack(&mut g);
+
+    // AutoDecider declined the MayDo — no cards drawn, no discard.
+    assert_eq!(
+        g.players[0].hand.len(),
+        hand_before,
+        "AutoDecider should decline the ETB MayDo (no draw)"
+    );
+    assert_eq!(
+        g.players[0].graveyard.len(),
+        gy_before,
+        "AutoDecider should decline the discard 2 follow-up"
+    );
+}
+
+#[test]
+fn transcendent_archaic_etb_may_draw_accepts_via_scripted_decider() {
+    // ScriptedDecider says Bool(true) to the MayDo prompt. With
+    // ConvergedValue = 0 (no cast context) the draw is 0 and the
+    // discard branch doesn't fire (gated on ConvergedValue ≥ 1).
+    let mut g = two_player_game();
+    // Configure scripted decider to accept the MayDo prompt.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    for _ in 0..5 {
+        g.add_card_to_library(0, catalog::grizzly_bears());
+    }
+    let hand_before = g.players[0].hand.len();
+    let gy_before = g.players[0].graveyard.len();
+    g.add_card_to_battlefield(0, catalog::transcendent_archaic());
+    drain_stack(&mut g);
+
+    // Even with "yes", ConvergedValue is 0, so Draw 0 happens — no
+    // observable change to hand, no discard either (gate fails).
+    assert_eq!(
+        g.players[0].hand.len(),
+        hand_before,
+        "Even with MayDo accepted, ConvergedValue=0 means no draw"
+    );
+    assert_eq!(
+        g.players[0].graveyard.len(),
+        gy_before,
+        "No discard fires when ConvergedValue=0 (gate fails)"
     );
 }

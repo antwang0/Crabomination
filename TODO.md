@@ -11,6 +11,26 @@ Periodic spot-check of the rules document
 (`crabomination/MagicCompRules 20260116.txt`). Each rule below has a
 status tag (✅ wired, 🟡 partial, ⏳ todo) plus a short note.
 
+- ✅ **CR 608.3f / 707.10f — Permanent-spell copies are tokens** (push
+  modern_decks audit, claude/modern_decks branch): "If the object that's
+  resolving is a copy of a permanent spell, it will become a token
+  permanent as it is put onto the battlefield." The engine's
+  `Effect::CopySpell` handler (`game/effects/mod.rs:1698`) sets
+  `copy_inst.is_token = true` on the `CardInstance` BEFORE pushing the
+  spell-copy onto the stack. When that StackItem::Spell resolves
+  (`game/stack.rs:311` `let card = *card;` + `self.battlefield.push(card)`),
+  the `is_token: true` flag is preserved on the resulting battlefield
+  permanent. The token-cleanup state-based-action sweep
+  (`check_state_based_actions` in `game/stack.rs`) then removes the
+  permanent from hand / library / exile / graveyard when it leaves the
+  stack (per CR 707.10a). For instant/sorcery copies, the same
+  `is_token: true` flag triggers SBA cleanup once the copy hits its
+  owner's graveyard. Tested implicitly by
+  `tests::sos::copied_spell_does_not_linger_in_graveyard_after_resolution`
+  + every Aziza / Lumaret's Favor / Social Snub copy test in the suite.
+  The TODO.md note that the resolved permanent wasn't flagged was stale
+  — closed by audit.
+
 - ✅ **CR 707.10c / 707.10 — Copy effects and "new targets"** (push
   modern_decks audit, claude/modern_decks branch): "Some effects copy
   a spell or ability and state that its controller may choose new
@@ -1011,15 +1031,14 @@ status tag (✅ wired, 🟡 partial, ⏳ todo) plus a short note.
   the normal dispatcher. No SOS/STX card exercises this today; first
   card to need it will be the wiring trigger.
 
-- ⏳ **Permanent-spell copy → token flag (CR 707.10f)** — `Effect::
-  CopySpell`'s resolved permanent should set `CardInstance.is_token =
-  true` when the copied spell is a permanent spell (Creature /
-  Artifact / Enchantment / Planeswalker / Battle / Land). Currently
-  only the stack copy is flagged; the resolved permanent isn't, so
-  it persists past SBA cleanup of token-copies. Not currently
-  blocking any catalog card (no copy-permanent-spell card wired) but
-  needed for future Mizzium Transreliquat / Sakashima of a Thousand
-  Faces-style permanent copy effects.
+- ✅ **Permanent-spell copy → token flag (CR 707.10f)** — `Effect::
+  CopySpell`'s `copy_inst.is_token = true` flag is set on the
+  `CardInstance` before the StackItem::Spell is pushed. On resolution,
+  `self.battlefield.push(card)` (`stack.rs:332`) preserves the flag, so
+  the resulting battlefield permanent is correctly a token. Token-
+  cleanup SBA path handles removal when the permanent leaves the
+  stack. See the new CR 608.3f / 707.10f rule audit row above. Closed
+  by audit — the TODO statement was stale.
 
 - ⏳ **CR 122.2-strict counter clearing on zone change** — to be
   fully compliant we should clear all counters when a card moves

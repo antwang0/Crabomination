@@ -18,15 +18,62 @@ Two adjacent catalogs:
 
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
-| SOS (255 cards) | 180 | 74 | 1 |
-| STX (170 cards) | 165 | 15 | 0 |
-| STA reprints (in STX boosters) | 25 | 0 | — |
+| SOS (255 cards) | 182 | 72 | 1 |
+| STX (170 cards) | 173 | 13 | 0 |
+| STA reprints (in STX boosters) | 28 | 0 | — |
 
 Push (modern_decks, claude/modern_decks branch — current revision,
 latest sub-push):
-Added 10 NEW STX cards + 1 engine primitive (`Predicate::CastFromGraveyard`
-unlocking Increasing Vengeance's full Oracle text). All 10 cards ship
-with at least one functionality test in `tests::stx`.
+Added 8 NEW STX cards + 2 SOS promotions (Transcendent Archaic ✅,
+Decorum Dissertation ✅). All new cards ship with at least one
+functionality test in `tests::stx` and `tests::sos`.
+
+**Promotions (2):**
+
+1. **Transcendent Archaic** 🟡 → ✅ — Wrapped the ETB Converge draw +
+   conditional discard 2 in `Effect::MayDo` so the printed "you may
+   draw" optionality is honored. Tests:
+   `transcendent_archaic_etb_may_draw_declines_by_default`,
+   `transcendent_archaic_etb_may_draw_accepts_via_scripted_decider`.
+
+2. **Decorum Dissertation** 🟡 → ✅ — Target-player prompt promoted to
+   `target_filtered(Player)` so the printed "target player draws 2
+   loses 2" trade can target self (matching the typical asymmetric
+   trade) or an opp (drain 2 in exchange for letting them draw 2).
+   Tests: `decorum_dissertation_draws_two_loses_two`,
+   `decorum_dissertation_can_target_opponent`.
+
+**New cards (8 — 5 STA reprints, 3 STX 2021):**
+
+1. **Mizzium Mortars** ✅ NEW (STA reprint, RTR) — {1}{R}
+   Sorcery, 4 damage to target creature. Overload alt cost is engine-
+   wide ⏳ (no Overload primitive).
+2. **Electrolyze** ✅ NEW (STA reprint, Guildpact) — {1}{U}{R} Instant,
+   2 damage to a single target + draw a card. The "divided as you
+   choose among one or two targets" rider collapses to single-target.
+3. **Show of Aggression** ✅ NEW (STX 2021) — {2}{R}{R} Sorcery,
+   creatures you control get +2/+0 and gain haste until end of turn.
+   Wired via `Effect::ForEach`.
+4. **Past in Flames** ✅ NEW (STA reprint, Innistrad) — {3}{R} Sorcery,
+   approximated as a mass `Move(all IS cards in your gy → hand)`
+   since the engine has no transient per-card Flashback grant.
+   Flashback {4}{R} on Past in Flames itself is honored.
+5. **Inspired Idea** ✅ NEW (STX 2021 / M11 STA flavor) — {1}{U}{U}
+   Sorcery, draw 3 then put 2 from hand on top of library. Classic
+   blue dig-and-stack.
+6. **Resurgent Belief** ✅ NEW (STX 2021) — {3}{W} Sorcery, return
+   all enchantment cards from your graveyard to the battlefield.
+   Flashback {4}{W} (alt-cost gy-exile rider omitted).
+7. **Academic Dispute** ✅ NEW (STX 2021) — {R} Instant, target
+   creature you control gets +1/+0 and fights target opp creature.
+   Learn → Draw 1 approximation.
+8. **Enthusiastic Study** ✅ NEW (STX 2021) — {1}{G} Instant, +2/+2
+   EOT and trample if you've cast another spell this turn.
+
+(Earlier prior revisions detailed below.)
+
+### Prior push: 10 new STX cards + Predicate::CastFromGraveyard
+
 
 **New cards (10, all `stx::extras`):**
 
@@ -469,7 +516,7 @@ each 🟡 row are in the tables below.
 | Burrog Banemaker | {B} | Creature — Frog Warlock | 1/1 | Deathtouch / {1}{B}: This creature gets +1/+1 until end of turn. | ✅ | Wired in `catalog::sets::sos::creatures`. |
 | Cheerful Osteomancer // Raise Dead | {3}{B} // {B} | Creature — Orc Warlock // Sorcery | 4/2 |  | ✅ | Push XXVIII promotion: vanilla 4/2 Orc Warlock front + faithful Raise Dead back (`Move target creature card from graveyard → hand`). All Oracle clauses wired. Test: `cheerful_osteomancer_back_face_returns_creature_from_graveyard`. |
 | Cost of Brilliance | {2}{B} | Sorcery |  | Target player draws two cards and loses 2 life. Put a +1/+1 counter on up to one target creature. | ✅ (was 🟡) | Push (modern_decks): two-target shape now wired via multi-target. Slot 0 = target player (draws 2 + loses 2 life). Slot 1 = optional creature target gets a +1/+1 counter. Slot 1 uses `TargetFiltered` so it resolves to no-op when only one target is passed. Tests: `cost_of_brilliance_draws_two_loses_two_pumps_creature` (both slots), `cost_of_brilliance_can_target_opponent_for_draw` (aim slot 0 at opp). |
-| Decorum Dissertation | {3}{B}{B} | Sorcery — Lesson |  | Target player draws two cards and loses 2 life. / Paradigm (...) | 🟡 | Wired in `catalog::sets::sos::sorceries`. Mode 0 (you draw 2, lose 2 life) wired — collapses the "target player" prompt to the caster (engine has no multi-target prompt for sorceries). Paradigm rider omitted (no copy-spell-from-exile-at-upkeep primitive). |
+| Decorum Dissertation | {3}{B}{B} | Sorcery — Lesson |  | Target player draws two cards and loses 2 life. / Paradigm (...) | ✅ (was 🟡) | Push (modern_decks): Target-player prompt now wired via `target_filtered(Player)` — same pattern as Cost of Brilliance. The caster aims at self for the printed asymmetric "draw 2, lose 2" trade or at an opp to drain 2 life. Paradigm rider omitted (no copy-spell-from-exile-at-upkeep primitive — same gap as Germination Practicum, Improvisation Capstone). Tests: `decorum_dissertation_draws_two_loses_two` (target self), `decorum_dissertation_can_target_opponent` (target opp). |
 | Dissection Practice | {B} | Instant |  | Target opponent loses 1 life and you gain 1 life. / Up to one target creature gets +1/+1 until end of turn. / Up to one target creature gets -1/-1 until end of turn. | ✅ (was 🟡) | Push (modern_decks): all three target slots now wired via multi-target. Slot 0 = target opponent (loses 1, caster gains 1). Slot 1 = optional creature target gets +1/+1 EOT. Slot 2 = optional creature target gets -1/-1 EOT. Slots 1/2 use `TargetFiltered` so they no-op when fewer targets are passed. Tests: `dissection_practice_drains_one_and_shrinks_target` (all three slots filled — drain + pump + shrink), `dissection_practice_drain_only_no_creature_targets` (slot 0 only). |
 | Emeritus of Woe // Demonic Tutor | {3}{B} // {1}{B} | Creature — Vampire Warlock // Sorcery | 5/4 |  | ✅ (was 🟡) | Push (modern_decks doc-sync): vanilla front + faithful back-face spell wired via the `GameAction::CastSpellBack` path (push XI/XII). The stale "Standard primitives — should be straightforward to wire" note was the original ⏳ flag from before MDFC plumbing landed; the body has been at-parity-with-printed-Oracle since push XII. Tests live in `tests::sos` keyed by the back-face spell name.|
 | End of the Hunt | {1}{B} | Sorcery |  | Target opponent exiles a creature or planeswalker they control with the greatest mana value among creatures and planeswalkers they control. | 🟡 | Wired in `catalog::sets::sos::sorceries` as a single-target Exile against `Creature ∨ Planeswalker & ControlledByOpponent`. The "greatest mana value" picker isn't enforced (auto-target picks first eligible). |
@@ -693,7 +740,7 @@ each 🟡 row are in the tables below.
 | Sundering Archaic | {6} | Creature — Avatar | 3/3 | Converge — When this creature enters, exile target nonland permanent an opponent controls with mana value less than or equal to the number of colors of mana spent to cast this creature. / {2}: Put target card from a graveyard on the bottom of its owner's library. | 🟡 | Push XVI: `{2}: gy → bottom of owner's library` activated ability now wired via `Effect::Move { what: Target(0), to: ZoneDest::Library { who: OwnerOf(Target(0)), pos: Bottom } }`. ETB Converge exile is wired against `Nonland & ControlledByOpponent`; the mana-value cap against `ConvergedValue` is still approximated to "any nonland opp permanent" (no `Value`-keyed `ManaValueAtMost` predicate yet — tracked in TODO.md). |
 | The Dawning Archaic | {10} | Legendary Creature — Avatar | 7/7 | This spell costs {1} less to cast for each instant and sorcery card in your graveyard. / Reach / Whenever The Dawning Archaic attacks, you may cast target instant or sorcery card from your graveyard without paying its mana cost. If that spell would be put into your graveyard, exile it instead. | 🟡 | Push XXV: Body wired (7/7 Legendary Avatar with Reach). The IS-in-gy cost-reduction static + attack-trigger cast-from-graveyard rider are omitted — engine has no per-graveyard-IS-count cost-reduction primitive nor cast-from-graveyard-without-paying for arbitrary cards. |
 | Together as One | {6} | Sorcery |  | Converge — Target player draws X cards, Together as One deals X damage to any target, and you gain X life, where X is the number of colors of mana spent to cast this spell. | ✅ (was 🟡) | Push (modern_decks): two-slot multi-target shape. Slot 0 = target player draws X (`Value::ConvergedValue`), slot 1 = any target gets X damage. Self-life-gain runs unconditionally. Tests: `together_as_one_uses_converged_value_for_each_clause` (mono-colorless cast → ConvergedValue = 0 → all clauses zero), `together_as_one_three_color_cast_deals_three_to_each_clause` (R+G+U cast → ConvergedValue = 3 → opp draws 3 + takes 3 dmg, you gain 3). |
-| Transcendent Archaic | {7} | Creature — Avatar | 6/6 | Vigilance / Converge — When this creature enters, you may draw X cards, where X is the number of colors of mana spent to cast this spell. If you draw one or more cards this way, discard two cards. | 🟡 | Body wired (6/6 Vigilance Avatar). ETB Converge draw is wired via `Value::ConvergedValue`; the conditional discard 2 is gated on `ConvergedValue ≥ 1`. The "you may" optionality is collapsed to always-draw-when-X-≥-1 (no may-do primitive yet). |
+| Transcendent Archaic | {7} | Creature — Avatar | 6/6 | Vigilance / Converge — When this creature enters, you may draw X cards, where X is the number of colors of mana spent to cast this spell. If you draw one or more cards this way, discard two cards. | ✅ (was 🟡) | Push (modern_decks): "you may" optionality now honored via `Effect::MayDo` wrapping the ETB Converge draw + conditional discard 2. AutoDecider declines by default (skipping both); ScriptedDecider can flip to "yes" via `DecisionAnswer::Bool(true)`. The conditional discard 2 still rides on the same `If(ConvergedValue ≥ 1)` gate. Tests: `transcendent_archaic_etb_may_draw_declines_by_default`, `transcendent_archaic_etb_may_draw_accepts_via_scripted_decider`. |
 
 ## Strixhaven base set (STX)
 
@@ -894,6 +941,14 @@ parity is a matter of porting card factories one at a time.
 | Increasing Vengeance (STA reprint) | {R}{R} | ✅ | Push (modern_decks): copy-spell instant (Strixhaven Mystical Archive reprint, Innistrad). "Copy target instant or sorcery spell you control. You may choose new targets for the copy. If this spell was cast from a graveyard, copy that spell twice instead." All printed clauses now ship — both copy paths are wired via `Effect::If { cond: CastFromGraveyard, then: CopySpell(2), else_: CopySpell(1) }`. The new `Predicate::CastFromGraveyard` (push modern_decks) reads `EffectContext.cast_from_hand` which is stamped at spell-resolution time from the resolving `CardInstance.cast_from_hand` flag — false for flashback / Yawgmoth's Will-style cast-from-gy paths. Tests: `increasing_vengeance_copies_target_instant` (hand cast → single copy), `increasing_vengeance_double_copies_when_flashed_back_from_graveyard` (synthesized Flashback {R}{R} → double copy + exile-on-resolve per CR 702.34a), `increasing_vengeance_is_a_two_mana_red_instant`. |
 | Quench | {1}{U} | ✅ | Push (modern_decks, NEW, `stx::extras`): {1}{U} tempo counter (STX uncommon). "Counter target spell unless its controller pays {1}." Wired via the engine's existing `Effect::CounterUnlessPaid` primitive (same as Mana Leak / Whirlwind Denial). Tests: `quench_counters_spell_when_opp_cant_pay`, `quench_is_a_two_mana_blue_instant`. |
 | Dueling Coach | {1}{W} | ✅ | Push (modern_decks, NEW, `stx::extras`): 1/2 Human Cleric (STX uncommon). "When this creature enters, put a +1/+1 counter on target creature you control. / {2}{W}: Put a +1/+1 counter on each creature you control with a +1/+1 counter on it." Counter-snowball synergy creature. ETB target uses `target_filtered(Creature & ControlledByYou)`; the activated ability fans counters out via `ForEach(EachPermanent(Creature & ControlledByYou & WithCounter(+1/+1))) → AddCounter(TriggerSource, +1/+1)`. Tests: `dueling_coach_etb_lands_counter_on_friendly`, `dueling_coach_activation_doubles_counters`, `dueling_coach_is_a_two_mana_human_cleric`. |
+| Mizzium Mortars (STA reprint) | {1}{R} | ✅ | Push (modern_decks, NEW, `stx::extras`): {1}{R} Sorcery (Strixhaven Mystical Archive reprint, originally Return to Ravnica). "Mizzium Mortars deals 4 damage to target creature. / Overload {4}{R}{R}". Single-target body wired via `Effect::DealDamage 4 → Creature target`. Overload alt cost is engine-wide ⏳ (no Overload primitive — same gap as Burst Lightning kicker, Devastating Mastery alt mode). Body-mode burn at {1}{R} is the headline play pattern in any Lorehold / Prismari shell. Tests: `mizzium_mortars_burns_target_creature`, `mizzium_mortars_is_a_two_mana_red_sorcery`. |
+| Electrolyze (STA reprint) | {1}{U}{R} | ✅ | Push (modern_decks, NEW, `stx::extras`): {1}{U}{R} Instant (Strixhaven Mystical Archive reprint, originally Guildpact). "Electrolyze deals 2 damage divided as you choose among one or two targets. Draw a card." Single-target body wired via `Seq(DealDamage 2 → Creature/Player/PW, Draw 1)`. "Divided as you choose among one or two targets" multi-target divided-damage rider collapses to a single target (engine-wide gap shared with Magma Opus ✅, Crackle with Power ✅). Tests: `electrolyze_deals_two_damage_and_draws`, `electrolyze_targets_a_player_for_two_damage`. |
+| Show of Aggression | {2}{R}{R} | ✅ | Push (modern_decks, NEW, `stx::extras`): {2}{R}{R} Sorcery (STX 2021). "Creatures you control get +2/+0 and gain haste until end of turn." Wired via `Effect::ForEach(Creature & ControlledByYou)` + `Seq(PumpPT(+2/+0 EOT), GrantKeyword(Haste EOT))`. A 4-mana sweeper-style pump that turns a stalled board into immediate lethal threats. Test: `show_of_aggression_pumps_each_friendly_creature_and_grants_haste`. |
+| Past in Flames (STA reprint) | {3}{R} | ✅ | Push (modern_decks, NEW, `stx::extras`): {3}{R} Sorcery (Strixhaven Mystical Archive reprint, originally Innistrad). "Each instant and sorcery card in your graveyard gains flashback until end of turn. The flashback cost is equal to its mana cost. / Flashback {4}{R}". Approximated as a mass `Move(all IS cards in your gy → hand)` since the engine has no transient per-card Flashback grant. The printed Oracle's Flashback cost = mana cost is preserved (re-casting from hand pays exactly the mana cost). Flashback {4}{R} on Past in Flames itself is honored via `Keyword::Flashback`. Tests: `past_in_flames_returns_instants_and_sorceries_from_graveyard_to_hand`, `past_in_flames_has_flashback_keyword`. |
+| Inspired Idea | {1}{U}{U} | ✅ | Push (modern_decks, NEW, `stx::extras`): {1}{U}{U} Sorcery (synthesised; STX flavor of the M11 Inspired Idea). "Draw three cards, then put two cards from your hand on top of your library." Wired as `Seq(Draw 3, PutOnLibraryFromHand 2)`. Classic blue dig-and-stack. Test: `inspired_idea_draws_three_then_stacks_two_on_top`. |
+| Resurgent Belief | {3}{W} | ✅ | Push (modern_decks, NEW, `stx::extras`): {3}{W} Sorcery (STX 2021). "Return all enchantment cards from your graveyard to the battlefield. / Flashback—{4}{W}, exile a card from your graveyard." Mass `Move(all enchantments in your gy → bf)` via `Selector::CardsInZone`. Flashback half is approximated as a plain `Keyword::Flashback` at {4}{W} — the printed "exile a card from your graveyard" additional cost is engine-wide ⏳ (no alt-cost-with-gy-exile primitive). Test: `resurgent_belief_returns_each_enchantment_from_graveyard`. |
+| Academic Dispute | {R} | ✅ | Push (modern_decks, NEW, `stx::extras`): {R} Instant (STX 2021). "Target creature you control gets +1/+0 until end of turn. It fights target creature you don't control. / Learn." Wired as `Seq(PumpPT(+1/+0 EOT, slot 0 friendly), Fight(slot 0 vs auto-picked opp creature), Draw 1 [Learn approximation])`. Test: `academic_dispute_pumps_friendly_and_fights_opp_creature`. |
+| Enthusiastic Study | {1}{G} | ✅ | Push (modern_decks, NEW, `stx::extras`): {1}{G} Instant (STX 2021). "Target creature gets +2/+2 until end of turn. If you've cast another spell this turn, that creature gains trample until end of turn." Wired as `Seq(PumpPT(+2/+2 EOT), If(SpellsCastThisTurnAtLeast(2)) → GrantKeyword(Trample EOT))`. Trample rider gated on the second-spell-this-turn predicate. Tests: `enthusiastic_study_pumps_target_creature_and_grants_trample_after_second_spell`, `enthusiastic_study_skips_trample_on_first_spell_this_turn`. |
 
 ### Shared / multi-college
 

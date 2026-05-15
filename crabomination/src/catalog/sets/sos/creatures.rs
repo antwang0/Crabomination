@@ -3096,21 +3096,33 @@ pub fn transcendent_archaic() -> CardDefinition {
         activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::Seq(vec![
-                Effect::Draw {
-                    who: Selector::You,
-                    amount: Value::ConvergedValue,
-                },
-                Effect::If {
-                    cond: Predicate::ValueAtLeast(Value::ConvergedValue, Value::Const(1)),
-                    then: Box::new(Effect::Discard {
+            // Push (modern_decks): printed "you may" optionality now honored via
+            // `Effect::MayDo`. AutoDecider answers "no" by default (skipping
+            // the whole draw + discard chain); ScriptedDecider can flip to
+            // "yes" via `DecisionAnswer::Bool(true)`. The conditional discard
+            // 2 still rides on the same `If(ConvergedValue ≥ 1)` gate so the
+            // printed "if you draw one or more cards this way, discard two
+            // cards" tail is preserved.
+            effect: Effect::MayDo {
+                description: "Draw X cards (where X is the number of colors of mana spent) \
+                              and then discard two cards if you drew at least one."
+                    .into(),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::Draw {
                         who: Selector::You,
-                        amount: Value::Const(2),
-                        random: false,
-                    }),
-                    else_: Box::new(Effect::Noop),
-                },
-            ]),
+                        amount: Value::ConvergedValue,
+                    },
+                    Effect::If {
+                        cond: Predicate::ValueAtLeast(Value::ConvergedValue, Value::Const(1)),
+                        then: Box::new(Effect::Discard {
+                            who: Selector::You,
+                            amount: Value::Const(2),
+                            random: false,
+                        }),
+                        else_: Box::new(Effect::Noop),
+                    },
+                ])),
+            },
         }],
         static_abilities: vec![],
         base_loyalty: 0,
