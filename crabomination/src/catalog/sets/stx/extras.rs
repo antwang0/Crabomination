@@ -7039,3 +7039,478 @@ pub fn enthusiastic_study() -> CardDefinition {
 // Tracked separately. The Stadium's "rivalry counter on each opponent
 // who has been dealt combat damage this turn" needs a per-player
 // rivalry-counter tracker that doesn't exist today.
+
+// ── Forked Bolt (STA reprint) ──────────────────────────────────────────────
+
+/// Forked Bolt — {R} Sorcery (Strixhaven Mystical Archive reprint,
+/// originally Saviors of Kamigawa). "Forked Bolt deals 2 damage divided as
+/// you choose among one or two target creatures and/or players."
+///
+/// ✅ Single-target body wired via `DealDamage 2 → Creature/Player/PW`.
+/// The "divided among one or two targets" rider collapses to a single
+/// target — the engine-wide multi-target gap shared with Magma Opus,
+/// Crackle with Power, Electrolyze.
+pub fn forked_bolt() -> CardDefinition {
+    CardDefinition {
+        name: "Forked Bolt",
+        cost: cost(&[r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::DealDamage {
+            to: target_filtered(
+                SelectionRequirement::Creature
+                    .or(SelectionRequirement::Player)
+                    .or(SelectionRequirement::Planeswalker),
+            ),
+            amount: Value::Const(2),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+    }
+}
+
+// ── Storm's Wrath (STX) ─────────────────────────────────────────────────────
+
+/// Storm's Wrath — {2}{R}{R} Sorcery (STX 2021). "Storm's Wrath deals 4
+/// damage to each creature and each planeswalker."
+///
+/// ✅ Wired via `ForEach(Creature ∨ Planeswalker) → DealDamage 4`. Mass
+/// 4-damage sweeper that punishes wide creature boards and small
+/// planeswalkers.
+pub fn storms_wrath() -> CardDefinition {
+    CardDefinition {
+        name: "Storm's Wrath",
+        cost: cost(&[generic(2), r(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::ForEach {
+            selector: Selector::EachPermanent(
+                SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+            ),
+            body: Box::new(Effect::DealDamage {
+                to: Selector::TriggerSource,
+                amount: Value::Const(4),
+            }),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+    }
+}
+
+// ── Cinderclasm (STX) ──────────────────────────────────────────────────────
+
+/// Cinderclasm — {1}{R}{R} Sorcery (STX 2021). "Kicker {R}. / Cinderclasm
+/// deals 1 damage to each creature and each planeswalker. If Cinderclasm
+/// was kicked, it deals 2 damage to each creature and each planeswalker
+/// instead."
+///
+/// ✅ Body wired at the unkicked cost (1 to each creature and each
+/// planeswalker) via `ForEach(Creature ∨ Planeswalker) → DealDamage 1`.
+/// The Kicker {R} alt-cost is engine-wide ⏳ (same gap as Burst
+/// Lightning's kicker). The unkicked version is the headline play
+/// pattern for sweeping 1-toughness boards.
+pub fn cinderclasm() -> CardDefinition {
+    CardDefinition {
+        name: "Cinderclasm",
+        cost: cost(&[generic(1), r(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::ForEach {
+            selector: Selector::EachPermanent(
+                SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+            ),
+            body: Box::new(Effect::DealDamage {
+                to: Selector::TriggerSource,
+                amount: Value::Const(1),
+            }),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+    }
+}
+
+// ── Cathartic Pyre (STX) ───────────────────────────────────────────────────
+
+/// Cathartic Pyre — {1}{R} Sorcery (STX 2021). "Choose one — / •
+/// Cathartic Pyre deals 3 damage to target creature. / • Discard up to
+/// two cards, then draw that many cards."
+///
+/// ✅ Wired as a two-mode `ChooseMode`. Mode 0 deals 3 damage to a
+/// creature target; mode 1 uses `Effect::DiscardAnyNumber` (the
+/// player-chosen subset primitive) so the controller can discard 0–2
+/// cards, then draws `Value::CardsDiscardedThisEffect` cards. AutoDecider
+/// picks mode 0 (burn) by default.
+pub fn cathartic_pyre() -> CardDefinition {
+    CardDefinition {
+        name: "Cathartic Pyre",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::ChooseMode(vec![
+            Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Creature),
+                amount: Value::Const(3),
+            },
+            Effect::Seq(vec![
+                Effect::DiscardAnyNumber { who: Selector::You },
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::CardsDiscardedThisEffect,
+                },
+            ]),
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+    }
+}
+
+// ── Stern Dismissal (STX) ──────────────────────────────────────────────────
+
+/// Stern Dismissal — {U} Instant (STX 2021). "Return target creature or
+/// enchantment to its owner's hand."
+///
+/// ✅ Wired as a single `Effect::Move` to the target's owner's hand,
+/// using the `target_filtered(Creature ∨ Enchantment)` filter. Classic
+/// blue tempo bounce.
+pub fn stern_dismissal() -> CardDefinition {
+    CardDefinition {
+        name: "Stern Dismissal",
+        cost: cost(&[u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Move {
+            what: target_filtered(
+                SelectionRequirement::Creature.or(SelectionRequirement::Enchantment),
+            ),
+            to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+    }
+}
+
+// ── Krosan Grip (STA reprint) ──────────────────────────────────────────────
+
+/// Krosan Grip — {2}{G} Instant (Strixhaven Mystical Archive reprint,
+/// originally Time Spiral). "Split second / Destroy target artifact or
+/// enchantment."
+///
+/// ✅ Body wired as a single `Effect::Destroy` against an artifact or
+/// enchantment target. The Split Second keyword (no spells or non-mana
+/// abilities can be cast/activated while this is on the stack) is
+/// engine-wide ⏳ — it's a stack-state restriction that the priority
+/// system doesn't yet expose. The destroy half plays correctly always.
+pub fn krosan_grip() -> CardDefinition {
+    CardDefinition {
+        name: "Krosan Grip",
+        cost: cost(&[generic(2), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Destroy {
+            what: target_filtered(
+                SelectionRequirement::Artifact.or(SelectionRequirement::Enchantment),
+            ),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+    }
+}
+
+// ── Sublime Epiphany (STA reprint) ─────────────────────────────────────────
+
+/// Sublime Epiphany — {4}{U}{U} Instant (Strixhaven Mystical Archive
+/// reprint, originally Core Set 2021). "Choose one or more — / •
+/// Counter target spell. / • Counter target activated or triggered
+/// ability. / • Return target nonland permanent to its owner's hand. / •
+/// Create a token that's a copy of target creature you control. / •
+/// Target player draws a card."
+///
+/// ✅ Wired as `Effect::ChooseN { picks: [2, 4], modes }` — auto-decider
+/// picks bounce a nonland permanent + draw a card (the two modes that
+/// share a single target slot most naturally). Counter target spell
+/// (mode 0), counter target ability (mode 1), and copy target creature
+/// (mode 3) sit in `modes` for future mode-pick UI: the engine has no
+/// ability-counter primitive (mode 1) and no permanent-copy primitive
+/// (mode 3); both fall back to Noop in their slots. Mode 0 (counter
+/// spell) is selectable via the mode-pick UI but uses an incompatible
+/// target filter (spell on stack vs. nonland permanent), so the
+/// default auto-pick avoids it.
+pub fn sublime_epiphany() -> CardDefinition {
+    CardDefinition {
+        name: "Sublime Epiphany",
+        cost: cost(&[generic(4), u(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::ChooseN {
+            picks: vec![2, 4],
+            modes: vec![
+                // Mode 0: Counter target spell.
+                Effect::CounterSpell {
+                    what: target_filtered(SelectionRequirement::IsSpellOnStack),
+                },
+                // Mode 1: Counter target activated or triggered ability.
+                // Engine doesn't model ability counters yet; placeholder
+                // Noop preserves the printed mode count.
+                Effect::Noop,
+                // Mode 2: Return target nonland permanent to its owner's hand.
+                Effect::Move {
+                    what: target_filtered(
+                        SelectionRequirement::Nonland.and(SelectionRequirement::Permanent),
+                    ),
+                    to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+                },
+                // Mode 3: Copy target creature you control — permanent-
+                // copy primitive ⏳, falls back to Noop.
+                Effect::Noop,
+                // Mode 4: Target player draws a card.
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
+            ],
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+    }
+}
+
+// ── Doctor's Orders (STX) — skipped: not a printed STX card ─────────────────
+
+// ── Sky Tether (STX, Aura) — skipped: Aura primitive not yet first-class ───
+
+// ── Karok Wrangler placeholder (already wired above) ───────────────────────
+
+// ── Mavinda promotion blocker note ─────────────────────────────────────────
+//
+// Mavinda, Students' Advocate needs a once-per-turn cast-from-graveyard
+// permission with a target introspection ("targets only a single
+// creature"). Tracked in TODO.md.
+
+// ── Persist (STA reprint) ──────────────────────────────────────────────────
+
+/// Persist — {1}{B}{G} Sorcery (Strixhaven Mystical Archive reprint,
+/// originally Shadowmoor). "Return target nonlegendary creature card
+/// from your graveyard to the battlefield with a -1/-1 counter on it."
+///
+/// ✅ Wired as `Seq(Move(target → Battlefield), AddCounter(-1/-1, 1))`.
+/// The "nonlegendary" filter omits Legendary creature cards via
+/// `SelectionRequirement::Not(HasSupertype(Legendary))`. The post-move
+/// `Selector::Target(0)` continues to resolve to the same CardId, which
+/// is now on the battlefield — same pattern as Daydream / Lorehold
+/// Recovery.
+pub fn persist() -> CardDefinition {
+    CardDefinition {
+        name: "Persist",
+        cost: cost(&[generic(1), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Move {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(
+                        SelectionRequirement::HasSupertype(
+                            crate::card::Supertype::Legendary,
+                        )
+                        .negate(),
+                    ),
+                ),
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: false,
+                },
+            },
+            Effect::AddCounter {
+                what: Selector::Target(0),
+                kind: CounterType::MinusOneMinusOne,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+    }
+}
+
+// ── Bone to Ash (STX) ──────────────────────────────────────────────────────
+
+/// Bone to Ash — {1}{U}{U} Instant (STX 2021). "Counter target creature
+/// spell. Draw a card."
+///
+/// ✅ Wired as `Seq(CounterSpell(creature on stack), Draw 1)`. Strong
+/// tempo-and-card-advantage counter against creature-heavy boards.
+pub fn bone_to_ash() -> CardDefinition {
+    CardDefinition {
+        name: "Bone to Ash",
+        cost: cost(&[generic(1), u(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::CounterSpell {
+                what: target_filtered(
+                    SelectionRequirement::IsSpellOnStack
+                        .and(SelectionRequirement::HasCardType(CardType::Creature)),
+                ),
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+    }
+}
+
+// ── Ingenious Mastery (STX, STA Mastery cycle) ─────────────────────────────
+
+/// Ingenious Mastery — {3}{U}{U} Sorcery (STX 2021). "You may pay
+/// {1}{U}{U} rather than pay this spell's mana cost. / Choose one — /
+/// • Draw three cards, put two cards from your hand on top of your
+/// library, then an opponent draws a card. / • Put X +1/+1 counters
+/// on target creature you control, where X is the amount of mana
+/// spent to cast this spell."
+///
+/// ✅ Wired as a vanilla `Effect::Draw 3 + PutOnLibraryFromHand 2 +
+/// Draw 1 → Opponent` at the regular {3}{U}{U} cost. The alt-cost
+/// {1}{U}{U} (which switches to the X-counter mode) is engine-wide ⏳
+/// (alt-cost-implies-mode shared with the other Mastery cycle members:
+/// Baleful Mastery ✅, Devastating Mastery ✅, Verdant Mastery ✅,
+/// Igneous Mastery, Ingenious Mastery). Body fully ships the primary
+/// dig + Time-Spiral-Inspired-Idea play pattern.
+pub fn ingenious_mastery() -> CardDefinition {
+    CardDefinition {
+        name: "Ingenious Mastery",
+        cost: cost(&[generic(3), u(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(3),
+            },
+            Effect::PutOnLibraryFromHand {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+            },
+            Effect::Draw {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+    }
+}
+
+// ── Defend the Campus enhancement note ─────────────────────────────────────
+//
+// Defend the Campus is already wired (3 Inkling tokens).

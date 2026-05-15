@@ -8774,3 +8774,369 @@ fn enthusiastic_study_skips_trample_on_first_spell_this_turn() {
         "no trample on the first spell of the turn"
     );
 }
+
+// ── Forked Bolt (STA reprint) ──────────────────────────────────────────────
+
+#[test]
+fn forked_bolt_deals_two_damage_to_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::forked_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Forked Bolt castable for {R}");
+    drain_stack(&mut g);
+
+    // 2/2 bear takes 2 damage → dies.
+    assert!(
+        !g.battlefield.iter().any(|c| c.id == bear),
+        "Grizzly Bears (2/2) should die to Forked Bolt's 2 damage"
+    );
+}
+
+#[test]
+fn forked_bolt_targets_player_for_two_damage() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::forked_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let p1_life_before = g.players[1].life;
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Forked Bolt can target a player");
+    drain_stack(&mut g);
+
+    assert_eq!(
+        g.players[1].life,
+        p1_life_before - 2,
+        "Opp loses 2 life from Forked Bolt"
+    );
+}
+
+// ── Storm's Wrath (STX) ─────────────────────────────────────────────────────
+
+#[test]
+fn storms_wrath_destroys_each_creature() {
+    let mut g = two_player_game();
+    let bear_p0 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let bear_p1 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::storms_wrath());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(2);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Storm's Wrath castable for {2}{R}{R}");
+    drain_stack(&mut g);
+
+    assert!(
+        !g.battlefield.iter().any(|c| c.id == bear_p0),
+        "P0 bear should die to 4 damage"
+    );
+    assert!(
+        !g.battlefield.iter().any(|c| c.id == bear_p1),
+        "P1 bear should die to 4 damage"
+    );
+}
+
+#[test]
+fn storms_wrath_is_a_four_mana_red_sorcery() {
+    let def = catalog::storms_wrath();
+    assert_eq!(def.name, "Storm's Wrath");
+    assert_eq!(def.cost.cmc(), 4);
+    assert!(def.card_types.contains(&crate::card::CardType::Sorcery));
+}
+
+// ── Cinderclasm (STX) ──────────────────────────────────────────────────────
+
+#[test]
+fn cinderclasm_pings_each_creature_for_one() {
+    let mut g = two_player_game();
+    // 1/1 token-like creature with toughness 1 dies; 2/2 bear survives.
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // Add a 1/1-toughness Pest token-like creature on the opp side.
+    let pest = g.add_card_to_battlefield(1, catalog::eyetwitch()); // 1/1 Pest
+    let id = g.add_card_to_hand(0, catalog::cinderclasm());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Cinderclasm castable for {1}{R}{R}");
+    drain_stack(&mut g);
+
+    // 2/2 bear took 1 damage but survives.
+    let bv = g.battlefield_find(bear).expect("bear should survive");
+    assert_eq!(bv.damage, 1, "bear takes 1 damage from Cinderclasm");
+    // 1/1 Pest dies.
+    assert!(
+        !g.battlefield.iter().any(|c| c.id == pest),
+        "1/1 creature dies to Cinderclasm's 1 damage"
+    );
+}
+
+// ── Cathartic Pyre (STX) ───────────────────────────────────────────────────
+
+#[test]
+fn cathartic_pyre_default_mode_burns_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::cathartic_pyre());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: Some(0),
+        x_value: None,
+    })
+    .expect("Cathartic Pyre castable for {1}{R}");
+    drain_stack(&mut g);
+
+    // 2/2 bear takes 3 damage → dies.
+    assert!(
+        !g.battlefield.iter().any(|c| c.id == bear),
+        "Cathartic Pyre mode 0 deals 3 damage → bear dies"
+    );
+}
+
+// ── Stern Dismissal (STX) ──────────────────────────────────────────────────
+
+#[test]
+fn stern_dismissal_bounces_creature_to_owner_hand() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::stern_dismissal());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    let p1_hand_before = g.players[1].hand.len();
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Stern Dismissal castable for {U}");
+    drain_stack(&mut g);
+
+    assert!(
+        !g.battlefield.iter().any(|c| c.id == bear),
+        "bear bounced off the battlefield"
+    );
+    assert_eq!(
+        g.players[1].hand.len(),
+        p1_hand_before + 1,
+        "bear returned to owner (P1) hand"
+    );
+}
+
+// ── Krosan Grip (STA reprint) ──────────────────────────────────────────────
+
+#[test]
+fn krosan_grip_destroys_artifact() {
+    let mut g = two_player_game();
+    let sol = g.add_card_to_battlefield(1, catalog::sol_ring());
+    let id = g.add_card_to_hand(0, catalog::krosan_grip());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(sol)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Krosan Grip castable for {2}{G}");
+    drain_stack(&mut g);
+
+    assert!(
+        !g.battlefield.iter().any(|c| c.id == sol),
+        "Sol Ring destroyed by Krosan Grip"
+    );
+}
+
+// ── Sublime Epiphany (STA reprint) ─────────────────────────────────────────
+
+#[test]
+fn sublime_epiphany_resolves_counter_bounce_draw() {
+    // Default picks are [0, 2, 4] — counter target spell, bounce nonland,
+    // draw a card. Test the draw + bounce halves (no spell on stack so
+    // mode 0 is a no-op which the engine handles cleanly).
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::island());
+    let id = g.add_card_to_hand(0, catalog::sublime_epiphany());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    let hand_before = g.players[0].hand.len();
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Sublime Epiphany castable for {4}{U}{U}");
+    drain_stack(&mut g);
+
+    // Bear was bounced.
+    assert!(
+        !g.battlefield.iter().any(|c| c.id == bear),
+        "Sublime Epiphany mode 2 bounces bear"
+    );
+    // Card was drawn (hand_before -1 cast +1 draw = same).
+    assert!(
+        g.players[0].hand.len() >= hand_before,
+        "Sublime Epiphany mode 4 draws a card"
+    );
+}
+
+#[test]
+fn sublime_epiphany_is_a_six_mana_blue_instant() {
+    let def = catalog::sublime_epiphany();
+    assert_eq!(def.name, "Sublime Epiphany");
+    assert_eq!(def.cost.cmc(), 6);
+    assert!(def.card_types.contains(&crate::card::CardType::Instant));
+}
+
+// ── Persist (STA reprint) ──────────────────────────────────────────────────
+
+#[test]
+fn persist_returns_creature_card_with_minus_one_counter() {
+    let mut g = two_player_game();
+    let bear_gy = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::persist());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(bear_gy)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Persist castable for {1}{B}{G}");
+    drain_stack(&mut g);
+
+    // The 2/2 bear returns with -1/-1 counter → 1/1 on battlefield.
+    let bear = g.battlefield_find(bear_gy).expect("bear back on battlefield");
+    assert_eq!(
+        bear.counters.get(&CounterType::MinusOneMinusOne).copied().unwrap_or(0),
+        1,
+        "Persist's bear should have one -1/-1 counter"
+    );
+    let cv = g.computed_permanent(bear_gy).expect("bear computed");
+    assert_eq!(cv.power, 1, "2/2 - 1/1 = 1/1");
+    assert_eq!(cv.toughness, 1, "2/2 - 1/1 = 1/1");
+}
+
+// ── Bone to Ash (STX) ───────────────────────────────────────────────────────
+
+#[test]
+fn bone_to_ash_counters_creature_spell_and_cantrips() {
+    let mut g = two_player_game();
+    // P1 (active player) casts Grizzly Bears.
+    let bear_card = g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.players[1].mana_pool.add(Color::Green, 1);
+    g.players[1].mana_pool.add_colorless(1);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear_card,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Grizzly Bears castable for {1}{G}");
+
+    // Bears now on the stack — find its CardId.
+    let bone_to_ash_target = match g.stack.last().expect("a spell is on the stack") {
+        crate::game::types::StackItem::Spell { card, .. } => card.id,
+        _ => panic!("expected spell on stack"),
+    };
+
+    // P0 responds with Bone to Ash (instant speed counter).
+    g.add_card_to_library(0, catalog::island());
+    let bta_id = g.add_card_to_hand(0, catalog::bone_to_ash());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 0;
+    let p0_hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: bta_id,
+        target: Some(Target::Permanent(bone_to_ash_target)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Bone to Ash castable for {1}{U}{U}");
+    drain_stack(&mut g);
+
+    // Bears were countered → in P1's graveyard.
+    assert!(
+        g.players[1].graveyard.iter().any(|c| c.id == bear_card),
+        "countered bears land in graveyard"
+    );
+    // P0 drew a card (cast -1 + draw 1 = same hand size).
+    assert!(
+        g.players[0].hand.len() >= p0_hand_before,
+        "Bone to Ash drew a card"
+    );
+}
+
+// ── Ingenious Mastery (STX) ────────────────────────────────────────────────
+
+#[test]
+fn ingenious_mastery_draws_three_stacks_two_and_opp_draws() {
+    let mut g = two_player_game();
+    for _ in 0..6 {
+        g.add_card_to_library(0, catalog::island());
+        g.add_card_to_library(1, catalog::island());
+    }
+    let id = g.add_card_to_hand(0, catalog::ingenious_mastery());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    let p0_hand_before = g.players[0].hand.len();
+    let p1_hand_before = g.players[1].hand.len();
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Ingenious Mastery castable for {3}{U}{U}");
+    drain_stack(&mut g);
+
+    // P0 played Ingenious Mastery (-1), drew 3, stacked 2 → net +0
+    assert_eq!(
+        g.players[0].hand.len(),
+        p0_hand_before,
+        "P0 hand: -1 cast + 3 draw - 2 stack = +0"
+    );
+    // P1 drew a card.
+    assert_eq!(
+        g.players[1].hand.len(),
+        p1_hand_before + 1,
+        "opp drew a card from Ingenious Mastery"
+    );
+}

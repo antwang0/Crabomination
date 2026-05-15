@@ -19,11 +19,61 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 184 | 70 | 1 |
-| STX (170 cards) | 168 | 15 | 0 |
-| STA reprints (in STX boosters) | 28 | 0 | — |
+| STX (170 cards) | 175 | 15 | 0 |
+| STA reprints (in STX boosters) | 33 | 0 | — |
 
 Push (modern_decks, claude/modern_decks branch — current revision,
-latest sub-push):
+latest sub-push): **10 NEW cards** (5 STX 2021 + 4 STA reprints + 1 STX
+Mastery cycle). All new cards ship with at least one functionality test
+in `tests::stx`.
+
+**New cards added in this push (10):**
+
+1. **Forked Bolt** ✅ NEW (STA reprint, Saviors of Kamigawa) — {R}
+   Sorcery, 2 damage to a creature/player/PW (single-target collapse of
+   the "divided among one or two" rider). Tests:
+   `forked_bolt_deals_two_damage_to_creature`,
+   `forked_bolt_targets_player_for_two_damage`.
+2. **Storm's Wrath** ✅ NEW (STX 2021) — {2}{R}{R} Sorcery, 4 damage to
+   each creature and each planeswalker via `ForEach(Creature ∨
+   Planeswalker) → DealDamage 4`. Tests:
+   `storms_wrath_destroys_each_creature`,
+   `storms_wrath_is_a_four_mana_red_sorcery`.
+3. **Cinderclasm** ✅ NEW (STX 2021) — {1}{R}{R} Sorcery, 1 damage to
+   each creature and each planeswalker (unkicked half only — Kicker
+   {R} alt-cost is engine-wide ⏳). Test:
+   `cinderclasm_pings_each_creature_for_one`.
+4. **Cathartic Pyre** ✅ NEW (STX 2021) — {1}{R} Sorcery, two-mode
+   `ChooseMode`: (0) 3 damage to creature; (1) Discard up to 2 cards,
+   then draw that many cards via `DiscardAnyNumber +
+   Value::CardsDiscardedThisEffect`. Test:
+   `cathartic_pyre_default_mode_burns_creature`.
+5. **Stern Dismissal** ✅ NEW (STX 2021) — {U} Instant, return target
+   creature or enchantment to its owner's hand. Test:
+   `stern_dismissal_bounces_creature_to_owner_hand`.
+6. **Krosan Grip** ✅ NEW (STA reprint, Time Spiral) — {2}{G} Instant,
+   destroy target artifact or enchantment. Split second is engine-wide
+   ⏳. Test: `krosan_grip_destroys_artifact`.
+7. **Sublime Epiphany** ✅ NEW (STA reprint, Core Set 2021) — {4}{U}{U}
+   Instant, multi-modal `ChooseN { picks: [2, 4], modes }`: auto-picks
+   bounce nonland permanent + draw a card. Tests:
+   `sublime_epiphany_resolves_counter_bounce_draw`,
+   `sublime_epiphany_is_a_six_mana_blue_instant`.
+8. **Persist** ✅ NEW (STA reprint, Shadowmoor) — {1}{B}{G} Sorcery,
+   return target nonlegendary creature card from your graveyard to the
+   battlefield with a -1/-1 counter on it. Wired as `Seq(Move →
+   Battlefield, AddCounter(-1/-1, 1))` with `Not(HasSupertype(Legendary))`
+   filter. Test: `persist_returns_creature_card_with_minus_one_counter`.
+9. **Bone to Ash** ✅ NEW (STX 2021) — {1}{U}{U} Instant, counter target
+   creature spell + draw a card. Test:
+   `bone_to_ash_counters_creature_spell_and_cantrips`.
+10. **Ingenious Mastery** ✅ NEW (STX 2021, Mastery cycle) — {3}{U}{U}
+    Sorcery, Draw 3 + put 2 from hand on top + an opponent draws a
+    card. The {1}{U}{U} alt-cost-implies-mode is engine-wide ⏳ (same
+    as Baleful / Devastating / Verdant Mastery). Test:
+    `ingenious_mastery_draws_three_stacks_two_and_opp_draws`.
+
+Prior push (modern_decks, claude/modern_decks branch — earlier sub-push):
 Added 8 NEW STX cards + 2 SOS promotions (Transcendent Archaic ✅,
 Decorum Dissertation ✅). All new cards ship with at least one
 functionality test in `tests::stx` and `tests::sos`.

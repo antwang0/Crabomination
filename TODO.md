@@ -11,6 +11,35 @@ Periodic spot-check of the rules document
 (`crabomination/MagicCompRules 20260116.txt`). Each rule below has a
 status tag (✅ wired, 🟡 partial, ⏳ todo) plus a short note.
 
+- ✅ **CR 120.5 — Damage doesn't destroy a creature directly; SBA
+  does** (push modern_decks audit, claude/modern_decks branch):
+  "Damage dealt to a creature, planeswalker, or battle doesn't destroy
+  it. Likewise, the source of that damage doesn't destroy it. Rather,
+  state-based actions may destroy a creature or otherwise put a
+  permanent into its owner's graveyard, due to the results of the
+  damage dealt to that permanent." The engine's
+  `deal_damage_to_from` (`game/effects/movement.rs`) marks damage on
+  the creature's `c.damage: u32` field but doesn't destroy the
+  permanent itself. The state-based-action sweep in
+  `check_state_based_actions` (`game/stack.rs:687`) walks the
+  battlefield each iteration and collects creatures where
+  `(c.damage as i32) >= computed_toughness` (with
+  Indestructible carved out per CR 702.12b). The two-step pattern is
+  visible in the per-resolution flow: a Lightning Bolt fires
+  `DealDamage`, which marks 3 on the creature's `damage` field; the
+  next SBA pass picks up `damage ≥ toughness` and moves the card to
+  graveyard, firing `CreatureDied`. The "source doesn't destroy"
+  rider is honored implicitly — the engine never directly destroys
+  from a damage call, only through the SBA path. Indestructible
+  creatures keep the damage but survive (CR 702.12b); toughness ≤ 0
+  bypasses Indestructible (CR 704.5g). Tests:
+  `lash_of_malice_kills_two_two_creature` (2/2 - 1/-1 = 1/1 + damage
+  marked — wait, no, that's pump-shrink not damage). For pure
+  damage→SBA→destroy round-trip, every Lightning Bolt to a 2-toughness
+  creature test exercises this (e.g. `lightning_bolt_kills_grizzly_
+  bears`). Lock-in test: the cleanup step clearing damage
+  (CR 514.2 / `game/stack.rs:615`) confirms the marked-damage model.
+
 - ✅ **CR 613.4c / 613.7c — Layer 7c (counter / +N/+M) applies above
   layer 7b (set base P/T)** (push modern_decks audit, claude/modern_decks
   branch): "Layer 7b: Effects that set power and/or toughness to a specific
