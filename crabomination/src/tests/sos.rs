@@ -3531,6 +3531,79 @@ fn antiquities_on_the_loose_creates_two_spirit_tokens() {
     assert_eq!(g.battlefield.len(), bf_before + 2);
 }
 
+/// Antiquities on the Loose's hand cast should NOT fan +1/+1 counters
+/// on existing Spirits — the rider only fires for casts from a zone
+/// other than your hand (flashback / Yawgmoth's Will-style).
+#[test]
+fn antiquities_on_the_loose_hand_cast_does_not_fan_counters() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    // Seed a pre-existing Spirit (a different Spirit-typed card) on
+    // the battlefield. The hand-cast path should leave its counter
+    // pool empty.
+    let existing_spirit = g.add_card_to_battlefield(0, catalog::pillardrop_rescuer());
+    let id = g.add_card_to_hand(0, catalog::antiquities_on_the_loose());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Antiquities on the Loose castable from hand");
+    drain_stack(&mut g);
+
+    let s = g.battlefield_find(existing_spirit).expect("spirit still on bf");
+    assert_eq!(s.counter_count(CounterType::PlusOnePlusOne), 0,
+        "Hand cast should NOT fan +1/+1 counters");
+}
+
+/// Flashback cast of Antiquities on the Loose triggers the +1/+1
+/// rider on each Spirit you control (per `Predicate::CastFromGraveyard`).
+/// The two minted Spirits + a pre-existing Spirit should all carry a
+/// +1/+1 counter after the spell resolves.
+#[test]
+fn antiquities_on_the_loose_flashback_cast_fans_counters() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    // Pre-existing Spirit on the battlefield.
+    let existing_spirit = g.add_card_to_battlefield(0, catalog::pillardrop_rescuer());
+
+    // Put Antiquities on the Loose straight into the graveyard.
+    let id = g.add_card_to_graveyard(0, catalog::antiquities_on_the_loose());
+
+    // Pay the flashback {4}{W}{W} cost.
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(4);
+
+    g.perform_action(GameAction::CastFlashback {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Antiquities on the Loose castable via Flashback for {4}{W}{W}");
+    drain_stack(&mut g);
+
+    // Pre-existing Spirit should now carry a +1/+1 counter (the
+    // counter fan-out fired because the spell was cast from gy).
+    let s = g.battlefield_find(existing_spirit).expect("existing spirit on bf");
+    assert_eq!(s.counter_count(CounterType::PlusOnePlusOne), 1,
+        "Flashback cast should fan +1/+1 counters on each Spirit");
+
+    // The two minted Spirit tokens should also have a counter each
+    // (the fan-out iterates every Spirit, including the two just-
+    // minted).
+    let minted_spirits_with_counters = g
+        .battlefield
+        .iter()
+        .filter(|c| c.controller == 0 && c.definition.name == "Spirit"
+            && c.counter_count(CounterType::PlusOnePlusOne) == 1)
+        .count();
+    assert_eq!(minted_spirits_with_counters, 2,
+        "Both minted Spirits should carry +1/+1 counters from the fan-out");
+
+    // Antiquities on the Loose should be in exile (per CR 702.34a).
+    assert!(g.exile.iter().any(|c| c.id == id),
+        "Antiquities on the Loose should be exiled after flashback resolves");
+}
+
 // ── Conciliator's Duelist ───────────────────────────────────────────────────
 
 #[test]

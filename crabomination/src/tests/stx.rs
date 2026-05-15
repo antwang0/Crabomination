@@ -7932,3 +7932,496 @@ fn increasing_vengeance_is_a_two_mana_red_instant() {
     assert!(def.card_types.contains(&crate::card::CardType::Instant));
     assert_eq!(def.cost.cmc(), 2);
 }
+
+/// Increasing Vengeance's "if cast from a graveyard, copy that spell
+/// twice instead" rider. The printed card has an implicit "exile from
+/// anywhere" replacement so the only way to cast it from a graveyard
+/// is via a granted Flashback (Past in Flames, Yawgmoth's Will-style
+/// effect). We synthesize the scenario by adding a Flashback {R}{R}
+/// cost to the card definition for the test, then casting via
+/// `GameAction::CastFlashback`. The cast_from_hand flag is false for
+/// flashback casts → `Predicate::CastFromGraveyard` evaluates true →
+/// the `If` branch runs `CopySpell { count: 2 }`.
+#[test]
+fn increasing_vengeance_double_copies_when_flashed_back_from_graveyard() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+
+    // Cast Lightning Bolt at bear (the spell to be copied).
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Bolt castable for {R}");
+
+    // Put a synthetic Increasing Vengeance (with Flashback {R}{R}) into
+    // P0's graveyard. Bolt is on the stack above.
+    let mut iv_def = catalog::increasing_vengeance();
+    iv_def.keywords.push(Keyword::Flashback(crate::mana::cost(&[
+        crate::mana::r(),
+        crate::mana::r(),
+    ])));
+    let iv = g.add_card_to_graveyard(0, iv_def);
+
+    // Pay the {R}{R} flashback cost.
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.perform_action(GameAction::CastFlashback {
+        card_id: iv,
+        target: Some(Target::Permanent(bolt)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Increasing Vengeance castable via Flashback for {R}{R}");
+    drain_stack(&mut g);
+
+    // Bolt + TWO copies of Bolt = 9 damage total (each deals 3 to the
+    // bear). The bear (2 toughness) dies from any single bolt.
+    assert!(g.battlefield_find(bear).is_none(), "bear destroyed");
+
+    // The IV card should end up in exile (flashback resolution exiles
+    // the cast card).
+    assert!(g.exile.iter().any(|c| c.id == iv),
+        "Increasing Vengeance should be exiled after flashback resolves");
+}
+
+// ── Push (modern_decks) NEW STX cards ────────────────────────────────────
+
+// ── Spined Karok ────────────────────────────────────────────────────────
+
+#[test]
+fn spined_karok_etb_lands_counter_on_friendly() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::spined_karok());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Spined Karok castable for {2}{G}{U}");
+    drain_stack(&mut g);
+
+    let bear_card = g.battlefield_find(bear).expect("bear still on bf");
+    assert_eq!(bear_card.counter_count(CounterType::PlusOnePlusOne), 1);
+}
+
+#[test]
+fn spined_karok_is_a_four_mana_three_three_with_reach() {
+    let def = catalog::spined_karok();
+    assert_eq!(def.cost.cmc(), 4);
+    assert_eq!(def.power, 3);
+    assert_eq!(def.toughness, 3);
+    assert!(def.keywords.contains(&Keyword::Reach));
+    assert!(def.has_creature_type(crate::card::CreatureType::Beast));
+}
+
+// ── Inspiring Veteran ───────────────────────────────────────────────────
+
+#[test]
+fn inspiring_veteran_buffs_other_friendly_creatures() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let veteran = g.add_card_to_battlefield(0, catalog::inspiring_veteran());
+
+    let bear_view = g.computed_permanent(bear).expect("bear on bf");
+    let vet_view = g.computed_permanent(veteran).expect("veteran on bf");
+    assert_eq!(bear_view.power, 3, "bear should be 2+1=3 power from anthem");
+    assert_eq!(bear_view.toughness, 3, "bear should be 2+1=3 toughness from anthem");
+    // The Veteran itself should be unaffected (OtherThanSource).
+    assert_eq!(vet_view.power, 2, "Veteran should not buff itself");
+    assert_eq!(vet_view.toughness, 2, "Veteran should not buff itself");
+}
+
+#[test]
+fn inspiring_veteran_does_not_buff_opp_creatures() {
+    let mut g = two_player_game();
+    let opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let _ = g.add_card_to_battlefield(0, catalog::inspiring_veteran());
+
+    let opp_view = g.computed_permanent(opp_bear).expect("opp bear on bf");
+    assert_eq!(opp_view.power, 2, "opp bear unbuffed");
+    assert_eq!(opp_view.toughness, 2, "opp bear unbuffed");
+}
+
+#[test]
+fn inspiring_veteran_anthem_expires_when_it_leaves_play() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let veteran = g.add_card_to_battlefield(0, catalog::inspiring_veteran());
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 3);
+
+    // Remove veteran.
+    let vet_card = g.battlefield.iter().position(|c| c.id == veteran).unwrap();
+    let card = g.battlefield.remove(vet_card);
+    g.players[0].graveyard.push(card);
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 2,
+        "bear should be back to 2 after veteran leaves");
+}
+
+// ── Snipe ───────────────────────────────────────────────────────────────
+
+#[test]
+fn snipe_deals_two_to_creature_without_cantrip() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::snipe());
+    let hand_before = g.players[0].hand.len();
+    // Library has enough cards.
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Snipe castable for {U}{R}");
+    drain_stack(&mut g);
+
+    // Bear 2/2 takes 2 damage and dies.
+    let _ = g.check_state_based_actions();
+    assert!(g.battlefield_find(bear).is_none(), "bear destroyed by 2 damage");
+
+    // No cantrip: spells_cast_this_turn = 1 (only Snipe), gate is "≥2".
+    // So hand size should be unchanged (cast Snipe = -1, no draw = 0 net).
+    assert_eq!(g.players[0].hand.len(), hand_before - 1,
+        "no cantrip on first spell");
+}
+
+#[test]
+fn snipe_cantrips_on_second_spell_cast() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    // Library has cards to draw.
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    // Fake a prior spell having been cast this turn.
+    g.players[0].spells_cast_this_turn = 1;
+    g.spells_cast_this_turn = 1;
+
+    let id = g.add_card_to_hand(0, catalog::snipe());
+    let hand_before = g.players[0].hand.len();
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Snipe castable for {U}{R}");
+    drain_stack(&mut g);
+
+    let _ = g.check_state_based_actions();
+    assert!(g.battlefield_find(bear).is_none(), "bear destroyed");
+    // Cast Snipe = -1, draw = +1, net 0.
+    assert_eq!(g.players[0].hand.len(), hand_before,
+        "cantrip fires on second spell");
+}
+
+// ── Witherbloom Pest Eater ──────────────────────────────────────────────
+
+#[test]
+fn witherbloom_pest_eater_etb_creates_pest_token() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::witherbloom_pest_eater());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+
+    let bf_before = g.battlefield.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Witherbloom Pest Eater castable for {3}{B}{G}");
+    drain_stack(&mut g);
+
+    // Eater enters + Pest token enters = +2 permanents.
+    assert_eq!(g.battlefield.len(), bf_before + 2);
+    let pest = g.battlefield.iter().find(|c|
+        c.definition.has_creature_type(crate::card::CreatureType::Pest)
+            && c.id != id
+    ).expect("Pest token should be created");
+    assert_eq!(pest.controller, 0, "Pest controlled by you");
+}
+
+#[test]
+fn witherbloom_pest_eater_grows_when_another_pest_dies() {
+    let mut g = two_player_game();
+    let eater = g.add_card_to_battlefield(0, catalog::witherbloom_pest_eater());
+    g.clear_sickness(eater);
+    let pest = g.add_card_to_battlefield(0, catalog::eyetwitch());
+    g.clear_sickness(pest);
+
+    let p_before = g.battlefield_find(eater).unwrap().power();
+    let t_before = g.battlefield_find(eater).unwrap().toughness();
+
+    // Kill the pest.
+    let pos = g.battlefield.iter().position(|c| c.id == pest).unwrap();
+    let card = g.battlefield.remove(pos);
+    g.players[0].graveyard.push(card);
+    // Fire the death-trigger manually (the SBA loop would normally have
+    // emitted this).
+    use crate::game::types::GameEvent;
+    let events = vec![GameEvent::CreatureDied { card_id: pest }];
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+
+    let p_after = g.battlefield_find(eater).unwrap().power();
+    let t_after = g.battlefield_find(eater).unwrap().toughness();
+    assert_eq!(p_after, p_before + 1, "Eater should pump +1 power on Pest death");
+    assert_eq!(t_after, t_before + 1, "Eater should pump +1 toughness on Pest death");
+}
+
+// ── Inkmoth Initiate ────────────────────────────────────────────────────
+
+#[test]
+fn inkmoth_initiate_etb_shrinks_target_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    let id = g.add_card_to_hand(0, catalog::inkmoth_initiate());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Inkmoth Initiate castable for {W}{B}");
+    drain_stack(&mut g);
+
+    // Bear 2/2 becomes 1/1 EOT.
+    let bear_view = g.battlefield_find(bear).expect("bear still alive");
+    assert_eq!(bear_view.toughness(), 1, "bear shrunk to 1 toughness");
+    assert_eq!(bear_view.power(), 1, "bear shrunk to 1 power");
+}
+
+#[test]
+fn inkmoth_initiate_is_a_two_mana_flying_human_cleric() {
+    let def = catalog::inkmoth_initiate();
+    assert_eq!(def.cost.cmc(), 2);
+    assert_eq!(def.power, 2);
+    assert_eq!(def.toughness, 2);
+    assert!(def.keywords.contains(&Keyword::Flying));
+    assert!(def.has_creature_type(crate::card::CreatureType::Human));
+    assert!(def.has_creature_type(crate::card::CreatureType::Cleric));
+}
+
+// ── Stoic Tutelage ──────────────────────────────────────────────────────
+
+#[test]
+fn stoic_tutelage_draws_two_and_drains_each_opp() {
+    let mut g = two_player_game();
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let id = g.add_card_to_hand(0, catalog::stoic_tutelage());
+    let hand_before = g.players[0].hand.len();
+    let opp_life_before = g.players[1].life;
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Stoic Tutelage castable for {3}{W}");
+    drain_stack(&mut g);
+
+    // -1 (cast) +2 (draw) = +1 net.
+    assert_eq!(g.players[0].hand.len(), hand_before + 1);
+    assert_eq!(g.players[1].life, opp_life_before - 1, "opp loses 1 life");
+}
+
+// ── Lorehold Recovery ───────────────────────────────────────────────────
+
+#[test]
+fn lorehold_recovery_reanimates_with_haste() {
+    let mut g = two_player_game();
+    let bear_in_gy = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::lorehold_recovery());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(bear_in_gy)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Lorehold Recovery castable for {2}{R}{W}");
+    drain_stack(&mut g);
+
+    let bear_card = g.battlefield_find(bear_in_gy).expect("bear reanimated");
+    assert!(bear_card.has_keyword(&Keyword::Haste),
+        "reanimated bear should have haste EOT");
+}
+
+// ── Quandrix Surge ──────────────────────────────────────────────────────
+
+#[test]
+fn quandrix_surge_doubles_each_creatures_counters() {
+    let mut g = two_player_game();
+    let bear1 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let bear2 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // Seed counters: bear1 has 2, bear2 has 3.
+    if let Some(c) = g.battlefield_find_mut(bear1) {
+        c.counters.insert(CounterType::PlusOnePlusOne, 2);
+    }
+    if let Some(c) = g.battlefield_find_mut(bear2) {
+        c.counters.insert(CounterType::PlusOnePlusOne, 3);
+    }
+
+    let id = g.add_card_to_hand(0, catalog::quandrix_surge());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Quandrix Surge castable for {1}{G}{U}");
+    drain_stack(&mut g);
+
+    let b1 = g.battlefield_find(bear1).unwrap();
+    let b2 = g.battlefield_find(bear2).unwrap();
+    assert_eq!(b1.counter_count(CounterType::PlusOnePlusOne), 4,
+        "bear1 counters doubled from 2 to 4");
+    assert_eq!(b2.counter_count(CounterType::PlusOnePlusOne), 6,
+        "bear2 counters doubled from 3 to 6");
+}
+
+#[test]
+fn quandrix_surge_noop_on_counterless_creatures() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::quandrix_surge());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Quandrix Surge castable");
+    drain_stack(&mut g);
+
+    let bear_view = g.battlefield_find(bear).unwrap();
+    assert_eq!(bear_view.counter_count(CounterType::PlusOnePlusOne), 0,
+        "no counters to double → no counters land");
+}
+
+// ── Magecraft Insight ───────────────────────────────────────────────────
+
+#[test]
+fn magecraft_insight_draws_two_cards() {
+    let mut g = two_player_game();
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let id = g.add_card_to_hand(0, catalog::magecraft_insight());
+    let hand_before = g.players[0].hand.len();
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Magecraft Insight castable for {2}{U}");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[0].hand.len(), hand_before + 1,
+        "draws 2, casts 1 = net +1");
+}
+
+// ── Sparkmage's Mantra ──────────────────────────────────────────────────
+
+#[test]
+fn sparkmages_mantra_pings_and_scrys() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let id = g.add_card_to_hand(0, catalog::sparkmages_mantra());
+    g.players[0].mana_pool.add(Color::Red, 1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None, x_value: None,
+    })
+    .expect("Sparkmage's Mantra castable for {R}");
+    drain_stack(&mut g);
+
+    // Bear takes 1 damage; 2-toughness, still alive.
+    let bear_view = g.battlefield_find(bear).expect("bear still alive after 1 dmg");
+    assert_eq!(bear_view.damage, 1, "bear should have 1 damage");
+}
+
+#[test]
+fn sparkmages_mantra_can_target_player() {
+    let mut g = two_player_game();
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let id = g.add_card_to_hand(0, catalog::sparkmages_mantra());
+    let life_before = g.players[1].life;
+    g.players[0].mana_pool.add(Color::Red, 1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        mode: None, x_value: None,
+    })
+    .expect("Sparkmage's Mantra castable for {R}");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[1].life, life_before - 1, "opp took 1 damage");
+}
+
+// ── Witherbloom Drainage ────────────────────────────────────────────────
+
+#[test]
+fn witherbloom_drainage_drains_each_opp_two() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::witherbloom_drainage());
+    let p0_before = g.players[0].life;
+    let p1_before = g.players[1].life;
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Witherbloom Drainage castable for {1}{B}{G}");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[1].life, p1_before - 2, "opp loses 2 life");
+    assert_eq!(g.players[0].life, p0_before + 2, "you gain 2 life");
+}

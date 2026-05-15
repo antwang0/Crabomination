@@ -56,6 +56,15 @@ pub struct EffectContext {
     /// during spell resolution and isn't present in any visible zone,
     /// so a zone-walking lookup wouldn't find it.
     pub source_name: Option<&'static str>,
+    /// True if the resolving spell was cast from its caster's hand.
+    /// False for flashback / cast-from-graveyard / cast-from-exile
+    /// paths. Stamped by `for_spell_with_source` from the resolving
+    /// `CardInstance.cast_from_hand` flag, read by
+    /// `Predicate::CastFromGraveyard` (Increasing Vengeance "if cast
+    /// from graveyard, copy twice instead"). Defaults to `true` for
+    /// non-spell contexts (triggers, activated abilities) since those
+    /// don't have a "cast zone" concept.
+    pub cast_from_hand: bool,
 }
 
 impl EffectContext {
@@ -70,6 +79,7 @@ impl EffectContext {
             converged_value: 0,
             mana_spent: 0,
             source_name: None,
+            cast_from_hand: true,
         }
     }
     /// Spell-resolution context with the resolving spell's
@@ -94,6 +104,39 @@ impl EffectContext {
         converged_value: u32,
         mana_spent: u32,
     ) -> Self {
+        Self::for_spell_with_source_and_origin(
+            spell_card,
+            spell_name,
+            caster,
+            target,
+            additional_targets,
+            mode,
+            x_value,
+            converged_value,
+            mana_spent,
+            true,
+        )
+    }
+
+    /// Variant of `for_spell_with_source` that also stamps the
+    /// `cast_from_hand` flag so the resolution-time predicate
+    /// `Predicate::CastFromGraveyard` (Increasing Vengeance) can read
+    /// whether the spell came from hand vs graveyard / flashback. The
+    /// no-origin sibling defaults to `cast_from_hand = true` since the
+    /// vast majority of spell resolutions are hand casts.
+    #[allow(clippy::too_many_arguments)]
+    pub fn for_spell_with_source_and_origin(
+        spell_card: CardId,
+        spell_name: &'static str,
+        caster: usize,
+        target: Option<Target>,
+        additional_targets: Vec<Target>,
+        mode: usize,
+        x_value: u32,
+        converged_value: u32,
+        mana_spent: u32,
+        cast_from_hand: bool,
+    ) -> Self {
         // Merge slot 0 (`target`) + slots 1+ (`additional_targets`) into
         // a single `targets` Vec so `Selector::Target(n)` reads slot n
         // for any n. Single-target spells leave `additional_targets`
@@ -110,6 +153,7 @@ impl EffectContext {
             converged_value,
             mana_spent,
             source_name: Some(spell_name),
+            cast_from_hand,
         }
     }
     pub fn for_trigger(
@@ -128,6 +172,7 @@ impl EffectContext {
             converged_value: 0,
             mana_spent: 0,
             source_name: None,
+            cast_from_hand: true,
         }
     }
     pub fn for_ability(
@@ -145,6 +190,7 @@ impl EffectContext {
             converged_value: 0,
             mana_spent: 0,
             source_name: None,
+            cast_from_hand: true,
         }
     }
 }

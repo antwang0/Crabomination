@@ -881,6 +881,7 @@ impl GameState {
                     converged_value: 0,
                     mana_spent: 0,
                     source_name: None,
+                    cast_from_hand: true,
                 };
                 if !self.evaluate_predicate(&filter, &ctx) {
                     continue;
@@ -1475,8 +1476,17 @@ impl GameState {
         override_effect: Option<Effect>,
     ) -> Result<Vec<GameEvent>, GameError> {
         let effect = override_effect.unwrap_or_else(|| card.definition.effect.clone());
-        let ctx = EffectContext::for_spell_with_source(
-            card.id, card.definition.name, caster, target.clone(), additional_targets.clone(), mode, x_value, converged_value, mana_spent,
+        let ctx = EffectContext::for_spell_with_source_and_origin(
+            card.id,
+            card.definition.name,
+            caster,
+            target.clone(),
+            additional_targets.clone(),
+            mode,
+            x_value,
+            converged_value,
+            mana_spent,
+            card.cast_from_hand,
         );
         let events = self.resolve_effect(&effect, &ctx)?;
         if let Some((decision, in_progress, remaining)) = self.suspend_signal.take() {

@@ -379,6 +379,16 @@ pub enum Predicate {
     /// `EffectContext.source_name` (the resolving spell's name); when no
     /// source is available the predicate is `False`.
     SameNamedInZoneAtLeast { who: PlayerRef, zone: Zone, at_least: Value },
+    /// True when the resolving spell was cast from its caster's
+    /// graveyard (typically via Flashback / Aftermath / Jump-Start /
+    /// Yawgmoth's Will-style "cast from graveyard" effects). Backed by
+    /// `EffectContext.cast_from_hand == false`, which is stamped by
+    /// `for_spell_with_source` from the resolving card's
+    /// `CardInstance.cast_from_hand` flag. Used by Increasing Vengeance
+    /// ("If this spell was cast from a graveyard, copy that spell twice
+    /// instead") and Antiquities on the Loose's "cast from anywhere
+    /// other than your hand" rider.
+    CastFromGraveyard,
 }
 
 // ── Duration ─────────────────────────────────────────────────────────────────

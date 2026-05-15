@@ -370,6 +370,16 @@ impl GameState {
                 };
                 count >= n
             }
+            Predicate::CastFromGraveyard => {
+                // Read directly off the resolution context. Stamped by
+                // `for_spell_with_source` from the resolving
+                // `CardInstance.cast_from_hand` flag. Non-spell
+                // contexts default `cast_from_hand` to true, so this
+                // predicate is `False` for triggers and activated
+                // abilities — which matches the printed wording
+                // ("cast from a graveyard" is a spell-only concept).
+                !ctx.cast_from_hand
+            }
             Predicate::IncrementSatisfied => {
                 // SOS Increment: "Whenever you cast a spell, if the
                 // amount of mana you spent is greater than this

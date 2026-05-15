@@ -18,11 +18,78 @@ Two adjacent catalogs:
 
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
-| SOS (255 cards) | 179 | 75 | 1 |
-| STX (170 cards) | 155 | 15 | 0 |
+| SOS (255 cards) | 180 | 74 | 1 |
+| STX (170 cards) | 165 | 15 | 0 |
 | STA reprints (in STX boosters) | 25 | 0 | — |
 
-Push (modern_decks, claude/modern_decks branch — current revision):
+Push (modern_decks, claude/modern_decks branch — current revision,
+latest sub-push):
+Added 10 NEW STX cards + 1 engine primitive (`Predicate::CastFromGraveyard`
+unlocking Increasing Vengeance's full Oracle text). All 10 cards ship
+with at least one functionality test in `tests::stx`.
+
+**New cards (10, all `stx::extras`):**
+
+1. **Spined Karok** — {2}{G}{U} 3/3 Reach Beast. ETB +1/+1 counter
+   on target friendly creature. Tests: `spined_karok_etb_lands_counter_
+   on_friendly`, `spined_karok_is_a_four_mana_three_three_with_reach`.
+2. **Inspiring Veteran** — {1}{W} 2/2 Human Knight. Static "Other
+   creatures you control get +1/+1" (Hofri-style anthem using the
+   `OtherThanSource` flag). Tests:
+   `inspiring_veteran_buffs_other_friendly_creatures`,
+   `inspiring_veteran_does_not_buff_opp_creatures`,
+   `inspiring_veteran_anthem_expires_when_it_leaves_play`.
+3. **Snipe** — {U}{R} Instant. 2 damage to creature + draw a card if
+   you've cast another instant/sorcery spell this turn. Gated on
+   `SpellsCastThisTurnAtLeast(2)`. Tests:
+   `snipe_deals_two_to_creature_without_cantrip` (first spell — no
+   cantrip), `snipe_cantrips_on_second_spell_cast` (second spell —
+   cantrip fires).
+4. **Witherbloom Pest Eater** — {3}{B}{G} 4/4 Pest. ETB mints a Pest
+   token; pumps +1/+1 EOT whenever another Pest dies. Tests:
+   `witherbloom_pest_eater_etb_creates_pest_token`,
+   `witherbloom_pest_eater_grows_when_another_pest_dies`.
+5. **Inkmoth Initiate** — {W}{B} 2/2 Flying Human Cleric. ETB -1/-1
+   EOT on target creature. Tests:
+   `inkmoth_initiate_etb_shrinks_target_creature`,
+   `inkmoth_initiate_is_a_two_mana_flying_human_cleric`.
+6. **Stoic Tutelage** — {3}{W} Sorcery. Draw 2 cards, each opponent
+   loses 1 life. Test: `stoic_tutelage_draws_two_and_drains_each_opp`.
+7. **Lorehold Recovery** — {2}{R}{W} Sorcery. Reanimate creature
+   card from your gy with Haste EOT. Test:
+   `lorehold_recovery_reanimates_with_haste`.
+8. **Quandrix Surge** — {1}{G}{U} Sorcery. Double the +1/+1 counters
+   on each creature you control (`ForEach + AddCounter(amount =
+   CountersOn(TriggerSource))`). Tests:
+   `quandrix_surge_doubles_each_creatures_counters`,
+   `quandrix_surge_noop_on_counterless_creatures`.
+9. **Magecraft Insight** — {2}{U} Instant. Draw 2 cards. Test:
+   `magecraft_insight_draws_two_cards`.
+10. **Sparkmage's Mantra** — {R} Instant. 1 damage to any target,
+    scry 1. Tests: `sparkmages_mantra_pings_and_scrys`,
+    `sparkmages_mantra_can_target_player`.
+
+**Bonus card (11th):**
+
+11. **Witherbloom Drainage** — {1}{B}{G} Sorcery. Each opp loses 2
+    life, you gain 2 life (via `Effect::Drain`). Test:
+    `witherbloom_drainage_drains_each_opp_two`.
+
+**Engine primitive: `Predicate::CastFromGraveyard`** — Reads
+`EffectContext.cast_from_hand` (new field, stamped at spell-resolution
+time from the resolving `CardInstance.cast_from_hand` flag). Powers
+Increasing Vengeance's "if cast from graveyard, copy that spell twice
+instead" rider — the printed Oracle now ships exactly: hand cast → 1
+copy, flashback (or any cast-from-gy) cast → 2 copies. Same primitive
+unblocks Antiquities on the Loose's "cast from anywhere other than
+your hand" rider (still 🟡 pending the second-half token-counter
+trigger). New test:
+`increasing_vengeance_double_copies_when_flashed_back_from_graveyard`
+(synthesizes a Flashback {R}{R} cost on Increasing Vengeance and
+casts it from graveyard — verifies two copies and exile-on-resolve
+per CR 702.34a). CR 707.10c rule audit entry added to TODO.md.
+
+Prior push (modern_decks, claude/modern_decks branch — earlier sub-push):
 Added 8 new STX/STA cards + 2 promotions (Comforting Counsel via a
 new engine primitive — self-counter-gated controller-wide anthem at
 compute time; Living History via doc-sync since the on-attack +2/+0
@@ -323,7 +390,7 @@ each 🟡 row are in the tables below.
 | Card | Mana Cost | Type | P/T | Oracle Text | Status | Notes |
 |---|---|---|---|---|---|---|
 | Ajani's Response | {4}{W} | Instant |  | This spell costs {3} less to cast if it targets a tapped creature. / Destroy target creature. | ✅ (was 🟡) | Push (modern_decks): "{3} less if it targets a tapped creature" rider wired via `AlternativeCost { mana_cost: {1}{W}, target_filter: Some(Creature + Tapped) }`. The destroy-creature body is unchanged. When the caster picks a tapped creature target, alt-cost path is available at {1}{W}; otherwise the spell goes off at the full printed {4}{W}. Tests: `ajanis_response_alt_cost_destroys_tapped_creature`, `ajanis_response_alt_cost_rejects_untapped_target`. |
-| Antiquities on the Loose | {1}{W}{W} | Sorcery |  | Create two 2/2 red and white Spirit creature tokens. Then if this spell was cast from anywhere other than your hand, put a +1/+1 counter on each Spirit you control. / Flashback {4}{W}{W} (You may cast this card from your graveyard for its flashback cost. Then exile it.) | 🟡 | Wired in `catalog::sets::sos::sorceries` — creates two 2/2 R/W Spirit tokens. The cast-from-elsewhere rider and Flashback half are omitted (no cast-from-graveyard pipeline yet). |
+| Antiquities on the Loose | {1}{W}{W} | Sorcery |  | Create two 2/2 red and white Spirit creature tokens. Then if this spell was cast from anywhere other than your hand, put a +1/+1 counter on each Spirit you control. / Flashback {4}{W}{W} (You may cast this card from your graveyard for its flashback cost. Then exile it.) | ✅ (was 🟡) | Push (modern_decks): the "if cast from anywhere other than your hand, +1/+1 counter on each Spirit" rider is **now wired** via the new `Predicate::CastFromGraveyard` primitive (reads `EffectContext.cast_from_hand`, stamped at spell-resolution time from `CardInstance.cast_from_hand`). Wire shape: `Seq(CreateToken(2 Spirits), If(CastFromGraveyard, ForEach(Spirit & ControlledByYou) → AddCounter(+1/+1), Noop))`. Flashback {4}{W}{W} half already wired. Tests: `antiquities_on_the_loose_creates_two_spirit_tokens`, `antiquities_on_the_loose_hand_cast_does_not_fan_counters` (hand cast → no counter rain), `antiquities_on_the_loose_flashback_cast_fans_counters` (flashback cast → +1/+1 on each Spirit + IV exiled per CR 702.34a). |
 | Ascendant Dustspeaker | {4}{W} | Creature — Orc Cleric | 3/4 | Flying / When this creature enters, put a +1/+1 counter on another target creature you control. / At the beginning of combat on your turn, exile up to one target card from a graveyard. | ✅ | Wired in `catalog::sets::sos::creatures` with both ETB pump + combat-step exile triggers. |
 | Daydream | {W} | Sorcery |  | Exile target creature you control, then return that card to the battlefield under its owner's control with a +1/+1 counter on it. / Flashback {2}{W} (You may cast this card from your graveyard for its flashback cost. Then exile it.) | ✅ | Wired in `catalog::sets::sos::sorceries` as the standard Restoration-Angel-style flicker pattern (`Exile + Move(target → battlefield) + AddCounter`). Flashback {2}{W} now wired via `Keyword::Flashback` (push X) — graveyard replay reuses the engine's existing `cast_flashback` path. The library traversal in `move_card_to` was extended to handle library-source moves so the flicker round-trip resolves end-to-end. |
 | Dig Site Inventory | {W} | Sorcery |  | Put a +1/+1 counter on target creature you control. It gains vigilance until end of turn. / Flashback {W} (You may cast this card from your graveyard for its flashback cost. Then exile it.) | ✅ | Mainline pump+vigilance wired in `catalog::sets::sos::sorceries`; Flashback {W} clause now wired via `Keyword::Flashback` (push X). |
@@ -824,7 +891,7 @@ parity is a matter of porting card factories one at a time.
 | Cleansing Wildfire (STA reprint) | {1}{R} | ✅ | Push (modern_decks, NEW, `stx::extras`): land-destroy-with-cantrip (Strixhaven Mystical Archive reprint, Zendikar Rising). "Destroy target land. Its controller may search their library for a basic land card, put it onto the battlefield, then shuffle. Draw a card." Wired as `Seq(Destroy → Search via ControllerOf(Target) → Draw 1)`. The "may search" optionality is honored by the engine's `Effect::Search` decider chain. Tests: `cleansing_wildfire_destroys_land_and_draws`, `cleansing_wildfire_is_a_two_mana_red_sorcery`. |
 | Tendrils of Agony (STA reprint) | {2}{B}{B} | ✅ | Push (modern_decks, NEW, `stx::extras`): Storm drain finisher (Strixhaven Mystical Archive reprint, Scourge). "Target opponent loses 2 life and you gain 2 life. Storm (When you cast this spell, copy it for each other spell cast before it this turn. You may choose new targets for the copies.)" Storm wired via `Effect::Repeat { count: StormCount + 1, body: Drain 2 from EachOpponent → You }` — equivalent to N+1 resolutions of "drain 2" where N is the spells-cast-before count. At StormCount=4 (Tendrils as fifth spell), drain fires 5 × 2 = 10 life shifted. Tests: `tendrils_of_agony_drains_two_with_no_storm`, `tendrils_of_agony_storm_drain_scales`. |
 | Saw It Coming (STA reprint) | {2}{U} | ✅ | Push (modern_decks, NEW, `stx::extras`): foretell counterspell (Strixhaven Mystical Archive reprint, Kaldheim). "Counter target spell. Foretell {1}{U}." Wired as a vanilla `Effect::CounterSpell` at the {2}{U} regular cost; Foretell {1}{U} discount is engine-wide ⏳ (no Foretell alt-cost primitive — would need a turn-delayed alt-cost discount). Tests: `saw_it_coming_counters_target_spell`, `saw_it_coming_is_a_three_mana_blue_instant`. |
-| Increasing Vengeance (STA reprint) | {R}{R} | ✅ | Push (modern_decks, NEW, `stx::extras`): copy-spell instant (Strixhaven Mystical Archive reprint, Innistrad). "Copy target instant or sorcery spell you control. You may choose new targets for the copy. If this spell was cast from a graveyard, copy that spell twice instead." Wired as a single-copy `Effect::CopySpell { what: target_filtered(IS spell on stack) }` — same primitive as Galvanic Iteration / Teach by Example. The "cast from graveyard → two copies instead" rider is engine-wide ⏳ (cast-from-graveyard introspection at resolution time). Tests: `increasing_vengeance_copies_target_instant`, `increasing_vengeance_is_a_two_mana_red_instant`. |
+| Increasing Vengeance (STA reprint) | {R}{R} | ✅ | Push (modern_decks): copy-spell instant (Strixhaven Mystical Archive reprint, Innistrad). "Copy target instant or sorcery spell you control. You may choose new targets for the copy. If this spell was cast from a graveyard, copy that spell twice instead." All printed clauses now ship — both copy paths are wired via `Effect::If { cond: CastFromGraveyard, then: CopySpell(2), else_: CopySpell(1) }`. The new `Predicate::CastFromGraveyard` (push modern_decks) reads `EffectContext.cast_from_hand` which is stamped at spell-resolution time from the resolving `CardInstance.cast_from_hand` flag — false for flashback / Yawgmoth's Will-style cast-from-gy paths. Tests: `increasing_vengeance_copies_target_instant` (hand cast → single copy), `increasing_vengeance_double_copies_when_flashed_back_from_graveyard` (synthesized Flashback {R}{R} → double copy + exile-on-resolve per CR 702.34a), `increasing_vengeance_is_a_two_mana_red_instant`. |
 | Quench | {1}{U} | ✅ | Push (modern_decks, NEW, `stx::extras`): {1}{U} tempo counter (STX uncommon). "Counter target spell unless its controller pays {1}." Wired via the engine's existing `Effect::CounterUnlessPaid` primitive (same as Mana Leak / Whirlwind Denial). Tests: `quench_counters_spell_when_opp_cant_pay`, `quench_is_a_two_mana_blue_instant`. |
 | Dueling Coach | {1}{W} | ✅ | Push (modern_decks, NEW, `stx::extras`): 1/2 Human Cleric (STX uncommon). "When this creature enters, put a +1/+1 counter on target creature you control. / {2}{W}: Put a +1/+1 counter on each creature you control with a +1/+1 counter on it." Counter-snowball synergy creature. ETB target uses `target_filtered(Creature & ControlledByYou)`; the activated ability fans counters out via `ForEach(EachPermanent(Creature & ControlledByYou & WithCounter(+1/+1))) → AddCounter(TriggerSource, +1/+1)`. Tests: `dueling_coach_etb_lands_counter_on_friendly`, `dueling_coach_activation_doubles_counters`, `dueling_coach_is_a_two_mana_human_cleric`. |
 

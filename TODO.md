@@ -11,6 +11,27 @@ Periodic spot-check of the rules document
 (`crabomination/MagicCompRules 20260116.txt`). Each rule below has a
 status tag (✅ wired, 🟡 partial, ⏳ todo) plus a short note.
 
+- ✅ **CR 707.10c / 707.10 — Copy effects and "new targets"** (push
+  modern_decks audit, claude/modern_decks branch): "Some effects copy
+  a spell or ability and state that its controller may choose new
+  targets for the copy." Push (modern_decks) lands the cast-from-
+  graveyard introspection needed to faithfully wire Increasing
+  Vengeance's "If this spell was cast from a graveyard, copy that
+  spell twice instead" rider. The new `Predicate::CastFromGraveyard`
+  reads `EffectContext.cast_from_hand` (stamped at spell-resolution
+  time from the resolving `CardInstance.cast_from_hand` flag — false
+  for flashback / Yawgmoth's Will-style "cast from graveyard"
+  paths). Combined with the engine's existing `Effect::CopySpell`,
+  the printed Oracle ships exactly: hand cast → 1 copy, flashback
+  cast → 2 copies. The "may choose new targets for the copy" half
+  is still ⏳ (the engine carries the original targets unchanged
+  through `CopySpell`); CR 707.10c's optional retarget needs a per-
+  copy decision shape on the controller's side. Tests:
+  `increasing_vengeance_copies_target_instant` (hand cast → single
+  copy), `increasing_vengeance_double_copies_when_flashed_back_from_
+  graveyard` (synthetic Flashback {R}{R} → flashback cast → two
+  copies + bear destroyed + IV exiled per CR 702.34a).
+
 - ✅ **CR 700.4 — Definition of "dies"** (push modern_decks audit,
   claude/modern_decks branch): "The term dies means 'is put into a
   graveyard from the battlefield.'" The engine emits a

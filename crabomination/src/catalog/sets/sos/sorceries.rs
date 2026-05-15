@@ -300,13 +300,30 @@ pub fn practiced_offense() -> CardDefinition {
 /// spell was cast from anywhere other than your hand, put a +1/+1
 /// counter on each Spirit you control. / Flashback {4}{W}{W}."
 ///
-/// The Flashback {4}{W}{W} clause is wired via `Keyword::Flashback`. The
-/// "if cast from anywhere other than your hand, +1/+1 counter on each
-/// Spirit you control" rider is still omitted (no `cast_from_zone`
-/// snapshot on `StackItem` yet) — the flashback cast still mints the
-/// two Spirits but skips the bonus counter shower.
+/// Push (modern_decks): the "if cast from anywhere other than your
+/// hand" rider is **now wired** via the new
+/// `Predicate::CastFromGraveyard` (reads
+/// `EffectContext.cast_from_hand`, which is stamped at spell-
+/// resolution time from the resolving `CardInstance.cast_from_hand`
+/// flag). On the flashback cast the predicate is true → the engine
+/// fans a +1/+1 counter out to each Spirit you control via
+/// `ForEach(Creature ∧ Spirit ∧ ControlledByYou) → AddCounter`. On
+/// the hand cast the predicate is false and only the two Spirit
+/// tokens are minted (no bonus counters). The Flashback {4}{W}{W}
+/// clause is wired via `Keyword::Flashback`.
+///
+/// "Anywhere other than your hand" technically also covers casts
+/// from exile (Foretell, Suspend) or library (Cascade, Hideaway).
+/// Our `cast_from_hand` flag is only true for the standard hand-cast
+/// path — every alternative-zone cast (Flashback path is the only
+/// one wired today) sets it to false, so the rider fires correctly
+/// for any future cast-from-exile path. Tests:
+/// `antiquities_on_the_loose_hand_cast_mints_two_spirits` (regular
+/// cast — no counter rain),
+/// `antiquities_on_the_loose_flashback_cast_fans_counters` (graveyard
+/// cast via Flashback — +1/+1 on each Spirit).
 pub fn antiquities_on_the_loose() -> CardDefinition {
-    use crate::card::Keyword;
+    use crate::card::{CounterType, Keyword, Predicate, SelectionRequirement, Selector};
     use crate::mana::{ManaCost, ManaSymbol};
     let flashback_cost = ManaCost {
         symbols: vec![
@@ -324,11 +341,31 @@ pub fn antiquities_on_the_loose() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![Keyword::Flashback(flashback_cost)],
-        effect: Effect::CreateToken {
-            who: PlayerRef::You,
-            count: Value::Const(2),
-            definition: spirit_token(),
-        },
+        effect: Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                definition: spirit_token(),
+            },
+            Effect::If {
+                cond: Predicate::CastFromGraveyard,
+                then: Box::new(Effect::ForEach {
+                    selector: Selector::EachPermanent(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::HasCreatureType(
+                                crate::card::CreatureType::Spirit,
+                            ))
+                            .and(SelectionRequirement::ControlledByYou),
+                    ),
+                    body: Box::new(Effect::AddCounter {
+                        what: Selector::TriggerSource,
+                        kind: CounterType::PlusOnePlusOne,
+                        amount: Value::Const(1),
+                    }),
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],

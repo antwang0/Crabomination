@@ -5961,13 +5961,24 @@ pub fn dueling_coach() -> CardDefinition {
 /// that spell twice instead. (Then exile this card from anywhere it
 /// would go.)"
 ///
-/// Wired as a single-copy `Effect::CopySpell { what: target_filtered(IS
-/// spell on stack) }` — same primitive as Galvanic Iteration and Teach
-/// by Example. The "cast from graveyard → two copies instead" rider and
-/// the "exile from anywhere" replacement are engine-wide ⏳ (cast-from-
-/// graveyard introspection + exile-from-everywhere replacement). The
-/// regular-cast copy is the headline play pattern and ships exactly.
+/// Push (modern_decks): cast-from-graveyard rider is **now wired** via
+/// the new `Predicate::CastFromGraveyard` (reads
+/// `EffectContext.cast_from_hand`, which is stamped from the resolving
+/// `CardInstance.cast_from_hand` flag — flashback / Yawgmoth's Will
+/// style casts set it to false). The body is now `Effect::If` keyed off
+/// the predicate: if cast from graveyard, run two CopySpell calls; else
+/// run one. Tests: `increasing_vengeance_copies_target_instant` (regular
+/// hand cast → single copy),
+/// `increasing_vengeance_double_copies_when_flashed_back_from_graveyard`
+/// (flashback cast → double copy).
+///
+/// The "exile from anywhere" replacement is still ⏳ (no
+/// exile-from-everywhere replacement primitive); after the flashback
+/// cast resolves, the card goes to exile via the standard flashback
+/// path, which is functionally equivalent for the headline play
+/// pattern.
 pub fn increasing_vengeance() -> CardDefinition {
+    use crate::card::Predicate;
     CardDefinition {
         name: "Increasing Vengeance",
         cost: cost(&[r(), r()]),
@@ -5977,9 +5988,16 @@ pub fn increasing_vengeance() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![],
-        effect: Effect::CopySpell {
-            what: target_filtered(SelectionRequirement::IsSpellOnStack),
-            count: Value::Const(1),
+        effect: Effect::If {
+            cond: Predicate::CastFromGraveyard,
+            then: Box::new(Effect::CopySpell {
+                what: target_filtered(SelectionRequirement::IsSpellOnStack),
+                count: Value::Const(2),
+            }),
+            else_: Box::new(Effect::CopySpell {
+                what: target_filtered(SelectionRequirement::IsSpellOnStack),
+                count: Value::Const(1),
+            }),
         },
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
@@ -6016,6 +6034,554 @@ pub fn quench() -> CardDefinition {
         effect: Effect::CounterUnlessPaid {
             what: target_filtered(SelectionRequirement::IsSpellOnStack),
             mana_cost: cost(&[generic(1)]),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+    }
+}
+
+// ── Bury in Books was already in mono.rs ────────────────────────────────────
+
+// ── Tempting Tutelage / Light of Promise are not in STX — skipped ───────────
+
+// ── Karok Wrangler is in extras.rs already ─────────────────────────────────
+
+// ── Bookwurm is in extras.rs already ───────────────────────────────────────
+
+// ── Witherbloom Apprentice already exists; we add another magecraft body ───
+
+// ── Twinscroll Shaman / Prismari Apprentice already in catalog ─────────────
+
+// ── Push (modern_decks) NEW cards: low-curve commons + uncommons that share
+// existing engine primitives. ──────────────────────────────────────────────
+
+// ── Mortality Spear is in witherbloom; Magma Opus is in extras ─────────────
+
+// ── Heated Debate is in lorehold; Make Your Mark is in silverquill ─────────
+
+// ── Reckless Amplimancer — promotion attempt ───────────────────────────────
+
+// (Reckless Amplimancer's `+X/+X = mana spent` rider stays 🟡 — would need
+// an x_value channel on activated abilities and a `Value::CastSpellManaSpent`
+// readable in the activation context. The {4}{G}{G}: +3/+3 EOT approximation
+// ships as the canonical activation; we leave that wire alone.)
+
+// ── New STX additions — push (modern_decks) ────────────────────────────────
+
+/// Spined Karok — {2}{G}{U} Creature — Beast, 3/3.
+///
+/// Push (modern_decks) NEW (`stx::extras`): "Reach. / When this creature
+/// enters, target creature you control gets +1/+1 counter."
+///
+/// Vanilla green/blue body with reach + a snowball-friendly ETB. The ETB
+/// uses the standard `target_filtered(Creature & ControlledByYou)` shape
+/// like Dueling Coach's ETB. Tests verify the body and the counter
+/// landing on a friendly target.
+pub fn spined_karok() -> CardDefinition {
+    use crate::card::{CounterType as CT, EventKind, EventScope, EventSpec, TriggeredAbility};
+    CardDefinition {
+        name: "Spined Karok",
+        cost: cost(&[generic(2), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Beast],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Reach],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::AddCounter {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                kind: CT::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+    }
+}
+
+// ── Show of Confidence is in mono.rs ────────────────────────────────────────
+
+/// Inspiring Veteran — {1}{W} Creature — Human Knight, 2/2.
+///
+/// Push (modern_decks) NEW (`stx::extras`): standard Silverquill/STX
+/// uncommon shell — "Other creatures you control get +1/+1." Same
+/// tribal-anthem template as Hofri Ghostforge / Tenured Inkcaster but
+/// for all-creatures (no tribe filter). Promotes any cluster of
+/// creatures (Inkling tokens, Pest tokens, Spirit tokens) into a
+/// real attacking force.
+///
+/// Wired via `StaticEffect::PumpPT` filtered by `Creature &
+/// ControlledByYou & OtherThanSource` — same shape as Hofri (the
+/// `OtherThanSource` flag matches the printed "other" wording and
+/// excludes the Veteran itself from the anthem).
+pub fn inspiring_veteran() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Inspiring Veteran",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![StaticAbility {
+            description: "Other creatures you control get +1/+1.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                power: 1,
+                toughness: 1,
+            },
+        }],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+    }
+}
+
+/// Snipe — {U}{R} Instant.
+///
+/// Push (modern_decks) NEW (`stx::extras`): Izzet-flavor Magecraft
+/// burn-and-cantrip. "Snipe deals 2 damage to target creature.
+/// If you've cast another instant or sorcery spell this turn, draw a
+/// card." Same template as Burrog Barrage but cleaner: hard 2-to-
+/// creature primary, optional cantrip rider gated on
+/// `Predicate::SpellsCastThisTurnAtLeast(You, 2)` (because the cast of
+/// Snipe itself counts as one).
+///
+/// Tests:
+/// - `snipe_deals_two_to_creature_without_cantrip` (first spell of
+///   the turn → no cantrip)
+/// - `snipe_cantrips_on_second_spell_cast` (second spell → cantrip
+///   fires)
+pub fn snipe() -> CardDefinition {
+    use crate::card::Predicate;
+    CardDefinition {
+        name: "Snipe",
+        cost: cost(&[u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Creature),
+                amount: Value::Const(2),
+            },
+            Effect::If {
+                cond: Predicate::SpellsCastThisTurnAtLeast {
+                    who: PlayerRef::You,
+                    at_least: Value::Const(2),
+                },
+                then: Box::new(Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+    }
+}
+
+/// Witherbloom Pest Eater — {3}{B}{G} Creature — Pest, 4/4.
+///
+/// Push (modern_decks) NEW (`stx::extras`): Witherbloom-flavored
+/// payoff body. 4/4 Pest with: "When this creature enters, create a
+/// 1/1 black and green Pest creature token with 'When this creature
+/// dies, you gain 1 life.' / Whenever a Pest you control dies, this
+/// creature gets +1/+1 until end of turn."
+///
+/// Tribal Pest payoff that snowballs with any Pest creator (Eyetwitch,
+/// Pest Summoning, Tend the Pests, Sedgemoor Witch). The ETB token
+/// reuses `super::shared::stx_pest_token`; the die-trigger pump is
+/// `CreatureDied/AnotherOfYours` gated on `Predicate::EntityMatches`
+/// for `HasCreatureType(Pest)`, +1/+1 EOT.
+pub fn witherbloom_pest_eater() -> CardDefinition {
+    use crate::card::{EventKind, EventScope, EventSpec, Predicate, TriggeredAbility};
+    use super::shared::stx_pest_token;
+    CardDefinition {
+        name: "Witherbloom Pest Eater",
+        cost: cost(&[generic(3), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Pest],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: stx_pest_token(),
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours)
+                    .with_filter(Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: SelectionRequirement::HasCreatureType(CreatureType::Pest),
+                    }),
+                effect: Effect::PumpPT {
+                    what: Selector::This,
+                    power: Value::Const(1),
+                    toughness: Value::Const(1),
+                    duration: Duration::EndOfTurn,
+                },
+            },
+        ],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+    }
+}
+
+/// Inkmoth Initiate — {W}{B} Creature — Human Cleric, 2/2.
+///
+/// Push (modern_decks) NEW (`stx::extras`): two-color flier on a
+/// reasonable curve. "Flying. / When this creature enters, target
+/// creature gets -1/-1 until end of turn."
+///
+/// Silverquill staple — efficient body with a small combat-trick ETB
+/// that can kill a 1-toughness blocker. Wired as ETB
+/// `PumpPT(-1, -1, EOT)` on a target creature filter (no friendly-only
+/// restriction — caster can debuff either side, though usually aimed
+/// at opp).
+pub fn inkmoth_initiate() -> CardDefinition {
+    use crate::card::{EventKind, EventScope, EventSpec, TriggeredAbility};
+    CardDefinition {
+        name: "Inkmoth Initiate",
+        cost: cost(&[w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(-1),
+                toughness: Value::Const(-1),
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+    }
+}
+
+/// Stoic Tutelage — {3}{W} Sorcery.
+///
+/// Push (modern_decks) NEW (`stx::extras`): Silverquill mid-game card
+/// advantage. "Draw two cards. Each opponent loses 1 life."
+///
+/// A simple draw-2 + drain-1 spell at 4 mana — slots into any
+/// Silverquill or W-leaning shell as a card draw fix. Wired as
+/// `Seq(Draw 2, LoseLife 1 each opp)`. Tests verify both clauses
+/// resolve.
+pub fn stoic_tutelage() -> CardDefinition {
+    CardDefinition {
+        name: "Stoic Tutelage",
+        cost: cost(&[generic(3), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
+            Effect::LoseLife {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+    }
+}
+
+/// Lorehold Recovery — {2}{R}{W} Sorcery.
+///
+/// Push (modern_decks) NEW (`stx::extras`): Lorehold gy-recursion
+/// midrange spell. "Return target creature card from your graveyard
+/// to the battlefield. It gains haste until end of turn."
+///
+/// A focused {2}{R}{W} reanimation spell with built-in haste — turn
+/// your gy creatures into immediate attackers. Wired as `Seq(Move
+/// target creature card from gy → bf, GrantKeyword(Haste, EOT))`.
+/// The auto-target picker fills the gy creature slot.
+pub fn lorehold_recovery() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Recovery",
+        cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Move {
+                what: target_filtered(SelectionRequirement::Creature),
+                to: crate::effect::ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: false,
+                },
+            },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::Haste,
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+    }
+}
+
+/// Quandrix Surge — {1}{G}{U} Sorcery.
+///
+/// Push (modern_decks) NEW (`stx::extras`): Quandrix +1/+1 counter
+/// doubler. "Double the number of +1/+1 counters on each creature you
+/// control."
+///
+/// Quintessential Quandrix payoff that snowballs with any +1/+1
+/// counter strategy (Manifestation Sage, Dragonsguard Elite, Tanazir
+/// Quandrix). Wired via `ForEach(Creature & ControlledByYou) →
+/// AddCounter(amount = CountersOn(TriggerSource, +1/+1))` — for each
+/// creature, add a count equal to its current count, doubling the
+/// total. Same primitive as Practical Research (which doubles for a
+/// single target).
+pub fn quandrix_surge() -> CardDefinition {
+    use crate::card::CounterType as CT;
+    CardDefinition {
+        name: "Quandrix Surge",
+        cost: cost(&[generic(1), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::ForEach {
+            selector: Selector::EachPermanent(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            ),
+            body: Box::new(Effect::AddCounter {
+                what: Selector::TriggerSource,
+                kind: CT::PlusOnePlusOne,
+                amount: Value::CountersOn {
+                    what: Box::new(Selector::TriggerSource),
+                    kind: CT::PlusOnePlusOne,
+                },
+            }),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+    }
+}
+
+/// Magecraft Insight — {2}{U} Instant.
+///
+/// Push (modern_decks) NEW (`stx::extras`): Magecraft-themed
+/// cantrip-plus. "Draw a card. Magecraft — Whenever you cast or copy
+/// an instant or sorcery spell, draw a card." (Note: this is a one-
+/// shot card-draw enchantment-on-an-instant flavor — the magecraft
+/// rider only fires for the spell currently being cast i.e. this
+/// itself.)
+///
+/// Wait — the printed Oracle in actual STX has this as a sorcery
+/// "Draw two cards. Loot 1." pattern. We ship our own version: simple
+/// draw 2 at instant speed for {2}{U}. Same as Quick Study but 1
+/// extra mana for 1 extra card.
+///
+/// Wired as `Seq(Draw 2)` — a simple 2-for-1 cantrip.
+pub fn magecraft_insight() -> CardDefinition {
+    CardDefinition {
+        name: "Magecraft Insight",
+        cost: cost(&[generic(2), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Draw {
+            who: Selector::You,
+            amount: Value::Const(2),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+    }
+}
+
+/// Sparkmage's Mantra — {R} Instant.
+///
+/// Push (modern_decks) NEW (`stx::extras`): low-curve burn. "Sparkmage's
+/// Mantra deals 1 damage to any target. Scry 1."
+///
+/// {R} cantrip-burn — efficient interaction that doubles as a draw
+/// smoother. Wired as `Seq(DealDamage 1 → Creature/Player/PW, Scry 1)`.
+/// Same Storm-friendly shape as Curate.
+pub fn sparkmages_mantra() -> CardDefinition {
+    CardDefinition {
+        name: "Sparkmage's Mantra",
+        cost: cost(&[r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature
+                        .or(SelectionRequirement::Player)
+                        .or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::Const(1),
+            },
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+    }
+}
+
+/// Witherbloom Drainage — {1}{B}{G} Sorcery.
+///
+/// Push (modern_decks) NEW (`stx::extras`): Witherbloom-flavored drain
+/// spell. "Each opponent loses 2 life. You gain 2 life."
+///
+/// Standard Witherbloom drain — wired via the existing
+/// `Effect::Drain` primitive which handles the lose/gain balance in
+/// one step. At {1}{B}{G} this is a solid finisher in any
+/// Witherbloom magecraft shell where lifegain triggers further
+/// payoffs.
+pub fn witherbloom_drainage() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Drainage",
+        cost: cost(&[generic(1), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Drain {
+            from: Selector::Player(PlayerRef::EachOpponent),
+            to: Selector::You,
+            amount: Value::Const(2),
         },
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
