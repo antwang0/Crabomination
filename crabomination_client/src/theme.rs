@@ -32,11 +32,19 @@ impl UiFonts {
     }
 }
 
-/// Startup system: loads the UI font and inserts `UiFonts`.
-pub fn init_ui_fonts(mut commands: Commands, asset_server: Res<AssetServer>) {
-    commands.insert_resource(UiFonts {
-        sans: asset_server.load(FONT_PATH),
-    });
+/// Plugin that inserts [`UiFonts`] eagerly during `App::build()`.
+///
+/// Must be added AFTER `DefaultPlugins` (needs `AssetServer`) but before any
+/// plugin that registers `OnEnter` systems that access `UiFonts` — because
+/// Bevy fires the initial `StateTransition` (and thus `OnEnter`) *before*
+/// `PreStartup`, so a `Startup` system would be too late.
+pub struct UiFontsPlugin;
+
+impl bevy::app::Plugin for UiFontsPlugin {
+    fn build(&self, app: &mut bevy::app::App) {
+        let font = app.world().resource::<AssetServer>().load(FONT_PATH);
+        app.world_mut().insert_resource(UiFonts { sans: font });
+    }
 }
 
 // ── Surfaces ─────────────────────────────────────────────────────────────────

@@ -167,12 +167,12 @@ fn main() {
                 }),
             MeshPickingPlugin,
         ))
-        .add_plugins((SinglePlayerPlugin, MenuPlugin))
+        .add_plugins((SinglePlayerPlugin, MenuPlugin, theme::UiFontsPlugin))
         .init_gizmo_group::<BlockingGizmos>()
         .init_gizmo_group::<AttackerGizmos>()
         .init_gizmo_group::<StackGizmos>()
         .init_gizmo_group::<PtModifiedGizmos>()
-        .add_systems(Startup, (configure_gizmos, theme::init_ui_fonts))
+        .add_systems(Startup, configure_gizmos)
         .insert_resource(DirectionalLightShadowMap { size: gfx.shadow_map_size })
         .insert_resource(gfx)
         .insert_resource(RenderQuality::default())
