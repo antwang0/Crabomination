@@ -9134,6 +9134,215 @@ pub fn witherbloom_mascot() -> CardDefinition {
     }
 }
 
+// ── Spiteful Squad (STX 2021) ───────────────────────────────────────────────
+
+/// Spiteful Squad — {2}{B}, 1/1 Skeleton (STX 2021).
+///
+/// "Deathtouch / When this creature dies, target opponent loses 2
+/// life and you gain 2 life."
+///
+/// Push (modern_decks, NEW, `stx::extras`): Classic Witherbloom drain
+/// payoff on a deathtouch body. Wired via `CreatureDied/SelfSource`
+/// trigger → `Drain 2` (target opp via auto-target). The deathtouch +
+/// 1/1 body means it almost always trades up — and you get the drain
+/// anyway. Test verifies both halves.
+pub fn spiteful_squad() -> CardDefinition {
+    use crate::effect::PlayerRef as PR;
+    CardDefinition {
+        name: "Spiteful Squad",
+        cost: cost(&[generic(2), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Skeleton],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Deathtouch],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::LoseLife {
+                    who: Selector::Player(PR::EachOpponent),
+                    amount: Value::Const(2),
+                },
+                Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::Const(2),
+                },
+            ]),
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Master Symmetrist (STX 2021) ────────────────────────────────────────────
+
+/// Master Symmetrist — {2}{G}{U}, 3/3 Fractal Wizard (STX 2021).
+///
+/// "When this creature enters, double the number of +1/+1 counters on
+/// each creature you control."
+///
+/// Push (modern_decks, NEW, `stx::extras`): Quandrix counter-doubling
+/// fan-out. Wired via `ForEach(EachPermanent(Creature & ControlledByYou))
+/// → AddCounter(target, CountersOn(target, +1/+1))`. Each creature
+/// the controller controls doubles its existing +1/+1 stack.
+pub fn master_symmetrist() -> CardDefinition {
+    CardDefinition {
+        name: "Master Symmetrist",
+        cost: cost(&[generic(2), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::ForEach {
+                selector: Selector::EachPermanent(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                body: Box::new(Effect::AddCounter {
+                    what: Selector::TriggerSource,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::CountersOn {
+                        what: Box::new(Selector::TriggerSource),
+                        kind: CounterType::PlusOnePlusOne,
+                    },
+                }),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Stinging Cave Crawler (STX 2021) ────────────────────────────────────────
+
+/// Stinging Cave Crawler — {3}{B}{B}, 3/4 Insect (STX 2021).
+///
+/// "When this creature enters, scry 2. / Whenever this creature attacks,
+/// target opponent loses 1 life and you gain 1 life."
+///
+/// Push (modern_decks, NEW, `stx::extras`): Solid mid-curve body in
+/// any black aggro / midrange shell. ETB scry smooths draws; attack-
+/// drain rider is consistent reach. Both halves are vanilla engine
+/// primitives.
+pub fn stinging_cave_crawler() -> CardDefinition {
+    use crate::effect::PlayerRef as PR;
+    CardDefinition {
+        name: "Stinging Cave Crawler",
+        cost: cost(&[generic(3), b(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Insect],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: Effect::Scry {
+                    who: PR::You,
+                    amount: Value::Const(2),
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+                effect: Effect::Seq(vec![
+                    Effect::LoseLife {
+                        who: Selector::Player(PR::EachOpponent),
+                        amount: Value::Const(1),
+                    },
+                    Effect::GainLife {
+                        who: Selector::You,
+                        amount: Value::Const(1),
+                    },
+                ]),
+            },
+        ],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Cogwork Archivist (STX 2021) ────────────────────────────────────────────
+
+/// Cogwork Archivist — {6} Artifact Creature — Construct, 4/4 (STX 2021).
+///
+/// "When this creature enters, target player puts the top four cards
+/// of their library into their graveyard."
+///
+/// Push (modern_decks, NEW, `stx::extras`): A colorless 6-drop with
+/// an ETB mill 4 as a side effect. Useful in self-mill / reanimator
+/// shells (target self) and as a soft mill threat (target opp). The
+/// 4/4 vanilla body is a fine attacker into open boards.
+pub fn cogwork_archivist() -> CardDefinition {
+    CardDefinition {
+        name: "Cogwork Archivist",
+        cost: cost(&[generic(6)]),
+        supertypes: vec![],
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Construct],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Mill {
+                who: Selector::You,
+                amount: Value::Const(4),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
 // ── Lorehold Mascot (STX-flavor support) ────────────────────────────────────
 
 /// Lorehold Mascot — {2}{R}{W}, 3/2 Spirit (STX-flavor).

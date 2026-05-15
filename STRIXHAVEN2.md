@@ -19,11 +19,21 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 192 | 62 | 1 |
-| STX (170 cards) | 192 | 15 | 0 |
+| STX (170 cards) | 196 | 15 | 0 |
 | STA reprints (in STX boosters) | 46 | 0 | — |
 
 Push (modern_decks, claude/modern_decks branch — latest revision —
-**newest sub-push**): **11 NEW cards** (10 STX 2021 + 1 STA reprint) +
+**newest sub-push #2**): **4 NEW cards** added on top of the prior batch:
+- **Spiteful Squad** ({2}{B}, 1/1 deathtouch Skeleton) — Dies: drain 2.
+- **Master Symmetrist** ({2}{G}{U}, 3/3 Fractal Wizard) — ETB doubles
+  +1/+1 counters on each creature you control.
+- **Stinging Cave Crawler** ({3}{B}{B}, 3/4 Insect) — ETB scry 2 +
+  attack drain 1.
+- **Cogwork Archivist** ({6} 4/4 Artifact Creature — Construct) — ETB
+  mills 4.
+
+Push (modern_decks, claude/modern_decks branch — latest revision —
+**sub-push #1**): **11 NEW cards** (10 STX 2021 + 1 STA reprint) +
 CR 701.25c audit coverage:
 
 **NEW STX 2021 / supplemental cards (10):**

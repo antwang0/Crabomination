@@ -10611,6 +10611,151 @@ fn zero_surveil_does_not_trigger_surveil_events_per_cr_701_25c() {
         "Only the spell itself entered graveyard");
 }
 
+// ── Spiteful Squad ──────────────────────────────────────────────────────────
+
+#[test]
+fn spiteful_squad_is_a_three_mana_one_one_deathtouch_skeleton() {
+    use crate::card::{CardType, CreatureType};
+    let def = catalog::spiteful_squad();
+    assert_eq!(def.cost.cmc(), 3);
+    assert!(def.card_types.contains(&CardType::Creature));
+    assert!(def.subtypes.creature_types.contains(&CreatureType::Skeleton));
+    assert!(def.keywords.contains(&Keyword::Deathtouch));
+    assert_eq!(def.power, 1);
+    assert_eq!(def.toughness, 1);
+}
+
+#[test]
+fn spiteful_squad_dies_drains_two() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::spiteful_squad());
+    let p0_life_before = g.players[0].life;
+    let p1_life_before = g.players[1].life;
+
+    let card = g.battlefield_find_mut(id).expect("squad on bf");
+    card.damage = 99;
+    let _ = g.check_state_based_actions();
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[0].life, p0_life_before + 2);
+    assert_eq!(g.players[1].life, p1_life_before - 2);
+}
+
+// ── Master Symmetrist ───────────────────────────────────────────────────────
+
+#[test]
+fn master_symmetrist_is_a_four_mana_three_three_fractal_wizard() {
+    use crate::card::{CardType, CreatureType};
+    let def = catalog::master_symmetrist();
+    assert_eq!(def.cost.cmc(), 4);
+    assert!(def.card_types.contains(&CardType::Creature));
+    assert!(def.subtypes.creature_types.contains(&CreatureType::Fractal));
+    assert!(def.subtypes.creature_types.contains(&CreatureType::Wizard));
+    assert_eq!(def.power, 3);
+    assert_eq!(def.toughness, 3);
+}
+
+#[test]
+fn master_symmetrist_doubles_counters_on_friendlies() {
+    let mut g = two_player_game();
+    // Friendly creature with a +1/+1 counter on it.
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let card = g.battlefield_find_mut(bear).expect("bear on bf");
+    card.add_counters(CounterType::PlusOnePlusOne, 2);
+
+    let id = g.add_card_to_hand(0, catalog::master_symmetrist());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Master Symmetrist castable");
+    drain_stack(&mut g);
+
+    let bear_card = g.battlefield_find(bear).expect("bear still alive");
+    assert_eq!(
+        bear_card.counter_count(CounterType::PlusOnePlusOne),
+        4,
+        "2 counters doubled to 4"
+    );
+}
+
+// ── Stinging Cave Crawler ───────────────────────────────────────────────────
+
+#[test]
+fn stinging_cave_crawler_is_a_five_mana_three_four_insect() {
+    use crate::card::{CardType, CreatureType};
+    let def = catalog::stinging_cave_crawler();
+    assert_eq!(def.cost.cmc(), 5);
+    assert!(def.card_types.contains(&CardType::Creature));
+    assert!(def.subtypes.creature_types.contains(&CreatureType::Insect));
+    assert_eq!(def.power, 3);
+    assert_eq!(def.toughness, 4);
+}
+
+#[test]
+fn stinging_cave_crawler_etb_scrys_two() {
+    let mut g = two_player_game();
+    for _ in 0..2 { g.add_card_to_library(0, catalog::island()); }
+    let id = g.add_card_to_hand(0, catalog::stinging_cave_crawler());
+
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Stinging Cave Crawler castable for {3}{B}{B}");
+    drain_stack(&mut g);
+
+    assert!(g.battlefield_find(id).is_some(), "Crawler resolved");
+}
+
+// ── Cogwork Archivist ───────────────────────────────────────────────────────
+
+#[test]
+fn cogwork_archivist_is_a_six_mana_artifact_creature_construct() {
+    use crate::card::{CardType, CreatureType};
+    let def = catalog::cogwork_archivist();
+    assert_eq!(def.cost.cmc(), 6);
+    assert!(def.card_types.contains(&CardType::Artifact));
+    assert!(def.card_types.contains(&CardType::Creature));
+    assert!(def.subtypes.creature_types.contains(&CreatureType::Construct));
+    assert_eq!(def.power, 4);
+    assert_eq!(def.toughness, 4);
+}
+
+#[test]
+fn cogwork_archivist_etb_mills_four_from_self() {
+    let mut g = two_player_game();
+    for _ in 0..8 { g.add_card_to_library(0, catalog::island()); }
+    let gy_before = g.players[0].graveyard.len();
+    let lib_before = g.players[0].library.len();
+
+    let id = g.add_card_to_hand(0, catalog::cogwork_archivist());
+    g.players[0].mana_pool.add_colorless(6);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Archivist castable for {6}");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[0].library.len(), lib_before - 4, "4 cards milled");
+    assert_eq!(g.players[0].graveyard.len(), gy_before + 4, "4 cards added to graveyard");
+}
+
 #[test]
 fn lorehold_mascot_attack_gains_life_and_pumps() {
     let mut g = two_player_game();
