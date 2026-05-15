@@ -5564,6 +5564,53 @@ fn tragedy_feaster_is_seven_six_trampler() {
     assert!(card.has_creature_type(crate::card::CreatureType::Demon));
 }
 
+/// Tragedy Feaster's Infusion: at end step, if you didn't gain life this
+/// turn, sacrifice a permanent. With no life gain, P0 sacrifices the
+/// cheapest creature available.
+#[test]
+fn tragedy_feaster_infusion_forces_sacrifice_when_no_life_gained() {
+    let mut g = two_player_game();
+    let feaster = g.add_card_to_battlefield(0, catalog::tragedy_feaster());
+    g.clear_sickness(feaster);
+    // Add a cheaper fodder creature to be sac'd first.
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    // No life gained this turn.
+    g.players[0].life_gained_this_turn = 0;
+    let bf_count_before = g.battlefield.iter().filter(|c| c.controller == 0).count();
+
+    g.fire_step_triggers(crate::game::types::TurnStep::End);
+    drain_stack(&mut g);
+
+    let bf_count_after = g.battlefield.iter().filter(|c| c.controller == 0).count();
+    assert_eq!(
+        bf_count_after,
+        bf_count_before - 1,
+        "Tragedy Feaster's Infusion should force a sacrifice when no life was gained"
+    );
+}
+
+/// Tragedy Feaster's Infusion is suppressed when lifegain happened.
+#[test]
+fn tragedy_feaster_infusion_skips_sacrifice_when_life_gained() {
+    let mut g = two_player_game();
+    let feaster = g.add_card_to_battlefield(0, catalog::tragedy_feaster());
+    g.clear_sickness(feaster);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    g.players[0].life_gained_this_turn = 1; // any lifegain bypasses the sac.
+    let bf_count_before = g.battlefield.iter().filter(|c| c.controller == 0).count();
+
+    g.fire_step_triggers(crate::game::types::TurnStep::End);
+    drain_stack(&mut g);
+
+    let bf_count_after = g.battlefield.iter().filter(|c| c.controller == 0).count();
+    assert_eq!(
+        bf_count_after, bf_count_before,
+        "No sac when life was gained — every permanent stays"
+    );
+}
+
 #[test]
 fn forum_necroscribe_repartee_returns_creature_from_graveyard() {
     let mut g = two_player_game();
@@ -6075,6 +6122,48 @@ fn moseo_veins_new_dean_is_2_1_flying_pest_etb_minter() {
     assert!(moseo.definition.keywords.contains(&Keyword::Flying));
     assert!(g.battlefield.iter().any(|c| c.definition.name == "Pest"),
         "Moseo's ETB should mint a Pest token");
+}
+
+/// Moseo's Infusion end-step trigger: when you've gained life this turn,
+/// return a creature card from your graveyard to your hand.
+#[test]
+fn moseo_veins_new_dean_infusion_returns_creature_to_hand_when_life_gained() {
+    let mut g = two_player_game();
+    // Seed a creature in P0's graveyard.
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let moseo = g.add_card_to_battlefield(0, catalog::moseo_veins_new_dean());
+    g.clear_sickness(moseo);
+    // Simulate gaining life this turn.
+    g.players[0].life_gained_this_turn = 2;
+
+    // Fire end-step trigger by advancing to end step.
+    g.fire_step_triggers(crate::game::types::TurnStep::End);
+    drain_stack(&mut g);
+
+    // Bear should now be in P0's hand.
+    assert!(
+        g.players[0].hand.iter().any(|c| c.id == bear),
+        "Moseo's Infusion end-step trigger should return the bear to hand"
+    );
+}
+
+/// Moseo's Infusion end-step trigger is gated: no life gained → no return.
+#[test]
+fn moseo_veins_new_dean_infusion_no_return_without_life_gain() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let moseo = g.add_card_to_battlefield(0, catalog::moseo_veins_new_dean());
+    g.clear_sickness(moseo);
+    // No life gained this turn.
+
+    g.fire_step_triggers(crate::game::types::TurnStep::End);
+    drain_stack(&mut g);
+
+    // Bear should still be in P0's graveyard.
+    assert!(
+        g.players[0].graveyard.iter().any(|c| c.id == bear),
+        "Bear should remain in graveyard when no life was gained"
+    );
 }
 
 #[test]
@@ -8951,19 +9040,31 @@ fn grave_researcher_back_face_reanimates_creature_from_graveyard() {
     let bear_id = g.add_card_to_graveyard(0, catalog::grizzly_bears());
     let researcher = g.add_card_to_hand(0, catalog::grave_researcher());
     g.players[0].mana_pool.add(Color::Black, 1);
+    let life_before = g.players[0].life;
 
-    // Cast back face Reanimate for {B}.
+    // Cast back face Reanimate for {B}, targeting the bear.
     g.perform_action(GameAction::CastSpellBack {
-        card_id: researcher, target: None, additional_targets: vec![], mode: None, x_value: None,
+        card_id: researcher,
+        target: Some(Target::Permanent(bear_id)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
     })
     .expect("Reanimate castable for {B}");
     drain_stack(&mut g);
 
     // Bear should now be on P0's battlefield.
-    assert!(g.battlefield.iter().any(|c| c.id == bear_id),
-        "Grizzly Bears returned to battlefield via Reanimate");
-    assert!(!g.players[0].graveyard.iter().any(|c| c.id == bear_id),
-        "Bear left the graveyard");
+    assert!(
+        g.battlefield.iter().any(|c| c.id == bear_id),
+        "Grizzly Bears returned to battlefield via Reanimate"
+    );
+    assert!(
+        !g.players[0].graveyard.iter().any(|c| c.id == bear_id),
+        "Bear left the graveyard"
+    );
+    // Real Reanimate: lose life equal to the creature's CMC.
+    // Grizzly Bears is {1}{G} = CMC 2 → P0 loses 2 life.
+    assert_eq!(g.players[0].life, life_before - 2);
 }
 
 #[test]

@@ -4152,14 +4152,23 @@ pub fn ennis_debate_moderator() -> CardDefinition {
 /// "Trample / Ward—Discard a card. / Infusion — At the beginning of your
 /// end step, sacrifice a permanent unless you gained life this turn."
 ///
-/// Body wired (7/6 Demon with Trample). Ward is omitted — the engine has
-/// no Ward keyword primitive yet (tracked in TODO.md). The Infusion
-/// upkeep-tax is also omitted (no `MayDo` / `If/else` sacrifice
-/// primitive that runs on a per-turn lifegain check). The base Demon
-/// shell still slots into Witherbloom / mono-black ramp into a 4-mana
-/// 7/6 trampler — strictly under-costed for a vanilla body, but the
-/// missing Ward/upkeep-sac taxes balance the printed card.
+/// Body wired (7/6 Demon with Trample). Ward — Discard a card is still
+/// keyword-tagged but ⏳ for enforcement (engine has no
+/// counter-the-spell-unless-discard ward primitive yet — tracked in
+/// TODO.md). The Infusion **end-step sacrifice-unless-lifegain rider
+/// is now wired** (push modern_decks): a `StepBegins(End) / ActivePlayer`
+/// trigger fires for the active-player, and the body is an `Effect::If`
+/// gated on `Predicate::LifeGainedThisTurnAtLeast(You, 1)` — when the
+/// controller has gained life this turn, the trigger resolves as Noop;
+/// otherwise it forces `Effect::Sacrifice { who: You, count: 1, filter:
+/// Permanent }`. The "or-pay" rider on the Infusion is a forced
+/// sacrifice (the Sacrifice picker tries to pick the cheapest /
+/// lowest-value permanent automatically). The card is now strictly
+/// faithful to the printed Oracle's main and Infusion clauses; Ward —
+/// Discard remains a keyword tag.
 pub fn tragedy_feaster() -> CardDefinition {
+    use crate::card::Predicate;
+    use crate::game::types::TurnStep;
     CardDefinition {
         name: "Tragedy Feaster",
         cost: cost(&[generic(2), b(), b()]),
@@ -4171,10 +4180,27 @@ pub fn tragedy_feaster() -> CardDefinition {
         },
         power: 7,
         toughness: 6,
-        keywords: vec![Keyword::Trample],
+        keywords: vec![Keyword::Trample, Keyword::Ward(0)],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::End),
+                EventScope::ActivePlayer,
+            ),
+            effect: Effect::If {
+                cond: Predicate::LifeGainedThisTurnAtLeast {
+                    who: PlayerRef::You,
+                    at_least: Value::Const(1),
+                },
+                then: Box::new(Effect::Noop),
+                else_: Box::new(Effect::Sacrifice {
+                    who: Selector::You,
+                    count: Value::Const(1),
+                    filter: SelectionRequirement::Permanent,
+                }),
+            },
+        }],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -4853,15 +4879,22 @@ pub fn deluge_virtuoso() -> CardDefinition {
 /// Infusion — At the beginning of your end step, if you gained life
 /// this turn, return up… (oracle truncated)"
 ///
-/// Body + Flying + ETB Pest token wired faithfully (the Pest token's
-/// on-attack lifegain rider rides on the shared `pest_token()` helper).
-/// The Infusion end-step rider is omitted — its oracle text was clipped
-/// in the table dump and the engine has no `MayDo` per-turn-lifegain
-/// trigger primitive yet (TODO.md). The vanilla 3-mana 2/1 Flier shell
-/// + free Pest token is a strictly under-printed approximation.
+/// Body + Flying + ETB Pest token wired faithfully. The Infusion end-step
+/// rider — "if you gained life this turn, return up to one target creature
+/// card from your graveyard to your hand" — is now also wired (push
+/// modern_decks). The end-step trigger fires for the active player; the
+/// body is gated on `Predicate::LifeGainedThisTurnAtLeast(You, 1)` (the
+/// canonical Infusion gate, also used by Foolish Fate, Old-Growth
+/// Educator, Efflorescence, Poisoner's Apprentice). Inside the gate,
+/// `Effect::Move { what: take(1, CardsInZone(Graveyard, Creature)), to:
+/// Hand(You) }` reanimates-to-hand the top matching creature card. The
+/// "up to one" semantics fall out naturally — when the graveyard has no
+/// matching cards, the move resolves to nothing.
 pub fn moseo_veins_new_dean() -> CardDefinition {
     use super::sorceries::pest_token;
-    use crate::card::Supertype;
+    use crate::card::{Predicate, Supertype, Zone};
+    use crate::effect::{Duration as _Duration, ZoneDest};
+    let _ = _Duration::EndOfTurn;
     CardDefinition {
         name: "Moseo, Vein's New Dean",
         cost: cost(&[generic(2), b()]),
@@ -4880,14 +4913,42 @@ pub fn moseo_veins_new_dean() -> CardDefinition {
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::CreateToken {
-                who: PlayerRef::You,
-                count: Value::Const(1),
-                definition: pest_token(),
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: pest_token(),
+                },
             },
-        }],
+            // Infusion end-step: if you gained life this turn, return up
+            // to one creature card from your graveyard to your hand.
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::StepBegins(crate::game::types::TurnStep::End),
+                    EventScope::ActivePlayer,
+                ),
+                effect: Effect::If {
+                    cond: Predicate::LifeGainedThisTurnAtLeast {
+                        who: PlayerRef::You,
+                        at_least: Value::Const(1),
+                    },
+                    then: Box::new(Effect::Move {
+                        what: Selector::take(
+                            Selector::CardsInZone {
+                                who: PlayerRef::You,
+                                zone: Zone::Graveyard,
+                                filter: SelectionRequirement::Creature,
+                            },
+                            Value::Const(1),
+                        ),
+                        to: ZoneDest::Hand(PlayerRef::You),
+                    }),
+                    else_: Box::new(Effect::Noop),
+                },
+            },
+        ],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],

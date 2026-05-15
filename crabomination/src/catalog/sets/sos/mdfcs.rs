@@ -1142,25 +1142,33 @@ pub fn emeritus_of_ideation() -> CardDefinition {
 /// rider is omitted (no power-/MV-paid life-cost primitive on
 /// resolution); the reanimation half resolves end-to-end.
 pub fn grave_researcher() -> CardDefinition {
-    use crate::card::Zone;
+    use crate::effect::shortcut::target_filtered;
+    // Real Reanimate Oracle: "Put target creature card from your graveyard
+    // onto the battlefield under your control. You lose life equal to its
+    // converted mana cost."
+    //
+    // Wired faithfully: target-from-graveyard filter (Creature ∧
+    // candidate-in-controller's-graveyard via the target validator's
+    // zone walk) → Move to battlefield, then `LoseLife(ManaValueOf(target))`
+    // — the target's CardId stays valid post-move, and `Value::ManaValueOf`
+    // walks battlefield / graveyard / exile / hand to read the printed CMC.
     let back = spell_back(
         "Reanimate",
         cost(&[b()]),
         CardType::Sorcery,
-        Effect::Move {
-            what: Selector::take(
-                Selector::CardsInZone {
-                    who: PlayerRef::You,
-                    zone: Zone::Graveyard,
-                    filter: SelectionRequirement::Creature,
+        Effect::Seq(vec![
+            Effect::Move {
+                what: target_filtered(SelectionRequirement::Creature),
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: false,
                 },
-                Value::Const(1),
-            ),
-            to: ZoneDest::Battlefield {
-                controller: PlayerRef::You,
-                tapped: false,
             },
-        },
+            Effect::LoseLife {
+                who: Selector::You,
+                amount: Value::ManaValueOf(Box::new(Selector::Target(0))),
+            },
+        ]),
     );
     let mut front = vanilla_front(
         "Grave Researcher",
