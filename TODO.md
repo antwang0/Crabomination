@@ -11,6 +11,25 @@ Periodic spot-check of the rules document
 (`crabomination/MagicCompRules 20260116.txt`). Each rule below has a
 status tag (✅ wired, 🟡 partial, ⏳ todo) plus a short note.
 
+- ✅ **CR 613.4c / 613.7c — Layer 7c (counter / +N/+M) applies above
+  layer 7b (set base P/T)** (push modern_decks audit, claude/modern_decks
+  branch): "Layer 7b: Effects that set power and/or toughness to a specific
+  number or value are applied. / Layer 7c: Effects and counters that modify
+  power and/or toughness (but don't set power and/or toughness to a
+  specific number or value) are applied." The engine's `compute_permanent`
+  applies layers in order: 7b's `Modification::SetPowerToughness` writes
+  the base P/T first, then 7c's `Modification::ModifyPower` /
+  `ModifyToughness` adds the +N/+M from counters and continuous effects.
+  Tests: `square_up_layers_under_plus_one_counters` (Square Up's
+  `SetBasePT(0, 4)` + a +1/+1 counter → 1/5, not 0/4), `quandrix_charm_
+  mode_2_setbasept_layers_under_counter` (Quandrix Charm's mode 2
+  `SetBasePT(5, 5)` + a +1/+1 counter → 6/6), `fractalize_layers_under_
+  plus_one_counters` (Fractalize at X=2 `SetBasePT(3, 3)` + a +1/+1
+  counter → 4/4). All three exercise the printed-Oracle CR 613.4c/d
+  layer ordering exactly. The `SetBasePT` primitive (added push XXXII)
+  now powers Square Up, Quandrix Charm mode 2, Mercurial Transformation,
+  and Fractalize (push modern_decks).
+
 - ✅ **CR 608.3f / 707.10f — Permanent-spell copies are tokens** (push
   modern_decks audit, claude/modern_decks branch): "If the object that's
   resolving is a copy of a permanent spell, it will become a token
@@ -697,6 +716,62 @@ status tag (✅ wired, 🟡 partial, ⏳ todo) plus a short note.
   the counters land on resolution).
 
 ## Suggested next-up tasks
+
+- ⏳ **`Predicate::ManaValueAtMostV(Value)` — value-keyed mana-value
+  filter** (suggested by push modern_decks's Mind into Matter +
+  Sundering Archaic gaps) — both cards want a target / candidate
+  filter capped by a runtime-evaluated `Value` (X-from-cost for Mind
+  into Matter, ConvergedValue for Sundering Archaic's "exile target
+  nonland permanent an opponent controls with mana value less than
+  or equal to the number of colors of mana spent"). The current
+  `SelectionRequirement::ManaValueAtMost(u32)` is a static cap. A
+  Value-keyed sibling needs to thread `EffectContext` (for the X
+  value) into both `evaluate_requirement_static` and
+  `evaluate_requirement_on_card` — significant call-site refactor.
+  Cast-time validation also needs to know the chosen X at the time
+  targets are picked (currently the engine picks targets first then
+  pays X, so this would need either re-ordering or a "deferred
+  validation" pass). Two ⏳ cards exercise this gap; deferring until
+  a third card stacks on or the cast pipeline is otherwise touched.
+
+- ⏳ **`Effect::ClearAbilities` / `StaticEffect::LoseAbilities`** —
+  the printed Mercurial Transformation says "and loses all abilities
+  until end of turn." Today we wire the base-P/T half via
+  `Effect::SetBasePT` but the loses-abilities half is omitted. The
+  layer system has `Modification::RemoveAllAbilities` but it only
+  clears the keyword list — the triggered/static/activated abilities
+  live on the `CardDefinition` and aren't touched by the layer pass.
+  Wiring would need either (a) a per-permanent override on the
+  computed-permanent struct that masks the definition's ability
+  fields, or (b) a fully-layered ability list (significant refactor).
+  Pongify, Beast Within's 3/3 token, and Mercurial Transformation
+  all need this.
+
+- ⏳ **Augusta, Dean of Order — same-power attackers trigger** (push
+  modern_decks STX Silverquill 🟡) — the printed "Whenever you attack
+  with three or more creatures with the same power, each of those
+  creatures gets +1/+1 and gains your choice of flying, first strike,
+  vigilance, or lifelink until end of turn" needs a **batched** post-
+  attacker-declaration event (not the per-attacker `Attacks` event
+  we have today). Suggested shape: new `EventKind::AttackersDeclared`
+  that fires once after `declare_attackers` resolves, with the list
+  of attackers exposed via `ctx.attackers_declared`. The trigger
+  would then need to find the largest same-power group and pump only
+  those creatures (custom selector logic). Skipped until a second
+  batched-attack trigger appears in the catalog.
+
+- ⏳ **Mavinda, Students' Advocate — cast-IS-from-graveyard static**
+  (push modern_decks STX Silverquill 🟡) — the printed "Once during
+  each of your turns, you may cast an instant or sorcery spell that
+  targets only a single creature from your graveyard. If a spell
+  cast this way would be put into your graveyard, exile it instead."
+  is a static ability that grants a cast-permission, not an
+  activated ability. Needs (a) a per-player "this-turn cast-from-gy
+  budget" counter, (b) a target-introspection at cast time
+  ("targets only a single creature"), and (c) a delayed replacement
+  to route the resolving spell to exile instead of graveyard.
+  Currently Mavinda ships as a 1/3 Flying+Vigilance Legendary
+  Cleric body without the static.
 
 - ⏳ **Foretell alt-cost primitive** (suggested by push modern_decks's
   Saw It Coming addition) — Foretell ({2} on cast, alt cost {1}{U} on
