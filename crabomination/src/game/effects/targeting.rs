@@ -176,4 +176,105 @@ impl GameState {
         }
         None
     }
+
+    /// Pick legal targets for every slot the effect uses, returning
+    /// `(slot 0, Vec<slot 1..>)`.
+    ///
+    /// Walks the effect tree (via `target_filter_for_slot_in_mode`) and
+    /// produces a `Vec<Target>` for `additional_targets`, plus an
+    /// `Option<Target>` for slot 0. Each slot is filled with the
+    /// best-pick legal target (per `auto_target_for_effect_avoiding`'s
+    /// preferences). Slots that fail to find any legal candidate are
+    /// skipped — matching the printed "up to N target" semantics where
+    /// the spell still resolves with fewer (or zero) targets when no
+    /// legal pick exists.
+    ///
+    /// The slot enumeration stops at the first slot index for which
+    /// the effect tree contains no `Selector::TargetFiltered { slot }`
+    /// reference. So for Snow Day (slots 0, 1), this returns up to
+    /// 2 targets. For Homesickness (slots 0, 1, 2), it returns up to
+    /// 3 targets. Vibrant Outburst (slots 0, 1) returns up to 2.
+    ///
+    /// Used by the bot harness to drive multi-target casts without
+    /// surfacing a UI prompt.
+    pub fn auto_targets_for_effect_all_slots(
+        &self,
+        eff: &Effect,
+        controller: usize,
+        mode: Option<usize>,
+    ) -> (Option<Target>, Vec<Target>) {
+        // Slot 0 — use the existing source-aware picker.
+        let slot_0 = self.auto_target_for_effect_avoiding(eff, controller, None);
+        let mut additional = Vec::new();
+        let mut slot: u8 = 1;
+        // Cap at 16 slots — no real card uses more than 4, but cap defensively.
+        while slot < 16 {
+            let req = match eff.target_filter_for_slot_in_mode(slot, mode) {
+                Some(r) => r.clone(),
+                None => break,
+            };
+            // Use the same hostile/friendly preference heuristics by
+            // constructing a small Effect::PumpPT-style probe and calling
+            // the picker against that filter. Simpler approach: walk
+            // battlefield + players, return first legal.
+            let opp = (controller + 1) % self.players.len();
+            let is_legal = |t: &Target| -> bool {
+                self.evaluate_requirement_static(&req, t, controller, None)
+                    && self.check_target_legality(t, controller).is_ok()
+            };
+            let pick = {
+                // Player slots: try controller first (caster-friendly),
+                // then opponent.
+                let mut found: Option<Target> = None;
+                let player_caster = Target::Player(controller);
+                let player_opp = Target::Player(opp);
+                if is_legal(&player_caster) {
+                    found = Some(player_caster);
+                } else if is_legal(&player_opp) {
+                    found = Some(player_opp);
+                }
+                // Battlefield: walk all permanents, prefer one not already
+                // picked by slot 0 or earlier slots to avoid double-targeting
+                // when the filter is permissive.
+                if found.is_none() {
+                    let already_picked: Vec<CardId> = std::iter::once(slot_0.clone())
+                        .chain(additional.iter().cloned().map(Some))
+                        .filter_map(|t| match t {
+                            Some(Target::Permanent(id)) => Some(id),
+                            _ => None,
+                        })
+                        .collect();
+                    if let Some(c) = self
+                        .battlefield
+                        .iter()
+                        .filter(|c| !already_picked.contains(&c.id))
+                        .map(|c| Target::Permanent(c.id))
+                        .find(|t| is_legal(t))
+                    {
+                        found = Some(c);
+                    } else if let Some(c) = self
+                        .battlefield
+                        .iter()
+                        .map(|c| Target::Permanent(c.id))
+                        .find(|t| is_legal(t))
+                    {
+                        // Fall back to allowing reuse if nothing else
+                        // matches — better to have a target than skip
+                        // when the spell semantics allow it.
+                        found = Some(c);
+                    }
+                }
+                found
+            };
+            match pick {
+                Some(t) => additional.push(t),
+                // Slot has a filter but no legal target — stop here.
+                // "Up to N target" effects resolve cleanly with whatever
+                // targets were filled in.
+                None => break,
+            }
+            slot += 1;
+        }
+        (slot_0, additional)
+    }
 }

@@ -19,10 +19,87 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 172 | 82 | 1 |
-| STX (167 cards) | 151 | 16 | 0 |
-| STA reprints (in STX boosters) | 16 | 0 | — |
+| STX (168 cards) | 152 | 16 | 0 |
+| STA reprints (in STX boosters) | 19 | 0 | — |
 
-Push (modern_decks, this revision — claude/modern_decks branch):
+Push (modern_decks, claude/modern_decks branch — current revision):
+Added 4 new STX/STA cards + 1 promotion, plus three new engine
+primitives + a bot-side multi-target auto-picker.
+
+**New cards (4 — 1 STX, 3 STA reprints):**
+
+1. **Maelstrom Muse** ✅ NEW (STX uncommon) — {3}{U}{R} 3/3 Djinn
+   Wizard with Flying. Opus magecraft loot — `shortcut::opus_trigger`
+   wires draw-1-discard-1 on small spells, draw-2-discard-1 on
+   spells with 5+ mana spent. Test:
+   `maelstrom_muse_opus_loots_on_small_cast`.
+2. **Approach of the Second Sun** ✅ NEW (STA reprint, Amonkhet) —
+   {6}{W}{W} Sorcery. First cast gains 7 life; on a second cast with
+   one copy already in graveyard, the new `Effect::WinGame` primitive
+   eliminates every other player so the SBA pass promotes the controller
+   to game-winner. Uses `Predicate::SameNamedInZoneAtLeast` (CR
+   gy-name predicate) to detect the second cast. Tests:
+   `approach_of_the_second_sun_gains_seven_life_on_first_cast`,
+   `approach_of_the_second_sun_wins_game_when_cast_with_one_in_graveyard`.
+3. **Resurrection** ✅ NEW (STA reprint, Alpha) — {2}{W}{W} Sorcery.
+   "Return target creature card from your graveyard to the battlefield."
+   Test: `resurrection_returns_creature_card_from_graveyard`.
+4. **Adventurous Impulse** ✅ NEW (STA reprint, Core 2021) — {G}
+   Sorcery. "Look at top three, may reveal a creature or land card,
+   rest go to bottom in random order." Wired via
+   `Effect::RevealUntilFind { miss_dest: BottomRandom }`. Test:
+   `adventurous_impulse_finds_a_creature_in_top_three`.
+
+**Promotion (1):**
+
+5. **Plargg, Dean of Chaos** 🟡 → ✅ — printed conditional damage
+   rider ("if a creature card was discarded → 2 damage to any target")
+   wired via the new `Value::CreatureCardsDiscardedThisEffect`
+   primitive. The activation now requires a target slot for the damage
+   (Effect::DealDamage with target_filtered(Creature ∨ Player ∨
+   Planeswalker)); the conditional `Effect::If` gates on the new
+   value reading ≥ 1. Existing test (`plargg_dean_of_chaos_taps_to_loot`)
+   stays green; two new tests cover the new branches:
+   `plargg_dean_of_chaos_deals_two_damage_when_creature_discarded`,
+   `plargg_dean_of_chaos_no_damage_when_noncreature_discarded`.
+
+**Engine improvements (3 new primitives):**
+
+- **`Value::CreatureCardsDiscardedThisEffect`** + new
+  `GameState.creature_cards_discarded_this_resolution: u32` scratch
+  counter. Bumped by both discard-branch handlers (random `Discard`
+  + the `DiscardChosenPending` `apply_pending_effect_answer` path)
+  whenever the just-discarded card carries `CardType::Creature`.
+  Reset at the top of `resolve_effect` alongside the existing
+  `cards_discarded_this_resolution`. Used by Plargg's conditional
+  damage rider — and unblocks any future "if a creature card was
+  discarded" / "if you discarded a creature card this turn"
+  payoff.
+
+- **`Effect::WinGame { who: PlayerRef }`** (CR 104.2a — "you win
+  the game"). Resolves `who` to a single player and marks every
+  other player `eliminated = true`. The state-based-action sweep
+  (`check_state_based_actions` in `game/stack.rs`) then promotes
+  `game_over = Some(winner)` on the next loop. Same primitive
+  unblocks Coalition Victory, Test of Endurance, Felidar
+  Sovereign, Mortal Combat — any "you win the game" wording.
+
+- **`GameState::auto_targets_for_effect_all_slots`** — bot-side
+  multi-slot target picker. Walks every `Selector::TargetFiltered
+  { slot }` index in the effect tree (via the existing
+  `target_filter_for_slot_in_mode` helper) and returns
+  `(Option<Target>, Vec<Target>)` — slot 0 plus an
+  `additional_targets` vec for slots 1+. Wired into the bot
+  harness in `server/bot.rs` so multi-target casts (Snow Day,
+  Homesickness, Cost of Brilliance, Render Speechless, Vibrant
+  Outburst, Dissection Practice, Cost of Brilliance) now drive
+  the multi-target shape end-to-end in bot games without manual
+  intervention. Cap of 16 slots (no real card uses more than 4).
+  Test: `auto_target_picker_fills_multi_slot_vibrant_outburst`.
+
+(Earlier prior revisions detailed below.)
+
+Prior push (modern_decks):
 Promoted 10 SOS 🟡 → ✅ via two new engine primitives (`Effect::
 DiscardAnyNumber` + `Effect::SetNoMaxHandSize` + `Player.
 no_maximum_hand_size`) and a multi-target promotion pass. The
@@ -508,7 +585,7 @@ parity is a matter of porting card factories one at a time.
 | Storm-Kiln Artist | {2}{R}{W} | ✅ | Push XXXI doc sync: stale 🟡 note cleared. The "1 damage to any target" half is wired faithfully — `DealDamage` against `target_filtered(Creature ∨ Player ∨ Planeswalker)`, NOT collapsed to "each opponent". Treasure half fires after the damage half. Test: `storm_kiln_artist_creates_treasure_and_deals_1_damage`. |
 | Sparring Regimen | {2}{R}{W} | ✅ | Push XXXI doc sync: stale 🟡 note cleared. Both halves wired — ETB creates a 2/2 R/W Spirit token via `lorehold_spirit_token()` + per-attacker `Attacks/AnotherOfYours` trigger places a +1/+1 counter on `Selector::TriggerSource`. The per-attacker emission model matches the printed batch trigger exactly (every declared attacker gets one counter). Tests: `sparring_regimen_creates_a_2_2_spirit_token_on_etb`, `sparring_regimen_creates_spirit_etb_and_pumps_attacker`. |
 | Lorehold Command | {2}{R}{W} | ✅ (was 🟡) | Push XXXII: Sorcery — promoted via the new `Effect::ChooseN { picks: [0, 3], modes }`. Auto-picks 4 damage to opp + two 2/2 R/W flying Spirits. The -2/-0 debuff and gy recursion modes are available for future mode-pick UI. **Closes out the Lorehold school — 0 🟡 STX Lorehold cards remain.** |
-| Plargg, Dean of Chaos | {1}{R} | 🟡 | Push (modern_decks, NEW, `stx::extras`): 2/2 Legendary Human Cleric. `{T}: Discard a card, then draw a card.` wired faithfully as a tap activation with `Seq(Discard 1, Draw 1)`. The conditional "if a creature card was discarded → 2 damage" rider is omitted (no track-card-discarded-by-this-effect primitive; same gap as Borrowed Knowledge mode 1). The "Partner with Augusta, Dean of Order" rider is omitted (no Partner-pair primitive). Tests: `plargg_dean_of_chaos_taps_to_loot`, `plargg_dean_of_chaos_is_a_two_two_legendary_human_cleric`. |
+| Plargg, Dean of Chaos | {1}{R} | ✅ (was 🟡) | Push (modern_decks): 2/2 Legendary Human Cleric. `{T}: Discard a card, then draw a card.` wired faithfully as a tap activation. The conditional **"if a creature card was discarded → 2 damage"** rider is **now wired** via the new `Value::CreatureCardsDiscardedThisEffect` primitive — both `Effect::Discard` branches (random + player-chosen) bump `creature_cards_discarded_this_resolution` when the discarded card carries `CardType::Creature`, and Plargg's tail `Effect::If { cond: ValueAtLeast(_, 1), DealDamage 2 }` reads that counter. The "any target" damage uses `target_filtered(Creature ∨ Player ∨ Planeswalker)` so activation requires a target slot. The "Partner with Augusta, Dean of Order" rider is still omitted (no Partner-pair primitive). Tests: `plargg_dean_of_chaos_taps_to_loot`, `plargg_dean_of_chaos_deals_two_damage_when_creature_discarded`, `plargg_dean_of_chaos_no_damage_when_noncreature_discarded`. |
 | Reconstruct History | {1}{R}{W} | ✅ | Push (modern_decks, NEW, `stx::lorehold`): Sorcery. "Choose two or more — return target artifact / instant / Spirit / sorcery card from your graveyard to your hand." Wired via `Effect::ChooseN { picks: [0, 1], modes }` with each mode resolving its filter against `Selector::one_of(CardsInZone(Graveyard, filter))`. The auto-decider picks modes 0 (artifact) + 1 (instant) by default — the typical Lorehold gy mix has both. The Spirit + sorcery modes (2, 3) sit in `modes` for future mode-pick UI. The "choose two or more" semantics is collapsed to two modes since the engine's `ChooseN.picks` field is a flat list rather than a count range; the printed Oracle's "or more" lets a player pick 3-4 modes when their gy is deep. Tests: `reconstruct_history_returns_two_cards_from_graveyard_to_hand`, `reconstruct_history_is_a_three_mana_lorehold_sorcery`. |
 | Lorehold Excavation | — | ✅ | Push (modern_decks, NEW, `stx::lorehold`): Lorehold dual land. "{T}: Add {R} or {W}. / {2}{R}{W}, {T}: Exile target card from a graveyard. If a creature card was exiled this way, create an X/X red and white Spirit creature token with flying, where X is that card's power." Wired with two `tap_add` mana abilities + a third activated ability that exiles a target gy card and conditionally mints an X/X R/W flying Spirit token when the target is a creature. The "X = its power" scaling is **now wired faithfully** via an engine improvement that extends `Value::PowerOf` to read printed power across battlefield / graveyard / exile / hand zones — at gy-resolution time the target is still in graveyard, so `Value::PowerOf(Target(0))` reads the creature's printed power. A 2/2 Grizzly Bears in gy → 2/2 Spirit; a 4/4 Serra Angel → 4/4 Spirit; a 0/0 creature → 0/0 token dies to SBA (printed Oracle exact). Tests: `lorehold_excavation_is_a_lorehold_dual_with_two_mana_abilities`, `lorehold_excavation_exile_creature_mints_flying_spirit_token`, `lorehold_excavation_exile_non_creature_no_token`, `lorehold_excavation_token_scales_with_creature_power`. |
 
@@ -633,6 +710,10 @@ parity is a matter of porting card factories one at a time.
 | Divide by Zero | {1}{U} | ✅ | Push (modern_decks, NEW, `stx::extras`): Quandrix Instant. "Return target spell or nonland permanent to its owner's hand. Learn." Wired as `Seq(Move(target → owner's hand), Draw 1)` — Learn approximated as Draw 1 (Lesson sideboard ⏳). The target filter is `IsSpellOnStack ∨ (Permanent & Nonland)` so the spell can hit either a stack spell or a nonland permanent. Tests: `divide_by_zero_bounces_permanent_and_cantrips`, `divide_by_zero_is_a_two_mana_instant`. |
 | Exsanguinate (STA reprint) | {X}{B}{B} | ✅ | Push (modern_decks, NEW, `stx::extras`): black X-cost drain finisher (Strixhaven Mystical Archive reprint). "Each opponent loses X life. You gain life equal to the life lost this way." Wired faithfully via `Effect::Drain { from: EachOpponent, to: You, amount: XFromCost }`. At X=10 this is a kill in any black shell. Test: `exsanguinate_drains_each_opp_by_x`. |
 | Fire Prophecy (STA reprint) | {1}{R} | ✅ | Push (modern_decks, NEW, `stx::extras`): red burn-and-cantrip (Strixhaven Mystical Archive reprint). "Fire Prophecy deals 3 damage to target creature or planeswalker. Put a card from your hand on the bottom of your library. Draw a card." Wired as `Seq(DealDamage(3) → creature/PW, PutOnLibraryFromHand 1, Draw 1)`. The "bottom" target of the put-on-library is approximated as "top" (engine `PutOnLibraryFromHand` defaults to top; a `LibraryPosition::Bottom` primitive bump is a future refactor). Net card advantage matches: -1 (hand-to-library) + 1 (draw) = 0, just trading a stale card for a fresh draw. Test: `fire_prophecy_deals_three_and_cantrips`. |
+| Maelstrom Muse | {3}{U}{R} | ✅ | Push (modern_decks, NEW, `stx::extras`): 3/3 Djinn Wizard with Flying. "Magecraft — Whenever you cast or copy an instant or sorcery spell, draw a card, then discard a card. If five or more mana was spent to cast that spell, draw two cards instead, then discard a card." Wired via `shortcut::opus_trigger`: small body = `Seq(Draw 1, Discard 1)`; big body = `Seq(Draw 2, Discard 1)`. The discard surfaces `Decision::Discard` (AutoDecider picks first hand card); ScriptedDecider can target a specific discard. Tests: `maelstrom_muse_opus_loots_on_small_cast`, `maelstrom_muse_is_a_five_mana_three_three_flying_djinn_wizard`. |
+| Approach of the Second Sun (STA reprint) | {6}{W}{W} | ✅ | Push (modern_decks, NEW, `stx::extras`): white finisher Sorcery (Strixhaven Mystical Archive). "If you've cast another spell named Approach of the Second Sun this game, you win the game. Otherwise, put this card seventh from the top of your owner's library and you gain 7 life." Wired via new `Effect::WinGame { who: PlayerRef }` primitive (CR 104.2a) + `Predicate::SameNamedInZoneAtLeast { who: You, zone: Graveyard, at_least: 1 }`. The "seventh from top of library" library positioning is approximated as "to graveyard" (the engine doesn't model the exact-position-in-library mechanic yet; the lifegain path keeps the spell as a payoff for first cast, with the win triggered by the predicate when a second cast occurs after the first has been moved to graveyard). Tests: `approach_of_the_second_sun_gains_seven_life_on_first_cast`, `approach_of_the_second_sun_wins_game_when_cast_with_one_in_graveyard`. |
+| Resurrection (STA reprint) | {2}{W}{W} | ✅ | Push (modern_decks, NEW, `stx::extras`): basic white reanimation (Strixhaven Mystical Archive reprint, Alpha original). "Return target creature card from your graveyard to the battlefield." Wired as a single `Effect::Move { target: Creature → Battlefield(You) }`. Same primitive shape as Reanimate but at 4 mana without the life cost. Test: `resurrection_returns_creature_card_from_graveyard`. |
+| Adventurous Impulse (STA reprint) | {G} | ✅ | Push (modern_decks, NEW, `stx::extras`): green cantrip (Strixhaven Mystical Archive reprint, Core 2021). "Look at the top three cards of your library. You may reveal a creature or land card from among them and put it into your hand. Put the rest on the bottom of your library in a random order." Wired via `Effect::RevealUntilFind { who: You, find: Creature ∨ Land, to: Hand, cap: 3, miss_dest: BottomRandom }`. The "may" optionality collapses to always-take when a match exists (declining would lose tempo). Test: `adventurous_impulse_finds_a_creature_in_top_three`. |
 
 ### Shared / multi-college
 

@@ -197,18 +197,24 @@ fn main_phase_action(state: &GameState, seat: usize) -> GameAction {
             modes.into_iter().filter_map(move |mode| {
                 // Pick a target appropriate to the chosen mode (ChooseMode
                 // mode-aware filter check happens in the cast paths).
+                // Multi-target shapes (Snow Day, Homesickness, Cost of
+                // Brilliance, Render Speechless, Vibrant Outburst, …) ask
+                // the picker for every slot index used by the effect tree;
+                // slots that find no legal target are skipped, matching
+                // "up to N target" semantics.
                 let mode_effect = mode_branch(&c.definition.effect, mode);
-                let target = if mode_effect.requires_target() {
-                    let t = state.auto_target_for_effect(mode_effect, seat);
+                let (target, additional_targets) = if mode_effect.requires_target() {
+                    let (t, extras) =
+                        state.auto_targets_for_effect_all_slots(mode_effect, seat, mode);
                     t.as_ref()?;
-                    t
+                    (t, extras)
                 } else {
-                    None
+                    (None, vec![])
                 };
                 Some(GameAction::CastSpell {
                     card_id: c.id,
                     target,
-                    additional_targets: vec![],
+                    additional_targets,
                     mode,
                     // For X-cost spells (Banefire, Earthquake, Wrath of the
                     // Skies, Mind Twist, Repeal, …), pump as much generic

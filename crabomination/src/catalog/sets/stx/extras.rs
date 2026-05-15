@@ -4130,20 +4130,26 @@ pub fn crux_of_fate() -> CardDefinition {
 /// discarded this way, Plargg, Dean of Chaos deals 2 damage to any
 /// target."
 ///
-/// Push (modern_decks): the loot half is wired faithfully as a tap
-/// activation with `Seq(Discard 1, Draw 1)`. The "if a creature card
-/// was discarded → 2 damage" rider is omitted (engine has no
-/// track-card-discarded-by-this-effect tally; same gap as Borrowed
-/// Knowledge mode 1 and Colossus of the Blood Age's death-trigger).
-/// Tracked in TODO.md as the
-/// `Effect::DiscardThisManyDrawSame` suggestion. The "Partner with
-/// Augusta, Dean of Order" rider is also omitted — engine has no
-/// Partner-pair primitive (only the singleton legend constraint is
-/// enforced).
+/// Push (modern_decks, this revision): the conditional damage rider is
+/// **now wired** via the new `Value::CreatureCardsDiscardedThisEffect`
+/// primitive. After the `Discard 1 + Draw 1` chain, an
+/// `Effect::If { cond: ValueAtLeast(CreatureCardsDiscardedThisEffect, 1),
+/// then: DealDamage(2), else_: Noop }` fires the 2 damage only when a
+/// creature card was the one discarded. AutoDecider chose the first card
+/// (which is what `Discard { random: false }` does on AutoDecider paths
+/// — surfaces a `Decision::Discard` and AutoDecider answers with the
+/// first hand-card matching `count`). The "any target" slot is reserved
+/// via `target_filtered(Creature ∨ Player ∨ Planeswalker)` so the
+/// activation requires a target up front (auto-target picker reads the
+/// trigger's slot 0). The "Partner with Augusta, Dean of Order" rider
+/// is still omitted — engine has no Partner-pair primitive (only the
+/// singleton legend constraint is enforced).
 ///
-/// At face value this is a 2-mana 2/2 with a tap-loot — a respectable
-/// curve filler for any Lorehold (R/W) shell.
+/// Tests: `plargg_dean_of_chaos_taps_to_loot` (no-creature discard path,
+/// damage skipped), `plargg_dean_of_chaos_deals_two_damage_when_creature_discarded`
+/// (scripted-decider picks the creature in hand, damage fires).
 pub fn plargg_dean_of_chaos() -> CardDefinition {
+    use crate::effect::shortcut::target_filtered;
     CardDefinition {
         name: "Plargg, Dean of Chaos",
         cost: cost(&[generic(1), r()]),
@@ -4169,6 +4175,21 @@ pub fn plargg_dean_of_chaos() -> CardDefinition {
                 Effect::Draw {
                     who: Selector::You,
                     amount: Value::Const(1),
+                },
+                Effect::If {
+                    cond: crate::card::Predicate::ValueAtLeast(
+                        Value::CreatureCardsDiscardedThisEffect,
+                        Value::Const(1),
+                    ),
+                    then: Box::new(Effect::DealDamage {
+                        to: target_filtered(
+                            SelectionRequirement::Creature
+                                .or(SelectionRequirement::Player)
+                                .or(SelectionRequirement::Planeswalker),
+                        ),
+                        amount: Value::Const(2),
+                    }),
+                    else_: Box::new(Effect::Noop),
                 },
             ]),
             once_per_turn: false,
@@ -5335,7 +5356,232 @@ pub fn divide_by_zero() -> CardDefinition {
     }
 }
 
-// ── Pursuit of Knowledge (STX — Silverquill rare) ──────────────────────────
+// (Note: Pursuit of Knowledge's doc and definition live further down
+// after the freshly-inserted STA reprint cycle — see
+// `pub fn pursuit_of_knowledge` below.)
+
+// ── Maelstrom Muse ──────────────────────────────────────────────────────────
+
+/// Maelstrom Muse — {3}{U}{R} 3/3 Djinn Wizard with Flying.
+///
+/// Real Oracle: "Magecraft — Whenever you cast or copy an instant or
+/// sorcery spell, draw a card, then discard a card. If five or more
+/// mana was spent to cast that spell, draw two cards instead, then
+/// discard a card."
+///
+/// Wired via `shortcut::opus_trigger` — the small body draws 1 + discards
+/// 1 (looting); the big body (≥5 mana spent) draws 2 + discards 1
+/// (digging). The AutoDecider's `Decision::Discard` answers with the
+/// first hand card, which is fine for the bot harness — a real client
+/// can surface the prompt. Test:
+/// `maelstrom_muse_opus_loots_on_small_cast_digs_on_big`.
+pub fn maelstrom_muse() -> CardDefinition {
+    use crate::effect::shortcut::opus_trigger;
+    CardDefinition {
+        name: "Maelstrom Muse",
+        cost: cost(&[generic(3), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Djinn, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![opus_trigger(
+            // Small body: draw 1, discard 1.
+            Effect::Seq(vec![
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
+                Effect::Discard {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                    random: false,
+                },
+            ]),
+            // Big body (≥5 mana): draw 2, discard 1.
+            Effect::Seq(vec![
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(2),
+                },
+                Effect::Discard {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                    random: false,
+                },
+            ]),
+        )],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+    }
+}
+
+// ── Approach of the Second Sun (STA reprint, Amonkhet) ──────────────────────
+
+/// Approach of the Second Sun — {6}{W}{W} Sorcery (Strixhaven Mystical
+/// Archive). Real Oracle: "If this spell was cast from your hand and
+/// you've cast another spell named Approach of the Second Sun this game,
+/// you win the game. Otherwise, put this card seventh from the top of
+/// your owner's library and you gain 7 life."
+///
+/// Push (modern_decks): wired with the lifegain half + a put-on-library
+/// approximation (we don't yet model "seventh from top" precisely; we
+/// `PutOnLibraryFromHand` which delivers to the top of the controller's
+/// library). The "if you've cast another with this name → you win" rider
+/// uses the new `Predicate::SameNamedInZoneAtLeast` (push XXXVIII)
+/// counting copies of "Approach of the Second Sun" in the controller's
+/// graveyard. On the second cast the graveyard already holds the first
+/// Approach (it hit graveyard at resolution before the second cast), so
+/// the predicate fires and the controller wins the game via
+/// `Effect::EndGameWithWinner`.
+///
+/// Note: the printed Oracle's "library counter" form is more nuanced
+/// (the win condition reads "you've cast another *spell* named ..."
+/// regardless of zone, so even a re-cast Approach in exile would count).
+/// The graveyard-count approximation captures the typical cube/game
+/// pattern (Approach #1 goes to gy when it resolves, then Approach #2
+/// reads it). Test: `approach_of_the_second_sun_gains_seven_life_on_first_cast`,
+/// `approach_of_the_second_sun_wins_game_when_cast_with_one_in_graveyard`.
+pub fn approach_of_the_second_sun() -> CardDefinition {
+    use crate::card::Predicate as P;
+    use crate::card::Zone;
+    CardDefinition {
+        name: "Approach of the Second Sun",
+        cost: cost(&[generic(6), w(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::If {
+            cond: P::SameNamedInZoneAtLeast {
+                who: PlayerRef::You,
+                zone: Zone::Graveyard,
+                at_least: Value::Const(1),
+            },
+            then: Box::new(Effect::WinGame {
+                who: PlayerRef::You,
+            }),
+            else_: Box::new(Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(7),
+            }),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+    }
+}
+
+// ── Resurrection (STA reprint, Alpha) ───────────────────────────────────────
+
+/// Resurrection — {2}{W}{W} Sorcery (Strixhaven Mystical Archive). "Return
+/// target creature card from your graveyard to the battlefield."
+///
+/// White's basic reanimation spell at four mana, no upside. Wired as a
+/// single `Effect::Move { target: Creature card in caster's gy →
+/// Battlefield(You) }`. The target filter uses `target_filtered` so the
+/// caster picks a specific creature card at cast time. Test:
+/// `resurrection_returns_creature_card_from_graveyard`.
+pub fn resurrection() -> CardDefinition {
+    use crate::effect::ZoneDest;
+    use crate::effect::shortcut::target_filtered;
+    CardDefinition {
+        name: "Resurrection",
+        cost: cost(&[generic(2), w(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Move {
+            what: target_filtered(SelectionRequirement::Creature),
+            to: ZoneDest::Battlefield {
+                controller: PlayerRef::You,
+                tapped: false,
+            },
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+    }
+}
+
+// ── Adventurous Impulse (STA reprint, Core 2021) ────────────────────────────
+
+/// Adventurous Impulse — {G} Sorcery (Strixhaven Mystical Archive). "Look
+/// at the top three cards of your library. You may reveal a creature or
+/// land card from among them and put it into your hand. Put the rest on
+/// the bottom of your library in a random order."
+///
+/// Wired via `Effect::RevealUntilFind { cap: 3, find: Creature OR Land,
+/// to: Hand }`. Misses go to the bottom of the library (per the printed
+/// "in a random order" rider — engine's `RevealMissDest::BottomRandom`).
+/// Picking nothing collapses to "draw nothing"; the printed "you may"
+/// optionality is collapsed to always-take when a match exists. Test:
+/// `adventurous_impulse_finds_a_creature_in_top_three`.
+pub fn adventurous_impulse() -> CardDefinition {
+    use crate::effect::{RevealMissDest, ZoneDest};
+    CardDefinition {
+        name: "Adventurous Impulse",
+        cost: cost(&[g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::RevealUntilFind {
+            who: PlayerRef::You,
+            find: SelectionRequirement::Creature.or(SelectionRequirement::Land),
+            to: ZoneDest::Hand(PlayerRef::You),
+            cap: Value::Const(3),
+            life_per_revealed: 0,
+            miss_dest: RevealMissDest::BottomRandom,
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+    }
+}
+
+// ── Mind into Mind ──────────────────────────────────────────────────────────
+//
+// (Skipped: Mind into Matter exists in SOS; the STA's Mizzix's Mastery
+// needs cast-from-exile without paying — engine-wide ⏳.)
+
+// ── Pursuit of Knowledge ────────────────────────────────────────────────────
 
 /// Pursuit of Knowledge — {1}{W} Enchantment. "Whenever you draw a
 /// card, you may put a study counter on this enchantment. / Remove

@@ -1904,6 +1904,34 @@ fn vibrant_outburst_deals_three_damage() {
         "Bear should die to 3 damage");
 }
 
+/// `auto_targets_for_effect_all_slots` should pick targets for both
+/// slots of Vibrant Outburst without manual specification, so a bot
+/// drives the multi-target shape end-to-end.
+#[test]
+fn auto_target_picker_fills_multi_slot_vibrant_outburst() {
+    let mut g = two_player_game();
+    let _bear1 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let _bear2 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::vibrant_outburst());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+
+    // Find the spell card definition and ask the picker for all slots.
+    let card_def = &g.players[0]
+        .hand
+        .iter()
+        .find(|c| c.id == id)
+        .unwrap()
+        .definition;
+    let eff = &card_def.effect;
+    let (slot_0, additional) = g.auto_targets_for_effect_all_slots(eff, 0, None);
+    assert!(slot_0.is_some(), "Slot 0 must be picked");
+    assert!(
+        !additional.is_empty(),
+        "Slot 1 (optional creature tap target) must also be picked"
+    );
+}
+
 #[test]
 fn vibrant_outburst_taps_optional_second_target() {
     // Push (modern_decks): slot 1 = optional creature target tap. Two

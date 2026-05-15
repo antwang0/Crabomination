@@ -201,6 +201,14 @@ pub enum Value {
     /// between independent resolutions, so a `Seq([Discard, Draw])`
     /// reads exactly the discards from this resolution.
     CardsDiscardedThisEffect,
+    /// Number of *creature* cards discarded so far within the current
+    /// effect resolution. Bumped alongside `CardsDiscardedThisEffect`
+    /// whenever the discarded card has `CardType::Creature`. Used by
+    /// Plargg, Dean of Chaos's "if a creature card was discarded this
+    /// way, this creature deals 2 damage to any target" conditional
+    /// rider — gates an `Effect::If { ValueAtLeast(this, 1), ... }`.
+    /// Reset to 0 between independent resolutions.
+    CreatureCardsDiscardedThisEffect,
     /// Mana value (CMC) of the first card the selector resolves to.
     /// Looks the card up across the battlefield, graveyards, exile, and
     /// hands. Used by Wrath of the Skies (destroy each nonland with mana
@@ -930,6 +938,16 @@ pub enum Effect {
     /// `caster_grants_uncounterable` to gate which creature spells the
     /// Cavern protects (only those that share the named type).
     NameCreatureType { what: Selector },
+
+    /// "[Player] wins the game." Used by Approach of the Second Sun's
+    /// second-cast win condition, Coalition Victory, Test of Endurance,
+    /// Felidar Sovereign, and similar alt-win effects. The engine
+    /// eliminates every other player so the standard
+    /// `check_state_based_actions` win-detection path (≤ 1 alive player
+    /// → `game_over = Some(winner)`) promotes the named player to the
+    /// winner on the next SBA pass. No CR violation: the state-based
+    /// action approach matches CR 104.2a's "you win the game" wording.
+    WinGame { who: PlayerRef },
 }
 
 /// Lightweight mirror of `crate::game::types::DelayedKind` for use inside
@@ -1157,6 +1175,7 @@ impl Effect {
                 sel_has_target(from) || value_has_target(count)
             }
             Effect::NameCreatureType { what } => sel_has_target(what),
+            Effect::WinGame { who } => player_has_target(who),
         }
     }
 

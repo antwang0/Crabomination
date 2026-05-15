@@ -103,6 +103,9 @@ impl GameState {
             Value::NonNeg(v) => self.evaluate_value(v, ctx).max(0),
             Value::SacrificedPower => self.sacrificed_power.unwrap_or(0),
             Value::CardsDiscardedThisEffect => self.cards_discarded_this_resolution as i32,
+            Value::CreatureCardsDiscardedThisEffect => {
+                self.creature_cards_discarded_this_resolution as i32
+            }
             Value::ConvergedValue => ctx.converged_value as i32,
             Value::CastSpellManaSpent => {
                 // Prefer the spell stack item's stored `mana_spent` when

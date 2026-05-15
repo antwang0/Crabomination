@@ -11,6 +11,31 @@ Periodic spot-check of the rules document
 (`crabomination/MagicCompRules 20260116.txt`). Each rule below has a
 status tag (✅ wired, 🟡 partial, ⏳ todo) plus a short note.
 
+- ✅ **CR 104.2b — "An effect may state that a player wins the game"**
+  (push modern_decks audit, claude/modern_decks branch): "An effect
+  may state that a player wins the game." Push (modern_decks) lands
+  the new `Effect::WinGame { who: PlayerRef }` primitive in
+  `effect.rs`. The handler in `game/effects/mod.rs` resolves `who`
+  to a single seat and sets `eliminated = true` on every other
+  player; the existing state-based-action sweep
+  (`check_state_based_actions` in `game/stack.rs:855`) then
+  promotes `game_over = Some(winner)` on the next loop. This
+  matches the printed CR 104.2a / 104.2b framing — "wins the game"
+  is implemented as "every other player loses" plus the existing
+  ≤-1-player SBA path, which is the standard engine pattern. No
+  CR 104.3f (simultaneous win-and-lose) conflict because the
+  eliminate-others step doesn't touch the winner's life or
+  poison. Approach of the Second Sun is the canonical exerciser
+  (Strixhaven Mystical Archive reprint of the Amonkhet finisher):
+  on a second cast with one copy in your graveyard, the predicate
+  `SameNamedInZoneAtLeast(You, Graveyard, 1)` flips the
+  `Effect::If` to `WinGame { You }`. Tests:
+  `approach_of_the_second_sun_wins_game_when_cast_with_one_in_graveyard`,
+  `approach_of_the_second_sun_gains_seven_life_on_first_cast`
+  (the non-win branch). Same primitive unblocks Coalition Victory,
+  Test of Endurance, Felidar Sovereign, Mortal Combat, Helix
+  Pinnacle.
+
 - ✅ **CR 402.2 — Maximum hand size enforced at cleanup, opt-out via
   "no maximum hand size"** (push modern_decks audit, claude/modern_decks
   branch): "Each player has a maximum hand size, which is normally seven

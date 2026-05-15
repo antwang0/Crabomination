@@ -186,6 +186,7 @@ impl GameState {
         // only counts discards from *this* resolution (Borrowed Knowledge
         // mode 1's "draw cards equal to the number discarded this way").
         self.cards_discarded_this_resolution = 0;
+        self.creature_cards_discarded_this_resolution = 0;
         let mut events = vec![];
         self.run_effect(effect, ctx, &mut events)?;
         Ok(events)
@@ -486,9 +487,16 @@ impl GameState {
                             if self.players[p].hand.is_empty() { break; }
                             let card = self.players[p].hand.remove(0);
                             let cid = card.id;
+                            let was_creature = card
+                                .definition
+                                .card_types
+                                .contains(&crate::card::CardType::Creature);
                             self.players[p].graveyard.push(card);
                             events.push(GameEvent::CardDiscarded { player: p, card_id: cid });
                             self.cards_discarded_this_resolution += 1;
+                            if was_creature {
+                                self.creature_cards_discarded_this_resolution += 1;
+                            }
                         }
                         continue;
                     }
@@ -1687,6 +1695,32 @@ impl GameState {
                 let answer = self.decider.decide(&decision);
                 let mut applied = self.apply_pending_effect_answer(pending, &answer)?;
                 events.append(&mut applied);
+                Ok(())
+            }
+
+            Effect::WinGame { who } => {
+                // CR 104.2a — "you win the game". Resolve `who` to a single
+                // player and eliminate every other (non-eliminated) player.
+                // The SBA pass after this resolution will pick up the
+                // 1-alive-player state and promote it to
+                // `game_over = Some(winner)`. We don't directly set
+                // `game_over` here so that anything resolving after this
+                // step (in the same Seq) can still observe normal state;
+                // the SBA loop is the canonical "the game ends" gate.
+                let winner = self
+                    .resolve_selector(&Selector::Player(who.clone()), ctx)
+                    .into_iter()
+                    .find_map(|e| match e {
+                        EntityRef::Player(p) => Some(p),
+                        _ => None,
+                    });
+                if let Some(w) = winner {
+                    for (idx, pl) in self.players.iter_mut().enumerate() {
+                        if idx != w {
+                            pl.eliminated = true;
+                        }
+                    }
+                }
                 Ok(())
             }
         }

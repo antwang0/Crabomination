@@ -177,6 +177,15 @@ pub struct GameState {
     /// independent resolutions.
     #[serde(skip)]
     pub(crate) cards_discarded_this_resolution: u32,
+    /// Transient: count of *creature* cards discarded within the current
+    /// effect resolution. Bumped alongside `cards_discarded_this_resolution`
+    /// when the discarded card carries `CardType::Creature`. Read by
+    /// `Value::CreatureCardsDiscardedThisEffect` so a follow-up step in
+    /// the same `Effect::Seq` can fire only when a creature was discarded
+    /// (Plargg, Dean of Chaos's printed conditional 2-damage rider).
+    /// Reset to 0 between independent resolutions.
+    #[serde(skip)]
+    pub(crate) creature_cards_discarded_this_resolution: u32,
     /// Transient: which face / cast path the in-progress cast is using.
     /// Set by `cast_spell_back_face` (`Back`) and `cast_flashback`
     /// (`Flashback`); reset to `Front` after each emitted SpellCast
@@ -234,6 +243,7 @@ impl Clone for GameState {
             sacrificed_power: self.sacrificed_power,
             last_created_token: self.last_created_token,
             cards_discarded_this_resolution: self.cards_discarded_this_resolution,
+            creature_cards_discarded_this_resolution: self.creature_cards_discarded_this_resolution,
             pending_cast_face: self.pending_cast_face,
             decider: self.decider.kind().into_boxed(),
             pending_decision: self.pending_decision.clone(),
@@ -273,6 +283,7 @@ impl GameState {
             sacrificed_power: None,
             last_created_token: None,
             cards_discarded_this_resolution: 0,
+            creature_cards_discarded_this_resolution: 0,
             pending_cast_face: CastFace::Front,
             decider: Box::new(AutoDecider),
             pending_decision: None,
@@ -1381,12 +1392,19 @@ impl GameState {
                     {
                         let card = self.players[target_player].hand.remove(pos);
                         let card_id = card.id;
+                        let was_creature = card
+                            .definition
+                            .card_types
+                            .contains(&crate::card::CardType::Creature);
                         self.players[target_player].graveyard.push(card);
                         events.push(GameEvent::CardDiscarded {
                             player: target_player,
                             card_id,
                         });
                         self.cards_discarded_this_resolution += 1;
+                        if was_creature {
+                            self.creature_cards_discarded_this_resolution += 1;
+                        }
                     }
                 }
                 Ok(events)

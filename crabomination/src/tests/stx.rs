@@ -5752,6 +5752,59 @@ fn plargg_dean_of_chaos_is_a_two_two_legendary_human_cleric() {
     assert!(def.has_creature_type(CreatureType::Cleric));
 }
 
+/// Plargg's "if a creature card was discarded" rider fires when the
+/// auto-decider discards Grizzly Bears (the only card in hand) and the
+/// activation targets an opposing player — 2 damage drops their life
+/// from 20 → 18.
+#[test]
+fn plargg_dean_of_chaos_deals_two_damage_when_creature_discarded() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    // Only-hand card is a creature, so AutoDecider's Discard picks it.
+    g.add_card_to_hand(0, catalog::grizzly_bears());
+    let plargg = g.add_card_to_battlefield(0, catalog::plargg_dean_of_chaos());
+    g.clear_sickness(plargg);
+    let life_before = g.players[1].life;
+
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: plargg,
+        ability_index: 0,
+        target: Some(Target::Player(1)),
+    })
+    .expect("Plargg activation");
+    drain_stack(&mut g);
+
+    // Bear discarded → 2 damage to P1.
+    assert_eq!(g.players[1].life, life_before - 2);
+}
+
+/// Plargg's conditional rider does *not* fire when the discarded card is
+/// a noncreature — the damage is gated by
+/// `Value::CreatureCardsDiscardedThisEffect ≥ 1`.
+#[test]
+fn plargg_dean_of_chaos_no_damage_when_noncreature_discarded() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    // Discard a land — non-creature.
+    g.add_card_to_hand(0, catalog::island());
+    let plargg = g.add_card_to_battlefield(0, catalog::plargg_dean_of_chaos());
+    g.clear_sickness(plargg);
+    let life_before = g.players[1].life;
+
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: plargg,
+        ability_index: 0,
+        target: Some(Target::Player(1)),
+    })
+    .expect("Plargg activation");
+    drain_stack(&mut g);
+
+    // Island discarded → no damage.
+    assert_eq!(g.players[1].life, life_before);
+}
+
 /// Pestilent Cauldron's sac activation mills 4 from each player and
 /// drains 3.
 #[test]
@@ -7317,4 +7370,181 @@ fn spitfire_lagac_is_a_four_mana_three_three_lizard() {
         .subtypes
         .creature_types
         .contains(&crate::card::CreatureType::Lizard));
+}
+
+// ── Approach of the Second Sun ─────────────────────────────────────────────
+
+/// First cast: gain 7 life (and the card lands in graveyard — the
+/// "seventh from top" rider is approximated as graveyard hit).
+#[test]
+fn approach_of_the_second_sun_gains_seven_life_on_first_cast() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::approach_of_the_second_sun());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(6);
+    let life_before = g.players[0].life;
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Approach castable at 8 mana");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[0].life, life_before + 7);
+    // Game still going.
+    assert!(g.game_over.is_none());
+}
+
+/// Second cast with one Approach already in graveyard: caster wins.
+#[test]
+fn approach_of_the_second_sun_wins_game_when_cast_with_one_in_graveyard() {
+    let mut g = two_player_game();
+    // Seed a copy of Approach in P0's graveyard (simulating the first cast).
+    g.add_card_to_graveyard(0, catalog::approach_of_the_second_sun());
+    let id = g.add_card_to_hand(0, catalog::approach_of_the_second_sun());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(6);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Approach castable at 8 mana");
+    drain_stack(&mut g);
+
+    // Game over with P0 as winner.
+    assert_eq!(g.game_over, Some(Some(0)));
+}
+
+// ── Resurrection ────────────────────────────────────────────────────────────
+
+#[test]
+fn resurrection_returns_creature_card_from_graveyard() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::resurrection());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(2);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Resurrection castable at 4 mana");
+    drain_stack(&mut g);
+
+    // Bear should now be on the battlefield under P0's control.
+    let bear_on_bf = g.battlefield.iter().find(|c| c.id == bear);
+    assert!(bear_on_bf.is_some(), "Bear should be back on the battlefield");
+    assert_eq!(bear_on_bf.unwrap().controller, 0);
+}
+
+#[test]
+fn resurrection_is_a_four_mana_sorcery() {
+    let def = catalog::resurrection();
+    assert_eq!(def.name, "Resurrection");
+    assert!(def.card_types.contains(&crate::card::CardType::Sorcery));
+    assert_eq!(def.cost.cmc(), 4);
+}
+
+// ── Adventurous Impulse ────────────────────────────────────────────────────
+
+#[test]
+fn adventurous_impulse_finds_a_creature_in_top_three() {
+    let mut g = two_player_game();
+    // Top of library: Grizzly Bears (creature) — Adventurous Impulse should
+    // put it into hand.
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_library(0, catalog::island());
+    let id = g.add_card_to_hand(0, catalog::adventurous_impulse());
+    g.players[0].mana_pool.add(Color::Green, 1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Adventurous Impulse castable for {G}");
+    drain_stack(&mut g);
+
+    // The bear should now be in P0's hand.
+    let bear_in_hand = g.players[0]
+        .hand
+        .iter()
+        .any(|c| c.definition.name == "Grizzly Bears");
+    assert!(bear_in_hand, "Bear should be put into hand");
+}
+
+#[test]
+fn adventurous_impulse_is_a_one_mana_green_sorcery() {
+    let def = catalog::adventurous_impulse();
+    assert_eq!(def.name, "Adventurous Impulse");
+    assert!(def.card_types.contains(&crate::card::CardType::Sorcery));
+    assert_eq!(def.cost.cmc(), 1);
+}
+
+// ── Maelstrom Muse ─────────────────────────────────────────────────────────
+
+/// Opus magecraft on Maelstrom Muse: cast a small instant → loot 1.
+/// (Hand stays unchanged after cast: draw 1, discard 1.)
+#[test]
+fn maelstrom_muse_opus_loots_on_small_cast() {
+    let mut g = two_player_game();
+    let muse = g.add_card_to_battlefield(0, catalog::maelstrom_muse());
+    g.clear_sickness(muse);
+    // Seed library for the draw.
+    g.add_card_to_library(0, catalog::island());
+    // Seed a discard target.
+    g.add_card_to_hand(0, catalog::grizzly_bears());
+    // Cast a 1-mana instant: should loot 1.
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let hand_before = g.players[0].hand.len(); // includes bear + bolt
+    let lib_before = g.players[0].library.len();
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Bolt castable");
+    drain_stack(&mut g);
+
+    // Bolt left hand (-1). Magecraft draws 1 (+1), discards 1 (-1).
+    // Net: hand_before - 1 (bolt cast) + 0 (draw - discard cancel out).
+    assert_eq!(g.players[0].hand.len(), hand_before - 1);
+    assert_eq!(g.players[0].library.len(), lib_before - 1);
+}
+
+#[test]
+fn maelstrom_muse_is_a_five_mana_three_three_flying_djinn_wizard() {
+    let def = catalog::maelstrom_muse();
+    assert_eq!(def.name, "Maelstrom Muse");
+    assert_eq!(def.power, 3);
+    assert_eq!(def.toughness, 3);
+    assert_eq!(def.cost.cmc(), 5);
+    assert!(def.keywords.contains(&Keyword::Flying));
+    assert!(def
+        .subtypes
+        .creature_types
+        .contains(&crate::card::CreatureType::Djinn));
+    assert!(def
+        .subtypes
+        .creature_types
+        .contains(&crate::card::CreatureType::Wizard));
 }
