@@ -18,16 +18,49 @@ Two adjacent catalogs:
 
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
-| SOS (255 cards) | 187 | 67 | 1 |
-| STX (170 cards) | 177 | 16 | 0 |
+| SOS (255 cards) | 192 | 62 | 1 |
+| STX (170 cards) | 178 | 15 | 0 |
 | STA reprints (in STX boosters) | 38 | 0 | — |
 
-Push (modern_decks, claude/modern_decks branch — current revision —
-latest sub-push): **6 NEW cards** (1 STX 2021 + 5 STA reprints) **+ 4
-promotions** (Owlin Shieldmage ✅ via combat damage prevention layer,
-Strife Scholar // Awaken the Ages ✅ via exile_on_resolve flag,
-Divergent Equation ✅ via the same flag, Wisdom of Ages ✅ via the
-same flag) + **2 new engine primitives**:
+Push (modern_decks, claude/modern_decks branch — latest revision —
+latest sub-push): **1 NEW card** (Anger, STA reprint) **+ 6 promotions**
+(Conciliator's Duelist ✅ via DelayUntil + CastSpellTarget fallback,
+Light of Promise ✅ via the new `Value::TriggerEventAmount` primitive,
+Thornfist Striker ✅ via the new `lifegain_anthem_for_name` helper,
+Mind Roots ✅ via the new `Selector::DiscardedThisResolution` primitive,
+Scolding Administrator ✅ + Fix What's Broken ✅ via doc-sync — both
+already wired) + **5 new engine primitives**:
+- **`Effect::DelayUntil` fallback to `Selector::CastSpellTarget(0)`** —
+  when the trigger context has no `ctx.targets`, the DelayUntil
+  capture walks the stack for the just-cast spell's slot-0 target.
+  Wires Conciliator's Duelist's "return at next end step" Repartee
+  rider.
+- **`Value::TriggerEventAmount` + `EffectContext.event_amount` +
+  `StackItem::Trigger.event_amount`** — per-event amount (life
+  gained, life lost, damage dealt, …) threaded through the trigger
+  dispatcher to the resolving trigger's body. Wires Light of
+  Promise's "that many" rider.
+- **`lifegain_anthem_for_name` helper table + compute-time
+  injection** in `GameState::compute_battlefield` (sibling of
+  `lifegain_selfpump_for_name`). Wires Thornfist Striker's Infusion
+  "creatures you control get +1/+0 and have trample" anthem.
+- **`graveyard_anthem_for_name` helper table + compute-time gy
+  walk** — first entry: Anger (Mountain → Haste). Adds a per-
+  graveyard pass that emits a continuous `AddKeyword` effect when
+  the gy-resident card's owner controls the required land subtype.
+- **`Selector::DiscardedThisResolution { filter }` +
+  `GameState.discarded_card_ids_this_resolution`** — tracks
+  per-resolution discarded card ids and exposes them as a Selector
+  for follow-up moves. Wires Mind Roots's "land discarded this way →
+  battlefield tapped".
+- **`PlayerRef::You` flatten in `resolve_zonedest_player`** — fixes
+  a bug where a `You`-anchored ZoneDest on a gy-to-bf move rebound
+  to the gy owner's seat (so Mind Roots's stolen land was landing
+  back under the opp's control). Now flattens to `Seat(ctx.controller)`
+  before `place_card_in_dest` runs.
+
+Earlier sub-push (still on modern_decks): **6 NEW cards** (1 STX 2021
++ 5 STA reprints) **+ 4 promotions** + **2 prior engine primitives**:
 - **`Effect::PreventAllCombatDamageThisTurn` + `GameState
   .prevent_combat_damage_this_turn` flag** (CR 615.1) — combat damage
   resolver consults the flag and zeroes attacker/blocker damage
