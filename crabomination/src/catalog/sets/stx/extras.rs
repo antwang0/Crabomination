@@ -8054,3 +8054,49 @@ pub fn skywarp_skaab() -> CardDefinition {
         exile_on_resolve: false,
     }
 }
+
+
+// ── Anger (STA reprint, Judgment) ───────────────────────────────────────────
+
+/// Anger — {2}{R} Creature — Incarnation, 2/2 (Judgment / STA reprint).
+///
+/// "Haste / As long as Anger is in your graveyard and you control a
+/// Mountain, creatures you control have haste."
+///
+/// Push (modern_decks, NEW, `stx::extras`): the Strixhaven Mystical
+/// Archive reprinted the Judgment Incarnation cycle. Wired with the
+/// printed Haste + graveyard-resident "Mountain → creatures get
+/// Haste" anthem static, via the new `graveyard_anthem_for_name`
+/// helper table walked by `GameState::compute_battlefield`. When
+/// Anger sits in a player's graveyard and that player controls a
+/// Mountain, layer 6 emits `AddKeyword(Haste)` over every creature
+/// the owner has on the battlefield. The keyword grant falls out
+/// automatically when Anger leaves the graveyard (exile, return-to-
+/// hand, etc.). The printed `Mountainwalk` evasion is omitted (no
+/// landwalk primitive — tracked in TODO.md).
+pub fn anger() -> CardDefinition {
+    CardDefinition {
+        name: "Anger",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Incarnation],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Haste],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}

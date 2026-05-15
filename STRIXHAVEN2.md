@@ -20,7 +20,7 @@ Two adjacent catalogs:
 |---|---|---|---|
 | SOS (255 cards) | 187 | 67 | 1 |
 | STX (170 cards) | 177 | 16 | 0 |
-| STA reprints (in STX boosters) | 37 | 0 | — |
+| STA reprints (in STX boosters) | 38 | 0 | — |
 
 Push (modern_decks, claude/modern_decks branch — current revision —
 latest sub-push): **6 NEW cards** (1 STX 2021 + 5 STA reprints) **+ 4
@@ -1071,6 +1071,7 @@ parity is a matter of porting card factories one at a time.
 | Symbol of Strength (STA reprint) | {2}{G} | ✅ | Push (modern_decks, NEW, `stx::extras`): {2}{G} Sorcery (STA reprint, originally Future Sight). "Target creature gets +2/+2 until end of turn. Draw a card. / Flashback {3}{G}." Pump-and-cantrip combat trick. Tests: `symbol_of_strength_pumps_two_two_and_draws`. |
 | Magmatic Sinkhole (STA reprint) | {1}{B}{R} | ✅ | Push (modern_decks, NEW, `stx::extras`): {1}{B}{R} Sorcery (STA reprint). "Surveil 2, then this deals 4 damage to target creature or planeswalker." The Delve alt-cost from some printings is omitted (no exile-from-gy alt-cost-reduction primitive). Body fully ships the printed primary effect. Test: `magmatic_sinkhole_surveils_and_deals_four_damage`. |
 | Sevinne's Reclamation (STA reprint) | {2}{W} | ✅ | Push (modern_decks, NEW, `stx::extras`): {2}{W} Sorcery (STA reprint, originally Commander 2019). "Return target permanent card with mana value 3 or less from your graveyard to the battlefield. If this spell was cast from a graveyard, copy it twice. You may choose new targets for the copies. / Flashback {5}{W}." The "if cast from a graveyard, copy twice" rider is **fully wired** via the existing `Predicate::CastFromGraveyard` primitive (push: modern_decks) — at hand-cast: 1 reanimation; at flashback-cast: 1 reanimation + 2 copies. Tests: `sevinnes_reclamation_returns_low_mv_permanent_from_graveyard`, `sevinnes_reclamation_rejects_high_mv_target`, `sevinnes_reclamation_has_flashback_keyword`. |
+| Anger (STA reprint) | {2}{R} | ✅ | Push (modern_decks, NEW, `stx::extras`): {2}{R} Creature — Incarnation, 2/2 (Judgment / STA reprint). "Haste / As long as Anger is in your graveyard and you control a Mountain, creatures you control have haste." The graveyard-resident static anthem is **wired** via the new `graveyard_anthem_for_name` helper-table walked by `GameState::compute_battlefield`. While Anger sits in a player's graveyard, the engine emits a layer-6 `AddKeyword(Haste)` continuous effect on every creature the gy-owner controls — but only when the owner also controls at least one Mountain on the battlefield. The Mountainwalk evasion is omitted (no landwalk primitive). Tests: `anger_is_a_three_mana_two_two_incarnation_with_haste`, `anger_in_graveyard_grants_haste_with_mountain`, `anger_in_graveyard_requires_mountain_to_grant_haste`, `anger_only_grants_haste_to_its_owners_creatures`. |
 
 ### Shared / multi-college
 

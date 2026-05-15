@@ -489,6 +489,45 @@ impl GameState {
                 }
             }
         }
+        // Graveyard-resident static-ability injection — covers Anger / Wonder /
+        // Filth-style Incarnations from STA whose printed Oracle reads "As
+        // long as [this card] is in your graveyard and you control a [Land
+        // subtype], creatures you control have [keyword]." Walks each
+        // player's graveyard for entries in the `graveyard_anthem_for_name`
+        // helper table; each match emits a continuous `AddKeyword` effect
+        // affecting `AffectedPermanents::All` keyed on the gy-resident
+        // card's owner — gated on the owner controlling at least one land
+        // of the required subtype on the battlefield. The effect's
+        // `source` is the gy card's id, so removing the gy card (zone
+        // shuffles, exile, etc.) causes the effect to fall out via
+        // `remove_effects_from_source` calls elsewhere.
+        for player in &self.players {
+            for card in &player.graveyard {
+                if let Some((land_subtype, kw)) =
+                    graveyard_anthem_for_name(card.definition.name)
+                {
+                    let controller_has_land = self.battlefield.iter().any(|c| {
+                        c.controller == card.owner
+                            && c.definition.subtypes.land_types.iter().any(|lt| lt == &land_subtype)
+                    });
+                    if controller_has_land {
+                        all_effects.push(ContinuousEffect {
+                            timestamp: card.id.0 as u64,
+                            source: card.id,
+                            affected: AffectedPermanents::All {
+                                controller: Some(card.owner),
+                                card_types: vec![CardType::Creature],
+                                exclude_source: false,
+                            },
+                            layer: Layer::L6Ability,
+                            sublayer: None,
+                            duration: EffectDuration::WhileSourceOnBattlefield,
+                            modification: Modification::AddKeyword(kw.clone()),
+                        });
+                    }
+                }
+            }
+        }
         apply_layers(&self.battlefield, &all_effects)
     }
 
@@ -1887,6 +1926,30 @@ fn lifegain_selfpump_for_name(
         "Honor Troll" => Some((2, 0, HONOR_TROLL_KWS)),
         "Ulna Alley Shopkeep" => Some((2, 0, NO_KWS)),
         "Tenured Concocter" => Some((2, 0, NO_KWS)),
+        _ => None,
+    }
+}
+
+/// Graveyard-resident static-ability table: cards whose printed
+/// Oracle is "As long as [this card] is in your graveyard and you
+/// control a [Land subtype], creatures you control have [keyword]."
+/// This is the Judgment Incarnation cycle (Anger / Wonder / Filth /
+/// Brawn / Genesis / Valor) — STA reprinted a subset of these. The
+/// engine walks each graveyard during `compute_battlefield` and
+/// applies a continuous `AddKeyword` effect to the controller's
+/// creatures when the gate (land subtype controlled) is met.
+///
+/// Returns `Some((land_subtype, keyword))` if `name` matches a known
+/// gy-anthem Incarnation, else `None`.
+///
+/// Current entries:
+/// - Anger (STA reprint, Judgment): controls Mountain → Haste anthem
+fn graveyard_anthem_for_name(
+    name: &'static str,
+) -> Option<(crate::card::LandType, crate::card::Keyword)> {
+    use crate::card::{Keyword, LandType};
+    match name {
+        "Anger" => Some((LandType::Mountain, Keyword::Haste)),
         _ => None,
     }
 }

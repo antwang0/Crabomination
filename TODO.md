@@ -11,6 +11,36 @@ Periodic spot-check of the rules document
 (`crabomination/MagicCompRules 20260116.txt`). Each rule below has a
 status tag (✅ wired, 🟡 partial, ⏳ todo) plus a short note.
 
+- 🟡 **CR 115.3 / 115.5 — Target distinctness + self-targeting**
+  (push modern_decks audit, claude/modern_decks branch): "The same
+  target can't be chosen multiple times for any one instance of the
+  word 'target' on a spell or ability. If the spell or ability uses
+  the word 'target' in multiple places, the same object or player
+  can be chosen once for each instance" (115.3) + "A spell or
+  ability on the stack is an illegal target for itself" (115.5).
+  Engine audit: (a) **115.5 self-targeting is implicitly enforced**.
+  `cast_spell_with_convoke` removes the card from hand, validates
+  the chosen target before pushing the spell on the stack — at
+  cast-time the spell isn't yet on the stack, so it isn't in the
+  candidate set for `IsSpellOnStack` targets. The target validator
+  in `evaluate_requirement_static` walks `self.stack` for spell
+  targets, which doesn't contain the cast-in-progress spell. (b)
+  **115.3 distinctness is partially enforced**. Multi-target spells
+  threaded via `additional_targets` (Snow Day, Render Speechless,
+  Crackle with Power) **do not** enforce distinctness today — each
+  slot is validated independently against its `target_filter_for_slot`,
+  but two slots can pick the same Target. For most multi-target
+  spells in our catalog this is fine because each slot represents a
+  separate "target" keyword instance per CR 115.3's permissive rule.
+  The strict "divided among any number of targets" shape (Crackle
+  with Power, Magma Opus's divided damage half) collapses to a single
+  target today (engine-wide gap shared with Devious Cover-Up,
+  Vibrant Outburst, Snow Day, …), so the distinctness corner is not
+  yet exercised. When the multi-target divided-damage primitive
+  lands, add a `must_be_distinct: bool` on `Selector::TargetFiltered`
+  + a cast-time pairwise check in `cast_spell_with_convoke`. Tracked
+  in TODO.md.
+
 - 🟡 **CR 615.1 — Prevention effects** (push modern_decks audit,
   claude/modern_decks branch): "Some continuous effects are prevention
   effects. Like replacement effects (see rule 614), prevention effects

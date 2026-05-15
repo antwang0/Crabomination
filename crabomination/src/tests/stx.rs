@@ -9502,3 +9502,69 @@ fn light_of_promise_scales_with_lump_sum_lifegain() {
     assert_eq!(counters, 4,
         "Bear should scale with the event's amount (4 life → 4 counters)");
 }
+
+#[test]
+fn anger_is_a_three_mana_two_two_incarnation_with_haste() {
+    use crate::card::CardType;
+    let def = catalog::anger();
+    assert_eq!(def.cost.cmc(), 3);
+    assert_eq!(def.power, 2);
+    assert_eq!(def.toughness, 2);
+    assert!(def.card_types.contains(&CardType::Creature));
+    assert!(def.keywords.contains(&Keyword::Haste));
+    assert!(def.subtypes.creature_types.contains(&crate::card::CreatureType::Incarnation));
+}
+
+#[test]
+fn anger_in_graveyard_grants_haste_with_mountain() {
+    // Push (modern_decks): NEW STA reprint. Anger's graveyard-resident
+    // anthem grants Haste to your creatures while you control a Mountain.
+    // Verified via the new `graveyard_anthem_for_name` helper-table walk
+    // in `GameState::compute_battlefield`.
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+
+    // No Anger anywhere — bear has no haste.
+    let base = g.computed_permanent(bear).unwrap();
+    assert!(!base.keywords.contains(&Keyword::Haste),
+        "bear has no haste without Anger in gy");
+
+    // Anger in gy + you control a Mountain → haste granted.
+    g.add_card_to_graveyard(0, catalog::anger());
+    g.add_card_to_battlefield(0, catalog::mountain());
+    let with_anger = g.computed_permanent(bear).unwrap();
+    assert!(with_anger.keywords.contains(&Keyword::Haste),
+        "bear gains haste from Anger in gy + Mountain controlled");
+}
+
+#[test]
+fn anger_in_graveyard_requires_mountain_to_grant_haste() {
+    // Without a Mountain on the battlefield, Anger's gy-anthem does not
+    // fire. The gate is keyed off the gy-resident card's owner's lands.
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_graveyard(0, catalog::anger());
+    // Add only Plains, not Mountain.
+    g.add_card_to_battlefield(0, catalog::plains());
+
+    let cp = g.computed_permanent(bear).unwrap();
+    assert!(!cp.keywords.contains(&Keyword::Haste),
+        "Anger anthem requires a Mountain — Plains doesn't trigger it");
+}
+
+#[test]
+fn anger_only_grants_haste_to_its_owners_creatures() {
+    // Anger in P0's graveyard with P0 controlling a Mountain — P0's
+    // creatures get Haste, but P1's do not.
+    let mut g = two_player_game();
+    g.add_card_to_graveyard(0, catalog::anger());
+    g.add_card_to_battlefield(0, catalog::mountain());
+    let my_bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+
+    let mine = g.computed_permanent(my_bear).unwrap();
+    let theirs = g.computed_permanent(opp_bear).unwrap();
+    assert!(mine.keywords.contains(&Keyword::Haste), "my bear gets haste");
+    assert!(!theirs.keywords.contains(&Keyword::Haste),
+        "opp bear does not get haste (not Anger's owner)");
+}
