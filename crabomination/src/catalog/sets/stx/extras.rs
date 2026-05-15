@@ -7960,15 +7960,15 @@ pub fn sevinnes_reclamation() -> CardDefinition {
 /// "Whenever you gain life, put that many +1/+1 counters on target
 /// creature you control."
 ///
-/// 🟡 Approximated: trigger fires on each `LifeGained/YourControl`
-/// event and places exactly 1 +1/+1 counter (printed "that many"
-/// reads the per-event amount; the engine has no `Value::Trigger
-/// EventAmount` primitive yet, so the rider scales per *fire* count
-/// not per gained-life count). For incidental Pest-style 1-life
-/// triggers this matches printed Oracle exactly. For lump-sum gains
-/// (Bookwurm's "gain 4 life"), the printed rider would yield 4
-/// counters; we ship 1 counter per fire, an under-count. The body's
-/// printed enchantment ability is otherwise wired.
+/// ✅ Push (modern_decks): the printed "that many" scaling **now
+/// lands** via the new `Value::TriggerEventAmount` primitive. The
+/// trigger fires on each `LifeGained/YourControl` event; the
+/// dispatcher threads the event's `amount` field through to
+/// `EffectContext.event_amount`, and the trigger body reads it via
+/// `Value::TriggerEventAmount` to place that many +1/+1 counters on
+/// a target friendly creature. Incidental 1-life-per-gain (Pest-
+/// style drain) drops 1 counter; lump-sum gains (Bookwurm's 4-life
+/// ETB, Beledros's Lifelink swings) correctly scale.
 pub fn light_of_promise() -> CardDefinition {
     CardDefinition {
         name: "Light of Promise",
@@ -7988,7 +7988,7 @@ pub fn light_of_promise() -> CardDefinition {
                     SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
                 ),
                 kind: CounterType::PlusOnePlusOne,
-                amount: Value::Const(1),
+                amount: Value::TriggerEventAmount,
             },
         }],
         static_abilities: vec![],

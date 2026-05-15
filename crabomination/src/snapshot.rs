@@ -676,6 +676,7 @@ mod tests {
             converged_value: 0,
         trigger_source: None,
             mana_spent: 0,
+            event_amount: 0,
         });
 
         let snap = GameSnapshot::capture(&g);
@@ -703,6 +704,7 @@ mod tests {
             converged_value: 0,
         trigger_source: None,
             mana_spent: 0,
+            event_amount: 0,
         });
 
         let json = serde_json::to_string(&g).expect("serialize GameState");

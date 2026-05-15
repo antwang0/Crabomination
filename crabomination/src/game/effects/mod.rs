@@ -65,6 +65,14 @@ pub struct EffectContext {
     /// non-spell contexts (triggers, activated abilities) since those
     /// don't have a "cast zone" concept.
     pub cast_from_hand: bool,
+    /// Per-event amount of the firing event (life gained, life lost,
+    /// damage dealt, cards drawn, …). Set on trigger resolutions from
+    /// the event payload (`StackItem::Trigger.event_amount`) so trigger
+    /// bodies can read it via `Value::TriggerEventAmount`. Used by
+    /// Light of Promise's "Whenever you gain life, put that many
+    /// +1/+1 counters on target creature you control." Defaults to 0
+    /// for non-trigger contexts (spells, activated abilities).
+    pub event_amount: u32,
 }
 
 impl EffectContext {
@@ -80,6 +88,7 @@ impl EffectContext {
             mana_spent: 0,
             source_name: None,
             cast_from_hand: true,
+            event_amount: 0,
         }
     }
     /// Spell-resolution context with the resolving spell's
@@ -154,6 +163,7 @@ impl EffectContext {
             mana_spent,
             source_name: Some(spell_name),
             cast_from_hand,
+            event_amount: 0,
         }
     }
     pub fn for_trigger(
@@ -173,6 +183,7 @@ impl EffectContext {
             mana_spent: 0,
             source_name: None,
             cast_from_hand: true,
+            event_amount: 0,
         }
     }
     pub fn for_ability(
@@ -191,6 +202,7 @@ impl EffectContext {
             mana_spent: 0,
             source_name: None,
             cast_from_hand: true,
+            event_amount: 0,
         }
     }
 }
@@ -1473,7 +1485,26 @@ impl GameState {
                 // Capture the current target slot so the delayed body can
                 // reference it via `Selector::Target(0)` later (e.g. Goryo's
                 // wants to exile the same creature it reanimated).
-                let target = ctx.targets.first().cloned();
+                //
+                // Fall back to the cast spell's slot-0 target when our own
+                // resolution context has no target — that's the Repartee /
+                // triggered-ability shape used by Conciliator's Duelist
+                // ("Repartee → exile the cast spell's target, return at
+                // next end step"). The trigger resolves with empty
+                // `ctx.targets` but the cast-spell `StackItem::Spell` is
+                // still below us on the stack, so we can pull its target.
+                let target = ctx.targets.first().cloned().or_else(|| {
+                    let cid = match ctx.trigger_source {
+                        Some(EntityRef::Card(c)) | Some(EntityRef::Permanent(c)) => c,
+                        _ => return None,
+                    };
+                    self.stack.iter().rev().find_map(|si| match si {
+                        StackItem::Spell { card, target, .. } if card.id == cid => {
+                            target.clone()
+                        }
+                        _ => None,
+                    })
+                });
                 let source = ctx.source.unwrap_or(crate::card::CardId(0));
                 self.delayed_triggers.push(DelayedTrigger {
                     controller: ctx.controller,

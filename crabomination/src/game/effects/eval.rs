@@ -71,6 +71,7 @@ impl GameState {
             Value::GraveyardSizeOf(p) => self.resolve_player(p, ctx).map(|p| self.players[p].graveyard.len() as i32).unwrap_or(0),
             Value::LibrarySizeOf(p) => self.resolve_player(p, ctx).map(|p| self.players[p].library.len() as i32).unwrap_or(0),
             Value::XFromCost => ctx.x_value as i32,
+            Value::TriggerEventAmount => ctx.event_amount as i32,
             Value::StormCount => self.spells_cast_this_turn.saturating_sub(1) as i32,
             Value::CountersOn { what, kind } => self
                 .resolve_selector(what, ctx)

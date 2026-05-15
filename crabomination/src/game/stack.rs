@@ -263,6 +263,7 @@ impl GameState {
                 converged_value: 0,
             trigger_source: None,
                 mana_spent: 0,
+                event_amount: 0,
             });
         }
 
@@ -284,6 +285,7 @@ impl GameState {
                 converged_value: 0,
             trigger_source: None,
                 mana_spent: 0,
+                event_amount: 0,
             });
         }
     }
@@ -375,6 +377,7 @@ impl GameState {
                             converged_value: 0,
                             trigger_source: None,
                             mana_spent: 0,
+                            event_amount: 0,
                         });
                     }
 
@@ -406,6 +409,7 @@ impl GameState {
                                     crate::game::effects::EntityRef::Permanent(card_id),
                                 ),
                                 mana_spent,
+                                event_amount: 0,
                             });
                         }
                     }
@@ -450,6 +454,7 @@ impl GameState {
                                     converged_value: 0,
                                 trigger_source: None,
                                     mana_spent: 0,
+                                    event_amount: 0,
                                 });
                             }
                         }
@@ -490,6 +495,7 @@ impl GameState {
                 converged_value,
                 trigger_source,
                 mana_spent,
+                event_amount,
             } => {
                 let chosen_mode = mode.unwrap_or(0);
                 let mut trig_events = self.continue_trigger_resolution_with_source(
@@ -502,6 +508,7 @@ impl GameState {
                     converged_value,
                     mana_spent,
                     trigger_source,
+                    event_amount,
                 )?;
                 events.append(&mut trig_events);
                 if self.pending_decision.is_some() {
@@ -773,6 +780,7 @@ impl GameState {
                     converged_value: 0,
                 trigger_source: None,
                     mana_spent: 0,
+                    event_amount: 0,
                 });
             }
             // Persist: return to battlefield with -1/-1 counter if it had no -1/-1 counter.
@@ -982,6 +990,7 @@ impl GameState {
                 converged_value: 0,
             trigger_source: None,
                 mana_spent: 0,
+                event_amount: 0,
             });
         }
         vec![] // Trigger events are on the stack; callers resolve them via pass_priority.

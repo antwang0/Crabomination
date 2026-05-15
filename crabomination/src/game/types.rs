@@ -455,6 +455,16 @@ pub enum StackItem {
         /// backwards-compatibility.
         #[serde(default)]
         mana_spent: u32,
+        /// Per-event amount of the fired event — life gained, life lost,
+        /// damage dealt, cards drawn, etc. Set by
+        /// `dispatch_triggers_for_events` from the event payload (typically
+        /// the event's `amount` field) so trigger bodies can read it via
+        /// `Value::TriggerEventAmount`. Used by Light of Promise's
+        /// "Whenever you gain life, put that many +1/+1 counters on
+        /// target creature you control." Defaults to 0 for snapshot
+        /// backwards-compatibility.
+        #[serde(default)]
+        event_amount: u32,
     },
 }
 

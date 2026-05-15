@@ -1086,19 +1086,22 @@ pub fn stirring_honormancer() -> CardDefinition {
 /// Conciliator's Duelist — {W}{W}{B}{B}, 4/3 Kor Warlock.
 /// "When this creature enters, draw a card. Each player loses 1 life."
 ///
-/// Approximation: the **Repartee** rider ("Whenever you cast an instant
-/// or sorcery spell that targets a creature, exile up to one target
-/// creature. Return that card to the battlefield under its owner's
-/// control at the beginning of the next end step.") is partially
-/// wired — the Repartee trigger now exiles the cast spell's targeted
-/// creature via the new `Selector::CastSpellTarget(0)` primitive, but
-/// the "return at next end step" delayed trigger remains stubbed
-/// because `Effect::DelayUntil` captures targets from `ctx.targets`,
-/// which are empty inside a triggered ability's resolution context.
-/// A future "capture-as-target from selector" engine primitive would
-/// promote this to ✅. Tracked in TODO.md.
+/// **Repartee** — "Whenever you cast an instant or sorcery spell that
+/// targets a creature, exile up to one target creature. Return that
+/// card to the battlefield under its owner's control at the beginning
+/// of the next end step."
+///
+/// Push (modern_decks): the "return at next end step" delayed rider is
+/// **now wired** via an extension to `Effect::DelayUntil` that falls
+/// back to `Selector::CastSpellTarget(0)` (the just-cast spell's
+/// target) when `ctx.targets` is empty. The Repartee trigger fires
+/// `Seq(Exile(CastSpellTarget(0)) + DelayUntil(NextEndStep, Move →
+/// Battlefield(Owner)))`; the DelayUntil capture-fallback pulls the
+/// cast spell's target off the stack and stashes it so the next-end-
+/// step body's `Selector::Target(0)` resolves back to the exiled
+/// creature.
 pub fn conciliators_duelist() -> CardDefinition {
-    use crate::effect::shortcut::repartee;
+    use crate::effect::{shortcut::repartee, DelayedTriggerKind, ZoneDest};
     CardDefinition {
         name: "Conciliator's Duelist",
         cost: cost(&[w(), w(), b(), b()]),
@@ -1133,11 +1136,24 @@ pub fn conciliators_duelist() -> CardDefinition {
                     },
                 ]),
             },
-            // Repartee — exile the targeted creature. The "return at
-            // next end step" rider is omitted (see card-level docs).
-            repartee(Effect::Exile {
-                what: Selector::CastSpellTarget(0),
-            }),
+            // Repartee — exile the cast spell's target creature, then
+            // bring it back at next end step. The DelayUntil captures
+            // the cast-spell target via the CastSpellTarget(0) fallback.
+            repartee(Effect::Seq(vec![
+                Effect::Exile {
+                    what: Selector::CastSpellTarget(0),
+                },
+                Effect::DelayUntil {
+                    kind: DelayedTriggerKind::NextEndStep,
+                    body: Box::new(Effect::Move {
+                        what: Selector::Target(0),
+                        to: ZoneDest::Battlefield {
+                            controller: PlayerRef::OwnerOf(Box::new(Selector::Target(0))),
+                            tapped: false,
+                        },
+                    }),
+                },
+            ])),
         ],
         static_abilities: vec![],
         base_loyalty: 0,

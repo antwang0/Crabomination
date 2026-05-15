@@ -266,6 +266,17 @@ pub enum Value {
     /// non-planeswalkers (the field is just the `CounterType::Loyalty`
     /// count, which is 0 for cards without loyalty).
     LoyaltyOf(Box<Selector>),
+    /// The amount carried by the event that fired the current trigger
+    /// (life gained, life lost, damage dealt, cards drawn, …). Read
+    /// from `EffectContext.event_amount`, which is set by the
+    /// `dispatch_triggers_for_events` dispatcher from the event's
+    /// `amount` field. Used by Light of Promise's "Whenever you gain
+    /// life, put that many +1/+1 counters on target creature you
+    /// control." — the trigger body reads `Value::TriggerEventAmount`
+    /// for the count of counters to drop. Returns 0 in non-trigger
+    /// resolution contexts (spells, activated abilities, delayed
+    /// triggers that have moved past the original event).
+    TriggerEventAmount,
 }
 
 impl Value {

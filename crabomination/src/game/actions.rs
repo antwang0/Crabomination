@@ -402,6 +402,7 @@ impl GameState {
                     converged_value: 0,
                 trigger_source: None,
                     mana_spent: 0,
+                    event_amount: 0,
                 });
             }
         }
@@ -766,6 +767,7 @@ impl GameState {
                     mana_spent: 0,
                     source_name: None,
                     cast_from_hand: true,
+                    event_amount: 0,
                 };
                 if !self.evaluate_predicate(pred, &ctx) {
                     continue;
@@ -786,6 +788,7 @@ impl GameState {
                 // Effect::CopySpell can find it on the stack.
                 trigger_source: Some(crate::game::effects::EntityRef::Card(source)),
                 mana_spent: 0,
+                event_amount: 0,
             });
         }
     }
@@ -1178,6 +1181,7 @@ impl GameState {
                     mana_spent,
                     source_name: None,
                     cast_from_hand: true,
+                    event_amount: 0,
                 };
                 if !self.evaluate_predicate(&filter, &ctx) {
                     continue;
@@ -1206,6 +1210,7 @@ impl GameState {
                 // Selector::CastSpellTarget) can find it on the stack.
                 trigger_source: Some(crate::game::effects::EntityRef::Card(cast_card)),
                 mana_spent,
+                event_amount: 0,
             });
         }
     }
@@ -1523,6 +1528,7 @@ impl GameState {
                 mana_spent: 0,
                 source_name: None,
                 cast_from_hand: true,
+                event_amount: 0,
             };
             if !self.evaluate_predicate(cond, &ctx) {
                 return Err(GameError::AbilityConditionNotMet);
@@ -1724,6 +1730,7 @@ impl GameState {
                 converged_value: 0,
             trigger_source: None,
                 mana_spent: 0,
+                event_amount: 0,
             });
             self.give_priority_to_active();
         }

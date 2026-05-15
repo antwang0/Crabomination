@@ -533,6 +533,7 @@ mod tests {
             converged_value: 0,
         trigger_source: None,
             mana_spent: 0,
+            event_amount: 0,
         });
         let v = project(&g, 0);
         assert_eq!(v.stack.len(), 2);

@@ -4392,6 +4392,56 @@ fn conciliators_duelist_repartee_exiles_target() {
 }
 
 #[test]
+fn conciliators_duelist_repartee_returns_target_at_end_step() {
+    // Push (modern_decks): the "return at next end step" delayed rider
+    // is wired via the DelayUntil fallback to `Selector::CastSpellTarget(0)`.
+    // Cast Make Your Mark (a pump-cantrip that targets a creature
+    // without killing it) at an opponent's creature, then advance
+    // through the end step; the exiled bear should return to the
+    // battlefield under its owner's (the opponent's) control.
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::conciliators_duelist());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+
+    // Seed library so the cantrip from Make Your Mark doesn't deck out.
+    g.add_card_to_library(0, catalog::lightning_bolt());
+
+    // Cast Make Your Mark targeting the opp's bear.
+    let mark = g.add_card_to_hand(0, catalog::make_your_mark());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: mark,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Make Your Mark castable for {1}{W}");
+    drain_stack(&mut g);
+
+    // Bear should be in exile after Repartee resolves (pump's target
+    // becomes illegal since the bear is no longer in play, but the
+    // cantrip still fires).
+    assert!(!g.battlefield.iter().any(|c| c.id == bear),
+        "bear should be exiled after Repartee fires");
+    assert!(g.exile.iter().any(|c| c.id == bear),
+        "bear should be in the (global) exile zone");
+
+    // Fire end-of-turn triggers; the delayed trigger should resolve and
+    // return the bear to the battlefield under its owner (player 1).
+    g.fire_step_triggers(crate::game::types::TurnStep::End);
+    drain_stack(&mut g);
+
+    let bear_on_bf = g.battlefield.iter().find(|c| c.id == bear)
+        .expect("bear should be back on the battlefield at end step");
+    assert_eq!(bear_on_bf.controller, 1,
+        "bear should come back under its owner's control");
+    assert!(!g.exile.iter().any(|c| c.id == bear),
+        "bear should be gone from exile zone");
+}
+
+#[test]
 fn hardened_academic_grants_counter_when_card_leaves_graveyard() {
     // Hardened Academic triggers off the `EventKind::CardLeftGraveyard`
     // event. Returning a card from your graveyard via Zealous

@@ -9467,20 +9467,38 @@ fn light_of_promise_is_a_four_mana_white_enchantment() {
 fn light_of_promise_adds_counter_on_lifegain_event() {
     // Push (modern_decks): NEW STX card. The printed "Whenever you gain
     // life, put that many +1/+1 counters on target creature you control"
-    // trigger is approximated as one counter per fire (engine has no
-    // per-event amount value yet). Verify the trigger fires on a real
-    // lifegain event.
+    // trigger places exactly 1 +1/+1 counter for a 1-life event.
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.clear_sickness(bear);
     let _enc = g.add_card_to_battlefield(0, catalog::light_of_promise());
 
-    // Fire a synthetic lifegain event through dispatch_triggers_for_events.
     g.players[0].life += 1;
     g.dispatch_triggers_for_events(&[GameEvent::LifeGained { player: 0, amount: 1 }]);
     drain_stack(&mut g);
 
     let counters = g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne);
-    assert!(counters >= 1,
-        "Bear should have at least one +1/+1 counter from Light of Promise trigger");
+    assert_eq!(counters, 1,
+        "Bear should have exactly one +1/+1 counter from a 1-life event");
+}
+
+#[test]
+fn light_of_promise_scales_with_lump_sum_lifegain() {
+    // Push (modern_decks): the "that many" rider now reads
+    // `Value::TriggerEventAmount` (the firing event's amount field). A
+    // lump-sum 4-life gain (Bookwurm-style) should place 4 +1/+1
+    // counters, not 1. Verifies the new `event_amount` thread through
+    // the trigger dispatcher → StackItem::Trigger → EffectContext.
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    let _enc = g.add_card_to_battlefield(0, catalog::light_of_promise());
+
+    g.players[0].life += 4;
+    g.dispatch_triggers_for_events(&[GameEvent::LifeGained { player: 0, amount: 4 }]);
+    drain_stack(&mut g);
+
+    let counters = g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne);
+    assert_eq!(counters, 4,
+        "Bear should scale with the event's amount (4 life → 4 counters)");
 }

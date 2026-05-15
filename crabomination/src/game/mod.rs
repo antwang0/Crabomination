@@ -821,6 +821,7 @@ impl GameState {
             controller: usize,
             filter: Option<crate::effect::Predicate>,
             subject: Option<crate::game::effects::EntityRef>,
+            event_amount: u32,
         }
         let mut candidates: Vec<TriggerCandidate> = Vec::new();
         for card in &self.battlefield {
@@ -836,6 +837,7 @@ impl GameState {
                             controller: card.controller,
                             filter: ta.event.filter.clone(),
                             subject: crate::game::effects::event_subject(ev),
+                            event_amount: event_amount(ev),
                         });
                         break;
                     }
@@ -863,6 +865,7 @@ impl GameState {
                                 controller: card.owner,
                                 filter: ta.event.filter.clone(),
                                 subject: crate::game::effects::event_subject(ev),
+                                event_amount: event_amount(ev),
                             });
                             break;
                         }
@@ -882,6 +885,7 @@ impl GameState {
                 controller,
                 filter,
                 subject,
+                event_amount,
             } = candidate;
             if let Some(filter) = filter {
                 let ctx = crate::game::effects::EffectContext {
@@ -895,6 +899,7 @@ impl GameState {
                     mana_spent: 0,
                     source_name: None,
                     cast_from_hand: true,
+                    event_amount,
                 };
                 if !self.evaluate_predicate(&filter, &ctx) {
                     continue;
@@ -920,9 +925,11 @@ impl GameState {
                 // bump.
                 trigger_source: subject,
                 mana_spent: 0,
+                event_amount,
             });
         }
     }
+
 
     /// Activate a loyalty ability on a planeswalker (sorcery speed, once per turn).
     pub fn activate_loyalty_ability(
@@ -1008,6 +1015,7 @@ impl GameState {
             converged_value: 0,
         trigger_source: None,
             mana_spent: 0,
+            event_amount: 0,
         });
         self.give_priority_to_active();
 
@@ -1584,6 +1592,7 @@ impl GameState {
     ) -> Result<Vec<GameEvent>, GameError> {
         self.continue_trigger_resolution_with_source(
             source, controller, effect, target, mode, x_value, converged_value, mana_spent, None,
+            0,
         )
     }
 
@@ -1594,6 +1603,11 @@ impl GameState {
     /// (e.g. Aziza's Magecraft copy, Conciliator's Duelist's Repartee
     /// exile-target). When `trigger_source_ent` is `None`, falls back
     /// to the legacy behavior (trigger_source = source permanent).
+    ///
+    /// `event_amount` carries the firing event's amount (life gained,
+    /// life lost, damage dealt, …) so trigger bodies can read it via
+    /// `Value::TriggerEventAmount` — used by Light of Promise's
+    /// "Whenever you gain life, put that many +1/+1 counters …".
     #[allow(clippy::too_many_arguments)]
     pub(crate) fn continue_trigger_resolution_with_source(
         &mut self,
@@ -1606,6 +1620,7 @@ impl GameState {
         converged_value: u32,
         mana_spent: u32,
         trigger_source_ent: Option<crate::game::effects::EntityRef>,
+        event_amount: u32,
     ) -> Result<Vec<GameEvent>, GameError> {
         // If the trigger has a stored target that's no longer legal (e.g.
         // an Elesh-Norn-doubled Solitude ETB whose first target was just
@@ -1627,6 +1642,7 @@ impl GameState {
             ctx.trigger_source = Some(ts);
         }
         ctx.mana_spent = mana_spent;
+        ctx.event_amount = event_amount;
         let events = self.resolve_effect(&effect, &ctx)?;
         if let Some((decision, in_progress, remaining)) = self.suspend_signal.take() {
             self.pending_decision = Some(PendingDecision {
@@ -1788,6 +1804,23 @@ fn is_event_hardcoded(ev: &GameEvent, spec: &crate::effect::EventSpec) -> bool {
         GameEvent::SpellCast { .. } => true,
         GameEvent::StepChanged(_) => true,
         _ => false,
+    }
+}
+
+/// Extract the per-event scalar amount carried by `event` — the life
+/// gained on a `LifeGained`, life lost on a `LifeLost`, the count of
+/// cards milled / drawn, etc. Threaded into `EffectContext.event_amount`
+/// via the trigger dispatcher so trigger bodies can read it via
+/// `Value::TriggerEventAmount`. Returns 0 for events that don't carry
+/// a scalar amount (CreatureDied, PermanentEntered, …).
+fn event_amount(event: &GameEvent) -> u32 {
+    match event {
+        GameEvent::LifeGained { amount, .. }
+        | GameEvent::LifeLost { amount, .. }
+        | GameEvent::DamageDealt { amount, .. }
+        | GameEvent::PoisonAdded { amount, .. } => *amount,
+        GameEvent::CounterAdded { count, .. } => *count,
+        _ => 0,
     }
 }
 

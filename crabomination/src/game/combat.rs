@@ -108,6 +108,7 @@ impl GameState {
                 converged_value: 0,
                 trigger_source: None,
                 mana_spent: 0,
+                event_amount: 0,
             });
         }
         self.give_priority_to_active();
@@ -619,6 +620,7 @@ impl GameState {
                 converged_value: 0,
                 trigger_source: None,
                 mana_spent: 0,
+                event_amount: 0,
             });
         }
     }
