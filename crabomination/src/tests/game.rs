@@ -4345,3 +4345,66 @@ fn token_without_name_derives_name_from_creature_subtypes() {
         "Tireless Tracker's Clue"
     );
 }
+
+// ── CR 701.17b — mill stops at empty library ─────────────────────────────
+
+/// Push (modern_decks): per CR 701.17b, "A player can't mill a number of
+/// cards greater than the number of cards in their library. If given the
+/// choice to do so, they can't choose to take that action. If instructed
+/// to do so, they mill as many as possible." The engine's `Effect::Mill`
+/// handler breaks the per-card loop when the library is empty, so a
+/// Mill(N) with M < N cards in library mills exactly M cards (not fewer
+/// or more). This test stages a 3-card library and mills 10, asserting
+/// all 3 cards go to graveyard and the library is empty afterwards.
+#[test]
+fn mill_caps_at_library_size_per_cr_701_17b() {
+    use crate::card::CardType;
+    use crate::effect::Effect;
+    let mut g = two_player_game();
+    // Build a 3-card library on P0.
+    let _c1 = g.add_card_to_library(0, catalog::forest());
+    let _c2 = g.add_card_to_library(0, catalog::island());
+    let _c3 = g.add_card_to_library(0, catalog::mountain());
+    assert_eq!(g.players[0].library.len(), 3);
+
+    // Construct a "Mill 10 cards" effect directly.
+    let mill_def = crate::card::CardDefinition {
+        name: "Test Mill 10",
+        cost: crate::mana::ManaCost::default(),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: crate::card::Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Mill {
+            who: crate::effect::Selector::Player(crate::effect::PlayerRef::Target(0)),
+            amount: Value::Const(10),
+        },
+        activated_abilities: vec![],
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    };
+    let mill = g.add_card_to_hand(0, mill_def);
+    g.perform_action(GameAction::CastSpell {
+        card_id: mill,
+        target: Some(Target::Player(0)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("mill spell castable");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[0].library.len(), 0, "library emptied");
+    // 3 milled cards + the mill spell itself → 4 cards in graveyard.
+    assert_eq!(g.players[0].graveyard.len(), 4,
+        "3 milled + 1 cast goes to graveyard (per CR 701.17b mills exactly library_size)");
+}

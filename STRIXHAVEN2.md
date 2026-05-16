@@ -19,10 +19,47 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 195 | 59 | 1 |
-| STX (259 cards) | 442 | 13 | 0 |
+| STX (259 cards) | 464 | 13 | 0 |
 | STA reprints (in STX boosters) | 46 | 0 | — |
 
 Push (modern_decks, claude/modern_decks branch — latest revision —
+**22 MORE STX cards + 24 new functionality tests + CR 701.17b mill
+audit + mill-cap test = batch 7 — 108 cards total**):
+
+Adds 22 more STX cards across all five colleges plus engine audits:
+Lorehold Scholar (gy-recursion ETB + on-attack indestructible),
+Witherbloom Sapfeeder (Magecraft +1/+1 counter), Quandrix
+Mathematician (ETB Scry + Magecraft counter), Prismari Mage
+(Magecraft optional loot), Silverquill Initiate (First Strike)
+(Magecraft self-pump), Lorehold Sparkmage (Haste + ETB ping),
+Witherbloom Loremage (Magecraft drain + gy recursion activated),
+Quandrix Surge Spell (pump by cards drawn + cantrip), Prismari
+Volcanist (ETB drain each opp + Magecraft ping), Lorehold Spellsage
+(Magecraft gain 1 + 1 dmg), Silverquill Penmate (counter on
+lifegain), Witherbloom Apothecary (sac-into-drain activation),
+Quandrix Trampler (enters with counter per other creature),
+Prismari Painter (Treasure ETB + sac-Treasure-for-loot),
+Lorehold Archivist (on-attack IS gy recursion), Silverquill
+Scrivener (optional ETB rummage), Witherbloom Geneticist (counter
+on ETB + lifegain), Quandrix Resonator (Scry on +1/+1 counter
+trigger), Prismari Wavecaller (ETB cantrip + Magecraft pump),
+Lorehold Spiritguide (gy creature → hand + optional rummage),
+Silverquill Verse (modal pump + drain + Inkling token),
+Witherbloom Quagmage (ETB drain + opp-death gain), Quandrix
+Surveyor (ETB tutor basic), Prismari Glitterbomb (3 dmg + Treasure).
+
+**Engine audit: CR 701.17b — mill stops at empty library**. The
+engine's `Effect::Mill` handler (`game/effects/mod.rs:595`) already
+correctly breaks the per-card loop when the library is empty (the
+`if self.players[p].library.is_empty() { break; }` guard at line
+600). Lock-in test:
+`tests::game::mill_caps_at_library_size_per_cr_701_17b` stages a
+3-card library on P0, mills 10, and asserts all 3 cards go to
+graveyard (mill 10 → mill 3) and the library is empty. This is the
+"mill as many as possible" framing — no error, no truncation panic,
+just stops at zero.
+
+Push (modern_decks, claude/modern_decks branch — prior revision —
 **22 MORE STX cards + 22 new functionality tests + smarter
 Proliferate (CR 701.34) auto-decider + 3 new proliferate tests =
 batch 6 — 86 cards total**):

@@ -556,6 +556,28 @@ status tag (✅ wired, 🟡 partial, ⏳ todo) plus a short note.
   Test of Endurance, Felidar Sovereign, Mortal Combat, Helix
   Pinnacle.
 
+- ✅ **CR 701.17 — Mill** (push modern_decks audit, claude/modern_decks
+  branch): "For a player to mill a number of cards, that player puts
+  that many cards from the top of their library into their graveyard.
+  A player can't mill a number of cards greater than the number of
+  cards in their library. … If instructed to do so, they mill as many
+  as possible." (701.17a, 701.17b). The engine's `Effect::Mill`
+  handler in `game/effects/mod.rs:595` resolves `amount` to `n`,
+  iterates `n` times pulling from library top, but breaks out of the
+  loop when `self.players[p].library.is_empty()` — implementing
+  701.17b's "mill as many as possible" framing exactly. Each milled
+  card emits a `GameEvent::CardMilled` event so future "Whenever a
+  card is milled" triggers (Bruvac the Grandiloquent, Ruin Crab) fire
+  on each individual card movement, matching CR 701.17c's "an effect
+  that refers to a milled card can find that card in the zone it
+  moved to from the library." Lock-in test:
+  `tests::game::mill_caps_at_library_size_per_cr_701_17b` stages a
+  3-card library, mills 10, asserts library empty + all 3 cards in
+  graveyard. The CR 701.17d "single card milled with multi-card
+  replacement effects" corner (Bruvac → mill 1 becomes mill 2 +
+  ask-about-it) isn't yet exercised by the catalog; no STX/SOS
+  cards print that interaction.
+
 - ✅ **CR 402.2 — Maximum hand size enforced at cleanup, opt-out via
   "no maximum hand size"** (push modern_decks audit, claude/modern_decks
   branch): "Each player has a maximum hand size, which is normally seven
