@@ -157,6 +157,55 @@ status tag (✅ wired, 🟡 partial, ⏳ todo) plus a short note.
   `master_symmetrist_etb_doubles_counters_on_friendly_creatures` (in
   `tests::stx`). Promote to ✅ when P/T-doubling lands.
 
+- 🟡 **CR 115 — Targets** (push modern_decks audit, claude/modern_decks
+  branch): The targeting framework — what a target is, when targets
+  are declared, change-target effects, and modal target requirements.
+  Audit:
+  (a) **115.1** targets declared as part of putting spell/ability on
+  stack — ✅ (`cast_spell_with_convoke` collects the slot-0 + additional
+  targets and stamps them on `StackItem::Spell.target`/`additional_targets`;
+  same for activated `activate_ability` and triggered `push_trigger`).
+  (b) **115.1a** IS spells targeted via "target [something]" phrasing —
+  ✅ (encoded via `Selector::Target(slot)` and `Selector::TargetFiltered`
+  in `Effect` bodies; the cast-time target validator runs filter checks).
+  (c) **115.1c/d** activated/triggered abilities targeted — ✅ (same
+  Target / TargetFiltered selectors).
+  (d) **115.2** only permanents are legal unless spell specifies player
+  or another zone — ✅ (target validator at `evaluate_requirement_static`
+  walks the right zone based on the filter; players addressable via
+  `SelectionRequirement::Player`, spells on stack via
+  `SelectionRequirement::IsSpellOnStack`, gy cards via
+  `Selector::CardsInZone`).
+  (e) **115.3** same target chosen only once per "target" instance — 🟡
+  (the engine doesn't enforce distinct-target across slots; the auto-target
+  picker happens to pick distinct entities by walking the candidate list,
+  but a deliberate "pick the same X twice" check isn't gated by the
+  validator. Not exercised by current catalog.)
+  (f) **115.4** "any target" = creature/player/PW/battle — ✅
+  (`Creature.or(Player).or(Planeswalker)` template used across burn
+  spells; Battle subtype is omitted engine-wide).
+  (g) **115.5** spell/ability is illegal target for itself — ⏳ (no
+  self-target validator; rarely exercised since cards explicitly
+  target other spells/abilities).
+  (h) **115.6** zero-target spells/abilities — ✅ (`Selector::TargetFiltered`
+  with slot > 0 returns no-op when no extra target passed; Vibrant
+  Outburst / Snow Day / Dissection Practice / Cost of Brilliance all
+  exercise the multi-target-with-optional-slot path).
+  (i) **115.7** change targets / choose new targets — 🟡 (no
+  Redirect-style change-target primitive yet; CopySpell preserves the
+  original spell's targets, so copies share targets — the "you may
+  choose new targets" rider on every CopySpell user is engine-wide
+  ⏳).
+  (j) **115.8** modal target requirements vary by mode — ✅
+  (`Effect::ChooseMode` + `Effect::ChooseN` each carry per-mode targets
+  via `Selector::Target` in the mode's body; the auto-target picker
+  fills targets matching the chosen mode's filter).
+  Tests: implicit across the entire suite — every Bolt-target test, every
+  multi-target Vibrant Outburst / Snow Day / Crackle with Power /
+  Together as One run exercises the 115.1 / 115.4 / 115.6 / 115.8
+  framework. Promote to ✅ when 115.7 (change targets) lands as a
+  primitive.
+
 - ✅ **CR 122.6 — Counters on permanents entering with counters**
   (push modern_decks audit, claude/modern_decks branch): "If an object
   enters the battlefield with counters on it, the effect causing the

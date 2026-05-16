@@ -19,10 +19,51 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 195 | 59 | 1 |
-| STX (195 cards) | 378 | 13 | 0 |
+| STX (217 cards) | 400 | 13 | 0 |
 | STA reprints (in STX boosters) | 46 | 0 | — |
 
 Push (modern_decks, claude/modern_decks branch — latest revision —
+**22 NEW STX cards + 23 new functionality tests**):
+
+Adds 22 new STX-flavored cards to `stx::extras` — Silverquill / Witherbloom
+depth + cross-college support. All cards use existing engine primitives
+and ship with at least one functional test each.
+
+**NEW STX cards (this push, 22):**
+
+- **Disciplined Duelist** ({1}{W}, 2/1 Human Cleric, First Strike) —
+  Aggressive Silverquill body that trades up cleanly.
+- **Eager Scribe** ({W}, 1/1 Human Cleric) — Magecraft: Scry 1.
+- **Silverquill Pen** ({2} Artifact) — `{2}{W}{B}, {T}: Drain 2 from
+  each opponent`.
+- **Witherbloom Acolyte** ({B}{G}, 2/1 Human Druid) — Magecraft: gain 1.
+- **Witherbloom Toxicology** ({3}{B}{G} Sorcery) — Destroy creature + mint
+  a Pest token.
+- **Pest Brood Caller** ({2}{B}{G}, 2/2 Human Warlock) — ETB mint two
+  Pest tokens.
+- **Inkling Caretaker** ({1}{W}{B}, 1/3 Inkling Cleric, Flying+Lifelink).
+- **Silverquill Strike** ({W}{B} Instant) — Drain 3 from target opp.
+- **Lorehold Reverie** ({R}{W} Sorcery) — Gain 3 life + 3 damage to opp.
+- **Prismari Loot** ({U}{R} Instant) — Draw 1 + Discard 1.
+- **Quandrix Counterspell** ({G}{U}{U} Instant) — Counter target spell +
+  +1/+1 counter on friendly creature.
+- **Spell Squelch** ({2}{U} Instant) — Counter target spell (Cancel-shape).
+- **Witherbloom Field-Worker** ({1}{G}, 2/2 Human Druid) — ETB gain 2.
+- **Lorehold Wayfinder** ({2}{R}{W}, 3/3 Spirit Cleric) — ETB Mill 2.
+- **Prismari Brilliance** ({U}{R} Sorcery) — Scry 2 + Draw 1.
+- **Quandrix Tutor** ({2}{G}{U} Sorcery) — Search creature to hand.
+- **Silverquill Cantrip** ({1}{W} Instant) — Gain 2 + Draw 1.
+- **Witherbloom Reanimator** ({3}{B}{G}, 2/3 Human Warlock) — ETB return
+  creature card from gy to hand.
+- **Lorehold Lightning** ({1}{R} Instant) — 3 damage to creature.
+- **Quandrix Engineer** ({1}{G}{U}, 2/3 Elf Druid) — `{T}: Add {G} or {U}`.
+- **Prismari Pyromage** ({2}{R}, 2/2 Human Wizard) — Magecraft: 1 damage
+  to any target.
+- **Lorehold Curator** ({2}{W}, 2/3 Spirit Soldier) — ETB return creature
+  card MV≤2 from gy to hand.
+- **Witherbloom Scholar** ({1}{B}, 2/1 Human Warlock) — Magecraft: drain 1.
+
+Push (modern_decks, claude/modern_decks branch — prior revision —
 **9 more STX cards + Value::CountersOn fan-out summation engine fix + 9 new tests**):
 
 Adds 9 more STX cards to `stx::extras` (Inkling Sentinel, Witherbloom
