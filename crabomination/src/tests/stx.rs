@@ -11673,3 +11673,528 @@ fn quandrix_quickener_scries_and_untaps_target_land() {
     let l = g.battlefield_find(land).expect("forest on bf");
     assert!(!l.tapped, "Forest untapped via Quickener");
 }
+
+// ── Search for Glory (modern_decks push) ────────────────────────────────
+
+#[test]
+fn search_for_glory_is_a_three_mana_white_sorcery() {
+    let def = catalog::search_for_glory();
+    assert_eq!(def.cost.cmc(), 3);
+    assert!(def.card_types.contains(&crate::card::CardType::Sorcery));
+}
+
+#[test]
+fn search_for_glory_tutors_a_legendary_card_to_hand() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let lib_card = g.add_card_to_library(0, catalog::quintorius_field_historian());
+    let id = g.add_card_to_hand(0, catalog::search_for_glory());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+
+    g.decider = Box::new(ScriptedDecider::new(vec![
+        // Scry decision (none — pass)
+        DecisionAnswer::ScryOrder { kept_top: vec![], bottom: vec![] },
+        DecisionAnswer::Search(Some(lib_card)),
+    ]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Search for Glory castable");
+    drain_stack(&mut g);
+
+    let in_hand = g.players[0].hand.iter().any(|c| c.id == lib_card);
+    assert!(in_hand, "Quintorius tutored into hand");
+}
+
+// ── Fervent Strike (modern_decks push) ──────────────────────────────────
+
+#[test]
+fn fervent_strike_is_a_one_mana_instant() {
+    let def = catalog::fervent_strike();
+    assert_eq!(def.cost.cmc(), 1);
+    assert!(def.card_types.contains(&crate::card::CardType::Instant));
+}
+
+#[test]
+fn fervent_strike_pumps_target_and_grants_trample() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::fervent_strike());
+    g.players[0].mana_pool.add(Color::Red, 1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(crate::game::types::Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("Fervent Strike castable");
+    drain_stack(&mut g);
+
+    let b = g.computed_permanent(bear).expect("bear");
+    assert_eq!(b.power, 4, "+2/+0 pump");
+    assert!(b.keywords.contains(&Keyword::Trample), "trample granted");
+}
+
+// ── Elemental Summoning (modern_decks push) ─────────────────────────────
+
+#[test]
+fn elemental_summoning_is_a_four_mana_lesson_sorcery() {
+    let def = catalog::elemental_summoning();
+    assert_eq!(def.cost.cmc(), 4);
+    assert!(def.card_types.contains(&crate::card::CardType::Sorcery));
+    assert!(def.subtypes.spell_subtypes.contains(&crate::card::SpellSubtype::Lesson));
+}
+
+#[test]
+fn elemental_summoning_mints_a_four_four_elemental() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::elemental_summoning());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Elemental Summoning castable");
+    drain_stack(&mut g);
+
+    let elementals: Vec<_> = g.battlefield.iter()
+        .filter(|c| c.definition.name == "Elemental" && c.controller == 0)
+        .collect();
+    assert_eq!(elementals.len(), 1, "one elemental token created");
+    assert_eq!(elementals[0].definition.power, 4);
+    assert_eq!(elementals[0].definition.toughness, 4);
+}
+
+// ── Humiliate (modern_decks push) ───────────────────────────────────────
+
+#[test]
+fn humiliate_is_a_three_mana_silverquill_sorcery() {
+    let def = catalog::humiliate();
+    assert_eq!(def.cost.cmc(), 3);
+    assert!(def.card_types.contains(&crate::card::CardType::Sorcery));
+}
+
+#[test]
+fn humiliate_strips_opp_nonland_and_drains_one() {
+    let mut g = two_player_game();
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    let id = g.add_card_to_hand(0, catalog::humiliate());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    let life_p0_before = g.players[0].life;
+    let life_p1_before = g.players[1].life;
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Humiliate castable");
+    drain_stack(&mut g);
+
+    let bolt_in_hand = g.players[1].hand.iter().any(|c| c.id == bolt);
+    assert!(!bolt_in_hand, "Bolt discarded from opp's hand");
+    assert_eq!(g.players[0].life, life_p0_before + 1, "you gain 1 life");
+    assert_eq!(g.players[1].life, life_p1_before - 1, "opp loses 1 life");
+}
+
+// ── Elite Spellbinder (modern_decks push) ───────────────────────────────
+
+#[test]
+fn elite_spellbinder_is_a_three_mana_three_one_flying_human() {
+    let def = catalog::elite_spellbinder();
+    assert_eq!(def.cost.cmc(), 3);
+    assert_eq!(def.power, 3);
+    assert_eq!(def.toughness, 1);
+    assert!(def.keywords.contains(&Keyword::Flying));
+    assert!(def.subtypes.creature_types.contains(&crate::card::CreatureType::Human));
+}
+
+#[test]
+fn elite_spellbinder_etb_strips_opp_nonland() {
+    let mut g = two_player_game();
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    let id = g.add_card_to_hand(0, catalog::elite_spellbinder());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Elite Spellbinder castable");
+    drain_stack(&mut g);
+
+    let bolt_in_hand = g.players[1].hand.iter().any(|c| c.id == bolt);
+    assert!(!bolt_in_hand, "Bolt removed from opp's hand");
+}
+
+// ── Waker of Waves (modern_decks push) ──────────────────────────────────
+
+#[test]
+fn waker_of_waves_is_a_five_mana_five_five_elemental() {
+    let def = catalog::waker_of_waves();
+    assert_eq!(def.cost.cmc(), 5);
+    assert_eq!(def.power, 5);
+    assert_eq!(def.toughness, 5);
+}
+
+#[test]
+fn waker_of_waves_etb_loots_two() {
+    let mut g = two_player_game();
+    // Seed library
+    for _ in 0..5 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    // Seed hand with two cards to discard
+    g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.add_card_to_hand(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::waker_of_waves());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(3);
+
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Waker of Waves castable");
+    drain_stack(&mut g);
+    // -1 cast, +2 draw, -2 discard = -1
+    assert_eq!(g.players[0].hand.len(), hand_before - 1);
+}
+
+// ── Discover the Formula (modern_decks push) ───────────────────────────
+
+#[test]
+fn discover_the_formula_is_a_five_mana_blue_sorcery() {
+    let def = catalog::discover_the_formula();
+    assert_eq!(def.cost.cmc(), 5);
+    assert!(def.card_types.contains(&crate::card::CardType::Sorcery));
+}
+
+#[test]
+fn discover_the_formula_draws_three() {
+    let mut g = two_player_game();
+    for _ in 0..5 { g.add_card_to_library(0, catalog::island()); }
+    let id = g.add_card_to_hand(0, catalog::discover_the_formula());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(3);
+
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Discover the Formula castable");
+    drain_stack(&mut g);
+    // -1 cast + 3 draw = +2
+    assert_eq!(g.players[0].hand.len(), hand_before + 2);
+}
+
+// ── Mortician Beetle (modern_decks push) ───────────────────────────────
+
+#[test]
+fn mortician_beetle_is_a_one_mana_one_one_insect() {
+    let def = catalog::mortician_beetle();
+    assert_eq!(def.cost.cmc(), 1);
+    assert_eq!(def.power, 1);
+    assert_eq!(def.toughness, 1);
+    assert!(def.subtypes.creature_types.contains(&crate::card::CreatureType::Insect));
+}
+
+#[test]
+fn mortician_beetle_grows_on_creature_death() {
+    let mut g = two_player_game();
+    let beetle = g.add_card_to_battlefield(0, catalog::mortician_beetle());
+    g.clear_sickness(beetle);
+    // Give opp a creature to kill.
+    let opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    // Cast lightning bolt on opp's bear
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(crate::game::types::Target::Permanent(opp_bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt castable");
+    drain_stack(&mut g);
+
+    // Bear dies → Mortician Beetle gets +1/+1 counter
+    let b = g.computed_permanent(beetle).expect("beetle");
+    assert!(b.power >= 2, "Mortician Beetle pumped to 2+: {}/{}", b.power, b.toughness);
+}
+
+// ── Vespine Strix (modern_decks push) ──────────────────────────────────
+
+#[test]
+fn vespine_strix_is_a_two_mana_one_two_flying_bird() {
+    let def = catalog::vespine_strix();
+    assert_eq!(def.cost.cmc(), 2);
+    assert_eq!(def.power, 1);
+    assert_eq!(def.toughness, 2);
+    assert!(def.keywords.contains(&Keyword::Flying));
+    assert!(def.subtypes.creature_types.contains(&crate::card::CreatureType::Bird));
+}
+
+// ── Witherbloom Apprenticeship (modern_decks push) ─────────────────────
+
+#[test]
+fn witherbloom_apprenticeship_is_a_four_mana_bg_sorcery() {
+    let def = catalog::witherbloom_apprenticeship();
+    assert_eq!(def.cost.cmc(), 4);
+    assert!(def.card_types.contains(&crate::card::CardType::Sorcery));
+}
+
+#[test]
+fn witherbloom_apprenticeship_creates_pests_and_pumps_board() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::witherbloom_apprenticeship());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Witherbloom Apprenticeship castable");
+    drain_stack(&mut g);
+
+    let pests = g.battlefield.iter()
+        .filter(|c| c.definition.name == "Pest" && c.controller == 0)
+        .count();
+    assert_eq!(pests, 2, "two Pest tokens minted");
+    // bear got +1/+1 counter
+    let b = g.computed_permanent(bear).expect("bear");
+    assert_eq!(b.power, 3, "bear pumped via counter");
+}
+
+// ── Wandering Mind (modern_decks push) ─────────────────────────────────
+
+#[test]
+fn wandering_mind_is_a_two_mana_one_three_flying_spirit_wizard() {
+    let def = catalog::wandering_mind();
+    assert_eq!(def.cost.cmc(), 2);
+    assert_eq!(def.power, 1);
+    assert_eq!(def.toughness, 3);
+    assert!(def.keywords.contains(&Keyword::Flying));
+    let ctypes = &def.subtypes.creature_types;
+    assert!(ctypes.contains(&crate::card::CreatureType::Spirit));
+    assert!(ctypes.contains(&crate::card::CreatureType::Wizard));
+}
+
+// ── Lecturing Loxodon (modern_decks push) ──────────────────────────────
+
+#[test]
+fn lecturing_loxodon_is_a_five_mana_four_four_elephant_cleric() {
+    let def = catalog::lecturing_loxodon();
+    assert_eq!(def.cost.cmc(), 5);
+    assert_eq!(def.power, 4);
+    assert_eq!(def.toughness, 4);
+    assert!(def.keywords.contains(&Keyword::Vigilance));
+}
+
+#[test]
+fn lecturing_loxodon_etb_pumps_other_creatures() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::lecturing_loxodon());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(4);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Lecturing Loxodon castable");
+    drain_stack(&mut g);
+
+    let b = g.computed_permanent(bear).expect("bear");
+    assert_eq!(b.power, 3, "bear pumped +1/+1");
+    assert_eq!(b.toughness, 3);
+}
+
+// ── Curriculum Crab (modern_decks push) ────────────────────────────────
+
+#[test]
+fn curriculum_crab_is_a_four_mana_three_four_crab() {
+    let def = catalog::curriculum_crab();
+    assert_eq!(def.cost.cmc(), 4);
+    assert_eq!(def.power, 3);
+    assert_eq!(def.toughness, 4);
+    assert!(def.subtypes.creature_types.contains(&crate::card::CreatureType::Crab));
+}
+
+#[test]
+fn curriculum_crab_etb_counters_with_scripted_decider() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::curriculum_crab());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Curriculum Crab castable");
+    drain_stack(&mut g);
+
+    let b = g.battlefield_find(bear).expect("bear on bf");
+    let counters = b.counters.get(&CounterType::PlusOnePlusOne).copied().unwrap_or(0);
+    assert!(counters >= 1, "bear got at least one +1/+1 counter");
+}
+
+// ── Pyrotechnics (modern_decks push) ───────────────────────────────────
+
+#[test]
+fn pyrotechnics_is_a_four_mana_red_sorcery() {
+    let def = catalog::pyrotechnics();
+    assert_eq!(def.cost.cmc(), 4);
+    assert!(def.card_types.contains(&crate::card::CardType::Sorcery));
+}
+
+#[test]
+fn pyrotechnics_burns_target_creature_for_four() {
+    let mut g = two_player_game();
+    let opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::pyrotechnics());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(crate::game::types::Target::Permanent(opp_bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Pyrotechnics castable");
+    drain_stack(&mut g);
+
+    // 4 damage kills the 2/2 bear via SBA
+    let bear_dead = !g.battlefield.iter().any(|c| c.id == opp_bear);
+    assert!(bear_dead, "bear destroyed by 4 damage");
+}
+
+// ── Tome of the Guildpact (modern_decks push) ──────────────────────────
+
+// ── Stormwild Capridor (modern_decks push) ─────────────────────────────
+
+#[test]
+fn stormwild_capridor_is_a_four_mana_one_four_flying_goat_beast() {
+    let def = catalog::stormwild_capridor();
+    assert_eq!(def.cost.cmc(), 4);
+    assert_eq!(def.power, 1);
+    assert_eq!(def.toughness, 4);
+    assert!(def.keywords.contains(&Keyword::Flying));
+    let ctypes = &def.subtypes.creature_types;
+    assert!(ctypes.contains(&crate::card::CreatureType::Goat));
+    assert!(ctypes.contains(&crate::card::CreatureType::Beast));
+}
+
+// ── Final Payment (modern_decks push) ──────────────────────────────────
+
+#[test]
+fn final_payment_is_a_two_mana_wb_instant() {
+    let def = catalog::final_payment();
+    assert_eq!(def.cost.cmc(), 2);
+    assert!(def.card_types.contains(&crate::card::CardType::Instant));
+}
+
+#[test]
+fn final_payment_destroys_creature_or_planeswalker() {
+    let mut g = two_player_game();
+    let opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::final_payment());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(crate::game::types::Target::Permanent(opp_bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Final Payment castable");
+    drain_stack(&mut g);
+
+    let bear_dead = !g.battlefield.iter().any(|c| c.id == opp_bear);
+    assert!(bear_dead, "bear destroyed by Final Payment");
+}
+
+// ── Witch's Cauldron (modern_decks push) ───────────────────────────────
+
+#[test]
+fn witchs_cauldron_is_a_three_mana_artifact() {
+    let def = catalog::witchs_cauldron();
+    assert_eq!(def.cost.cmc(), 3);
+    assert!(def.card_types.contains(&crate::card::CardType::Artifact));
+}
+
+#[test]
+fn witchs_cauldron_sac_gains_two_life_and_draws() {
+    let mut g = two_player_game();
+    let cauldron = g.add_card_to_battlefield(0, catalog::witchs_cauldron());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(cauldron);
+    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
+
+    let life_before = g.players[0].life;
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: cauldron,
+        ability_index: 0,
+        target: None,
+    }).expect("Cauldron activation");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[0].life, life_before + 2, "gained 2 life");
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "drew a card");
+    let bear_dead = !g.battlefield.iter().any(|c| c.id == bear);
+    assert!(bear_dead, "bear sacrificed");
+}
+
+// ── Steady Stance (modern_decks push) ──────────────────────────────────
+
+#[test]
+fn steady_stance_is_a_two_mana_white_instant() {
+    let def = catalog::steady_stance();
+    assert_eq!(def.cost.cmc(), 2);
+    assert!(def.card_types.contains(&crate::card::CardType::Instant));
+}
+
+#[test]
+fn steady_stance_pumps_three_toughness_and_grants_vigilance() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::steady_stance());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(crate::game::types::Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Steady Stance castable");
+    drain_stack(&mut g);
+
+    let b = g.computed_permanent(bear).expect("bear");
+    assert_eq!(b.toughness, 5, "+0/+3 toughness pump");
+    assert!(b.keywords.contains(&Keyword::Vigilance), "vigilance granted");
+}
+
+#[test]
+fn tome_of_the_guildpact_is_a_two_mana_artifact() {
+    let def = catalog::tome_of_the_guildpact();
+    assert_eq!(def.cost.cmc(), 2);
+    assert!(def.card_types.contains(&crate::card::CardType::Artifact));
+}
+
+#[test]
+fn tome_of_the_guildpact_activation_draws_a_card() {
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
+    let tome = g.add_card_to_battlefield(0, catalog::tome_of_the_guildpact());
+    g.clear_sickness(tome);
+    g.players[0].mana_pool.add_colorless(2);
+    let hand_before = g.players[0].hand.len();
+
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: tome,
+        ability_index: 0,
+        target: None,
+    }).expect("Tome activation");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "drew a card");
+}

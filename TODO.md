@@ -11,6 +11,43 @@ Periodic spot-check of the rules document
 (`crabomination/MagicCompRules 20260116.txt`). Each rule below has a
 status tag (✅ wired, 🟡 partial, ⏳ todo) plus a short note.
 
+- ✅ **CR 117 — Timing and Priority** (push modern_decks audit,
+  claude/modern_decks branch): The foundational priority + timing
+  framework. Audit confirms the engine wires every sub-rule:
+  (a) **117.1a** instant-speed casts at any priority — ✅
+  (`cast_spell` validates `is_instant_speed`); (b) **117.1b**
+  activated abilities at any priority — ✅ (`activate_ability`
+  bypasses sorcery-speed gates for non-sorcery_speed abilities);
+  (c) **117.1d** mana abilities mid-cast — ✅ (`is_mana_ability`
+  + `try_pay_with_auto_tap` in `game/actions.rs`); (d) **117.2a**
+  triggers queue at next priority gate, not at fire-time — ✅
+  (the SBA loop in `check_state_based_actions` collects pending
+  triggers into a buffer and pushes onto the stack at the priority
+  gate, per `dispatch_triggers_for_events`); (e) **117.2b** static
+  abilities continuous — ✅ (compute_battlefield re-applies layers
+  every recompute); (f) **117.2c** turn-based actions before
+  priority — ✅ (`advance_to_next_step` runs `do_untap`/`do_draw`/
+  `do_cleanup` before `pass_priority`); (g) **117.2d** SBAs before
+  priority — ✅ (the SBA-trigger-SBA loop runs to fixpoint before
+  any priority assignment); (h) **117.2e** no priority during
+  resolution — ✅ (`drain_stack` doesn't return to priority until
+  the top resolves); (i) **117.3a** active player priority at step
+  start — ✅; (j) **117.3b** active player priority post-resolution
+  — ✅; (k) **117.3c** priority retained after action — ✅
+  (`pass_priority` resets consecutive_passes to 0 after any action);
+  (l) **117.3d** pass priority moves to next player — ✅; (m)
+  **117.4** all-pass = resolve top of stack / end step — ✅
+  (`pass_priority` resolves on `consecutive_passes >= n_alive`);
+  (n) **117.5** SBA-trigger-SBA loop before priority — ✅; (o)
+  **117.7** in-response-to ordering — ✅ (the stack's LIFO order
+  naturally implements last-in-first-out resolution).
+  No new tests added — the priority framework is implicitly
+  exercised by every other test in the suite (1661 passing tests
+  all depend on correct priority + step transitions). The audit
+  is a confirmation that CR 117 is end-to-end CR-compliant for
+  the 1v1 case. Multi-player priority (CR 117.6 shared team
+  turns) is still ⏳, tracked under Format Phase F (2HG).
+
 - 🟡 **CR 614.16 — "If an effect would create tokens / put counters,
   replacement effects apply" (token half)** (push modern_decks audit,
   claude/modern_decks branch): "Some replacement effects apply 'if an
@@ -2559,4 +2596,35 @@ no new engine features required:
 | Coalition Relic | Charge-counter burst | Medium |
 | Tezzeret, Cruel Captain | Artifact-creature static pump | Low |
 | Karn, Scion of Urza | Artifact-count scaling Construct | Medium |
+
+## Engine — Sacrifice-Distinct Event (push modern_decks audit)
+
+Currently `Effect::Sacrifice` resolves by removing the picked creatures
+into the graveyard and emitting `GameEvent::CreatureDied` per dead
+creature. This collapses "sacrificed" into "dies", which is correct
+for most printed cards but loses information for triggers that read
+specifically "Whenever a player sacrifices a creature" (Mortician
+Beetle, Yahenni, Bone Picker, Solemn Recruit-style triggers). A
+follow-up should:
+
+1. Add `EventKind::CreatureSacrificed` + `GameEvent::CreatureSacrificed
+   { card_id, who }` (new variants).
+2. Have `Effect::Sacrifice` resolver emit both events in order:
+   first `CreatureSacrificed`, then the standard `CreatureDied`.
+3. Update Mortician Beetle's trigger from `CreatureDied / AnyPlayer`
+   to `CreatureSacrificed / AnyPlayer` — tightening the body for
+   the printed Oracle. **Without this**, Mortician Beetle also fires
+   on lethal combat damage and burn, which is strictly stronger than
+   printed.
+
+## Engine — `Value::SacrificedToughness` in activation cost path
+(push modern_decks audit)
+
+`Value::SacrificedPower` / `Value::SacrificedToughness` are stamped
+by `Effect::SacrificeAndRemember` but **not** by `sac_cost: true` on
+activated abilities. Witch's Cauldron's "gain life equal to the
+sacrificed creature's toughness" approximates as flat 2 life because
+of this gap. Fix: thread `sacrificed_power` and `sacrificed_toughness`
+into the resolution context when `sac_cost: true` consumes the
+source. Same plumbing as `Effect::SacrificeAndRemember`.
 

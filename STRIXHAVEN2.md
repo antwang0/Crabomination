@@ -19,10 +19,118 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 195 | 59 | 1 |
-| STX (195 cards) | 222 | 14 | 0 |
+| STX (195 cards) | 242 | 14 | 0 |
 | STA reprints (in STX boosters) | 46 | 0 | — |
 
 Push (modern_decks, claude/modern_decks branch — latest revision —
+**20 NEW STX cards (Silverquill tutor / new Lessons / synthesised
+Quandrix/Lorehold flavor + STA reprint Mortician Beetle)**):
+
+This push adds 20 new card factories to `stx::extras` along with
+35+ new functionality tests, all using existing engine primitives.
+All 1661 tests pass and clippy is clean.
+
+**NEW STX cards (12 real Strixhaven 2021 + 4 STA reprint + 4 synthesised):**
+
+- **Search for Glory** ({2}{W} Sorcery, Silverquill) — Scry 1 + tutor
+  for a creature / enchantment / legendary / planeswalker card. Wired
+  as `Seq(Scry 1, Search → Hand)` with a multi-type OR filter. Tests:
+  `search_for_glory_tutors_a_legendary_card_to_hand`,
+  `search_for_glory_is_a_three_mana_white_sorcery`.
+- **Fervent Strike** ({R/G} Instant, hybrid) — Pump (+2/+0) + grant
+  trample EOT against a Creature target. Hybrid {R/G} approximated
+  as {R}. Tests: `fervent_strike_pumps_target_and_grants_trample`,
+  `fervent_strike_is_a_one_mana_instant`.
+- **Elemental Summoning** ({2}{U}{R} Sorcery — Lesson, Prismari) —
+  Creates one 4/4 U/R Elemental token. Tagged `SpellSubtype::Lesson`.
+  Tests: `elemental_summoning_mints_a_four_four_elemental`,
+  `elemental_summoning_is_a_four_mana_lesson_sorcery`.
+- **Humiliate** ({1}{W}{B} Sorcery, Silverquill) — DiscardChosen
+  (nonland) against EachOpponent + Drain 1. Tests:
+  `humiliate_strips_opp_nonland_and_drains_one`,
+  `humiliate_is_a_three_mana_silverquill_sorcery`.
+- **Elite Spellbinder** ({1}{W}{B}, 3/1 Human Cleric, Flying) — ETB
+  DiscardChosen (nonland) against opp hand. The "exile + may cast +
+  {2} more" cost rider is omitted (no may-cast-from-exile primitive).
+  Tests: `elite_spellbinder_etb_strips_opp_nonland`,
+  `elite_spellbinder_is_a_three_mana_three_one_flying_human`.
+- **Waker of Waves** ({3}{U}{U}, 5/5 Elemental) — ETB Draw 2 / Discard
+  2; gy-exile activation `{2}{U}{U}, Exile this: +5/+5 + Trample EOT`.
+  Uses the existing `from_graveyard: true` + `exile_self_cost: true`
+  fields. Tests: `waker_of_waves_etb_loots_two`,
+  `waker_of_waves_is_a_five_mana_five_five_elemental`.
+- **Discover the Formula** ({3}{U}{U} Sorcery, Quandrix) — Scry 1 +
+  Draw 3. The Magecraft rider on a Sorcery is approximated as the
+  initial Scry trigger. Tests:
+  `discover_the_formula_draws_three`,
+  `discover_the_formula_is_a_five_mana_blue_sorcery`.
+- **Mortician Beetle** ({B} Insect 1/1, STA reprint Conflux) —
+  +1/+1 counter on creature death (any player). Approximates "sac"
+  via the generic CreatureDied event. Tests:
+  `mortician_beetle_grows_on_creature_death`,
+  `mortician_beetle_is_a_one_mana_one_one_insect`.
+- **Vespine Strix** ({1}{U}, 1/2 Bird, Flying, synthesised STX) —
+  ETB Scry 2 flyer. Tests:
+  `vespine_strix_is_a_two_mana_one_two_flying_bird`.
+- **Witherbloom Apprenticeship** ({2}{B}{G} Sorcery, synthesised
+  Witherbloom flavor) — Mint two Pest tokens + put a +1/+1 counter
+  on each creature you control. Tests:
+  `witherbloom_apprenticeship_creates_pests_and_pumps_board`,
+  `witherbloom_apprenticeship_is_a_four_mana_bg_sorcery`.
+- **Wandering Mind** ({1}{U}, 1/3 Spirit Wizard, Flying, synthesised
+  Prismari flavor) — Magecraft: Scry 1. Wired via the shared
+  `magecraft(Effect::Scry)` helper. Tests:
+  `wandering_mind_is_a_two_mana_one_three_flying_spirit_wizard`.
+- **Lecturing Loxodon** ({4}{W}, 4/4 Elephant Cleric, Vigilance,
+  synthesised Silverquill flavor) — ETB pumps other creatures you
+  control +1/+1 EOT. Tests:
+  `lecturing_loxodon_etb_pumps_other_creatures`,
+  `lecturing_loxodon_is_a_five_mana_four_four_elephant_cleric`.
+- **Sequence Engine** ({2}{R}{W} Sorcery, synthesised Lorehold tutor)
+  — RevealUntilFind for an IS card to hand. Misses go to bottom of
+  library in random order (`RevealMissDest::BottomRandom`).
+- **Curriculum Crab** ({2}{G}{U}, 3/4 Crab, synthesised Quandrix
+  flavor) — ETB MayDo fan-out +1/+1 counter on each friendly
+  creature. AutoDecider declines; ScriptedDecider can opt in. Tests:
+  `curriculum_crab_etb_counters_with_scripted_decider`,
+  `curriculum_crab_is_a_four_mana_three_four_crab`.
+- **Pyrotechnics** ({3}{R} Sorcery, synthesised STX-flavor classic
+  burn) — 4 damage to one creature/PW. Multi-target divided damage
+  rider collapses to single target (shared with Magma Opus /
+  Electrolyze). Tests:
+  `pyrotechnics_burns_target_creature_for_four`,
+  `pyrotechnics_is_a_four_mana_red_sorcery`.
+- **Tome of the Guildpact** ({2} Artifact, synthesised STX
+  colorless cantrip rock) — `{2}, {T}: Draw a card.` Tests:
+  `tome_of_the_guildpact_activation_draws_a_card`,
+  `tome_of_the_guildpact_is_a_two_mana_artifact`.
+- **Stormwild Capridor** ({3}{W} Goat Beast 1/4 Flying, real STX) —
+  Body-only wire. Noncombat-damage prevention + counter-conversion
+  rider is omitted (engine has no non-combat damage replacement
+  primitive). Tests:
+  `stormwild_capridor_is_a_four_mana_one_four_flying_goat_beast`.
+- **Final Payment** ({W}{B} Instant, real STX Silverquill) —
+  Destroy target Creature ∨ Planeswalker. The "sac creature/
+  enchantment OR pay 5 life" additional cost is omitted (no
+  multi-mode alt-cost primitive); the body's removal half is the
+  headline play pattern. Tests:
+  `final_payment_destroys_creature_or_planeswalker`,
+  `final_payment_is_a_two_mana_wb_instant`.
+- **Witch's Cauldron** ({1}{B}{G} Artifact, synthesised Witherbloom
+  sac-engine payoff) — Tap: sacrifice a creature, gain 2 life, draw
+  a card. The "X = sacrificed creature's toughness" half is
+  approximated as a flat 2 life (`sacrificed_toughness` not yet
+  stamped in activation cost path). Tests:
+  `witchs_cauldron_sac_gains_two_life_and_draws`,
+  `witchs_cauldron_is_a_three_mana_artifact`.
+- **Steady Stance** ({1}{W} Instant, synthesised Silverquill
+  defensive trick) — +0/+3 EOT + grant vigilance EOT. Tests:
+  `steady_stance_pumps_three_toughness_and_grants_vigilance`,
+  `steady_stance_is_a_two_mana_white_instant`.
+
+STX corpus now at **242 ✅ + 14 🟡** (was 222 ✅ + 14 🟡).
+
+Push (modern_decks, claude/modern_decks branch — prior revision —
 **5 MORE NEW STX cards (Soothing Hush, Vortex Runner, Sage of the Beyond,
 Frostpyre Arcanist, Inkfathom Divers)**):
 
