@@ -19,10 +19,23 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 195 | 59 | 1 |
-| STX (195 cards) | 369 | 13 | 0 |
+| STX (195 cards) | 378 | 13 | 0 |
 | STA reprints (in STX boosters) | 46 | 0 | — |
 
 Push (modern_decks, claude/modern_decks branch — latest revision —
+**9 more STX cards + Value::CountersOn fan-out summation engine fix + 9 new tests**):
+
+Adds 9 more STX cards to `stx::extras` (Inkling Sentinel, Witherbloom
+Ritualist, Quandrix Theorem, Prismari Surge, Lorehold Conservator,
+Silverquill Initiate, Witherbloom Channeler, Lorehold Mentor, Prismari
+Bauble). Engine improvement: `Value::CountersOn { what }` now SUMS
+counters across all entities `what` resolves to (single-entity
+selectors still return that one entity's count). Lock-in test:
+`reflective_anatomy_pumps_target_by_total_counters` exercises the
+sum behavior with two creatures (2 + 1 counters → +3/+3 pump). All
+1910 tests pass.
+
+Push (modern_decks, claude/modern_decks branch — prior revision —
 **20 NEW STX cards + 5 NEW Lessons + 27 new functionality tests + CR 111 Tokens audit**):
 
 This push adds 20 new card factories to `stx::extras` (focused on

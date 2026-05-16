@@ -76,7 +76,7 @@ impl GameState {
             Value::CountersOn { what, kind } => self
                 .resolve_selector(what, ctx)
                 .into_iter()
-                .find_map(|e| {
+                .filter_map(|e| {
                     let cid = match e {
                         EntityRef::Permanent(c) | EntityRef::Card(c) => c,
                         _ => return None,
@@ -95,7 +95,14 @@ impl GameState {
                         .or_else(|| self.exile.iter().find(|c| c.id == cid))
                         .map(|c| c.counter_count(*kind) as i32)
                 })
-                .unwrap_or(0),
+                // CR-spec: "the number of [counter type] on X" returns the
+                // total across all entities X resolves to. Single-entity
+                // selectors (`Target(0)`, `This`) still return that entity's
+                // count; fan-out selectors (`EachPermanent(filter)`) now sum
+                // — unblocking "total +1/+1 counters across all creatures
+                // you control" cards (Reflective Anatomy). Lock-in test:
+                // `tests::stx::reflective_anatomy_pumps_target_at_least_by_its_counters`.
+                .sum(),
             Value::Sum(vs) => vs.iter().map(|v| self.evaluate_value(v, ctx)).sum(),
             Value::Diff(a, b) => self.evaluate_value(a, ctx) - self.evaluate_value(b, ctx),
             Value::Times(a, b) => self.evaluate_value(a, ctx) * self.evaluate_value(b, ctx),

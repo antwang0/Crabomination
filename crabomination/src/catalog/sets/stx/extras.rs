@@ -17842,6 +17842,441 @@ pub fn lorehold_vanguard() -> CardDefinition {
     }
 }
 
+// ── Inkling Sentinel ───────────────────────────────────────────────────────
+
+/// Inkling Sentinel — {1}{W}, 1/3 Inkling Soldier with Flying and
+/// Vigilance.
+///
+/// Defensive Inkling body — Vigilance + Flying makes it a great
+/// blocker that also turns sideways without committing a tap.
+/// Tribal synergy with Tenured Inkcaster (3/5 under the +2/+2 anthem).
+pub fn inkling_sentinel() -> CardDefinition {
+    CardDefinition {
+        name: "Inkling Sentinel",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![Keyword::Flying, Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Witherbloom Ritualist ──────────────────────────────────────────────────
+
+/// Witherbloom Ritualist — {2}{B}{G}, 3/3 Human Druid. "{1}{B}{G}:
+/// Target creature gets +1/+1 until end of turn. You gain 1 life."
+///
+/// Repeatable pump activation with a lifegain tail. Slots into
+/// Witherbloom lifegain decks (Honor Troll's flip threshold, Pursuit
+/// of Knowledge's study counters), and gives Bartlett's Witherbloom
+/// Apprentice's drain magecraft a turn-after-turn target.
+pub fn witherbloom_ritualist() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Ritualist",
+        cost: cost(&[generic(2), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: false,
+            mana_cost: cost(&[generic(1), b(), g()]),
+            effect: Effect::Seq(vec![
+                Effect::PumpPT {
+                    what: target_filtered(SelectionRequirement::Creature),
+                    power: Value::Const(1),
+                    toughness: Value::Const(1),
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
+            ]),
+            once_per_turn: false,
+            sorcery_speed: false,
+            sac_cost: false,
+            condition: None,
+            life_cost: 0,
+            from_graveyard: false,
+            exile_self_cost: false,
+            exile_other_filter: None,
+        }],
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Quandrix Theorem ───────────────────────────────────────────────────────
+
+/// Quandrix Theorem — {2}{G}{U} Sorcery. "Put a +1/+1 counter on each
+/// creature you control."
+///
+/// Mass +1/+1 counter for the Quandrix board. Wired via
+/// `ForEach(EachPermanent(Creature & ControlledByYou)) → AddCounter
+/// (TriggerSource, +1/+1)`. Same template as Practical Research's
+/// counter fan-out but applied to every creature, not just one
+/// target.
+pub fn quandrix_theorem() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Theorem",
+        cost: cost(&[generic(2), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::ForEach {
+            selector: Selector::EachPermanent(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            ),
+            body: Box::new(Effect::AddCounter {
+                what: Selector::TriggerSource,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            }),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Prismari Surge ─────────────────────────────────────────────────────────
+
+/// Prismari Surge — {1}{U}{R} Sorcery. "Draw a card. Prismari Surge
+/// deals 3 damage to any target."
+///
+/// Cantrip + 3 damage at sorcery speed. Same shape as the cube
+/// classic Frostburn Weird's "draw + burn" but as a single-shot
+/// instant.
+pub fn prismari_surge() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Surge",
+        cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+            Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature
+                        .or(SelectionRequirement::Player)
+                        .or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::Const(3),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Lorehold Conservator ───────────────────────────────────────────────────
+
+/// Lorehold Conservator — {2}{R}{W}, 3/3 Spirit Cleric with Vigilance.
+/// "When this creature enters, exile target card from a graveyard."
+///
+/// Graveyard hate body with vigilance. Slots into Lorehold reanimator
+/// shells as a graveyard-management option in matchups vs Witherbloom
+/// reanimator / Prismari spellslinger gy decks.
+pub fn lorehold_conservator() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Conservator",
+        cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Move {
+                what: target_filtered(SelectionRequirement::Any),
+                to: ZoneDest::Exile,
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Silverquill Initiate ───────────────────────────────────────────────────
+
+/// Silverquill Initiate — {W}, 1/2 Human Cleric. "Magecraft —
+/// Whenever you cast or copy an instant or sorcery spell, you gain
+/// 1 life."
+///
+/// Lifegain Magecraft 1-drop in white. Slots into any lifegain
+/// shell — fuels Honor Troll's flip, Light of Promise's "that many"
+/// counter rider, etc.
+pub fn silverquill_initiate() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Initiate",
+        cost: cost(&[w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::GainLife {
+            who: Selector::You,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Witherbloom Channeler ──────────────────────────────────────────────────
+
+/// Witherbloom Channeler — {2}{B}, 2/3 Human Druid. "{T}: Add {B}
+/// or {G}. / {1}, {T}: Each opponent loses 1 life and you gain 1
+/// life."
+///
+/// Dual-ability Witherbloom utility creature — mana ramp + drain
+/// activation. The mana ability uses `ManaPayload::AnyOneColor` to
+/// approximate "B or G". The drain activation is the standard
+/// Witherbloom Apprentice payoff but on a body.
+pub fn witherbloom_channeler() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Channeler",
+        cost: cost(&[generic(2), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: ManaCost::default(),
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::AnyOneColor(Value::Const(1)),
+                },
+                once_per_turn: false,
+                sorcery_speed: false,
+                sac_cost: false,
+                condition: None,
+                life_cost: 0,
+                from_graveyard: false,
+                exile_self_cost: false,
+                exile_other_filter: None,
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: cost(&[generic(1)]),
+                effect: Effect::Drain {
+                    from: Selector::Player(PlayerRef::EachOpponent),
+                    to: Selector::You,
+                    amount: Value::Const(1),
+                },
+                once_per_turn: false,
+                sorcery_speed: false,
+                sac_cost: false,
+                condition: None,
+                life_cost: 0,
+                from_graveyard: false,
+                exile_self_cost: false,
+                exile_other_filter: None,
+            },
+        ],
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Lorehold Mentor ────────────────────────────────────────────────────────
+
+/// Lorehold Mentor — {3}{R}{W}, 3/3 Spirit Cleric with Mentor.
+/// "Mentor (Whenever this creature attacks, put a +1/+1 counter on
+/// target attacking creature with lesser power.)"
+///
+/// Mentor is wired via `Attacks/SelfSource` + `AddCounter` against
+/// `target_filtered(Attacking & PowerAtMost(2))`. Same template as
+/// Combat Professor's mentor — Mentor's "lesser power" rider reads
+/// the source's printed power (3) so the cap is `PowerAtMost(2)`
+/// (CR-equivalent strictly-less).
+pub fn lorehold_mentor() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Mentor",
+        cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::AddCounter {
+                what: target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::IsAttacking)
+                        .and(SelectionRequirement::PowerAtMost(2)),
+                ),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Prismari Bauble ────────────────────────────────────────────────────────
+
+/// Prismari Bauble — {0} Artifact. "When this artifact enters, scry
+/// 1. / {1}, Sacrifice this artifact: Draw a card."
+///
+/// Zero-mana cantrip artifact with a Scry-on-ETB rider. Same template
+/// as Mishra's Bauble in Prismari colors — pure card velocity at no
+/// cost.
+pub fn prismari_bauble() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Bauble",
+        cost: ManaCost::default(),
+        supertypes: vec![],
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: false,
+            mana_cost: cost(&[generic(1)]),
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+            once_per_turn: false,
+            sorcery_speed: false,
+            sac_cost: true,
+            condition: None,
+            life_cost: 0,
+            from_graveyard: false,
+            exile_self_cost: false,
+            exile_other_filter: None,
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
 // ── Inkling Aether-Smith ───────────────────────────────────────────────────
 
 /// Inkling Aether-Smith — {2}{W}{B}, 2/3 Inkling Artificer with
