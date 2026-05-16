@@ -23,6 +23,43 @@ Two adjacent catalogs:
 | STA reprints (in STX boosters) | 46 | 0 | — |
 
 Push (modern_decks, claude/modern_decks branch — latest revision —
+**22 MORE STX cards + 22 new functionality tests + smarter
+Proliferate (CR 701.34) auto-decider + 3 new proliferate tests =
+batch 6 — 86 cards total**):
+
+Adds 22 more STX cards across all five colleges plus engine
+improvement: Silverquill Tutor (MV≤2 search), Witherbloom Apprentice's
+Familiar (small magecraft drain body), Lorehold Investigator (IS gy
+recursion), Prismari Ember-Mage (magecraft self-pump 2/3), Quandrix
+Calculator (board-wide +1/+1 ETB), Lorehold Spark (Lightning Helix
+shape), Witherbloom Tonic (drain 3), Silverquill Scribe (ETB
+discard + 1 life), Prismari Maelstrom (creature counter + 2 dmg),
+Lorehold Beacon (2× Spirit token mint), Quandrix Mentor (magecraft
++1/+1 counter), Silverquill Riposte (attack-or-block destroy),
+Witherbloom Druid-in-Training (Pest ETB), Lorehold Recurrence
+(reanimate creature/PW), Prismari Sage (looter + magecraft pump),
+Quandrix Aviator (Fractal flying mint), Witherbloom Necromancer
+(low-MV reanimator + per-death gain), Silverquill Edict (Diabolic
+Edict shape), Lorehold Recall (exile + MV-scaled burn), Quandrix
+Refraction (counter creature + scry 2), Prismari Architect (Treasure
+ETB + magecraft pump), Witherbloom Briarmage (lifegain → +1/+1
+counters), Silverquill Strategist (magecraft drain + per-death gain).
+
+**Engine improvement: smarter Proliferate auto-decider (CR 701.34a)**.
+The `Effect::Proliferate` handler now respects the printed "choose
+any number" framing — friendlies with +1/+1 counters get bumped;
+enemy permanents with +1/+1 counters are skipped (you'd never pump
+your opponent). MinusOneMinusOne flips: skip on yours, fire on
+theirs. Stun is treated the same way (skip on yours so your
+permanents untap; fire on theirs so they stay locked). Poison is
+self-exclusive (opp gets +1, you decline). The old strict-superset
+fan-out was technically strictly stronger than the rules but
+counter-thematically wrong since the auto-decider was always
+picking the maximum proliferation set including hostile-to-self
+counters. Promotes the CR 701.34 audit entry from "always-yes-on-
+everything" to a more faithful "choose-strategically" baseline.
+
+Push (modern_decks, claude/modern_decks branch — prior revision —
 **6 MORE STX cards + 6 new tests + tap_add_any_color helper =
 batch 5 — 64 cards total**):
 

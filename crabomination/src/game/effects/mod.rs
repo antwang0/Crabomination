@@ -1007,14 +1007,47 @@ impl GameState {
             }
 
             Effect::Proliferate => {
-                // Add one counter of each existing type on any permanent/player.
-                // Simplified: only handles permanents, each counter type present.
+                // CR 701.34a — "To proliferate means to choose any number
+                // of permanents and/or players that have a counter, then
+                // give each one additional counter of each kind that
+                // permanent or player already has." The proliferating
+                // player picks which permanents and which players. The
+                // engine's auto-decider implements a strategic baseline:
+                //  - Pick each friendly permanent for every counter kind
+                //    that benefits the controller (+1/+1, Charge, Loyalty,
+                //    Page, Stun on enemy-bound permanents). Skip
+                //    MinusOneMinusOne on friendlies (would shrink them).
+                //  - Pick each enemy permanent for MinusOneMinusOne only
+                //    (would shrink them); skip +1/+1 on enemies (would
+                //    pump them).
+                //  - For poison: each opponent gets +1 poison; the
+                //    proliferating player declines their own poison
+                //    counter.
+                let proliferating = ctx.controller;
                 let updates: Vec<(CardId, Vec<CounterType>)> = self
                     .battlefield
                     .iter()
                     .map(|c| {
+                        let friendly = c.controller == proliferating;
                         let kinds: Vec<CounterType> = c.counters.iter()
                             .filter(|(_, n)| **n > 0)
+                            .filter(|(k, _)| match **k {
+                                // Bad-for-friendly: skip on your stuff,
+                                // proliferate on enemy stuff.
+                                CounterType::MinusOneMinusOne => !friendly,
+                                CounterType::Stun => !friendly,
+                                // Good-for-friendly: proliferate yours,
+                                // skip opponent's.
+                                CounterType::PlusOnePlusOne
+                                | CounterType::Loyalty
+                                | CounterType::Charge
+                                | CounterType::Page => friendly,
+                                // Other kinds: proliferate by default
+                                // (the controller can always elect to
+                                // proliferate any counter under the
+                                // printed rule).
+                                _ => true,
+                            })
                             .map(|(k, _)| *k)
                             .collect();
                         (c.id, kinds)
@@ -1030,7 +1063,7 @@ impl GameState {
                     }
                 }
                 for i in 0..self.players.len() {
-                    if self.players[i].poison_counters > 0 {
+                    if self.players[i].poison_counters > 0 && i != proliferating {
                         self.players[i].poison_counters += 1;
                         events.push(GameEvent::PoisonAdded { player: i, amount: 1 });
                     }

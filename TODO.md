@@ -817,6 +817,34 @@ status tag (✅ wired, 🟡 partial, ⏳ todo) plus a short note.
   control `non_infect_spell_damage_to_player_reduces_life_per_cr_702_
   90b_control` (bare bear deals 2 → 2 life loss, 0 poison).
 
+- 🟡 **CR 701.34 — Proliferate** (push modern_decks audit,
+  claude/modern_decks branch): "To proliferate means to choose any
+  number of permanents and/or players that have a counter, then give
+  each one additional counter of each kind that permanent or player
+  already has." Audit: (a) **701.34a** core fan-out — 🟡 (the engine's
+  `Effect::Proliferate` handler in `game/effects/mod.rs:1009` fans
+  +1 to every counter kind on every permanent with counters and to
+  every player with poison; the printed "choose any number" lets
+  the proliferating player elect which permanents/players to skip,
+  which the engine currently treats as a strict superset by
+  always-choosing-all. Net play pattern: strictly stronger than the
+  printed Oracle since you can't accidentally pump a hostile
+  permanent with a -1/-1 counter on it). (b) Loyalty counter fan-out
+  — ✅ (`add_counters(Loyalty, 1)` works on planeswalkers via the
+  same generic counter table). (c) **701.34b** 2HG poison-share —
+  ⏳ (the engine doesn't model teams' shared poison; tracked under
+  Format Phase F). (d) Other counter types (Charge, Stun, Page,
+  Time) — ✅ (the engine's counter table is generic, so every
+  CounterType variant proliferates the same way). The strict-
+  superset approximation is exercised by Tezzeret's Gambit ✅
+  (mode 0 = Proliferate), Karn's Bastion ✅, and any
+  `Effect::Proliferate` body. Tracked promotion to ✅ once the
+  "choose any subset" decision shape lands (would need a new
+  `Decision::ChoosePermanentsToProliferate { candidates }` plus a
+  per-permanent picker in the auto-decider / scripted-decider that
+  defaults to "all friendlies + your own life total" as a
+  reasonable bot baseline).
+
 - ✅ **CR 702.34a — Flashback exile-on-resolve** (push XXXV audit):
   "Flashback [cost]" means "You may cast this card from your graveyard
   if the resulting spell is an instant or sorcery spell by paying
