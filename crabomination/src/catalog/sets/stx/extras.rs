@@ -11648,3 +11648,963 @@ pub fn tome_of_the_guildpact() -> CardDefinition {
         exile_on_resolve: false,
     }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// modern_decks push (claude/modern_decks branch): 21 NEW STX / STA cards
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ── Revitalize (M19 reprint flavored STX) ──────────────────────────────────
+
+/// Revitalize — {1}{W} Instant (Core Set 2019 reprint, synthesised STX
+/// flavor). "You gain 3 life. Draw a card."
+///
+/// Push (modern_decks, NEW, `stx::extras`): Pure white card-velocity-
+/// plus-life — a one-card answer to the early "I'm bleeding" turns
+/// against aggro. Wired as `Seq(GainLife 3, Draw 1)`. Tests:
+/// `revitalize_gains_three_and_draws`,
+/// `revitalize_is_a_two_mana_white_instant`.
+pub fn revitalize() -> CardDefinition {
+    CardDefinition {
+        name: "Revitalize",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(3),
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Grim Bounty (synthesised STX Witherbloom flavor) ───────────────────────
+
+/// Grim Bounty — {3}{B} Instant (synthesised STX Witherbloom flavor).
+/// "Destroy target creature. Create a Treasure token."
+///
+/// Push (modern_decks, NEW, `stx::extras`): A 4-mana single-target
+/// removal that refunds half its cost via Treasure. Wired as
+/// `Seq(Destroy(target Creature), CreateToken(Treasure))`. Tests:
+/// `grim_bounty_destroys_target_creature_and_creates_treasure`,
+/// `grim_bounty_is_a_four_mana_black_instant`.
+pub fn grim_bounty() -> CardDefinition {
+    use crate::game::effects::treasure_token;
+    CardDefinition {
+        name: "Grim Bounty",
+        cost: cost(&[generic(3), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Destroy {
+                what: target_filtered(SelectionRequirement::Creature),
+            },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: treasure_token(),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Growth Spiral (RNA reprint, STX Quandrix flavor) ───────────────────────
+
+/// Growth Spiral — {G}{U} Instant (Ravnica Allegiance reprint flavor).
+/// "Draw a card. You may put a land card from your hand onto the
+/// battlefield."
+///
+/// Push (modern_decks, NEW, `stx::extras`): Two-mana Quandrix ramp +
+/// cantrip — the canonical Simic ramp spell. Wired as
+/// `Seq(Draw 1, MayDo(Move land from hand to bf))`. AutoDecider
+/// declines the land-drop by default; ScriptedDecider can opt in.
+/// Mirrors the Embrace the Paradox / Eureka Moment template at a
+/// tighter mana cost. Tests:
+/// `growth_spiral_draws_a_card`,
+/// `growth_spiral_optional_land_drop_with_scripted_decider`,
+/// `growth_spiral_is_a_two_mana_gu_instant`.
+pub fn growth_spiral() -> CardDefinition {
+    use crate::card::Zone;
+    CardDefinition {
+        name: "Growth Spiral",
+        cost: cost(&[g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+            Effect::MayDo {
+                description: "put a land card from your hand onto the battlefield".to_string(),
+                body: Box::new(Effect::Move {
+                    what: Selector::take(
+                        Selector::CardsInZone {
+                            who: PlayerRef::You,
+                            zone: Zone::Hand,
+                            filter: SelectionRequirement::Land,
+                        },
+                        Value::Const(1),
+                    ),
+                    to: ZoneDest::Battlefield {
+                        controller: PlayerRef::You,
+                        tapped: false,
+                    },
+                }),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Idyllic Tutor (Theros reprint, STX flavor) ─────────────────────────────
+
+/// Idyllic Tutor — {2}{W} Sorcery (Theros reprint flavor). "Search your
+/// library for an enchantment card, reveal it, put it into your hand,
+/// then shuffle."
+///
+/// Push (modern_decks, NEW, `stx::extras`): The "Demonic Tutor for
+/// enchantments" — a 3-mana white enchantment tutor. Wired via
+/// `Effect::Search { filter: HasCardType(Enchantment), to: Hand(You) }`.
+/// Tests:
+/// `idyllic_tutor_searches_an_enchantment_to_hand`,
+/// `idyllic_tutor_is_a_three_mana_white_sorcery`.
+pub fn idyllic_tutor() -> CardDefinition {
+    CardDefinition {
+        name: "Idyllic Tutor",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Search {
+            who: PlayerRef::You,
+            filter: SelectionRequirement::HasCardType(CardType::Enchantment),
+            to: ZoneDest::Hand(PlayerRef::You),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Gift of Estates (Urza's Destiny reprint flavor) ────────────────────────
+
+/// Gift of Estates — {W} Sorcery (Urza's Destiny reprint flavor). "If
+/// an opponent controls more lands than you, search your library for up
+/// to three Plains cards, reveal them, put them into your hand, then
+/// shuffle."
+///
+/// Push (modern_decks, NEW, `stx::extras`): A catch-up white ramp
+/// spell. The "if an opponent controls more lands" gate is **omitted**
+/// (no `Predicate::AnyOppHasMoreLands` primitive yet — engine-wide ⏳),
+/// so this resolves unconditionally as "search for up to three Plains".
+/// Wired as three individual `Effect::Search` calls; the auto-decider
+/// commits to all three. A ScriptedDecider can `DecisionAnswer::Search(None)`
+/// for any slot to model the "up to" rider. Tests:
+/// `gift_of_estates_searches_three_plains`,
+/// `gift_of_estates_is_a_one_mana_white_sorcery`.
+pub fn gift_of_estates() -> CardDefinition {
+    let one_plains = || Effect::Search {
+        who: PlayerRef::You,
+        filter: SelectionRequirement::IsBasicLand
+            .and(SelectionRequirement::HasLandType(LandType::Plains)),
+        to: ZoneDest::Hand(PlayerRef::You),
+    };
+    CardDefinition {
+        name: "Gift of Estates",
+        cost: cost(&[w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![one_plains(), one_plains(), one_plains()]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Pillage (Urza's Saga reprint flavor) ───────────────────────────────────
+
+/// Pillage — {1}{R}{R} Sorcery (Urza's Saga reprint flavor). "Destroy
+/// target artifact or land. It can't be regenerated."
+///
+/// Push (modern_decks, NEW, `stx::extras`): Three-mana red flexible
+/// artifact / land destruction. Wired as `Effect::Destroy { what:
+/// target_filtered(Artifact ∨ Land) }`. The "can't be regenerated"
+/// rider is a no-op in the current engine (no regeneration shield
+/// primitive — destroy is unconditional). Tests:
+/// `pillage_destroys_target_land`,
+/// `pillage_destroys_target_artifact`,
+/// `pillage_is_a_three_mana_red_sorcery`.
+pub fn pillage() -> CardDefinition {
+    CardDefinition {
+        name: "Pillage",
+        cost: cost(&[generic(1), r(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Destroy {
+            what: target_filtered(
+                SelectionRequirement::Artifact.or(SelectionRequirement::Land),
+            ),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Slip Through Space (OGW reprint, STX flavor) ───────────────────────────
+
+/// Slip Through Space — {U} Instant (Oath of the Gatewatch reprint
+/// flavor). "Target creature can't be blocked this turn. Draw a card."
+///
+/// Push (modern_decks, NEW, `stx::extras`): One-mana evasion-on-demand
+/// cantrip. Wired as `Seq(GrantKeyword(Unblockable EOT), Draw 1)`.
+/// Pairs with any unblockable strategy. Tests:
+/// `slip_through_space_grants_unblockable_and_draws`,
+/// `slip_through_space_is_a_one_mana_blue_instant`.
+pub fn slip_through_space() -> CardDefinition {
+    CardDefinition {
+        name: "Slip Through Space",
+        cost: cost(&[u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::GrantKeyword {
+                what: target_filtered(SelectionRequirement::Creature),
+                keyword: Keyword::Unblockable,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Doomskar (Kaldheim reprint flavor) ─────────────────────────────────────
+
+/// Doomskar — {3}{W}{W} Sorcery (Kaldheim reprint flavor). "Destroy all
+/// creatures." (Foretell {2}{W} omitted.)
+///
+/// Push (modern_decks, NEW, `stx::extras`): A 5-mana white wrath. The
+/// Foretell {2}{W} alt cost is engine-wide ⏳ (no Foretell alt-cost
+/// primitive yet — same gap as Saw It Coming ✅). Wired as a single
+/// `ForEach(EachPermanent Creature) + Destroy`. Tests:
+/// `doomskar_destroys_each_creature`,
+/// `doomskar_is_a_five_mana_white_sorcery`.
+pub fn doomskar() -> CardDefinition {
+    CardDefinition {
+        name: "Doomskar",
+        cost: cost(&[generic(3), w(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::ForEach {
+            selector: Selector::EachPermanent(SelectionRequirement::Creature),
+            body: Box::new(Effect::Destroy {
+                what: Selector::TriggerSource,
+            }),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Battle Mammoth (STA reprint, Kaldheim) ─────────────────────────────────
+
+/// Battle Mammoth — {3}{G}{G} Creature — Elephant, 6/5 (STA reprint,
+/// originally Kaldheim). "Trample / Whenever a permanent you control
+/// becomes the target of a spell or ability an opponent controls, draw
+/// a card."
+///
+/// Push (modern_decks, NEW, `stx::extras`): Big green trampler with a
+/// "becomes target" card-advantage rider. Body 6/5 Trample ships
+/// faithfully. The "becomes target of opp spell or ability" rider is
+/// **omitted** (no `EventKind::BecameTarget` event — engine-wide ⏳).
+/// Tests: `battle_mammoth_is_a_five_mana_six_five_trampler`.
+pub fn battle_mammoth() -> CardDefinition {
+    CardDefinition {
+        name: "Battle Mammoth",
+        cost: cost(&[generic(3), g(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elephant],
+            ..Default::default()
+        },
+        power: 6,
+        toughness: 5,
+        keywords: vec![Keyword::Trample],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Mind Drain (synthesised STX Witherbloom flavor) ────────────────────────
+
+/// Mind Drain — {1}{B}{B} Sorcery (synthesised STX Witherbloom flavor).
+/// "Each opponent discards two cards."
+///
+/// Push (modern_decks, NEW, `stx::extras`): A 3-mana symmetric
+/// hand-attack — Mind Rot's "each opp" upgrade. Wired via
+/// `ForEach(EachOpponent) → Discard 2`. AutoDecider picks the first
+/// two cards in each opponent's hand. Tests:
+/// `mind_drain_makes_each_opp_discard_two`,
+/// `mind_drain_is_a_three_mana_black_sorcery`.
+pub fn mind_drain() -> CardDefinition {
+    CardDefinition {
+        name: "Mind Drain",
+        cost: cost(&[generic(1), b(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::ForEach {
+            selector: Selector::Player(PlayerRef::EachOpponent),
+            body: Box::new(Effect::Discard {
+                who: Selector::Player(PlayerRef::Triggerer),
+                amount: Value::Const(2),
+                random: false,
+            }),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Hindering Light (Lorwyn reprint, STX flavor) ───────────────────────────
+
+/// Hindering Light — {W}{U} Instant (Lorwyn reprint, STX Silverquill /
+/// Quandrix hybrid flavor). "Counter target spell that targets you or
+/// a permanent you control. Draw a card."
+///
+/// Push (modern_decks, NEW, `stx::extras`): Two-mana counter-cantrip.
+/// The printed "spell that targets you or permanent you control"
+/// target-restriction is engine-wide ⏳ (no "spell targeting X" filter);
+/// we collapse to "counter target spell" so the card ships a vanilla
+/// counter+cantrip. Tests:
+/// `hindering_light_counters_target_spell_and_draws`,
+/// `hindering_light_is_a_two_mana_wu_instant`.
+pub fn hindering_light() -> CardDefinition {
+    CardDefinition {
+        name: "Hindering Light",
+        cost: cost(&[w(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::CounterSpell {
+                what: target_filtered(SelectionRequirement::IsSpellOnStack),
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Soul Shatter (STX Lorehold/Witherbloom flavor) ─────────────────────────
+
+/// Soul Shatter — {2}{B}{R} Instant (synthesised STX Lorehold flavor).
+/// "Each opponent sacrifices a creature or planeswalker."
+///
+/// Push (modern_decks, NEW, `stx::extras`): A 4-mana symmetric sweeper
+/// — each opp picks one creature/PW to sacrifice. The printed Oracle's
+/// "with the greatest mana value among permanents that player
+/// controls" restriction is engine-wide ⏳ (no max-by-mana-value
+/// sacrifice picker); the auto-picker takes each opponent's
+/// lowest-CMC creature. Tests:
+/// `soul_shatter_each_opp_sacrifices_a_creature`,
+/// `soul_shatter_is_a_four_mana_br_instant`.
+pub fn soul_shatter() -> CardDefinition {
+    CardDefinition {
+        name: "Soul Shatter",
+        cost: cost(&[generic(2), b(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::ForEach {
+            selector: Selector::Player(PlayerRef::EachOpponent),
+            body: Box::new(Effect::Sacrifice {
+                who: Selector::Player(PlayerRef::Triggerer),
+                count: Value::Const(1),
+                filter: SelectionRequirement::Creature
+                    .or(SelectionRequirement::Planeswalker),
+            }),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Lurking Predators (Onslaught reprint, STX flavor) ──────────────────────
+
+/// Lurking Predators — {4}{G}{G} Enchantment (Onslaught reprint,
+/// synthesised STX Quandrix flavor). "Whenever an opponent casts a
+/// spell, reveal the top card of your library. If it's a creature
+/// card, put it onto the battlefield. Otherwise, you may put it on the
+/// bottom of your library."
+///
+/// Push (modern_decks, NEW, `stx::extras`): The opponent-cast-trigger
+/// reveal-and-cheat reanimator engine. Wired via an
+/// `EventKind::SpellCast / OpponentControl` trigger that conditionally
+/// moves the top of the controller's library to the battlefield when
+/// the top is a creature. The "or put on bottom" half is approximated
+/// as "leave on top" (no reveal-and-may-move primitive); the engine's
+/// next draw step naturally rotates the library. Tests:
+/// `lurking_predators_drops_creature_when_opp_casts`,
+/// `lurking_predators_is_a_six_mana_green_enchantment`.
+pub fn lurking_predators() -> CardDefinition {
+    CardDefinition {
+        name: "Lurking Predators",
+        cost: cost(&[generic(4), g(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::OpponentControl),
+            effect: Effect::If {
+                cond: Predicate::EntityMatches {
+                    what: Selector::TopOfLibrary {
+                        who: PlayerRef::You,
+                        count: Value::Const(1),
+                    },
+                    filter: SelectionRequirement::Creature,
+                },
+                then: Box::new(Effect::Move {
+                    what: Selector::TopOfLibrary {
+                        who: PlayerRef::You,
+                        count: Value::Const(1),
+                    },
+                    to: ZoneDest::Battlefield {
+                        controller: PlayerRef::You,
+                        tapped: false,
+                    },
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Prowling Caracal (vanilla white aggro body) ────────────────────────────
+
+/// Prowling Caracal — {1}{W} Creature — Cat, 3/2 (synthesised STX
+/// flavor, originally Theros Beyond Death adjacent). Vanilla 3/2
+/// white aggro body — same stat-for-mana as the Watchwolf curve but
+/// mono-white.
+///
+/// Push (modern_decks, NEW, `stx::extras`): Curve-out white creature
+/// for any Silverquill aggro shell. Tests:
+/// `prowling_caracal_is_a_two_mana_three_two_cat`.
+pub fn prowling_caracal() -> CardDefinition {
+    CardDefinition {
+        name: "Prowling Caracal",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Cat],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Elvish Visionary (M11 reprint flavor) ──────────────────────────────────
+
+/// Elvish Visionary — {1}{G} Creature — Elf Shaman, 1/1 (M11 reprint
+/// flavor). "When this creature enters, draw a card."
+///
+/// Push (modern_decks, NEW, `stx::extras`): Classic green ETB cantrip
+/// creature — same template as Spirited Companion (W). Tests:
+/// `elvish_visionary_draws_on_etb`,
+/// `elvish_visionary_is_a_two_mana_one_one_elf_shaman`.
+pub fn elvish_visionary() -> CardDefinition {
+    CardDefinition {
+        name: "Elvish Visionary",
+        cost: cost(&[generic(1), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Shaman],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Sungrass Egg (synthesised STX Quandrix flavor) ─────────────────────────
+
+/// Sungrass Egg — {2} Artifact (synthesised STX Quandrix flavor).
+/// "{1}, {T}, Sacrifice this artifact: Add two mana of any one color."
+///
+/// Push (modern_decks, NEW, `stx::extras`): A two-mana ramp rock that
+/// trades itself for a ritual on a key turn — same template as Sky
+/// Diamond at a more flexible payoff. Wired via a `sac_cost: true`
+/// activation with `Effect::AddMana { pool: AnyOneColor(2) }`. Tests:
+/// `sungrass_egg_sac_adds_two_mana_of_one_color`,
+/// `sungrass_egg_is_a_two_mana_artifact`.
+pub fn sungrass_egg() -> CardDefinition {
+    CardDefinition {
+        name: "Sungrass Egg",
+        cost: cost(&[generic(2)]),
+        supertypes: vec![],
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[generic(1)]),
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::AnyOneColor(Value::Const(2)),
+            },
+            once_per_turn: false,
+            sorcery_speed: false,
+            sac_cost: true,
+            condition: None,
+            life_cost: 0,
+            from_graveyard: false,
+            exile_self_cost: false,
+            exile_other_filter: None,
+        }],
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Mascot Summoning (synthesised STX Lesson) ──────────────────────────────
+
+/// Mascot Summoning — {3}{W} Sorcery — Lesson (synthesised STX flavor).
+/// "Create a 2/2 white Cat creature token with lifelink."
+///
+/// Push (modern_decks, NEW, `stx::extras`): A Silverquill-adjacent
+/// Lesson that mints a Cat-with-lifelink body — the printed Oracle
+/// shape of Spirit Summoning re-flavored for the Cat tribe. Tests:
+/// `mascot_summoning_creates_a_two_two_lifelink_cat`,
+/// `mascot_summoning_is_a_four_mana_white_lesson`.
+pub fn mascot_summoning() -> CardDefinition {
+    use crate::card::SpellSubtype;
+    CardDefinition {
+        name: "Mascot Summoning",
+        cost: cost(&[generic(3), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes {
+            spell_subtypes: vec![SpellSubtype::Lesson],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: TokenDefinition {
+                name: "Cat".to_string(),
+                power: 2,
+                toughness: 2,
+                keywords: vec![Keyword::Lifelink],
+                card_types: vec![CardType::Creature],
+                colors: vec![Color::White],
+                supertypes: vec![],
+                subtypes: Subtypes {
+                    creature_types: vec![CreatureType::Cat],
+                    ..Default::default()
+                },
+                activated_abilities: vec![],
+                triggered_abilities: vec![],
+            },
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Scry Inversion (synthesised STX Quandrix flavor) ───────────────────────
+
+/// Scry Inversion — {2}{U} Instant (synthesised STX Quandrix flavor).
+/// "Scry 2, then draw two cards."
+///
+/// Push (modern_decks, NEW, `stx::extras`): A 3-mana hybrid filter +
+/// card-velocity instant. Wired as `Seq(Scry 2, Draw 2)`. Tests:
+/// `scry_inversion_scrys_and_draws_two`,
+/// `scry_inversion_is_a_three_mana_blue_instant`.
+pub fn scry_inversion() -> CardDefinition {
+    CardDefinition {
+        name: "Scry Inversion",
+        cost: cost(&[generic(2), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(2),
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Cunning Rhetoric (synthesised STX Silverquill flavor) ──────────────────
+
+/// Cunning Rhetoric — {2}{W}{B} Enchantment (synthesised STX
+/// Silverquill flavor). "Whenever an opponent casts a spell, you gain
+/// 1 life and they lose 1 life."
+///
+/// Push (modern_decks, NEW, `stx::extras`): An anti-spell tax that
+/// punishes any opp-cast spell — a Silverquill life-drain payoff
+/// against control / combo decks. Wired via an `EventKind::SpellCast /
+/// OpponentControl` trigger that drains 1 from the triggering player.
+/// Tests: `cunning_rhetoric_drains_on_opp_cast`,
+/// `cunning_rhetoric_is_a_four_mana_wb_enchantment`.
+pub fn cunning_rhetoric() -> CardDefinition {
+    CardDefinition {
+        name: "Cunning Rhetoric",
+        cost: cost(&[generic(2), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::OpponentControl),
+            effect: Effect::Drain {
+                from: Selector::Player(PlayerRef::OwnerOf(Box::new(Selector::TriggerSource))),
+                to: Selector::You,
+                amount: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Library Larcenist (synthesised STX Witherbloom flavor) ─────────────────
+
+/// Library Larcenist — {1}{B}{G} Creature — Pest Rogue, 2/3
+/// (synthesised STX Witherbloom flavor). "Whenever this creature deals
+/// combat damage to a player, that player mills two cards."
+///
+/// Push (modern_decks, NEW, `stx::extras`): A combat-damage mill body
+/// — pairs with Witherbloom Apprentice / Sedgemoor Witch's gy-build
+/// engines. Wired via `EventKind::DealsCombatDamageToPlayer /
+/// SelfSource` trigger + `Effect::Mill { who: Triggerer, amount: 2 }`.
+/// Tests: `library_larcenist_mills_on_combat_damage`,
+/// `library_larcenist_is_a_three_mana_two_three_pest_rogue`.
+pub fn library_larcenist() -> CardDefinition {
+    CardDefinition {
+        name: "Library Larcenist",
+        cost: cost(&[generic(1), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Pest, CreatureType::Rogue],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::DealsCombatDamageToPlayer,
+                EventScope::SelfSource,
+            ),
+            effect: Effect::Mill {
+                who: Selector::Player(PlayerRef::Triggerer),
+                amount: Value::Const(2),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Dean's List (synthesised STX blue utility) ─────────────────────────────
+
+/// Dean's List — {1}{U} Sorcery (synthesised STX colorless utility).
+/// "Look at the top four cards of your library. Put one of them into
+/// your hand and the rest into your graveyard."
+///
+/// Push (modern_decks, NEW, `stx::extras`): A 2-mana selective-mill +
+/// hand-fix. Wired via `Effect::RevealUntilFind` with `find: Any` so
+/// the auto-picker takes the first card to hand and misses go to
+/// graveyard. Strong with gy-recursion strategies (Past in Flames,
+/// Sevinne's Reclamation). Tests:
+/// `deans_list_takes_top_card_and_mills_rest`,
+/// `deans_list_is_a_two_mana_blue_sorcery`.
+pub fn deans_list() -> CardDefinition {
+    CardDefinition {
+        name: "Dean's List",
+        cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::RevealUntilFind {
+            who: PlayerRef::You,
+            find: SelectionRequirement::Any,
+            to: ZoneDest::Hand(PlayerRef::You),
+            cap: Value::Const(1),
+            life_per_revealed: 0,
+            miss_dest: crate::effect::RevealMissDest::Graveyard,
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}

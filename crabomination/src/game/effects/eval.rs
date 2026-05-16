@@ -469,7 +469,16 @@ impl GameState {
                     .battlefield_find(*cid)
                     .or_else(|| self.players.iter().find_map(|p| p.graveyard.iter().find(|c| c.id == *cid)))
                     .or_else(|| self.exile.iter().find(|c| c.id == *cid))
-                    .or(stack_card);
+                    .or(stack_card)
+                    // Library / hand: needed by "look at top of library"
+                    // predicates (Lurking Predators: "if it's a creature
+                    // card, …"), discard-from-hand pickers, and any future
+                    // hidden-zone filter check. Library cards have hidden
+                    // info for opponents in real play, but the engine is
+                    // permission-checked at the call site (effects target
+                    // the controller's own library).
+                    .or_else(|| self.players.iter().find_map(|p| p.library.iter().find(|c| c.id == *cid)))
+                    .or_else(|| self.players.iter().find_map(|p| p.hand.iter().find(|c| c.id == *cid)));
                 let Some(card) = card else { return false; };
                 match req {
                     R::Creature => card.definition.is_creature(),

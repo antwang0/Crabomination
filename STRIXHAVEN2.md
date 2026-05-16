@@ -19,10 +19,128 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 195 | 59 | 1 |
-| STX (195 cards) | 242 | 14 | 0 |
+| STX (195 cards) | 263 | 14 | 0 |
 | STA reprints (in STX boosters) | 46 | 0 | — |
 
 Push (modern_decks, claude/modern_decks branch — latest revision —
+**21 NEW STX cards + 2 engine improvements (stack-aware `find_card_owner`
++ library/hand zone fallback in `evaluate_requirement_static`)**):
+
+This push adds 21 new card factories to `stx::extras` along with
+33+ new functionality tests. All 1702 tests pass. Includes two
+engine improvements:
+
+1. **`find_card_owner` now checks the stack** (`game/mod.rs`) —
+   previously `find_card_owner` walked battlefield + per-player hidden
+   zones + exile, but didn't check `StackItem::Spell.card.owner`. This
+   broke `PlayerRef::OwnerOf(Selector::TriggerSource)` resolution for
+   SpellCast triggers (the cast spell is on the stack mid-resolution,
+   not yet in any persistent zone). Wires Cunning Rhetoric's "you gain
+   1 life, the casting player loses 1 life" rider faithfully.
+
+2. **`evaluate_requirement_static` now checks library + hand**
+   (`game/effects/eval.rs`) — previously only walked battlefield + per-
+   player graveyards + exile + stack. Cards on the top of library
+   (e.g. Lurking Predators's "if it's a creature card, …" check) now
+   correctly resolve their card-type and creature-type filters. The
+   library / hand info is hidden in real play but the engine's
+   permission-checked at the call site (effects target the
+   controller's own zones).
+
+**NEW STX cards (1 vanilla + 1 ETB cantrip + 19 effect spells / utility):**
+
+- **Revitalize** ({1}{W} Instant, M19 reprint flavor) — Gain 3 life,
+  draw a card. Wired as `Seq(GainLife 3, Draw 1)`. Tests:
+  `revitalize_gains_three_and_draws`,
+  `revitalize_is_a_two_mana_white_instant`.
+- **Grim Bounty** ({3}{B} Instant) — Destroy target creature; create
+  a Treasure token. Tests:
+  `grim_bounty_destroys_target_creature_and_creates_treasure`,
+  `grim_bounty_is_a_four_mana_black_instant`.
+- **Growth Spiral** ({G}{U} Instant, RNA reprint flavor) — Draw a
+  card; may put a land from hand onto bf. Optional land-drop via
+  `MayDo`. Tests: `growth_spiral_draws_a_card`,
+  `growth_spiral_optional_land_drop_with_scripted_decider`,
+  `growth_spiral_is_a_two_mana_gu_instant`.
+- **Idyllic Tutor** ({2}{W} Sorcery) — Search library for enchantment
+  to hand. Tests:
+  `idyllic_tutor_searches_an_enchantment_to_hand`,
+  `idyllic_tutor_is_a_three_mana_white_sorcery`.
+- **Gift of Estates** ({W} Sorcery) — Search library for up to three
+  Plains to hand. The "if opp controls more lands" gate is omitted
+  (no `Predicate::AnyOppHasMoreLands` primitive). Tests:
+  `gift_of_estates_searches_three_plains`,
+  `gift_of_estates_is_a_one_mana_white_sorcery`.
+- **Pillage** ({1}{R}{R} Sorcery) — Destroy target artifact or land.
+  Tests: `pillage_destroys_target_land`,
+  `pillage_destroys_target_artifact`,
+  `pillage_is_a_three_mana_red_sorcery`.
+- **Slip Through Space** ({U} Instant, OGW reprint flavor) — Target
+  creature can't be blocked this turn; draw a card. Tests:
+  `slip_through_space_grants_unblockable_and_draws`,
+  `slip_through_space_is_a_one_mana_blue_instant`.
+- **Doomskar** ({3}{W}{W} Sorcery, Kaldheim reprint flavor) — Destroy
+  each creature. Foretell alt cost omitted. Tests:
+  `doomskar_destroys_each_creature`,
+  `doomskar_is_a_five_mana_white_sorcery`.
+- **Battle Mammoth** ({3}{G}{G} Creature — Elephant 6/5 Trample, STA
+  reprint) — Body-only wire; "draw on opp-target" rider omitted (no
+  `EventKind::BecameTarget` event). Test:
+  `battle_mammoth_is_a_five_mana_six_five_trampler`.
+- **Mind Drain** ({1}{B}{B} Sorcery) — Each opp discards two cards.
+  Wired via `ForEach(EachOpponent) → Discard 2`. Tests:
+  `mind_drain_makes_each_opp_discard_two`,
+  `mind_drain_is_a_three_mana_black_sorcery`.
+- **Hindering Light** ({W}{U} Instant, Lorwyn reprint flavor) —
+  Counter target spell + draw a card. Target-restriction (spell
+  targeting you or your permanent) omitted. Tests:
+  `hindering_light_counters_target_spell_and_draws`,
+  `hindering_light_is_a_two_mana_wu_instant`.
+- **Soul Shatter** ({2}{B}{R} Instant) — Each opp sacrifices a
+  creature or PW. "Greatest mana value" rider collapsed (no
+  max-by-MV sacrifice picker). Tests:
+  `soul_shatter_each_opp_sacrifices_a_creature`,
+  `soul_shatter_is_a_four_mana_br_instant`.
+- **Lurking Predators** ({4}{G}{G} Enchantment, Onslaught reprint
+  flavor) — Whenever an opp casts a spell, conditionally drop top of
+  library if it's a creature. Wired via OpponentControl SpellCast
+  trigger + `EntityMatches(TopOfLibrary, Creature)`. Tests:
+  `lurking_predators_drops_creature_when_opp_casts`,
+  `lurking_predators_is_a_six_mana_green_enchantment`.
+- **Prowling Caracal** ({1}{W} Creature — Cat 3/2) — Vanilla aggro
+  body. Test: `prowling_caracal_is_a_two_mana_three_two_cat`.
+- **Elvish Visionary** ({1}{G} Creature — Elf Shaman 1/1, M11 reprint
+  flavor) — ETB cantrip. Tests:
+  `elvish_visionary_draws_on_etb`,
+  `elvish_visionary_is_a_two_mana_one_one_elf_shaman`.
+- **Sungrass Egg** ({2} Artifact) — `{1}, {T}, Sac: Add two mana of
+  any one color.` Tests:
+  `sungrass_egg_sac_adds_two_mana_of_one_color`,
+  `sungrass_egg_is_a_two_mana_artifact`.
+- **Mascot Summoning** ({3}{W} Sorcery — Lesson) — Mints a 2/2 W Cat
+  with Lifelink. Tagged `SpellSubtype::Lesson`. Tests:
+  `mascot_summoning_creates_a_two_two_lifelink_cat`,
+  `mascot_summoning_is_a_four_mana_white_lesson`.
+- **Scry Inversion** ({2}{U} Instant) — Scry 2, then draw 2. Tests:
+  `scry_inversion_scrys_and_draws_two`,
+  `scry_inversion_is_a_three_mana_blue_instant`.
+- **Cunning Rhetoric** ({2}{W}{B} Enchantment) — Whenever an opp
+  casts a spell, drain 1 (you gain 1, they lose 1). Engine
+  improvement #1 above makes the stack-resident spell's owner
+  resolvable via `PlayerRef::OwnerOf(Selector::TriggerSource)`.
+  Tests: `cunning_rhetoric_drains_on_opp_cast`,
+  `cunning_rhetoric_is_a_four_mana_wb_enchantment`.
+- **Library Larcenist** ({1}{B}{G} Creature — Pest Rogue 2/3) —
+  Combat-damage-to-player trigger mills 2. Test:
+  `library_larcenist_is_a_three_mana_two_three_pest_rogue`.
+- **Dean's List** ({1}{U} Sorcery) — Look at top 4, take 1 to hand,
+  rest to graveyard. Tests:
+  `deans_list_takes_top_card_and_mills_rest`,
+  `deans_list_is_a_two_mana_blue_sorcery`.
+
+STX corpus now at **263 ✅ + 14 🟡** (was 242 ✅ + 14 🟡).
+
+Push (modern_decks, claude/modern_decks branch — prior revision —
 **20 NEW STX cards (Silverquill tutor / new Lessons / synthesised
 Quandrix/Lorehold flavor + STA reprint Mortician Beetle)**):
 

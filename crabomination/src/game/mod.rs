@@ -2042,6 +2042,18 @@ impl GameState {
         if self.exile.iter().any(|c| c.id == id) {
             return self.exile.iter().find(|c| c.id == id).map(|c| c.owner);
         }
+        // Stack: a spell mid-resolution is on the stack but not yet in any
+        // player's persistent zone. The spell's caster is its current
+        // controller; `card.owner` is the printed owner (typically equal to
+        // the caster, except for stolen spells like Wandering Archaic
+        // copies). Cards on the stack via StackItem::Spell are findable here.
+        for item in &self.stack {
+            if let crate::game::types::StackItem::Spell { card, .. } = item
+                && card.id == id
+            {
+                return Some(card.owner);
+            }
+        }
         None
     }
 

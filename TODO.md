@@ -11,6 +11,47 @@ Periodic spot-check of the rules document
 (`crabomination/MagicCompRules 20260116.txt`). Each rule below has a
 status tag (✅ wired, 🟡 partial, ⏳ todo) plus a short note.
 
+- 🟡 **CR 121 — Drawing a Card** (push modern_decks audit,
+  claude/modern_decks branch): The card-draw foundation, gated as
+  the engine's `Effect::Draw` + `Player::draw_top` site. Audit:
+  (a) **121.1** draw = top of library → hand ✅
+  (`Player::draw_top` removes index 0 from library, pushes to hand,
+  bumps `cards_drawn_this_turn`); (b) **121.2** multi-draw = sequential
+  individual draws ✅ (`Effect::Draw`'s handler loops `n` times
+  calling `draw_top` individually so each draw can independently fail
+  on empty library); (c) **121.2a** modify-draw-count replacement
+  effects ⏳ (no CR 616.1g replacement primitive — engine treats
+  `Draw N` as a sequence of N individual `CardDrawn` events without
+  pre-grouping); (d) **121.2b** "can't draw more than 1 per turn"
+  effects ⏳ (no per-turn draw-cap predicate); (e) **121.2c** APNAP
+  ordering for multi-player draws 🟡 (`ForEach(EachPlayer)` resolves
+  in turn order from the active player onward — naturally APNAP for
+  most multi-player payoffs like Howling Mine, but no explicit cap
+  if both Howling Mine + a draw-replacement coexist on the same
+  player); (f) **121.4** drawing from empty library = lose game at
+  next priority ✅ (SBA in `check_state_based_actions` marks the
+  player `eliminated` when `draw_top` returns `None`, then the
+  next priority gate transitions to `game_over = Some(opp)`; the
+  existing `drawing_from_empty_library_eliminates_player` test in
+  `tests/game.rs` exercises this); (g) **121.5** library → hand
+  without "draw" is NOT a draw ✅ (`Effect::Move` doesn't emit
+  `GameEvent::CardDrawn`; only `Effect::Draw` does, so triggers like
+  Day's Heralds or Sylvan Library don't fire on `Effect::Search` or
+  `Move(Library → Hand)`); (h) **121.6** replace card draws via
+  replacement effects 🟡 (general CR 614 replacement-effect primitive
+  is partial; the engine has explicit replacements for token-doubling
+  but no "replace draw with X" primitive); (i) **121.7** prevention/
+  replacement that results in card draws 🟡 (no general replacement
+  pipeline); (j) **121.8** face-down draws during cast ⏳ (the engine
+  resolves the cast pipeline atomically without exposing mid-cast
+  draw triggers); (k) **121.9** optional-reveal on draw ⏳ (no
+  reveal-on-draw decision hook). Tests:
+  `drawing_from_empty_library_eliminates_player` in `tests/game.rs`
+  covers 121.4. Suggested follow-ups (low priority unless a
+  replacement-draw card lands): add `Effect::DrawReplacement` event
+  emission so cards like Notion Thief / Possibility Storm can wire
+  cleanly.
+
 - ✅ **CR 117 — Timing and Priority** (push modern_decks audit,
   claude/modern_decks branch): The foundational priority + timing
   framework. Audit confirms the engine wires every sub-rule:
@@ -913,6 +954,29 @@ status tag (✅ wired, 🟡 partial, ⏳ todo) plus a short note.
 
 ## Suggested next-up tasks
 
+- ✅ **Stack-aware `find_card_owner`** (push modern_decks): the
+  card-owner lookup in `GameState::find_card_owner` (`game/mod.rs`)
+  now walks `StackItem::Spell` items so a spell mid-resolution can
+  be queried by id. This wires `PlayerRef::OwnerOf(Selector::TriggerSource)`
+  for SpellCast triggers — previously the lookup returned `None`
+  because the cast card lives on the stack but not in any persistent
+  zone. Cunning Rhetoric's "you gain 1, casting player loses 1"
+  rider relies on this. Same unblock applies to any future "the
+  player who cast that spell" trigger payoff.
+
+- ✅ **Library / hand zone fallback in `evaluate_requirement_static`**
+  (push modern_decks): the static target-validator
+  (`game/effects/eval.rs::evaluate_requirement_static`) now walks
+  battlefield → graveyards → exile → stack → library → hand to find
+  the named card before applying its filter. This wires
+  `EntityMatches(Selector::TopOfLibrary, Creature)` and similar
+  "is the top of library a creature card" predicates — previously
+  cards in library/hand zones returned `false` for every filter
+  because they weren't in the lookup chain. Lurking Predators' "if
+  it's a creature card, …" check now correctly resolves; future
+  Domri Rade / Garruk Wildspeaker-style "top card type" payoffs
+  plug in cleanly.
+
 - ✅ **`Selector::DiscardedThisResolution { filter }` — discarded-card
   tracker** (push modern_decks): tracks discarded card ids in
   `GameState.discarded_card_ids_this_resolution` and exposes them as a
@@ -1072,6 +1136,41 @@ status tag (✅ wired, 🟡 partial, ⏳ todo) plus a short note.
   Reliquary Tower / Spellbook / Library of Leng-style permanent that
   grants the same rider via a static effect (those cards would need a
   `StaticEffect::ControllerNoMaxHandSize` variant on top of this).
+
+- ⏳ **`Predicate::AnyOppHasMoreLandsThanYou`** (suggested by push
+  modern_decks's Gift of Estates ramp-spell addition) — Gift of
+  Estates's printed gate is "If an opponent controls more lands than
+  you, search your library for up to three Plains cards." Today the
+  gate is omitted and the spell unconditionally searches three
+  Plains. Wiring shape: add a new `Predicate::AnyOppHasMoreLandsThanYou`
+  primitive that walks `self.players[opponent]` count of permanents
+  matching `SelectionRequirement::Land` and compares against
+  `self.players[controller]`'s land count. Same primitive unblocks
+  any future "if you're behind on lands" catch-up effect (Tithe,
+  Knight of the White Orchid's ETB trigger, Land Tax).
+
+- ⏳ **`EventKind::BecameTarget`** (suggested by push modern_decks's
+  Battle Mammoth addition) — Battle Mammoth's printed rider is
+  "Whenever a permanent you control becomes the target of a spell or
+  ability an opponent controls, draw a card." Today the body ships
+  as a 6/5 trampler with the trigger omitted. Wiring shape: a new
+  `EventKind::BecameTarget { target, source, source_controller }`
+  event emitted by `validate_target_legality` at cast-time and by the
+  ability-activation walker. Triggers listening on the event would
+  fire post-cast / post-activation. Same primitive unblocks
+  Witchstalker Frenzy, Bygone Bishop variants, Glasspool Mimic's
+  copy trigger, and any "becomes target" cycle.
+
+- ⏳ **`Predicate::ManaValueGreatest` — sacrifice picker filter**
+  (suggested by push modern_decks's Soul Shatter addition) — Soul
+  Shatter's printed Oracle is "Each opponent sacrifices a creature or
+  planeswalker with the greatest mana value among permanents that
+  player controls." Today the auto-picker takes the lowest-CMC
+  matching permanent. Wiring shape: a new sacrifice-filter that
+  reads each candidate's `card.definition.cost.cmc()` and picks the
+  max. Same primitive unblocks future "with the highest power" /
+  "with the lowest toughness" picker variants (Skull Fracture,
+  Slaughter Specialist, etc.).
 
 - ⏳ **`Effect::DiscardOrSacrifice` — additional-cost picker for "discard
   a card or sacrifice a creature"** — STA Bone Shards (already wired as a

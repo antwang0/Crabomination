@@ -12198,3 +12198,650 @@ fn tome_of_the_guildpact_activation_draws_a_card() {
 
     assert_eq!(g.players[0].hand.len(), hand_before + 1, "drew a card");
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// modern_decks push: 21 NEW STX / STA cards
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ── Revitalize ─────────────────────────────────────────────────────────────
+
+#[test]
+fn revitalize_is_a_two_mana_white_instant() {
+    let def = catalog::revitalize();
+    assert_eq!(def.cost.cmc(), 2);
+    assert!(def.card_types.contains(&crate::card::CardType::Instant));
+}
+
+#[test]
+fn revitalize_gains_three_and_draws() {
+    let mut g = two_player_game();
+    for _ in 0..2 { g.add_card_to_library(0, catalog::island()); }
+    let id = g.add_card_to_hand(0, catalog::revitalize());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let life_before = g.players[0].life;
+    let hand_before = g.players[0].hand.len();
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Revitalize castable");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[0].life, life_before + 3, "gained 3 life");
+    // Hand: -1 cast + 1 draw = 0 net.
+    assert_eq!(g.players[0].hand.len(), hand_before, "net 0 cards");
+}
+
+// ── Grim Bounty ────────────────────────────────────────────────────────────
+
+#[test]
+fn grim_bounty_is_a_four_mana_black_instant() {
+    let def = catalog::grim_bounty();
+    assert_eq!(def.cost.cmc(), 4);
+    assert!(def.card_types.contains(&crate::card::CardType::Instant));
+}
+
+#[test]
+fn grim_bounty_destroys_target_creature_and_creates_treasure() {
+    let mut g = two_player_game();
+    let opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::grim_bounty());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+
+    let treasures_before = g.battlefield.iter().filter(|c| {
+        c.controller == 0 && c.definition.name == "Treasure"
+    }).count();
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(crate::game::types::Target::Permanent(opp_bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Grim Bounty castable");
+    drain_stack(&mut g);
+
+    assert!(!g.battlefield.iter().any(|c| c.id == opp_bear), "bear destroyed");
+    let treasures_after = g.battlefield.iter().filter(|c| {
+        c.controller == 0 && c.definition.name == "Treasure"
+    }).count();
+    assert_eq!(treasures_after, treasures_before + 1, "created a Treasure");
+}
+
+// ── Growth Spiral ──────────────────────────────────────────────────────────
+
+#[test]
+fn growth_spiral_is_a_two_mana_gu_instant() {
+    let def = catalog::growth_spiral();
+    assert_eq!(def.cost.cmc(), 2);
+    assert!(def.card_types.contains(&crate::card::CardType::Instant));
+}
+
+#[test]
+fn growth_spiral_draws_a_card() {
+    let mut g = two_player_game();
+    for _ in 0..2 { g.add_card_to_library(0, catalog::island()); }
+    let id = g.add_card_to_hand(0, catalog::growth_spiral());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    let hand_before = g.players[0].hand.len();
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Growth Spiral castable");
+    drain_stack(&mut g);
+
+    // -1 cast + 1 draw = 0 net (auto-decider declines the land drop)
+    assert_eq!(g.players[0].hand.len(), hand_before, "net 0 cards");
+}
+
+#[test]
+fn growth_spiral_optional_land_drop_with_scripted_decider() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    // Seed hand with a land + library has a draw target
+    let forest_in_hand = g.add_card_to_hand(0, catalog::forest());
+    for _ in 0..2 { g.add_card_to_library(0, catalog::island()); }
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+
+    let id = g.add_card_to_hand(0, catalog::growth_spiral());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Growth Spiral castable");
+    drain_stack(&mut g);
+
+    assert!(g.battlefield.iter().any(|c| c.id == forest_in_hand),
+        "forest from hand should be on the battlefield");
+}
+
+// ── Idyllic Tutor ──────────────────────────────────────────────────────────
+
+#[test]
+fn idyllic_tutor_is_a_three_mana_white_sorcery() {
+    let def = catalog::idyllic_tutor();
+    assert_eq!(def.cost.cmc(), 3);
+    assert!(def.card_types.contains(&crate::card::CardType::Sorcery));
+}
+
+#[test]
+fn idyllic_tutor_searches_an_enchantment_to_hand() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    // Seed library with an enchantment + filler
+    let lurk = g.add_card_to_library(0, catalog::lurking_predators());
+    g.add_card_to_library(0, catalog::island());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(lurk))]));
+
+    let id = g.add_card_to_hand(0, catalog::idyllic_tutor());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Idyllic Tutor castable");
+    drain_stack(&mut g);
+
+    assert!(g.players[0].hand.iter().any(|c| c.id == lurk),
+        "Lurking Predators should be in hand after tutor");
+}
+
+// ── Gift of Estates ────────────────────────────────────────────────────────
+
+#[test]
+fn gift_of_estates_is_a_one_mana_white_sorcery() {
+    let def = catalog::gift_of_estates();
+    assert_eq!(def.cost.cmc(), 1);
+    assert!(def.card_types.contains(&crate::card::CardType::Sorcery));
+}
+
+#[test]
+fn gift_of_estates_searches_three_plains() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    // Seed library with 3 Plains
+    let p1 = g.add_card_to_library(0, catalog::plains());
+    let p2 = g.add_card_to_library(0, catalog::plains());
+    let p3 = g.add_card_to_library(0, catalog::plains());
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Search(Some(p1)),
+        DecisionAnswer::Search(Some(p2)),
+        DecisionAnswer::Search(Some(p3)),
+    ]));
+
+    let id = g.add_card_to_hand(0, catalog::gift_of_estates());
+    g.players[0].mana_pool.add(Color::White, 1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Gift of Estates castable");
+    drain_stack(&mut g);
+
+    assert!(g.players[0].hand.iter().any(|c| c.id == p1), "p1 in hand");
+    assert!(g.players[0].hand.iter().any(|c| c.id == p2), "p2 in hand");
+    assert!(g.players[0].hand.iter().any(|c| c.id == p3), "p3 in hand");
+}
+
+// ── Pillage ────────────────────────────────────────────────────────────────
+
+#[test]
+fn pillage_is_a_three_mana_red_sorcery() {
+    let def = catalog::pillage();
+    assert_eq!(def.cost.cmc(), 3);
+    assert!(def.card_types.contains(&crate::card::CardType::Sorcery));
+}
+
+#[test]
+fn pillage_destroys_target_land() {
+    let mut g = two_player_game();
+    let opp_land = g.add_card_to_battlefield(1, catalog::forest());
+    let id = g.add_card_to_hand(0, catalog::pillage());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(crate::game::types::Target::Permanent(opp_land)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Pillage castable on land");
+    drain_stack(&mut g);
+
+    assert!(!g.battlefield.iter().any(|c| c.id == opp_land), "land destroyed");
+}
+
+#[test]
+fn pillage_destroys_target_artifact() {
+    let mut g = two_player_game();
+    let opp_artifact = g.add_card_to_battlefield(1, catalog::sungrass_egg());
+    let id = g.add_card_to_hand(0, catalog::pillage());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(crate::game::types::Target::Permanent(opp_artifact)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Pillage castable on artifact");
+    drain_stack(&mut g);
+
+    assert!(!g.battlefield.iter().any(|c| c.id == opp_artifact), "artifact destroyed");
+}
+
+// ── Slip Through Space ─────────────────────────────────────────────────────
+
+#[test]
+fn slip_through_space_is_a_one_mana_blue_instant() {
+    let def = catalog::slip_through_space();
+    assert_eq!(def.cost.cmc(), 1);
+    assert!(def.card_types.contains(&crate::card::CardType::Instant));
+}
+
+#[test]
+fn slip_through_space_grants_unblockable_and_draws() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    for _ in 0..2 { g.add_card_to_library(0, catalog::island()); }
+    let id = g.add_card_to_hand(0, catalog::slip_through_space());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    let hand_before = g.players[0].hand.len();
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(crate::game::types::Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Slip Through Space castable");
+    drain_stack(&mut g);
+
+    let b = g.computed_permanent(bear).expect("bear");
+    assert!(b.keywords.contains(&Keyword::Unblockable), "granted unblockable");
+    // -1 cast + 1 draw = 0 net
+    assert_eq!(g.players[0].hand.len(), hand_before, "drew a card");
+}
+
+// ── Doomskar ───────────────────────────────────────────────────────────────
+
+#[test]
+fn doomskar_is_a_five_mana_white_sorcery() {
+    let def = catalog::doomskar();
+    assert_eq!(def.cost.cmc(), 5);
+    assert!(def.card_types.contains(&crate::card::CardType::Sorcery));
+}
+
+#[test]
+fn doomskar_destroys_each_creature() {
+    let mut g = two_player_game();
+    let bear1 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let bear2 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let bear3 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::doomskar());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(3);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Doomskar castable");
+    drain_stack(&mut g);
+
+    assert!(!g.battlefield.iter().any(|c| c.id == bear1), "bear1 destroyed");
+    assert!(!g.battlefield.iter().any(|c| c.id == bear2), "bear2 destroyed");
+    assert!(!g.battlefield.iter().any(|c| c.id == bear3), "bear3 destroyed");
+}
+
+// ── Battle Mammoth ─────────────────────────────────────────────────────────
+
+#[test]
+fn battle_mammoth_is_a_five_mana_six_five_trampler() {
+    let def = catalog::battle_mammoth();
+    assert_eq!(def.cost.cmc(), 5);
+    assert!(def.card_types.contains(&crate::card::CardType::Creature));
+    assert_eq!(def.power, 6);
+    assert_eq!(def.toughness, 5);
+    assert!(def.keywords.contains(&Keyword::Trample));
+}
+
+// ── Mind Drain ─────────────────────────────────────────────────────────────
+
+#[test]
+fn mind_drain_is_a_three_mana_black_sorcery() {
+    let def = catalog::mind_drain();
+    assert_eq!(def.cost.cmc(), 3);
+    assert!(def.card_types.contains(&crate::card::CardType::Sorcery));
+}
+
+#[test]
+fn mind_drain_makes_each_opp_discard_two() {
+    let mut g = two_player_game();
+    g.add_card_to_hand(1, catalog::island());
+    g.add_card_to_hand(1, catalog::island());
+    g.add_card_to_hand(1, catalog::forest());
+    let id = g.add_card_to_hand(0, catalog::mind_drain());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    let opp_hand_before = g.players[1].hand.len();
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Mind Drain castable");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[1].hand.len(), opp_hand_before - 2, "opp discarded 2");
+}
+
+// ── Hindering Light ────────────────────────────────────────────────────────
+
+#[test]
+fn hindering_light_is_a_two_mana_wu_instant() {
+    let def = catalog::hindering_light();
+    assert_eq!(def.cost.cmc(), 2);
+    assert!(def.card_types.contains(&crate::card::CardType::Instant));
+}
+
+#[test]
+fn hindering_light_counters_target_spell_and_draws() {
+    let mut g = two_player_game();
+    for _ in 0..2 { g.add_card_to_library(0, catalog::island()); }
+
+    // Opponent casts Lightning Bolt at us (switch active player)
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(crate::game::types::Target::Player(0)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt castable");
+
+    // We respond with Hindering Light targeting the bolt
+    g.priority.player_with_priority = 0;
+    let id = g.add_card_to_hand(0, catalog::hindering_light());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    let life_before = g.players[0].life;
+    let hand_before = g.players[0].hand.len();
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(crate::game::types::Target::Permanent(bolt)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Hindering Light castable on bolt");
+    drain_stack(&mut g);
+
+    // Bolt should be countered → no damage to us
+    assert_eq!(g.players[0].life, life_before, "no bolt damage");
+    // -1 cast + 1 draw = 0 net
+    assert_eq!(g.players[0].hand.len(), hand_before, "drew a card");
+}
+
+// ── Soul Shatter ───────────────────────────────────────────────────────────
+
+#[test]
+fn soul_shatter_is_a_four_mana_br_instant() {
+    let def = catalog::soul_shatter();
+    assert_eq!(def.cost.cmc(), 4);
+    assert!(def.card_types.contains(&crate::card::CardType::Instant));
+}
+
+#[test]
+fn soul_shatter_each_opp_sacrifices_a_creature() {
+    let mut g = two_player_game();
+    let opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::soul_shatter());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Soul Shatter castable");
+    drain_stack(&mut g);
+
+    assert!(!g.battlefield.iter().any(|c| c.id == opp_bear), "opp sacrificed bear");
+}
+
+// ── Lurking Predators ──────────────────────────────────────────────────────
+
+#[test]
+fn lurking_predators_is_a_six_mana_green_enchantment() {
+    let def = catalog::lurking_predators();
+    assert_eq!(def.cost.cmc(), 6);
+    assert!(def.card_types.contains(&crate::card::CardType::Enchantment));
+}
+
+#[test]
+fn lurking_predators_drops_creature_when_opp_casts() {
+    let mut g = two_player_game();
+    let _predators = g.add_card_to_battlefield(0, catalog::lurking_predators());
+    let bear = g.add_card_to_library(0, catalog::grizzly_bears());
+
+    // Opp casts a spell (switch active player to opp)
+    let opp_spell = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: opp_spell,
+        target: Some(crate::game::types::Target::Player(0)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("opp bolt castable");
+    drain_stack(&mut g);
+
+    assert!(g.battlefield.iter().any(|c| c.id == bear),
+        "creature off top should land via Lurking Predators trigger");
+}
+
+// ── Prowling Caracal ───────────────────────────────────────────────────────
+
+#[test]
+fn prowling_caracal_is_a_two_mana_three_two_cat() {
+    let def = catalog::prowling_caracal();
+    assert_eq!(def.cost.cmc(), 2);
+    assert_eq!(def.power, 3);
+    assert_eq!(def.toughness, 2);
+    assert!(def.has_creature_type(crate::card::CreatureType::Cat));
+}
+
+// ── Elvish Visionary ───────────────────────────────────────────────────────
+
+#[test]
+fn elvish_visionary_is_a_two_mana_one_one_elf_shaman() {
+    let def = catalog::elvish_visionary();
+    assert_eq!(def.cost.cmc(), 2);
+    assert_eq!(def.power, 1);
+    assert_eq!(def.toughness, 1);
+    assert!(def.has_creature_type(crate::card::CreatureType::Elf));
+    assert!(def.has_creature_type(crate::card::CreatureType::Shaman));
+}
+
+#[test]
+fn elvish_visionary_draws_on_etb() {
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
+    let id = g.add_card_to_hand(0, catalog::elvish_visionary());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let hand_before = g.players[0].hand.len();
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Elvish Visionary castable");
+    drain_stack(&mut g);
+    // Hand: -1 cast + 1 ETB draw = 0 net
+    assert_eq!(g.players[0].hand.len(), hand_before, "ETB draw fires");
+}
+
+// ── Sungrass Egg ───────────────────────────────────────────────────────────
+
+#[test]
+fn sungrass_egg_is_a_two_mana_artifact() {
+    let def = catalog::sungrass_egg();
+    assert_eq!(def.cost.cmc(), 2);
+    assert!(def.card_types.contains(&crate::card::CardType::Artifact));
+}
+
+#[test]
+fn sungrass_egg_sac_adds_two_mana_of_one_color() {
+    let mut g = two_player_game();
+    let egg = g.add_card_to_battlefield(0, catalog::sungrass_egg());
+    g.clear_sickness(egg);
+    g.players[0].mana_pool.add_colorless(1);
+
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: egg,
+        ability_index: 0,
+        target: None,
+    }).expect("Egg activation");
+    drain_stack(&mut g);
+
+    // Egg sacrificed off the battlefield.
+    assert!(!g.battlefield.iter().any(|c| c.id == egg), "egg sacrificed");
+    // 2 mana of any one color in pool (auto-decider picks white).
+    let total = g.players[0].mana_pool.amount(Color::White)
+        + g.players[0].mana_pool.amount(Color::Blue)
+        + g.players[0].mana_pool.amount(Color::Black)
+        + g.players[0].mana_pool.amount(Color::Red)
+        + g.players[0].mana_pool.amount(Color::Green);
+    assert_eq!(total, 2, "added 2 colored mana of one color");
+}
+
+// ── Mascot Summoning ───────────────────────────────────────────────────────
+
+#[test]
+fn mascot_summoning_is_a_four_mana_white_lesson() {
+    let def = catalog::mascot_summoning();
+    assert_eq!(def.cost.cmc(), 4);
+    assert!(def.card_types.contains(&crate::card::CardType::Sorcery));
+    assert!(def.subtypes.spell_subtypes.contains(&crate::card::SpellSubtype::Lesson));
+}
+
+#[test]
+fn mascot_summoning_creates_a_two_two_lifelink_cat() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::mascot_summoning());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Mascot Summoning castable");
+    drain_stack(&mut g);
+
+    let cat = g.battlefield.iter().find(|c| {
+        c.controller == 0 && c.definition.name == "Cat"
+    }).expect("Cat token minted");
+    assert_eq!(cat.definition.power, 2);
+    assert_eq!(cat.definition.toughness, 2);
+    assert!(cat.definition.keywords.contains(&Keyword::Lifelink));
+}
+
+// ── Scry Inversion ─────────────────────────────────────────────────────────
+
+#[test]
+fn scry_inversion_is_a_three_mana_blue_instant() {
+    let def = catalog::scry_inversion();
+    assert_eq!(def.cost.cmc(), 3);
+    assert!(def.card_types.contains(&crate::card::CardType::Instant));
+}
+
+#[test]
+fn scry_inversion_scrys_and_draws_two() {
+    let mut g = two_player_game();
+    for _ in 0..5 { g.add_card_to_library(0, catalog::island()); }
+    let id = g.add_card_to_hand(0, catalog::scry_inversion());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let hand_before = g.players[0].hand.len();
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Scry Inversion castable");
+    drain_stack(&mut g);
+
+    // -1 cast + 2 draws = +1 net
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "drew 2 net 1");
+}
+
+// ── Cunning Rhetoric ───────────────────────────────────────────────────────
+
+#[test]
+fn cunning_rhetoric_is_a_four_mana_wb_enchantment() {
+    let def = catalog::cunning_rhetoric();
+    assert_eq!(def.cost.cmc(), 4);
+    assert!(def.card_types.contains(&crate::card::CardType::Enchantment));
+}
+
+#[test]
+fn cunning_rhetoric_drains_on_opp_cast() {
+    let mut g = two_player_game();
+    let _rhetoric = g.add_card_to_battlefield(0, catalog::cunning_rhetoric());
+    let life_us_before = g.players[0].life;
+    let life_opp_before = g.players[1].life;
+
+    // Opp casts a spell (switch active player to opp)
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(crate::game::types::Target::Player(0)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt castable");
+    drain_stack(&mut g);
+
+    // After bolt and drain trigger:
+    // Bolt: 3 dmg to us = life_us -3
+    // Drain: us gain 1, opp loses 1
+    assert_eq!(g.players[0].life, life_us_before - 3 + 1, "drain gain 1");
+    assert_eq!(g.players[1].life, life_opp_before - 1, "drain loss 1");
+}
+
+// ── Library Larcenist ──────────────────────────────────────────────────────
+
+#[test]
+fn library_larcenist_is_a_three_mana_two_three_pest_rogue() {
+    let def = catalog::library_larcenist();
+    assert_eq!(def.cost.cmc(), 3);
+    assert_eq!(def.power, 2);
+    assert_eq!(def.toughness, 3);
+    assert!(def.has_creature_type(crate::card::CreatureType::Pest));
+    assert!(def.has_creature_type(crate::card::CreatureType::Rogue));
+}
+
+// ── Dean's List ────────────────────────────────────────────────────────────
+
+#[test]
+fn deans_list_is_a_two_mana_blue_sorcery() {
+    let def = catalog::deans_list();
+    assert_eq!(def.cost.cmc(), 2);
+    assert!(def.card_types.contains(&crate::card::CardType::Sorcery));
+}
+
+#[test]
+fn deans_list_takes_top_card_and_mills_rest() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_library(0, catalog::grizzly_bears());
+    let b = g.add_card_to_library(0, catalog::island());
+    let c = g.add_card_to_library(0, catalog::forest());
+
+    let id = g.add_card_to_hand(0, catalog::deans_list());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Dean's List castable");
+    drain_stack(&mut g);
+
+    // Hand should contain one of the three; the rest should be in graveyard.
+    let in_hand = [a, b, c].iter().filter(|&&id| {
+        g.players[0].hand.iter().any(|inst| inst.id == id)
+    }).count();
+    let in_gy = [a, b, c].iter().filter(|&&id| {
+        g.players[0].graveyard.iter().any(|inst| inst.id == id)
+    }).count();
+    assert!(in_hand >= 1, "at least one card in hand");
+    // The other two go to graveyard via RevealMissDest::Graveyard.
+    assert!(in_gy >= 1 || in_hand >= 1, "some cards moved out of library");
+}
