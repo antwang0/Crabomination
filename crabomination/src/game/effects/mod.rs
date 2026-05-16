@@ -1404,6 +1404,56 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::SacrificeGreatestMV { who, count, filter } => {
+                // Same picker as `Effect::Sacrifice` but reverses the CMC
+                // sort to pick the most-expensive match. Used by Soul
+                // Shatter ("Each opponent sacrifices a creature or
+                // planeswalker with the greatest mana value among
+                // permanents that player controls"). When ties exist
+                // (multiple matches at the same CMC), the auto-picker
+                // breaks them by lowest power (matching Sacrifice's
+                // secondary key).
+                let n = self.evaluate_value(count, ctx).max(0) as usize;
+                let source_id = ctx.source;
+                for ent in self.resolve_selector(who, ctx) {
+                    let EntityRef::Player(p) = ent else { continue; };
+                    let mut candidates: Vec<&CardInstance> = self
+                        .battlefield
+                        .iter()
+                        .filter(|c| c.controller == p)
+                        .filter(|c| {
+                            let t = Target::Permanent(c.id);
+                            self.evaluate_requirement_static(filter, &t, p, ctx.source)
+                        })
+                        .collect();
+                    // Sort key:
+                    // 1. Source last (preserves "another creature" intent).
+                    // 2. Descending CMC (highest first via i32 negation).
+                    // 3. Ascending power (lowest first as tiebreaker).
+                    candidates.sort_by_key(|c| {
+                        (
+                            Some(c.id) == source_id,
+                            -(c.definition.cost.cmc() as i32),
+                            c.power(),
+                        )
+                    });
+                    let ids: Vec<CardId> =
+                        candidates.into_iter().take(n).map(|c| c.id).collect();
+                    for id in ids {
+                        let is_creature = self
+                            .battlefield_find(id)
+                            .map(|c| c.definition.is_creature())
+                            .unwrap_or(false);
+                        if is_creature {
+                            events.push(GameEvent::CreatureDied { card_id: id });
+                        }
+                        let mut die_evs = self.remove_to_graveyard_with_triggers(id);
+                        events.append(&mut die_evs);
+                    }
+                }
+                Ok(())
+            }
+
             Effect::AddPoison { who, amount } => {
                 let n = self.evaluate_value(amount, ctx).max(0) as u32;
                 for ent in self.resolve_selector(who, ctx) {

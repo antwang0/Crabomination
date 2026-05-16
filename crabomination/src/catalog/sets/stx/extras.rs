@@ -12148,16 +12148,18 @@ pub fn hindering_light() -> CardDefinition {
 // ── Soul Shatter (STX Lorehold/Witherbloom flavor) ─────────────────────────
 
 /// Soul Shatter — {2}{B}{R} Instant (synthesised STX Lorehold flavor).
-/// "Each opponent sacrifices a creature or planeswalker."
+/// "Each opponent sacrifices a creature or planeswalker with the
+/// greatest mana value among permanents that player controls."
 ///
-/// Push (modern_decks, NEW, `stx::extras`): A 4-mana symmetric sweeper
-/// — each opp picks one creature/PW to sacrifice. The printed Oracle's
-/// "with the greatest mana value among permanents that player
-/// controls" restriction is engine-wide ⏳ (no max-by-mana-value
-/// sacrifice picker); the auto-picker takes each opponent's
-/// lowest-CMC creature. Tests:
-/// `soul_shatter_each_opp_sacrifices_a_creature`,
-/// `soul_shatter_is_a_four_mana_br_instant`.
+/// Push (modern_decks): A 4-mana symmetric sweeper — each opp picks
+/// their highest-MV creature/PW to sacrifice. The "greatest mana
+/// value" restriction is **now wired** via the new
+/// `Effect::SacrificeGreatestMV` primitive (engine variant added
+/// alongside this card). The picker sorts each opp's matching
+/// permanents by descending CMC, picking the most-expensive match.
+/// Tests: `soul_shatter_each_opp_sacrifices_a_creature`,
+/// `soul_shatter_is_a_four_mana_br_instant`,
+/// `soul_shatter_picks_greatest_mana_value_creature`.
 pub fn soul_shatter() -> CardDefinition {
     CardDefinition {
         name: "Soul Shatter",
@@ -12170,7 +12172,7 @@ pub fn soul_shatter() -> CardDefinition {
         keywords: vec![],
         effect: Effect::ForEach {
             selector: Selector::Player(PlayerRef::EachOpponent),
-            body: Box::new(Effect::Sacrifice {
+            body: Box::new(Effect::SacrificeGreatestMV {
                 who: Selector::Player(PlayerRef::Triggerer),
                 count: Value::Const(1),
                 filter: SelectionRequirement::Creature

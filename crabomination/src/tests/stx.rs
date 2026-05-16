@@ -12626,6 +12626,28 @@ fn soul_shatter_each_opp_sacrifices_a_creature() {
     assert!(!g.battlefield.iter().any(|c| c.id == opp_bear), "opp sacrificed bear");
 }
 
+#[test]
+fn soul_shatter_picks_greatest_mana_value_creature() {
+    let mut g = two_player_game();
+    // Opp has a 2-MV bear and a 5-MV Serra Angel — Soul Shatter should
+    // hit the Angel (greater MV), not the bear.
+    let cheap_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let big_angel = g.add_card_to_battlefield(1, catalog::serra_angel());
+    let id = g.add_card_to_hand(0, catalog::soul_shatter());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Soul Shatter castable");
+    drain_stack(&mut g);
+    // The Angel (5-MV) should die; bear (2-MV) stays.
+    assert!(!g.battlefield.iter().any(|c| c.id == big_angel),
+        "5-MV Angel sacrificed (greatest MV picker)");
+    assert!(g.battlefield.iter().any(|c| c.id == cheap_bear),
+        "2-MV bear survives (lowest MV)");
+}
+
 // ── Lurking Predators ──────────────────────────────────────────────────────
 
 #[test]

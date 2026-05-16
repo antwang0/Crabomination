@@ -913,6 +913,13 @@ pub enum Effect {
 
     // ── Sacrifice ────────────────────────────────────────────────────────────
     Sacrifice { who: Selector, count: Value, filter: SelectionRequirement },
+    /// "Sacrifice a [filter] with the greatest mana value" picker.
+    /// Mirrors `Sacrifice` but the candidate sort prefers maximum CMC.
+    /// Used by Soul Shatter ("Each opponent sacrifices a creature or
+    /// planeswalker with the greatest mana value among permanents
+    /// that player controls"). Auto-decider picks the highest-CMC
+    /// matching permanent per player.
+    SacrificeGreatestMV { who: Selector, count: Value, filter: SelectionRequirement },
 
     // ── Counters on players ──────────────────────────────────────────────────
     AddPoison { who: Selector, amount: Value },
@@ -1244,6 +1251,9 @@ impl Effect {
                 sel_has_target(what) || value_has_target(count)
             }
             Effect::Sacrifice { who, count, .. } => sel_has_target(who) || value_has_target(count),
+            Effect::SacrificeGreatestMV { who, count, .. } => {
+                sel_has_target(who) || value_has_target(count)
+            }
             Effect::AddPoison { who, amount } => sel_has_target(who) || value_has_target(amount),
             Effect::RevealTopAndDrawIf { who, .. } | Effect::RevealTopCard { who } => {
                 player_has_target(who)
@@ -1324,7 +1334,9 @@ impl Effect {
             // `Selector::Target(0)` falls through unchanged so existing
             // edicts that pre-date the filter primitive (Diabolic Edict,
             // Geth's Verdict) keep their explicit-target casting contract.
-            Effect::Sacrifice { who, .. } => sel_filter(who),
+            Effect::Sacrifice { who, .. } | Effect::SacrificeGreatestMV { who, .. } => {
+                sel_filter(who)
+            }
             // Compound effects: walk into the children. Spells like Goryo's
             // Vengeance wrap a `Move` (target legendary creature) in a
             // `Seq` alongside a delayed exile trigger; the primary target
@@ -1623,7 +1635,9 @@ impl Effect {
                 Effect::Attach { what, to } => sel_find(what, slot).or_else(|| sel_find(to, slot)),
                 Effect::CopySpell { what, .. }
                 | Effect::CopySpellUnlessPaid { what, .. } => sel_find(what, slot),
-                Effect::Sacrifice { who, .. } => sel_find(who, slot),
+                Effect::Sacrifice { who, .. } | Effect::SacrificeGreatestMV { who, .. } => {
+                    sel_find(who, slot)
+                }
                 Effect::AddPoison { who, .. } => sel_find(who, slot),
                 _ => None,
             }
