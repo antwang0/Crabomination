@@ -16565,3 +16565,180 @@ fn witherbloom_verdict_forces_opp_sac() {
     assert_eq!(g.players[1].graveyard.len(), gy_before + 1,
         "opp sacrificed creature → gy");
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Push (modern_decks current batch 3): tests for the 12 mono-color staples.
+// ─────────────────────────────────────────────────────────────────────────────
+
+#[test]
+fn strixhaven_footsoldier_is_a_one_mana_one_two_vigilant() {
+    let def = catalog::strixhaven_footsoldier();
+    assert_eq!(def.cost.cmc(), 1);
+    assert_eq!(def.power, 1);
+    assert_eq!(def.toughness, 2);
+    assert!(def.keywords.contains(&Keyword::Vigilance));
+}
+
+#[test]
+fn mage_tower_crystal_taps_for_any_color() {
+    let mut g = two_player_game();
+    let mtc = g.add_card_to_battlefield(0, catalog::mage_tower_crystal());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: mtc, ability_index: 0, target: None,
+    }).expect("rainbow tap");
+    drain_stack(&mut g);
+    let total: u32 = [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green]
+        .iter()
+        .map(|&c| g.players[0].mana_pool.amount(c))
+        .sum();
+    assert!(total >= 1, "added one mana of any color");
+}
+
+#[test]
+fn witherbloom_adept_is_a_three_mana_menace_body() {
+    let def = catalog::witherbloom_adept();
+    assert_eq!(def.cost.cmc(), 3);
+    assert_eq!(def.power, 3);
+    assert_eq!(def.toughness, 2);
+    assert!(def.keywords.contains(&Keyword::Menace));
+}
+
+#[test]
+fn lorehold_pyromancer_pumps_on_instant_cast() {
+    let mut g = two_player_game();
+    let pyro = g.add_card_to_battlefield(0, catalog::lorehold_pyromancer());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt castable");
+    drain_stack(&mut g);
+    let p = g.compute_battlefield().into_iter().find(|c| c.id == pyro)
+        .expect("pyro alive");
+    assert!(p.power >= 4, "pyromage power ≥4 after magecraft (2+2)");
+}
+
+#[test]
+fn quandrix_defender_etb_scrys() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let qd = g.add_card_to_hand(0, catalog::quandrix_defender());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let lib_before = g.players[0].library.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: qd, target: None, additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("Defender castable");
+    drain_stack(&mut g);
+    // Scry 1 doesn't change library size.
+    assert_eq!(g.players[0].library.len(), lib_before);
+}
+
+#[test]
+fn silverquill_lifedrain_drains_each_opp() {
+    let mut g = two_player_game();
+    let sl = g.add_card_to_hand(0, catalog::silverquill_lifedrain());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let p0_before = g.players[0].life;
+    let p1_before = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: sl, target: None, additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("Lifedrain castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, p1_before - 2);
+    assert_eq!(g.players[0].life, p0_before + 2);
+}
+
+#[test]
+fn witherbloom_plowman_etb_gains_three_life() {
+    let mut g = two_player_game();
+    let wp = g.add_card_to_hand(0, catalog::witherbloom_plowman());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    let life_before = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: wp, target: None, additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("Plowman castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life_before + 3);
+}
+
+#[test]
+fn prismari_spellfire_sage_etb_draws() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let pss = g.add_card_to_hand(0, catalog::prismari_spellfire_sage());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: pss, target: None, additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("Sage castable");
+    drain_stack(&mut g);
+    // -1 (cast) + 1 (draw) = 0 net
+    assert_eq!(g.players[0].hand.len(), hand_before);
+}
+
+#[test]
+fn lorehold_justice_destroys_power_4_creature() {
+    let mut g = two_player_game();
+    let big = g.add_card_to_battlefield(1, catalog::serra_angel());  // 4/4
+    let lj = g.add_card_to_hand(0, catalog::lorehold_justice());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: lj, target: Some(Target::Permanent(big)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Justice castable");
+    drain_stack(&mut g);
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == big), "angel dies");
+}
+
+#[test]
+fn quandrix_recall_bounces_creature_to_owners_hand() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let qr = g.add_card_to_hand(0, catalog::quandrix_recall());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: qr, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Recall castable");
+    drain_stack(&mut g);
+    assert!(g.players[1].hand.iter().any(|c| c.id == bear),
+        "bear back to owner's hand");
+}
+
+#[test]
+fn witherbloom_pestilence_kills_two_toughness_creatures() {
+    let mut g = two_player_game();
+    let b1 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b2 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let wp = g.add_card_to_hand(0, catalog::witherbloom_pestilence());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: wp, target: None, additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("Pestilence castable");
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == b1), "b1 dies");
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == b2), "b2 dies");
+}
+
+#[test]
+fn lorehold_combatant_is_a_three_mana_two_two_double_striker() {
+    let def = catalog::lorehold_combatant();
+    assert_eq!(def.cost.cmc(), 3);
+    assert_eq!(def.power, 2);
+    assert_eq!(def.toughness, 2);
+    assert!(def.keywords.contains(&Keyword::DoubleStrike));
+}

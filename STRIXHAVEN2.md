@@ -19,10 +19,23 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 195 | 59 | 1 |
-| STX (231 cards) | 414 | 13 | 0 |
+| STX (243 cards) | 426 | 13 | 0 |
 | STA reprints (in STX boosters) | 46 | 0 | — |
 
 Push (modern_decks, claude/modern_decks branch — latest revision —
+**12 MORE STX cards + 12 new tests = batch 3**):
+
+Adds 12 more mono-color staples + cross-college tools: Strixhaven
+Footsoldier (1W vigilant), Mage Tower Crystal (rainbow rock), Witherbloom
+Adept (3-mana menace), Lorehold Pyromancer (Magecraft +2/+0 self-pump),
+Quandrix Defender (Wall + ETB Scry), Silverquill Lifedrain (drain 2),
+Witherbloom Plowman (4/3 reach + gain 3), Prismari Spellfire-Sage (Mulldrifter
+shape), Lorehold Justice (destroy power 4+), Quandrix Recall (Unsummon),
+Witherbloom Pestilence (board -2/-2 EOT), Lorehold Combatant (3-mana
+double strike). All 1961 lib tests pass — 48 NEW STX cards across 3
+batches this push.
+
+Push (modern_decks, claude/modern_decks branch — prior revision —
 **14 MORE STX cards + 14 new functionality tests = batch 2**):
 
 Builds on the previous 22-card extras drop with 14 more STX-themed

@@ -19959,3 +19959,446 @@ pub fn witherbloom_verdict() -> CardDefinition {
         exile_on_resolve: false,
     }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Push (modern_decks current, batch 3): 12 more STX cards — mono-color
+// staples + a few more cross-college tools.
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ── Strixhaven Footsoldier ─────────────────────────────────────────────────
+
+/// Strixhaven Footsoldier — {W}, 1/2 Human Soldier with Vigilance.
+/// Cheap white vigilance creature that swings + holds back to block.
+pub fn strixhaven_footsoldier() -> CardDefinition {
+    CardDefinition {
+        name: "Strixhaven Footsoldier",
+        cost: cost(&[w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Mage Tower Crystal ─────────────────────────────────────────────────────
+
+/// Mage Tower Crystal — {2} Artifact.
+/// "{T}: Add one mana of any color."
+///
+/// Manalith-style 3-mana rainbow rock at 3 mana — fixes colors for
+/// 3-color college decks.
+pub fn mage_tower_crystal() -> CardDefinition {
+    CardDefinition {
+        name: "Mage Tower Crystal",
+        cost: cost(&[generic(2)]),
+        supertypes: vec![],
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: ManaCost::default(),
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::AnyOneColor(Value::Const(1)),
+            },
+            once_per_turn: false,
+            sorcery_speed: false,
+            sac_cost: false,
+            condition: None,
+            life_cost: 0,
+            from_graveyard: false,
+            exile_self_cost: false,
+            exile_other_filter: None,
+        }],
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Witherbloom Adept ──────────────────────────────────────────────────────
+
+/// Witherbloom Adept — {2}{B}, 3/2 Human Warlock with Menace.
+/// Aggressive mono-B Menace body — same shape as Tormented Hero
+/// scaled up.
+pub fn witherbloom_adept() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Adept",
+        cost: cost(&[generic(2), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Menace],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Lorehold Pyromancer ────────────────────────────────────────────────────
+
+/// Lorehold Pyromancer — {2}{R}, 2/2 Human Wizard.
+/// "Magecraft — Whenever you cast or copy an instant or sorcery
+/// spell, this creature gets +2/+0 until end of turn."
+///
+/// Magecraft self-pump that turns each spell into +2 attack power.
+pub fn lorehold_pyromancer() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Pyromancer",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_self_pump(2, 0)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Quandrix Defender ─────────────────────────────────────────────────────
+
+/// Quandrix Defender — {1}{U}, 0/4 Wall with Defender + Flying.
+/// "When this creature enters, scry 1."
+///
+/// Defender wall with flying that blocks anything in the air, plus
+/// a Scry ETB for card selection.
+pub fn quandrix_defender() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Defender",
+        cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Wall],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 4,
+        keywords: vec![Keyword::Defender, Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Silverquill Lifedrain ──────────────────────────────────────────────────
+
+/// Silverquill Lifedrain — {1}{B} Sorcery.
+/// "Each opponent loses 2 life. You gain 2 life."
+///
+/// Vampire's Bite / Sanguine Glorifier shape in mono-B. Pure drain
+/// at 2 mana.
+pub fn silverquill_lifedrain() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Lifedrain",
+        cost: cost(&[generic(1), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Drain {
+            from: Selector::Player(PlayerRef::EachOpponent),
+            to: Selector::You,
+            amount: Value::Const(2),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Witherbloom Plowman ────────────────────────────────────────────────────
+
+/// Witherbloom Plowman — {3}{G}, 4/3 Human Druid with Reach.
+/// "When this creature enters, you gain 3 life."
+///
+/// Reach beater that turns on Witherbloom's lifegain triggers.
+pub fn witherbloom_plowman() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Plowman",
+        cost: cost(&[generic(3), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 3,
+        keywords: vec![Keyword::Reach],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(3),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Prismari Spellfire-Sage ────────────────────────────────────────────────
+
+/// Prismari Spellfire-Sage — {3}{U}{R}, 4/4 Human Wizard with Flash.
+/// "When this creature enters, draw a card."
+///
+/// 5-mana flash 4/4 with a cantrip ETB — same shape as Mulldrifter
+/// without the evoke alt-cost.
+pub fn prismari_spellfire_sage() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Spellfire-Sage",
+        cost: cost(&[generic(3), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Flash],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Lorehold Justice ───────────────────────────────────────────────────────
+
+/// Lorehold Justice — {2}{W} Instant.
+/// "Destroy target creature with power 4 or greater."
+///
+/// White conditional removal — Stand Up for Yourself's mirror for
+/// big creatures. Same shape as Crib Swap.
+pub fn lorehold_justice() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Justice",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Destroy {
+            what: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::PowerAtLeast(4)),
+            ),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Quandrix Recall ───────────────────────────────────────────────────────
+
+/// Quandrix Recall — {1}{U} Instant.
+/// "Return target creature to its owner's hand."
+///
+/// Unsummon-shape in Quandrix colors at 2 mana — tempo play to
+/// reset a problematic opp body or replay your ETB creature.
+pub fn quandrix_recall() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Recall",
+        cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Move {
+            what: target_filtered(SelectionRequirement::Creature),
+            to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Witherbloom Pestilence ─────────────────────────────────────────────────
+
+/// Witherbloom Pestilence — {1}{B}{B} Sorcery.
+/// "Each creature gets -2/-2 until end of turn."
+///
+/// Mass debuff that wipes 2-toughness boards (Pestilence-style
+/// wrath). Wired via `ForEach(EachPermanent(Creature)) → PumpPT
+/// (-2/-2 EOT)`.
+pub fn witherbloom_pestilence() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Pestilence",
+        cost: cost(&[generic(1), b(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::ForEach {
+            selector: Selector::EachPermanent(SelectionRequirement::Creature),
+            body: Box::new(Effect::PumpPT {
+                what: Selector::TriggerSource,
+                power: Value::Const(-2),
+                toughness: Value::Const(-2),
+                duration: Duration::EndOfTurn,
+            }),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Lorehold Combatant ─────────────────────────────────────────────────────
+
+/// Lorehold Combatant — {1}{R}{W}, 2/2 Dwarf Soldier with Double Strike.
+/// Aggressive R/W body with double strike — a 4-damage swinger when
+/// pumped. Same template as Vexilus Praetor's body in Lorehold colors.
+pub fn lorehold_combatant() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Combatant",
+        cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dwarf, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::DoubleStrike],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
