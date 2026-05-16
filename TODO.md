@@ -1249,22 +1249,22 @@ status tag (✅ wired, 🟡 partial, ⏳ todo) plus a short note.
   `dragons_approach_does_not_offer_tutor_without_four_named_in_graveyard`
   (the gate fails the predicate cleanly).
 
-- ⏳ **`Effect::CopyUnlessPaid { what, mana_cost }` — opp-spell tax-or-
-  copy gate (Wandering Archaic)** — push XXXVI lands the body of
-  Wandering Archaic as an unconditional copy of every opp-cast
-  instant/sorcery via the new opp-spell wire in
-  `fire_spell_cast_triggers` (`EventScope::OpponentControl`). The
-  printed Oracle's "that player may pay {2}. If they don't, …" tax-or-
-  copy gate is engine-wide ⏳: it needs the opp's auto-decider to pay
-  {2} from their pool (mid-trigger-push, not at resolution), and a new
-  `Effect::CopyUnlessPaid` that branches on the payment. Wiring needs:
-  (a) a yes/no decision on the opp's side at trigger-push time; (b)
-  the engine's mana-pool pay path used from within the trigger
-  dispatcher; (c) the trigger's `controller` (the listener, not the
-  caster) stays the source's controller — only the `pay` step
-  consults the *caster's* pool. Same primitive could power Mindbreak
-  Trap-style "if your opp casts 3+ spells" tax-or-counter gates if
-  generalized to `IfPaid { cost, then, else }`.
+- ✅ **`Effect::CopySpellUnlessPaid { what, mana_cost, count }` — opp-spell
+  tax-or-copy gate (Wandering Archaic)** — push (modern_decks) lands the
+  primitive in `effect.rs` + handler in `game/effects/mod.rs`. At trigger
+  resolution: (a) locate the matching `StackItem::Spell`; (b) ask the
+  spell's *caster* yes/no via `Decision::OptionalTrigger`; (c) on yes
+  + affordable pool, deduct `mana_cost` and skip the copy; (d) on no or
+  unaffordable, copy the spell `count` times. The optional-pay decision
+  flows through the caster's decider — the listening Wandering Archaic
+  itself is owned by `you`, but the pay-or-copy decision is on the opp's
+  side. AutoDecider answers false (decline to pay), so the bot-vs-bot
+  flow defaults to "let the copy happen." Promotes Wandering Archaic
+  🟡 → ✅. Tests: `wandering_archaic_lets_opp_pay_two_to_skip_copy`,
+  `wandering_archaic_copies_when_opp_cannot_afford_two`,
+  `wandering_archaic_copies_opp_instant`. The "may choose new targets
+  for the copy" half stays engine-wide ⏳ (CopySpell inheriting
+  original targets unchanged).
 
 - ⏳ **`PlayerRef::Opponent` (single-opponent helper)** — engine has
   `EachOpponent` (all opps) and `Target(_)` (cast-time targeting) but

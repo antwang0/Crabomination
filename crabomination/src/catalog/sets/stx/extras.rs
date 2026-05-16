@@ -3540,14 +3540,14 @@ pub fn tezzerets_gambit() -> CardDefinition {
 /// player may pay {2}. If they don't, you may copy the spell. You may
 /// choose new targets for the copy."
 ///
-/// 🟡 approximation: the printed "may pay {2}" tax is collapsed into
-/// an automatic copy via `Effect::CopySpell` whenever an opponent
-/// casts an instant or sorcery. This is strictly stronger than the
-/// printed Oracle (no opt-out for the opp) but preserves the
-/// "Wandering Archaic punishes spell-heavy decks" play pattern. The
-/// `CounterUnlessPaid`-style "pay or get copied" gate is engine-wide
-/// ⏳ — it needs a new `Effect::CopyUnlessPaid { ... }` primitive that
-/// hooks into the opp's auto-decider at cast time.
+/// ✅ (push modern_decks): the printed "may pay {2} or get copied" tax
+/// is wired via the new `Effect::CopySpellUnlessPaid` primitive. At
+/// trigger resolution, the engine asks the spell's caster yes/no — if
+/// they accept *and* can afford {2} from their floated mana pool, the
+/// engine deducts the cost and skips the copy. Otherwise the spell
+/// gets copied once. The "you may choose new targets for the copy" half
+/// is engine-wide ⏳ (the copy inherits the original's targets — same
+/// gap as every other CopySpell user).
 ///
 /// The body is a 4/4 Spirit for {2}{W}{W} — a strong wall against
 /// non-spell-heavy decks and a free copy generator against
@@ -3580,8 +3580,9 @@ pub fn wandering_archaic() -> CardDefinition {
                         filter: SelectionRequirement::HasCardType(CardType::Sorcery),
                     },
                 ])),
-            effect: Effect::CopySpell {
+            effect: Effect::CopySpellUnlessPaid {
                 what: Selector::TriggerSource,
+                mana_cost: cost(&[generic(2)]),
                 count: Value::Const(1),
             },
         }],

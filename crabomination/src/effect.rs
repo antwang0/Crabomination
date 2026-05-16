@@ -883,6 +883,26 @@ pub enum Effect {
     },
     /// Copy target spell/ability `count` times.
     CopySpell    { what: Selector, count: Value },
+    /// Copy target spell **unless** its caster pays `mana_cost`. Used by
+    /// Wandering Archaic ("Whenever an opponent casts an instant or sorcery
+    /// spell, that player may pay {2}. If they don't, you may copy the
+    /// spell."). The resolver: (a) walks the stack for the spell whose
+    /// `card.id` matches `what`; (b) asks the spell's caster yes/no via
+    /// `Decision::OptionalTrigger`; (c) if they accept *and* can afford
+    /// `mana_cost` from their pool, deducts it and skips the copy; (d) if
+    /// they decline or can't afford, copies the spell `count` times above
+    /// it on the stack.
+    ///
+    /// AutoDecider's default answer is `false` (decline to pay) — the
+    /// printed Oracle implies most casters won't have an extra {2}
+    /// floating, so the conservative default is "let the copy happen."
+    /// ScriptedDecider can override via `DecisionAnswer::Bool(true)` for
+    /// tests that want to exercise the pay path.
+    CopySpellUnlessPaid {
+        what: Selector,
+        mana_cost: crate::mana::ManaCost,
+        count: Value,
+    },
 
     // ── Sacrifice ────────────────────────────────────────────────────────────
     Sacrifice { who: Selector, count: Value, filter: SelectionRequirement },
@@ -1213,6 +1233,9 @@ impl Effect {
             | Effect::ResetCreature { what, .. } => sel_has_target(what),
             Effect::Attach { what, to } => sel_has_target(what) || sel_has_target(to),
             Effect::CopySpell { what, count } => sel_has_target(what) || value_has_target(count),
+            Effect::CopySpellUnlessPaid { what, count, .. } => {
+                sel_has_target(what) || value_has_target(count)
+            }
             Effect::Sacrifice { who, count, .. } => sel_has_target(who) || value_has_target(count),
             Effect::AddPoison { who, amount } => sel_has_target(who) || value_has_target(amount),
             Effect::RevealTopAndDrawIf { who, .. } | Effect::RevealTopCard { who } => {
@@ -1591,7 +1614,8 @@ impl Effect {
                 Effect::BecomeBasicLand { what, .. }
                 | Effect::ResetCreature { what, .. } => sel_find(what, slot),
                 Effect::Attach { what, to } => sel_find(what, slot).or_else(|| sel_find(to, slot)),
-                Effect::CopySpell { what, .. } => sel_find(what, slot),
+                Effect::CopySpell { what, .. }
+                | Effect::CopySpellUnlessPaid { what, .. } => sel_find(what, slot),
                 Effect::Sacrifice { who, .. } => sel_find(who, slot),
                 Effect::AddPoison { who, .. } => sel_find(who, slot),
                 _ => None,

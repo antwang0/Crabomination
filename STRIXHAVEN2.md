@@ -19,8 +19,30 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 195 | 59 | 1 |
-| STX (190 cards) | 216 | 15 | 0 |
+| STX (190 cards) | 217 | 14 | 0 |
 | STA reprints (in STX boosters) | 46 | 0 | — |
+
+Push (modern_decks, claude/modern_decks branch — latest revision —
+**Wandering Archaic 🟡 → ✅ via new `Effect::CopySpellUnlessPaid`**):
+
+Promotes **Wandering Archaic** 🟡 → ✅ via the new
+`Effect::CopySpellUnlessPaid { what, mana_cost, count }` primitive
+(`effect.rs`). At trigger resolution the engine asks the *spell's
+caster* (the opp who cast the IS) yes/no via `Decision::OptionalTrigger`;
+on yes + affordable pool, the engine deducts the cost from their pool
+and skips the copy; on no or unaffordable, the spell is copied `count`
+times. AutoDecider answers false by default (let the copy fire),
+ScriptedDecider flips to true for tests. Handler lives in
+`game/effects/mod.rs` alongside the existing `Effect::CopySpell`
+resolver — same stack-lookup + copy-clone logic, gated on the
+optional-pay decision. The "may choose new targets for the copy" half
+stays engine-wide ⏳. Tests:
+`wandering_archaic_lets_opp_pay_two_to_skip_copy`,
+`wandering_archaic_copies_when_opp_cannot_afford_two`,
+`wandering_archaic_copies_opp_instant` (the existing AutoDecider-default
+test still passes since AutoDecider declines to pay).
+
+STX corpus now at **217 ✅ + 14 🟡 = 231** (was 216 ✅ + 15 🟡).
 
 Push (modern_decks, claude/modern_decks branch — latest revision —
 **20 NEW STX cards + `StaticEffect::DoubleTokens` primitive**):
@@ -1314,7 +1336,7 @@ parity is a matter of porting card factories one at a time.
 | Fortifying Draught | {2}{W} | ✅ | Push XXXVI (NEW, `stx::lessons`): Sorcery — Lesson. Target creature gets +1/+4 EOT. Defensive combat trick Lesson, wired as a single `PumpPT(+1/+4, EndOfTurn)`. Test: `fortifying_draught_pumps_target_creature`. |
 | Guiding Voice | {W} | ✅ | Push XXXVI (NEW, `stx::lessons`): Sorcery — Lesson. +1/+1 counter on target creature + Learn (→ Draw 1). Wired as `Seq(AddCounter(+1/+1), Draw(1))`. Test: `guiding_voice_counters_and_draws`. |
 | Tezzeret's Gambit | {U}{B} | ✅ | Push XXXVI (NEW, `stx::extras`): Sorcery. Two-mode `ChooseMode`: (0) Proliferate; (1) Pay 2 life, draw 2 cards. Printed cost {U/P}{B/P} (Phyrexian mana) collapses to strict {U}{B} — pure Phyrexian-life payment is engine-wide ⏳. Tests: `tezzerets_gambit_mode_zero_proliferates`, `tezzerets_gambit_mode_one_pays_two_life_draws_two`. |
-| Wandering Archaic | {2}{W}{W} | 🟡 | Push XXXVI (NEW, `stx::extras`): 4/4 Spirit. Whenever an opp casts an instant or sorcery, this triggers via the new opp-spell-cast wire in `fire_spell_cast_triggers` (`EventScope::OpponentControl`). Copies the opp's spell unconditionally — printed Oracle's "may pay {2}" tax-or-copy gate is engine-wide ⏳ (needs a `CopyUnlessPaid` primitive with opp-side auto-decision). Tests: `wandering_archaic_copies_opp_instant`, `wandering_archaic_is_a_4_4_spirit`. |
+| Wandering Archaic | {2}{W}{W} | ✅ (was 🟡) | Push (modern_decks): the printed "may pay {2}" tax-or-copy gate **is now wired** via the new `Effect::CopySpellUnlessPaid { what, mana_cost, count }` primitive. At trigger resolution: (a) locate the matching `StackItem::Spell` for `what`; (b) ask the spell's *caster* yes/no via `Decision::OptionalTrigger`; (c) on yes + affordable pool, deduct `mana_cost` and skip the copy; (d) on no or unaffordable, copy the spell `count` times. AutoDecider defaults to false (decline to pay → copy fires). ScriptedDecider can flip to true for tests. The "you may choose new targets for the copy" half is engine-wide ⏳ (copies inherit the original's targets — same gap as every other CopySpell user). Tests: `wandering_archaic_copies_opp_instant` (AutoDecider declines → copy fires), `wandering_archaic_lets_opp_pay_two_to_skip_copy` (ScriptedDecider says yes + pre-floats {2} → copy skipped), `wandering_archaic_copies_when_opp_cannot_afford_two` (ScriptedDecider says yes but opp has no {2} → copy fires anyway). |
 | Take Up the Shield | {1}{W} | ✅ | Push XXXVII (NEW, `stx::extras`): Instant. Target creature gets +0/+3 and gains indestructible EOT. Wired as `Seq(PumpPT(+0/+3), GrantKeyword(Indestructible))` — same Masterful-Flourish-style template. Defensive combat trick that protects a friendly attacker or a fragile blocker through a Wrath. Test: `take_up_the_shield_buffs_toughness_and_grants_indestructible`. |
 | Star Pupil's Papers | {1} | ✅ | Push XXXVII (NEW, `stx::extras`): Artifact. ETB Scry 1; `{2}, Sacrifice this: Put a +1/+1 counter on target creature.` Pure colorless filtering + counter payoff. ETB trigger uses `Effect::Scry { who: You, amount: 1 }`; the activated ability uses `sac_cost: true` to consume the artifact. Tests: `star_pupils_papers_is_a_one_mana_artifact_with_etb_scry`, `star_pupils_papers_sac_activation_grants_counter`. |
 | Frostboil Snarl | — | ✅ (🟡 reveal half) | Push XXXVII (NEW, `stx::extras`): Izzet (U/R) Snarl dual. Always-enters-tapped approximation of the printed "reveal-from-hand-or-tap" mechanic. Wired via the new `snarl_land()` helper which produces `{T}: Add {U}` and `{T}: Add {R}` activated abilities plus the standard `etb_tap()` trigger. The full reveal-from-hand decision shape is tracked in TODO.md. Test: `frostboil_snarl_is_a_u_r_dual_that_enters_tapped`. |

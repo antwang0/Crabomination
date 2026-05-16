@@ -5037,6 +5037,74 @@ fn wandering_archaic_is_a_4_4_spirit() {
     assert!(card.subtypes.creature_types.contains(&crate::card::CreatureType::Spirit));
 }
 
+/// Wandering Archaic (modern_decks): When the opp casts an IS spell, they
+/// may pay {2} to skip the copy. ScriptedDecider answers `Bool(true)` for
+/// the optional pay; the opp pre-floats {2} in their pool, so the engine
+/// deducts and skips the copy. No copy fires.
+#[test]
+fn wandering_archaic_lets_opp_pay_two_to_skip_copy() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let _arch = g.add_card_to_battlefield(0, catalog::wandering_archaic());
+
+    // Opp casts Lightning Bolt at us.
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    // Opp pre-floats {2} extra in their pool for the optional pay, plus
+    // the {R} for the Bolt cast itself.
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.players[1].mana_pool.add_colorless(2);
+    let life_before = g.players[0].life;
+
+    // ScriptedDecider answers Bool(true) for the pay prompt.
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)),
+        additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("opp casts Bolt");
+    drain_stack(&mut g);
+
+    // Only the original Bolt (3 damage) resolves — copy was skipped.
+    assert_eq!(g.players[0].life, life_before - 3,
+        "Only original Bolt resolves (no copy); got {} damage",
+        life_before - g.players[0].life);
+    // Opp's pool was drained by {2} for the optional pay.
+    assert_eq!(g.players[1].mana_pool.total(), 0,
+        "Opp's pool fully drained (paid 2 + 1 for Bolt)");
+}
+
+/// Wandering Archaic when the opp can't afford the {2}: the engine
+/// silently falls through to the copy. The opp pre-floats only {R}, so
+/// AutoDecider answers true but the deduct fails → copy fires.
+#[test]
+fn wandering_archaic_copies_when_opp_cannot_afford_two() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let _arch = g.add_card_to_battlefield(0, catalog::wandering_archaic());
+
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    // No extra mana for the optional pay.
+    let life_before = g.players[0].life;
+
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)),
+        additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("opp casts Bolt");
+    drain_stack(&mut g);
+
+    // 6 damage: Bolt + copy (since opp couldn't pay {2}).
+    assert_eq!(g.players[0].life, life_before - 6,
+        "Bolt (3) + Archaic copy (3) = 6 damage; got {}",
+        life_before - g.players[0].life);
+}
+
 // ── New STX cards (claude/modern_decks push) ────────────────────────────────
 
 /// Take Up the Shield: target creature gets +0/+3 and gains

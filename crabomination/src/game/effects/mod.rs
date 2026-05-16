@@ -1892,6 +1892,114 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::CopySpellUnlessPaid { what, mana_cost, count } => {
+                // Wandering Archaic shape: the *caster of the spell being
+                // copied* may pay `mana_cost` to avoid being copied. We:
+                // (1) locate the matching `StackItem::Spell`; (2) ask the
+                // *caster* yes/no via `Decision::OptionalTrigger`; (3) on
+                // yes + affordable pool, deduct + skip copy; (4) on no
+                // or unaffordable, fall through to the same copy path as
+                // `Effect::CopySpell`.
+                use crate::decision::{Decision, DecisionAnswer};
+                let n = self.evaluate_value(count, ctx).max(0) as usize;
+                if n == 0 {
+                    return Ok(());
+                }
+                let candidate_ids: Vec<CardId> = match what {
+                    Selector::TriggerSource => ctx
+                        .trigger_source
+                        .into_iter()
+                        .filter_map(|e| match e {
+                            EntityRef::Permanent(c) | EntityRef::Card(c) => Some(c),
+                            _ => None,
+                        })
+                        .collect(),
+                    Selector::This => ctx.source.into_iter().collect(),
+                    _ => self
+                        .resolve_selector(what, ctx)
+                        .into_iter()
+                        .filter_map(|e| match e {
+                            EntityRef::Permanent(c) | EntityRef::Card(c) => Some(c),
+                            _ => None,
+                        })
+                        .collect(),
+                };
+                for cid in candidate_ids {
+                    let stack_idx = self.stack.iter().rposition(|s| {
+                        matches!(s, crate::game::types::StackItem::Spell { card, .. }
+                            if card.id == cid)
+                    });
+                    let Some(idx) = stack_idx else { continue; };
+                    // Snapshot the caster (the affected payer for the
+                    // optional pay) up-front. The spell snapshot for the
+                    // copy is taken inside the "unpaid" branch.
+                    let caster_for_pay = if let crate::game::types::StackItem::Spell {
+                        caster, ..
+                    } = &self.stack[idx]
+                    {
+                        *caster
+                    } else {
+                        continue;
+                    };
+                    // Ask the *caster* of the spell whether they want to
+                    // pay the tax. Bot's AutoDecider defaults to false
+                    // (let the copy happen — saves the {2}).
+                    let answer = self.decider.decide(&Decision::OptionalTrigger {
+                        source: ctx.source.unwrap_or(CardId(0)),
+                        description: "Pay {2} to prevent Wandering Archaic's copy?"
+                            .to_string(),
+                    });
+                    if matches!(answer, DecisionAnswer::Bool(true)) {
+                        // Try to deduct from the payer's pool.
+                        let pool = &mut self.players[caster_for_pay].mana_pool;
+                        if pool.pay(mana_cost).is_ok() {
+                            // Paid — skip the copy.
+                            continue;
+                        }
+                        // Couldn't afford; fall through to copy.
+                    }
+                    // Unpaid (declined or unaffordable) → copy `n` times.
+                    let (orig_card_def, caster, target, additional_targets, mode, x_value, converged_value)
+                        = if let crate::game::types::StackItem::Spell {
+                            card, caster, target, additional_targets, mode, x_value, converged_value, ..
+                        } = &self.stack[idx] {
+                            (
+                                card.definition.clone(),
+                                *caster,
+                                target.clone(),
+                                additional_targets.clone(),
+                                *mode,
+                                *x_value,
+                                *converged_value,
+                            )
+                        } else {
+                            continue;
+                        };
+                    for _ in 0..n {
+                        let new_id = self.next_id();
+                        let mut copy_inst =
+                            crate::card::CardInstance::new(new_id, orig_card_def.clone(), caster);
+                        copy_inst.is_token = true;
+                        self.stack.push(crate::game::types::StackItem::Spell {
+                            card: Box::new(copy_inst),
+                            caster,
+                            target: target.clone(),
+                            additional_targets: additional_targets.clone(),
+                            mode,
+                            x_value,
+                            converged_value,
+                            mana_spent: 0,
+                            uncounterable: true,
+                        });
+                    }
+                    events.push(GameEvent::SpellsCopied {
+                        original: cid,
+                        count: n as u32,
+                    });
+                }
+                Ok(())
+            }
+
             Effect::NameCreatureType { what } => {
                 // Cavern of Souls "as it enters, choose a creature type".
                 // The chooser is the source's controller. Suspend with a
