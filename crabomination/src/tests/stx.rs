@@ -16742,3 +16742,179 @@ fn lorehold_combatant_is_a_three_mana_two_two_double_striker() {
     assert_eq!(def.toughness, 2);
     assert!(def.keywords.contains(&Keyword::DoubleStrike));
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Push (modern_decks current batch 4): tests for the 10 more STX cards.
+// ─────────────────────────────────────────────────────────────────────────────
+
+#[test]
+fn owlin_tactician_etb_pumps_target_and_grants_flying() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let owl = g.add_card_to_hand(0, catalog::owlin_tactician());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: owl, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Owlin castable");
+    drain_stack(&mut g);
+    let b = g.compute_battlefield().into_iter().find(|c| c.id == bear)
+        .expect("bear alive");
+    assert!(b.keywords.contains(&Keyword::Flying), "bear flies EOT");
+    assert!(b.power >= 3, "+1 power applied");
+}
+
+#[test]
+fn pest_mediator_grows_on_lifegain() {
+    let mut g = two_player_game();
+    let pm = g.add_card_to_battlefield(0, catalog::pest_mediator());
+    // Trigger a lifegain via Witherbloom Apprentice + a Bolt cast.
+    let _wa = g.add_card_to_battlefield(0, catalog::witherbloom_apprentice());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt castable");
+    drain_stack(&mut g);
+    let pm_card = g.battlefield.iter().find(|c| c.id == pm).expect("pm alive");
+    assert!(pm_card.counter_count(CounterType::PlusOnePlusOne) >= 1,
+        "got +1/+1 counter from lifegain");
+}
+
+#[test]
+fn inkling_aerialist_pumps_on_other_inkling_etb() {
+    let mut g = two_player_game();
+    let ia = g.add_card_to_battlefield(0, catalog::inkling_aerialist());
+    // Mint an Inkling token via Defend the Campus
+    let defend = g.add_card_to_hand(0, catalog::defend_the_campus());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: defend, target: None, additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("Defend castable");
+    drain_stack(&mut g);
+    let ia_card = g.compute_battlefield().into_iter().find(|c| c.id == ia)
+        .expect("ia alive");
+    // 3 Inkling tokens enter → 3 triggers → +3/+3 EOT
+    assert!(ia_card.power >= 3, "Aerialist grows on Inkling ETB");
+}
+
+#[test]
+fn quandrix_theorist_draws_per_counter_creature() {
+    let mut g = two_player_game();
+    // Two creatures with +1/+1 counters on the board.
+    let b1 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b2 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == b1) {
+        c.add_counters(CounterType::PlusOnePlusOne, 1);
+    }
+    if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == b2) {
+        c.add_counters(CounterType::PlusOnePlusOne, 1);
+    }
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_library(0, catalog::island());
+    let qt = g.add_card_to_hand(0, catalog::quandrix_theorist());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: qt, target: None, additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("Theorist castable");
+    drain_stack(&mut g);
+    // -1 (cast) + 2 (draw 2 from two counter creatures) = +1 net
+    assert_eq!(g.players[0].hand.len(), hand_before + 1);
+}
+
+#[test]
+fn prismari_inferno_sweeps_creatures_for_three() {
+    let mut g = two_player_game();
+    let _b1 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let _b2 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let inf = g.add_card_to_hand(0, catalog::prismari_inferno());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: inf, target: None, additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("Inferno castable");
+    drain_stack(&mut g);
+    // Both bears die (2 toughness vs 3 damage).
+    assert!(g.players[0].graveyard.iter().any(|c| c.definition.name == "Grizzly Bears"));
+    assert!(g.players[1].graveyard.iter().any(|c| c.definition.name == "Grizzly Bears"));
+}
+
+#[test]
+fn lorehold_resurgence_returns_low_mv_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let lr = g.add_card_to_hand(0, catalog::lorehold_resurgence());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: lr, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Resurgence castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == bear), "bear on bf");
+}
+
+#[test]
+fn witherbloom_studies_mills_then_returns_to_hand() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_library(0, catalog::mountain());
+    g.add_card_to_library(0, catalog::forest());
+    let dead = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let ws = g.add_card_to_hand(0, catalog::witherbloom_studies());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: ws, target: Some(Target::Permanent(dead)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Studies castable");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == dead),
+        "bear back to hand");
+}
+
+#[test]
+fn silverquill_vanguard_anthems_other_inklings() {
+    let mut g = two_player_game();
+    let _vg = g.add_card_to_battlefield(0, catalog::silverquill_vanguard());
+    let _other_inkling = g.add_card_to_battlefield(0, catalog::inkling_caretaker());
+    // The other Inkling should now be 2/4 (base 1/3 + 1/1 anthem)
+    let comp = g.compute_battlefield();
+    let other = comp.iter().find(|c| c.id == _other_inkling).expect("other inkling");
+    assert_eq!(other.power, 2, "anthem +1");
+    assert_eq!(other.toughness, 4, "anthem +1");
+}
+
+#[test]
+fn prismari_channeler_taps_for_blue_or_red() {
+    let mut g = two_player_game();
+    let pc = g.add_card_to_battlefield(0, catalog::prismari_channeler());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: pc, ability_index: 0, target: None,
+    }).expect("blue tap");
+    drain_stack(&mut g);
+    assert!(g.players[0].mana_pool.amount(Color::Blue) >= 1, "blue added");
+}
+
+#[test]
+fn lorehold_anthem_pumps_creatures() {
+    let mut g = two_player_game();
+    let _anthem = g.add_card_to_battlefield(0, catalog::lorehold_anthem());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let comp = g.compute_battlefield();
+    let b = comp.iter().find(|c| c.id == bear).expect("bear");
+    assert_eq!(b.power, 3);  // 2+1
+    assert_eq!(b.toughness, 3);  // 2+1
+}

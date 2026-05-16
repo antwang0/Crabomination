@@ -19,10 +19,21 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 195 | 59 | 1 |
-| STX (243 cards) | 426 | 13 | 0 |
+| STX (253 cards) | 436 | 13 | 0 |
 | STA reprints (in STX boosters) | 46 | 0 | — |
 
 Push (modern_decks, claude/modern_decks branch — latest revision —
+**10 MORE STX cards + 10 new tests = batch 4 — 58 cards total**):
+
+Adds 10 more STX cards: Owlin Tactician (ETB pump + grant flying),
+Pest Mediator (grows on lifegain), Inkling Aerialist (Inkling-ETB
+self-pump), Quandrix Theorist (draw per counter creature), Prismari
+Inferno (Pyroclasm scale 3 to each), Lorehold Resurgence (return
+MV≤3 to bf), Witherbloom Studies (mill 3 + return to hand),
+Silverquill Vanguard (+1/+1 Inkling anthem), Prismari Channeler
+(2/3 mana fixer), Lorehold Anthem (Glorious Anthem).
+
+Push (modern_decks, claude/modern_decks branch — prior revision —
 **12 MORE STX cards + 12 new tests = batch 3**):
 
 Adds 12 more mono-color staples + cross-college tools: Strixhaven

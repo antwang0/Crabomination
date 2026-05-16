@@ -20402,3 +20402,469 @@ pub fn lorehold_combatant() -> CardDefinition {
         exile_on_resolve: false,
     }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Push (modern_decks current, batch 4): 10 more STX cards — additional
+// staples and a few impactful effects.
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ── Owlin Tactician ────────────────────────────────────────────────────────
+
+/// Owlin Tactician — {2}{W}, 2/3 Bird Soldier with Flying.
+/// "When this creature enters, target creature gets +1/+1 and gains
+/// flying until end of turn."
+///
+/// Flier with a flicker-like pump rider that grants another creature
+/// evasion for a swing turn.
+pub fn owlin_tactician() -> CardDefinition {
+    CardDefinition {
+        name: "Owlin Tactician",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bird, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::PumpPT {
+                    what: target_filtered(SelectionRequirement::Creature),
+                    power: Value::Const(1),
+                    toughness: Value::Const(1),
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::GrantKeyword {
+                    what: Selector::Target(0),
+                    keyword: Keyword::Flying,
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Pest Mediator ──────────────────────────────────────────────────────────
+
+/// Pest Mediator — {1}{B}{G}, 2/2 Pest Cleric.
+/// "Whenever you gain life, put a +1/+1 counter on this creature."
+///
+/// Witherbloom lifegain payoff body — grows each time life is
+/// gained. Wired against `EventKind::LifeGained, YourControl` for
+/// the "you gain life" trigger.
+pub fn pest_mediator() -> CardDefinition {
+    CardDefinition {
+        name: "Pest Mediator",
+        cost: cost(&[generic(1), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Pest, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::LifeGained, EventScope::YourControl),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Inkling Aerialist ──────────────────────────────────────────────────────
+
+/// Inkling Aerialist — {2}{W}{B}, 2/2 Inkling Wizard with Flying.
+/// "Whenever another Inkling enters under your control, this creature
+/// gets +1/+1 until end of turn."
+///
+/// Inkling tribal payoff body. Wired against EntersBattlefield/
+/// AnotherOfYours with a `Predicate::EntityMatches { what: TriggerSource,
+/// filter: HasCreatureType(Inkling) }` gate.
+pub fn inkling_aerialist() -> CardDefinition {
+    CardDefinition {
+        name: "Inkling Aerialist",
+        cost: cost(&[generic(2), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnotherOfYours)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::HasCreatureType(CreatureType::Inkling),
+                }),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(1),
+                toughness: Value::Const(1),
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Quandrix Theorist ──────────────────────────────────────────────────────
+
+/// Quandrix Theorist — {3}{G}{U}, 3/3 Elf Wizard.
+/// "When this creature enters, draw a card for each creature you
+/// control with a +1/+1 counter on it."
+///
+/// Counter payoff — pulls value from a wide +1/+1 board. Wired via
+/// `Draw { amount: CountOf(EachPermanent(Creature & ControlledByYou &
+/// WithCounter(+1/+1))) }`.
+pub fn quandrix_theorist() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Theorist",
+        cost: cost(&[generic(3), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::CountOf(Box::new(Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::WithCounter(CounterType::PlusOnePlusOne)),
+                ))),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Prismari Inferno ──────────────────────────────────────────────────────
+
+/// Prismari Inferno — {4}{R}{R} Sorcery.
+/// "Prismari Inferno deals 3 damage to each creature."
+///
+/// Pyroclasm at scale — sweeps 3-toughness boards for 6 mana. Wired
+/// as `ForEach(EachPermanent(Creature)) → DealDamage 3`.
+pub fn prismari_inferno() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Inferno",
+        cost: cost(&[generic(4), r(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::ForEach {
+            selector: Selector::EachPermanent(SelectionRequirement::Creature),
+            body: Box::new(Effect::DealDamage {
+                amount: Value::Const(3),
+                to: Selector::TriggerSource,
+            }),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Lorehold Resurgence ────────────────────────────────────────────────────
+
+/// Lorehold Resurgence — {2}{R}{W} Sorcery.
+/// "Return target creature card with mana value 3 or less from your
+/// graveyard to the battlefield."
+///
+/// Sun Titan's reach-down in sorcery form. 4 mana, returns up to a
+/// 3-MV creature.
+pub fn lorehold_resurgence() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Resurgence",
+        cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Move {
+            what: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::ManaValueAtMost(3)),
+            ),
+            to: ZoneDest::Battlefield {
+                controller: PlayerRef::You,
+                tapped: false,
+            },
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Witherbloom Studies ────────────────────────────────────────────────────
+
+/// Witherbloom Studies — {1}{B}{G} Sorcery.
+/// "Mill 3 cards, then return target creature card from your
+/// graveyard to your hand."
+///
+/// Self-mill into selective reanimation-to-hand. Same shape as
+/// Stitcher's Supplier-style mill + Raise Dead.
+pub fn witherbloom_studies() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Studies",
+        cost: cost(&[generic(1), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Mill {
+                who: Selector::You,
+                amount: Value::Const(3),
+            },
+            Effect::Move {
+                what: target_filtered(SelectionRequirement::Creature),
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Silverquill Vanguard ───────────────────────────────────────────────────
+
+/// Silverquill Vanguard — {3}{W}{B}, 4/3 Inkling Cleric with Flying.
+/// "Other Inkling creatures you control get +1/+1."
+///
+/// Inkling tribal anthem at +1/+1 (Tenured Inkcaster's lesser sibling
+/// — Inkcaster is +2/+2 for 4 mana, Vanguard is +1/+1 for 5 mana with
+/// a flying 4/3 body). Wired via `tribal_anthem_for_name` helper-
+/// table extension (same path as Tenured Inkcaster).
+pub fn silverquill_vanguard() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Vanguard",
+        cost: cost(&[generic(3), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![StaticAbility {
+            description: "Other Inkling creatures you control get +1/+1.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::HasCreatureType(CreatureType::Inkling))
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                power: 1,
+                toughness: 1,
+            },
+        }],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Prismari Channeler ─────────────────────────────────────────────────────
+
+/// Prismari Channeler — {2}{R}, 2/3 Human Wizard.
+/// "{T}: Add {U} or {R}."
+///
+/// Mana-fixing dork in Prismari colors for U/R decks. Same shape as
+/// the Quandrix Engineer's body.
+pub fn prismari_channeler() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Channeler",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: ManaCost::default(),
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::OfColor(Color::Blue, Value::Const(1)),
+                },
+                once_per_turn: false,
+                sorcery_speed: false,
+                sac_cost: false,
+                condition: None,
+                life_cost: 0,
+                from_graveyard: false,
+                exile_self_cost: false,
+                exile_other_filter: None,
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: ManaCost::default(),
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::OfColor(Color::Red, Value::Const(1)),
+                },
+                once_per_turn: false,
+                sorcery_speed: false,
+                sac_cost: false,
+                condition: None,
+                life_cost: 0,
+                from_graveyard: false,
+                exile_self_cost: false,
+                exile_other_filter: None,
+            },
+        ],
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Lorehold Anthem ────────────────────────────────────────────────────────
+
+/// Lorehold Anthem — {2}{W} Enchantment.
+/// "Creatures you control get +1/+1."
+///
+/// Classic Glorious Anthem. Wired via a `StaticAbility::PumpPT` with
+/// `AffectedPermanents::All { controller: Some(true), card_types:
+/// [Creature], exclude_source: false }`.
+pub fn lorehold_anthem() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Anthem",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![StaticAbility {
+            description: "Creatures you control get +1/+1.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+                power: 1,
+                toughness: 1,
+            },
+        }],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
