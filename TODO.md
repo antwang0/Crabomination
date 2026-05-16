@@ -18,12 +18,10 @@ status tag (✅ wired, 🟡 partial, ⏳ todo) plus a short note.
   (a) **506.1** five steps (BoC, declare attackers, declare blockers,
   combat damage, end of combat) — ✅ (`TurnStep::BeginCombat /
   DeclareAttackers / DeclareBlockers / CombatDamage / EndCombat` in
-  `game/types.rs`); the first-strike split-damage step (CR 506.1)
-  is ⏳ (engine resolves combat damage in a single step that
-  collapses both first-strike and regular into one tick — no
-  `TurnStep::FirstStrikeDamage` yet; first-strike+regular tests
-  pass because the resolver applies first-strike damage before
-  regular damage within the same step). (b) **506.2** active = attacker,
+  `game/types.rs`); first-strike split-damage step ✅ (the
+  `TurnStep::FirstStrikeDamage` variant is present in `TurnStep`
+  and runs before the regular `CombatDamage` step when any
+  attacker/blocker has First Strike or Double Strike). (b) **506.2** active = attacker,
   non-active = defender — ✅ (`declare_attackers` enforces
   `AttackTarget::Player(p) != active_player_idx`). (c) **506.3**
   only creatures attack/block — ✅ (`declare_attackers` requires

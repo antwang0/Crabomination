@@ -16795,6 +16795,141 @@ pub fn quandrix_wavebender() -> CardDefinition {
     }
 }
 
+// ── Tezzeret's Inkling Forge ───────────────────────────────────────────────
+
+/// Tezzeret's Inkling Forge — {1}{W}{B} Enchantment (synthesised STX
+/// Silverquill flavor). "At the beginning of your end step, create a
+/// 1/1 white and black Inkling creature token with flying."
+///
+/// Per-turn Inkling token generator. Wired via the `StepBegins
+/// (EndStep)/ActivePlayer` trigger (so it only fires on your own
+/// end step). Mints one Inkling per turn — slow but inevitable
+/// go-wide finisher. Tests:
+/// `tezzerets_inkling_forge_is_a_three_mana_wb_enchantment`.
+pub fn tezzerets_inkling_forge() -> CardDefinition {
+    use crate::catalog::sets::sos::inkling_token;
+    use crate::game::types::TurnStep;
+    CardDefinition {
+        name: "Tezzeret's Inkling Forge",
+        cost: cost(&[generic(1), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::End),
+                EventScope::ActivePlayer,
+            ),
+            // Only fires on the controller's own end step. The
+            // ActivePlayer scope already gates this — on opp's end step,
+            // active = opp ≠ controller of Forge, so the trigger
+            // wouldn't fire.
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: inkling_token(),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Quandrix Snake-Charmer ─────────────────────────────────────────────────
+
+/// Quandrix Snake-Charmer — {2}{G}, 3/3 Snake Druid (synthesised STX
+/// Quandrix flavor). "When this creature enters, draw a card."
+///
+/// 3-mana 3/3 Elvish Visionary upgrade — efficient body + cantrip
+/// in green. Slots into any Quandrix midrange shell. Tests:
+/// `quandrix_snake_charmer_is_a_three_mana_three_three_snake_druid`,
+/// `quandrix_snake_charmer_etb_cantrips`.
+pub fn quandrix_snake_charmer() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Snake-Charmer",
+        cost: cost(&[generic(2), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Snake, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Witherbloom Necrotouch ─────────────────────────────────────────────────
+
+/// Witherbloom Necrotouch — {2}{B}{G} Instant (synthesised STX
+/// Witherbloom flavor). "Destroy target creature. You gain 2 life."
+///
+/// 4-mana premium removal + life buffer. Mirror to Grapple with
+/// Death (already exists as {1}{B}{G}, +1 life) but trades flexibility
+/// (no artifact mode) for life-gain depth (2 life instead of 1).
+/// Tests: `witherbloom_necrotouch_destroys_creature_and_gains_two`,
+/// `witherbloom_necrotouch_is_a_four_mana_bg_instant`.
+pub fn witherbloom_necrotouch() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Necrotouch",
+        cost: cost(&[generic(2), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Destroy {
+                what: target_filtered(SelectionRequirement::Creature),
+            },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
 // ── Inkling Aether-Smith ───────────────────────────────────────────────────
 
 /// Inkling Aether-Smith — {2}{W}{B}, 2/3 Inkling Artificer with

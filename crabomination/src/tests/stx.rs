@@ -15125,6 +15125,73 @@ fn quandrix_wavebender_is_a_three_mana_two_three_elf_druid() {
     assert!(def.has_creature_type(crate::card::CreatureType::Druid));
 }
 
+// ── Tezzeret's Inkling Forge ───────────────────────────────────────────────
+
+#[test]
+fn tezzerets_inkling_forge_is_a_three_mana_wb_enchantment() {
+    let def = catalog::tezzerets_inkling_forge();
+    assert_eq!(def.cost.cmc(), 3);
+    assert!(def.card_types.contains(&crate::card::CardType::Enchantment));
+}
+
+// ── Quandrix Snake-Charmer ─────────────────────────────────────────────────
+
+#[test]
+fn quandrix_snake_charmer_is_a_three_mana_three_three_snake_druid() {
+    let def = catalog::quandrix_snake_charmer();
+    assert_eq!(def.cost.cmc(), 3);
+    assert_eq!(def.power, 3);
+    assert_eq!(def.toughness, 3);
+    assert!(def.has_creature_type(crate::card::CreatureType::Snake));
+    assert!(def.has_creature_type(crate::card::CreatureType::Druid));
+}
+
+#[test]
+fn quandrix_snake_charmer_etb_cantrips() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let sc = g.add_card_to_hand(0, catalog::quandrix_snake_charmer());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: sc, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Snake-Charmer castable");
+    drain_stack(&mut g);
+    // Hand: -1 (cast) + 1 (ETB draw) = 0 net.
+    assert_eq!(g.players[0].hand.len(), hand_before);
+}
+
+// ── Witherbloom Necrotouch ─────────────────────────────────────────────────
+
+#[test]
+fn witherbloom_necrotouch_is_a_four_mana_bg_instant() {
+    let def = catalog::witherbloom_necrotouch();
+    assert_eq!(def.cost.cmc(), 4);
+    assert!(def.card_types.contains(&crate::card::CardType::Instant));
+}
+
+#[test]
+fn witherbloom_necrotouch_destroys_creature_and_gains_two() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let nt = g.add_card_to_hand(0, catalog::witherbloom_necrotouch());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let life_before = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: nt,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    }).expect("Necrotouch castable");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == bear), "bear destroyed");
+    assert_eq!(g.players[0].life, life_before + 2, "caster gains 2");
+}
+
 // ── Augusta, Dean of Order (promoted) ──────────────────────────────────────
 
 #[test]

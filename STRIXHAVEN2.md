@@ -19,11 +19,11 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 195 | 59 | 1 |
-| STX (195 cards) | 346 | 13 | 0 |
+| STX (195 cards) | 349 | 13 | 0 |
 | STA reprints (in STX boosters) | 46 | 0 | — |
 
 Push (modern_decks, claude/modern_decks branch — latest revision —
-**40 NEW STX cards + 68 new functionality tests + Augusta promotion + CR 506 audit**):
+**43 NEW STX cards + 73 new functionality tests + Augusta promotion + CR 506 audit**):
 
 This push adds 36 new card factories to `stx::extras` focused on
 Silverquill (W/B) school depth + cross-college utility. All 1855 tests
@@ -106,6 +106,12 @@ of Order body-only → per-attacker +1/+1+Vigilance approximation).
 - **Quandrix Wavebender** ({1}{G}{U}, 2/3 Elf Druid) — Whenever you
   cast a spell with {X} in its mana cost, put X +1/+1 counters on
   this creature.
+- **Tezzeret's Inkling Forge** ({1}{W}{B}, Enchantment) — End-step
+  Inkling token generator.
+- **Quandrix Snake-Charmer** ({2}{G}, 3/3 Snake Druid) — ETB cantrip
+  (Elvish Visionary upgrade).
+- **Witherbloom Necrotouch** ({2}{B}{G}, Instant) — Destroy target
+  creature + 2 life.
 
 **Augusta, Dean of Order — 🟡 → 🟡 (improved)**: Body-only wire upgraded
 to a per-attacker `Attacks/AnotherOfYours` trigger that pumps the
