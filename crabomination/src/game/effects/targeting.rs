@@ -34,7 +34,12 @@ impl GameState {
         controller: usize,
         avoid_source: Option<CardId>,
     ) -> Option<Target> {
-        let req = eff.primary_target_filter()?;
+        // Effects with a bare `Selector::Target(0)` (e.g. Lightning Bolt's
+        // "deal 3 damage to any target") have no surfaced primary filter —
+        // they accept any legal entity. Fall back to `Any` so the picker
+        // walks players + permanents instead of short-circuiting to None.
+        let any_filter = crate::card::SelectionRequirement::Any;
+        let req = eff.primary_target_filter().unwrap_or(&any_filter);
         // First opponent on a different team. Falls back to the next
         // seat in singleton-team / unknown-team cases so the legacy 1v1
         // pick (`(controller + 1) % n`) is preserved.
