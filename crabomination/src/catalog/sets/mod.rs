@@ -26,6 +26,28 @@ pub fn tap_add(color: Color) -> ActivatedAbility {
     }
 }
 
+/// Mana ability shorthand: `{T}: Add one mana of any color.` — rainbow
+/// rocks (Mana Tower Crystal, Manalith). Player chooses the color at
+/// activation time via the `ManaPayload::AnyOneColor(1)` payload.
+pub fn tap_add_any_color() -> ActivatedAbility {
+    ActivatedAbility {
+        tap_cost: true,
+        mana_cost: ManaCost::default(),
+        effect: Effect::AddMana {
+            who: PlayerRef::You,
+            pool: ManaPayload::AnyOneColor(Value::Const(1)),
+        },
+        once_per_turn: false,
+        sorcery_speed: false,
+        sac_cost: false,
+        condition: None,
+        life_cost: 0,
+        from_graveyard: false,
+        exile_self_cost: false,
+        exile_other_filter: None,
+    }
+}
+
 /// Mana ability shorthand: `{T}: Add {C}.` (one true colorless pip, not
 /// generic). Used by colorless-only lands (Wastes, Petrified Hamlet) and
 /// Eldrazi-aligned utility lands.

@@ -16918,3 +16918,118 @@ fn lorehold_anthem_pumps_creatures() {
     assert_eq!(b.power, 3);  // 2+1
     assert_eq!(b.toughness, 3);  // 2+1
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Push (modern_decks current batch 5): tests for 6 more STX cards.
+// ─────────────────────────────────────────────────────────────────────────────
+
+#[test]
+fn strixhaven_diplomat_etb_draws_card() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let sd = g.add_card_to_hand(0, catalog::strixhaven_diplomat());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: sd, target: None, additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("Diplomat castable");
+    drain_stack(&mut g);
+    // -1 (cast) + 1 (draw) = 0 net
+    assert_eq!(g.players[0].hand.len(), hand_before);
+}
+
+#[test]
+fn lorehold_banishment_exiles_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let lb = g.add_card_to_hand(0, catalog::lorehold_banishment());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: lb, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Banishment castable");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == bear), "bear exiled");
+}
+
+#[test]
+fn quandrix_mass_counter_fans_two_counters() {
+    let mut g = two_player_game();
+    let b1 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b2 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let qmc = g.add_card_to_hand(0, catalog::quandrix_mass_counter());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: qmc, target: None, additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("Mass Counter castable");
+    drain_stack(&mut g);
+    let b1_card = g.battlefield.iter().find(|c| c.id == b1).expect("b1");
+    let b2_card = g.battlefield.iter().find(|c| c.id == b2).expect("b2");
+    assert_eq!(b1_card.counter_count(CounterType::PlusOnePlusOne), 2);
+    assert_eq!(b2_card.counter_count(CounterType::PlusOnePlusOne), 2);
+}
+
+#[test]
+fn prismari_storm_burns_four_and_draws() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let target = g.add_card_to_battlefield(1, catalog::serra_angel());  // 4/4
+    let ps = g.add_card_to_hand(0, catalog::prismari_storm());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: ps, target: Some(Target::Permanent(target)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Storm castable");
+    drain_stack(&mut g);
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == target), "angel dies");
+    // -1 cast + 1 draw = 0 net
+    assert_eq!(g.players[0].hand.len(), hand_before);
+}
+
+#[test]
+fn witherbloom_plague_sweeps_small_creatures() {
+    let mut g = two_player_game();
+    let small = g.add_card_to_battlefield(0, catalog::grizzly_bears());  // 2/2
+    let big = g.add_card_to_battlefield(1, catalog::serra_angel());  // 4/4
+    let plague = g.add_card_to_hand(0, catalog::witherbloom_plague());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: plague, target: None, additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("Plague castable");
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == small),
+        "small dies");
+    assert!(!g.players[1].graveyard.iter().any(|c| c.id == big),
+        "big survives (toughness 4 > 2 cap)");
+}
+
+#[test]
+fn silverquill_aerie_etb_mints_two_inklings() {
+    let mut g = two_player_game();
+    let sa = g.add_card_to_hand(0, catalog::silverquill_aerie());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: sa, target: None, additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("Aerie castable");
+    drain_stack(&mut g);
+    let inklings: Vec<_> = g.battlefield.iter()
+        .filter(|c| c.controller == 0 && c.is_token && c.definition.name == "Inkling")
+        .collect();
+    assert_eq!(inklings.len(), 2, "two Inkling tokens");
+}

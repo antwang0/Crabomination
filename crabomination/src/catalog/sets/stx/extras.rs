@@ -20004,6 +20004,7 @@ pub fn strixhaven_footsoldier() -> CardDefinition {
 /// Manalith-style 3-mana rainbow rock at 3 mana — fixes colors for
 /// 3-color college decks.
 pub fn mage_tower_crystal() -> CardDefinition {
+    use crate::catalog::sets::tap_add_any_color;
     CardDefinition {
         name: "Mage Tower Crystal",
         cost: cost(&[generic(2)]),
@@ -20014,22 +20015,7 @@ pub fn mage_tower_crystal() -> CardDefinition {
         toughness: 0,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: vec![ActivatedAbility {
-            tap_cost: true,
-            mana_cost: ManaCost::default(),
-            effect: Effect::AddMana {
-                who: PlayerRef::You,
-                pool: ManaPayload::AnyOneColor(Value::Const(1)),
-            },
-            once_per_turn: false,
-            sorcery_speed: false,
-            sac_cost: false,
-            condition: None,
-            life_cost: 0,
-            from_graveyard: false,
-            exile_self_cost: false,
-            exile_other_filter: None,
-        }],
+        activated_abilities: vec![tap_add_any_color()],
         triggered_abilities: vec![],
         static_abilities: vec![],
         base_loyalty: 0,
@@ -20859,6 +20845,244 @@ pub fn lorehold_anthem() -> CardDefinition {
                 toughness: 1,
             },
         }],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Push (modern_decks current, batch 5): 7 more STX cards including some
+// more interesting effects (Selesnya/Azorius dual-pip + cross-college).
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ── Strixhaven Diplomat ────────────────────────────────────────────────────
+
+/// Strixhaven Diplomat — {2}{W}{U}, 2/4 Human Wizard with Flying.
+/// "When this creature enters, draw a card."
+///
+/// 4-mana 2/4 flier with a cantrip ETB — flash-less Mulldrifter in
+/// Azorius colors with a smaller body.
+pub fn strixhaven_diplomat() -> CardDefinition {
+    CardDefinition {
+        name: "Strixhaven Diplomat",
+        cost: cost(&[generic(2), w(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Lorehold Banishment ────────────────────────────────────────────────────
+
+/// Lorehold Banishment — {1}{W} Instant.
+/// "Exile target creature."
+///
+/// Path-to-Exile-shape at 2 mana without the land ramp rider. Wired
+/// as `Effect::Move(target Creature → Exile)`.
+pub fn lorehold_banishment() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Banishment",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Move {
+            what: target_filtered(SelectionRequirement::Creature),
+            to: ZoneDest::Exile,
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Quandrix Mass Counter ──────────────────────────────────────────────────
+
+/// Quandrix Mass Counter — {3}{G}{U} Instant.
+/// "Put two +1/+1 counters on each creature you control."
+///
+/// Fan-out anthem — bumps your whole board. Wired via `ForEach
+/// (EachPermanent(Creature & ControlledByYou)) → AddCounter +1/+1 ×2`.
+pub fn quandrix_mass_counter() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Mass Counter",
+        cost: cost(&[generic(3), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::ForEach {
+            selector: Selector::EachPermanent(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            ),
+            body: Box::new(Effect::AddCounter {
+                what: Selector::TriggerSource,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(2),
+            }),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Prismari Storm ─────────────────────────────────────────────────────────
+
+/// Prismari Storm — {2}{U}{R} Sorcery.
+/// "Prismari Storm deals 4 damage to target creature. Draw a card."
+///
+/// 4-mana 4-damage + cantrip — same shape as Magma Jet on a creature
+/// body with a card replacement.
+pub fn prismari_storm() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Storm",
+        cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                amount: Value::Const(4),
+                to: target_filtered(SelectionRequirement::Creature),
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Witherbloom Plague ────────────────────────────────────────────────────
+
+/// Witherbloom Plague — {2}{B}{G} Sorcery.
+/// "Destroy all creatures with toughness 2 or less."
+///
+/// Drown in Sorrow / Pyroclasm variant — sweeps small creatures
+/// only. Wired via `ForEach(EachPermanent(Creature & Toughness ≤ 2))
+/// → Destroy`.
+pub fn witherbloom_plague() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Plague",
+        cost: cost(&[generic(2), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::ForEach {
+            selector: Selector::EachPermanent(
+                SelectionRequirement::Creature.and(SelectionRequirement::ToughnessAtMost(2)),
+            ),
+            body: Box::new(Effect::Destroy {
+                what: Selector::TriggerSource,
+            }),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Silverquill Aerie ─────────────────────────────────────────────────────
+
+/// Silverquill Aerie — {3}{W}{B} Enchantment.
+/// "When this enchantment enters, create two 1/1 white and black
+/// Inkling creature tokens with flying."
+///
+/// 5-mana flying-token mint — same shape as Bitterblossom-style
+/// Inkling generation at sorcery speed. Reuses `inkling_token()`.
+pub fn silverquill_aerie() -> CardDefinition {
+    use crate::catalog::sets::sos::inkling_token;
+    CardDefinition {
+        name: "Silverquill Aerie",
+        cost: cost(&[generic(3), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                definition: inkling_token(),
+            },
+        }],
+        static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,

@@ -19,10 +19,24 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 195 | 59 | 1 |
-| STX (253 cards) | 436 | 13 | 0 |
+| STX (259 cards) | 442 | 13 | 0 |
 | STA reprints (in STX boosters) | 46 | 0 | — |
 
 Push (modern_decks, claude/modern_decks branch — latest revision —
+**6 MORE STX cards + 6 new tests + tap_add_any_color helper =
+batch 5 — 64 cards total**):
+
+Adds 6 more STX cards: Strixhaven Diplomat (Azorius cantrip flier),
+Lorehold Banishment (Path to Exile shape), Quandrix Mass Counter
+(+2/+2 fan-out), Prismari Storm (4-damage + draw), Witherbloom Plague
+(small-creature wipe), Silverquill Aerie (Inkling enchantment).
+
+Engine helper: `catalog::sets::tap_add_any_color()` — a one-line
+factory for the `{T}: Add one mana of any color` activated ability,
+used by Mage Tower Crystal and unblocking any future rainbow-rock
+card without re-spelling the full `ActivatedAbility` literal.
+
+Push (modern_decks, claude/modern_decks branch — prior revision —
 **10 MORE STX cards + 10 new tests = batch 4 — 58 cards total**):
 
 Adds 10 more STX cards: Owlin Tactician (ETB pump + grant flying),
