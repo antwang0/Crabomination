@@ -93,14 +93,30 @@ pub fn lookup_by_name(name: &str) -> Option<CardDefinition> {
 
 fn lookup_token_by_name(name: &str) -> Option<CardDefinition> {
     use crate::game::effects::{blood_token, clue_token, food_token, token_to_card_definition, treasure_token};
-    let token = match name {
-        "Clue" => clue_token(),
-        "Treasure" => treasure_token(),
-        "Food" => food_token(),
-        "Blood" => blood_token(),
-        _ => return None,
-    };
-    Some(token_to_card_definition(&token))
+    // Predefined utility tokens (CR 111.10): Clue, Treasure, Food, Blood.
+    if let Some(token) = match name {
+        "Clue" => Some(clue_token()),
+        "Treasure" => Some(treasure_token()),
+        "Food" => Some(food_token()),
+        "Blood" => Some(blood_token()),
+        _ => None,
+    } {
+        return Some(token_to_card_definition(&token));
+    }
+    // SOS / STX college tokens — minted by Inkling Summoning, Pest Summoning,
+    // Spirit Mascot, Fractal Anomaly, Lorehold Excavation, etc. Snapshots
+    // mid-game include these on the battlefield, so the round-trip-load
+    // path needs to resolve them by name.
+    if let Some(token) = match name {
+        "Inkling" => Some(sets::sos::inkling_token()),
+        "Pest" => Some(sets::stx::stx_pest_token()),
+        "Spirit" => Some(sets::sos::spirit_token()),
+        "Fractal" => Some(sets::sos::fractal_token()),
+        _ => None,
+    } {
+        return Some(token_to_card_definition(&token));
+    }
+    None
 }
 
 #[cfg(test)]
@@ -123,6 +139,24 @@ mod tests {
     fn lookup_resolves_a_token() {
         let def = lookup_by_name("Treasure").expect("Treasure token should resolve via the token table");
         assert_eq!(def.name, "Treasure");
+    }
+
+    #[test]
+    fn lookup_resolves_each_predefined_utility_token() {
+        for token_name in ["Clue", "Treasure", "Food", "Blood"] {
+            let def = lookup_by_name(token_name).expect(token_name);
+            assert_eq!(def.name, token_name);
+        }
+    }
+
+    #[test]
+    fn lookup_resolves_sos_stx_college_tokens() {
+        for token_name in ["Inkling", "Pest", "Spirit", "Fractal"] {
+            let def = lookup_by_name(token_name).expect(token_name);
+            assert_eq!(def.name, token_name);
+            assert!(def.is_creature(),
+                "{} token should be a creature definition", token_name);
+        }
     }
 
     #[test]
