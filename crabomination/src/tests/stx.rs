@@ -13429,6 +13429,64 @@ fn witherbloom_necrotutor_is_a_four_mana_three_two_warlock() {
     assert!(def.has_creature_type(crate::card::CreatureType::Warlock));
 }
 
+// ── Lorehold Excavator ─────────────────────────────────────────────────────
+
+#[test]
+fn lorehold_excavator_is_a_three_mana_two_two_spirit_cleric() {
+    let def = catalog::lorehold_excavator();
+    assert_eq!(def.cost.cmc(), 3);
+    assert_eq!(def.power, 2);
+    assert_eq!(def.toughness, 2);
+    assert!(def.has_creature_type(crate::card::CreatureType::Spirit));
+}
+
+#[test]
+fn lorehold_excavator_etb_exiles_target_gy_card() {
+    let mut g = two_player_game();
+    // Place a card in opponent's graveyard.
+    let _bolt = g.add_card_to_graveyard(1, catalog::lightning_bolt());
+    let exc = g.add_card_to_hand(0, catalog::lorehold_excavator());
+    let opp_gy_before = g.players[1].graveyard.len();
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: exc, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Excavator castable");
+    drain_stack(&mut g);
+    // Opp gy should be reduced by one (the bolt was exiled).
+    assert_eq!(g.players[1].graveyard.len(), opp_gy_before - 1);
+}
+
+// ── Stridehollow Vampire ──────────────────────────────────────────────────
+
+#[test]
+fn stridehollow_vampire_is_a_three_mana_two_two_vampire() {
+    let def = catalog::stridehollow_vampire();
+    assert_eq!(def.cost.cmc(), 3);
+    assert_eq!(def.power, 2);
+    assert_eq!(def.toughness, 2);
+    assert!(def.has_creature_type(crate::card::CreatureType::Vampire));
+    assert!(def.keywords.contains(&Keyword::Flying));
+}
+
+#[test]
+fn stridehollow_vampire_etb_default_draws() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let id = g.add_card_to_hand(0, catalog::stridehollow_vampire());
+    let hand_before = g.players[0].hand.len();
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Vampire castable");
+    drain_stack(&mut g);
+    // -1 cast + 1 draw = 0 net (mode 0 picked by AutoDecider).
+    assert_eq!(g.players[0].hand.len(), hand_before);
+}
+
 #[test]
 fn witherbloom_necrotutor_etb_returns_creature_card_and_loses_two_life() {
     let mut g = two_player_game();

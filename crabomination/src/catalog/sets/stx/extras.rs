@@ -13795,6 +13795,127 @@ pub fn quandrix_sphinx() -> CardDefinition {
     }
 }
 
+// ── Lorehold Excavator (synthesised STX-flavor) ───────────────────────────
+
+/// Lorehold Excavator — {1}{R}{W}, 2/2 Spirit Cleric (synthesised STX
+/// Lorehold flavor). "When this creature enters, exile target card
+/// from a graveyard. / {2}{R}{W}, {T}: This creature deals 1 damage
+/// to any target."
+///
+/// Push (modern_decks, NEW, `stx::extras`): A 3-mana gy-hate body
+/// with an activated ping. Wired with an ETB exile-target-gy-card
+/// trigger + tap activation. Tests:
+/// `lorehold_excavator_etb_exiles_target_gy_card`,
+/// `lorehold_excavator_is_a_three_mana_two_two_spirit_cleric`.
+pub fn lorehold_excavator() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Excavator",
+        cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[generic(2), r(), w()]),
+            effect: Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature
+                        .or(SelectionRequirement::Player)
+                        .or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::Const(1),
+            },
+            once_per_turn: false,
+            sorcery_speed: false,
+            sac_cost: false,
+            condition: None,
+            life_cost: 0,
+            from_graveyard: false,
+            exile_self_cost: false,
+            exile_other_filter: None,
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Move {
+                what: Selector::one_of(Selector::CardsInZone {
+                    who: PlayerRef::EachPlayer,
+                    zone: crate::card::Zone::Graveyard,
+                    filter: SelectionRequirement::Any,
+                }),
+                to: ZoneDest::Exile,
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Stridehollow Vampire (synthesised STX Silverquill modal pump) ─────────
+
+/// Stridehollow Vampire — {1}{W}{B}, 2/2 Vampire Soldier (synthesised
+/// STX Silverquill flavor). "Flying. / When this creature enters,
+/// choose one — / • Draw a card. / • Target creature gets +1/+1
+/// until end of turn."
+///
+/// Push (modern_decks, NEW, `stx::extras`): A 3-mana evasive modal
+/// flier. ETB ChooseMode picks draw or pump. AutoDecider picks mode
+/// 0 (draw). Tests:
+/// `stridehollow_vampire_etb_default_draws`,
+/// `stridehollow_vampire_is_a_three_mana_two_two_vampire`.
+pub fn stridehollow_vampire() -> CardDefinition {
+    CardDefinition {
+        name: "Stridehollow Vampire",
+        cost: cost(&[generic(1), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::ChooseMode(vec![
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
+                Effect::PumpPT {
+                    what: target_filtered(SelectionRequirement::Creature),
+                    power: Value::Const(1),
+                    toughness: Value::Const(1),
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
 // ── Witherbloom Necrotutor (synthesised STX-flavor Witherbloom) ───────────
 
 /// Witherbloom Necrotutor — {2}{B}{B}, 3/2 Human Warlock (synthesised
