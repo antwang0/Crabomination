@@ -11,6 +11,50 @@ Periodic spot-check of the rules document
 (`crabomination/MagicCompRules 20260116.txt`). Each rule below has a
 status tag (✅ wired, 🟡 partial, ⏳ todo) plus a short note.
 
+- 🟡 **CR 506 — Combat Phase** (push modern_decks audit,
+  claude/modern_decks branch): The combat-phase framework — five
+  steps, attacker/blocker declaration, removed-from-combat semantics,
+  and "had to attack" / "alone" qualifiers. Audit:
+  (a) **506.1** five steps (BoC, declare attackers, declare blockers,
+  combat damage, end of combat) — ✅ (`TurnStep::BeginCombat /
+  DeclareAttackers / DeclareBlockers / CombatDamage / EndCombat` in
+  `game/types.rs`); the first-strike split-damage step (CR 506.1)
+  is ⏳ (engine resolves combat damage in a single step that
+  collapses both first-strike and regular into one tick — no
+  `TurnStep::FirstStrikeDamage` yet; first-strike+regular tests
+  pass because the resolver applies first-strike damage before
+  regular damage within the same step). (b) **506.2** active = attacker,
+  non-active = defender — ✅ (`declare_attackers` enforces
+  `AttackTarget::Player(p) != active_player_idx`). (c) **506.3**
+  only creatures attack/block — ✅ (`declare_attackers` requires
+  `card.definition.is_creature()` via `card.can_attack()`).
+  (d) **506.4** removed-from-combat triggers (leaves battlefield,
+  controller change, phase out, etc.) — 🟡 (LBF-during-combat
+  removes the creature from `self.attacking` and `self.blockers`
+  via the SBA dies handler; controller-change removes via
+  `clear_combat` — but the corner case of "creature stops being a
+  creature mid-combat" isn't audited, and phasing isn't modelled).
+  (e) **506.4a** declared attackers/blockers can't be re-removed
+  by "can't attack/block" effects after declaration — ✅
+  (post-declaration `Effect::Tap` / "can't attack" filters do not
+  remove from `self.attacking`). (f) **506.4b** tap/untap doesn't
+  remove from combat — ✅ (`self.attacking` only mutated on death,
+  controller change, or end-of-combat clear). (g) **506.5** "attacking
+  alone" / "blocking alone" — ⏳ (no `is_attacking_alone()` predicate;
+  cards like Marauding Raptor / Battlemastery would need this).
+  (h) **506.6** "had to attack" — ⏳ (no requirement-vs-choice
+  tracking; cards like Brave the Sands' "creatures you control can
+  block as though they could block two" don't reach the predicate).
+  (i) **506.7** "cast only [before/after] [point]" timing — ⏳ (no
+  cast-time predicate that gates on declare-attackers / declare-
+  blockers step phase; cards like Pyrohemia, Tibalt's Trickery,
+  Burst of Speed-style "play only during combat" would need it).
+  No new tests added — the combat framework is exercised by every
+  combat-damage test in the suite (CreatureDied via SBA, Sparring
+  Regimen's per-attacker counters, Hofri/Quintorius anthems on
+  attacking creatures). Promote to ✅ when the first-strike
+  damage-step split and 506.5/.6/.7 land.
+
 - 🟡 **CR 605 — Mana Abilities** (push modern_decks audit,
   claude/modern_decks branch): The mana-ability framework — what
   qualifies as a mana ability and how it resolves. Audit confirms

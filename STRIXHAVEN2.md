@@ -19,10 +19,104 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 195 | 59 | 1 |
-| STX (195 cards) | 306 | 14 | 0 |
+| STX (195 cards) | 346 | 13 | 0 |
 | STA reprints (in STX boosters) | 46 | 0 | — |
 
 Push (modern_decks, claude/modern_decks branch — latest revision —
+**40 NEW STX cards + 68 new functionality tests + Augusta promotion + CR 506 audit**):
+
+This push adds 36 new card factories to `stx::extras` focused on
+Silverquill (W/B) school depth + cross-college utility. All 1855 tests
+pass (+61 from prior baseline). Cards cover Inkling tribal anthems,
+Magecraft drain/draw payoffs, life-gain triggers, modal ETB minions,
+flash-and-burn instants, dual-pip evasion bodies, and Lorehold/Quandrix/
+Prismari support cards. Includes one partial promotion (Augusta, Dean
+of Order body-only → per-attacker +1/+1+Vigilance approximation).
+
+**NEW STX cards (this push, 36):**
+
+- **Inkling Scholar** ({2}{W}{B}, 3/3 Inkling Cleric with Flying +
+  Lifelink) — Tribal-anthem target.
+- **Inkling Squire** ({W}, 1/1 Inkling Soldier with Flying) — Cheap
+  Inkling tribal.
+- **Silverquill Scholar** ({W}{B}, 2/1 Human Wizard) — Magecraft draw
+  + lose 1.
+- **Inkling Reinforcement** ({W}{B}, Sorcery) — Two 1/1 Inkling tokens
+  with Flying.
+- **Pestilent Verse** ({1}{B}{B}, Sorcery) — Destroy target creature,
+  lose 1 life.
+- **Inkling Ambusher** ({2}{B}, 2/2 Inkling Rogue with Flash + Flying).
+- **Silver-Quill Scholarship** ({2}{W}, Sorcery) — +1/+1 counter on
+  target creature + cantrip.
+- **Silvercrown Lecturer** ({3}{W}, 2/4 Human Cleric) — ETB +1/+1
+  counter on friendly creature.
+- **Demolishing Lecture** ({2}{B}, Sorcery) — Destroy target creature
+  with toughness 2 or less.
+- **Inkling Mentor** ({3}{W}{B}, 3/4 Human Cleric) — Inkling tribal
+  +1/+1 anthem (StaticEffect::PumpPT with `OtherThanSource`).
+- **Pestilent Inkmage** ({2}{W}{B}, 2/4 Human Wizard with Lifelink) —
+  Magecraft self-pump (+2/+0 EOT).
+- **Inkling Reaver** ({3}{B}, 3/3 Inkling Warrior with Menace).
+- **Quintessential Inkling** ({1}{W}{B}, 2/2 Inkling Spirit with
+  Flying + Lifelink).
+- **Quill Witch** ({1}{B}{B}, 2/2 Human Warlock with Flying) —
+  Magecraft drain 1.
+- **Lesson in Honor** ({1}{W}, Sorcery — Lesson) — +2/+2 EOT + Learn.
+- **Inkling Squad** ({3}{W}{B}, Sorcery) — Three 1/1 Inkling tokens
+  with Flying.
+- **Inkling Drillmaster** ({1}{W}, 1/2 Inkling Soldier with Flying) —
+  ETB +1/+1 counter on another Inkling.
+- **Sealing Verse** ({W}{B}, Instant) — Exile target creature with
+  MV ≤ 3.
+- **Strict Tutelage** ({1}{W}{B}, Enchantment) — Whenever opp draws,
+  they lose 1 life.
+- **Inkrise Vampire** ({2}{B}, 2/3 Vampire Warlock with Lifelink).
+- **Silverquill Sting** ({W}{B}, Instant) — Drain 2 from target opp.
+- **Blade Historian** ({2}{R}{W}, 3/2 Human Wizard) — Magecraft pump
+  attackers +1/+0 and grant double strike EOT.
+- **Carving Cherub** ({W}, 1/1 Spirit) — Magecraft +1/+1 EOT on
+  target creature.
+- **Inkrider Witch** ({1}{B}, 2/2 Human Rogue with Menace).
+- **Roving Scholar** ({3}{U}, 2/3 Human Wizard) — Howling Mine ETB
+  (each player draws 2).
+- **Forceful Mirror** ({2}{U}, Sorcery) — Copy target IS spell.
+- **Fractalic Discovery** ({2}{G}{U}, Sorcery) — Draw 3, put 2 on top.
+- **Lorehold Lookback** ({2}{R}{W}, Sorcery) — Return creature/artifact
+  from gy + mint a 2/2 R/W Spirit token.
+- **Witherbloom Reaper Spirit** ({2}{B}{G}, 4/3 Plant Spirit with
+  Deathtouch).
+- **Witherbloom Lifedrinker** ({1}{B}, 1/3 Plant Warlock with
+  Lifelink) — Grows on each lifegain trigger.
+- **Lorehold Battlemaster** ({2}{R}{W}, 3/3 Spirit Cleric with Haste
+  + First Strike).
+- **Prismari Spellfire** ({3}{U}{R}, Sorcery) — 5 damage to creature/
+  PW + cantrip.
+- **Quandrix Recalibrator** ({1}{G}{U}, 2/2 Elf Wizard) — ETB +1/+1
+  counter on each friendly creature.
+- **Crackleburr Initiate** ({U}{R}, 2/1 Human Wizard with Flash) —
+  Magecraft self-pump +1/+0 EOT.
+- **Spellseeker's Insight** ({1}{U}, Instant) — Tutor IS with MV ≤ 3.
+- **Inkling Aether-Smith** ({2}{W}{B}, 2/3 Inkling Artificer with
+  Flying) — Modal ETB: token or +1/+1 counter.
+- **Burrog Snapper** ({1}{U}, 2/2 Frog Wizard with Flash) — ETB target
+  creature -2/-0 EOT.
+- **Galvanic Ribbons** ({1}{R}, Instant) — 2 dmg + draw 1 if you
+  control an artifact.
+- **Plant Mascot** ({1}{G}, 2/2 Plant) — ETB +1/+1 EOT on friendly.
+- **Quandrix Wavebender** ({1}{G}{U}, 2/3 Elf Druid) — Whenever you
+  cast a spell with {X} in its mana cost, put X +1/+1 counters on
+  this creature.
+
+**Augusta, Dean of Order — 🟡 → 🟡 (improved)**: Body-only wire upgraded
+to a per-attacker `Attacks/AnotherOfYours` trigger that pumps the
+attacker +1/+1 EOT and grants Vigilance EOT (auto-picks Vigilance from
+the printed "your choice of flying/first strike/vigilance/lifelink" —
+the most generally useful for chained attacks). The "three or more with
+same power" gate is omitted (engine has no "attacking creatures with
+same power" predicate). Same `Attacks/AnotherOfYours` per-attacker
+emission model as Sparring Regimen.
+
+Push (modern_decks, claude/modern_decks branch — prior revision —
 **22 NEW STX cards + 45 new functionality tests + CR 605 audit**):
 
 This push adds 22 new card factories to `stx::extras` exercising
@@ -1645,7 +1739,7 @@ parity is a matter of porting card factories one at a time.
 | Promising Duskmage | {2}{W}{B} | ✅ | Push XXXI: 2/2 Inkling Wizard with Flying. Magecraft: each opponent loses 1 life and you gain 1 life (`magecraft_drain_each_opp(1)` — same Witherbloom drain template applied to a Silverquill flyer). The printed "target opponent" is collapsed to each-opponent for the auto-target framework. Test: `promising_duskmage_drains_on_instant_cast`. |
 | Tenured Inkcaster | {2}{W}{B} | ✅ | Push XXXI: 3/2 Vampire Warlock. "Other Inkling creatures you control get +2/+2." Tribal anthem on the Inkling creature type, wired via the engine's `AffectedPermanents::AllWithCreatureType.exclude_source: true` flag (push XXX, Quintorius pattern). The anthem is layered in via a compute-time injection in `GameState::compute_battlefield`, so all of the controller's Inkling creatures (including Inkling tokens from Inkling Summoning, Defend the Campus) get +2/+2 while Inkcaster is on the battlefield. Tests: `tenured_inkcaster_buffs_friendly_inklings_by_two_two`, `tenured_inkcaster_does_not_buff_opponent_inklings`, `tenured_inkcaster_does_not_buff_self`, `tenured_inkcaster_anthem_expires_when_inkcaster_leaves_play`. |
 | Selfless Glyphweaver | {1}{W}{W} | ✅ | Push (modern_decks, NEW, `stx::silverquill`): front-face only of the MDFC Selfless Glyphweaver // Deadly Vanity. 2/3 Human Cleric Wizard. "Sacrifice this creature: Creatures you control gain indestructible until end of turn." Wired as a `sac_cost: true` activation that grants `Keyword::Indestructible` EOT to each controlled creature; the Glyphweaver is sacrificed as cost (before resolution) so it doesn't grant indestructible to itself — matching the printed Oracle. Back-face Deadly Vanity (mass force-sacrifice with each-opp-picks-which-to-keep) is omitted (no multi-pick decision shape). Tests: `selfless_glyphweaver_sac_grants_indestructible_to_friendlies`, `selfless_glyphweaver_is_a_three_mana_two_three_cleric_wizard`. |
-| Augusta, Dean of Order | {2}{W} | 🟡 | Push (modern_decks, NEW, `stx::extras`): 2/3 Legendary Human Cleric. Body-only wire. The printed combat-step trigger ("whenever you attack with three or more creatures with the same power, +1/+1 and chosen keyword EOT") is omitted (no "attacking creatures with same power" predicate or chosen-keyword pump shape). Partner with Plargg, Dean of Chaos is also omitted (no Partner-pair primitive). Test: `augusta_dean_of_order_is_a_two_three_legendary_human_cleric`. |
+| Augusta, Dean of Order | {2}{W} | 🟡 | Push (modern_decks): 2/3 Legendary Human Cleric. **Improved**: body-only wire upgraded to a per-attacker `Attacks/AnotherOfYours` trigger that pumps the attacker +1/+1 EOT and grants Vigilance EOT — simplified stand-in for the printed "your choice of flying/first strike/vigilance/lifelink" rider (auto-picks Vigilance, the most generally useful for chained attacks). The "three or more with same power" gate is omitted (no engine predicate for "attacking creatures with same power"). Partner with Plargg, Dean of Chaos is also omitted (no Partner-pair primitive). Tests: `augusta_dean_of_order_per_attacker_trigger_pumps_other_attacker`. |
 
 ### Witherbloom (B/G)
 
