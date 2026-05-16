@@ -4296,3 +4296,52 @@ fn non_infect_spell_damage_to_player_reduces_life_per_cr_702_90b_control() {
     assert_eq!(g.players[1].life, p1_life_before - 2);
     assert_eq!(g.players[1].poison_counters, p1_poison_before);
 }
+
+// ── CR 111.4 — token name auto-derives from subtypes ─────────────────────
+
+#[test]
+fn token_without_name_derives_name_from_creature_subtypes() {
+    use crate::card::{ArtifactSubtype, CreatureType, Subtypes, TokenDefinition};
+    use crate::game::effects::token_to_card_definition;
+
+    // Per CR 111.4, a token whose creating effect doesn't name it takes its
+    // subtypes plus " Token" as its name.
+    let spirit = TokenDefinition {
+        name: String::new(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![crate::card::CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+    assert_eq!(token_to_card_definition(&spirit).name, "Spirit Token");
+
+    let treasure = TokenDefinition {
+        name: String::new(),
+        card_types: vec![crate::card::CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Treasure],
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+    assert_eq!(token_to_card_definition(&treasure).name, "Treasure Token");
+
+    // Explicit name still wins over the auto-derive.
+    let explicit = TokenDefinition {
+        name: "Tireless Tracker's Clue".into(),
+        card_types: vec![crate::card::CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Clue],
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+    assert_eq!(
+        token_to_card_definition(&explicit).name,
+        "Tireless Tracker's Clue"
+    );
+}

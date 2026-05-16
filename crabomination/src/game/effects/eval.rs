@@ -101,7 +101,7 @@ impl GameState {
                 // count; fan-out selectors (`EachPermanent(filter)`) now sum
                 // — unblocking "total +1/+1 counters across all creatures
                 // you control" cards (Reflective Anatomy). Lock-in test:
-                // `tests::stx::reflective_anatomy_pumps_target_at_least_by_its_counters`.
+                // `tests::stx::reflective_anatomy_pumps_target_by_total_counters`.
                 .sum(),
             Value::Sum(vs) => vs.iter().map(|v| self.evaluate_value(v, ctx)).sum(),
             Value::Diff(a, b) => self.evaluate_value(a, ctx) - self.evaluate_value(b, ctx),

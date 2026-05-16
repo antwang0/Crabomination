@@ -9,13 +9,41 @@ use crate::card::{
 use crate::effect::{ManaPayload, PlayerRef};
 use crate::mana::{ManaCost, ManaSymbol};
 
+/// CR 111.4 — synthesize a token's display name from its subtypes when no
+/// explicit name was given. The result is the joined subtype names plus
+/// " Token" (e.g. `Subtypes { creature_types: [Spirit] }` → `"Spirit Token"`).
+/// Falls back to bare `"Token"` when the token has no subtypes at all.
+fn derive_name_from_subtypes(subtypes: &Subtypes) -> String {
+    let mut parts: Vec<String> = Vec::new();
+    parts.extend(subtypes.creature_types.iter().map(|s| format!("{:?}", s)));
+    parts.extend(subtypes.artifact_subtypes.iter().map(|s| format!("{:?}", s)));
+    parts.extend(subtypes.enchantment_subtypes.iter().map(|s| format!("{:?}", s)));
+    parts.extend(subtypes.land_types.iter().map(|s| format!("{:?}", s)));
+    parts.extend(subtypes.planeswalker_subtypes.iter().map(|s| format!("{:?}", s)));
+    if parts.is_empty() {
+        "Token".to_string()
+    } else {
+        format!("{} Token", parts.join(" "))
+    }
+}
+
 pub fn token_to_card_definition(token: &TokenDefinition) -> CardDefinition {
+    // CR 111.4: if the spell/ability that creates the token didn't specify
+    // a name, the name is its subtypes plus the word "Token". Every catalog
+    // factory ships a name today; this fallback covers future code paths
+    // (e.g. copy-token primitives) that might construct a `TokenDefinition`
+    // without filling in `name`.
+    let resolved_name = if token.name.is_empty() {
+        derive_name_from_subtypes(&token.subtypes)
+    } else {
+        token.name.clone()
+    };
     CardDefinition {
         // CardDefinition.name is &'static str; tokens carry an owned
         // String (so they round-trip through serde), so we leak a copy
         // here to extend its lifetime. The leak is bounded by the
         // number of unique token names produced over a session.
-        name: crate::static_str_serde::intern(token.name.clone()),
+        name: crate::static_str_serde::intern(resolved_name),
         cost: ManaCost::default(),
         supertypes: token.supertypes.clone(),
         card_types: token.card_types.clone(),

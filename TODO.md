@@ -2917,36 +2917,28 @@ source. Same plumbing as `Effect::SacrificeAndRemember`.
 
 ## New TODO suggestions (push modern_decks)
 
-### Engine — `Value::CountersOn` fan-out summation
+### Engine — `Value::CountersOn` fan-out summation ✅ DONE
 
-`Value::CountersOn { what, kind }` currently reads the first matching
-entity's counter pool when `what` is a fan-out selector (e.g.
-`Selector::EachPermanent(filter)`). The printed wording on cards like
-Inspiring Bard, Vigor Of The Forge, and Reflective Anatomy (new
-modern_decks Lesson) reads "total +1/+1 counters across all creatures
-you control" — a sum, not a single-entity read.
+`Value::CountersOn { what, kind }` now sums `counter_count(kind)` across
+every entity `what` resolves to (`game/effects/eval.rs::evaluate_value`).
+Single-entity selectors (target / This) keep returning the lone entity's
+count; fan-out selectors (`EachPermanent(filter)`) return the total.
+Lock-in test: `tests::stx::reflective_anatomy_pumps_target_by_total_counters`
+stages two bears with 2+1 counters and asserts Reflective Anatomy pumps
+the target +3/+3 (2+1 summed).
 
-**Fix**: in `game/effects/eval.rs::evaluate_value`, when `Value::
-CountersOn { what }` resolves `what` to multiple entities, sum the
-`counter_count(kind)` for each. The single-entity case (target
-selectors, This) continues to work. Lock in via a synthetic test that
-stages two creatures with 2+1 counters and asserts the resolved
-value equals 3.
+### Engine — Token name auto-derive from subtypes (CR 111.4) ✅ DONE
 
-### Engine — Token name auto-derive from subtypes (CR 111.4)
-
-CR 111.4: "If the spell or ability doesn't specify the name of the
-token, its name is the same as its subtype(s) plus the word 'Token.'"
-Today every `TokenDefinition` carries an explicit `name` string; if a
-factory leaves it empty/blank the resulting permanent's name display
-breaks the printed "Pest Token" / "Spirit Token" / "Treasure" name.
-
-**Fix**: in the `Effect::CreateToken` handler (or the
-`TokenDefinition::default()` constructor), if `name.is_empty()` then
-synthesise it from the joined `creature_types` + " Token". Low risk —
-no card currently exercises this since every `TokenDefinition` already
-ships a name. Mainly tightens correctness for future code paths that
-might omit the name (e.g. copy-token-of-creature primitive when added).
+`token_to_card_definition` (`game/effects/tokens.rs`) now synthesizes the
+resulting `CardDefinition.name` from the joined token subtypes when
+`TokenDefinition.name` is empty (`"Spirit Token"`, `"Treasure Token"`,
+`"Soldier Token"`, …). Walks `creature_types`, `artifact_subtypes`,
+`enchantment_subtypes`, `land_types`, `planeswalker_subtypes` in that
+order; falls back to bare `"Token"` if every subtype list is empty.
+Explicit names still pass through unchanged. Lock-in test:
+`tests::game::token_without_name_derives_name_from_creature_subtypes`.
+Catalog factories still ship explicit names today; this just future-
+proofs copy-token-of-creature shells.
 
 ### Engine — Multi-target divided damage primitive
 
