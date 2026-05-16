@@ -1169,6 +1169,24 @@ status tag (✅ wired, 🟡 partial, ⏳ todo) plus a short note.
 
 ## Suggested next-up tasks
 
+- ⏳ **Inkling / Pest tribal completeness** (push modern_decks
+  current): with the 22-card extras drop the Silverquill Inkling pool
+  now has 1+/+1 lord support, lifelink fliers, drain payoff, and
+  artifact drain. The Witherbloom Pest pool similarly has token
+  spawners + a destroy-plus-Pest sorcery + a 2-Pest ETB body. A
+  cross-college BG/WB sealed pool could lean into these new shells.
+  Slot into the SoS Silverquill / Witherbloom pool selector once the
+  decklist generators support tribal weighting.
+
+- ⏳ **`Effect::CounterAbility`** — Spell Squelch and similar "counter
+  target activated or triggered ability" cards currently collapse to
+  generic CounterSpell. Engine extension: extend `Effect::CounterSpell`
+  to accept a `kind: CounterKind` enum (Spell, ActivatedAbility,
+  TriggeredAbility, Any) so Stifle / Trickbind / Squelch can target
+  abilities exclusively. Catalog impact: Spell Squelch (newly added),
+  Stifle (cube). Unblocks the printed "counter target activated or
+  triggered ability" Oracle.
+
 - ⏳ **Spirit-tribal Lorehold archetype** (push modern_decks): the new
   Spirit Banner (+1/+1 anthem for Spirits) joins Quintorius's
   pre-existing Spirit lord and the Lorehold token chain (Sparring

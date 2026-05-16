@@ -16318,3 +16318,250 @@ fn witherbloom_scholar_drains_on_instant_cast() {
     assert_eq!(g.players[1].life, p1_before - 4);
     assert_eq!(g.players[0].life, p0_before + 1);
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Push (modern_decks current batch 2): tests for the 14 new STX cards.
+// ─────────────────────────────────────────────────────────────────────────────
+
+#[test]
+fn quandrix_apprenticeship_adds_two_counters_and_scrys() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let qa = g.add_card_to_hand(0, catalog::quandrix_apprenticeship());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: qa, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Apprenticeship castable");
+    drain_stack(&mut g);
+    let b = g.battlefield.iter().find(|c| c.id == bear).expect("bear alive");
+    assert_eq!(b.counter_count(CounterType::PlusOnePlusOne), 2);
+}
+
+#[test]
+fn prismari_pyrotechnics_burns_for_five() {
+    let mut g = two_player_game();
+    let bigboi = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let pyro = g.add_card_to_hand(0, catalog::prismari_pyrotechnics());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: pyro, target: Some(Target::Permanent(bigboi)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Pyrotechnics castable");
+    drain_stack(&mut g);
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bigboi), "bear dies");
+}
+
+#[test]
+fn lorehold_strategist_etb_gains_two_and_flies() {
+    let mut g = two_player_game();
+    let ls = g.add_card_to_hand(0, catalog::lorehold_strategist());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let life_before = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: ls, target: None, additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("Strategist castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life_before + 2);
+    let body = g.battlefield.iter().find(|c| c.id == ls).expect("on bf");
+    assert!(body.has_keyword(&Keyword::Flying));
+}
+
+#[test]
+fn witherbloom_necromancy_reanimates_and_loses_two() {
+    let mut g = two_player_game();
+    let cheap = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let necro = g.add_card_to_hand(0, catalog::witherbloom_necromancy());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    let life_before = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: necro, target: Some(Target::Permanent(cheap)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Necromancy castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == cheap), "creature on bf");
+    assert_eq!(g.players[0].life, life_before - 2);
+}
+
+#[test]
+fn silverquill_resolve_pumps_and_grants_lifelink() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let sr = g.add_card_to_hand(0, catalog::silverquill_resolve());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: sr, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Resolve castable");
+    drain_stack(&mut g);
+    let b = g.compute_battlefield().into_iter().find(|c| c.id == bear)
+        .expect("bear alive");
+    assert_eq!(b.power, 3);  // 2+1
+    assert_eq!(b.toughness, 5);  // 2+3
+    assert!(b.keywords.contains(&Keyword::Lifelink), "bear gains lifelink");
+}
+
+#[test]
+fn prismari_conduit_attacks_with_haste() {
+    let def = catalog::prismari_conduit();
+    assert!(def.keywords.contains(&Keyword::Haste));
+    assert_eq!(def.power, 2);
+    assert_eq!(def.toughness, 2);
+    assert!(!def.triggered_abilities.is_empty(),
+        "Conduit has attack-trigger loot");
+}
+
+#[test]
+fn quandrix_doubling_doubles_counters() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // Seed 3 +1/+1 counters
+    if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == bear) {
+        c.add_counters(CounterType::PlusOnePlusOne, 3);
+    }
+    let qd = g.add_card_to_hand(0, catalog::quandrix_doubling());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: qd, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Doubling castable");
+    drain_stack(&mut g);
+    let b = g.battlefield.iter().find(|c| c.id == bear).expect("bear alive");
+    assert_eq!(b.counter_count(CounterType::PlusOnePlusOne), 6, "3 → 6 doubled");
+}
+
+#[test]
+fn lorehold_smith_etb_creates_treasure() {
+    let mut g = two_player_game();
+    let smith = g.add_card_to_hand(0, catalog::lorehold_smith());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: smith, target: None, additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("Smith castable");
+    drain_stack(&mut g);
+    let treasures: Vec<_> = g.battlefield.iter()
+        .filter(|c| c.controller == 0 && c.is_token && c.definition.name == "Treasure")
+        .collect();
+    assert_eq!(treasures.len(), 1, "one Treasure");
+}
+
+#[test]
+fn silverquill_decree_destroys_and_gains_life() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let decree = g.add_card_to_hand(0, catalog::silverquill_decree());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    let life_before = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: decree, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Decree castable");
+    drain_stack(&mut g);
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bear), "bear dies");
+    assert_eq!(g.players[0].life, life_before + 2, "P0 gains 2");
+}
+
+#[test]
+fn witherbloom_wand_drains_target_player() {
+    let mut g = two_player_game();
+    let wand = g.add_card_to_battlefield(0, catalog::witherbloom_wand());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let p0_before = g.players[0].life;
+    let p1_before = g.players[1].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: wand, ability_index: 0, target: Some(Target::Player(1)),
+    }).expect("Wand activates");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, p1_before - 2);
+    assert_eq!(g.players[0].life, p0_before + 2);
+}
+
+#[test]
+fn quandrix_survey_ramps_and_draws() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::forest());
+    g.add_card_to_library(0, catalog::island());
+    let qs = g.add_card_to_hand(0, catalog::quandrix_survey());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: qs, target: None, additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("Survey castable");
+    drain_stack(&mut g);
+    // -1 (cast) + 1 (draw) = 0 net (the search drops 1 land onto bf).
+    assert_eq!(g.players[0].hand.len(), hand_before);
+}
+
+#[test]
+fn prismari_arsonist_etb_deals_two_damage() {
+    let mut g = two_player_game();
+    // Use a hardier target (Serra Angel = 4/4) so we can see the
+    // damage without the creature dying to SBA.
+    let target = g.add_card_to_battlefield(1, catalog::serra_angel());
+    let arson = g.add_card_to_hand(0, catalog::prismari_arsonist());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: arson, target: Some(Target::Permanent(target)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Arsonist castable");
+    drain_stack(&mut g);
+    let t = g.battlefield.iter().find(|c| c.id == target).expect("alive");
+    assert_eq!(t.damage, 2, "took 2 damage");
+}
+
+#[test]
+fn lorehold_banner_etb_gains_life_and_taps_for_color() {
+    let mut g = two_player_game();
+    let banner = g.add_card_to_hand(0, catalog::lorehold_banner());
+    g.players[0].mana_pool.add_colorless(3);
+    let life_before = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: banner, target: None, additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("Banner castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life_before + 2, "gains 2");
+    // Activate red mana ability
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: banner, ability_index: 0, target: None,
+    }).expect("red mana tap");
+    drain_stack(&mut g);
+    assert!(g.players[0].mana_pool.amount(Color::Red) >= 1, "red added");
+}
+
+#[test]
+fn witherbloom_verdict_forces_opp_sac() {
+    let mut g = two_player_game();
+    let _bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let v = g.add_card_to_hand(0, catalog::witherbloom_verdict());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let gy_before = g.players[1].graveyard.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: v, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Verdict castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].graveyard.len(), gy_before + 1,
+        "opp sacrificed creature → gy");
+}

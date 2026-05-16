@@ -19320,3 +19320,642 @@ pub fn witherbloom_scholar() -> CardDefinition {
         exile_on_resolve: false,
     }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Push (modern_decks current, batch 2): 14 more STX cards focused on the
+// Quandrix / Prismari / Lorehold colleges with a few cross-college staples.
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ── Quandrix Apprenticeship ───────────────────────────────────────────────
+
+/// Quandrix Apprenticeship — {1}{G}{U} Sorcery.
+/// "Put two +1/+1 counters on target creature you control. Scry 1."
+///
+/// Two-pronged growth-with-selection that pairs with any +1/+1 counter
+/// payoff (Quandrix Cultivator, Symmathematics, Dragonsguard Elite).
+pub fn quandrix_apprenticeship() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Apprenticeship",
+        cost: cost(&[generic(1), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::AddCounter {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(2),
+            },
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Prismari Pyrotechnics ──────────────────────────────────────────────────
+
+/// Prismari Pyrotechnics — {3}{R}{R} Sorcery.
+/// "Prismari Pyrotechnics deals 5 damage to target creature or
+/// planeswalker."
+///
+/// 5-mana 5-damage burn — same template as Lava Coil but flexible
+/// to creature OR planeswalker, no exile rider.
+pub fn prismari_pyrotechnics() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Pyrotechnics",
+        cost: cost(&[generic(3), r(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::DealDamage {
+            amount: Value::Const(5),
+            to: target_filtered(
+                SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+            ),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Lorehold Strategist ────────────────────────────────────────────────────
+
+/// Lorehold Strategist — {2}{W}, 2/2 Spirit Cleric with Flying.
+/// "When this creature enters, you gain 2 life."
+///
+/// Strixhaven flier-with-lifegain. Plays in any lifegain-matters
+/// shell (Comforting Counsel, Light of Promise, Honor Troll).
+pub fn lorehold_strategist() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Strategist",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Witherbloom Necromancy ─────────────────────────────────────────────────
+
+/// Witherbloom Necromancy — {2}{B}{B} Sorcery.
+/// "Return target creature card from your graveyard to the
+/// battlefield. You lose 2 life."
+///
+/// Black classic reanimation at 4 mana with a life cost — Animate
+/// Dead's modern variant in Witherbloom. Pairs with Sproutback Trudge
+/// for a 5/6 swing that nets 5 life back.
+pub fn witherbloom_necromancy() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Necromancy",
+        cost: cost(&[generic(2), b(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Move {
+                what: target_filtered(SelectionRequirement::Creature),
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: false,
+                },
+            },
+            Effect::LoseLife {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Silverquill Resolve ────────────────────────────────────────────────────
+
+/// Silverquill Resolve — {1}{W} Instant.
+/// "Target creature gets +1/+3 and gains lifelink until end of turn."
+///
+/// Defensive combat trick — pumps toughness for a 4/4-vs-blocker
+/// turn and lifelinks the bonus damage back. Same template as
+/// Veteran's Sidearm.
+pub fn silverquill_resolve() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Resolve",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(1),
+                toughness: Value::Const(3),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::Lifelink,
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Prismari Conduit ───────────────────────────────────────────────────────
+
+/// Prismari Conduit — {1}{R}, 2/2 Elemental.
+/// "Haste. Whenever this creature attacks, you may discard a card.
+/// If you do, draw a card."
+///
+/// Hasty 2/2 with a loot-on-attack rider for graveyard-fillery /
+/// hand-fixing. Wired as `Attacks/SelfSource → MayDo(Discard 1 + Draw
+/// 1)`.
+pub fn prismari_conduit() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Conduit",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Haste],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::MayDo {
+                description: "Loot".to_string(),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::Discard {
+                        who: Selector::You,
+                        amount: Value::Const(1),
+                        random: false,
+                    },
+                    Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::Const(1),
+                    },
+                ])),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Quandrix Doubling ──────────────────────────────────────────────────────
+
+/// Quandrix Doubling — {3}{G}{U} Sorcery.
+/// "Double the number of +1/+1 counters on target creature you
+/// control."
+///
+/// Pure counter-doubling at sorcery speed. Equivalent shape to
+/// Practical Research (which also doubles counters). Wired via
+/// `AddCounter(amount = CountersOn(target, +1/+1))` so the counter
+/// pool grows to 2N total exactly per CR 701.10e.
+pub fn quandrix_doubling() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Doubling",
+        cost: cost(&[generic(3), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::AddCounter {
+            what: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            ),
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::CountersOn {
+                what: Box::new(Selector::Target(0)),
+                kind: CounterType::PlusOnePlusOne,
+            },
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Lorehold Smith ─────────────────────────────────────────────────────────
+
+/// Lorehold Smith — {2}{R}, 2/3 Dwarf Warrior.
+/// "When this creature enters, create a Treasure token."
+///
+/// 3-mana 2/3 with a Treasure-on-ETB rider. Same shape as Tavern
+/// Smasher's mini-version, in Lorehold flavor. Reuses the engine's
+/// `treasure_token()` definition.
+pub fn lorehold_smith() -> CardDefinition {
+    use crate::game::effects::treasure_token;
+    CardDefinition {
+        name: "Lorehold Smith",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dwarf, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: treasure_token(),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Silverquill Decree ─────────────────────────────────────────────────────
+
+/// Silverquill Decree — {3}{W}{B} Instant.
+/// "Destroy target creature or planeswalker. You gain 2 life."
+///
+/// 5-mana flexible removal at instant speed with a small lifegain
+/// rider — Silverquill's premium removal answer.
+pub fn silverquill_decree() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Decree",
+        cost: cost(&[generic(3), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Destroy {
+                what: target_filtered(
+                    SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+                ),
+            },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Witherbloom Wand ───────────────────────────────────────────────────────
+
+/// Witherbloom Wand — {2} Artifact.
+/// "{2}{B}{G}, {T}: Target player loses 2 life and you gain 2 life."
+///
+/// Repeatable Witherbloom drain in artifact form. Same shape as
+/// Silverquill Pen but at {B}{G} pips for the Witherbloom shell.
+pub fn witherbloom_wand() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Wand",
+        cost: cost(&[generic(2)]),
+        supertypes: vec![],
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[generic(2), b(), g()]),
+            effect: Effect::Drain {
+                from: target_filtered(
+                    SelectionRequirement::Player.and(SelectionRequirement::ControlledByOpponent),
+                ),
+                to: Selector::You,
+                amount: Value::Const(2),
+            },
+            once_per_turn: false,
+            sorcery_speed: false,
+            sac_cost: false,
+            condition: None,
+            life_cost: 0,
+            from_graveyard: false,
+            exile_self_cost: false,
+            exile_other_filter: None,
+        }],
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Quandrix Survey ────────────────────────────────────────────────────────
+
+/// Quandrix Survey — {2}{G}{U} Sorcery.
+/// "Search your library for a land card, put it onto the battlefield
+/// tapped, then shuffle. Draw a card."
+///
+/// Quandrix ramp-and-draw — Cultivate's body in 4 mana with a slimmer
+/// land-into-play count. Reuses the engine's `Effect::Search` over
+/// `IsBasicLand`-or-`Land` filter and the Draw primitive.
+pub fn quandrix_survey() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Survey",
+        cost: cost(&[generic(2), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Search {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::Land,
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: true,
+                },
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Prismari Arsonist ──────────────────────────────────────────────────────
+
+/// Prismari Arsonist — {2}{U}{R}, 3/2 Human Wizard with Flash.
+/// "When this creature enters, this creature deals 2 damage to target
+/// creature."
+///
+/// 4-mana flash 3/2 with a Flametongue Kavu-style ETB — drops at
+/// the end of opp's turn to kill a 2-toughness creature + body up
+/// for the next attack.
+pub fn prismari_arsonist() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Arsonist",
+        cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Flash],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::DealDamage {
+                amount: Value::Const(2),
+                to: target_filtered(SelectionRequirement::Creature),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Lorehold Banner ────────────────────────────────────────────────────────
+
+/// Lorehold Banner — {3} Artifact.
+/// "When this artifact enters, you gain 2 life. / {T}: Add {R} or
+/// {W}."
+///
+/// Color-fixing artifact with a small lifegain ETB. Plays like a
+/// Manalith / Coalition Banner in Lorehold colors.
+pub fn lorehold_banner() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Banner",
+        cost: cost(&[generic(3)]),
+        supertypes: vec![],
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: ManaCost::default(),
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::OfColor(Color::Red, Value::Const(1)),
+                },
+                once_per_turn: false,
+                sorcery_speed: false,
+                sac_cost: false,
+                condition: None,
+                life_cost: 0,
+                from_graveyard: false,
+                exile_self_cost: false,
+                exile_other_filter: None,
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: ManaCost::default(),
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::OfColor(Color::White, Value::Const(1)),
+                },
+                once_per_turn: false,
+                sorcery_speed: false,
+                sac_cost: false,
+                condition: None,
+                life_cost: 0,
+                from_graveyard: false,
+                exile_self_cost: false,
+                exile_other_filter: None,
+            },
+        ],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Witherbloom Verdict ───────────────────────────────────────────────────
+
+/// Witherbloom Verdict — {2}{B} Sorcery.
+/// "Target opponent sacrifices a creature."
+///
+/// Diabolic Edict / Cruel Edict template in Witherbloom colors. Wired
+/// via the existing `Effect::Sacrifice` primitive aimed at an opp
+/// player slot.
+pub fn witherbloom_verdict() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Verdict",
+        cost: cost(&[generic(2), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Sacrifice {
+            who: target_filtered(
+                SelectionRequirement::Player.and(SelectionRequirement::ControlledByOpponent),
+            ),
+            count: Value::Const(1),
+            filter: SelectionRequirement::Creature,
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}

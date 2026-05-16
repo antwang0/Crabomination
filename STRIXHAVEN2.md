@@ -19,10 +19,25 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 195 | 59 | 1 |
-| STX (217 cards) | 400 | 13 | 0 |
+| STX (231 cards) | 414 | 13 | 0 |
 | STA reprints (in STX boosters) | 46 | 0 | — |
 
 Push (modern_decks, claude/modern_decks branch — latest revision —
+**14 MORE STX cards + 14 new functionality tests = batch 2**):
+
+Builds on the previous 22-card extras drop with 14 more STX-themed
+cards covering Quandrix / Prismari / Lorehold / Witherbloom: Quandrix
+Apprenticeship (counter+scry), Prismari Pyrotechnics (5 damage burn),
+Lorehold Strategist (2/2 flying ETB-gain-2), Witherbloom Necromancy
+(reanimation), Silverquill Resolve (+1/+3 + lifelink), Prismari Conduit
+(2/2 haste attack-loot), Quandrix Doubling (double +1/+1 counters),
+Lorehold Smith (2/3 + Treasure ETB), Silverquill Decree (5-mana
+removal + lifegain), Witherbloom Wand (artifact drain), Quandrix
+Survey (ramp + cantrip), Prismari Arsonist (3/2 flash FTK ETB),
+Lorehold Banner (R/W mana rock + ETB gain), Witherbloom Verdict
+(target opp sacs a creature). All 1949 lib tests pass.
+
+Push (modern_decks, claude/modern_decks branch — prior revision —
 **22 NEW STX cards + 23 new functionality tests**):
 
 Adds 22 new STX-flavored cards to `stx::extras` — Silverquill / Witherbloom
