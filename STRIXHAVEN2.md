@@ -19,10 +19,89 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 195 | 59 | 1 |
-| STX (195 cards) | 349 | 13 | 0 |
+| STX (195 cards) | 369 | 13 | 0 |
 | STA reprints (in STX boosters) | 46 | 0 | — |
 
 Push (modern_decks, claude/modern_decks branch — latest revision —
+**20 NEW STX cards + 5 NEW Lessons + 27 new functionality tests + CR 111 Tokens audit**):
+
+This push adds 20 new card factories to `stx::extras` (focused on
+Silverquill college depth) plus 5 new Lesson cards in `stx::lessons`
+(Pest Inheritance, Mascot Interpretation, Reduce // Rubble, Containment
+Studies, Reflective Anatomy). All 1922+ tests pass.
+
+**NEW STX cards (this push, 20):**
+
+- **Silverquill Apprentice** ({W}{B}, 2/2 Human Wizard) — Magecraft
+  +1/+1 counter on target creature (the missing Silverquill Apprentice
+  matching the cycle of college Apprentices).
+- **Pestilent Lecturer** ({1}{W}{B}, 2/3 Inkling Cleric with Flying) —
+  ETB drain 1.
+- **Shadow-Mage Hopeful** ({1}{W}{B}, 2/2 Human Wizard with Lifelink) —
+  Magecraft drain 1.
+- **Quill Page** ({W}, 1/1 Human Cleric) — Magecraft Scry 1.
+- **Inkbond Cleric** ({2}{W}, 2/3 Human Cleric) — Surveil 1 + counter
+  on another Inkling.
+- **Quill Inscriber** ({1}{B}, 2/2 Human Warlock) — Magecraft self-pump
+  +1/+0 EOT.
+- **Pestilent Squire** ({1}{B}, 2/1 Pest Warrior with Lifelink).
+- **Silverquill Mediator** ({3}{W}{B}, 3/4 Inkling Cleric with Flying +
+  Lifelink) — ETB drain 2.
+- **Dissident Lecturer** ({2}{B}, 2/3 Human Warlock) — Magecraft burn
+  each opp for 1 (no lifegain rider).
+- **Silverquill Persuader** ({2}{W}{B}, 2/3 Inkling Wizard with Flying)
+  — Cleric tribal anthem.
+- **Pestilent Imp** ({B}, 1/1 Imp Pest with Flying).
+- **Witherbloom Tincture-Maker** ({1}{B}{G}, 2/3 Human Druid) — Pure
+  lifegain Magecraft.
+- **Lorehold Crusader** ({2}{R}{W}, 3/3 Spirit Soldier with First
+  Strike + Vigilance).
+- **Quandrix Initiate** ({G}{U}, 1/2 Elf Druid) — Magecraft self
+  +1/+1 counter.
+- **Lorehold Wand** ({2} Artifact) — `{2}{R}, {T}: 2 damage to any
+  target.`
+- **Witherbloom Bramble** ({1}{B}{G} Sorcery) — Mints a Pest + +1/+1
+  counter on each creature you control.
+- **Prismari Spark** ({U}{R} Instant) — 2 damage to creature + draw 1.
+- **Quandrix Trickster** ({1}{U}, 2/1 Merfolk Wizard with Flash) — ETB
+  -2/-0 EOT on target.
+- **Lorehold Memorialist** ({R}{W} Sorcery) — Return creature card
+  from gy → hand.
+- **Witherbloom Researcher** ({2}{B}{G}, 3/3 Human Druid) — ETB +2
+  life + draw.
+- **Quandrix Catalyst** ({1}{G}{U} Sorcery) — Put 2 counters on target
+  then double.
+- **Lorehold Vanguard** ({R}{W}, 2/2 Spirit Soldier with Haste).
+
+**NEW STX Lessons (this push, 5):**
+
+- **Pest Inheritance** ({3}{G} Sorcery — Lesson) — Mint Pests equal to
+  lands you control. Uses `Value::CountOf(Land & ControlledByYou)` for
+  the X token count. Engine support already exists in
+  `Effect::CreateToken { count: Value }`.
+- **Mascot Interpretation** ({1}{U} Sorcery — Lesson) — Two +1/+1
+  counters on target creature you control + Learn (cantrip).
+- **Reduce // Rubble** ({2}{R} Sorcery — Lesson) — 3 damage to
+  creature/PW + Learn (cantrip).
+- **Containment Studies** ({2}{W} Sorcery — Lesson) — Tap target
+  creature + put 2 stun counters on it.
+- **Reflective Anatomy** ({2}{G}{U} Sorcery — Lesson) — Target
+  creature gets +X/+X EOT, where X is the total number of +1/+1
+  counters on creatures you control. Uses the existing
+  `Value::CountersOn { what: EachPermanent(filter), kind: +1/+1 }`
+  fan-out to sum counters across the board.
+
+**CR 111 audit row** (added to TODO.md): Tokens — Engine handles the
+core token semantics correctly (111.7 ceases-to-exist in non-bf zones
+via the SBA in `check_state_based_actions`, 111.8 LBF tokens can't
+re-enter, 111.10 predefined tokens via `TokenDefinition`). Triggered
+abilities on tokens (111.10a Treasure, 111.10b Food, 111.10g Blood)
+all use the `TokenDefinition.triggered_abilities` field added in
+SOS-VI. The 111.5 "creates a token that's a copy of an instant or
+sorcery card, no token is created" corner is a no-op (engine has no
+copy-token-of-spell primitive). Promoted to ✅ in TODO.md.
+
+Push (modern_decks, claude/modern_decks branch — prior revision —
 **43 NEW STX cards + 73 new functionality tests + Augusta promotion + CR 506 audit**):
 
 This push adds 36 new card factories to `stx::extras` focused on

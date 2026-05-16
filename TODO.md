@@ -11,6 +11,50 @@ Periodic spot-check of the rules document
 (`crabomination/MagicCompRules 20260116.txt`). Each rule below has a
 status tag (✅ wired, 🟡 partial, ⏳ todo) plus a short note.
 
+- ✅ **CR 111 — Tokens** (push modern_decks audit, claude/modern_decks
+  branch): The token primitive — what a token is, how it enters,
+  how it leaves play, predefined tokens. Audit:
+  (a) **111.1** tokens put onto battlefield by effects — ✅
+  (`Effect::CreateToken { who, count, definition }` handler in
+  `game/effects/mod.rs` mints a fresh `CardInstance` per token and
+  pushes onto `self.battlefield`). (b) **111.2** owner = creator,
+  controller = creator on ETB — ✅ (`CardInstance::new_token(id, def,
+  owner)` sets both `owner` and initial `controller` to the same
+  seat). (c) **111.3** token characteristics defined by creating
+  effect — ✅ (`TokenDefinition` carries name/cost/types/subtypes/PT/
+  keywords/triggered_abilities, mapped to the resulting `CardInstance.
+  definition`). (d) **111.4** token name from subtypes when not
+  specified — 🟡 (the engine doesn't auto-derive "Pest Token"-style
+  names; each `TokenDefinition` carries an explicit `name` string).
+  (e) **111.5** "can't ETB" rule blocks token creation — ⏳ (no
+  general "can't enter the battlefield" replacement primitive yet;
+  the corner is not exercised by the current catalog).
+  (f) **111.6** tokens subject to permanent-affecting rules — ✅
+  (tokens are regular `CardInstance` values with `is_token: true`;
+  every "creatures you control"/"target permanent" selector counts
+  them the same as cards). (g) **111.7** token outside battlefield
+  ceases to exist (SBA) — ✅ (the SBA sweep in
+  `check_state_based_actions` walks every player's graveyard/hand/
+  library + the shared exile and `retain(|c| !c.is_token)`).
+  (h) **111.8** ex-battlefield tokens can't re-enter — ✅ (the
+  ceases-to-exist sweep runs every SBA pass; any move targeting a
+  token already in a non-bf zone fails to find it). (i) **111.10**
+  predefined tokens (Treasure / Food / Clue / Blood / Powerstone /
+  etc.) — ✅ (Treasure via `treasure_token()` helper, Food via
+  `food_token()`, Clue via `clue_token()`; all carry their
+  `TokenDefinition.activated_abilities` for the canonical sacrifice
+  payoffs). (j) **111.10s** Map token (explore) — ⏳ (no Explore
+  primitive). (k) **111.10i** Incubator double-faced token — ⏳ (no
+  DFC-token primitive). The headline play patterns (mint a 1/1, mint
+  a Pest, mint a Treasure, mint a Spirit, mint a Fractal) all ship
+  end-to-end. Tests: implicit across the entire suite — every
+  "creates token" test (Pest Summoning ✅, Tend the Pests ✅,
+  Sparring Regimen ETB Spirit ✅, Quintorius ETB Spirit ✅, every
+  Inkling-mint card, Pest Inheritance, Witherbloom Bramble) exercises
+  the framework. The token-cleanup SBA is exercised by
+  `tests::sos::copied_spell_does_not_linger_in_graveyard_after_resolution`
+  and any "creature token dies and leaves graveyard" test.
+
 - 🟡 **CR 506 — Combat Phase** (push modern_decks audit,
   claude/modern_decks branch): The combat-phase framework — five
   steps, attacker/blocker declaration, removed-from-combat semantics,
@@ -2870,4 +2914,108 @@ sacrificed creature's toughness" approximates as flat 2 life because
 of this gap. Fix: thread `sacrificed_power` and `sacrificed_toughness`
 into the resolution context when `sac_cost: true` consumes the
 source. Same plumbing as `Effect::SacrificeAndRemember`.
+
+## New TODO suggestions (push modern_decks)
+
+### Engine — `Value::CountersOn` fan-out summation
+
+`Value::CountersOn { what, kind }` currently reads the first matching
+entity's counter pool when `what` is a fan-out selector (e.g.
+`Selector::EachPermanent(filter)`). The printed wording on cards like
+Inspiring Bard, Vigor Of The Forge, and Reflective Anatomy (new
+modern_decks Lesson) reads "total +1/+1 counters across all creatures
+you control" — a sum, not a single-entity read.
+
+**Fix**: in `game/effects/eval.rs::evaluate_value`, when `Value::
+CountersOn { what }` resolves `what` to multiple entities, sum the
+`counter_count(kind)` for each. The single-entity case (target
+selectors, This) continues to work. Lock in via a synthetic test that
+stages two creatures with 2+1 counters and asserts the resolved
+value equals 3.
+
+### Engine — Token name auto-derive from subtypes (CR 111.4)
+
+CR 111.4: "If the spell or ability doesn't specify the name of the
+token, its name is the same as its subtype(s) plus the word 'Token.'"
+Today every `TokenDefinition` carries an explicit `name` string; if a
+factory leaves it empty/blank the resulting permanent's name display
+breaks the printed "Pest Token" / "Spirit Token" / "Treasure" name.
+
+**Fix**: in the `Effect::CreateToken` handler (or the
+`TokenDefinition::default()` constructor), if `name.is_empty()` then
+synthesise it from the joined `creature_types` + " Token". Low risk —
+no card currently exercises this since every `TokenDefinition` already
+ships a name. Mainly tightens correctness for future code paths that
+might omit the name (e.g. copy-token-of-creature primitive when added).
+
+### Engine — Multi-target divided damage primitive
+
+The engine collapses every "divided as you choose among any number of
+targets" rider to a single target. Affected cards: Crackle with Power,
+Magma Opus, Electrolyze, Devious Cover-Up, Vibrant Outburst, Mizzium
+Mortars (Overload alt only), Snow Day, Spell Satchel. The headline
+play pattern works at one target, but the multi-target shape is a
+recurring 🟡 in STRIXHAVEN2.md.
+
+**Fix**: extend `Selector::Target(u8)` to accept an array of targets
+with associated damage portions: `Selector::DividedTargets(Vec<(u8,
+Value)>)`. Cast-time the caster picks N targets and divides the spell's
+total damage among them; resolution loops `DealDamage(target_i,
+portion_i)`. This unlocks ~6 cube/SOS/STX 🟡s in one engine landing.
+
+### Engine — Permanent-copy primitive (`Effect::CreateCopyToken`)
+
+Multiple SOS/STX cards print "create a token that's a copy of target
+non-Aura permanent you control" (Applied Geometry, Spitting Image,
+Echocasting Symposium's body). The engine has no "copy a permanent"
+primitive; these all approximate with a vanilla token mint.
+
+**Fix**: add `Effect::CreateCopyToken { source: Selector, who:
+PlayerRef, count: Value, modifiers: Vec<CopyModifier> }`. The
+resolver reads `source`'s `CardDefinition` (printed copiable values)
+and mints a token whose `definition` clones the source's. The
+`modifiers` field lets cards like Applied Geometry append
+"0/0 Fractal creature in addition to its other types".
+
+### Engine — Cast-from-exile pipeline
+
+SOS Improvisation Capstone, Decorum Dissertation, Echocasting
+Symposium's Paradigm rider, Practiced Scrollsmith's "may cast" rider
+all require a cast-from-exile-without-paying-its-mana-cost path with
+an associated timer/decision shape. Many cube cards (Eldrazi
+Conscription / Bolas's Citadel / Aminatou's Augury) need the same
+primitive.
+
+**Fix**: extend `GameAction::CastSpell` with an `alt_zone_source:
+Option<(Zone, AltCostKind)>` field. The cast pipeline already supports
+Flashback (cast from gy, pay flashback cost, exile on resolve); the
+generalisation is a Zone + payment-mode tuple, with payment-mode
+including `NoCost`, `Mana(ManaCost)`, `Discard(N)`, `ExileN(N)`, etc.
+
+### Card — Verdant Mastery alt-cost mode
+
+STX Verdant Mastery has a "{6}{G}{G}: each player fetches two basics"
+alt cost adding a mode. Currently regular cost ({3}{G}{G}) ships
+("each player fetches one basic") and the alt cost is omitted.
+
+**Fix**: add a generic `AlternativeCost { mana_cost: ManaCost,
+alt_effect: Effect }` shape that swaps the spell's resolved effect
+based on which cost was paid. Same primitive unblocks Devastating
+Mastery's "{7}{W}{W}: also return up to two nonland permanent cards"
+mode and Baleful Mastery's mode swap.
+
+### Card — Hofri Ghostforge exile-return-as-1/1-Spirit
+
+Hofri's printed second clause: "When a nontoken creature you control
+dies, if it wasn't a Spirit, exile it. Return it to the battlefield
+under your control with 'When this creature leaves the battlefield,
+create a 1/1 white Spirit creature token with flying.'" The body
++ Spirit anthem are wired; the death-replacement-with-return is still
+🟡.
+
+**Fix**: needs the general replacement-effect framework (push H
+already tracked in Commander phase) — `ReplacementEffect` registry
+keyed on `ZoneChange { from: Battlefield, to: Graveyard, card_filter }`.
+Returns an `(Exile, DelayedTriggerOnExile)` 2-tuple instead of the
+default zone change.
 

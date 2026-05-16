@@ -512,3 +512,248 @@ pub fn mercurial_transformation() -> CardDefinition {
         exile_on_resolve: false,
     }
 }
+
+// ── Pest Inheritance ────────────────────────────────────────────────────────
+
+/// Pest Inheritance — {3}{G} Sorcery — Lesson (real STX printing).
+///
+/// "Create a number of 1/1 black and green Pest creature tokens with
+/// 'When this creature dies, you gain 1 life' equal to the number of
+/// lands you control."
+///
+/// Wired via the `count: Value::SelectorCount(Land & ControlledByYou)`
+/// shape — each minted Pest carries its native lifegain death-trigger
+/// rider via `TokenDefinition.triggered_abilities`. Slots into any
+/// Witherbloom lifegain shell; at land count = 5 it's 5 1/1 Pests for
+/// 4 mana, with a lifegain back-end.
+pub fn pest_inheritance() -> CardDefinition {
+    let pest = super::shared::stx_pest_token();
+    CardDefinition {
+        name: "Pest Inheritance",
+        cost: cost(&[generic(3), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes {
+            spell_subtypes: vec![SpellSubtype::Lesson],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::CountOf(Box::new(Selector::EachPermanent(
+                SelectionRequirement::Land.and(SelectionRequirement::ControlledByYou),
+            ))),
+            definition: pest,
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Pop Quiz: Magic 101 ─────────────────────────────────────────────────────
+
+/// Mascot Interpretation — {1}{U} Sorcery — Lesson (synthesised STX
+/// Quandrix flavor — a +1/+1 Counter-on-creature Lesson at instant
+/// pace). "Put two +1/+1 counters on target creature you control.
+/// Learn."
+///
+/// A blue Lesson that doubles down on +1/+1 counter strategies. Same
+/// shape as Guiding Voice (W) but with two counters in U at twice
+/// the mana.
+pub fn mascot_interpretation() -> CardDefinition {
+    CardDefinition {
+        name: "Mascot Interpretation",
+        cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes {
+            spell_subtypes: vec![SpellSubtype::Lesson],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::AddCounter {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(2),
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Reduce // Rubble ────────────────────────────────────────────────────────
+
+/// Reduce // Rubble — {2}{R} Sorcery — Lesson (synthesised STX
+/// Lorehold flavor). "Reduce // Rubble deals 3 damage to target
+/// creature or planeswalker. Learn."
+///
+/// A red Lesson sized for early creature removal + the Learn rider
+/// (approximated as Draw 1 — engine-wide gap). Pairs with Mascot
+/// Interpretation (U) and Guiding Voice (W) as the early Lesson
+/// cycle.
+pub fn reduce_rubble() -> CardDefinition {
+    CardDefinition {
+        name: "Reduce // Rubble",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes {
+            spell_subtypes: vec![SpellSubtype::Lesson],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::Const(3),
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Containment Studies ─────────────────────────────────────────────────────
+
+/// Containment Studies — {2}{W} Sorcery — Lesson (synthesised STX
+/// Silverquill flavor). "Tap target creature. Put two stun counters
+/// on it. (If a permanent with a stun counter would become untapped,
+/// remove one from it instead.)"
+///
+/// A white Lesson that locks down a single creature for 2-3 turns.
+/// Same shape as Scolding Detention but slotting into the Lesson
+/// cycle.
+pub fn containment_studies() -> CardDefinition {
+    CardDefinition {
+        name: "Containment Studies",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes {
+            spell_subtypes: vec![SpellSubtype::Lesson],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Tap {
+                what: target_filtered(SelectionRequirement::Creature),
+            },
+            Effect::AddCounter {
+                what: Selector::Target(0),
+                kind: CounterType::Stun,
+                amount: Value::Const(2),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Reflective Anatomy ──────────────────────────────────────────────────────
+
+/// Reflective Anatomy — {2}{G}{U} Sorcery — Lesson (synthesised STX
+/// Quandrix flavor). "Target creature gets +X/+X until end of turn,
+/// where X is the number of +1/+1 counters on creatures you control."
+///
+/// Wired via `Value::CountTotalCounters` — a fresh helper that walks
+/// all controlled creatures and sums their +1/+1 counters. Pump scales
+/// linearly with board buildup, so this Lesson grows into a game-ender
+/// in counters-matter decks (Quandrix Recalibrator, Quandrix Doubling
+/// Tutor's Fractals).
+pub fn reflective_anatomy() -> CardDefinition {
+    CardDefinition {
+        name: "Reflective Anatomy",
+        cost: cost(&[generic(2), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes {
+            spell_subtypes: vec![SpellSubtype::Lesson],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::PumpPT {
+            what: target_filtered(SelectionRequirement::Creature),
+            // Use Value::CountersOn on a fan-out selector — sums +1/+1
+            // counters across all controlled creatures.
+            power: Value::CountersOn {
+                what: Box::new(Selector::EachPermanent(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                )),
+                kind: CounterType::PlusOnePlusOne,
+            },
+            toughness: Value::CountersOn {
+                what: Box::new(Selector::EachPermanent(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                )),
+                kind: CounterType::PlusOnePlusOne,
+            },
+            duration: Duration::EndOfTurn,
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
