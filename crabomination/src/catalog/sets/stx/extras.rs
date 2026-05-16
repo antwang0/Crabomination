@@ -19137,6 +19137,7 @@ pub fn lorehold_lightning() -> CardDefinition {
 /// of Paradise restricted to G/U. Bumps the curve to play Body of
 /// Research / Tanazir Quandrix on turn 5.
 pub fn quandrix_engineer() -> CardDefinition {
+    use crate::catalog::sets::tap_add;
     CardDefinition {
         name: "Quandrix Engineer",
         cost: cost(&[generic(1), g(), u()]),
@@ -19150,40 +19151,7 @@ pub fn quandrix_engineer() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: vec![
-            ActivatedAbility {
-                tap_cost: true,
-                mana_cost: ManaCost::default(),
-                effect: Effect::AddMana {
-                    who: PlayerRef::You,
-                    pool: ManaPayload::OfColor(Color::Green, Value::Const(1)),
-                },
-                once_per_turn: false,
-                sorcery_speed: false,
-                sac_cost: false,
-                condition: None,
-                life_cost: 0,
-                from_graveyard: false,
-                exile_self_cost: false,
-                exile_other_filter: None,
-            },
-            ActivatedAbility {
-                tap_cost: true,
-                mana_cost: ManaCost::default(),
-                effect: Effect::AddMana {
-                    who: PlayerRef::You,
-                    pool: ManaPayload::OfColor(Color::Blue, Value::Const(1)),
-                },
-                once_per_turn: false,
-                sorcery_speed: false,
-                sac_cost: false,
-                condition: None,
-                life_cost: 0,
-                from_graveyard: false,
-                exile_self_cost: false,
-                exile_other_filter: None,
-            },
-        ],
+        activated_abilities: vec![tap_add(Color::Green), tap_add(Color::Blue)],
         triggered_abilities: vec![],
         static_abilities: vec![],
         base_loyalty: 0,
@@ -19860,6 +19828,7 @@ pub fn prismari_arsonist() -> CardDefinition {
 /// Color-fixing artifact with a small lifegain ETB. Plays like a
 /// Manalith / Coalition Banner in Lorehold colors.
 pub fn lorehold_banner() -> CardDefinition {
+    use crate::catalog::sets::tap_add;
     CardDefinition {
         name: "Lorehold Banner",
         cost: cost(&[generic(3)]),
@@ -19870,40 +19839,7 @@ pub fn lorehold_banner() -> CardDefinition {
         toughness: 0,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: vec![
-            ActivatedAbility {
-                tap_cost: true,
-                mana_cost: ManaCost::default(),
-                effect: Effect::AddMana {
-                    who: PlayerRef::You,
-                    pool: ManaPayload::OfColor(Color::Red, Value::Const(1)),
-                },
-                once_per_turn: false,
-                sorcery_speed: false,
-                sac_cost: false,
-                condition: None,
-                life_cost: 0,
-                from_graveyard: false,
-                exile_self_cost: false,
-                exile_other_filter: None,
-            },
-            ActivatedAbility {
-                tap_cost: true,
-                mana_cost: ManaCost::default(),
-                effect: Effect::AddMana {
-                    who: PlayerRef::You,
-                    pool: ManaPayload::OfColor(Color::White, Value::Const(1)),
-                },
-                once_per_turn: false,
-                sorcery_speed: false,
-                sac_cost: false,
-                condition: None,
-                life_cost: 0,
-                from_graveyard: false,
-                exile_self_cost: false,
-                exile_other_filter: None,
-            },
-        ],
+        activated_abilities: vec![tap_add(Color::Red), tap_add(Color::White)],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::GainLife {
@@ -20754,6 +20690,7 @@ pub fn silverquill_vanguard() -> CardDefinition {
 /// Mana-fixing dork in Prismari colors for U/R decks. Same shape as
 /// the Quandrix Engineer's body.
 pub fn prismari_channeler() -> CardDefinition {
+    use crate::catalog::sets::tap_add;
     CardDefinition {
         name: "Prismari Channeler",
         cost: cost(&[generic(2), r()]),
@@ -20767,40 +20704,7 @@ pub fn prismari_channeler() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: vec![
-            ActivatedAbility {
-                tap_cost: true,
-                mana_cost: ManaCost::default(),
-                effect: Effect::AddMana {
-                    who: PlayerRef::You,
-                    pool: ManaPayload::OfColor(Color::Blue, Value::Const(1)),
-                },
-                once_per_turn: false,
-                sorcery_speed: false,
-                sac_cost: false,
-                condition: None,
-                life_cost: 0,
-                from_graveyard: false,
-                exile_self_cost: false,
-                exile_other_filter: None,
-            },
-            ActivatedAbility {
-                tap_cost: true,
-                mana_cost: ManaCost::default(),
-                effect: Effect::AddMana {
-                    who: PlayerRef::You,
-                    pool: ManaPayload::OfColor(Color::Red, Value::Const(1)),
-                },
-                once_per_turn: false,
-                sorcery_speed: false,
-                sac_cost: false,
-                condition: None,
-                life_cost: 0,
-                from_graveyard: false,
-                exile_self_cost: false,
-                exile_other_filter: None,
-            },
-        ],
+        activated_abilities: vec![tap_add(Color::Blue), tap_add(Color::Red)],
         triggered_abilities: vec![],
         static_abilities: vec![],
         base_loyalty: 0,
