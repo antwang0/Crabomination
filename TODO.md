@@ -11,6 +11,53 @@ Periodic spot-check of the rules document
 (`crabomination/MagicCompRules 20260116.txt`). Each rule below has a
 status tag (✅ wired, 🟡 partial, ⏳ todo) plus a short note.
 
+- 🟡 **CR 701.10 — Double** (push modern_decks audit,
+  claude/modern_decks branch): "To double a creature's power means
+  that creature gets +X/+0, where X is that creature's power as the
+  spell or ability that doubles its power resolves" (701.10b). "To
+  double the number of a kind of counters on a player or permanent,
+  give that player or permanent as many of those counters as that
+  player or permanent already has" (701.10e). The engine wires the
+  counter-doubling form via `Value::CountersOn` + `Effect::AddCounter`
+  (the printed pattern is "Put a +1/+1 counter on it" with `amount:
+  CountersOn(target, +1/+1)`, which adds N existing counters → 2N
+  total). Catalog exercisers: Tanazir Quandrix ETB ("double the +1/+1
+  counters on each creature you control"), Symmathematics Magecraft
+  ("double the number of +1/+1 counters"), Practical Research,
+  Master Symmetrist, Doubling Season (cube). The P/T-doubling form
+  (701.10b: "Double target creature's power") is **not wired** as a
+  first-class primitive — would need `Effect::DoublePower { target }`
+  reading `PowerOf` and emitting `PumpPT { power: PowerOf(target),
+  toughness: 0, duration: EOT }` (since 701.10a says it's a continuous
+  effect, not a base-P/T rewrite). Mana-doubling (701.10f: "double
+  the amount of a type of mana") and life-doubling (701.10d: "double
+  a player's life total") aren't wired today and aren't tracked
+  against current catalog cards. Tests:
+  `tanazir_etb_doubles_plus_one_counters`,
+  `symmathematics_doubles_counters_on_instant_cast`,
+  `master_symmetrist_etb_doubles_counters_on_friendly_creatures` (in
+  `tests::stx`). Promote to ✅ when P/T-doubling lands.
+
+- ✅ **CR 122.6 — Counters on permanents entering with counters**
+  (push modern_decks audit, claude/modern_decks branch): "If an object
+  enters the battlefield with counters on it, the effect causing the
+  object to be given counters may specify which player puts those
+  counters on it. If the effect doesn't specify, the object's
+  controller puts them on it." Wired via the `CardDefinition.
+  enters_with_counters` field (push XXXI engine primitive). Counters
+  are applied INSIDE the same ETB-zone hand-off, BEFORE state-based
+  actions check toughness (CR 614.12 + 122.6 timing match). Each
+  printed Oracle's "enters with N counters" line lands at the
+  hand-off site: `stack.rs` spell-resolution path for hard-cast
+  permanents + `effects/movement.rs::place_card_in_dest` for reanimate
+  / flicker / search-to-battlefield. The owner-vs-controller split
+  doesn't matter for the current catalog (no card specifies a
+  non-controller as the placer), but the architecture supports it
+  cleanly via `ctx.controller` reading the resolution's seat. Tests:
+  `pterafractyl_cr_614_12_zero_toughness_base_survives_etb_via_enters_with`,
+  `symmathematics_enters_with_two_plus_one_counters`. Closes the
+  CR 122.6 audit row.
+
 - 🟡 **CR 121 — Drawing a Card** (push modern_decks audit,
   claude/modern_decks branch): The card-draw foundation, gated as
   the engine's `Effect::Draw` + `Player::draw_top` site. Audit:

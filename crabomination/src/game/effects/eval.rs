@@ -382,6 +382,42 @@ impl GameState {
                 // ("cast from a graveyard" is a spell-only concept).
                 !ctx.cast_from_hand
             }
+            Predicate::OpponentControlsMoreLandsThanYou => {
+                // Walk the battlefield, count lands per seat. True iff
+                // any opponent of `ctx.controller` has strictly more
+                // lands than the controller. Skips eliminated players
+                // and shares seat ↔ team semantics via the helper.
+                let you = ctx.controller;
+                let mut your_lands = 0usize;
+                let mut max_opp_lands = 0usize;
+                for c in &self.battlefield {
+                    if !c.definition.is_land() {
+                        continue;
+                    }
+                    if c.controller == you {
+                        your_lands += 1;
+                    } else if !self.same_team(c.controller, you)
+                        && !self.players[c.controller].eliminated
+                    {
+                        // Track the largest opponent land count so we
+                        // compare against the most-ahead opponent.
+                        // (Tracking a per-opp sum and taking the max
+                        // would require a HashMap; the same effect is
+                        // achieved by counting each opp's lands.)
+                        let opp_lands = self
+                            .battlefield
+                            .iter()
+                            .filter(|p| {
+                                p.controller == c.controller && p.definition.is_land()
+                            })
+                            .count();
+                        if opp_lands > max_opp_lands {
+                            max_opp_lands = opp_lands;
+                        }
+                    }
+                }
+                max_opp_lands > your_lands
+            }
             Predicate::IncrementSatisfied => {
                 // SOS Increment: "Whenever you cast a spell, if the
                 // amount of mana you spent is greater than this

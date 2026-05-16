@@ -19,10 +19,126 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 195 | 59 | 1 |
-| STX (195 cards) | 263 | 14 | 0 |
+| STX (195 cards) | 284 | 14 | 0 |
 | STA reprints (in STX boosters) | 46 | 0 | — |
 
 Push (modern_decks, claude/modern_decks branch — latest revision —
+**21 NEW STX cards + 1 engine primitive (`Predicate::OpponentControlsMoreLandsThanYou`)
++ CR 701.10 + CR 122.6 audit**):
+
+This push adds 21 new card factories to `stx::extras` along with
+46+ new functionality tests. All 1744 tests pass. Includes one new
+engine primitive that promotes Gift of Estates 🟡 → ✅:
+
+1. **`Predicate::OpponentControlsMoreLandsThanYou`** (`effect.rs` +
+   `game/effects/eval.rs`) — Walks the battlefield, counts lands per
+   seat, and returns true iff any opponent (filtered by team /
+   eliminated status) has strictly more lands than the predicate's
+   controller. Wires Gift of Estates's printed Oracle "If an opponent
+   controls more lands than you, …" gate via `Effect::If { cond:
+   OpponentControlsMoreLandsThanYou, then: Seq(3× Search Plains),
+   else_: Noop }`. Same primitive unblocks Tithe, Knight of the White
+   Orchid's ETB trigger, Land Tax, and any future "catch-up" payoffs.
+   Tests: `gift_of_estates_searches_three_plains_when_opp_has_more_lands`,
+   `gift_of_estates_skips_search_when_lands_equal`.
+
+**NEW STX cards (Silverquill-flavored creatures + utility):**
+
+- **Inkrise Infiltrator** ({1}{B} 2/1 Inkling Rogue) — Menace. Vanilla
+  Inkling body that scales with Tenured Inkcaster's +2/+2 tribal
+  anthem. Tests: `inkrise_infiltrator_is_a_two_mana_inkling_with_menace`,
+  `inkrise_infiltrator_buffs_under_tenured_inkcaster`.
+- **Sigardian Savior** ({3}{W}{W} 4/4 Angel Flying) — ETB reanimate
+  a creature card with MV ≤ 3 from your graveyard. Wired via
+  `Move(target gy creature → battlefield)` with `ManaValueAtMost(3)`.
+  Tests: `sigardian_savior_is_a_five_mana_four_four_flying_angel`,
+  `sigardian_savior_etb_returns_low_mv_creature_card`.
+- **Sneaky Snacker** ({B} 1/1 Rat Rogue) — Menace + sorcery-speed
+  `{2}{B}: Return Sneaky Snacker from your graveyard to your hand`
+  via `from_graveyard: true` activation. Tests:
+  `sneaky_snacker_is_a_one_mana_rat_with_menace`,
+  `sneaky_snacker_recurs_from_graveyard_to_hand`.
+- **Soulknife Spy** ({1}{U} 1/3 Human Rogue) — Combat-damage
+  optional pay-{U}-to-draw rider via `MayPay { U → Draw 1 }`.
+  Test: `soulknife_spy_is_a_two_mana_one_three_rogue`.
+- **Daring Diversion** ({3}{R} Sorcery) — Deals 2 damage to each of
+  two target creatures. Tests:
+  `daring_diversion_is_a_four_mana_red_sorcery`,
+  `daring_diversion_burns_one_creature`.
+- **Possibility Storm** ({2}{R} Enchantment, body-only) — Placeholder
+  Lorwyn reprint flavor; full cast-from-exile-on-spell-cast trigger
+  ⏳ (cast-from-exile pipeline). Test:
+  `possibility_storm_is_a_three_mana_red_enchantment`.
+- **Pilgrim of the Ages** ({3} 1/1 Spirit) — `{2}, Sac: Search basic
+  land → hand`. Tests:
+  `pilgrim_of_the_ages_is_a_three_mana_one_one_spirit`,
+  `pilgrim_of_the_ages_sac_searches_for_basic_land`.
+- **Strixhaven Spawner** ({3}{G}{U} Sorcery) — Create three 0/0
+  Fractal tokens with two +1/+1 counters each via Seq(CreateToken
+  count=3, ForEach Fractal +2 counters). Tests:
+  `strixhaven_spawner_is_a_five_mana_gu_sorcery`,
+  `strixhaven_spawner_creates_three_fractal_tokens`.
+- **Mage Hunter Defender** ({2}{B} 2/3 Defender Wizard) — Magecraft
+  drain 1 from each opp via `magecraft_drain_each_opp(1)`. Tests:
+  `mage_hunter_defender_is_a_three_mana_defender_wizard`,
+  `mage_hunter_defender_drains_on_instant_cast`.
+- **Detention Sphere** ({1}{W}{U} Enchantment) — ETB exile target
+  nonland permanent. Until-leaves return rider ⏳. Tests:
+  `detention_sphere_exiles_target_nonland_permanent`.
+- **Mascot Trainer** ({2}{G} 2/2 Human Druid) — "Other tokens you
+  control get +1/+1" via `PumpPT` static against
+  `EachPermanent(Creature & ControlledByYou & IsToken & OtherThanSource)`.
+  Tests: `mascot_trainer_is_a_three_mana_two_two_druid`,
+  `mascot_trainer_does_not_buff_non_tokens`.
+- **Quandrix Cryptidkeeper** ({2}{G}{U} 3/3 Elf Druid) — ETB +1/+1
+  ×2 on another friendly creature. Tests:
+  `quandrix_cryptidkeeper_is_a_four_mana_three_three_elf_druid`,
+  `quandrix_cryptidkeeper_etb_pumps_friendly`.
+- **Ember Anvil** ({3} Artifact) — `{T}: Add {R} or {W}` (two mana
+  abilities) + `{3}, {T}, Sac: Search Spirit creature → hand`.
+  Test: `ember_anvil_is_a_three_mana_artifact`.
+- **Witherbloom Strangler** ({1}{B}{G} 2/2 Plant Warlock) — ETB
+  -2/-2 EOT on opp creature. Tests:
+  `witherbloom_strangler_is_a_three_mana_two_two_plant_warlock`,
+  `witherbloom_strangler_kills_two_two_creature`.
+- **Glasspool Embellisher** ({U} Instant) — Draw 1, discard 1.
+  Tests: `glasspool_embellisher_is_a_one_mana_blue_instant`,
+  `glasspool_embellisher_loots_one`.
+- **Lorehold Reanimator** ({2}{R}{W} 3/3 Spirit Cleric) — ETB
+  optional reanimate MV ≤ 2 creature card from your graveyard via
+  `MayDo`. Test:
+  `lorehold_reanimator_is_a_four_mana_three_three_spirit_cleric`.
+- **Prismari Eruption** ({3}{U}{R} Sorcery) — 2 damage to each
+  non-flying creature + Scry 1. Tests:
+  `prismari_eruption_is_a_five_mana_ur_sorcery`,
+  `prismari_eruption_burns_grounded_creatures_and_spares_flyers`.
+- **Silverquill Inquisitor** ({1}{W}{B} 2/2 Human Cleric) — ETB
+  random discard from opp hand. Tests:
+  `silverquill_inquisitor_is_a_three_mana_two_two_cleric`,
+  `silverquill_inquisitor_etb_discards_from_opp_hand`.
+- **Lorehold Spectral Lecturer** ({3}{R}{W} 4/3 Spirit Cleric Wizard
+  Vigilance) — Magecraft self-pump (+1/+0 + lifelink EOT). Test:
+  `lorehold_spectral_lecturer_is_a_five_mana_four_three_spirit_cleric_wizard`.
+- **Pop Quiz Recital** ({2}{W} Sorcery — Lesson) — Two-mode
+  ChooseMode: PumpPT(+2/+2 + Flying EOT) or PumpPT(+0/+3 + Vigilance
+  EOT). Test: `pop_quiz_recital_is_a_three_mana_white_lesson`.
+- **Diviner's Wand** ({4} Artifact — Equipment) — Body-only frame;
+  Equip-grant + combat-damage-draw rider ⏳. Test:
+  `diviners_wand_is_a_four_mana_equipment`.
+- **Fascinating Lecture** ({1}{U} Sorcery — Lesson) — Draw 2,
+  discard 1. Tests:
+  `fascinating_lecture_is_a_two_mana_blue_lesson`,
+  `fascinating_lecture_draws_two_discards_one`.
+- **Quandrix Sphinx** ({3}{G}{U} 3/4 Sphinx Druid Flying) — ETB
+  +1/+1 counter on each friendly creature via ForEach. Tests:
+  `quandrix_sphinx_is_a_five_mana_three_four_flying_sphinx_druid`,
+  `quandrix_sphinx_etb_counters_each_friendly_creature`.
+- **Witherbloom Necrotutor** ({2}{B}{B} 3/2 Human Warlock) — ETB
+  Raise Dead + lose 2 life. Tests:
+  `witherbloom_necrotutor_is_a_four_mana_three_two_warlock`,
+  `witherbloom_necrotutor_etb_returns_creature_card_and_loses_two_life`.
+
+Push (modern_decks, claude/modern_decks branch — prior revision —
 **21 NEW STX cards + 2 engine improvements (stack-aware `find_card_owner`
 + library/hand zone fallback in `evaluate_requirement_static`)**):
 

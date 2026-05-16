@@ -415,6 +415,13 @@ pub enum Predicate {
     /// instead") and Antiquities on the Loose's "cast from anywhere
     /// other than your hand" rider.
     CastFromGraveyard,
+    /// True if any opponent of `ctx.controller` controls more lands
+    /// than `ctx.controller` does. Backed by walking the battlefield
+    /// and counting `Land` permanents per seat. Used by catch-up ramp
+    /// spells like Gift of Estates ("If an opponent controls more
+    /// lands than you, …"), Tithe, Knight of the White Orchid's ETB
+    /// trigger, and Land Tax.
+    OpponentControlsMoreLandsThanYou,
 }
 
 // ── Duration ─────────────────────────────────────────────────────────────────

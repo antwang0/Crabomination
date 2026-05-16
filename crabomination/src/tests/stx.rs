@@ -12357,9 +12357,12 @@ fn gift_of_estates_is_a_one_mana_white_sorcery() {
 }
 
 #[test]
-fn gift_of_estates_searches_three_plains() {
+fn gift_of_estates_searches_three_plains_when_opp_has_more_lands() {
     use crate::decision::{DecisionAnswer, ScriptedDecider};
     let mut g = two_player_game();
+    // Give P1 (opp) two lands, P0 (caster) zero lands so opp leads.
+    g.add_card_to_battlefield(1, catalog::forest());
+    g.add_card_to_battlefield(1, catalog::forest());
     // Seed library with 3 Plains
     let p1 = g.add_card_to_library(0, catalog::plains());
     let p2 = g.add_card_to_library(0, catalog::plains());
@@ -12381,6 +12384,29 @@ fn gift_of_estates_searches_three_plains() {
     assert!(g.players[0].hand.iter().any(|c| c.id == p1), "p1 in hand");
     assert!(g.players[0].hand.iter().any(|c| c.id == p2), "p2 in hand");
     assert!(g.players[0].hand.iter().any(|c| c.id == p3), "p3 in hand");
+}
+
+#[test]
+fn gift_of_estates_skips_search_when_lands_equal() {
+    let mut g = two_player_game();
+    // Both players have one land — gate fails (P1 doesn't have *more* than P0).
+    g.add_card_to_battlefield(0, catalog::forest());
+    g.add_card_to_battlefield(1, catalog::forest());
+    let p1 = g.add_card_to_library(0, catalog::plains());
+
+    let id = g.add_card_to_hand(0, catalog::gift_of_estates());
+    g.players[0].mana_pool.add(Color::White, 1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Gift of Estates castable");
+    drain_stack(&mut g);
+
+    // Predicate fails (equal lands), so no Search fires. Plains stays in library.
+    assert!(
+        !g.players[0].hand.iter().any(|c| c.id == p1),
+        "no plains tutored when lands are equal"
+    );
 }
 
 // ── Pillage ────────────────────────────────────────────────────────────────
@@ -12844,4 +12870,577 @@ fn deans_list_takes_top_card_and_mills_rest() {
     assert!(in_hand >= 1, "at least one card in hand");
     // The other two go to graveyard via RevealMissDest::Graveyard.
     assert!(in_gy >= 1 || in_hand >= 1, "some cards moved out of library");
+}
+
+// ── Inkrise Infiltrator ────────────────────────────────────────────────────
+
+#[test]
+fn inkrise_infiltrator_is_a_two_mana_inkling_with_menace() {
+    let def = catalog::inkrise_infiltrator();
+    assert_eq!(def.cost.cmc(), 2);
+    assert_eq!(def.power, 2);
+    assert_eq!(def.toughness, 1);
+    assert!(def.has_creature_type(crate::card::CreatureType::Inkling));
+    assert!(def.has_creature_type(crate::card::CreatureType::Rogue));
+    assert!(def.keywords.contains(&Keyword::Menace));
+}
+
+#[test]
+fn inkrise_infiltrator_buffs_under_tenured_inkcaster() {
+    let mut g = two_player_game();
+    let inkling = g.add_card_to_battlefield(0, catalog::inkrise_infiltrator());
+    // Apply Inkcaster anthem so the inkling gains +2/+2.
+    let _ink = g.add_card_to_battlefield(0, catalog::tenured_inkcaster());
+    let comp = g.computed_permanent(inkling).expect("inkling on bf");
+    assert_eq!(comp.power, 4, "Inkling Rogue gets +2/+2 from Inkcaster");
+    assert_eq!(comp.toughness, 3);
+}
+
+// ── Sigardian Savior ───────────────────────────────────────────────────────
+
+#[test]
+fn sigardian_savior_is_a_five_mana_four_four_flying_angel() {
+    let def = catalog::sigardian_savior();
+    assert_eq!(def.cost.cmc(), 5);
+    assert_eq!(def.power, 4);
+    assert_eq!(def.toughness, 4);
+    assert!(def.has_creature_type(crate::card::CreatureType::Angel));
+    assert!(def.keywords.contains(&Keyword::Flying));
+}
+
+#[test]
+fn sigardian_savior_etb_returns_low_mv_creature_card() {
+    let mut g = two_player_game();
+    // Place a 2-MV creature in graveyard.
+    let bear_id = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let savior = g.add_card_to_hand(0, catalog::sigardian_savior());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(3);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: savior, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Savior castable");
+    drain_stack(&mut g);
+
+    // Bear should be back on the battlefield.
+    assert!(
+        g.battlefield.iter().any(|c| c.id == bear_id),
+        "bear reanimated"
+    );
+}
+
+// ── Sneaky Snacker ─────────────────────────────────────────────────────────
+
+#[test]
+fn sneaky_snacker_is_a_one_mana_rat_with_menace() {
+    let def = catalog::sneaky_snacker();
+    assert_eq!(def.cost.cmc(), 1);
+    assert!(def.keywords.contains(&Keyword::Menace));
+    assert!(def.has_creature_type(crate::card::CreatureType::Rat));
+}
+
+#[test]
+fn sneaky_snacker_recurs_from_graveyard_to_hand() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_graveyard(0, catalog::sneaky_snacker());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    // sorcery-speed activation requires main-phase priority on our turn.
+    assert_eq!(g.active_player_idx, 0);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id,
+        ability_index: 0,
+        target: None,
+    }).expect("Snacker recurs from graveyard");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == id), "snacker in hand");
+    assert!(
+        !g.players[0].graveyard.iter().any(|c| c.id == id),
+        "snacker removed from gy"
+    );
+}
+
+// ── Soulknife Spy ──────────────────────────────────────────────────────────
+
+#[test]
+fn soulknife_spy_is_a_two_mana_one_three_rogue() {
+    let def = catalog::soulknife_spy();
+    assert_eq!(def.cost.cmc(), 2);
+    assert_eq!(def.power, 1);
+    assert_eq!(def.toughness, 3);
+    assert!(def.has_creature_type(crate::card::CreatureType::Rogue));
+}
+
+// ── Daring Diversion ───────────────────────────────────────────────────────
+
+#[test]
+fn daring_diversion_is_a_four_mana_red_sorcery() {
+    let def = catalog::daring_diversion();
+    assert_eq!(def.cost.cmc(), 4);
+    assert!(def.card_types.contains(&crate::card::CardType::Sorcery));
+}
+
+#[test]
+fn daring_diversion_burns_one_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::daring_diversion());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(crate::game::types::Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    }).expect("Daring Diversion castable");
+    drain_stack(&mut g);
+    // 2/2 bear takes 2 damage and dies (slot 1 unfilled).
+    assert!(!g.battlefield.iter().any(|c| c.id == bear), "bear killed");
+}
+
+// ── Possibility Storm ──────────────────────────────────────────────────────
+
+#[test]
+fn possibility_storm_is_a_three_mana_red_enchantment() {
+    let def = catalog::possibility_storm();
+    assert_eq!(def.cost.cmc(), 3);
+    assert!(def.card_types.contains(&crate::card::CardType::Enchantment));
+}
+
+// ── Pilgrim of the Ages ────────────────────────────────────────────────────
+
+#[test]
+fn pilgrim_of_the_ages_is_a_three_mana_one_one_spirit() {
+    let def = catalog::pilgrim_of_the_ages();
+    assert_eq!(def.cost.cmc(), 3);
+    assert_eq!(def.power, 1);
+    assert_eq!(def.toughness, 1);
+    assert!(def.has_creature_type(crate::card::CreatureType::Spirit));
+}
+
+#[test]
+fn pilgrim_of_the_ages_sac_searches_for_basic_land() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let pilgrim = g.add_card_to_battlefield(0, catalog::pilgrim_of_the_ages());
+    let forest_id = g.add_card_to_library(0, catalog::forest());
+    g.players[0].mana_pool.add_colorless(2);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(forest_id))]));
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: pilgrim,
+        ability_index: 0,
+        target: None,
+    }).expect("Pilgrim activation");
+    drain_stack(&mut g);
+    // Pilgrim sacrificed (not on battlefield).
+    assert!(!g.battlefield.iter().any(|c| c.id == pilgrim), "pilgrim sacrificed");
+    // Basic land tutored to hand.
+    assert!(
+        g.players[0]
+            .hand
+            .iter()
+            .any(|c| c.id == forest_id),
+        "forest tutored to hand"
+    );
+}
+
+// ── Strixhaven Spawner ─────────────────────────────────────────────────────
+
+#[test]
+fn strixhaven_spawner_is_a_five_mana_gu_sorcery() {
+    let def = catalog::strixhaven_spawner();
+    assert_eq!(def.cost.cmc(), 5);
+    assert!(def.card_types.contains(&crate::card::CardType::Sorcery));
+}
+
+#[test]
+fn strixhaven_spawner_creates_three_fractal_tokens() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::strixhaven_spawner());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Spawner castable");
+    drain_stack(&mut g);
+    // Each fractal enters at 0/0 and the ForEach pumps +2 counters before SBA,
+    // so the 0/0 token survives at 2/2. With no token doublers, three Fractals
+    // come out. Each has at least 2 +1/+1 counters.
+    let fractals: Vec<_> = g
+        .battlefield
+        .iter()
+        .filter(|c| c.controller == 0 && c.definition.name == "Fractal")
+        .collect();
+    assert!(!fractals.is_empty(), "at least one Fractal token minted");
+    for f in &fractals {
+        let n = f.counter_count(crate::card::CounterType::PlusOnePlusOne);
+        assert!(n >= 2, "each fractal has ≥2 +1/+1 counters (got {})", n);
+    }
+}
+
+// ── Mage Hunter Defender ───────────────────────────────────────────────────
+
+#[test]
+fn mage_hunter_defender_is_a_three_mana_defender_wizard() {
+    let def = catalog::mage_hunter_defender();
+    assert_eq!(def.cost.cmc(), 3);
+    assert!(def.keywords.contains(&Keyword::Defender));
+    assert!(def.has_creature_type(crate::card::CreatureType::Wizard));
+}
+
+#[test]
+fn mage_hunter_defender_drains_on_instant_cast() {
+    let mut g = two_player_game();
+    let _mhd = g.add_card_to_battlefield(0, catalog::mage_hunter_defender());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    let life_us_before = g.players[0].life;
+    let life_opp_before = g.players[1].life;
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(crate::game::types::Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    }).expect("Bolt castable");
+    drain_stack(&mut g);
+    // Bolt: 3 dmg to opp. Magecraft Drain 1: opp loses 1, us gain 1.
+    assert_eq!(g.players[0].life, life_us_before + 1, "drain gain 1");
+    assert_eq!(g.players[1].life, life_opp_before - 3 - 1, "bolt + drain");
+}
+
+// ── Detention Sphere ───────────────────────────────────────────────────────
+
+#[test]
+fn detention_sphere_is_a_three_mana_white_blue_enchantment() {
+    let def = catalog::detention_sphere();
+    assert_eq!(def.cost.cmc(), 3);
+    assert!(def.card_types.contains(&crate::card::CardType::Enchantment));
+}
+
+#[test]
+fn detention_sphere_exiles_target_nonland_permanent() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::detention_sphere());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(crate::game::types::Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    }).expect("Detention Sphere castable");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == bear), "bear in exile");
+}
+
+// ── Mascot Trainer ─────────────────────────────────────────────────────────
+
+#[test]
+fn mascot_trainer_is_a_three_mana_two_two_druid() {
+    let def = catalog::mascot_trainer();
+    assert_eq!(def.cost.cmc(), 3);
+    assert_eq!(def.power, 2);
+    assert_eq!(def.toughness, 2);
+    assert!(def.has_creature_type(crate::card::CreatureType::Druid));
+}
+
+#[test]
+fn mascot_trainer_does_not_buff_non_tokens() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let _trainer = g.add_card_to_battlefield(0, catalog::mascot_trainer());
+    let comp = g.computed_permanent(bear).expect("bear on bf");
+    // Bear is not a token, should not get the buff.
+    assert_eq!(comp.power, 2);
+    assert_eq!(comp.toughness, 2);
+}
+
+// ── Quandrix Cryptidkeeper ─────────────────────────────────────────────────
+
+#[test]
+fn quandrix_cryptidkeeper_is_a_four_mana_three_three_elf_druid() {
+    let def = catalog::quandrix_cryptidkeeper();
+    assert_eq!(def.cost.cmc(), 4);
+    assert_eq!(def.power, 3);
+    assert_eq!(def.toughness, 3);
+    assert!(def.has_creature_type(crate::card::CreatureType::Elf));
+}
+
+#[test]
+fn quandrix_cryptidkeeper_etb_pumps_friendly() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let keeper = g.add_card_to_hand(0, catalog::quandrix_cryptidkeeper());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: keeper,
+        target: Some(crate::game::types::Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    }).expect("Cryptidkeeper castable");
+    drain_stack(&mut g);
+    let counters = g
+        .battlefield
+        .iter()
+        .find(|c| c.id == bear)
+        .expect("bear still on bf")
+        .counter_count(CounterType::PlusOnePlusOne);
+    assert_eq!(counters, 2, "bear got two +1/+1 counters");
+}
+
+// ── Ember Anvil ───────────────────────────────────────────────────────────
+
+#[test]
+fn ember_anvil_is_a_three_mana_artifact() {
+    let def = catalog::ember_anvil();
+    assert_eq!(def.cost.cmc(), 3);
+    assert!(def.card_types.contains(&crate::card::CardType::Artifact));
+}
+
+// ── Witherbloom Strangler ──────────────────────────────────────────────────
+
+#[test]
+fn witherbloom_strangler_is_a_three_mana_two_two_plant_warlock() {
+    let def = catalog::witherbloom_strangler();
+    assert_eq!(def.cost.cmc(), 3);
+    assert_eq!(def.power, 2);
+    assert_eq!(def.toughness, 2);
+    assert!(def.has_creature_type(crate::card::CreatureType::Plant));
+}
+
+#[test]
+fn witherbloom_strangler_kills_two_two_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::witherbloom_strangler());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(crate::game::types::Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    }).expect("Strangler castable");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == bear), "bear killed by -2/-2");
+}
+
+// ── Glasspool Embellisher ──────────────────────────────────────────────────
+
+#[test]
+fn glasspool_embellisher_is_a_one_mana_blue_instant() {
+    let def = catalog::glasspool_embellisher();
+    assert_eq!(def.cost.cmc(), 1);
+    assert!(def.card_types.contains(&crate::card::CardType::Instant));
+}
+
+#[test]
+fn glasspool_embellisher_loots_one() {
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
+    let id = g.add_card_to_hand(0, catalog::glasspool_embellisher());
+    let hand_before = g.players[0].hand.len();
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Embellisher castable");
+    drain_stack(&mut g);
+    // -1 (cast) +1 (draw) -1 (discard) = -1 net.
+    assert_eq!(g.players[0].hand.len(), hand_before - 1);
+}
+
+// ── Lorehold Reanimator ────────────────────────────────────────────────────
+
+#[test]
+fn lorehold_reanimator_is_a_four_mana_three_three_spirit_cleric() {
+    let def = catalog::lorehold_reanimator();
+    assert_eq!(def.cost.cmc(), 4);
+    assert_eq!(def.power, 3);
+    assert_eq!(def.toughness, 3);
+    assert!(def.has_creature_type(crate::card::CreatureType::Spirit));
+}
+
+// ── Prismari Eruption ──────────────────────────────────────────────────────
+
+#[test]
+fn prismari_eruption_is_a_five_mana_ur_sorcery() {
+    let def = catalog::prismari_eruption();
+    assert_eq!(def.cost.cmc(), 5);
+    assert!(def.card_types.contains(&crate::card::CardType::Sorcery));
+}
+
+#[test]
+fn prismari_eruption_burns_grounded_creatures_and_spares_flyers() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let flyer = g.add_card_to_battlefield(1, catalog::serra_angel());
+    let id = g.add_card_to_hand(0, catalog::prismari_eruption());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Eruption castable");
+    drain_stack(&mut g);
+    // 2/2 bear dies; 4/4 flying Serra Angel lives.
+    assert!(!g.battlefield.iter().any(|c| c.id == bear), "bear dies");
+    assert!(g.battlefield.iter().any(|c| c.id == flyer), "flyer survives");
+}
+
+// ── Silverquill Inquisitor ─────────────────────────────────────────────────
+
+#[test]
+fn silverquill_inquisitor_is_a_three_mana_two_two_cleric() {
+    let def = catalog::silverquill_inquisitor();
+    assert_eq!(def.cost.cmc(), 3);
+    assert_eq!(def.power, 2);
+    assert_eq!(def.toughness, 2);
+    assert!(def.has_creature_type(crate::card::CreatureType::Cleric));
+}
+
+#[test]
+fn silverquill_inquisitor_etb_discards_from_opp_hand() {
+    let mut g = two_player_game();
+    g.add_card_to_hand(1, catalog::lightning_bolt());
+    let inq = g.add_card_to_hand(0, catalog::silverquill_inquisitor());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let opp_hand_before = g.players[1].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: inq, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Inquisitor castable");
+    drain_stack(&mut g);
+    // Opp's hand drops by 1 (random discard).
+    assert_eq!(g.players[1].hand.len(), opp_hand_before - 1);
+}
+
+// ── Lorehold Spectral Lecturer ─────────────────────────────────────────────
+
+#[test]
+fn lorehold_spectral_lecturer_is_a_five_mana_four_three_spirit_cleric_wizard() {
+    let def = catalog::lorehold_spectral_lecturer();
+    assert_eq!(def.cost.cmc(), 5);
+    assert_eq!(def.power, 4);
+    assert_eq!(def.toughness, 3);
+    assert!(def.has_creature_type(crate::card::CreatureType::Spirit));
+    assert!(def.keywords.contains(&Keyword::Vigilance));
+}
+
+// ── Pop Quiz Recital ───────────────────────────────────────────────────────
+
+#[test]
+fn pop_quiz_recital_is_a_three_mana_white_lesson() {
+    let def = catalog::pop_quiz_recital();
+    assert_eq!(def.cost.cmc(), 3);
+    assert!(def.subtypes.spell_subtypes.contains(&crate::card::SpellSubtype::Lesson));
+}
+
+// ── Diviner's Wand ─────────────────────────────────────────────────────────
+
+#[test]
+fn diviners_wand_is_a_four_mana_equipment() {
+    let def = catalog::diviners_wand();
+    assert_eq!(def.cost.cmc(), 4);
+    assert!(def.card_types.contains(&crate::card::CardType::Artifact));
+    assert!(def
+        .subtypes
+        .artifact_subtypes
+        .contains(&crate::card::ArtifactSubtype::Equipment));
+}
+
+// ── Fascinating Lecture ────────────────────────────────────────────────────
+
+#[test]
+fn fascinating_lecture_is_a_two_mana_blue_lesson() {
+    let def = catalog::fascinating_lecture();
+    assert_eq!(def.cost.cmc(), 2);
+    assert!(def.subtypes.spell_subtypes.contains(&crate::card::SpellSubtype::Lesson));
+}
+
+#[test]
+fn fascinating_lecture_draws_two_discards_one() {
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
+    let id = g.add_card_to_hand(0, catalog::fascinating_lecture());
+    let hand_before = g.players[0].hand.len();
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Lecture castable");
+    drain_stack(&mut g);
+    // -1 cast + 2 draws - 1 discard = 0 net.
+    assert_eq!(g.players[0].hand.len(), hand_before);
+}
+
+// ── Quandrix Sphinx ────────────────────────────────────────────────────────
+
+#[test]
+fn quandrix_sphinx_is_a_five_mana_three_four_flying_sphinx_druid() {
+    let def = catalog::quandrix_sphinx();
+    assert_eq!(def.cost.cmc(), 5);
+    assert_eq!(def.power, 3);
+    assert_eq!(def.toughness, 4);
+    assert!(def.keywords.contains(&Keyword::Flying));
+}
+
+#[test]
+fn quandrix_sphinx_etb_counters_each_friendly_creature() {
+    let mut g = two_player_game();
+    let bear1 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let bear2 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::quandrix_sphinx());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Sphinx castable");
+    drain_stack(&mut g);
+    for &bid in &[bear1, bear2] {
+        let n = g.battlefield.iter()
+            .find(|c| c.id == bid)
+            .expect("bear on bf")
+            .counter_count(CounterType::PlusOnePlusOne);
+        assert_eq!(n, 1, "each bear gets one counter");
+    }
+}
+
+// ── Witherbloom Necrotutor ─────────────────────────────────────────────────
+
+#[test]
+fn witherbloom_necrotutor_is_a_four_mana_three_two_warlock() {
+    let def = catalog::witherbloom_necrotutor();
+    assert_eq!(def.cost.cmc(), 4);
+    assert_eq!(def.power, 3);
+    assert_eq!(def.toughness, 2);
+    assert!(def.has_creature_type(crate::card::CreatureType::Warlock));
+}
+
+#[test]
+fn witherbloom_necrotutor_etb_returns_creature_card_and_loses_two_life() {
+    let mut g = two_player_game();
+    let bear_id = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let nec = g.add_card_to_hand(0, catalog::witherbloom_necrotutor());
+    let life_before = g.players[0].life;
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: nec, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Necrotutor castable");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == bear_id), "bear in hand");
+    assert_eq!(g.players[0].life, life_before - 2);
 }
