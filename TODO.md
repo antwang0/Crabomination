@@ -11,6 +11,39 @@ Periodic spot-check of the rules document
 (`crabomination/MagicCompRules 20260116.txt`). Each rule below has a
 status tag (✅ wired, 🟡 partial, ⏳ todo) plus a short note.
 
+- 🟡 **CR 605 — Mana Abilities** (push modern_decks audit,
+  claude/modern_decks branch): The mana-ability framework — what
+  qualifies as a mana ability and how it resolves. Audit confirms
+  the engine's activated-mana-ability fast-path is end-to-end CR-
+  compliant: (a) **605.1a** activated mana ability criteria (no
+  target + could add mana + not loyalty) — ✅ (`is_mana_ability` in
+  `game/actions.rs` matches the rule conservatively: pure
+  `Effect::AddMana` OR a `Seq` of mana abilities); (b) **605.2**
+  mana ability remains a mana ability even if it can't produce mana
+  right now — ✅ (the criteria check is static against the
+  `ActivatedAbility.effect` shape, not the runtime "could it add
+  mana"); (c) **605.3a** mid-cast / mid-resolve activation — ✅
+  (mana abilities can be activated during cost-payment via
+  `try_pay_with_auto_tap`); (d) **605.3b** doesn't go on the stack —
+  ✅ (`activate_ability` routes mana abilities through
+  `continue_ability_resolution` directly, skipping `StackItem::
+  Trigger` push); (e) **605.3c** can't reactivate until resolved —
+  ✅ (resolution is atomic in the mana-ability path); (f) **605.4a**
+  triggered mana abilities don't go on the stack — ⏳ (no STX/SOS
+  card requires it; engine handles all triggered abilities through
+  the standard stack-push path; first card to need the fast-path
+  would be Mana Reflection / Wirewood Channeler-style "Whenever
+  a permanent taps for mana, it produces twice as much"); (g)
+  **605.5a/b** abilities with targets / spells aren't mana
+  abilities — ✅ (the `is_mana_ability` recogniser doesn't accept
+  effects with `Target(_)` selectors or any non-AddMana sub-effect).
+  No new tests added — the framework is implicitly exercised by
+  every mana-rock test and every spell-cast test in the suite
+  (Sky/Marble/Fire/Charcoal/Moss Diamond, Lorehold Excavation's
+  two color-producing taps, every Witherbloom Pledgemage / Cellar
+  of Secrets / Diamond cycle activation). Promote to ✅ when the
+  triggered-mana-ability fast-path lands.
+
 - 🟡 **CR 701.10 — Double** (push modern_decks audit,
   claude/modern_decks branch): "To double a creature's power means
   that creature gets +X/+0, where X is that creature's power as the
@@ -1000,6 +1033,28 @@ status tag (✅ wired, 🟡 partial, ⏳ todo) plus a short note.
   the counters land on resolution).
 
 ## Suggested next-up tasks
+
+- ⏳ **Spirit-tribal Lorehold archetype** (push modern_decks): the new
+  Spirit Banner (+1/+1 anthem for Spirits) joins Quintorius's
+  pre-existing Spirit lord and the Lorehold token chain (Sparring
+  Regimen, Lorehold Excavation, Quintorius). With this in place,
+  a Spirit-tribal Lorehold variant deck could lean into the
+  Sparring-Regimen-attack → counter rain → anthem combo. Slot it
+  into the SoS Lorehold pool selector.
+
+- ⏳ **Inkling-tribal Silverquill archetype** (push modern_decks): the
+  new Quartzwood Inkling + Inkwell Strider + Inkling Studies join the
+  pre-existing Tenured Inkcaster tribal anthem and Felisa Fang of
+  Silverquill's Inkling generator. With at least 5 distinct Inkling
+  minters and a +2/+2 lord in the catalog, a Silverquill Inkling
+  tribal pool is now viable.
+
+- ⏳ **Triggered mana ability fast-path** (CR 605.4a) — promoted from
+  the existing TODO entry into the CR-audit row. Same blocker as
+  before: no STX/SOS card requires the fast-path today. First Mana
+  Reflection / Wirewood Channeler-class card would trigger.
+
+
 
 - ✅ **Stack-aware `find_card_owner`** (push modern_decks): the
   card-owner lookup in `GameState::find_card_owner` (`game/mod.rs`)

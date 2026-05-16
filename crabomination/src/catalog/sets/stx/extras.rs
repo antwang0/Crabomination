@@ -13,7 +13,7 @@ use crate::card::{
     TokenDefinition, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{magecraft, magecraft_drain_each_opp, magecraft_self_pump, target_filtered};
-use crate::effect::{Duration, ManaPayload, PlayerRef, ZoneDest};
+use crate::effect::{Duration, ManaPayload, PlayerRef, StaticAbility, StaticEffect, ZoneDest};
 use crate::mana::{Color, b, cost, g, generic, r, u, w, ManaCost};
 
 // ── Bookwurm ────────────────────────────────────────────────────────────────
@@ -13960,6 +13960,1124 @@ pub fn witherbloom_necrotutor() -> CardDefinition {
                 },
             ]),
         }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Silverquill Pledge ──────────────────────────────────────────────────────
+
+/// Silverquill Pledge — {1}{W}{B} Instant (synthesised STX Silverquill
+/// flavor based on the printed Silverquill Cleric tradition).
+///
+/// "Target creature gets +3/+1 until end of turn." Pure combat trick on
+/// the Silverquill color identity — Inkrise Infiltrator's swing
+/// becomes a 5/2 with menace; Eager First-Year goes from a 2/1 to a
+/// 5/2 trader. Wired as `Effect::PumpPT { +3/+1, EOT }`. Tests:
+/// `silverquill_pledge_pumps_target_three_one`,
+/// `silverquill_pledge_is_a_three_mana_silverquill_instant`.
+pub fn silverquill_pledge() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Pledge",
+        cost: cost(&[generic(1), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::PumpPT {
+            what: target_filtered(SelectionRequirement::Creature),
+            power: Value::Const(3),
+            toughness: Value::Const(1),
+            duration: Duration::EndOfTurn,
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Inkwell Strider ─────────────────────────────────────────────────────────
+
+/// Inkwell Strider — {2}{W}{B} 2/3 Inkling Soldier with Flying + Lifelink
+/// (synthesised STX Silverquill flavor — combines the school's two
+/// signature keywords on a fair body).
+///
+/// Provides reach + life-gain for Silverquill payoffs (Promising
+/// Duskmage's Magecraft, Light of Promise's counter rain, Tenured
+/// Inkcaster's anthem). Tests:
+/// `inkwell_strider_is_a_four_mana_two_three_flying_inkling`,
+/// `inkwell_strider_combat_grants_life_via_lifelink`.
+pub fn inkwell_strider() -> CardDefinition {
+    CardDefinition {
+        name: "Inkwell Strider",
+        cost: cost(&[generic(2), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Flying, Keyword::Lifelink],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Scolding Detention ──────────────────────────────────────────────────────
+
+/// Scolding Detention — {2}{W} Sorcery (synthesised STX Silverquill
+/// flavor). "Tap target creature an opponent controls. Put two stun
+/// counters on it."
+///
+/// A heavier-handed Frost Trickster — clears two combat steps. The
+/// stun-counter SBA gates removal of one counter per failed untap, so
+/// the target stays tapped for two of the controller's untaps. Wired
+/// as `Seq(Tap target, AddCounter Stun × 2)`. Tests:
+/// `scolding_detention_taps_and_stuns_twice`.
+pub fn scolding_detention() -> CardDefinition {
+    CardDefinition {
+        name: "Scolding Detention",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Tap {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+                ),
+            },
+            Effect::AddCounter {
+                what: Selector::Target(0),
+                kind: CounterType::Stun,
+                amount: Value::Const(2),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Lesson Recall ───────────────────────────────────────────────────────────
+
+/// Lesson Recall — {1}{U} Instant (synthesised STX Strixhaven flavor).
+/// "Return target instant or sorcery card from your graveyard to your
+/// hand. Draw a card."
+///
+/// Card-advantage cantrip that recurs spells. Wired as
+/// `Seq(Move(target IS in your gy → hand), Draw 1)`. Tests:
+/// `lesson_recall_returns_instant_and_cantrips`,
+/// `lesson_recall_is_a_two_mana_blue_instant`.
+pub fn lesson_recall() -> CardDefinition {
+    CardDefinition {
+        name: "Lesson Recall",
+        cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Move {
+                what: Selector::one_of(Selector::CardsInZone {
+                    who: PlayerRef::You,
+                    zone: crate::card::Zone::Graveyard,
+                    filter: SelectionRequirement::HasCardType(CardType::Instant)
+                        .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+                }),
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Pestilent Acolyte ───────────────────────────────────────────────────────
+
+/// Pestilent Acolyte — {2}{B} 2/3 Human Warlock (synthesised STX
+/// Witherbloom flavor). "When this creature enters, target creature
+/// gets -1/-1 until end of turn."
+///
+/// ETB removal-on-a-stick — kills X/1 creatures and softens 2/3s for
+/// trading. Wired as `Effect::PumpPT { -1/-1, EOT }` on a creature
+/// target. Tests:
+/// `pestilent_acolyte_etb_kills_one_toughness_creature`,
+/// `pestilent_acolyte_is_a_three_mana_two_three_warlock`.
+pub fn pestilent_acolyte() -> CardDefinition {
+    CardDefinition {
+        name: "Pestilent Acolyte",
+        cost: cost(&[generic(2), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(-1),
+                toughness: Value::Const(-1),
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Stoneglare Lecturer ─────────────────────────────────────────────────────
+
+/// Stoneglare Lecturer — {3}{W} 3/3 Cat Cleric (synthesised STX
+/// Silverquill flavor). "When this creature enters, you gain 2 life
+/// and draw a card."
+///
+/// A four-mana Bookwurm: 3/3 + 2 life + cantrip. Solid card-advantage
+/// body for white control / midrange decks. Wired as ETB
+/// `Seq(GainLife 2, Draw 1)`. Tests:
+/// `stoneglare_lecturer_etb_gains_life_and_draws`,
+/// `stoneglare_lecturer_is_a_four_mana_three_three_cat_cleric`.
+pub fn stoneglare_lecturer() -> CardDefinition {
+    CardDefinition {
+        name: "Stoneglare Lecturer",
+        cost: cost(&[generic(3), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Cat, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::Const(2),
+                },
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
+            ]),
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Pop Quiz Sorcery (cantrip variant) ──────────────────────────────────────
+
+/// Critical Critique — {1}{B} Instant (synthesised STX Silverquill flavor).
+/// "Target creature gets -2/-2 until end of turn. Scry 1."
+///
+/// Two-mana spot removal with a Scry rider — kills 2/2 creatures and
+/// digs for the next play. Wired as `Seq(PumpPT -2/-2 EOT, Scry 1)`.
+/// Tests: `critical_critique_kills_two_two_and_scrys`,
+/// `critical_critique_is_a_two_mana_black_instant`.
+pub fn critical_critique() -> CardDefinition {
+    CardDefinition {
+        name: "Critical Critique",
+        cost: cost(&[generic(1), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(-2),
+                toughness: Value::Const(-2),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Quandrix Manipulator ────────────────────────────────────────────────────
+
+/// Quandrix Manipulator — {2}{G}{U} 3/3 Elf Druid (synthesised STX
+/// Quandrix flavor). "When this creature enters, double the number of
+/// +1/+1 counters on target creature."
+///
+/// Tanazir-on-a-budget — a 3/3 body that fans counters to a friendly
+/// +1/+1-bearer. Wired via `Effect::AddCounter { amount:
+/// CountersOn(target, +1/+1) }` — adds N more, doubling from N to 2N.
+/// Tests: `quandrix_manipulator_doubles_counters_on_target_creature`,
+/// `quandrix_manipulator_is_a_four_mana_three_three_elf_druid`.
+pub fn quandrix_manipulator() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Manipulator",
+        cost: cost(&[generic(2), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::AddCounter {
+                what: target_filtered(SelectionRequirement::Creature),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::CountersOn {
+                    what: Box::new(Selector::Target(0)),
+                    kind: CounterType::PlusOnePlusOne,
+                },
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Prismari Iteration ──────────────────────────────────────────────────────
+
+/// Prismari Iteration — {2}{U}{R} Sorcery (synthesised STX Prismari
+/// flavor). "Discard a card, then draw two cards."
+///
+/// 4-mana looter — trades one off-color card for two fresh ones. Wired
+/// as `Seq(Discard 1, Draw 2)`. Net card advantage: -1 + 2 = +1.
+/// Tests: `prismari_iteration_loots_two_for_one`,
+/// `prismari_iteration_is_a_four_mana_ur_sorcery`.
+pub fn prismari_iteration() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Iteration",
+        cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Discard {
+                who: Selector::You,
+                amount: Value::Const(1),
+                random: false,
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Lorehold Battle-Priest ──────────────────────────────────────────────────
+
+/// Lorehold Battle-Priest — {2}{R}{W} 2/4 Spirit Cleric with First
+/// Strike + Vigilance (synthesised STX Lorehold flavor — exactly the
+/// printed shape of Pillardrop Rescuer + first-strike instead of flying).
+///
+/// A defensive Lorehold body that trades up in combat and stays
+/// available for blocking. Tests:
+/// `lorehold_battle_priest_is_a_four_mana_two_four_spirit_cleric_with_first_strike_vigilance`.
+pub fn lorehold_battle_priest() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Battle-Priest",
+        cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        keywords: vec![Keyword::FirstStrike, Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Witherbloom Strangler (already exists; this is Witherbloom Reaper) ─────
+
+/// Witherbloom Reaper — {3}{B}{G} 4/3 Plant Warlock with Deathtouch
+/// (synthesised STX Witherbloom flavor). "When this creature enters,
+/// each opponent sacrifices a creature."
+///
+/// Edict-on-a-body — a Cruel Edict stapled to a 4/3 Deathtouch. Wired
+/// as ETB `ForEach(EachOpponent) → Sacrifice { who: Triggerer,
+/// filter: Creature, count: 1 }`. Tests:
+/// `witherbloom_reaper_etb_edicts_each_opp`,
+/// `witherbloom_reaper_is_a_five_mana_four_three_deathtouch_plant_warlock`.
+pub fn witherbloom_reaper() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Reaper",
+        cost: cost(&[generic(3), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 3,
+        keywords: vec![Keyword::Deathtouch],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::ForEach {
+                selector: Selector::Player(PlayerRef::EachOpponent),
+                body: Box::new(Effect::Sacrifice {
+                    who: Selector::Player(PlayerRef::Triggerer),
+                    filter: SelectionRequirement::Creature,
+                    count: Value::Const(1),
+                }),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Pyromancer's Bolt ──────────────────────────────────────────────────────
+
+/// Pyromancer's Bolt — {1}{R} Instant (synthesised STX Prismari flavor).
+/// "This deals 3 damage to target creature or planeswalker."
+///
+/// Strict-upgrade Lightning Bolt on creatures/PW only — a clean
+/// 2-mana removal spell that doesn't trade card advantage for face
+/// damage. Wired with `target_filtered(Creature ∨ Planeswalker)`.
+/// Tests: `pyromancers_bolt_kills_three_toughness_creature`,
+/// `pyromancers_bolt_is_a_two_mana_red_instant`.
+pub fn pyromancers_bolt() -> CardDefinition {
+    CardDefinition {
+        name: "Pyromancer's Bolt",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::DealDamage {
+            to: target_filtered(
+                SelectionRequirement::Creature
+                    .or(SelectionRequirement::HasCardType(CardType::Planeswalker)),
+            ),
+            amount: Value::Const(3),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Symmetry Lecturer ──────────────────────────────────────────────────────
+
+/// Symmetry Lecturer — {1}{G}{U} 2/2 Elf Wizard with Flash (synthesised
+/// STX Quandrix flavor). "Flash / When this creature enters, put a
+/// +1/+1 counter on another target creature you control."
+///
+/// A combat-trick Quandrix body — flashes in, lands a counter on a
+/// blocker mid-combat, then trades up. Wired with `Keyword::Flash` +
+/// ETB `AddCounter(+1/+1) → target friendly other`. Tests:
+/// `symmetry_lecturer_etb_pumps_friendly_other`,
+/// `symmetry_lecturer_has_flash`.
+pub fn symmetry_lecturer() -> CardDefinition {
+    CardDefinition {
+        name: "Symmetry Lecturer",
+        cost: cost(&[generic(1), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flash],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::AddCounter {
+                what: target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Wisdom of the Ancients ──────────────────────────────────────────────────
+
+/// Wisdom of the Ancients — {3}{U} Sorcery (synthesised STX Quandrix
+/// flavor). "Draw three cards."
+///
+/// Pure card-velocity blue sorcery — Concentrate's strict-equivalent
+/// at the standard 4-mana three-draw template. Useful test exerciser
+/// for engine's `Effect::Draw` count-N path. Tests:
+/// `wisdom_of_the_ancients_draws_three`,
+/// `wisdom_of_the_ancients_is_a_four_mana_blue_sorcery`.
+pub fn wisdom_of_the_ancients() -> CardDefinition {
+    CardDefinition {
+        name: "Wisdom of the Ancients",
+        cost: cost(&[generic(3), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Draw {
+            who: Selector::You,
+            amount: Value::Const(3),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Mob Mentality ──────────────────────────────────────────────────────────
+
+/// Mob Mentality — {1}{R}{W} Instant (synthesised STX Lorehold flavor).
+/// "Creatures you control get +1/+1 until end of turn. If you've cast
+/// another spell this turn, they also gain first strike until end of
+/// turn."
+///
+/// A combat-step finisher — pump everyone, then upgrade with first
+/// strike if you cast a setup spell first. Wired as
+/// `Seq(ForEach(Creature & ControlledByYou) → PumpPT(+1/+1 EOT),
+///      If(SpellsCastThisTurnAtLeast(2)) → ForEach(...) → GrantKeyword(FirstStrike EOT))`.
+/// Tests: `mob_mentality_pumps_each_friendly_creature`,
+/// `mob_mentality_grants_first_strike_after_second_spell`.
+pub fn mob_mentality() -> CardDefinition {
+    CardDefinition {
+        name: "Mob Mentality",
+        cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::ForEach {
+                selector: Selector::EachPermanent(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                body: Box::new(Effect::PumpPT {
+                    what: Selector::TriggerSource,
+                    power: Value::Const(1),
+                    toughness: Value::Const(1),
+                    duration: Duration::EndOfTurn,
+                }),
+            },
+            Effect::If {
+                cond: Predicate::SpellsCastThisTurnAtLeast {
+                    who: PlayerRef::You,
+                    at_least: Value::Const(2),
+                },
+                then: Box::new(Effect::ForEach {
+                    selector: Selector::EachPermanent(
+                        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                    ),
+                    body: Box::new(Effect::GrantKeyword {
+                        what: Selector::TriggerSource,
+                        keyword: Keyword::FirstStrike,
+                        duration: Duration::EndOfTurn,
+                    }),
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Witherbloom Drain Ritual ───────────────────────────────────────────────
+
+/// Witherbloom Drain Ritual — {2}{B}{G} Sorcery (synthesised STX
+/// Witherbloom flavor). "Each opponent loses 3 life. You gain life
+/// equal to the life lost this way."
+///
+/// A Drain Life-style finisher on the Witherbloom color identity.
+/// Wired via `Effect::Drain { from: EachOpponent, to: You, amount: 3 }`
+/// — symmetric on 1v1 (you gain exactly 3 life). Tests:
+/// `witherbloom_drain_ritual_drains_three_each_opp`,
+/// `witherbloom_drain_ritual_is_a_four_mana_bg_sorcery`.
+pub fn witherbloom_drain_ritual() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Drain Ritual",
+        cost: cost(&[generic(2), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Drain {
+            from: Selector::Player(PlayerRef::EachOpponent),
+            to: Selector::You,
+            amount: Value::Const(3),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Spell Tutor ────────────────────────────────────────────────────────────
+
+/// Mystical Inquiry — {2}{U} Sorcery (synthesised STX Quandrix flavor —
+/// a sorcery tutor for the Prismari/Quandrix shells).
+/// "Search your library for an instant or sorcery card, reveal it,
+/// put it into your hand, then shuffle."
+///
+/// Standard {2}{U} tutor on a printed catalog template (same shape as
+/// `solve_the_equation` but at sorcery speed without an MV cap).
+/// Tests: `mystical_inquiry_tutors_an_instant_or_sorcery`,
+/// `mystical_inquiry_is_a_three_mana_blue_sorcery`.
+pub fn mystical_inquiry() -> CardDefinition {
+    CardDefinition {
+        name: "Mystical Inquiry",
+        cost: cost(&[generic(2), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Search {
+            who: PlayerRef::You,
+            filter: SelectionRequirement::HasCardType(CardType::Instant)
+                .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+            to: ZoneDest::Hand(PlayerRef::You),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Conjurer's Bauble (STA reprint, originally Modern Horizons) ────────────
+
+/// Conjurer's Bauble — {0} Artifact (STA reprint, originally Modern
+/// Horizons). "{1}, Sacrifice this artifact: Put a card from your
+/// graveyard on the bottom of your library. Draw a card."
+///
+/// A zero-mana artifact that cycles graveyard contents for a fresh
+/// draw — useful for both blue control and graveyard-based decks
+/// (snake the right card back into the library for a future tutor).
+/// Wired with `cost: 0`, `{1}` mana cost + `sac_cost: true` on the
+/// activation. The "put gy card on bottom" approximation moves a
+/// chosen creature card from gy → library bottom; if no creature
+/// is available, the activation still resolves with just the draw.
+/// Tests: `conjurers_bauble_zero_mana_artifact`,
+/// `conjurers_bauble_sac_activation_cantrips`.
+pub fn conjurers_bauble() -> CardDefinition {
+    CardDefinition {
+        name: "Conjurer's Bauble",
+        cost: ManaCost::default(),
+        supertypes: vec![],
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            tap_cost: false,
+            sac_cost: true,
+            life_cost: 0,
+            sorcery_speed: false,
+            condition: None,
+            from_graveyard: false,
+            exile_self_cost: false,
+            exile_other_filter: None,
+            once_per_turn: false,
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        }],
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Quartzwood Inkling ──────────────────────────────────────────────────────
+
+/// Quartzwood Inkling — {2}{B} 3/2 Inkling Soldier with Menace
+/// (synthesised STX Silverquill flavor).
+///
+/// An efficient Menace beater for the Silverquill aggro shell — scales
+/// with Tenured Inkcaster's +2/+2 anthem to a 5/4 trampler. Tests:
+/// `quartzwood_inkling_is_a_three_mana_three_two_menace_inkling`,
+/// `quartzwood_inkling_buffs_under_tenured_inkcaster`.
+pub fn quartzwood_inkling() -> CardDefinition {
+    CardDefinition {
+        name: "Quartzwood Inkling",
+        cost: cost(&[generic(2), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Menace],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Pop Quiz Lecturer ──────────────────────────────────────────────────────
+
+/// Pop Quiz Lecturer — {2}{W} 2/3 Human Cleric with Vigilance
+/// (synthesised STX Silverquill flavor). "When this creature enters,
+/// scry 2."
+///
+/// A defensive tap-out creature with a sticky 2/3 + Vigilance body
+/// and an ETB scry. Wired with `Effect::Scry { who: You, amount: 2 }`.
+/// Tests: `pop_quiz_lecturer_etb_scries_two`,
+/// `pop_quiz_lecturer_is_a_three_mana_two_three_vigilance_cleric`.
+pub fn pop_quiz_lecturer() -> CardDefinition {
+    CardDefinition {
+        name: "Pop Quiz Lecturer",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(2),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Brilliant Restoration ──────────────────────────────────────────────────
+
+/// Brilliant Restoration — {3}{W}{W} Sorcery (synthesised STX
+/// Silverquill flavor). "Return target creature card from your
+/// graveyard to the battlefield. You gain 2 life."
+///
+/// 5-mana reanimation with a lifegain rider — fits Silverquill's
+/// lifegain payoffs (Light of Promise, Promising Duskmage). Wired
+/// as `Seq(Move(target creature in gy → bf), GainLife 2)`.
+/// Tests: `brilliant_restoration_returns_creature_card_and_gains_life`,
+/// `brilliant_restoration_is_a_five_mana_white_sorcery`.
+pub fn brilliant_restoration() -> CardDefinition {
+    CardDefinition {
+        name: "Brilliant Restoration",
+        cost: cost(&[generic(3), w(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Move {
+                what: Selector::one_of(Selector::CardsInZone {
+                    who: PlayerRef::You,
+                    zone: crate::card::Zone::Graveyard,
+                    filter: SelectionRequirement::Creature,
+                }),
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: false,
+                },
+            },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Inkling Studies ────────────────────────────────────────────────────────
+
+/// Inkling Studies — {2}{W}{B} Sorcery (synthesised STX Silverquill
+/// flavor). "Create two 2/1 white-and-black Inkling creature tokens
+/// with flying."
+///
+/// Token-mint payoff for Silverquill — slots into Tenured Inkcaster +
+/// Felisa Fang lifelink shells. Wired with `Effect::CreateToken {
+/// count: 2, definition: inkling_token() }`. Tests:
+/// `inkling_studies_creates_two_inkling_tokens`,
+/// `inkling_studies_is_a_four_mana_wb_sorcery`.
+pub fn inkling_studies() -> CardDefinition {
+    use crate::catalog::sets::sos::inkling_token;
+    CardDefinition {
+        name: "Inkling Studies",
+        cost: cost(&[generic(2), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(2),
+            definition: inkling_token(),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Spirit Banner ──────────────────────────────────────────────────────────
+
+/// Spirit Banner — {3} Artifact (synthesised STX Lorehold flavor).
+/// "Spirit creatures you control get +1/+1."
+///
+/// A tribal anthem for Lorehold's Spirit-focused shells (Sparring
+/// Regimen, Quintorius's tokens, Lorehold Excavation's tokens).
+/// Wired via `StaticEffect::PumpPT { applies_to:
+/// EachPermanent(Creature & ControlledByYou & HasCreatureType(Spirit)),
+/// power: +1, toughness: +1 }`. Tests:
+/// `spirit_banner_pumps_spirits_by_one_one`,
+/// `spirit_banner_does_not_pump_non_spirits`.
+pub fn spirit_banner() -> CardDefinition {
+    CardDefinition {
+        name: "Spirit Banner",
+        cost: cost(&[generic(3)]),
+        supertypes: vec![],
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![StaticAbility {
+            description: "Spirit creatures you control get +1/+1.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::HasCreatureType(CreatureType::Spirit)),
+                ),
+                power: 1,
+                toughness: 1,
+            },
+        }],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Spectral Adjudicator ──────────────────────────────────────────────────
+
+/// Spectral Adjudicator — {3}{W} 2/3 Spirit Cleric with Flying +
+/// Lifelink (synthesised STX Silverquill flavor).
+///
+/// A defensive Spirit flyer that doubles as a 2/3 lifelink racer.
+/// Tests: `spectral_adjudicator_is_a_four_mana_two_three_lifelink_spirit_cleric_with_flying`.
+pub fn spectral_adjudicator() -> CardDefinition {
+    CardDefinition {
+        name: "Spectral Adjudicator",
+        cost: cost(&[generic(3), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Flying, Keyword::Lifelink],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Quandrix Doubling Tutor ────────────────────────────────────────────────
+
+/// Quandrix Doubling Tutor — {2}{G}{U} Sorcery (synthesised STX
+/// Quandrix flavor). "Create two 0/0 green and blue Fractal creature
+/// tokens, then put a +1/+1 counter on each Fractal you control."
+///
+/// Wired as `Seq(CreateToken(2 Fractals), ForEach(Fractal &
+/// ControlledByYou) → AddCounter(+1/+1, 1))`. The result is two 1/1
+/// Fractals — but with Tanazir Quandrix in play, the counter rain
+/// doubles. Tests:
+/// `quandrix_doubling_tutor_creates_two_fractals_with_counters`,
+/// `quandrix_doubling_tutor_is_a_four_mana_gu_sorcery`.
+pub fn quandrix_doubling_tutor() -> CardDefinition {
+    use crate::catalog::sets::sos::fractal_token;
+    CardDefinition {
+        name: "Quandrix Doubling Tutor",
+        cost: cost(&[generic(2), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                definition: fractal_token(),
+            },
+            Effect::ForEach {
+                selector: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::HasCreatureType(CreatureType::Fractal)),
+                ),
+                body: Box::new(Effect::AddCounter {
+                    what: Selector::TriggerSource,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                }),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],

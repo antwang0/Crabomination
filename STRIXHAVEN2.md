@@ -19,10 +19,80 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 195 | 59 | 1 |
-| STX (195 cards) | 284 | 14 | 0 |
+| STX (195 cards) | 306 | 14 | 0 |
 | STA reprints (in STX boosters) | 46 | 0 | — |
 
 Push (modern_decks, claude/modern_decks branch — latest revision —
+**22 NEW STX cards + 45 new functionality tests + CR 605 audit**):
+
+This push adds 22 new card factories to `stx::extras` exercising
+existing engine primitives — focused on the Silverquill (W/B)
+school + cross-college utility. All 1794 tests pass. The cards
+cover the full Strixhaven design vocabulary (Magecraft pump,
+Pest/Inkling/Spirit tribal, lifegain payoffs, draw-loot, edict-on-a-body,
++1/+1 counter doubling) using only existing primitives.
+
+**NEW STX cards (this push, 22):**
+
+- **Silverquill Pledge** ({1}{W}{B}, Instant) — +3/+1 EOT.
+  Tests: `silverquill_pledge_pumps_target_three_one`.
+- **Inkwell Strider** ({2}{W}{B}, 2/3 Inkling Soldier with
+  Flying + Lifelink) — Tribal-anthem target.
+- **Scolding Detention** ({2}{W}, Sorcery) — Tap + two stun
+  counters on opp creature. Tests: `scolding_detention_taps_and_stuns_twice`.
+- **Lesson Recall** ({1}{U}, Instant) — Return IS card from gy
+  to hand + cantrip. Tests: `lesson_recall_returns_instant_and_cantrips`.
+- **Pestilent Acolyte** ({2}{B}, 2/3 Human Warlock) — ETB -1/-1 EOT.
+  Tests: `pestilent_acolyte_etb_kills_one_toughness_creature`.
+- **Stoneglare Lecturer** ({3}{W}, 3/3 Cat Cleric) — ETB +2 life
+  + draw. Tests: `stoneglare_lecturer_etb_gains_life_and_draws`.
+- **Critical Critique** ({1}{B}, Instant) — -2/-2 EOT + Scry 1.
+  Tests: `critical_critique_kills_two_two_and_scrys`.
+- **Quandrix Manipulator** ({2}{G}{U}, 3/3 Elf Druid) — ETB
+  doubles +1/+1 counters on a creature (CountersOn pattern).
+  Tests: `quandrix_manipulator_doubles_counters_on_target_creature`.
+- **Prismari Iteration** ({2}{U}{R}, Sorcery) — Discard 1, draw 2
+  (looter).
+- **Lorehold Battle-Priest** ({2}{R}{W}, 2/4 Spirit Cleric with
+  First Strike + Vigilance).
+- **Witherbloom Reaper** ({3}{B}{G}, 4/3 Plant Warlock with
+  Deathtouch) — ETB each opp sacs a creature (edict-on-a-body).
+  Tests: `witherbloom_reaper_etb_edicts_each_opp`.
+- **Pyromancer's Bolt** ({1}{R}, Instant) — 3 damage to creature/PW.
+- **Symmetry Lecturer** ({1}{G}{U}, 2/2 Elf Wizard with Flash)
+  — ETB +1/+1 counter on another friendly creature.
+- **Wisdom of the Ancients** ({3}{U}, Sorcery) — Draw 3.
+- **Mob Mentality** ({1}{R}{W}, Instant) — Friendlies get +1/+1 EOT;
+  if you cast another spell this turn, also First Strike EOT.
+- **Witherbloom Drain Ritual** ({2}{B}{G}, Sorcery) — Drain 3 from
+  each opp.
+- **Mystical Inquiry** ({2}{U}, Sorcery) — Tutor an instant/sorcery.
+- **Conjurer's Bauble** ({0}, Artifact, STA reprint) — `{1}, Sac:
+  Draw a card`. Zero-mana cantrip artifact.
+- **Quartzwood Inkling** ({2}{B}, 3/2 Inkling Soldier with Menace)
+  — Tenured Inkcaster anthem target.
+- **Pop Quiz Lecturer** ({2}{W}, 2/3 Human Cleric with Vigilance)
+  — ETB Scry 2.
+- **Brilliant Restoration** ({3}{W}{W}, Sorcery) — Reanimate
+  creature card + 2 life.
+- **Inkling Studies** ({2}{W}{B}, Sorcery) — Mint two Inkling
+  tokens.
+- **Spirit Banner** ({3}, Artifact) — Tribal anthem for Spirits.
+  Tests: `spirit_banner_pumps_spirits_by_one_one`,
+  `spirit_banner_does_not_pump_non_spirits`.
+- **Spectral Adjudicator** ({3}{W}, 2/3 Spirit Cleric with Flying
+  + Lifelink).
+- **Quandrix Doubling Tutor** ({2}{G}{U}, Sorcery) — Mint two 0/0
+  Fractals; pump each Fractal you control with a +1/+1 counter.
+
+**CR 605 audit row** (added to TODO.md): Mana Abilities — Both
+activated (605.1a) and triggered (605.1b) mana ability variants
+verified. Engine recogniser in `is_mana_ability` correctly identifies
+pure `Effect::AddMana` (and `Seq` of AddMana) activations as bypassing
+the stack per CR 605.3b; the triggered-mana-ability fast-path
+(CR 605.4a) is still tracked as ⏳ (no STX/SOS card requires it).
+
+Push (modern_decks, claude/modern_decks branch — prior revision —
 **21 NEW STX cards + 1 engine primitive (`Predicate::OpponentControlsMoreLandsThanYou`)
 + CR 701.10 + CR 122.6 audit**):
 
