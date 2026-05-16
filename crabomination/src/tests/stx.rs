@@ -15884,6 +15884,16 @@ fn lorehold_mentor_is_a_five_mana_three_three_with_mentor_trigger() {
 }
 
 #[test]
+fn conspiracy_theorist_has_attack_trigger_now() {
+    // Push (modern_decks) approximation: the printed "rummage into exile +
+    // play it this turn" rider is now a "may discard, then draw" approximation
+    // since the engine has no play-from-exile-with-timer primitive.
+    let def = catalog::conspiracy_theorist();
+    assert!(!def.triggered_abilities.is_empty(),
+        "Conspiracy Theorist has the attack-trigger rummage approximation");
+}
+
+#[test]
 fn prismari_bauble_etb_scrys_and_can_sac_for_draw() {
     let mut g = two_player_game();
     g.add_card_to_library(0, catalog::island());

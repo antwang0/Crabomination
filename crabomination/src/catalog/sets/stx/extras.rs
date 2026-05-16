@@ -328,10 +328,16 @@ pub fn combat_professor() -> CardDefinition {
 /// {T}: Exile the top card of your library. You may play it this turn.
 /// Activate only if you control no cards in hand."
 ///
-/// 🟡 Body wired as 2/1 Human Shaman. The attack-trigger "rummage into
-/// exile + play this turn" rider and the empty-hand activated ability
-/// are both omitted (no play-from-exile-with-timer primitive — same gap
-/// as Suspend Aggression).
+/// 🟡 Body wired as 2/1 Human Shaman. The full "play from exile this
+/// turn" semantics are still ⏳ (no play-from-exile-with-timer
+/// primitive — same gap as Suspend Aggression). Push (modern_decks)
+/// adds the attack-trigger rummage approximation: on each attack,
+/// the controller may discard a card; if they do, draw a card
+/// (replacing the "exile-and-play" rider with a strict-weaker cantrip
+/// since the engine can't grant temporary playability to an exiled
+/// card). The empty-hand activated ability is omitted (no
+/// hand-size-conditional sorcery primitive aligned with the activation
+/// path).
 pub fn conspiracy_theorist() -> CardDefinition {
     CardDefinition {
         name: "Conspiracy Theorist",
@@ -347,7 +353,27 @@ pub fn conspiracy_theorist() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            // Approximation: "you may discard a card. If you do, draw a
+            // card." (printed: "exile top + may play this turn").
+            // AutoDecider declines (won't discard for the cantrip);
+            // ScriptedDecider can flip true for tests.
+            effect: Effect::MayDo {
+                description: "Discard a card, then draw a card.".to_string(),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::Discard {
+                        who: Selector::You,
+                        amount: Value::Const(1),
+                        random: false,
+                    },
+                    Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::Const(1),
+                    },
+                ])),
+            },
+        }],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
