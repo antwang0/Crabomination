@@ -10331,6 +10331,227 @@ pub fn pop_quiz_coach() -> CardDefinition {
     }
 }
 
+// ── Soothing Hush (STX-flavor blue uncommon instant) ────────────────────────
+
+/// Soothing Hush — {1}{U} Instant.
+/// "Counter target creature spell."
+///
+/// Push (modern_decks, NEW, `stx::extras`): Classic mono-blue creature
+/// counter at 2 mana. Tests:
+/// `soothing_hush_counters_creature_spell`.
+pub fn soothing_hush() -> CardDefinition {
+    CardDefinition {
+        name: "Soothing Hush",
+        cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::CounterSpell {
+            what: target_filtered(
+                SelectionRequirement::IsSpellOnStack
+                    .and(SelectionRequirement::HasCardType(CardType::Creature)),
+            ),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Vortex Runner (STX-flavor blue common creature) ─────────────────────────
+
+/// Vortex Runner — {1}{U}, 2/1 Merfolk Wizard.
+/// "This creature can't be blocked."
+///
+/// Push (modern_decks, NEW, `stx::extras`): A 2/1 unblockable Merfolk
+/// for 2 mana — chip-shot evasion. Wired via the existing
+/// `Keyword::Unblockable`. Tests:
+/// `vortex_runner_is_a_two_mana_two_one_unblockable_merfolk`.
+pub fn vortex_runner() -> CardDefinition {
+    CardDefinition {
+        name: "Vortex Runner",
+        cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Unblockable],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Sage of the Beyond (STX-flavor B/U uncommon creature) ───────────────────
+
+/// Sage of the Beyond — {3}{U}{B}, 4/3 Specter Wizard.
+/// "Flying / Whenever this creature deals combat damage to a player,
+/// that player discards a card."
+///
+/// Push (modern_decks, NEW, `stx::extras`): A 4/3 evasion-with-discard
+/// trigger. Tests: `sage_of_the_beyond_combat_damage_makes_opp_discard`,
+/// `sage_of_the_beyond_is_a_five_mana_four_three_specter_wizard`.
+pub fn sage_of_the_beyond() -> CardDefinition {
+    CardDefinition {
+        name: "Sage of the Beyond",
+        cost: cost(&[generic(3), u(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Specter, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::DealsCombatDamageToPlayer,
+                EventScope::SelfSource,
+            ),
+            // The damaged player is stored as `Target(0)` on the
+            // trigger (see `fire_combat_damage_to_player_triggers` in
+            // `game/combat.rs:625` which pushes the trigger with
+            // `target: Some(Target::Player(damaged_player))`). Use
+            // `PlayerRef::Target(0)` to reference it.
+            effect: Effect::Discard {
+                who: Selector::Player(PlayerRef::Target(0)),
+                amount: Value::Const(1),
+                random: false,
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Frostpyre Arcanist (STX-flavor Prismari uncommon creature) ──────────────
+
+/// Frostpyre Arcanist — {3}{U}{R}, 4/4 Elemental Wizard.
+/// "Whenever you cast or copy an instant or sorcery spell, you may
+/// return target instant or sorcery card from your graveyard to your
+/// hand. Activate only once each turn."
+///
+/// Push (modern_decks, NEW, `stx::extras`): Approximated as a Magecraft
+/// trigger that returns an auto-picked IS card from gy to hand. The
+/// "only once each turn" rider is engine-wide ⏳ (no per-trigger
+/// once-per-turn flag — same gap as Brain in a Jar's M-style limit).
+/// The "may" is wired via `Effect::MayDo`. Tests:
+/// `frostpyre_arcanist_magecraft_returns_is_from_graveyard`,
+/// `frostpyre_arcanist_is_a_five_mana_four_four_elemental_wizard`.
+pub fn frostpyre_arcanist() -> CardDefinition {
+    CardDefinition {
+        name: "Frostpyre Arcanist",
+        cost: cost(&[generic(3), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::MayDo {
+            description: "Return target instant or sorcery card from your graveyard to your hand.".into(),
+            body: Box::new(Effect::Move {
+                what: Selector::one_of(Selector::CardsInZone {
+                    who: PlayerRef::You,
+                    zone: crate::card::Zone::Graveyard,
+                    filter: SelectionRequirement::HasCardType(CardType::Instant)
+                        .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+                }),
+                to: ZoneDest::Hand(PlayerRef::You),
+            }),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Inkfathom Divers (STX-flavor U/B uncommon creature) ─────────────────────
+
+/// Inkfathom Divers — {2}{U}{B}, 3/2 Merfolk Rogue.
+/// "Flying / When this creature enters, look at target opponent's hand
+/// and choose a nonland card from it. That player discards that card."
+///
+/// Push (modern_decks, NEW, `stx::extras`): Targeted hand-attack body —
+/// scry-into-discard for Silverquill / Witherbloom shells. Wired via
+/// `Effect::DiscardChosen` with a nonland filter. Tests:
+/// `inkfathom_divers_etb_strips_opp_nonland_from_hand`,
+/// `inkfathom_divers_is_a_four_mana_three_two_flying_merfolk_rogue`.
+pub fn inkfathom_divers() -> CardDefinition {
+    CardDefinition {
+        name: "Inkfathom Divers",
+        cost: cost(&[generic(2), u(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Rogue],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::DiscardChosen {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                count: Value::Const(1),
+                filter: SelectionRequirement::Nonland,
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
 // ── Quandrix Quickener (STX-flavor common cantrip) ──────────────────────────
 
 /// Quandrix Quickener — {G}{U} Instant.

@@ -11475,6 +11475,172 @@ fn pop_quiz_coach_magecraft_adds_counter() {
     assert_eq!(cp.toughness, 3);
 }
 
+// ── Soothing Hush (modern_decks push) ─────────────────────────────────────
+
+#[test]
+fn soothing_hush_counters_creature_spell() {
+    let mut g = two_player_game();
+    let bears = g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.players[1].mana_pool.add(Color::Green, 1);
+    g.players[1].mana_pool.add_colorless(1);
+
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bears, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("opp casts Bears");
+
+    let hush = g.add_card_to_hand(0, catalog::soothing_hush());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: hush,
+        target: Some(crate::game::types::Target::Permanent(bears)),
+        additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("Soothing Hush castable");
+    drain_stack(&mut g);
+
+    // Bears should be countered (in graveyard, not battlefield).
+    let bears_on_bf = g.battlefield.iter().any(|c| c.id == bears);
+    assert!(!bears_on_bf, "Bears countered, not on battlefield");
+    let bears_in_gy = g.players[1].graveyard.iter().any(|c| c.id == bears);
+    assert!(bears_in_gy, "Bears in graveyard");
+}
+
+// ── Vortex Runner (modern_decks push) ─────────────────────────────────────
+
+#[test]
+fn vortex_runner_is_a_two_mana_two_one_unblockable_merfolk() {
+    let def = catalog::vortex_runner();
+    assert_eq!(def.cost.cmc(), 2);
+    assert_eq!(def.power, 2);
+    assert_eq!(def.toughness, 1);
+    assert!(def.keywords.contains(&Keyword::Unblockable));
+    assert!(def.subtypes.creature_types.contains(&crate::card::CreatureType::Merfolk));
+}
+
+// ── Sage of the Beyond (modern_decks push) ────────────────────────────────
+
+#[test]
+fn sage_of_the_beyond_is_a_five_mana_four_three_specter_wizard() {
+    let def = catalog::sage_of_the_beyond();
+    assert_eq!(def.cost.cmc(), 5);
+    assert_eq!(def.power, 4);
+    assert_eq!(def.toughness, 3);
+    assert!(def.keywords.contains(&Keyword::Flying));
+    let ctypes = &def.subtypes.creature_types;
+    assert!(ctypes.contains(&crate::card::CreatureType::Specter));
+    assert!(ctypes.contains(&crate::card::CreatureType::Wizard));
+}
+
+#[test]
+fn sage_of_the_beyond_combat_damage_makes_opp_discard() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::sage_of_the_beyond());
+    g.clear_sickness(id);
+    // Seed opp's hand with a card to discard.
+    let target_card = g.add_card_to_hand(1, catalog::lightning_bolt());
+
+    while g.step != crate::game::types::TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass priority");
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: id,
+        target: AttackTarget::Player(1),
+    }])).expect("declare attackers");
+    drain_stack(&mut g);
+
+    // Skip past blockers (none).
+    while g.step != crate::game::types::TurnStep::CombatDamage {
+        g.perform_action(GameAction::PassPriority).expect("pass priority");
+    }
+    g.resolve_combat().expect("combat damage");
+    drain_stack(&mut g);
+
+    // Opp discarded a card from hand.
+    let card_in_hand = g.players[1].hand.iter().any(|c| c.id == target_card);
+    let card_in_gy = g.players[1].graveyard.iter().any(|c| c.id == target_card);
+    assert!(
+        !card_in_hand || card_in_gy,
+        "Opp's card discarded (in gy, not hand)"
+    );
+}
+
+// ── Frostpyre Arcanist (modern_decks push) ────────────────────────────────
+
+#[test]
+fn frostpyre_arcanist_is_a_five_mana_four_four_elemental_wizard() {
+    let def = catalog::frostpyre_arcanist();
+    assert_eq!(def.cost.cmc(), 5);
+    assert_eq!(def.power, 4);
+    assert_eq!(def.toughness, 4);
+    let ctypes = &def.subtypes.creature_types;
+    assert!(ctypes.contains(&crate::card::CreatureType::Elemental));
+    assert!(ctypes.contains(&crate::card::CreatureType::Wizard));
+}
+
+#[test]
+fn frostpyre_arcanist_magecraft_returns_is_from_graveyard() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::frostpyre_arcanist());
+    // Seed an IS card in graveyard.
+    let bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    // Cast another bolt to trigger Magecraft.
+    let live_bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+
+    g.players[0].mana_pool.add(Color::Red, 1);
+
+    // ScriptedDecider answers Bool(true) to take the optional return.
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: live_bolt,
+        target: Some(crate::game::types::Target::Player(1)),
+        additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("Bolt castable");
+    drain_stack(&mut g);
+
+    // Original bolt should be back in hand.
+    let bolt_in_hand = g.players[0].hand.iter().any(|c| c.id == bolt);
+    assert!(bolt_in_hand, "Bolt returned to hand via Frostpyre's Magecraft");
+}
+
+// ── Inkfathom Divers (modern_decks push) ──────────────────────────────────
+
+#[test]
+fn inkfathom_divers_is_a_four_mana_three_two_flying_merfolk_rogue() {
+    let def = catalog::inkfathom_divers();
+    assert_eq!(def.cost.cmc(), 4);
+    assert_eq!(def.power, 3);
+    assert_eq!(def.toughness, 2);
+    assert!(def.keywords.contains(&Keyword::Flying));
+}
+
+#[test]
+fn inkfathom_divers_etb_strips_opp_nonland_from_hand() {
+    let mut g = two_player_game();
+    // Seed opp's hand with a nonland card.
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    let id = g.add_card_to_hand(0, catalog::inkfathom_divers());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Inkfathom Divers castable");
+    drain_stack(&mut g);
+
+    // Bolt stripped from hand.
+    let bolt_in_hand = g.players[1].hand.iter().any(|c| c.id == bolt);
+    let bolt_in_gy = g.players[1].graveyard.iter().any(|c| c.id == bolt);
+    assert!(!bolt_in_hand, "Bolt removed from opp's hand");
+    assert!(bolt_in_gy, "Bolt in opp's graveyard");
+}
+
 // ── Quandrix Quickener (modern_decks push) ─────────────────────────────────
 
 #[test]

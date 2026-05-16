@@ -19,8 +19,32 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 195 | 59 | 1 |
-| STX (190 cards) | 217 | 14 | 0 |
+| STX (195 cards) | 222 | 14 | 0 |
 | STA reprints (in STX boosters) | 46 | 0 | — |
+
+Push (modern_decks, claude/modern_decks branch — latest revision —
+**5 MORE NEW STX cards (Soothing Hush, Vortex Runner, Sage of the Beyond,
+Frostpyre Arcanist, Inkfathom Divers)**):
+
+- **Soothing Hush** ({1}{U} Instant) — Counter target creature spell.
+  Test: `soothing_hush_counters_creature_spell`.
+- **Vortex Runner** ({1}{U}, 2/1 Merfolk Wizard, Unblockable) — Evasive
+  chip-shot. Test:
+  `vortex_runner_is_a_two_mana_two_one_unblockable_merfolk`.
+- **Sage of the Beyond** ({3}{U}{B}, 4/3 Specter Wizard, Flying) — Combat
+  damage-to-player trigger makes the damaged player discard. Tests:
+  `sage_of_the_beyond_combat_damage_makes_opp_discard`,
+  `sage_of_the_beyond_is_a_five_mana_four_three_specter_wizard`.
+- **Frostpyre Arcanist** ({3}{U}{R}, 4/4 Elemental Wizard) — Magecraft
+  may-return IS card from gy to hand. Tests:
+  `frostpyre_arcanist_magecraft_returns_is_from_graveyard`,
+  `frostpyre_arcanist_is_a_five_mana_four_four_elemental_wizard`.
+- **Inkfathom Divers** ({2}{U}{B}, 3/2 Merfolk Rogue, Flying) — ETB
+  targeted nonland-card hand strip. Tests:
+  `inkfathom_divers_etb_strips_opp_nonland_from_hand`,
+  `inkfathom_divers_is_a_four_mana_three_two_flying_merfolk_rogue`.
+
+STX corpus now at **222 ✅ + 14 🟡** (was 217 ✅ + 14 🟡).
 
 Push (modern_decks, claude/modern_decks branch — latest revision —
 **Wandering Archaic 🟡 → ✅ via new `Effect::CopySpellUnlessPaid`**):
