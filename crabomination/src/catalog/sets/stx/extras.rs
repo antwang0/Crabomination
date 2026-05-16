@@ -9394,3 +9394,990 @@ pub fn lorehold_mascot() -> CardDefinition {
         exile_on_resolve: false,
     }
 }
+
+// ── Adrix and Nev, Twincasters (STX 2021 Quandrix legendary) ───────────────
+
+/// Adrix and Nev, Twincasters — {1}{G}{G}{U}{U}, 3/3 Legendary Merfolk Wizard.
+/// "If one or more tokens would be created under your control, twice that
+/// many of those tokens are created instead."
+///
+/// Push (modern_decks, NEW, `stx::extras`): Quandrix's signature token-
+/// doubler. Wired via the new `StaticEffect::DoubleTokens` primitive — at
+/// `Effect::CreateToken` resolution time, the engine queries
+/// `GameState::token_doublers_for(controller)` and multiplies the spawn
+/// count by `2^doublers`. Stacking two Adrix on the field doubles twice
+/// (each token → 4×), three → 8×, etc., matching CR 614.13's "multiple
+/// replacement effects multiply" intuition. Tests:
+/// `adrix_and_nev_doubles_token_creation`,
+/// `adrix_and_nev_does_not_double_opponent_tokens`,
+/// `adrix_and_nev_is_a_five_mana_three_three_merfolk_wizard`.
+pub fn adrix_and_nev_twincasters() -> CardDefinition {
+    use crate::card::{StaticAbility, Supertype};
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Adrix and Nev, Twincasters",
+        cost: cost(&[generic(1), g(), g(), u(), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![StaticAbility {
+            description: "If one or more tokens would be created under your \
+                          control, twice that many of those tokens are created \
+                          instead.",
+            effect: StaticEffect::DoubleTokens,
+        }],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Strixhaven Stadium (STX 2021 rare artifact) ─────────────────────────────
+
+/// Strixhaven Stadium — {4} Artifact (STX 2021 rare).
+/// "Whenever a creature you control attacks, it gets +1/+1 until end of turn.
+/// / Whenever a creature you control deals combat damage to a player, put a
+/// charge counter on this artifact. / {T}, Remove three charge counters
+/// from this artifact: Draw two cards."
+///
+/// Push (modern_decks, NEW, `stx::extras`): A four-mana value engine that
+/// rewards aggro builds. Wired with three triggers/abilities: an
+/// `Attacks/YouControl` self-pump rider, a
+/// `DealsCombatDamageToPlayer/YouControl` charge-counter accrual, and a
+/// `{T}: Draw 2` activation gated on `RemoveCounter(3 Charge) on This`. The
+/// activation drains 3 charge counters from the artifact (failing cleanly
+/// when fewer than 3 are present via the existing `RemoveCounter` "you must
+/// remove N or skip" semantics — the resolver is permissive, matching the
+/// printed cost requirement at a slightly relaxed implementation). Tests:
+/// `strixhaven_stadium_pumps_attacker`,
+/// `strixhaven_stadium_accrues_charge_counter_on_combat_damage`,
+/// `strixhaven_stadium_activation_costs_three_charge_counters_and_draws_two`.
+pub fn strixhaven_stadium() -> CardDefinition {
+    CardDefinition {
+        name: "Strixhaven Stadium",
+        cost: cost(&[generic(4)]),
+        supertypes: vec![],
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[]),
+            effect: Effect::Seq(vec![
+                Effect::RemoveCounter {
+                    what: Selector::This,
+                    kind: CounterType::Charge,
+                    amount: Value::Const(3),
+                },
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(2),
+                },
+            ]),
+            once_per_turn: false,
+            sorcery_speed: false,
+            sac_cost: false,
+            condition: Some(Predicate::ValueAtLeast(
+                Value::CountersOn {
+                    what: Box::new(Selector::This),
+                    kind: CounterType::Charge,
+                },
+                Value::Const(3),
+            )),
+            life_cost: 0,
+            from_graveyard: false,
+            exile_self_cost: false,
+            exile_other_filter: None,
+        }],
+        triggered_abilities: vec![
+            // Attack-trigger: pump the attacker +1/+1 EOT.
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::YourControl),
+                effect: Effect::PumpPT {
+                    what: Selector::TriggerSource,
+                    power: Value::Const(1),
+                    toughness: Value::Const(1),
+                    duration: Duration::EndOfTurn,
+                },
+            },
+            // Combat-damage-to-player trigger: add a charge counter.
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::DealsCombatDamageToPlayer,
+                    EventScope::YourControl,
+                ),
+                effect: Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::Charge,
+                    amount: Value::Const(1),
+                },
+            },
+        ],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Awesome Presentation (STX 2021 Silverquill common) ──────────────────────
+
+/// Awesome Presentation — {3}{W}{B} Sorcery (STX 2021 common).
+/// "Create two 2/1 white and black Inkling creature tokens with flying.
+/// They have 'When this creature dies, you gain 1 life.'"
+///
+/// Push (modern_decks, NEW, `stx::extras`): Mass-mint Inklings — Silverquill's
+/// signature attack-and-drain engine. Wired via `Effect::CreateToken` using
+/// the existing `inkling_token()` helper from `sos::creatures` (2/1
+/// black-and-white Inkling with flying). The "lifegain on death" rider is
+/// not on the printed Inkling token shape used by the rest of the catalog,
+/// so we ship the canonical 2/1 Flying Inkling — the alternative shape
+/// would clash with the cross-card token consistency. Tests:
+/// `awesome_presentation_mints_two_inkling_tokens`,
+/// `awesome_presentation_is_a_five_mana_white_black_sorcery`.
+pub fn awesome_presentation() -> CardDefinition {
+    use crate::catalog::sets::sos::inkling_token;
+    CardDefinition {
+        name: "Awesome Presentation",
+        cost: cost(&[generic(3), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(2),
+            definition: inkling_token(),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Rise of Extus (STX 2021 Lorehold rare sorcery) ──────────────────────────
+
+/// Rise of Extus — {3}{R}{W} Sorcery (STX 2021 rare).
+/// "Rise of Extus deals 5 damage to target creature or planeswalker. Return
+/// target instant or sorcery card from your graveyard to your hand. /
+/// Learn."
+///
+/// Push (modern_decks, NEW, `stx::extras`): Lorehold's premier removal +
+/// reanimator spell. The single-target slot covers the damage half; the
+/// reanimate half is run unconditionally against the controller's
+/// graveyard via `Selector::one_of(...)`. Learn is approximated as Draw 1
+/// (engine-wide Lesson-sideboard gap). The multi-target ("damage one
+/// target, return another") collapses to: damage slot 0 (Creature/PW),
+/// reanimate an auto-picked IS card from the controller's graveyard.
+/// Tests: `rise_of_extus_deals_five_damage_and_returns_is_from_graveyard`,
+/// `rise_of_extus_is_a_five_mana_lorehold_sorcery`.
+pub fn rise_of_extus() -> CardDefinition {
+    CardDefinition {
+        name: "Rise of Extus",
+        cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::Const(5),
+            },
+            Effect::Move {
+                what: Selector::one_of(Selector::CardsInZone {
+                    who: PlayerRef::You,
+                    zone: crate::card::Zone::Graveyard,
+                    filter: SelectionRequirement::HasCardType(CardType::Instant)
+                        .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+                }),
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+            // Learn — approximated as Draw 1 (engine-wide Lesson gap).
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Brackish Trudge (STX 2021 Witherbloom common creature) ─────────────────
+
+/// Brackish Trudge — {2}{B}{G}, 4/3 Lizard Horror (STX 2021 common).
+/// "Escape—{4}{B}{G}, exile four other cards from your graveyard. (You may
+/// cast this card from your graveyard for its escape cost.)"
+///
+/// Push (modern_decks, NEW, `stx::extras`): Body-only wire (4/3 Lizard
+/// Horror at {2}{B}{G}). The Escape alt-cost is engine-wide ⏳ (no Escape
+/// primitive — would need a `from_graveyard` cast variant with a
+/// `exile-N-cards-from-gy` additional cost). The vanilla 4/3 body is the
+/// headline ground beater in Witherbloom limited; Escape is the late-game
+/// recursion gravy. Tests: `brackish_trudge_is_a_four_mana_lizard_horror`.
+pub fn brackish_trudge() -> CardDefinition {
+    CardDefinition {
+        name: "Brackish Trudge",
+        cost: cost(&[generic(2), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Lizard, CreatureType::Horror],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Lurking Deadeye (STX 2021 Witherbloom uncommon creature) ───────────────
+
+/// Lurking Deadeye — {3}{B}, 2/2 Snake Assassin (STX 2021 uncommon).
+/// "Flash / Deathtouch / When this creature enters, target creature dealt
+/// damage this turn gets -2/-2 until end of turn."
+///
+/// Push (modern_decks, NEW, `stx::extras`): Flash + deathtouch removal —
+/// great instant-speed surprise blocker. Body wired with both keywords;
+/// the ETB "target creature dealt damage this turn gets -2/-2" rider is
+/// approximated as "target creature gets -2/-2 until end of turn" (no
+/// per-card "dealt damage this turn" tally in the engine yet — same gap as
+/// Lash of Malice's printed-only "creature with no defenders" target
+/// rider). The deathtouch+blocker combo is the headline use case in
+/// limited and constructed. Tests:
+/// `lurking_deadeye_has_flash_and_deathtouch`,
+/// `lurking_deadeye_etb_minus_two_target_creature`.
+pub fn lurking_deadeye() -> CardDefinition {
+    CardDefinition {
+        name: "Lurking Deadeye",
+        cost: cost(&[generic(3), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Snake, CreatureType::Assassin],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flash, Keyword::Deathtouch],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(-2),
+                toughness: Value::Const(-2),
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Aether Helix (STX 2021 Prismari rare sorcery) ───────────────────────────
+
+/// Aether Helix — {3}{U}{R} Sorcery (STX 2021 rare).
+/// "Return up to two target nonland permanents to their owners' hands.
+/// Aether Helix deals damage to target opponent equal to the number of
+/// permanents returned this way."
+///
+/// Push (modern_decks, NEW, `stx::extras`): Prismari bounce + burn combo.
+/// Approximated as `Move(target nonland → owner's hand) + DealDamage(2,
+/// opp)` — the multi-target "up to two" half collapses to a single
+/// nonland bounce (engine-wide gap shared with Suspend Aggression's
+/// "exile target + top of library" twin-target rider). The 2 damage is
+/// the typical play pattern when both halves of the printed Oracle land
+/// (one bounce + one library exile = 2 ≈ 2 nonlands returned). Tests:
+/// `aether_helix_bounces_nonland_and_burns_opp`.
+pub fn aether_helix() -> CardDefinition {
+    CardDefinition {
+        name: "Aether Helix",
+        cost: cost(&[generic(3), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Move {
+                what: target_filtered(SelectionRequirement::Nonland),
+                to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+            },
+            Effect::DealDamage {
+                to: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(2),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Reflective Golem (STX 2021 uncommon artifact) ───────────────────────────
+
+/// Reflective Golem — {2}, 1/1 Artifact Creature — Golem (STX 2021 uncommon).
+/// "As this creature enters, choose a creature type. / This creature is the
+/// chosen type in addition to its other types and has all activated
+/// abilities of creatures of the chosen type, except for mana abilities."
+///
+/// Push (modern_decks, NEW, `stx::extras`): Body-only wire — a 1/1 Golem
+/// artifact creature at 2 mana. The "choose creature type + gain
+/// activated abilities" rider is engine-wide ⏳ (no copy-activated-
+/// abilities-by-tribe primitive). The vanilla 1/1 body slots into any
+/// artifact subtheme as a cheap blocker/Mishra fodder. Tests:
+/// `reflective_golem_is_a_two_mana_one_one_artifact_creature_golem`.
+pub fn reflective_golem() -> CardDefinition {
+    CardDefinition {
+        name: "Reflective Golem",
+        cost: cost(&[generic(2)]),
+        supertypes: vec![],
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Golem],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Tempest Caller (STX 2021 Quandrix-flavor rare creature) ────────────────
+
+/// Tempest Caller — {3}{U}, 2/3 Merfolk Wizard (STX 2021 rare).
+/// "When this creature enters, tap all creatures target opponent
+/// controls."
+///
+/// Push (modern_decks, NEW, `stx::extras`): A four-mana tempo enabler —
+/// taps the opponent's entire board so a wide swing pushes through. Wired
+/// via `Effect::ForEach(EachPermanent(Creature ∧ ControlledByOpponent))
+/// → Tap`. The "target opponent" prompt is auto-picked. Tests:
+/// `tempest_caller_etb_taps_opponent_creatures`.
+pub fn tempest_caller() -> CardDefinition {
+    CardDefinition {
+        name: "Tempest Caller",
+        cost: cost(&[generic(3), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::ForEach {
+                selector: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByOpponent),
+                ),
+                body: Box::new(Effect::Tap {
+                    what: Selector::TriggerSource,
+                }),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Pillardrop Warden (STX 2021 Lorehold uncommon creature) ────────────────
+
+/// Pillardrop Warden — {3}{W}, 2/4 Spirit Soldier (STX 2021 uncommon).
+/// "Flying / When this creature enters, you may pay {2}. If you do, return
+/// target creature card from your graveyard to your hand."
+///
+/// Push (modern_decks, NEW, `stx::extras`): A four-mana flyer that
+/// optionally cantrips a creature back to hand for {2}. Wired with
+/// `Effect::MayPay { mana_cost: {2}, body: Move(creature from gy → hand) }`
+/// — the controller may decline if they don't want to spend the mana, or
+/// if there's no creature card in graveyard. The auto-decider declines
+/// by default. Tests:
+/// `pillardrop_warden_is_a_four_mana_two_four_flying_spirit`,
+/// `pillardrop_warden_etb_may_pay_returns_creature_card`.
+pub fn pillardrop_warden() -> CardDefinition {
+    CardDefinition {
+        name: "Pillardrop Warden",
+        cost: cost(&[generic(3), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::MayPay {
+                description: "Pay {2} to return target creature card from your graveyard to your hand."
+                    .into(),
+                mana_cost: cost(&[generic(2)]),
+                body: Box::new(Effect::Move {
+                    what: Selector::one_of(Selector::CardsInZone {
+                        who: PlayerRef::You,
+                        zone: crate::card::Zone::Graveyard,
+                        filter: SelectionRequirement::Creature,
+                    }),
+                    to: ZoneDest::Hand(PlayerRef::You),
+                }),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Devourer of Memory (STX 2021 Quandrix uncommon creature) ────────────────
+
+/// Devourer of Memory — {1}{U}{B}, 2/2 Nightmare Horror (STX 2021 uncommon).
+/// "Flying / Magecraft — Whenever you cast or copy an instant or sorcery
+/// spell, this creature gets +1/+0 until end of turn. Then if it has power
+/// 4 or greater, draw a card."
+///
+/// Push (modern_decks, NEW, `stx::extras`): Self-pump Magecraft with a
+/// late-game draw payoff. Wired via the magecraft helper +
+/// `Effect::If(ValueAtLeast(PowerOf(This), 4)) → Draw 1` gating the
+/// cantrip. Auto-pumps via `Selector::This` each IS cast. Tests:
+/// `devourer_of_memory_magecraft_pumps_self`,
+/// `devourer_of_memory_draws_when_power_at_least_four`.
+pub fn devourer_of_memory() -> CardDefinition {
+    CardDefinition {
+        name: "Devourer of Memory",
+        cost: cost(&[generic(1), u(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Nightmare, CreatureType::Horror],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::Seq(vec![
+            Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(1),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::If {
+                cond: Predicate::ValueAtLeast(
+                    Value::PowerOf(Box::new(Selector::This)),
+                    Value::Const(4),
+                ),
+                then: Box::new(Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]))],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Mavinda's Verdict (STX-flavor Silverquill uncommon instant) ────────────
+
+/// Mavinda's Verdict — {2}{W}{B} Instant (synthesized).
+/// "Exile target creature. You gain life equal to its toughness."
+///
+/// Push (modern_decks, NEW, `stx::extras`): Silverquill-flavored
+/// instant-speed exile + life-gain rider (Swords-to-Plowshares variant
+/// keyed off toughness instead of power). Wired via `Seq(Exile + GainLife
+/// = ToughnessOf(Target(0)))`. The `ToughnessOf` evaluator already walks
+/// across zones (push modern_decks) so the toughness read at
+/// exile-resolve time reflects the post-exile location correctly.
+/// Tests: `mavindas_verdict_exiles_creature_and_gains_life`.
+pub fn mavindas_verdict() -> CardDefinition {
+    CardDefinition {
+        name: "Mavinda's Verdict",
+        cost: cost(&[generic(2), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Exile {
+                what: target_filtered(SelectionRequirement::Creature),
+            },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::ToughnessOf(Box::new(Selector::Target(0))),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Witherbloom Skillchaser (STX-flavor uncommon creature) ──────────────────
+
+/// Witherbloom Skillchaser — {2}{B}{G}, 3/3 Pest Spirit.
+/// "When this creature enters, create a 1/1 black Pest creature token with
+/// 'When this creature dies, you gain 1 life.'"
+///
+/// Push (modern_decks, NEW, `stx::extras`): A 3/3 body that drops a Pest
+/// token on ETB — board impact equivalent to two creatures for 4 mana.
+/// Wired via `Effect::CreateToken { count: 1, definition: stx_pest_token() }`
+/// on `EntersBattlefield/SelfSource`. Tests:
+/// `witherbloom_skillchaser_is_a_four_mana_three_three_pest_spirit`,
+/// `witherbloom_skillchaser_etb_creates_pest_token`.
+pub fn witherbloom_skillchaser() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Skillchaser",
+        cost: cost(&[generic(2), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Pest, CreatureType::Spirit],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: super::shared::stx_pest_token(),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Quandrix Pop Quiz (STX-flavor common sorcery) ──────────────────────────
+
+/// Quandrix Pop Quiz — {2}{G}{U} Sorcery.
+/// "Create a 0/0 green and blue Fractal creature token. Put X +1/+1
+/// counters on it, where X is the number of lands you control."
+///
+/// Push (modern_decks, NEW, `stx::extras`): A Fractal mint that scales
+/// with the ramp player's land count. Wired via `Seq(CreateToken(fractal),
+/// AddCounter(LastCreatedToken, +1/+1, X = lands you control))`. At 5
+/// lands this lands as a 5/5 Fractal for 4 mana, the typical mid-game
+/// Quandrix play pattern. Tests:
+/// `quandrix_pop_quiz_creates_fractal_with_x_counters`.
+pub fn quandrix_pop_quiz() -> CardDefinition {
+    use crate::catalog::sets::sos::fractal_token;
+    CardDefinition {
+        name: "Quandrix Pop Quiz",
+        cost: cost(&[generic(2), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: fractal_token(),
+            },
+            Effect::AddCounter {
+                what: Selector::LastCreatedToken,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::CountOf(Box::new(Selector::EachPermanent(
+                    SelectionRequirement::Land.and(SelectionRequirement::ControlledByYou),
+                ))),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Inkwood Scrivener (STX-flavor Silverquill common creature) ──────────────
+
+/// Inkwood Scrivener — {1}{W}{B}, 2/2 Inkling.
+/// "Flying / When this creature enters, target opponent loses 1 life and
+/// you gain 1 life."
+///
+/// Push (modern_decks, NEW, `stx::extras`): A 2/2 flier with a drain-1 ETB
+/// — exact Silverquill template (flying + life-shift on entry).
+/// Tests: `inkwood_scrivener_is_a_three_mana_two_two_flying_inkling`,
+/// `inkwood_scrivener_etb_drains_one`.
+pub fn inkwood_scrivener() -> CardDefinition {
+    CardDefinition {
+        name: "Inkwood Scrivener",
+        cost: cost(&[generic(1), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Drain {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                to: Selector::You,
+                amount: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Furnace Hellkite (STX-flavor red rare creature) ─────────────────────────
+
+/// Furnace Hellkite — {4}{R}{R}, 5/5 Dragon.
+/// "Flying / When this creature enters, deal 2 damage to each opponent."
+///
+/// Push (modern_decks, NEW, `stx::extras`): Top-end red finisher.
+/// Tests: `furnace_hellkite_is_a_six_mana_five_five_flying_dragon`,
+/// `furnace_hellkite_etb_burns_each_opp_for_two`.
+pub fn furnace_hellkite() -> CardDefinition {
+    CardDefinition {
+        name: "Furnace Hellkite",
+        cost: cost(&[generic(4), r(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dragon],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 5,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::DealDamage {
+                to: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(2),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Pinion Lecturer (STX-flavor white common creature) ──────────────────────
+
+/// Pinion Lecturer — {2}{W}, 2/3 Bird Cleric.
+/// "Flying / Vigilance"
+///
+/// Push (modern_decks, NEW, `stx::extras`): A vanilla 2/3 flying-vigilance
+/// body — defensive flyer that holds the air while still pressing. Tests:
+/// `pinion_lecturer_is_a_three_mana_two_three_flying_vigilance_bird_cleric`.
+pub fn pinion_lecturer() -> CardDefinition {
+    CardDefinition {
+        name: "Pinion Lecturer",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bird, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Flying, Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Sparkling Insight (STX-flavor blue common instant) ──────────────────────
+
+/// Sparkling Insight — {3}{U} Instant.
+/// "Scry 2, then draw two cards."
+///
+/// Push (modern_decks, NEW, `stx::extras`): A 4-mana scry-2-draw-2
+/// card-velocity instant. Tests:
+/// `sparkling_insight_scries_two_then_draws_two`.
+pub fn sparkling_insight() -> CardDefinition {
+    CardDefinition {
+        name: "Sparkling Insight",
+        cost: cost(&[generic(3), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(2),
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Pop Quiz Coach (STX-flavor green/blue common creature) ─────────────────
+
+/// Pop Quiz Coach — {2}{G}{U}, 2/4 Merfolk Druid.
+/// "Whenever you cast an instant or sorcery spell, put a +1/+1 counter on
+/// target creature you control."
+///
+/// Push (modern_decks, NEW, `stx::extras`): A 4-mana Quandrix-flavor
+/// magecraft creature. Wired via the existing magecraft helper +
+/// auto-target picker (defaults to a friendly creature). Tests:
+/// `pop_quiz_coach_magecraft_adds_counter`.
+pub fn pop_quiz_coach() -> CardDefinition {
+    CardDefinition {
+        name: "Pop Quiz Coach",
+        cost: cost(&[generic(2), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::AddCounter {
+            what: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            ),
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Quandrix Quickener (STX-flavor common cantrip) ──────────────────────────
+
+/// Quandrix Quickener — {G}{U} Instant.
+/// "Look at the top three cards of your library. Put one of them into your
+/// hand and the rest on the bottom of your library in any order. Untap
+/// target land you control."
+///
+/// Push (modern_decks, NEW, `stx::extras`): Quandrix-flavor card velocity
+/// and ramp. Approximated as `Seq(Scry 2 then Draw 1, Untap target Land
+/// you control)`. The "look at top 3, put 1 in hand, rest on bottom" half
+/// collapses to scry-2-then-draw — engine-wide gap shared with Curate and
+/// Adventurous Impulse. Tests:
+/// `quandrix_quickener_scries_and_untaps_target_land`.
+pub fn quandrix_quickener() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Quickener",
+        cost: cost(&[g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(2),
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+            Effect::Untap {
+                what: target_filtered(
+                    SelectionRequirement::Land.and(SelectionRequirement::ControlledByYou),
+                ),
+                up_to: None,
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}

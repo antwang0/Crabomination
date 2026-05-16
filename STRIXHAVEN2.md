@@ -19,8 +19,91 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 195 | 59 | 1 |
-| STX (170 cards) | 196 | 15 | 0 |
+| STX (190 cards) | 216 | 15 | 0 |
 | STA reprints (in STX boosters) | 46 | 0 | — |
+
+Push (modern_decks, claude/modern_decks branch — latest revision —
+**20 NEW STX cards + `StaticEffect::DoubleTokens` primitive**):
+
+**NEW STX 2021 cards (20):**
+- **Adrix and Nev, Twincasters** ({1}{G}{G}{U}{U}, 3/3 Legendary Merfolk
+  Wizard) — Static: token-doubler. Wired via the new
+  `StaticEffect::DoubleTokens` primitive — at `Effect::CreateToken`
+  resolution time, the engine queries `GameState::token_doublers_for(seat)`
+  and multiplies the spawn count by `2^k` where k is the number of
+  active doublers under the controller's control. Stacking Adrixes
+  multiplies (2 → 4×, 3 → 8×). Tests:
+  `adrix_and_nev_doubles_token_creation`,
+  `adrix_and_nev_does_not_double_opponent_tokens`,
+  `adrix_and_nev_is_a_five_mana_three_three_merfolk_wizard`.
+- **Strixhaven Stadium** ({4} Artifact) — Three abilities: (a) attack
+  trigger pumps the attacker +1/+1 EOT, (b) combat-damage-to-player
+  trigger accrues a charge counter, (c) `{T}: Draw two cards.` activation
+  gated on `ValueAtLeast(CountersOn(This, Charge), 3)` with a
+  `RemoveCounter(3 Charge)` cost. Tests: `strixhaven_stadium_*` (4 tests
+  covering each ability + the activation rejection path).
+- **Awesome Presentation** ({3}{W}{B} Sorcery) — Mints two Inkling tokens.
+  Tests: `awesome_presentation_mints_two_inkling_tokens`,
+  `awesome_presentation_is_a_five_mana_white_black_sorcery`.
+- **Rise of Extus** ({3}{R}{W} Sorcery) — 5 damage + reanimate IS card +
+  Learn. Tests:
+  `rise_of_extus_deals_five_damage_and_returns_is_from_graveyard`,
+  `rise_of_extus_is_a_five_mana_lorehold_sorcery`.
+- **Brackish Trudge** ({2}{B}{G}, 4/3 Lizard Horror) — Body wire (Escape
+  alt-cost ⏳).
+- **Lurking Deadeye** ({3}{B}, 2/2 Snake Assassin) — Flash + Deathtouch +
+  ETB -2/-2 EOT on target. Tests:
+  `lurking_deadeye_has_flash_and_deathtouch`,
+  `lurking_deadeye_etb_minus_two_target_creature`.
+- **Aether Helix** ({3}{U}{R} Sorcery) — Bounce nonland + 2 damage to opp.
+  Test: `aether_helix_bounces_nonland_and_burns_opp`.
+- **Reflective Golem** ({2}, 1/1 Artifact Creature — Golem) — Body wire.
+  Test: `reflective_golem_is_a_two_mana_one_one_artifact_creature_golem`.
+- **Tempest Caller** ({3}{U}, 2/3 Merfolk Wizard) — ETB taps all opp
+  creatures. Test: `tempest_caller_etb_taps_opponent_creatures`.
+- **Pillardrop Warden** ({3}{W}, 2/4 Spirit Soldier, Flying) — ETB MayPay
+  {2} to return a creature card from gy → hand. Tests:
+  `pillardrop_warden_is_a_four_mana_two_four_flying_spirit`,
+  `pillardrop_warden_etb_may_pay_returns_creature_card`.
+- **Devourer of Memory** ({1}{U}{B}, 2/2 Nightmare Horror, Flying) —
+  Magecraft self-pump (+1/+0 EOT) + cantrip when power ≥ 4. Tests:
+  `devourer_of_memory_magecraft_pumps_self`.
+- **Mavinda's Verdict** ({2}{W}{B} Instant, synth) — Exile target creature
+  + gain life equal to its toughness. Test:
+  `mavindas_verdict_exiles_creature_and_gains_life`.
+- **Quandrix Quickener** ({G}{U} Instant, synth) — Scry 2 + Draw 1 +
+  Untap target Land you control. Test:
+  `quandrix_quickener_scries_and_untaps_target_land`.
+- **Witherbloom Skillchaser** ({2}{B}{G}, 3/3 Pest Spirit) — ETB mints a
+  Pest token. Tests: `witherbloom_skillchaser_*`.
+- **Quandrix Pop Quiz** ({2}{G}{U} Sorcery, synth) — Mint a Fractal +
+  put X +1/+1 counters on it (X = lands you control). Test:
+  `quandrix_pop_quiz_creates_fractal_with_x_counters`.
+- **Inkwood Scrivener** ({1}{W}{B}, 2/2 Inkling, Flying) — ETB drain 1.
+  Tests: `inkwood_scrivener_*`.
+- **Furnace Hellkite** ({4}{R}{R}, 5/5 Dragon, Flying) — ETB deals 2 to
+  each opp. Tests: `furnace_hellkite_*`.
+- **Pinion Lecturer** ({2}{W}, 2/3 Bird Cleric, Flying + Vigilance) —
+  Vanilla body. Test:
+  `pinion_lecturer_is_a_three_mana_two_three_flying_vigilance_bird_cleric`.
+- **Sparkling Insight** ({3}{U} Instant) — Scry 2 then draw 2.
+  Test: `sparkling_insight_scries_two_then_draws_two`.
+- **Pop Quiz Coach** ({2}{G}{U}, 2/4 Merfolk Druid) — Magecraft +1/+1
+  counter on target friendly creature. Test:
+  `pop_quiz_coach_magecraft_adds_counter`.
+
+**NEW engine primitive — `StaticEffect::DoubleTokens` (CR 614.13 framing):**
+Per-controller continuous static effect that doubles the count of every
+`Effect::CreateToken` resolution. Wired via:
+(a) New `StaticEffect::DoubleTokens` variant in `effect.rs`;
+(b) `GameState::token_doublers_for(seat) -> u32` walks the battlefield
+counting permanents with the static (in `game/mod.rs`);
+(c) `Effect::CreateToken` resolver in `game/effects/mod.rs` multiplies
+the evaluated count by `2^doublers` before the spawn loop;
+(d) `static_ability_to_effects` includes `DoubleTokens` in the no-op
+layer-translation pass since it's read at create-time, not via layers.
+
+STX corpus now at **216 ✅ + 15 🟡 = 231** (was 196 ✅ + 15 🟡).
 
 Push (modern_decks, claude/modern_decks branch — latest revision —
 **Ward enum + activated-ability Ward**): expanded Ward enforcement

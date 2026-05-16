@@ -795,7 +795,7 @@ impl GameState {
 
         let all_targets: Vec<Target> = target
             .into_iter()
-            .chain(additional_targets.into_iter())
+            .chain(additional_targets)
             .collect();
         self.push_ward_triggers_for_targets(caster, cast_card_id, &all_targets);
     }

@@ -10789,3 +10789,653 @@ fn lorehold_mascot_attack_gains_life_and_pumps() {
         .expect("computed permanent");
     assert_eq!(cp.power, 4, "Pumped to 4 on attack");
 }
+
+// ── Adrix and Nev, Twincasters (modern_decks push) ─────────────────────────
+
+#[test]
+fn adrix_and_nev_is_a_five_mana_three_three_merfolk_wizard() {
+    let def = catalog::adrix_and_nev_twincasters();
+    assert_eq!(def.name, "Adrix and Nev, Twincasters");
+    assert_eq!(def.power, 3);
+    assert_eq!(def.toughness, 3);
+    assert_eq!(def.cost.cmc(), 5);
+    assert!(def.is_legendary());
+    let ctypes = &def.subtypes.creature_types;
+    assert!(ctypes.contains(&crate::card::CreatureType::Merfolk));
+    assert!(ctypes.contains(&crate::card::CreatureType::Wizard));
+}
+
+#[test]
+fn adrix_and_nev_doubles_token_creation() {
+    // With Adrix on the battlefield, creating one Treasure should mint two.
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::adrix_and_nev_twincasters());
+
+    // Cast a token-creating spell. We use Hunt for Specimens which creates
+    // one Pest token.
+    let id = g.add_card_to_hand(0, catalog::hunt_for_specimens());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+
+    let pests_before = g.battlefield.iter()
+        .filter(|c| c.definition.name == "Pest").count();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Hunt for Specimens castable");
+    drain_stack(&mut g);
+    let pests_after = g.battlefield.iter()
+        .filter(|c| c.definition.name == "Pest").count();
+    assert_eq!(
+        pests_after - pests_before,
+        2,
+        "Adrix doubles the mint: one Pest → two Pests"
+    );
+}
+
+#[test]
+fn adrix_and_nev_does_not_double_opponent_tokens() {
+    // Adrix only doubles tokens under its controller's control.
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::adrix_and_nev_twincasters());
+
+    // Opp casts a token-creating spell — should mint only one token.
+    let id = g.add_card_to_hand(1, catalog::hunt_for_specimens());
+    g.players[1].mana_pool.add(Color::Black, 1);
+    g.players[1].mana_pool.add_colorless(3);
+    g.priority.player_with_priority = 1;
+    g.active_player_idx = 1;
+    g.step = crate::game::types::TurnStep::PreCombatMain;
+
+    let pests_before = g.battlefield.iter()
+        .filter(|c| c.definition.name == "Pest").count();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Opp casts Hunt for Specimens");
+    drain_stack(&mut g);
+    let pests_after = g.battlefield.iter()
+        .filter(|c| c.definition.name == "Pest").count();
+    assert_eq!(
+        pests_after - pests_before,
+        1,
+        "Adrix doesn't double opp's token mint"
+    );
+}
+
+// ── Strixhaven Stadium (modern_decks push) ─────────────────────────────────
+
+#[test]
+fn strixhaven_stadium_is_a_four_mana_artifact() {
+    let def = catalog::strixhaven_stadium();
+    assert_eq!(def.cost.cmc(), 4);
+    assert!(def.card_types.contains(&crate::card::CardType::Artifact));
+    assert_eq!(def.activated_abilities.len(), 1);
+    // Two trigger abilities (Attacks + DealsCombatDamageToPlayer).
+    assert_eq!(def.triggered_abilities.len(), 2);
+}
+
+#[test]
+fn strixhaven_stadium_pumps_attacker() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::strixhaven_stadium());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+
+    // Move to declare attackers step.
+    while g.step != crate::game::types::TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass priority");
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: bear,
+        target: AttackTarget::Player(1),
+    }])).expect("declare attackers");
+    drain_stack(&mut g);
+
+    // Bear was 2/2, Stadium pumps it +1/+1 EOT.
+    let cp = g.compute_battlefield().iter()
+        .find(|c| c.id == bear).cloned()
+        .expect("bear on bf");
+    assert_eq!(cp.power, 3, "Bear pumped to 3 power on attack");
+    assert_eq!(cp.toughness, 3, "Bear pumped to 3 toughness on attack");
+}
+
+#[test]
+fn strixhaven_stadium_activation_costs_three_charge_counters_and_draws_two() {
+    let mut g = two_player_game();
+    let stadium = g.add_card_to_battlefield(0, catalog::strixhaven_stadium());
+    // Seed three charge counters.
+    {
+        let s = g.battlefield_find_mut(stadium).expect("stadium");
+        s.add_counters(CounterType::Charge, 3);
+    }
+    // Seed library for the two draws.
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let hand_before = g.players[0].hand.len();
+
+    // Activate the ability (no mana cost — just tap + remove 3 charge).
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: stadium,
+        ability_index: 0,
+        target: None,
+    }).expect("activation succeeds with 3 charge counters");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[0].hand.len(), hand_before + 2, "drew 2 cards");
+    let s = g.battlefield_find(stadium).expect("stadium still on bf");
+    assert_eq!(s.counter_count(CounterType::Charge), 0, "3 charges removed");
+}
+
+#[test]
+fn strixhaven_stadium_activation_rejected_without_enough_charge_counters() {
+    let mut g = two_player_game();
+    let stadium = g.add_card_to_battlefield(0, catalog::strixhaven_stadium());
+    // Only 2 charge counters — below the 3 threshold.
+    {
+        let s = g.battlefield_find_mut(stadium).expect("stadium");
+        s.add_counters(CounterType::Charge, 2);
+    }
+    // Activation should be rejected.
+    let res = g.perform_action(GameAction::ActivateAbility {
+        card_id: stadium,
+        ability_index: 0,
+        target: None,
+    });
+    assert!(res.is_err(), "activation requires 3 charge counters");
+}
+
+// ── Awesome Presentation (modern_decks push) ───────────────────────────────
+
+#[test]
+fn awesome_presentation_is_a_five_mana_white_black_sorcery() {
+    let def = catalog::awesome_presentation();
+    assert_eq!(def.name, "Awesome Presentation");
+    assert_eq!(def.cost.cmc(), 5);
+    assert!(def.card_types.contains(&crate::card::CardType::Sorcery));
+}
+
+#[test]
+fn awesome_presentation_mints_two_inkling_tokens() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::awesome_presentation());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+
+    let inklings_before = g.battlefield.iter()
+        .filter(|c| c.definition.name == "Inkling").count();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Awesome Presentation castable for {3}{W}{B}");
+    drain_stack(&mut g);
+    let inklings_after = g.battlefield.iter()
+        .filter(|c| c.definition.name == "Inkling").count();
+    assert_eq!(inklings_after - inklings_before, 2);
+}
+
+// ── Rise of Extus (modern_decks push) ──────────────────────────────────────
+
+#[test]
+fn rise_of_extus_is_a_five_mana_lorehold_sorcery() {
+    let def = catalog::rise_of_extus();
+    assert_eq!(def.name, "Rise of Extus");
+    assert_eq!(def.cost.cmc(), 5);
+    assert!(def.card_types.contains(&crate::card::CardType::Sorcery));
+}
+
+#[test]
+fn rise_of_extus_deals_five_damage_and_returns_is_from_graveyard() {
+    let mut g = two_player_game();
+    // Seed library for Learn's Draw.
+    g.add_card_to_library(0, catalog::island());
+    let bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    let opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::rise_of_extus());
+
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(crate::game::types::Target::Permanent(opp_bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    }).expect("Rise of Extus castable");
+    drain_stack(&mut g);
+
+    // 5 damage kills the 2/2 bear.
+    let bear_dead = g.battlefield.iter().all(|c| c.id != opp_bear);
+    assert!(bear_dead, "5 damage kills the bear");
+    // Lightning Bolt should be back in hand. Plus Learn (Draw 1).
+    let hand_after = g.players[0].hand.len();
+    let bolt_in_hand = g.players[0].hand.iter().any(|c| c.id == bolt);
+    assert!(bolt_in_hand, "Lightning Bolt returned to hand");
+    // Hand: -1 (cast Rise of Extus) +1 (Lightning Bolt return) +1 (Learn) = +1.
+    assert_eq!(hand_after - hand_before, 1);
+}
+
+// ── Brackish Trudge (modern_decks push) ────────────────────────────────────
+
+#[test]
+fn brackish_trudge_is_a_four_mana_lizard_horror() {
+    let def = catalog::brackish_trudge();
+    assert_eq!(def.cost.cmc(), 4);
+    assert_eq!(def.power, 4);
+    assert_eq!(def.toughness, 3);
+    let ctypes = &def.subtypes.creature_types;
+    assert!(ctypes.contains(&crate::card::CreatureType::Lizard));
+    assert!(ctypes.contains(&crate::card::CreatureType::Horror));
+}
+
+// ── Lurking Deadeye (modern_decks push) ────────────────────────────────────
+
+#[test]
+fn lurking_deadeye_has_flash_and_deathtouch() {
+    let def = catalog::lurking_deadeye();
+    assert!(def.keywords.contains(&Keyword::Flash));
+    assert!(def.keywords.contains(&Keyword::Deathtouch));
+    assert_eq!(def.power, 2);
+    assert_eq!(def.toughness, 2);
+}
+
+#[test]
+fn lurking_deadeye_etb_minus_two_target_creature() {
+    let mut g = two_player_game();
+    let opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::lurking_deadeye());
+
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(crate::game::types::Target::Permanent(opp_bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    }).expect("Lurking Deadeye castable at flash speed");
+    drain_stack(&mut g);
+
+    // Bear was 2/2, -2/-2 kills it.
+    let bear_dead = g.battlefield.iter().all(|c| c.id != opp_bear);
+    assert!(bear_dead, "-2/-2 kills the bear via SBA");
+}
+
+// ── Aether Helix (modern_decks push) ────────────────────────────────────────
+
+#[test]
+fn aether_helix_bounces_nonland_and_burns_opp() {
+    let mut g = two_player_game();
+    let opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::aether_helix());
+
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+
+    let life_before = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(crate::game::types::Target::Permanent(opp_bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    }).expect("Aether Helix castable");
+    drain_stack(&mut g);
+
+    // Bear bounced to opp's hand.
+    let bear_on_bf = g.battlefield.iter().any(|c| c.id == opp_bear);
+    assert!(!bear_on_bf, "Bear bounced off battlefield");
+    let bear_in_hand = g.players[1].hand.iter().any(|c| c.id == opp_bear);
+    assert!(bear_in_hand, "Bear in opp's hand");
+    // Opp lost 2 life from the burn.
+    assert_eq!(g.players[1].life, life_before - 2);
+}
+
+// ── Reflective Golem (modern_decks push) ────────────────────────────────────
+
+#[test]
+fn reflective_golem_is_a_two_mana_one_one_artifact_creature_golem() {
+    let def = catalog::reflective_golem();
+    assert_eq!(def.cost.cmc(), 2);
+    assert_eq!(def.power, 1);
+    assert_eq!(def.toughness, 1);
+    assert!(def.card_types.contains(&crate::card::CardType::Artifact));
+    assert!(def.card_types.contains(&crate::card::CardType::Creature));
+    assert!(def.subtypes.creature_types.contains(&crate::card::CreatureType::Golem));
+}
+
+// ── Tempest Caller (modern_decks push) ──────────────────────────────────────
+
+#[test]
+fn tempest_caller_etb_taps_opponent_creatures() {
+    let mut g = two_player_game();
+    let bear1 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let bear2 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::tempest_caller());
+
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Tempest Caller castable");
+    drain_stack(&mut g);
+
+    let b1 = g.battlefield_find(bear1).expect("bear1 still on bf");
+    let b2 = g.battlefield_find(bear2).expect("bear2 still on bf");
+    assert!(b1.tapped, "bear1 tapped");
+    assert!(b2.tapped, "bear2 tapped");
+}
+
+// ── Pillardrop Warden (modern_decks push) ──────────────────────────────────
+
+#[test]
+fn pillardrop_warden_is_a_four_mana_two_four_flying_spirit() {
+    let def = catalog::pillardrop_warden();
+    assert_eq!(def.cost.cmc(), 4);
+    assert_eq!(def.power, 2);
+    assert_eq!(def.toughness, 4);
+    assert!(def.keywords.contains(&Keyword::Flying));
+}
+
+#[test]
+fn pillardrop_warden_etb_may_pay_returns_creature_card() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let dead_bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::pillardrop_warden());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(5); // 3 base + 2 for MayPay
+
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Pillardrop Warden castable");
+    drain_stack(&mut g);
+
+    // Bear came back to hand.
+    let bear_in_hand = g.players[0].hand.iter().any(|c| c.id == dead_bear);
+    assert!(bear_in_hand, "Bear returned to hand via MayPay");
+}
+
+// ── Devourer of Memory (modern_decks push) ─────────────────────────────────
+
+#[test]
+fn devourer_of_memory_magecraft_pumps_self() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::devourer_of_memory());
+    g.clear_sickness(id);
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+
+    g.players[0].mana_pool.add(Color::Red, 1);
+
+    // Cast Lightning Bolt at opp; Magecraft pumps Devourer +1/+0 EOT.
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(crate::game::types::Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    }).expect("Bolt castable");
+    drain_stack(&mut g);
+
+    let cp = g.compute_battlefield().iter()
+        .find(|c| c.id == id).cloned()
+        .expect("devourer on bf");
+    assert_eq!(cp.power, 3, "Devourer pumped to 3 power");
+}
+
+// ── Mavinda's Verdict (modern_decks push) ──────────────────────────────────
+
+#[test]
+fn mavindas_verdict_exiles_creature_and_gains_life() {
+    let mut g = two_player_game();
+    let opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::mavindas_verdict());
+
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+
+    let life_before = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(crate::game::types::Target::Permanent(opp_bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    }).expect("Mavinda's Verdict castable");
+    drain_stack(&mut g);
+
+    // Bear exiled (not in any zone but exile).
+    let bear_exiled = g.exile.iter().any(|c| c.id == opp_bear);
+    assert!(bear_exiled, "Bear in exile");
+    // Gain life = bear's toughness (2).
+    assert_eq!(g.players[0].life, life_before + 2);
+}
+
+// ── Witherbloom Skillchaser (modern_decks push) ────────────────────────────
+
+#[test]
+fn witherbloom_skillchaser_is_a_four_mana_three_three_pest_spirit() {
+    let def = catalog::witherbloom_skillchaser();
+    assert_eq!(def.cost.cmc(), 4);
+    assert_eq!(def.power, 3);
+    assert_eq!(def.toughness, 3);
+    let ctypes = &def.subtypes.creature_types;
+    assert!(ctypes.contains(&crate::card::CreatureType::Pest));
+    assert!(ctypes.contains(&crate::card::CreatureType::Spirit));
+}
+
+#[test]
+fn witherbloom_skillchaser_etb_creates_pest_token() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::witherbloom_skillchaser());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+
+    let pests_before = g.battlefield.iter()
+        .filter(|c| c.definition.name == "Pest").count();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Skillchaser castable");
+    drain_stack(&mut g);
+    let pests_after = g.battlefield.iter()
+        .filter(|c| c.definition.name == "Pest").count();
+    assert_eq!(pests_after - pests_before, 1);
+}
+
+// ── Quandrix Pop Quiz (modern_decks push) ──────────────────────────────────
+
+#[test]
+fn quandrix_pop_quiz_creates_fractal_with_x_counters() {
+    let mut g = two_player_game();
+    // Put four lands you control on the battlefield.
+    for _ in 0..4 {
+        g.add_card_to_battlefield(0, catalog::forest());
+    }
+    let id = g.add_card_to_hand(0, catalog::quandrix_pop_quiz());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Quandrix Pop Quiz castable");
+    drain_stack(&mut g);
+
+    // Fractal should be 4/4 (X = 4 lands).
+    let fractal_id = g.battlefield.iter()
+        .find(|c| c.definition.name == "Fractal").map(|c| c.id);
+    assert!(fractal_id.is_some(), "Fractal token created");
+    let cp = g.compute_battlefield().iter()
+        .find(|c| c.id == fractal_id.unwrap()).cloned()
+        .expect("computed fractal");
+    assert_eq!(cp.power, 4);
+    assert_eq!(cp.toughness, 4);
+}
+
+// ── Inkwood Scrivener (modern_decks push) ──────────────────────────────────
+
+#[test]
+fn inkwood_scrivener_is_a_three_mana_two_two_flying_inkling() {
+    let def = catalog::inkwood_scrivener();
+    assert_eq!(def.cost.cmc(), 3);
+    assert_eq!(def.power, 2);
+    assert_eq!(def.toughness, 2);
+    assert!(def.keywords.contains(&Keyword::Flying));
+    assert!(def.subtypes.creature_types.contains(&crate::card::CreatureType::Inkling));
+}
+
+#[test]
+fn inkwood_scrivener_etb_drains_one() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::inkwood_scrivener());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    let p0_life = g.players[0].life;
+    let p1_life = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Scrivener castable");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[0].life, p0_life + 1);
+    assert_eq!(g.players[1].life, p1_life - 1);
+}
+
+// ── Furnace Hellkite (modern_decks push) ───────────────────────────────────
+
+#[test]
+fn furnace_hellkite_is_a_six_mana_five_five_flying_dragon() {
+    let def = catalog::furnace_hellkite();
+    assert_eq!(def.cost.cmc(), 6);
+    assert_eq!(def.power, 5);
+    assert_eq!(def.toughness, 5);
+    assert!(def.keywords.contains(&Keyword::Flying));
+    assert!(def.subtypes.creature_types.contains(&crate::card::CreatureType::Dragon));
+}
+
+#[test]
+fn furnace_hellkite_etb_burns_each_opp_for_two() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::furnace_hellkite());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(4);
+
+    let p1_life = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Hellkite castable");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[1].life, p1_life - 2);
+}
+
+// ── Pinion Lecturer (modern_decks push) ────────────────────────────────────
+
+#[test]
+fn pinion_lecturer_is_a_three_mana_two_three_flying_vigilance_bird_cleric() {
+    let def = catalog::pinion_lecturer();
+    assert_eq!(def.cost.cmc(), 3);
+    assert_eq!(def.power, 2);
+    assert_eq!(def.toughness, 3);
+    assert!(def.keywords.contains(&Keyword::Flying));
+    assert!(def.keywords.contains(&Keyword::Vigilance));
+    let ctypes = &def.subtypes.creature_types;
+    assert!(ctypes.contains(&crate::card::CreatureType::Bird));
+    assert!(ctypes.contains(&crate::card::CreatureType::Cleric));
+}
+
+// ── Sparkling Insight (modern_decks push) ──────────────────────────────────
+
+#[test]
+fn sparkling_insight_scries_two_then_draws_two() {
+    let mut g = two_player_game();
+    for _ in 0..5 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let id = g.add_card_to_hand(0, catalog::sparkling_insight());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Sparkling Insight castable");
+    drain_stack(&mut g);
+    // Net: -1 (cast) + 2 (draw 2) = +1.
+    assert_eq!(g.players[0].hand.len(), hand_before + 1);
+}
+
+// ── Pop Quiz Coach (modern_decks push) ─────────────────────────────────────
+
+#[test]
+fn pop_quiz_coach_magecraft_adds_counter() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::pop_quiz_coach());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+
+    g.players[0].mana_pool.add(Color::Red, 1);
+
+    // Cast Lightning Bolt; Magecraft puts a +1/+1 counter on the bear.
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(crate::game::types::Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    }).expect("Bolt castable");
+    drain_stack(&mut g);
+
+    let cp = g.compute_battlefield().iter()
+        .find(|c| c.id == bear).cloned()
+        .expect("bear on bf");
+    // Bear was 2/2, now 3/3 with the +1/+1 counter.
+    assert_eq!(cp.power, 3);
+    assert_eq!(cp.toughness, 3);
+}
+
+// ── Quandrix Quickener (modern_decks push) ─────────────────────────────────
+
+#[test]
+fn quandrix_quickener_scries_and_untaps_target_land() {
+    let mut g = two_player_game();
+    // Seed library for scry.
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    // Tap a land we can target.
+    let land = g.add_card_to_battlefield(0, catalog::forest());
+    {
+        let l = g.battlefield_find_mut(land).expect("forest");
+        l.tapped = true;
+    }
+    let id = g.add_card_to_hand(0, catalog::quandrix_quickener());
+
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(crate::game::types::Target::Permanent(land)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    }).expect("Quandrix Quickener castable");
+    drain_stack(&mut g);
+
+    let l = g.battlefield_find(land).expect("forest on bf");
+    assert!(!l.tapped, "Forest untapped via Quickener");
+}

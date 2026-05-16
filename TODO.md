@@ -11,6 +11,33 @@ Periodic spot-check of the rules document
 (`crabomination/MagicCompRules 20260116.txt`). Each rule below has a
 status tag (✅ wired, 🟡 partial, ⏳ todo) plus a short note.
 
+- 🟡 **CR 614.16 — "If an effect would create tokens / put counters,
+  replacement effects apply" (token half)** (push modern_decks audit,
+  claude/modern_decks branch): "Some replacement effects apply 'if an
+  effect would create one or more tokens' or 'if an effect would put
+  one or more counters on a permanent.' These replacement effects apply
+  if the effect of a resolving spell or ability creates a token or puts
+  a counter on a permanent, and they also apply if another replacement
+  or prevention effect does so, even if the original event being
+  modified wasn't itself an effect." Push (modern_decks) lands the
+  **token half** of CR 614.16 via the new `StaticEffect::DoubleTokens`
+  primitive. Wiring shape: a per-controller continuous static effect
+  that doubles the count of every `Effect::CreateToken` resolution. The
+  resolver in `game/effects/mod.rs` (`Effect::CreateToken` handler)
+  queries `GameState::token_doublers_for(seat)` (in `game/mod.rs`) and
+  multiplies the evaluated count by `2^k` where k is the number of
+  active `DoubleTokens` permanents the controller has on the
+  battlefield. Stacking multiplies (2 Adrix → 4×, 3 → 8×, ...) — the
+  CR 614.13 "multiple replacement effects apply in any order" framing
+  in this case collapses to "multiply" because every Adrix does the
+  same doubling regardless of order. Adrix and Nev, Twincasters is the
+  canonical exerciser. Tests: `adrix_and_nev_doubles_token_creation`,
+  `adrix_and_nev_does_not_double_opponent_tokens`. The counter half
+  ("if an effect would put one or more counters on a permanent" —
+  Doubling Season, Hardened Scales, Branching Evolution) is still ⏳
+  pending a `StaticEffect::DoubleCounters` sibling that hooks into the
+  `Effect::AddCounter` resolver.
+
 - 🟡 **CR 603.4 — Intervening 'if' clause (trigger-time half)**
   (push modern_decks audit, claude/modern_decks branch): "A triggered
   ability may read 'When/Whenever/At [trigger event], if [condition],

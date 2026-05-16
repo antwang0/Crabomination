@@ -1680,6 +1680,16 @@ pub enum StaticEffect {
     /// spells as though they had flash. Tracked via `Player.sorceries_as_flash`
     /// (set/cleared by the loyalty ability + `do_untap`).
     ControllerSorceriesAsFlash,
+    /// "If one or more tokens would be created under your control, twice
+    /// that many tokens are created instead." Used by Adrix and Nev,
+    /// Twincasters (Quandrix uncommon legendary). Doubling Season uses a
+    /// stronger variant that also doubles counter accrual; this variant
+    /// covers the token half only. The static is read at
+    /// `Effect::CreateToken` resolution time: each active `DoubleTokens`
+    /// permanent the controller has on the battlefield doubles the
+    /// token count (2 doublers → 4×, 3 → 8×, …). CR 614.13 framing —
+    /// the effect is a replacement that scales the create-token event.
+    DoubleTokens,
 }
 
 // ── Triggered / activated / loyalty ability shells ───────────────────────────

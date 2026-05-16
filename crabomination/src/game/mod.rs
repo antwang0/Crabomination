@@ -445,6 +445,28 @@ impl GameState {
         self.team_of(a) == self.team_of(b)
     }
 
+    /// Number of `StaticEffect::DoubleTokens` permanents `seat` controls
+    /// on the battlefield. Used by `Effect::CreateToken` to scale the
+    /// token count by `2^n` — one Adrix and Nev, Twincasters in play
+    /// means twice as many tokens are minted; two doublers means four
+    /// times as many; etc. (CR 614.13: multiple replacement effects
+    /// apply in any order chosen by the controller, but all functionally
+    /// multiply rather than just add.)
+    pub fn token_doublers_for(&self, seat: usize) -> u32 {
+        use crate::effect::StaticEffect;
+        self.battlefield
+            .iter()
+            .filter(|c| c.controller == seat)
+            .map(|c| {
+                c.definition
+                    .static_abilities
+                    .iter()
+                    .filter(|sa| matches!(sa.effect, StaticEffect::DoubleTokens))
+                    .count() as u32
+            })
+            .sum()
+    }
+
     /// Replace the current team partition. Every seat must appear in
     /// exactly one entry; partitions must be non-empty. Used by team
     /// formats (2HG) after `new()` to group seats.
@@ -2235,7 +2257,10 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             // (`player_locked_to_sorcery_timing` etc.); not modeled as
             // continuous-layer modifications here.
             | StaticEffect::OpponentsSorceryTimingOnly
-            | StaticEffect::ControllerSorceriesAsFlash => vec![],
+            | StaticEffect::ControllerSorceriesAsFlash
+            // DoubleTokens — read at `Effect::CreateToken` resolution time
+            // via `GameState::token_doublers_for(seat)`; no layer effect.
+            | StaticEffect::DoubleTokens => vec![],
         })
         .collect()
 }

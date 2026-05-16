@@ -1051,7 +1051,16 @@ impl GameState {
 
             Effect::CreateToken { who, count, definition } => {
                 let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
-                let n = self.evaluate_value(count, ctx).max(0) as u32;
+                let mut n = self.evaluate_value(count, ctx).max(0) as u32;
+                // CR 614.13 token-doubling replacement: each
+                // `StaticEffect::DoubleTokens` permanent the controller has on
+                // the battlefield (Adrix and Nev, Twincasters; Doubling Season
+                // for the token half) doubles the count. Stacking doublers
+                // multiply (2^k where k is the number of active doublers).
+                let doublers = self.token_doublers_for(p);
+                for _ in 0..doublers {
+                    n = n.saturating_mul(2);
+                }
                 for _ in 0..n {
                     let id = self.next_id();
                     let def = token_to_card_definition(definition);
