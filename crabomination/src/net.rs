@@ -161,6 +161,19 @@ pub struct PlayerView {
     /// player is over 7 cards.
     #[serde(default)]
     pub no_maximum_hand_size: bool,
+    /// Cards in this player's command zone (Commander commanders,
+    /// Conspiracies, etc.). Always face-up — the command zone is a
+    /// public zone, so every entry is `Known` regardless of viewer.
+    /// `#[serde(default)]` for snapshot back-compat.
+    #[serde(default)]
+    pub command: Vec<HandCardView>,
+    /// CardIds the engine has flagged as this player's commanders
+    /// (Phase J's `Player.commanders`). Surfaced so the UI can
+    /// distinguish "your commander, currently on the battlefield"
+    /// from a regular permanent (cast-tax preview, frame highlight).
+    /// `#[serde(default)]` for snapshot back-compat.
+    #[serde(default)]
+    pub commanders: Vec<CardId>,
 }
 
 /// A single hand-slot entry. `Hidden` for cards the viewer isn't entitled to

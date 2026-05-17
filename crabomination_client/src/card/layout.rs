@@ -41,6 +41,11 @@ const DECK_X: f32 = 11.0;
 const DECK_Z: f32 = 9.5;
 const GRAVEYARD_X: f32 = 11.0;
 const GRAVEYARD_Z: f32 = 4.0;
+/// Command zone sits between the graveyard and the table edge,
+/// closer to the center, so the commander is always visible.
+/// Each card in the zone stacks slightly along Y for legibility.
+const COMMAND_X: f32 = -11.0;
+const COMMAND_Z: f32 = 4.0;
 
 pub const LAND_STACK_OFFSET_X: f32 = 0.18;
 pub const LAND_STACK_OFFSET_Z: f32 = 0.35;
@@ -107,6 +112,32 @@ pub fn graveyard_position(seat: usize, viewer: usize, n_seats: usize) -> Vec3 {
         GRAVEYARD_X + opp_x_offset(seat, viewer, n_seats)
     };
     Vec3::new(x, 0.0, sign * GRAVEYARD_Z)
+}
+
+/// Transform for a card in `seat`'s command zone, slot `slot`. Cards
+/// are face-up and tilted toward the camera (viewer-side) or
+/// face-up but flipped for opponents (still legible from afar).
+/// Multiple commanders stack with a small Y offset.
+pub fn command_zone_card_transform(
+    seat: usize,
+    viewer: usize,
+    n_seats: usize,
+    slot: usize,
+) -> Transform {
+    let sign = z_sign(seat, viewer);
+    let x = if is_viewer(seat, viewer) {
+        COMMAND_X
+    } else {
+        -COMMAND_X + opp_x_offset(seat, viewer, n_seats)
+    };
+    let y = CARD_THICKNESS * (slot as f32) * 2.0;
+    let z = sign * COMMAND_Z;
+    let rot = if is_viewer(seat, viewer) {
+        Quat::from_rotation_x(-FRAC_PI_2)
+    } else {
+        Quat::from_rotation_x(-FRAC_PI_2) * Quat::from_rotation_z(PI)
+    };
+    Transform::from_xyz(x, y, z).with_rotation(rot)
 }
 
 /// Rotation applied to a face-down card belonging to `seat` (deck pile,

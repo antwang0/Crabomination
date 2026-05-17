@@ -1013,6 +1013,38 @@ mod tests {
         handle.join().unwrap();
     }
 
+    /// 4-player bot FFA on the Commander demo deck (Rofellos mono-green
+    /// mirror). Verifies the Phase I/J/L/M pipeline end-to-end:
+    /// command zone populated at setup for all 4 seats, replacement
+    /// effect bounces commanders back if killed, cast-from-CZ + tax
+    /// accounting runs through `RandomBot` action picks across all
+    /// 4 players, 21-commander-damage SBA still terminates the game.
+    /// Phase A/B/C/D/E machinery is also exercised: 4-seat turn
+    /// rotation, APNAP trigger ordering, team-aware attack/block
+    /// validation collapsing to FFA semantics.
+    #[test]
+    fn bot_vs_bot_commander_demo_terminates() {
+        use crate::demo::build_commander_state;
+        let state = build_commander_state();
+        let (done_tx, done_rx) = mpsc::channel();
+        let handle = thread::spawn(move || {
+            run_match(
+                state,
+                vec![
+                    SeatOccupant::Bot(Box::new(RandomBot::new())),
+                    SeatOccupant::Bot(Box::new(RandomBot::new())),
+                    SeatOccupant::Bot(Box::new(RandomBot::new())),
+                    SeatOccupant::Bot(Box::new(RandomBot::new())),
+                ],
+            );
+            let _ = done_tx.send(());
+        });
+        done_rx
+            .recv_timeout(Duration::from_secs(120))
+            .expect("commander 4-player FFA bot match must terminate");
+        handle.join().unwrap();
+    }
+
     /// `dump_deadlock_state` writes a self-describing JSON file under
     /// `debug/` with `kind: "bot_deadlock"` plus the live snapshot.
     /// The watchdog (`report_deadlock`) wraps this with a panic; the

@@ -44,7 +44,8 @@ use systems::animate::{
 use systems::game_ui::{
     apply_swap_front_material, auto_advance_p0, handle_ability_menu, handle_alt_cast_buttons,
     handle_export_keypress, handle_game_input, poll_action_buttons, setup_game_hud,
-    spawn_ability_menu, spawn_alt_cast_modal, sync_flipped_hand_cards, sync_game_visuals,
+    spawn_ability_menu, spawn_alt_cast_modal, sync_command_zone, sync_flipped_hand_cards,
+    sync_game_visuals,
     trigger_reveal_animation, update_attack_all_visibility, update_log_text, update_p1_text,
     update_hint, update_pass_button, update_phase_chart, update_player_text,
     update_stack_panel, update_turn_text, ButtonState, GameLogicSet,
@@ -222,6 +223,15 @@ fn main() {
         .add_systems(
             Update,
             sync_flipped_hand_cards
+                .after(sync_game_visuals)
+                .run_if(in_state(AppState::InGame)),
+        )
+        // Command zone sync — spawns visuals for each card in any
+        // player's command zone. Independent of the main game-visual
+        // sync (no animation handoff with hand/battlefield).
+        .add_systems(
+            Update,
+            sync_command_zone
                 .after(sync_game_visuals)
                 .run_if(in_state(AppState::InGame)),
         )

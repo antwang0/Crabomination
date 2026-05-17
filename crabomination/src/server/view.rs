@@ -94,6 +94,16 @@ fn project_player(player: &Player, player_seat: usize, viewer_seat: usize) -> Pl
         instants_or_sorceries_cast_this_turn: player.instants_or_sorceries_cast_this_turn,
         creatures_cast_this_turn: player.creatures_cast_this_turn,
         no_maximum_hand_size: player.no_maximum_hand_size,
+        // Command zone is public — every viewer sees every card as
+        // `Known`. We reuse `HandCardView` for the card shape since
+        // it already carries name / cost / types / target hints,
+        // which is what the UI needs to render and previs casting.
+        command: player
+            .command
+            .iter()
+            .map(|c| HandCardView::Known(known_card(c)))
+            .collect(),
+        commanders: player.commanders.clone(),
     }
 }
 
@@ -795,5 +805,37 @@ mod tests {
         assert_eq!(costs, vec![1, -1, -2]);
         // The -2 ability creates a token; pre-rendered label should reflect that.
         assert_eq!(perm.loyalty_abilities[2].effect_label, "Create token");
+    }
+
+    /// The command zone is a public zone — every viewer sees every
+    /// seat's commanders as `Known`, including opponents'. Surfaces
+    /// the Phase J seating + Phase L cast-tax UI requirements.
+    #[test]
+    fn command_zone_is_publicly_visible_to_all_viewers() {
+        let mut state = two_player_game();
+        let cmd_ids = state.seat_commanders(0, vec![catalog::atraxa_grand_unifier()]);
+        let atraxa = cmd_ids[0];
+
+        // Viewer is the commander owner.
+        let view_p0 = project(&state, 0);
+        assert_eq!(view_p0.players[0].command.len(), 1);
+        match &view_p0.players[0].command[0] {
+            HandCardView::Known(k) => assert_eq!(k.id, atraxa),
+            HandCardView::Hidden { .. } => panic!("own command zone must be Known"),
+        }
+        assert!(view_p0.players[0].commanders.contains(&atraxa));
+
+        // Opponent viewer — still Known, because the command zone is
+        // public.
+        let view_p1 = project(&state, 1);
+        assert_eq!(view_p1.players[0].command.len(), 1);
+        match &view_p1.players[0].command[0] {
+            HandCardView::Known(k) => assert_eq!(k.id, atraxa),
+            HandCardView::Hidden { .. } => panic!("opponent's command zone is also public"),
+        }
+        // Commanders list also visible to opponents — needed so the
+        // UI can flag opponents' commanders on the battlefield for
+        // damage-tally tooltips.
+        assert!(view_p1.players[0].commanders.contains(&atraxa));
     }
 }

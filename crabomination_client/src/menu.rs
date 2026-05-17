@@ -22,7 +22,7 @@ use bevy::prelude::*;
 
 use crabomination::cube::build_cube_state;
 use crabomination::sos_mode::build_sos_state;
-use crabomination::demo::build_demo_state;
+use crabomination::demo::{build_commander_state, build_demo_state};
 use crabomination::game::GameState;
 use crabomination::server::{
     ClientChannel, RandomBot, SeatOccupant, run_match, run_match_full, seat_pair,
@@ -83,6 +83,11 @@ pub enum MatchFormat {
     Modern,
     Cube,
     Sos,
+    /// 1v1 Commander: both seats run the Rofellos mono-green
+    /// demo deck. 100-card singleton, 40 life, commander seated in
+    /// the command zone before opening-hand draw. Built via
+    /// `demo::build_commander_state`.
+    Commander,
 }
 
 impl MatchFormat {
@@ -98,6 +103,7 @@ impl MatchFormat {
             MatchFormat::Modern => build_demo_state(),
             MatchFormat::Cube => build_cube_state(),
             MatchFormat::Sos => build_sos_state(),
+            MatchFormat::Commander => build_commander_state(),
         }
     }
 
@@ -106,6 +112,7 @@ impl MatchFormat {
             MatchFormat::Modern => "Modern",
             MatchFormat::Cube => "Cube",
             MatchFormat::Sos => "SoS",
+            MatchFormat::Commander => "Commander",
         }
     }
 }
@@ -280,6 +287,7 @@ fn spawn_menu(mut commands: Commands, ui_fonts: Res<UiFonts>) {
                         format_toggle(row, &tf, MatchFormat::Modern);
                         format_toggle(row, &tf, MatchFormat::Cube);
                         format_toggle(row, &tf, MatchFormat::Sos);
+                        format_toggle(row, &tf, MatchFormat::Commander);
                     });
                 });
 
@@ -681,16 +689,20 @@ fn spawn_inprocess_bot(world: &mut World, format: MatchFormat) {
     let (server_seat, ClientChannel { tx, rx }) = seat_pair();
     let sink: SnapshotSink = Arc::new(Mutex::new(SnapshotSinkState::default()));
     let sink_for_match = Arc::clone(&sink);
+    // Build the state first so we can size the occupant list to its
+    // seat count. Two-player formats (Modern / Cube / SoS) end up with
+    // [Human, Bot]; four-player formats (Commander) get
+    // [Human, Bot, Bot, Bot]. Pre-fix this was hardcoded to two and
+    // panicked when a Commander match brought 4 seats.
+    let state = format.build_state();
+    let n_seats = state.players.len();
+    let mut occupants: Vec<SeatOccupant> = Vec::with_capacity(n_seats);
+    occupants.push(SeatOccupant::Human(server_seat));
+    for _ in 1..n_seats {
+        occupants.push(SeatOccupant::Bot(Box::new(RandomBot::new())));
+    }
     std::thread::spawn(move || {
-        run_match_full(
-            format.build_state(),
-            vec![
-                SeatOccupant::Human(server_seat),
-                SeatOccupant::Bot(Box::new(RandomBot::new())),
-            ],
-            vec![],
-            Some(sink_for_match),
-        );
+        run_match_full(state, occupants, vec![], Some(sink_for_match));
     });
     world.insert_resource(NetOutbox(tx));
     world.insert_resource(NetInbox(Mutex::new(rx)));
@@ -719,16 +731,15 @@ fn spawn_spectate_bots(world: &mut World, format: MatchFormat) {
     let (server_seat, ClientChannel { tx, rx }) = seat_pair();
     let sink: SnapshotSink = Arc::new(Mutex::new(SnapshotSinkState::default()));
     let sink_for_match = Arc::clone(&sink);
+    // Size the bot list to the format's seat count — Commander brings
+    // 4 seats, the other formats bring 2.
+    let state = format.build_state();
+    let n_seats = state.players.len();
+    let occupants: Vec<SeatOccupant> = (0..n_seats)
+        .map(|_| SeatOccupant::Bot(Box::new(RandomBot::new())))
+        .collect();
     std::thread::spawn(move || {
-        run_match_full(
-            format.build_state(),
-            vec![
-                SeatOccupant::Bot(Box::new(RandomBot::new())),
-                SeatOccupant::Bot(Box::new(RandomBot::new())),
-            ],
-            vec![server_seat],
-            Some(sink_for_match),
-        );
+        run_match_full(state, occupants, vec![server_seat], Some(sink_for_match));
     });
     world.insert_resource(NetOutbox(tx));
     world.insert_resource(NetInbox(Mutex::new(rx)));

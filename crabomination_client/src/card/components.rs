@@ -130,6 +130,18 @@ pub struct DeckCard {
     pub index: usize,
 }
 
+/// Marker for a card sitting in a player's command zone (Commander
+/// commanders, Conspiracies). Rendered as a fixed-position pile
+/// near the seat's deck/graveyard, face-up; clicking the viewer's
+/// own command zone routes through `GameAction::CastFromCommandZone`.
+/// `owner` is the seat the zone belongs to; `slot` is the stack
+/// index within that zone.
+#[derive(Component)]
+pub struct CommandZoneCard {
+    pub owner: usize,
+    pub slot: usize,
+}
+
 /// Marker for an opponent's hand card visual (face-down, count-synced).
 /// `owner` is the seat that owns this card; `slot` is its position in the
 /// owner's hand fan.

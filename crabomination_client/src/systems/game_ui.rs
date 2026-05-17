@@ -1,7 +1,7 @@
 //! HUD overlay, visual sync, input handling, and ability menu. Gizmos and the
 //! quality panel live in their own sibling modules (`gizmos.rs`, `quality.rs`).
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::f32::consts::{FRAC_PI_2, PI};
 
 use bevy::prelude::*;
@@ -2103,6 +2103,10 @@ pub fn handle_game_input(
     hovered_hand: Query<&GameCardId, (With<CardHovered>, With<HandCard>)>,
     hovered_bf: Query<(&GameCardId, &CardOwner), (With<CardHovered>, With<BattlefieldCard>)>,
     hovered_target_zone: Query<&PlayerTargetZone, With<CardHovered>>,
+    hovered_command_zone: Query<
+        (&GameCardId, &crate::card::CommandZoneCard),
+        With<CardHovered>,
+    >,
     valid_targets: Query<Entity, With<ValidTarget>>,
     btns: Res<ButtonState>,
     windows: Query<&Window, With<bevy::window::PrimaryWindow>>,
@@ -2357,6 +2361,46 @@ pub fn handle_game_input(
                     targeting.back_face_pending = false;
                 } else {
                     outbox.submit(GameAction::CastSpell { card_id: card.id, target: None, additional_targets: vec![], mode: None, x_value: None });
+                }
+            }
+        }
+
+        // ── Command zone click → cast from CZ ───────────────────────────
+        // Phase L: clicking a card in the viewer's own command zone
+        // routes through `CastFromCommandZone` so the {2}×N commander
+        // tax is added on top of the printed cost. Targeted commanders
+        // (rare — most commanders are vanilla legendaries) fall back to
+        // the targeting prompt the same way `CastSpell` does. Foreign
+        // command zones aren't clickable.
+        if in_main && mouse.just_pressed(MouseButton::Left)
+            && let Some((game_id, cz_card)) = hovered_command_zone.iter().next()
+            && cz_card.owner == your_seat
+        {
+            if let Some(card) = cv.players[your_seat].command.iter().find_map(|h| {
+                if let crabomination::net::HandCardView::Known(k) = h && k.id == game_id.0 {
+                    return Some(k.clone());
+                }
+                None
+            }) {
+                if card.needs_target {
+                    // Reuse the targeting modal — when the user picks a
+                    // target it submits CastSpell today. We mark the
+                    // pending cast as command-zone-sourced via a new
+                    // resource if/when we wire the prompt for it.
+                    // For now: skip targeted commanders from the
+                    // command zone (the Rofellos demo commander is
+                    // non-targeted, so this branch is dormant).
+                    targeting.active = true;
+                    targeting.pending_card_id = Some(card.id);
+                    targeting.back_face_pending = false;
+                } else {
+                    outbox.submit(GameAction::CastFromCommandZone {
+                        card_id: card.id,
+                        target: None,
+                        additional_targets: vec![],
+                        mode: None,
+                        x_value: None,
+                    });
                 }
             }
         }
@@ -2844,5 +2888,80 @@ pub fn sync_flipped_hand_cards(
         } else {
             commands.entity(entity).remove::<crate::card::FlippedFace>();
         }
+    }
+}
+
+// ── Command zone sync ─────────────────────────────────────────────────────────
+
+/// Spawn/despawn visual entities for command-zone cards (Commander
+/// commanders, Conspiracies). Each card is rendered as a face-up
+/// fixed-position card near the seat's edge of the table. Click
+/// handling routes through `CastFromCommandZone` (see
+/// `try_cast_from_command_zone`).
+///
+/// Simple model: each (owner, slot) pair gets one visual entity.
+/// On view sync, despawn entities for slot pairs that are no
+/// longer present and spawn new ones for arrivals. No animations
+/// — cards just appear/disappear with the view update.
+#[allow(clippy::type_complexity)]
+pub fn sync_command_zone(
+    mut commands: Commands,
+    cv: Res<CurrentView>,
+    card_assets: Option<Res<crate::card::CardMeshAssets>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    asset_server: Res<AssetServer>,
+    existing: Query<(Entity, &GameCardId), With<crate::card::CommandZoneCard>>,
+) {
+    let Some(view) = cv.0.as_ref() else { return };
+    let Some(card_assets) = card_assets else { return };
+    let viewer = view.your_seat;
+    let n_seats = view.players.len();
+
+    // Collect every (CardId, owner, slot) currently in any command
+    // zone, so the spawn loop can reuse the layout helper.
+    let mut want: HashMap<CardId, (usize, usize)> = HashMap::new();
+    let mut want_name: HashMap<CardId, String> = HashMap::new();
+    for player in &view.players {
+        for (slot, entry) in player.command.iter().enumerate() {
+            if let crabomination::net::HandCardView::Known(k) = entry {
+                want.insert(k.id, (player.seat, slot));
+                want_name.insert(k.id, k.name.clone());
+            }
+        }
+    }
+
+    // Despawn visuals for cards no longer in any command zone.
+    let mut have: HashSet<CardId> = HashSet::new();
+    for (entity, game_id) in &existing {
+        if !want.contains_key(&game_id.0) {
+            commands.entity(entity).despawn();
+        } else {
+            have.insert(game_id.0);
+        }
+    }
+
+    // Spawn fresh visuals for newly-arrived command-zone cards.
+    for (card_id, (owner, slot)) in &want {
+        if have.contains(card_id) {
+            continue;
+        }
+        let name = want_name.get(card_id).cloned().unwrap_or_default();
+        let target = crate::card::command_zone_card_transform(*owner, viewer, n_seats, *slot);
+        let front_mat = card_front_material(&name, &mut materials, &asset_server);
+        let back_mat = card_assets.back_material.clone();
+        let entity = crate::card::spawn_single_card(
+            &mut commands,
+            &card_assets.card_mesh,
+            front_mat,
+            back_mat,
+            target,
+            GameCardId(*card_id),
+            &name,
+            target.translation,
+        );
+        commands.entity(entity).insert(crate::card::CommandZoneCard {
+            owner: *owner,
+            slot: *slot,
+        });
     }
 }
