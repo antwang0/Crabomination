@@ -556,6 +556,17 @@ impl GameState {
                     R::IsBasicLand => card.definition.is_land() && card.definition.supertypes.contains(&Supertype::Basic),
                     R::IsAttacking => self.attacking.iter().any(|a| a.attacker == card.id),
                     R::IsBlocking => self.block_map.contains_key(&card.id),
+                    // CR 506.5: attacking alone = card is in attacking AND
+                    // there is exactly one declared attacker.
+                    R::IsAttackingAlone => {
+                        self.attacking.len() == 1
+                            && self.attacking.iter().any(|a| a.attacker == card.id)
+                    }
+                    // CR 506.5: blocking alone = card is in block_map keys
+                    // AND there is exactly one declared blocker.
+                    R::IsBlockingAlone => {
+                        self.block_map.len() == 1 && self.block_map.contains_key(&card.id)
+                    }
                     R::IsSpellOnStack => self.stack.iter().any(|si| matches!(si, StackItem::Spell { card: c, .. } if c.id == card.id)),
                     R::ManaValueAtMost(n) => card.definition.cost.cmc() <= *n,
                     R::ManaValueAtLeast(n) => card.definition.cost.cmc() >= *n,
@@ -645,7 +656,8 @@ impl GameState {
             R::OtherThanSource => true,
             // Battlefield-state predicates can't be evaluated for library cards.
             R::Tapped | R::Untapped | R::WithCounter(_)
-            | R::IsAttacking | R::IsBlocking | R::IsSpellOnStack => false,
+            | R::IsAttacking | R::IsBlocking | R::IsAttackingAlone | R::IsBlockingAlone
+            | R::IsSpellOnStack => false,
         }
     }
 }

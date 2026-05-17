@@ -140,8 +140,22 @@ status tag (✅ wired, 🟡 partial, ⏳ todo) plus a short note.
   remove from `self.attacking`). (f) **506.4b** tap/untap doesn't
   remove from combat — ✅ (`self.attacking` only mutated on death,
   controller change, or end-of-combat clear). (g) **506.5** "attacking
-  alone" / "blocking alone" — ⏳ (no `is_attacking_alone()` predicate;
-  cards like Marauding Raptor / Battlemastery would need this).
+  alone" / "blocking alone" — ✅ (push modern_decks batch 12): both
+  predicates land via `SelectionRequirement::IsAttackingAlone` +
+  `IsBlockingAlone`. `IsAttackingAlone` reads `self.attacking.len() == 1`
+  AND the card is in `attacking`; `IsBlockingAlone` reads
+  `self.block_map.len() == 1` AND the card is in `block_map.keys()`.
+  The `declare_attackers` path was updated to evaluate Attacks
+  trigger filters AFTER the entire attacker batch is declared
+  (CR 506.5's post-batch view), so a card like Lone Rider that
+  triggers "when it attacks alone" only fires when no other
+  attackers were declared in the same step. First card exerciser:
+  **Lone Rider** ({1}{R}, 2/2 Haste Human Knight, "Whenever this
+  creature attacks alone, +2/+0 and gains trample until EOT") —
+  tests: `lone_rider_pumps_when_attacking_alone`,
+  `lone_rider_does_not_pump_with_other_attackers`. `Blocking alone`
+  predicate is wired in `evaluate_requirement_static` but no
+  catalog card exercises it yet.
   (h) **506.6** "had to attack" — ⏳ (no requirement-vs-choice
   tracking; cards like Brave the Sands' "creatures you control can
   block as though they could block two" don't reach the predicate).
@@ -149,11 +163,11 @@ status tag (✅ wired, 🟡 partial, ⏳ todo) plus a short note.
   cast-time predicate that gates on declare-attackers / declare-
   blockers step phase; cards like Pyrohemia, Tibalt's Trickery,
   Burst of Speed-style "play only during combat" would need it).
-  No new tests added — the combat framework is exercised by every
-  combat-damage test in the suite (CreatureDied via SBA, Sparring
-  Regimen's per-attacker counters, Hofri/Quintorius anthems on
-  attacking creatures). Promote to ✅ when the first-strike
-  damage-step split and 506.5/.6/.7 land.
+  No new combat-framework tests added beyond the Lone Rider pair —
+  the framework is exercised by every combat-damage test in the
+  suite (CreatureDied via SBA, Sparring Regimen's per-attacker
+  counters, Hofri/Quintorius anthems on attacking creatures).
+  Promote to ✅ when 506.6 and 506.7 land.
 
 - 🟡 **CR 605 — Mana Abilities** (push modern_decks audit,
   claude/modern_decks branch): The mana-ability framework — what

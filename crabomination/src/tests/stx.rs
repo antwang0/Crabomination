@@ -20484,6 +20484,43 @@ fn strixhaven_reservoir_taps_for_any_color() {
 }
 
 #[test]
+fn lone_rider_pumps_when_attacking_alone() {
+    // Locks in CR 506.5 "attacking alone" predicate. The Lone Rider's
+    // attack-trigger only fires when it's the only declared attacker.
+    let mut g = two_player_game();
+    let rider = g.add_card_to_battlefield(0, catalog::lone_rider());
+    g.clear_sickness(rider);
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: rider, target: AttackTarget::Player(1),
+    }])).expect("Rider attacks alone");
+    drain_stack(&mut g);
+    let view = g.computed_permanent(rider).expect("Rider on bf");
+    assert_eq!(view.power, 4, "Rider 2 + 2 from alone-attack trigger");
+    assert!(view.keywords.contains(&Keyword::Trample), "Trample EOT granted");
+}
+
+#[test]
+fn lone_rider_does_not_pump_with_other_attackers() {
+    let mut g = two_player_game();
+    let rider = g.add_card_to_battlefield(0, catalog::lone_rider());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(rider);
+    g.clear_sickness(bear);
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: rider, target: AttackTarget::Player(1) },
+        Attack { attacker: bear, target: AttackTarget::Player(1) },
+    ])).expect("Both attack");
+    drain_stack(&mut g);
+    let view = g.computed_permanent(rider).expect("Rider on bf");
+    assert_eq!(view.power, 2, "Rider not pumped (multiple attackers — not 'alone')");
+    assert!(!view.keywords.contains(&Keyword::Trample), "No Trample (not alone)");
+}
+
+#[test]
 fn spelltongue_statute_gains_life_on_instant_cast() {
     let mut g = two_player_game();
     let _ = g.add_card_to_battlefield(0, catalog::spelltongue_statute());

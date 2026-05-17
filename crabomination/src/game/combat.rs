@@ -44,7 +44,15 @@ impl GameState {
         }
 
         let mut events = vec![];
-        let mut triggers: Vec<(CardId, Effect, usize)> = vec![];
+        // Per CR 506.5, the Attacks trigger filter must be evaluated
+        // post-batch, so we carry the optional filter alongside each
+        // queued trigger.
+        let mut triggers: Vec<(
+            CardId,
+            Effect,
+            usize,
+            Option<crate::effect::Predicate>,
+        )> = vec![];
         let computed = self.compute_battlefield();
         let computed_kw = |id: CardId| -> &[Keyword] {
             computed
@@ -83,7 +91,11 @@ impl GameState {
             events.push(GameEvent::AttackerDeclared(id));
             for t in &card.definition.triggered_abilities {
                 if t.event.kind == EventKind::Attacks {
-                    triggers.push((id, t.effect.clone(), p));
+                    // Capture the trigger's optional filter so we can
+                    // re-evaluate it AFTER the entire attacker batch is
+                    // declared (CR 506.5 "attacking alone" semantics
+                    // require the post-batch view).
+                    triggers.push((id, t.effect.clone(), p, t.event.filter.clone()));
                 }
             }
             // Annihilator: TODO — translate to Effect tree (no-op for now).
@@ -95,7 +107,30 @@ impl GameState {
                 }
             });
         }
-        for (source, effect, controller) in triggers {
+        for (source, effect, controller, filter) in triggers {
+            // CR 603.2 + CR 506.5: evaluate the trigger's optional filter
+            // predicate at fire-time, which for Attacks is "after the
+            // entire declare attackers step batch is resolved". This lets
+            // `Predicate::EntityMatches { what: This, filter: IsAttackingAlone }`
+            // and similar batched-attack riders gate correctly.
+            if let Some(predicate) = filter {
+                let ctx = crate::game::effects::EffectContext {
+                    controller,
+                    source: Some(source),
+                    targets: vec![],
+                    trigger_source: Some(crate::game::effects::EntityRef::Card(source)),
+                    mode: 0,
+                    x_value: 0,
+                    converged_value: 0,
+                    mana_spent: 0,
+                    source_name: None,
+                    cast_from_hand: true,
+                    event_amount: 0,
+                };
+                if !self.evaluate_predicate(&predicate, &ctx) {
+                    continue;
+                }
+            }
             let auto_target =
                 self.auto_target_for_effect_avoiding(&effect, controller, Some(source));
             self.stack.push(StackItem::Trigger {

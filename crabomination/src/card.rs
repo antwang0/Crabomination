@@ -286,6 +286,21 @@ pub enum SelectionRequirement {
     IsBasicLand,
     IsAttacking,
     IsBlocking,
+    /// CR 506.5: "A creature attacks alone if it's the only creature
+    /// declared as an attacker during the declare attackers step. A
+    /// creature is attacking alone if it's attacking but no other
+    /// creatures are." Used by cards like Marauding Raptor's "whenever
+    /// a Dinosaur enters …" rider, Battlemastery / "Whenever this
+    /// creature attacks alone" payoffs, and any future single-attacker
+    /// combat trick. Reads the `GameState.attacking` Vec: returns true
+    /// when the card is in `attacking` AND `attacking.len() == 1`.
+    IsAttackingAlone,
+    /// CR 506.5: "A creature blocks alone if it's the only creature
+    /// declared as a blocker during the declare blockers step. A
+    /// creature is blocking alone if it's blocking but no other
+    /// creatures are." Returns true when the card is in
+    /// `block_map.keys()` AND `block_map.len() == 1`.
+    IsBlockingAlone,
     IsSpellOnStack,
     ManaValueAtMost(u32),
     ManaValueAtLeast(u32),

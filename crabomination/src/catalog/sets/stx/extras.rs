@@ -28631,6 +28631,66 @@ pub fn strixhaven_reservoir() -> CardDefinition {
     }
 }
 
+// ── Lone Rider (batch 12, CR 506.5 exerciser) ──────────────────────────────
+
+/// Lone Rider — {1}{R}, 2/2 Human Knight, Haste.
+///
+/// Printed Oracle (synthesised): "Haste / Whenever this creature attacks
+/// alone, it gets +2/+0 and gains trample until end of turn."
+///
+/// First card exercising the new `SelectionRequirement::IsAttackingAlone`
+/// predicate (CR 506.5). The trigger fires on every Attacks event but
+/// is gated by an intervening-if predicate: the trigger is pushed onto
+/// the stack only when this creature is the only declared attacker.
+/// Tests: `lone_rider_pumps_when_attacking_alone`,
+/// `lone_rider_does_not_pump_with_other_attackers`.
+pub fn lone_rider() -> CardDefinition {
+    use crate::card::Predicate;
+    CardDefinition {
+        name: "Lone Rider",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Haste],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::This,
+                    filter: SelectionRequirement::IsAttackingAlone,
+                }),
+            effect: Effect::Seq(vec![
+                Effect::PumpPT {
+                    what: Selector::This,
+                    power: Value::Const(2),
+                    toughness: Value::Const(0),
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::GrantKeyword {
+                    what: Selector::This,
+                    keyword: Keyword::Trample,
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
 // ── Spelltongue Statute (batch 12) ─────────────────────────────────────────
 
 /// Spelltongue Statute — {2}{W} Enchantment.
