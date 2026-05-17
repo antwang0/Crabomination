@@ -655,3 +655,183 @@ pub fn prismari_volley() -> CardDefinition {
         exile_on_resolve: false,
     }
 }
+
+// ── Prismari Stormcaster (batch 19) ────────────────────────────────────────
+
+/// Prismari Stormcaster — {3}{U}{R}, 3/3 Djinn Wizard, Flying.
+///
+/// Printed Oracle (synthesised): "Flying / Magecraft — Whenever you
+/// cast or copy an instant or sorcery spell, draw a card, then discard
+/// a card."
+///
+/// Looter-tron-on-a-flier — 5-mana 3/3 evasive body that loots every
+/// cast. Stronger sibling to Prismari Storm-Caller (1 power, no
+/// flying) on a heavier curve. Pairs with Goldspan Dragon-style
+/// big-creature recursion via the constant graveyard refill.
+pub fn prismari_stormcaster() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Stormcaster",
+        cost: cost(&[generic(3), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Djinn, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::Seq(vec![
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+            Effect::Discard {
+                who: Selector::You,
+                amount: Value::Const(1),
+                random: false,
+            },
+        ]))],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Prismari Sparkmaster (batch 19) ────────────────────────────────────────
+
+/// Prismari Sparkmaster — {2}{U}{R}, 2/2 Human Wizard.
+///
+/// Printed Oracle (synthesised): "Magecraft — Whenever you cast or
+/// copy an instant or sorcery spell, this creature gets +1/+0 until
+/// end of turn."
+///
+/// Cheap magecraft self-pump — every cast turns the Sparkmaster into
+/// a bigger attacker for the turn. Mirror of Eccentric Apprentice on
+/// a sturdier 2/2 frame at the 4-mana slot.
+pub fn prismari_sparkmaster() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Sparkmaster",
+        cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_self_pump(1, 0)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Prismari Ember-Channeler (batch 19) ────────────────────────────────────
+
+/// Prismari Ember-Channeler — {U}{R}, 1/2 Human Wizard.
+///
+/// Printed Oracle (synthesised): "Magecraft — Whenever you cast or
+/// copy an instant or sorcery spell, this creature deals 1 damage to
+/// any target."
+///
+/// 2-mana Lorehold Apprentice mirror at the {U}{R} slot — every cast
+/// pings 1 damage to any target. Functions as a budget-Reverberator
+/// (2 mana vs 4) at half the damage; cheap, fragile, but compounds.
+pub fn prismari_ember_channeler() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Ember-Channeler",
+        cost: cost(&[u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::DealDamage {
+            to: target_filtered(
+                SelectionRequirement::Creature
+                    .or(SelectionRequirement::Player)
+                    .or(SelectionRequirement::Planeswalker),
+            ),
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Prismari Flarespark (batch 19) ─────────────────────────────────────────
+
+/// Prismari Flarespark — {1}{U}{R} Instant.
+///
+/// Printed Oracle (synthesised): "Prismari Flarespark deals 2 damage
+/// to any target. Draw a card."
+///
+/// 3-mana instant burn cantrip. Mirror of Prismari Volley at lower
+/// damage (2 vs 3) but with the wider "any target" range. Same
+/// post-cast card draw, so it's a strict tempo trade — replace itself
+/// while removing a 2-toughness creature or punching a planeswalker.
+pub fn prismari_flarespark() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Flarespark",
+        cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature
+                        .or(SelectionRequirement::Player)
+                        .or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::Const(2),
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}

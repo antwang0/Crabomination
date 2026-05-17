@@ -2029,3 +2029,169 @@ pub fn silverquill_censure() -> CardDefinition {
         exile_on_resolve: false,
     }
 }
+
+// ── Silverquill Castigant (batch 19) ───────────────────────────────────────
+
+/// Silverquill Castigant — {2}{W}, 2/3 Human Cleric.
+///
+/// Printed Oracle (synthesised): "When this creature enters, each
+/// opponent loses 1 life and you gain 1 life."
+///
+/// Compact ETB drain body. Slots into Silverquill curve (2-drop +
+/// Castigant + Verselord) for incidental life-swap value. Combo-friendly
+/// with Light of Promise (gain-life on bodies) and Inkling Bloodscribe
+/// (lifelink Vampire Inkling).
+pub fn silverquill_castigant() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Castigant",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Drain {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                to: Selector::You,
+                amount: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Silverquill Heartrender (batch 19) ─────────────────────────────────────
+
+/// Silverquill Heartrender — {2}{B} Sorcery.
+///
+/// Printed Oracle (synthesised): "Each opponent loses 3 life and you
+/// gain 3 life. Scry 1."
+///
+/// Pure 3-mana drain with selection rider. Stronger ratio than
+/// Witherbloom Reverie at the same cost (drain 3 + scry vs drain 3
+/// alone) trading the green pip for the scry. Pairs with Sanguine
+/// Bond / Witherbloom Apprentice for snowball boards.
+pub fn silverquill_heartrender() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Heartrender",
+        cost: cost(&[generic(2), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Drain {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                to: Selector::You,
+                amount: Value::Const(3),
+            },
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Inkling Confessor (batch 19) ───────────────────────────────────────────
+
+/// Inkling Confessor — {1}{W}{B}, 2/2 Inkling Cleric, Flying.
+///
+/// Printed Oracle (synthesised): "Flying / Magecraft — Whenever you
+/// cast or copy an instant or sorcery spell, each opponent loses 1
+/// life and you gain 1 life."
+///
+/// Flying Inkling magecraft drain body. Mirror of Witherbloom
+/// Apprentice on a flier with one fewer power. Stacks with Tenured
+/// Inkcaster's anthem and Inkling Verselord's lifelink grant.
+pub fn inkling_confessor() -> CardDefinition {
+    CardDefinition {
+        name: "Inkling Confessor",
+        cost: cost(&[generic(1), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_drain_each_opp(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Inkling Inkrider (batch 19) ────────────────────────────────────────────
+
+/// Inkling Inkrider — {2}{W}{B}, 3/2 Inkling Knight, Flying +
+/// Vigilance.
+///
+/// Printed Oracle (synthesised): "Flying, vigilance."
+///
+/// Aggressive 4-mana evasive Inkling — exact P/T as Inkling Sanctifier
+/// but trades lifelink for vigilance to enable persistent ground
+/// defense while attacking. Stacks with Inkling Verselord (grant
+/// lifelink → 3/2 Flying + Vigilance + Lifelink) for a true beater.
+pub fn inkling_inkrider() -> CardDefinition {
+    CardDefinition {
+        name: "Inkling Inkrider",
+        cost: cost(&[generic(2), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Flying, Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}

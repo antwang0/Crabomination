@@ -1566,6 +1566,70 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   — the framework already handles 116.2a (the only special action
   actually exercised by the catalog).
 
+- ✅ **CR 302 — Creatures** (push modern_decks batch 19,
+  claude/modern_decks branch — audit against
+  `MagicCompRules_20260417.txt`): The creature card type — casting,
+  resolution, subtypes, power/toughness, attack/block eligibility,
+  summoning sickness, and damage marking. Audit:
+  (a) **302.1** "A player who has priority may cast a creature card
+  from their hand during a main phase of their turn when the stack is
+  empty. Casting a creature as a spell uses the stack" — ✅
+  (`GameAction::CastSpell` for a Creature-typed card pushes a
+  `StackItem::Spell` after cost payment; sorcery-speed gating is
+  enforced at the priority check).
+  (b) **302.2** "When a creature spell resolves, its controller puts
+  it onto the battlefield under their control" — ✅
+  (`resolve_spell` in `game/stack.rs` routes a resolving Creature
+  spell to `self.battlefield` under the spell's controller via
+  `StackItem.controller`; the move also fires `EntersBattlefield`
+  triggers).
+  (c) **302.3** "Creature subtypes are usually a single word long
+  and are listed after a long dash" — ✅ (`Subtypes::creature_types:
+  Vec<CreatureType>` stores per-card subtypes; the engine carries
+  the full STX creature subtype set incl. Inkling, Pest, Fractal,
+  Spirit, Cat, Dog, Demon, Elemental, etc.; 205.3m's complete list
+  isn't enforced but every printed STX/SOS card uses real subtypes).
+  (d) **302.4 / 302.4a-c** "Power and toughness are characteristics
+  only creatures have. A creature's power is the amount of damage it
+  deals in combat. To determine a creature's power and toughness,
+  start with the numbers printed in its lower right corner, then
+  apply any applicable continuous effects" — ✅ (`CardInstance.power()`
+  and `toughness()` start from `CardDefinition.base_power` /
+  `base_toughness` and walk the layer system in `game::layers::
+  compute_permanent` to apply 7a CDA, 7b SetPowerToughness, 7c
+  ModifyPowerToughness, 7d Switch, and +1/+1/-1/-1 counter
+  deltas in the correct CR 613.7 order).
+  (e) **302.5** "Creatures can attack and block" — ✅
+  (`GameAction::DeclareAttackers` and `DeclareBlockers` accept only
+  creature-typed cards; non-creature permanents are rejected at the
+  legality check).
+  (f) **302.6** "summoning sickness" — ✅
+  (`CardInstance.entered_battlefield_at` snapshot + per-card
+  `can_attack`/`can_tap` gate in `actions.rs` checks "has been
+  under controller's control continuously since their most recent
+  turn began"; the haste keyword grants an exemption). The
+  "tap/untap symbol" activation gate is also enforced
+  (`activate_ability` rejects tap-cost activations on
+  summoning-sick creatures unless they have haste).
+  (g) **302.7** "Damage dealt to a creature is marked on that
+  creature; if marked damage ≥ toughness, that creature has been
+  dealt lethal damage and is destroyed as a state-based action.
+  All damage marked on a creature is removed when it regenerates
+  and during the cleanup step" — ✅ (`CardInstance.damage: u32`
+  accumulates damage; `check_state_based_actions` at the next SBA
+  check destroys creatures whose `damage >= toughness()`;
+  `do_cleanup` zeroes `damage` for every creature on the
+  battlefield, matching CR 514.2). Wither / infect divergence —
+  ✅ (push earlier; `EventKind::DealsCombatDamageTo` carries a
+  `wither_or_infect: bool` field that routes the damage to -1/-1
+  counters instead of marked damage). Regenerate — ⏳ (no
+  Regenerate primitive; printed cards using Regenerate are 🟡
+  with the regenerate rider stubbed). Tests: implicit across every
+  combat test that asserts a creature dies to lethal damage; the
+  layer system is exercised by every PumpPT / SetBasePT / counter
+  test. Promote-eligible when Regenerate primitive lands; the
+  remainder is wired.
+
 ## Suggested next-up tasks
 
 - ⏳ **Batched sacrifice picker for cost-paid filters** (push
@@ -1600,14 +1664,18 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   Slot into the SoS Silverquill / Witherbloom pool selector once the
   decklist generators support tribal weighting.
 
-- ⏳ **`Effect::CounterAbility`** — Spell Squelch and similar "counter
-  target activated or triggered ability" cards currently collapse to
-  generic CounterSpell. Engine extension: extend `Effect::CounterSpell`
-  to accept a `kind: CounterKind` enum (Spell, ActivatedAbility,
-  TriggeredAbility, Any) so Stifle / Trickbind / Squelch can target
-  abilities exclusively. Catalog impact: Spell Squelch (newly added),
-  Stifle (cube). Unblocks the printed "counter target activated or
-  triggered ability" Oracle.
+- ✅ **`Effect::CounterAbility`** (push modern_decks batch 19 doc
+  cleanup — already wired in an earlier push, doc was stale) — the
+  effect.rs:887 variant takes a `Selector` and counters a target
+  activated/triggered ability on the stack via the same dispatcher
+  path as `Effect::CounterSpell` but routes through
+  `StackItem::Ability` selection. Used by Consign to Memory (mode 0)
+  and the cube's Stifle-class cards. The promotion clears the stale
+  TODO row that suggested adding a `CounterKind` enum — the engine
+  picks the right counter target via the selector's filter (e.g.
+  `target_filtered(IsAbilityOnStack)` for ability-only counters,
+  `target_filtered(IsSpellOnStack & Legendary)` for legendary-spell
+  counters). Future Stifle-grade promotions can compose on top.
 
 - ⏳ **Spirit-tribal Lorehold archetype** (push modern_decks): the new
   Spirit Banner (+1/+1 anthem for Spirits) joins Quintorius's

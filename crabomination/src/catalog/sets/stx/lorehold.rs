@@ -1121,3 +1121,178 @@ pub fn lorehold_reverberator() -> CardDefinition {
     }
 }
 
+// ── Lorehold Pyrescribe (batch 19) ─────────────────────────────────────────
+
+/// Lorehold Pyrescribe — {2}{R}{W}, 3/2 Spirit Wizard.
+///
+/// Printed Oracle (synthesised): "Magecraft — Whenever you cast or
+/// copy an instant or sorcery spell, this creature deals 1 damage to
+/// each opponent."
+///
+/// Each cast pings each opponent — the Lorehold drain-burn template
+/// (Lorehold Pyrosage's mirror with a bigger body). Stacks with
+/// Galvanic Iteration and Twinscroll Shaman for doubled triggers.
+pub fn lorehold_pyrescribe() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Pyrescribe",
+        cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::DealDamage {
+            to: Selector::Player(PlayerRef::EachOpponent),
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Lorehold Echoist (batch 19) ────────────────────────────────────────────
+
+/// Lorehold Echoist — {1}{R}, 1/2 Spirit Wizard.
+///
+/// Printed Oracle (synthesised): "When this creature enters, create a
+/// 2/2 red and white Spirit creature token."
+///
+/// Two-mana 1/2 ETB-into-2/2-token body — net 3/4 over two bodies for
+/// {1}{R}. Slots into the Lorehold-aggro slot (Sparring Regimen,
+/// Lorehold Spiritcaller). The ETB Spirit token shares the
+/// `lorehold_spirit_token` helper for tribal consistency.
+pub fn lorehold_echoist() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Echoist",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: lorehold_spirit_token(),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Lorehold Spiritmaster (batch 19) ───────────────────────────────────────
+
+/// Lorehold Spiritmaster — {3}{R}{W}, 3/3 Spirit Cleric.
+///
+/// Printed Oracle (synthesised): "When this creature enters, create
+/// two 2/2 red and white Spirit creature tokens."
+///
+/// Curve-top Lorehold token mint. 5-mana 3/3 + 2× 2/2 Spirit tokens
+/// = 7/7 worth of power across three bodies — bargain rate. Pairs
+/// with Quintorius Field Historian's Spirit-tribal anthem for instant
+/// pressure.
+pub fn lorehold_spiritmaster() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Spiritmaster",
+        cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                definition: lorehold_spirit_token(),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Lorehold Bonepriest (batch 19) ─────────────────────────────────────────
+
+/// Lorehold Bonepriest — {1}{R}{W}, 2/2 Spirit Cleric.
+///
+/// Printed Oracle (synthesised): "Magecraft — Whenever you cast or
+/// copy an instant or sorcery spell, put a +1/+1 counter on this
+/// creature."
+///
+/// Permanent self-grower — every cast leaves a +1/+1 counter, so this
+/// scales hard in spell-heavy shells. The counters are permanent
+/// (unlike Lorehold Pyrebrand's EOT pump) so the Bonepriest carries
+/// its bulk across turns.
+pub fn lorehold_bonepriest() -> CardDefinition {
+    use crate::card::CounterType;
+    CardDefinition {
+        name: "Lorehold Bonepriest",
+        cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::AddCounter {
+            what: Selector::This,
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+

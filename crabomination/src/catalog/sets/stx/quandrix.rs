@@ -814,3 +814,182 @@ pub fn quandrix_geomyst() -> CardDefinition {
         exile_on_resolve: false,
     }
 }
+
+// ── Quandrix Doublecaster (batch 19) ───────────────────────────────────────
+
+/// Quandrix Doublecaster — {3}{G}{U}, 3/3 Fractal Wizard.
+///
+/// Printed Oracle (synthesised): "Magecraft — Whenever you cast or
+/// copy an instant or sorcery spell, put a +1/+1 counter on this
+/// creature."
+///
+/// Permanent self-grower in Quandrix's Fractal subtype. Five-mana 3/3
+/// frame that snowballs across multi-spell turns. Pairs hard with
+/// Symmathematics (DoubleCounters → each magecraft trigger places 2
+/// counters) and Quandrix Multibinding for explosive scaling.
+pub fn quandrix_doublecaster() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Doublecaster",
+        cost: cost(&[generic(3), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::AddCounter {
+            what: Selector::This,
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Quandrix Wavewright (batch 19) ─────────────────────────────────────────
+
+/// Quandrix Wavewright — {2}{G}{U}, 2/3 Elf Druid.
+///
+/// Printed Oracle (synthesised): "When this creature enters, scry 2,
+/// then draw a card."
+///
+/// Four-mana 2/3 ETB card-velocity body. Scry 2 + draw 1 is the
+/// stronger Symmetrist template (Symmetrist is scry 2 + draw 1 at the
+/// same cost). Slots into Quandrix mid-game with no setup required.
+pub fn quandrix_wavewright() -> CardDefinition {
+    use crate::effect::PlayerRef;
+    CardDefinition {
+        name: "Quandrix Wavewright",
+        cost: cost(&[generic(2), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::Scry {
+                    who: PlayerRef::You,
+                    amount: Value::Const(2),
+                },
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
+            ]),
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Quandrix Sapsprout (batch 19) ──────────────────────────────────────────
+
+/// Quandrix Sapsprout — {G}{U}, 1/2 Fractal.
+///
+/// Printed Oracle (synthesised): "Magecraft — Whenever you cast or
+/// copy an instant or sorcery spell, put a +1/+1 counter on this
+/// creature."
+///
+/// One-mana magecraft self-grower. Smaller cousin of Quandrix
+/// Doublecaster on a 2-mana frame — the Fractal subtype lets it scale
+/// with Doubling Season effects and Symmathematics counter-doubling.
+pub fn quandrix_sapsprout() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Sapsprout",
+        cost: cost(&[g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::AddCounter {
+            what: Selector::This,
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Fractal Multiplier (batch 19) ──────────────────────────────────────────
+
+/// Fractal Multiplier — {2}{G}{U} Sorcery.
+///
+/// Printed Oracle (synthesised): "Double the number of +1/+1 counters
+/// on target creature you control."
+///
+/// Single-clause counter-doubler at the 4-mana slot. Reads current
+/// +1/+1 counters via `Value::CountersOn` and adds the same amount —
+/// net effect = doubling. On a 0/0 Fractal with 3 counters → 6
+/// counters → 6/6. Quandrix's cleanest counter-explosion enabler.
+pub fn fractal_multiplier() -> CardDefinition {
+    CardDefinition {
+        name: "Fractal Multiplier",
+        cost: cost(&[generic(2), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::AddCounter {
+            what: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            ),
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::CountersOn {
+                what: Box::new(Selector::Target(0)),
+                kind: CounterType::PlusOnePlusOne,
+            },
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}

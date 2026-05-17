@@ -915,3 +915,171 @@ pub fn witherbloom_pestmancer() -> CardDefinition {
         exile_on_resolve: false,
     }
 }
+
+// ── Witherbloom Lifebleeder (batch 19) ─────────────────────────────────────
+
+/// Witherbloom Lifebleeder — {1}{B}{G}, 2/2 Human Warlock.
+///
+/// Printed Oracle (synthesised): "Magecraft — Whenever you cast or
+/// copy an instant or sorcery spell, each opponent loses 1 life and
+/// you gain 1 life."
+///
+/// Witherbloom Apprentice on a 3-mana frame for tougher metas. Same
+/// drain trigger but with one extra mana of stat-cushion (2/2 → still
+/// a bear) and the more relevant 3-CMC slot in slower decks. Pairs
+/// with Daemogoth Titan as the magecraft-drain backbone.
+pub fn witherbloom_lifebleeder() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Lifebleeder",
+        cost: cost(&[generic(1), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_drain_each_opp(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Pest Marauder (batch 19) ───────────────────────────────────────────────
+
+/// Pest Marauder — {1}{B}, 1/1 Pest with Deathtouch.
+///
+/// Printed Oracle (synthesised): "Deathtouch / When this creature
+/// dies, you gain 1 life."
+///
+/// Pest-class 2-drop with deathtouch — classic black "trade-into-
+/// anything" body wrapped in the stx_pest_token death lifegain rider
+/// (1 life on death, mirroring the Pest token's printed shape). Pairs
+/// with Witherbloom Vinemaster's Pest-death counter trigger.
+pub fn pest_marauder() -> CardDefinition {
+    use crate::card::EventKind;
+    CardDefinition {
+        name: "Pest Marauder",
+        cost: cost(&[generic(1), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Pest],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Deathtouch],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+            effect: Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Witherbloom Decoctor (batch 19) ────────────────────────────────────────
+
+/// Witherbloom Decoctor — {3}{B}{G}, 3/4 Human Druid.
+///
+/// Printed Oracle (synthesised): "When this creature enters, each
+/// opponent loses 2 life and you gain 2 life."
+///
+/// Curve-top Witherbloom drain body. 5-mana 3/4 frame with built-in
+/// 4-life swing on ETB. Slots into the "drain finisher" archetype
+/// alongside Pestilent Cauldron and Witherbloom Reverie.
+pub fn witherbloom_decoctor() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Decoctor",
+        cost: cost(&[generic(3), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Drain {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                to: Selector::You,
+                amount: Value::Const(2),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Witherbloom Sapfiend (batch 19) ────────────────────────────────────────
+
+/// Witherbloom Sapfiend — {2}{G}, 2/3 Plant Beast.
+///
+/// Printed Oracle (synthesised): "Magecraft — Whenever you cast or
+/// copy an instant or sorcery spell, this creature gets +1/+1 until
+/// end of turn."
+///
+/// Green magecraft growth body. Mirror of Eager First-Year on a more
+/// defensive (2/3 vs 2/1) self-target frame. Multiple casts in a turn
+/// stack — a 4-spell turn turns the Sapfiend into a 6/7 trampler-of-
+/// chunk-damage.
+pub fn witherbloom_sapfiend() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_self_pump;
+    CardDefinition {
+        name: "Witherbloom Sapfiend",
+        cost: cost(&[generic(2), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Beast],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_self_pump(1, 1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
