@@ -121,8 +121,6 @@ pub fn prismari_apprentice() -> CardDefinition {
 /// casts into a 4/5. Same pump shape as Spectacle Mage but with
 /// magecraft (instant/sorcery only) instead of prowess.
 pub fn prismari_drakelord() -> CardDefinition {
-    use crate::card::SelectionRequirement;
-    let _ = SelectionRequirement::Creature;
     CardDefinition {
         name: "Prismari Drakelord",
         cost: cost(&[generic(1), u(), r()]),
@@ -457,6 +455,196 @@ pub fn prismari_drakeward() -> CardDefinition {
                 amount: Value::Const(2),
             },
         }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Prismari Spellsmith (batch 18) ─────────────────────────────────────────
+
+/// Prismari Spellsmith — {1}{U}{R}, 2/2 Human Wizard.
+///
+/// Printed Oracle (synthesised): "When this creature enters, create a
+/// Treasure token. (It's an artifact with '{T}, Sacrifice this artifact:
+/// Add one mana of any color.')"
+///
+/// Three-mana ramp + body — drops a 2/2 plus an immediately-usable
+/// Treasure. Same template as Spectacular Skywhale but on a {U}{R}
+/// 2/2 body instead of a 1/4 flyer. Pairs with Prismari Treasurewright
+/// for double-Treasure ETB chains.
+pub fn prismari_spellsmith() -> CardDefinition {
+    use crate::game::effects::treasure_token;
+    CardDefinition {
+        name: "Prismari Spellsmith",
+        cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: treasure_token(),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Prismari Storm-Caller (batch 18) ───────────────────────────────────────
+
+/// Prismari Storm-Caller — {2}{U}{R}, 3/2 Elemental Wizard.
+///
+/// Printed Oracle (synthesised): "Magecraft — Whenever you cast or copy
+/// an instant or sorcery spell, draw a card, then discard a card."
+///
+/// Looter-tron Prismari magecraft body — every cast becomes a loot.
+/// Fuels graveyard recursion (Pillardrop Rescuer, Lorehold Excavation)
+/// and feeds Tablet of Discovery-style discard payoffs.
+pub fn prismari_storm_caller() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Storm-Caller",
+        cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::Seq(vec![
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+            Effect::Discard {
+                who: Selector::You,
+                amount: Value::Const(1),
+                random: false,
+            },
+        ]))],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Prismari Ignite-Apprentice (batch 18) ──────────────────────────────────
+
+/// Prismari Ignite-Apprentice — {1}{R}, 2/1 Human Wizard.
+///
+/// Printed Oracle (synthesised): "When this creature enters, it deals
+/// 1 damage to any target."
+///
+/// Mini-Sparkmage Apprentice on a {1}{R} frame. The ETB ping closes
+/// out random small creatures (2/1 trade into 1/1) or shaves a final
+/// life off a planeswalker. Distinct from extras.rs's `prismari_sparkmage`
+/// (a 2/3 Magecraft ping body) — different stat-line and trigger.
+pub fn prismari_ignite_apprentice() -> CardDefinition {
+    use crate::card::SelectionRequirement;
+    CardDefinition {
+        name: "Prismari Ignite-Apprentice",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature
+                        .or(SelectionRequirement::Player)
+                        .or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Prismari Volley (batch 18) ─────────────────────────────────────────────
+
+/// Prismari Volley — {2}{R} Instant.
+///
+/// Printed Oracle (synthesised): "Prismari Volley deals 3 damage to
+/// target creature or planeswalker. Draw a card."
+///
+/// Three-mana Prismari removal cantrip — a creature/planeswalker-only
+/// burn with built-in card advantage. Strictly weaker than Lightning
+/// Bolt on the body side (no player damage) but trades up via the
+/// draw. Pairs aggressively with magecraft + opus payoff bodies.
+pub fn prismari_volley() -> CardDefinition {
+    use crate::card::SelectionRequirement;
+    CardDefinition {
+        name: "Prismari Volley",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::Const(3),
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],

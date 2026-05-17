@@ -603,7 +603,7 @@ impl GameState {
     pub fn is_commander(&self, card_id: crate::card::CardId) -> bool {
         self.players
             .iter()
-            .any(|p| p.commanders.iter().any(|c| *c == card_id))
+            .any(|p| p.commanders.contains(&card_id))
     }
 
     /// Add `amount` to the commander-damage tally for

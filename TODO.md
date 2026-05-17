@@ -676,6 +676,56 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   `DamagePrevented` event emission. The combat-damage flag handles
   the headline play pattern for fog effects.
 
+- ✅ **CR 120.6 — Marked damage persists until cleanup; lethal damage
+  destroys via SBA** (push modern_decks batch 18 audit,
+  claude/modern_decks branch — audit against `MagicCompRules_20260417.txt`):
+  "Damage marked on a creature remains until the cleanup step, even if
+  that permanent stops being a creature. If the total damage marked on
+  a creature is greater than or equal to its toughness, that creature
+  has been dealt lethal damage and is destroyed as a state-based action
+  (see rule 704). All damage marked on a permanent is removed when it
+  regenerates (see rule 701.19, 'Regenerate') and during the cleanup
+  step (see rule 514.2)." The engine tracks `CardInstance.damage: u32`,
+  preserved across SBA passes and across the resolving spell's stack
+  unwind. `check_state_based_actions` (`game/stack.rs`) reads `c.damage
+  >= c.toughness()` to detect lethal damage and routes the creature to
+  graveyard via the standard CreatureDied path. The "stops being a
+  creature" rider is honored — the engine doesn't gate damage tracking
+  on the card being currently classified as a creature. `do_cleanup`
+  (`game/stack.rs`) zeroes `c.damage` for every battlefield card at
+  cleanup step end (CR 514.2). Tests: existing
+  `lightning_bolt_kills_grizzly_bears` style tests + new
+  `prismari_ignite_apprentice_pings_on_etb` (1-damage marks then
+  persists through the SBA pass). Regenerate clears damage (CR 701.19)
+  is ✅ via `restore_damage_after_regenerate` in the regen path.
+
+- ✅ **CR 120.4 — Four-part damage-dealing sequence** (push modern_decks
+  batch 18 audit, claude/modern_decks branch — audit against
+  `MagicCompRules_20260417.txt`): "Damage is processed in a four-part
+  sequence. / 120.4a First, if an effect that's causing damage to be
+  dealt states that excess damage that would be dealt to a permanent
+  is dealt to another permanent or player instead, the damage event is
+  modified accordingly. / 120.4b Second, damage is dealt, as modified
+  by replacement and prevention effects that interact with damage. /
+  120.4c Third, damage that's been dealt is processed into its results,
+  as modified by replacement effects that interact with those results
+  (such as life loss or counters). / 120.4d Fourth, abilities that
+  trigger on damage being dealt now go on the stack." The engine's
+  `deal_damage_to_from` (`game/effects/movement.rs`) follows the
+  printed sequence: (b) damage is dealt (prevention via the
+  `prevent_combat_damage_this_turn` flag for fogs), (c) damage results
+  apply (LoseLife for players, damage marking + lifelink for creatures
+  via `process_damage_results`), (d) `DamageDealt` event fires through
+  `dispatch_triggers_for_events` after the damage is applied. The
+  120.4a excess-damage routing (Phyrexian Soulgorger / trample-via-
+  divide) is implicit in the combat damage divider but not generally
+  exposed for ability-damage; tracked separately under the trample
+  excess-damage TODO. CR 120.8 (0-damage suppression) is ✅ via the
+  zero-check in `deal_damage_to_from` that early-returns without
+  emitting events. Tests: `lash_of_malice_kills_two_two_creature`,
+  `prismari_volley_burns_creature_and_draws` (DealDamage → SBA →
+  CreatureDied chain).
+
 - ✅ **CR 120.5 — Damage doesn't destroy a creature directly; SBA
   does** (push modern_decks audit, claude/modern_decks branch):
   "Damage dealt to a creature, planeswalker, or battle doesn't destroy
@@ -1518,6 +1568,29 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
 
 ## Suggested next-up tasks
 
+- ⏳ **Batched sacrifice picker for cost-paid filters** (push
+  modern_decks batch 18 suggested) — `Effect::Sacrifice { filter, …}`
+  works for the post-resolution sac (Witherbloom Pestkeeper's
+  activation step uses it). The cost-paid sac branch (the engine's
+  `sac_cost: true` field on `ActivatedAbility`) is a single source-only
+  sac and doesn't expose a filter. Wiring shape: extend the activation
+  cost field to optionally carry a `SelectionRequirement` filter that
+  drives the cost-time fodder picker, so cards like Pestkeeper can
+  declare "sac a Pest you control" as a *cost* (rejecting activation
+  without a Pest) rather than as the first step of the effect
+  (resolves even if no Pest exists). Today's resolve-time filter is
+  permissive — if no Pest is available, the sac step is skipped and
+  the -2/-2 still resolves.
+
+- ⏳ **`Predicate::CastFromZone(zone)`** (push modern_decks batch 18
+  suggested) — the just-landed `CastFromHand` / `CastFromGraveyard`
+  pair covers the hand/gy split, but a generalised `CastFromZone(Exile)`
+  / `CastFromZone(Library)` is still ⏳. Threading shape: stamp a
+  `cast_zone: Zone` field on `CardInstance` alongside `cast_from_hand`
+  + propagate to `EffectContext.cast_zone` via
+  `for_spell_with_source`. Future Cascade / Suspend / Flashback-from-
+  exile riders ("if cast from exile, …") would key off this.
+
 - ⏳ **Inkling / Pest tribal completeness** (push modern_decks
   current): with the 22-card extras drop the Silverquill Inkling pool
   now has 1+/+1 lord support, lifelink fliers, drain payoff, and
@@ -1706,19 +1779,21 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   vanilla {2}{U} counter — the Foretell discount path is engine-wide
   ⏳.
 
-- ⏳ **Cast-from-graveyard introspection at resolution time** (suggested
-  by push modern_decks's Increasing Vengeance addition + Antiquities
-  on the Loose's stale 🟡) — cards like Increasing Vengeance ("if
-  this was cast from graveyard, copy twice"), Antiquities on the
-  Loose ("if cast from anywhere other than hand, +1/+1 counter on
-  each Spirit"), and Goryo's Vengeance (Flashback-from-grave rider)
-  need to read the spell's cast-source zone at resolution time. The
-  engine already tracks `Card.cast_from_hand: bool` on the resolving
-  spell. The gap is a `Predicate::CastFromHand` / `Predicate::
-  CastFromZone(zone)` and a wiring of `EffectContext.cast_zone` so
-  triggers and conditionals can read it. Adding these unlocks the
-  "if cast from graveyard" rider on at least three current 🟡 cards
-  + future Flashback-cared payoffs.
+- ✅ **Cast-from-graveyard introspection at resolution time** (push
+  modern_decks batch 18): `Predicate::CastFromGraveyard` + the new
+  `Predicate::CastFromHand` complement cover the cast-source-zone gate.
+  Both read from `EffectContext.cast_from_hand` (stamped by
+  `for_spell_with_source` from `CardInstance.cast_from_hand`). The
+  positive form (`CastFromHand`) is reserved for "if you cast this
+  spell from your hand, …" rider patterns — Quandrix, the Proof's
+  "spells cast from your hand have cascade" static gates against it
+  once the Cascade keyword lands. Triggers / activated abilities
+  default `cast_from_hand` to `true`, which matches the printed
+  semantics (cast-zone is a spell-only concept; non-spell contexts
+  fall through the predicate as `True`/`False` per direction).
+  `CastFromZone(zone)` for arbitrary source zones (exile, library)
+  is still ⏳ — the engine only tracks the hand/graveyard split
+  today.
 
 - ✅ **`Effect::DiscardAnyNumber { who }` — "discard any number of cards"
   primitive** (push modern_decks): new effect variant that asks the

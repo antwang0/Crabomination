@@ -926,3 +926,198 @@ pub fn lorehold_ember_forge() -> CardDefinition {
     }
 }
 
+// ── Lorehold Spiritcaller (batch 18) ───────────────────────────────────────
+
+/// Lorehold Spiritcaller — {2}{R}{W}, 2/2 Human Cleric.
+///
+/// Printed Oracle (synthesised): "When this creature enters, create a
+/// 2/2 red and white Spirit creature token. / Whenever one or more
+/// cards leave your graveyard, you gain 1 life."
+///
+/// Four-mana Lorehold ETB token-minter + per-graveyard-leave lifegain.
+/// Pairs aggressively with Lorehold Excavation, Pillardrop Rescuer, and
+/// the magecraft-from-graveyard cycle for cascading lifegain.
+pub fn lorehold_spiritcaller() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Spiritcaller",
+        cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: lorehold_spirit_token(),
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::CardLeftGraveyard,
+                    EventScope::YourControl,
+                ),
+                effect: Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
+            },
+        ],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Lorehold Pyrebrand (batch 18) ──────────────────────────────────────────
+
+/// Lorehold Pyrebrand — {1}{R}{W}, 2/3 Spirit Warrior, First Strike.
+///
+/// Printed Oracle (synthesised): "First strike / Magecraft — Whenever
+/// you cast or copy an instant or sorcery spell, this creature gets
+/// +1/+0 until end of turn."
+///
+/// Three-mana first-strike attacker that scales with every cast. Pairs
+/// with Sparring Regimen (per-attack counter) and Lorehold Loremaster
+/// (per-attack Spirit) for a dominant Lorehold combat board.
+pub fn lorehold_pyrebrand() -> CardDefinition {
+    use crate::effect::Duration;
+    CardDefinition {
+        name: "Lorehold Pyrebrand",
+        cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::FirstStrike],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::PumpPT {
+            what: Selector::This,
+            power: Value::Const(1),
+            toughness: Value::Const(0),
+            duration: Duration::EndOfTurn,
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Lorehold Reclamation (batch 18) ────────────────────────────────────────
+
+/// Lorehold Reclamation — {2}{R}{W} Sorcery.
+///
+/// Printed Oracle (synthesised): "Return target creature card from your
+/// graveyard to the battlefield. It's a Spirit in addition to its
+/// other types."
+///
+/// Four-mana single-target reanimate with a Spirit-tribal kicker. Pairs
+/// with Quintorius / Lorehold Excavation for tribal anthem stacking.
+/// The "Spirit-in-addition" rider is omitted — the engine has no
+/// type-add-on-zone-change primitive yet, so the reanimated card keeps
+/// its printed types.
+pub fn lorehold_reclamation() -> CardDefinition {
+    use crate::card::Zone;
+    use crate::effect::ZoneDest;
+    CardDefinition {
+        name: "Lorehold Reclamation",
+        cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Move {
+            what: Selector::one_of(Selector::CardsInZone {
+                who: PlayerRef::You,
+                zone: Zone::Graveyard,
+                filter: SelectionRequirement::Creature,
+            }),
+            to: ZoneDest::Battlefield {
+                controller: PlayerRef::You,
+                tapped: false,
+            },
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Lorehold Reverberator (batch 18) ───────────────────────────────────────
+
+/// Lorehold Reverberator — {3}{R}, 3/2 Spirit Wizard, Haste.
+///
+/// Printed Oracle (synthesised): "Haste / Magecraft — Whenever you
+/// cast or copy an instant or sorcery spell, this creature deals 2
+/// damage to any target."
+///
+/// Four-mana hasty magecraft burn body. Each instant/sorcery you cast
+/// fires off a 2-damage shot. The hasty body itself adds 3 immediate
+/// damage, then the rider snowballs on subsequent casts.
+pub fn lorehold_reverberator() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Reverberator",
+        cost: cost(&[generic(3), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Haste],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::DealDamage {
+            to: target_filtered(
+                SelectionRequirement::Creature
+                    .or(SelectionRequirement::Player)
+                    .or(SelectionRequirement::Planeswalker),
+            ),
+            amount: Value::Const(2),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+

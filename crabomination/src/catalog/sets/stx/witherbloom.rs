@@ -594,3 +594,324 @@ pub fn withergrowth_apprentice() -> CardDefinition {
         exile_on_resolve: false,
     }
 }
+
+// ── Witherbloom Pestkeeper (batch 18) ──────────────────────────────────────
+
+/// Witherbloom Pestkeeper — {2}{B}, 2/3 Plant Cleric.
+///
+/// Printed Oracle (synthesised): "When this creature enters, create a
+/// 1/1 black and green Pest creature token with 'When this creature
+/// dies, you gain 1 life.' / {1}{B}{G}, Sacrifice a Pest: Target
+/// creature gets -2/-2 until end of turn."
+///
+/// Sticky Pest enabler with a fold-up reactive sac-outlet. The
+/// activation feeds Pestkeeper itself fodder, then ships -2/-2 to a
+/// problem creature. Pairs with Witherbloom Apprentice for double-drain
+/// + creature removal in the same sequence.
+pub fn witherbloom_pestkeeper() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    use crate::effect::shortcut::target_filtered;
+    use crate::effect::Duration;
+    CardDefinition {
+        name: "Witherbloom Pestkeeper",
+        cost: cost(&[generic(2), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: false,
+            mana_cost: cost(&[generic(1), b(), g()]),
+            // Sac a Pest you control (`filter` constrains the picker) and
+            // then ship -2/-2 to the target creature.
+            effect: Effect::Seq(vec![
+                Effect::Sacrifice {
+                    who: Selector::You,
+                    count: Value::Const(1),
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::HasCreatureType(CreatureType::Pest))
+                        .and(SelectionRequirement::ControlledByYou),
+                },
+                Effect::PumpPT {
+                    what: target_filtered(SelectionRequirement::Creature),
+                    power: Value::Const(-2),
+                    toughness: Value::Const(-2),
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+            once_per_turn: false,
+            sorcery_speed: false,
+            sac_cost: false,
+            condition: None,
+            life_cost: 0,
+            from_graveyard: false,
+            exile_self_cost: false,
+            exile_other_filter: None,
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: stx_pest_token(),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Witherbloom Bonepicker (batch 18) ──────────────────────────────────────
+
+/// Witherbloom Bonepicker — {1}{B}{G}, 3/3 Plant Skeleton, Trample.
+///
+/// Printed Oracle (synthesised): "Trample / When this creature enters,
+/// each opponent loses 2 life."
+///
+/// Three-mana 3/3 trample drain — the headline Witherbloom curve-out:
+/// drops a body that's already racing, then drains 2 immediately. Pairs
+/// with Honor Troll for compounding lifegain payoff.
+pub fn witherbloom_bonepicker() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Bonepicker",
+        cost: cost(&[generic(1), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Skeleton],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Trample],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::LoseLife {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(2),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Pest Inheritance (batch 18) ────────────────────────────────────────────
+
+/// Pest Bequest — {3}{B}{G} Sorcery.
+///
+/// Printed Oracle (synthesised): "Target creature you control gets
+/// +1/+1 and gains deathtouch until end of turn. Create a 1/1 black and
+/// green Pest creature token."
+///
+/// Combat-ready Pest minter with a single-creature pump-and-deathtouch
+/// rider. Pairs naturally with any Pest-tribal payoff (Pestbinder /
+/// Vinemaster / Apprentice). The Pest's death-trigger lifegain rides
+/// via `stx_pest_token()`. Renamed from "Pest Inheritance" to avoid
+/// catalog name collision with the same-named Lesson in `stx::lessons`.
+pub fn pest_swarm_inheritance() -> CardDefinition {
+    use crate::effect::Duration;
+    CardDefinition {
+        name: "Pest Bequest",
+        cost: cost(&[generic(3), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: Selector::Target(0),
+                power: Value::Const(1),
+                toughness: Value::Const(1),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::Deathtouch,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: stx_pest_token(),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Witherbloom Decayblossom (batch 18) ────────────────────────────────────
+
+/// Witherbloom Decayblossom — {1}{B}, 1/1 Plant Cleric.
+///
+/// Printed Oracle (synthesised): "When this creature dies, target
+/// creature gets -1/-1 until end of turn."
+///
+/// One-mana B sacrifice fodder that ships -1/-1 on death — combos with
+/// Pestkeeper's sac outlet, Daemogoth Titan's attack-trigger sacrifice,
+/// or just trades into a problem creature.
+pub fn witherbloom_decayblossom() -> CardDefinition {
+    use crate::effect::shortcut::target_filtered;
+    use crate::effect::Duration;
+    CardDefinition {
+        name: "Witherbloom Decayblossom",
+        cost: cost(&[generic(1), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+            effect: Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(-1),
+                toughness: Value::Const(-1),
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Witherbloom Recourse (batch 18) ────────────────────────────────────────
+
+/// Witherbloom Recourse — {1}{B}{G} Instant.
+///
+/// Printed Oracle (synthesised): "Return target creature card with
+/// mana value 2 or less from your graveyard to your hand. Each opponent
+/// loses 1 life and you gain 1 life."
+///
+/// Cheap creature-recursion + drain rider. The MV-≤-2 filter targets
+/// the typical Witherbloom Pest / Apprentice graveyard contents. Drain
+/// piggybacks for Apprentice-style chain triggers.
+pub fn witherbloom_recourse() -> CardDefinition {
+    use crate::card::Zone;
+    CardDefinition {
+        name: "Witherbloom Recourse",
+        cost: cost(&[generic(1), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Move {
+                what: Selector::one_of(Selector::CardsInZone {
+                    who: PlayerRef::You,
+                    zone: Zone::Graveyard,
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::ManaValueAtMost(2)),
+                }),
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+            Effect::LoseLife {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(1),
+            },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Witherbloom Pestmancer (batch 18) ──────────────────────────────────────
+
+/// Witherbloom Pestmancer — {2}{B}{G}, 2/2 Human Warlock.
+///
+/// Printed Oracle (synthesised): "Magecraft — Whenever you cast or copy
+/// an instant or sorcery spell, create a 1/1 black and green Pest
+/// creature token with 'When this creature dies, you gain 1 life.'"
+///
+/// Top-end Witherbloom magecraft engine — each instant/sorcery you
+/// cast mints a Pest. The Pest's death-trigger lifegain stacks with
+/// the magecraft drain cards (Apprentice / Seer) for huge swings in
+/// spell-heavy boards.
+pub fn witherbloom_pestmancer() -> CardDefinition {
+    use crate::effect::shortcut::magecraft;
+    CardDefinition {
+        name: "Witherbloom Pestmancer",
+        cost: cost(&[generic(2), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: stx_pest_token(),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}

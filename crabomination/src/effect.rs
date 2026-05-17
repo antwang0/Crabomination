@@ -415,6 +415,15 @@ pub enum Predicate {
     /// instead") and Antiquities on the Loose's "cast from anywhere
     /// other than your hand" rider.
     CastFromGraveyard,
+    /// True when the resolving spell was cast from its caster's hand
+    /// (the typical case). Inverse of `CastFromGraveyard`. Reserved for
+    /// "if you cast this spell from your hand, …" rider patterns —
+    /// Quandrix, the Proof's "instant and sorcery spells you cast from
+    /// your hand have cascade" static gates against this predicate.
+    /// Note: triggers / activated abilities default `cast_from_hand`
+    /// to `true`, so this predicate evaluates as `True` outside of
+    /// spell-resolution context too.
+    CastFromHand,
     /// True if any opponent of `ctx.controller` controls more lands
     /// than `ctx.controller` does. Backed by walking the battlefield
     /// and counting `Land` permanents per seat. Used by catch-up ramp

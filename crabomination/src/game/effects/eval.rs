@@ -397,6 +397,12 @@ impl GameState {
                 // ("cast from a graveyard" is a spell-only concept).
                 !ctx.cast_from_hand
             }
+            Predicate::CastFromHand => {
+                // Inverse of CastFromGraveyard. Triggers / activated
+                // abilities default `cast_from_hand` to `true` which
+                // matches their non-spell-resolution context.
+                ctx.cast_from_hand
+            }
             Predicate::OpponentControlsMoreLandsThanYou => {
                 // Walk the battlefield, count lands per seat. True iff
                 // any opponent of `ctx.controller` has strictly more

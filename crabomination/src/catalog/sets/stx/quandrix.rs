@@ -568,3 +568,249 @@ pub fn quandrix_tutelary() -> CardDefinition {
         exile_on_resolve: false,
     }
 }
+
+// ── Quandrix Fractalflow (batch 18) ────────────────────────────────────────
+
+/// Quandrix Fractalflow — {2}{G}{U}, 3/3 Elf Wizard.
+///
+/// Printed Oracle (synthesised): "When this creature enters, create a
+/// 0/0 green and blue Fractal creature token. Put X +1/+1 counters on
+/// it, where X is the number of cards in your hand."
+///
+/// Hand-size-scaling Fractal minter. At a typical {4} cast point with
+/// ~3-4 cards in hand, the Fractal lands as a 3/3 or 4/4 — solid value
+/// that snowballs when paired with Mind into Matter / Brilliant Plan.
+pub fn quandrix_fractalflow() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Fractalflow",
+        cost: cost(&[generic(2), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: quandrix_fractal_token(),
+                },
+                Effect::AddCounter {
+                    what: Selector::LastCreatedToken,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::HandSizeOf(PlayerRef::You),
+                },
+            ]),
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Quandrix Snake-Charmer (batch 18) ──────────────────────────────────────
+
+/// Quandrix Scrycharmer — {G}{U}, 1/2 Elf Druid.
+///
+/// Printed Oracle (synthesised): "Magecraft — Whenever you cast or
+/// copy an instant or sorcery spell, scry 1."
+///
+/// Cheap top-deck-shaping Quandrix body. Pure card-selection magecraft —
+/// no late-game finisher payoff but reliably digs toward win conditions
+/// in the spell-heavy Quandrix shell. Distinct from extras.rs's
+/// `quandrix_snake_charmer` (a different card with a counter trigger).
+pub fn quandrix_scrycharmer() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Scrycharmer",
+        cost: cost(&[g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::Scry {
+            who: PlayerRef::You,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Quandrix Crystallizer (batch 18) ───────────────────────────────────────
+
+/// Quandrix Crystallizer — {2}{U}, 2/3 Crab.
+///
+/// Printed Oracle (synthesised): "Hexproof / {2}{G}{U}, {T}: Put a
+/// +1/+1 counter on target creature you control. Activate only as
+/// a sorcery."
+///
+/// Sticky hexproof body with a counter-pump activation. The sorcery-
+/// speed gate keeps it from being instant-speed Tanazir; the hexproof
+/// keeps it alive through removal so the activation can repeat
+/// turn after turn. Synergises with Tanazir's attack-doubling.
+pub fn quandrix_crystallizer() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Crystallizer",
+        cost: cost(&[generic(2), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Crab],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Hexproof],
+        effect: Effect::Noop,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[generic(2), g(), u()]),
+            effect: Effect::AddCounter {
+                what: target_filtered(SelectionRequirement::Creature
+                    .and(SelectionRequirement::ControlledByYou)),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+            once_per_turn: false,
+            sorcery_speed: true,
+            sac_cost: false,
+            condition: None,
+            life_cost: 0,
+            from_graveyard: false,
+            exile_self_cost: false,
+            exile_other_filter: None,
+        }],
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Quandrix Multibinding (batch 18) ───────────────────────────────────────
+
+/// Quandrix Multibinding — {2}{G}{U} Sorcery.
+///
+/// Printed Oracle (synthesised): "Put two +1/+1 counters on target
+/// creature you control. Then double the number of +1/+1 counters on
+/// it."
+///
+/// Two-step counter accelerator — drops two +1/+1, then doubles them
+/// (via `Value::CountersOn`). On a 0/0 Fractal: 2 → 4. On a 2/2 Bear
+/// with one prior counter: 1 → 3 → 6 counters total. Pairs hard with
+/// Quandrix Reckoner (per-attack counter) and Symmathematics (cast-
+/// doubles counters).
+pub fn quandrix_multibinding() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Multibinding",
+        cost: cost(&[generic(2), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::AddCounter {
+                what: target_filtered(SelectionRequirement::Creature
+                    .and(SelectionRequirement::ControlledByYou)),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(2),
+            },
+            // Double counters: add (current count) more so net = 2 * current.
+            Effect::AddCounter {
+                what: Selector::Target(0),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::CountersOn {
+                    what: Box::new(Selector::Target(0)),
+                    kind: CounterType::PlusOnePlusOne,
+                },
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Quandrix Geomyst (batch 18) ────────────────────────────────────────────
+
+/// Quandrix Geomyst — {3}{G}{U}, 4/4 Elemental Wizard, Reach.
+///
+/// Printed Oracle (synthesised): "Reach / When this creature enters,
+/// draw a card."
+///
+/// Five-mana 4/4 reach with a built-in cantrip. Solid value-on-curve
+/// that doubles as combat anchor (reach for fliers) + card advantage.
+/// The Wizard subtype synergises with Archmage Emeritus and the
+/// magecraft pump cycle.
+pub fn quandrix_geomyst() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Geomyst",
+        cost: cost(&[generic(3), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Reach],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}

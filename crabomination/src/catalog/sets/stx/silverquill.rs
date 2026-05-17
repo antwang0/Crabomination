@@ -1901,3 +1901,131 @@ pub fn inkling_witness() -> CardDefinition {
         exile_on_resolve: false,
     }
 }
+
+// ── Inkling Coursebinder (batch 18) ────────────────────────────────────────
+
+/// Inkling Coursebinder — {1}{W}{B}, 2/2 Inkling Wizard, Flying.
+///
+/// Printed Oracle (synthesised): "Flying / Magecraft — Whenever you
+/// cast or copy an instant or sorcery spell, you gain 1 life and each
+/// opponent loses 1 life."
+///
+/// Three-mana flying Inkling with built-in magecraft drain — the
+/// classic Silverquill flyer + drain payoff. Pairs with Tenured
+/// Inkcaster (Inkling tribal +2/+2) for a 4/4 lifedrain flyer.
+pub fn inkling_coursebinder() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_drain_each_opp;
+    CardDefinition {
+        name: "Inkling Coursebinder",
+        cost: cost(&[generic(1), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_drain_each_opp(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Silverquill Sermon (batch 18) ──────────────────────────────────────────
+
+/// Silverquill Sermon — {2}{W}{B} Sorcery.
+///
+/// Printed Oracle (synthesised): "Create two 1/1 W/B Inkling creature
+/// tokens with flying."
+///
+/// Four-mana double Inkling fan-out — same shape as Defend the Campus
+/// at a lower cost (4 vs 5 mana) for 2 tokens instead of 3. Pairs
+/// with Tenured Inkcaster's Inkling-tribal anthem (+2/+2) for two
+/// 3/3 flyers immediately.
+pub fn silverquill_sermon() -> CardDefinition {
+    use crate::catalog::sets::sos::inkling_token;
+    CardDefinition {
+        name: "Silverquill Sermon",
+        cost: cost(&[generic(2), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(2),
+            definition: inkling_token(),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Silverquill Censure (batch 18) ─────────────────────────────────────────
+
+/// Silverquill Censure — {1}{W} Instant.
+///
+/// Printed Oracle (synthesised): "Exile target creature with power 3
+/// or less. You gain 2 life."
+///
+/// Two-mana exile-removal at the small-creature slot + 2 life rider.
+/// A clean answer to early-game threats with a Light-of-Promise hook.
+/// Stronger than Silverquill Reprimand at the same role since exile
+/// dodges Persist / Undying / gy-recursion shells.
+pub fn silverquill_censure() -> CardDefinition {
+    use crate::effect::shortcut::target_filtered;
+    use crate::effect::ZoneDest;
+    CardDefinition {
+        name: "Silverquill Censure",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Move {
+                what: target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::PowerAtMost(3)),
+                ),
+                to: ZoneDest::Exile,
+            },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
