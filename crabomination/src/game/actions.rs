@@ -239,14 +239,39 @@ pub(crate) fn etb_trigger_multiplier(
 /// creature you cast is uncounterable while you control a Cavern" — close
 /// enough for the demo deck.
 impl crate::game::GameState {
+    /// Legacy entrypoint kept for symmetry; new call sites should use
+    /// `caster_grants_uncounterable_with_x` to thread the cast's X
+    /// value. Internally delegates with X = 0.
+    #[allow(dead_code)]
     pub(crate) fn caster_grants_uncounterable(
         &self,
         caster: usize,
         card: &crate::card::CardInstance,
     ) -> bool {
+        self.caster_grants_uncounterable_with_x(caster, card, 0)
+    }
+
+    /// X-aware variant. Threaded by `finalize_cast` so cards whose
+    /// "can't be countered" rider is gated on the X value (Banefire's
+    /// "if X is 5 or more, this spell can't be countered") see the
+    /// correct flag at cast time.
+    pub(crate) fn caster_grants_uncounterable_with_x(
+        &self,
+        caster: usize,
+        card: &crate::card::CardInstance,
+        x_value: u32,
+    ) -> bool {
         // The card itself is uncounterable (Dovin's Veto, Stubborn Denial,
         // etc. — `Keyword::CantBeCountered`).
         if card.definition.keywords.contains(&Keyword::CantBeCountered) {
+            return true;
+        }
+        // Banefire: "If X is 5 or more, this spell can't be countered
+        // and the damage can't be prevented." We honor the can't-be-
+        // countered half by flipping the `uncounterable` flag at cast
+        // time. The damage-can't-be-prevented half is a no-op since
+        // the engine has no general damage-prevention layer.
+        if card.definition.name == "Banefire" && x_value >= 5 {
             return true;
         }
         // Cavern of Souls: a creature spell whose caster controls a Cavern
@@ -724,7 +749,7 @@ impl GameState {
         consume_first_spell_tax(self, p);
 
         let on_cast_triggers = collect_self_cast_triggers(&card);
-        let uncounterable = self.caster_grants_uncounterable(p, &card);
+        let uncounterable = self.caster_grants_uncounterable_with_x(p, &card, x_value);
 
         let was_creature_spell = card.definition.is_creature();
         self.stack.push(StackItem::Spell {

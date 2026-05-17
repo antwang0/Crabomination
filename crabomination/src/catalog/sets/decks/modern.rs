@@ -367,9 +367,14 @@ pub fn unburial_rites() -> CardDefinition {
 /// Exhume — {1}{B} Sorcery. Each player puts a creature card from their
 /// graveyard onto the battlefield.
 ///
-/// Approximation: only the caster reanimates a creature (the engine doesn't
-/// expose `EachPlayer` reanimate symmetry as a single primitive). Equivalent
-/// to "you reanimate" in the typical Goryo's-deck context.
+/// Push (modern_decks): the "each player" symmetry **is now wired** via
+/// `ForEach { selector: Player(EachPlayer), body: Move(take(1,
+/// CardsInZone(Graveyard(Triggerer), Creature)), Battlefield(Triggerer)) }`.
+/// Each iterated player's auto-decider picks the top matching creature
+/// in their own graveyard. The reanimate target winds up under each
+/// respective player's control. In typical play (Goryo's etc.) the
+/// caster has the biggest creature stocked in gy; the opp may
+/// reanimate nothing or a weaker body.
 pub fn exhume() -> CardDefinition {
     CardDefinition {
         name: "Exhume",
@@ -380,12 +385,22 @@ pub fn exhume() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![],
-        effect: Effect::Move {
-            what: target_filtered(SelectionRequirement::Creature),
-            to: ZoneDest::Battlefield {
-                controller: PlayerRef::You,
-                tapped: false,
-            },
+        effect: Effect::ForEach {
+            selector: Selector::Player(PlayerRef::EachPlayer),
+            body: Box::new(Effect::Move {
+                what: Selector::take(
+                    Selector::CardsInZone {
+                        who: PlayerRef::Triggerer,
+                        zone: crate::card::Zone::Graveyard,
+                        filter: SelectionRequirement::Creature,
+                    },
+                    Value::Const(1),
+                ),
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::Triggerer,
+                    tapped: false,
+                },
+            }),
         },
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
@@ -5099,17 +5114,22 @@ pub fn assassins_trophy() -> CardDefinition {
     }
 }
 
-/// Volcanic Fallout — {1}{R}{R} Instant. Volcanic Fallout deals 2 damage
-/// to each creature and each player.
+/// Volcanic Fallout — {1}{R}{R} Instant. Volcanic Fallout can't be
+/// countered. Volcanic Fallout deals 2 damage to each creature and
+/// each player.
 ///
-/// The "this can't be countered" rider is dropped — engine has no
-/// cast-time uncounterable flag wireup, but the body works as the
-/// gameplay-relevant sweeper.
+/// Push (modern_decks): the "can't be countered" rider **is now wired**
+/// via `Keyword::CantBeCountered` on the card definition.
+/// `caster_grants_uncounterable_with_x` already checks for this
+/// keyword on the cast, so the resulting `StackItem::Spell.uncounterable`
+/// = true and counterspells targeting the Fallout fizzle. Body
+/// unchanged (2 damage to each creature, 2 damage to each player).
 pub fn volcanic_fallout() -> CardDefinition {
     CardDefinition {
         name: "Volcanic Fallout",
         cost: cost(&[generic(1), r(), r()]),
         card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::CantBeCountered],
         effect: Effect::Seq(vec![
             Effect::ForEach {
                 selector: Selector::EachPermanent(SelectionRequirement::Creature),

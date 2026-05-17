@@ -430,10 +430,12 @@ fn buried_alive_pulls_up_to_three_creatures() {
 #[test]
 fn exhume_reanimates_creature() {
     let mut g = two_player_game();
-    let creature = g.add_card_to_library(0, catalog::grizzly_bears());
-    let pos = g.players[0].library.iter().position(|c| c.id == creature).unwrap();
-    let card = g.players[0].library.remove(pos);
-    g.players[0].graveyard.push(card);
+    // Push (modern_decks): printed Oracle is now "each player puts a
+    // creature card from their graveyard onto the battlefield". The
+    // caster's auto-decider picks the top creature card in their own
+    // graveyard; same for the opp. This test only seeds the caster's
+    // graveyard, so only the caster reanimates.
+    let creature = g.add_card_to_graveyard(0, catalog::grizzly_bears());
 
     let id = g.add_card_to_hand(0, catalog::exhume());
     g.players[0].mana_pool.add(Color::Black, 1);
@@ -441,7 +443,7 @@ fn exhume_reanimates_creature() {
 
     g.perform_action(GameAction::CastSpell {
         card_id: id,
-        target: Some(Target::Permanent(creature)),
+        target: None,
         additional_targets: vec![],
         mode: None,
         x_value: None,
@@ -450,7 +452,37 @@ fn exhume_reanimates_creature() {
     drain_stack(&mut g);
 
     assert!(g.battlefield.iter().any(|c| c.id == creature),
-        "Exhume should reanimate the targeted creature");
+        "Exhume should reanimate the caster's only creature in their graveyard");
+}
+
+#[test]
+fn exhume_each_player_reanimates_a_creature() {
+    // Push (modern_decks): "each player reanimates" symmetry — both
+    // P0 and P1 have a creature in their gy; both should land on the
+    // battlefield under their respective controllers.
+    let mut g = two_player_game();
+    let p0_bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let p1_bear = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+
+    let id = g.add_card_to_hand(0, catalog::exhume());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Exhume castable for {1}{B}");
+    drain_stack(&mut g);
+
+    let p0_back = g.battlefield_find(p0_bear);
+    let p1_back = g.battlefield_find(p1_bear);
+    assert!(p0_back.is_some() && p0_back.unwrap().controller == 0,
+        "P0's bear should be on P0's battlefield");
+    assert!(p1_back.is_some() && p1_back.unwrap().controller == 1,
+        "P1's bear should be on P1's battlefield (each-player symmetry)");
 }
 
 // ── Creatures ────────────────────────────────────────────────────────────────
@@ -3646,9 +3678,11 @@ fn static_prison_etb_taps_target() {
 }
 
 #[test]
-fn static_prison_x2_etb_adds_two_stun_counters() {
-    // Validates the engine's `x_value`-on-trigger threading: a {2}{2}{W}
-    // cast (X=2) should leave Static Prison with 2 stun counters.
+fn static_prison_x2_etb_adds_two_stun_counters_to_target() {
+    // Push (modern_decks): Stun counters now land on the TARGET (CR-
+    // correct), not on Static Prison itself. The engine's stun-counter
+    // mechanic (CR 122.1d) consumes one counter per untap step, keeping
+    // the target tapped for X turn cycles.
     use crate::card::CounterType;
     let mut g = two_player_game();
     let opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
@@ -3668,11 +3702,20 @@ fn static_prison_x2_etb_adds_two_stun_counters() {
     .expect("Static Prison castable with X=2");
     drain_stack(&mut g);
 
+    let target = g.battlefield_find(opp_bear).expect("Bear still on battlefield");
+    assert_eq!(
+        target.counter_count(CounterType::Stun),
+        2,
+        "X=2 should put 2 stun counters on the TARGET (the opp's bear), \
+         not on Static Prison itself"
+    );
+    assert!(target.tapped, "Target should also be tapped");
     let inst = g.battlefield_find(prison).expect("Prison on battlefield");
     assert_eq!(
         inst.counter_count(CounterType::Stun),
-        2,
-        "X=2 should put 2 stun counters on Static Prison via the threaded x_value"
+        0,
+        "Static Prison itself should have no stun counters (CR-correct: \
+         counters go on the targeted permanent)"
     );
 }
 
@@ -5918,6 +5961,60 @@ fn banefire_burns_a_player_face_for_x() {
         "Banefire X=7 should burn for 7");
 }
 
+#[test]
+fn banefire_uncounterable_at_x_five() {
+    // Push (modern_decks): "If X is 5 or more, this spell can't be
+    // countered" rider wired via `caster_grants_uncounterable_with_x`.
+    // X=5 → the cast pushes `StackItem::Spell { uncounterable: true }`
+    // and counterspells targeting it fizzle.
+    use crate::game::types::StackItem;
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::banefire());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(5);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: Some(5),
+    }).expect("Banefire castable for {5}{R} (X=5)");
+
+    // Inspect the stack item to confirm uncounterable is set.
+    let uncounterable = g.stack.iter().find_map(|si| match si {
+        StackItem::Spell { uncounterable, .. } => Some(*uncounterable),
+        _ => None,
+    });
+    assert_eq!(uncounterable, Some(true),
+        "Banefire at X=5 should land on the stack as uncounterable");
+}
+
+#[test]
+fn banefire_counterable_below_x_five() {
+    // X=4: stays counterable (rider doesn't kick in until X ≥ 5).
+    use crate::game::types::StackItem;
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::banefire());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(4);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: Some(4),
+    }).expect("Banefire castable for {4}{R} (X=4)");
+
+    let uncounterable = g.stack.iter().find_map(|si| match si {
+        StackItem::Spell { uncounterable, .. } => Some(*uncounterable),
+        _ => None,
+    });
+    assert_eq!(uncounterable, Some(false),
+        "Banefire at X=4 should remain counterable");
+}
+
 // ── Tokens ───────────────────────────────────────────────────────────────────
 
 /// Spectral Procession creates three 1/1 white flying spirits.
@@ -7172,6 +7269,28 @@ fn volcanic_fallout_deals_two_to_each_creature_and_player() {
         "Volcanic Fallout doesn't kill the 5-toughness dragon");
     assert_eq!(g.players[0].life, life0 - 2, "Caster takes 2");
     assert_eq!(g.players[1].life, life1 - 2, "Opp takes 2");
+}
+
+#[test]
+fn volcanic_fallout_is_uncounterable() {
+    // Push (modern_decks): the "this can't be countered" rider now lands
+    // via `Keyword::CantBeCountered` on the card definition. The cast
+    // pushes `StackItem::Spell.uncounterable = true`.
+    use crate::game::types::StackItem;
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::volcanic_fallout());
+    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Fallout castable");
+    let uncounterable = g.stack.iter().find_map(|si| match si {
+        StackItem::Spell { uncounterable, .. } => Some(*uncounterable),
+        _ => None,
+    });
+    assert_eq!(uncounterable, Some(true),
+        "Fallout should land on the stack as uncounterable");
 }
 
 #[test]

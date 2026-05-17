@@ -195,12 +195,16 @@ pub fn dovins_veto() -> CardDefinition {
 /// upkeep, remove a stun counter; while it has stun counters, that
 /// permanent doesn't untap.
 ///
-/// Approximation: ETB stamps `Value::XFromCost` Stun counters on
-/// itself and **also** taps the targeted permanent immediately. The
-/// "while it has stun counters, target doesn't untap" suppression
-/// clause and the upkeep counter-removal still ⏳ (no untap-
-/// replacement primitive yet). The current wiring captures the most
-/// important play: tap a permanent for at least one turn cycle.
+/// Push (modern_decks): the Stun-counter wire **now lands on the
+/// targeted permanent** (was previously stamping the counters on
+/// Static Prison itself, where they had no untap relevance). The
+/// engine's existing Stun-counter mechanic (CR 122.1d) keeps the
+/// target tapped — at each untap step, one stun counter is removed
+/// instead of the target being untapped. So an X=2 Static Prison
+/// taps the target now + keeps it tapped for X turn cycles. The
+/// printed "at the beginning of your upkeep, remove a stun counter"
+/// rider is naturally handled by the engine's stun-counter consume-
+/// on-untap behavior.
 pub fn static_prison() -> CardDefinition {
     use crate::mana::ManaSymbol;
     // Real Oracle: `{X}{2}{W}` Enchantment.
@@ -220,13 +224,16 @@ pub fn static_prison() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Seq(vec![
-                Effect::AddCounter {
-                    what: Selector::This,
-                    kind: CounterType::Stun,
-                    amount: Value::XFromCost,
-                },
                 Effect::Tap {
                     what: target_filtered(SelectionRequirement::Permanent),
+                },
+                // Stamp X Stun counters on the TARGET, not on the
+                // Prison itself. Each stun counter consumes an untap
+                // in the target's next untap step (CR 122.1d).
+                Effect::AddCounter {
+                    what: target_filtered(SelectionRequirement::Permanent),
+                    kind: CounterType::Stun,
+                    amount: Value::XFromCost,
                 },
             ]),
         }],

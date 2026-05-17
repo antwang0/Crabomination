@@ -109,7 +109,7 @@ via `#[path = "../tests/modern.rs"] mod tests_modern` in `game::mod`).
 | Lava Spike | {R} | ✅ | 3 damage to target player; Arcane subtype |
 | Lava Dart | {R} | 🟡 | Flashback cost approximated as `{0}` — engine has no "sacrifice a Mountain" alt-cost primitive |
 | Unburial Rites | {3}{B} | ✅ | `Move(target creature → BF)` + `Keyword::Flashback({W}{B})` |
-| Exhume | {1}{B} | 🟡 | Models "you reanimate" only; symmetrical "each player reanimates" not yet wired |
+| Exhume | {1}{B} | ✅ (was 🟡) | Push (modern_decks): "each player reanimates a creature card from their graveyard" symmetry now wired via `ForEach(EachPlayer) → Move(take(1, Graveyard(Triggerer), Creature), Battlefield(Triggerer))`. Each player's auto-decider picks the top matching creature in their own gy. Tests: `exhume_reanimates_creature`, `exhume_each_player_reanimates_a_creature`. |
 | Buried Alive | {2}{B} | ✅ | "Up to three" search wired via `Repeat(3, Search)`. Decider can answer `Search(None)` to opt out of any iteration. |
 | Entomb | {B} | ✅ | `Search(Any → Graveyard)` |
 | Burning-Tree Emissary | {2} | ✅ | Hybrid pips collapsed to {2}; ETB adds {R}{G} |
@@ -155,7 +155,7 @@ via `#[path = "../tests/modern.rs"] mod tests_modern` in `game::mod`).
 | Languish | {2}{B}{B} | ✅ | `ForEach(EachPermanent(Creature)) + PumpPT(-2/-2 EOT)`. Sweeps 2/2s, leaves 4/4s. |
 | Lay Down Arms | {W} | 🟡 | `Exile(Creature ∧ PowerAtMost(4))`. Plains-count cost-rebate clause collapsed (no count-based-cost-rebate primitive). |
 | Smelt | {R} | ✅ | `Destroy(Artifact)`. |
-| Banefire | {X}{R} | 🟡 | `DealDamage(Target, XFromCost)`. The "uncounterable when X ≥ 5" rider is omitted (no conditional-uncounterable primitive yet). |
+| Banefire | {X}{R} | ✅ (was 🟡) | Push (modern_decks): `DealDamage(Target, XFromCost)` + "uncounterable if X ≥ 5" rider via the new `caster_grants_uncounterable_with_x` helper. At cast time `finalize_cast` flags `StackItem::Spell.uncounterable = true` for Banefire when X ≥ 5. Damage-can't-be-prevented half is a no-op (engine has no general damage-prevention layer). Tests: `banefire_deals_x_damage_to_creature`, `banefire_burns_a_player_face_for_x`, `banefire_uncounterable_at_x_five`, `banefire_counterable_below_x_five`. |
 | Spectral Procession | {2}{W} | 🟡 | `CreateToken(3 × 1/1 white Spirit with Flying)`. Hybrid white-or-2-life pips collapsed to {2}{W} (most permissive). |
 | Regrowth | {1}{G} | ✅ | `Move(target → Hand(You))` over `Any`. Auto-target prefers the caster's graveyard via `prefers_graveyard_source`. |
 | Beast Within | {2}{G} | ✅ | `Seq([CreateToken(3/3 Beast to ControllerOf(Target)), Destroy(Permanent)])`. The token's controller is captured at cast time so it goes to the destroyed permanent's controller. |
@@ -193,7 +193,7 @@ via `#[path = "../tests/modern.rs"] mod tests_modern` in `game::mod`).
 | Wild Mongrel | {1}{G} | 🟡 | 2/2 Hound; `Discard 1: +1/+1 EOT` (Psychic Frog mirror). The "becomes the color of your choice" half collapses. |
 | Tear Asunder | {1}{B}{G} | 🟡 | `Destroy(Artifact ∨ Enchantment)`. Kicker {2} "destroy any nonland permanent" mode collapsed (alt-cost can't yet swap target filters at cast time). |
 | Assassin's Trophy | {B}{G} | 🟡 | `Destroy(Permanent ∧ Nonland ∧ ControlledByOpponent)`. The "owner searches their library for a basic land" downside is omitted (Search always targets the caster). |
-| Volcanic Fallout | {1}{R}{R} | 🟡 | `Seq([ForEach(Creature) → DealDamage 2, ForEach(EachPlayer) → DealDamage 2])`. Uncounterable rider dropped. |
+| Volcanic Fallout | {1}{R}{R} | ✅ (was 🟡) | Push (modern_decks): body unchanged (2 damage to each creature + each player). The "can't be countered" rider now lands via `Keyword::CantBeCountered`. `caster_grants_uncounterable_with_x` reads this keyword and flips `StackItem::Spell.uncounterable = true` at cast time. Tests: `volcanic_fallout_deals_two_to_each_creature_and_player`, `volcanic_fallout_is_uncounterable`. |
 | Rout | {3}{W}{W} | 🟡 | `ForEach(Creature) + Destroy` — DoJ at +1 mana. Flash mode collapsed. |
 | Plague Wind | {8}{B}{B} | 🟡 | `ForEach(Creature ∧ ControlledByOpponent) + Destroy` — one-sided creature sweep. Regen rider collapsed. |
 | Carnage Tyrant | {4}{G}{G} | ✅ | 7/6 Dinosaur with `Trample + Hexproof + CantBeCountered`. The keyword gates `CounterSpell` resolution at the engine. |
