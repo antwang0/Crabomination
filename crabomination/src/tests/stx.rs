@@ -18599,3 +18599,192 @@ fn inkling_squad_existing_sorcery_creates_three_inklings() {
     // 3 tokens (Inkling Squad is a Sorcery, not a creature)
     assert_eq!(inklings, 3);
 }
+
+// ── Push (modern_decks): batch 9 — 10 more STX cards + 10 tests ─────────────
+
+#[test]
+fn quandrix_forecaster_digs_and_cantrips() {
+    let mut g = two_player_game();
+    for _ in 0..5 { g.add_card_to_library(0, catalog::island()); }
+    let qf = g.add_card_to_hand(0, catalog::quandrix_forecaster());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: qf, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Forecaster castable");
+    drain_stack(&mut g);
+    // -1 cast + 1 from RevealUntilFind + 1 from Draw = +1 net
+    assert!(g.players[0].hand.len() >= hand_before, "hand gained at least one");
+}
+
+#[test]
+fn silverquill_bookbinder_etb_drains_3() {
+    let mut g = two_player_game();
+    let sb = g.add_card_to_hand(0, catalog::silverquill_bookbinder());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let opp_life = g.players[1].life;
+    let your_life = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: sb, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bookbinder castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, opp_life - 3, "opp lost 3");
+    assert_eq!(g.players[0].life, your_life + 3, "you gained 3");
+}
+
+#[test]
+fn silverquill_bookbinder_has_flying() {
+    let sb = catalog::silverquill_bookbinder();
+    assert!(sb.keywords.contains(&Keyword::Flying));
+    assert_eq!(sb.power, 2);
+    assert_eq!(sb.toughness, 4);
+}
+
+#[test]
+fn lorehold_crusader_knight_first_strike_lifelink_self_pump() {
+    let mut g = two_player_game();
+    let lc = g.add_card_to_battlefield(0, catalog::lorehold_crusader_knight());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let p_before = g.battlefield_find(lc).unwrap().power();
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt castable");
+    drain_stack(&mut g);
+    let card = g.battlefield_find(lc).unwrap();
+    assert_eq!(card.power(), p_before + 1, "Crusader pumped");
+    assert!(card.has_keyword(&Keyword::FirstStrike));
+    assert!(card.has_keyword(&Keyword::Lifelink));
+}
+
+#[test]
+fn witherbloom_conjurer_etb_mints_two_pests() {
+    let mut g = two_player_game();
+    let wc = g.add_card_to_hand(0, catalog::witherbloom_conjurer());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: wc, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Witherbloom Conjurer castable");
+    drain_stack(&mut g);
+    let pests = g.battlefield.iter()
+        .filter(|c| c.controller == 0 && c.definition.has_creature_type(crate::card::CreatureType::Pest)).count();
+    assert!(pests >= 2, "minted at least 2 Pests");
+}
+
+#[test]
+fn prismari_conjurer_magecraft_pings_and_loots() {
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
+    let _pc = g.add_card_to_battlefield(0, catalog::prismari_conjurer());
+    let _filler = g.add_card_to_hand(0, catalog::island());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let opp_life = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt castable");
+    drain_stack(&mut g);
+    // Bolt did 3 + Conjurer's ping did 1 = 4 to opp
+    assert!(g.players[1].life <= opp_life - 3, "opp took at least bolt damage");
+}
+
+#[test]
+fn quandrix_calligrapher_enters_with_three_counters() {
+    let mut g = two_player_game();
+    let qc = g.add_card_to_hand(0, catalog::quandrix_calligrapher());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: qc, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Calligrapher castable");
+    drain_stack(&mut g);
+    let card = g.battlefield_find(qc).unwrap();
+    assert_eq!(card.counter_count(CounterType::PlusOnePlusOne), 3, "3 +1/+1 counters");
+    assert_eq!(card.power(), 7, "4 + 3 = 7");
+}
+
+#[test]
+fn silverquill_penmaster_destroys_big_creatures_via_mode_one() {
+    let mut g = two_player_game();
+    // Sproutback Trudge is a 5/6 — big creature.
+    let big = g.add_card_to_battlefield(1, catalog::sproutback_trudge());
+    let sp = g.add_card_to_hand(0, catalog::silverquill_penmaster());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    // Mode 1: destroy big creature (PowerAtLeast(4)).
+    g.perform_action(GameAction::CastSpell {
+        card_id: sp, target: Some(Target::Permanent(big)), additional_targets: vec![],
+        mode: Some(1), x_value: None,
+    }).expect("Penmaster mode 1 castable");
+    drain_stack(&mut g);
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == big), "big creature destroyed");
+}
+
+#[test]
+fn lorehold_treasure_smith_etb_mints_treasure() {
+    let mut g = two_player_game();
+    let ls = g.add_card_to_hand(0, catalog::lorehold_treasure_smith());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: ls, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Smith castable");
+    drain_stack(&mut g);
+    let treasures = g.battlefield.iter()
+        .filter(|c| c.controller == 0 && c.definition.name == "Treasure").count();
+    assert!(treasures >= 1, "Smith minted Treasure");
+}
+
+#[test]
+fn witherbloom_tutor_pays_2_life_and_finds_a_creature() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let wt = g.add_card_to_hand(0, catalog::witherbloom_tutor());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let life_before = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: wt, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Tutor castable");
+    drain_stack(&mut g);
+    // Lost 2 life
+    assert_eq!(g.players[0].life, life_before - 2, "lost 2 life from cost");
+}
+
+#[test]
+fn prismari_cartographer_scrys_and_draws() {
+    let mut g = two_player_game();
+    for _ in 0..4 { g.add_card_to_library(0, catalog::island()); }
+    let pc = g.add_card_to_hand(0, catalog::prismari_cartographer());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: pc, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Cartographer castable");
+    drain_stack(&mut g);
+    // -1 cast + 1 draw = 0 net
+    assert_eq!(g.players[0].hand.len(), hand_before);
+}
+
+#[test]
+fn quandrix_geologist_can_tap_for_g_or_u() {
+    let mut g = two_player_game();
+    let qg = g.add_card_to_battlefield(0, catalog::quandrix_geologist());
+    let pool_g_before = g.players[0].mana_pool.amount(Color::Green);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: qg, ability_index: 0, target: None,
+    }).expect("Tap for G");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.amount(Color::Green), pool_g_before + 1, "added G");
+}

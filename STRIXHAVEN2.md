@@ -19,10 +19,25 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 195 | 59 | 1 |
-| STX (259 cards) | 485 | 13 | 0 |
+| STX (259 cards) | 495 | 13 | 0 |
 | STA reprints (in STX boosters) | 46 | 0 | — |
 
 Push (modern_decks, claude/modern_decks branch — latest revision —
+**10 MORE STX cards + 11 new functionality tests = batch 9 — 139 cards
+total**):
+
+Adds 10 more STX cards across all five colleges, exercising existing
+engine primitives: Quandrix Forecaster (look-3 dig-and-cantrip),
+Silverquill Bookbinder (ETB +3/-3 drain flier), Lorehold Crusader Knight
+(First Strike + Lifelink + Magecraft self-pump), Witherbloom Conjurer
+(ETB 2 Pests + on-lifegain counter), Prismari Conjurer (Magecraft
+ping + loot), Quandrix Calligrapher (enters-with-3-counters + self-
+double activation), Silverquill Penmaster (2-mode destroy big / exile
+small), Lorehold Treasure Smith (ETB Treasure + sac-Treasure pump),
+Witherbloom Tutor (creature tutor for 2 life), Prismari Cartographer
+(2-mana Scry 2 + draw), Quandrix Geologist (tap-for-G/U + loot).
+
+Push (modern_decks, claude/modern_decks branch — prior revision —
 **21 MORE STX cards + 27 new functionality tests + CR 119 (Life) audit
 + new `Effect::SetLifeTotal` primitive (CR 119.5) + zero-life-gain
 trigger test (CR 119.9) = batch 8 — 129 cards total**):
@@ -2255,6 +2270,17 @@ parity is a matter of porting card factories one at a time.
 | Quandrix Schematist | {G}{U} | ✅ | Push (modern_decks, NEW, `stx::extras`, batch 8, synthesised STX Quandrix): 1/2 Elf Wizard. ETB Scry 2 + activated `{2}{G}{U}: +1/+1 on target friendly creature`. Test: `quandrix_schematist_etb_scrys_two`. |
 | Lorehold Resurrectionist | {3}{R}{W} | ✅ | Push (modern_decks, NEW, `stx::extras`, batch 8, synthesised STX Lorehold): 3/3 Spirit Cleric, Flying. ETB reanimates a ≤3-MV creature card with haste EOT. Test: `lorehold_resurrectionist_reanimates_low_mv_creature`. |
 | Prismari Tinkerer | {U}{R} | ✅ | Push (modern_decks, NEW, `stx::extras`, batch 8, synthesised STX Prismari): 2/1 Human Artificer, Prowess. Dies → Treasure token. Tests: `prismari_tinkerer_has_prowess`, `prismari_tinkerer_creates_treasure_on_death`. |
+| Quandrix Forecaster | {1}{G}{U} | ✅ | Push (modern_decks, NEW, `stx::extras`, batch 9, synthesised STX Quandrix): Sorcery. RevealUntilFind cap-3 → Hand + Draw 1. Pairs with gy-recursion engines. Test: `quandrix_forecaster_digs_and_cantrips`. |
+| Silverquill Bookbinder | {2}{W}{B} | ✅ | Push (modern_decks, NEW, `stx::extras`, batch 9, synthesised STX Silverquill): 2/4 Inkling Cleric, Flying. ETB drain 3 (+ you gain 3, opp loses 3). Tests: `silverquill_bookbinder_etb_drains_3`, `silverquill_bookbinder_has_flying`. |
+| Lorehold Crusader Knight | {2}{R}{W} | ✅ | Push (modern_decks, NEW, `stx::extras`, batch 9, synthesised STX Lorehold): 2/2 Spirit Knight, First Strike + Lifelink. Magecraft self-pump (+1/+1 EOT). Test: `lorehold_crusader_knight_first_strike_lifelink_self_pump`. |
+| Witherbloom Conjurer | {3}{B}{G} | ✅ | Push (modern_decks, NEW, `stx::extras`, batch 9, synthesised STX Witherbloom): 3/4 Plant Druid. ETB 2 Pest tokens + on-lifegain +1/+1 counter (loops via Pest die-to-gain-1 chain). Test: `witherbloom_conjurer_etb_mints_two_pests`. |
+| Prismari Conjurer | {2}{U}{R} | ✅ | Push (modern_decks, NEW, `stx::extras`, batch 9, synthesised STX Prismari): 2/3 Human Wizard. Magecraft (ping 1 any target + draw + discard). Test: `prismari_conjurer_magecraft_pings_and_loots`. |
+| Quandrix Calligrapher | {3}{G}{U} | ✅ | Push (modern_decks, NEW, `stx::extras`, batch 9, synthesised STX Quandrix): 4/4 Fractal Wizard, enters with 3 +1/+1 counters (via `enters_with_counters`). `{2}{G}{U}: Double its own +1/+1 counters` (`Value::CountersOn(This)` self-double). Test: `quandrix_calligrapher_enters_with_three_counters`. |
+| Silverquill Penmaster | {1}{W}{B} | ✅ | Push (modern_decks, NEW, `stx::extras`, batch 9, synthesised STX Silverquill): Instant. Two-mode `ChooseMode`: mode 0 exile target small creature (PowerAtMost 2), mode 1 destroy target big creature (PowerAtLeast 4). Test: `silverquill_penmaster_destroys_big_creatures_via_mode_one`. |
+| Lorehold Treasure Smith | {1}{R}{W} | ✅ | Push (modern_decks, NEW, `stx::extras`, batch 9, synthesised STX Lorehold): 2/3 Dwarf Artificer. ETB Treasure + `{1}, Sac a Treasure: +1/+1 EOT`. Pairs with Prismari Treasure engines. Test: `lorehold_treasure_smith_etb_mints_treasure`. |
+| Witherbloom Tutor | {1}{B}{G} | ✅ | Push (modern_decks, NEW, `stx::extras`, batch 9, synthesised STX Witherbloom): Sorcery. Search creature ≤ 3 MV → Hand + lose 2 life. Test: `witherbloom_tutor_pays_2_life_and_finds_a_creature`. |
+| Prismari Cartographer | {U}{R} | ✅ | Push (modern_decks, NEW, `stx::extras`, batch 9, synthesised STX Prismari): Instant. Scry 2 + Draw 1. Test: `prismari_cartographer_scrys_and_draws`. |
+| Quandrix Geologist | {G}{U} | ✅ | Push (modern_decks, NEW, `stx::extras`, batch 9, synthesised STX Quandrix): 1/3 Elf Druid. `{T}: Add {G} or {U}` + `{T}, Discard: Draw 1` looter. Test: `quandrix_geologist_can_tap_for_g_or_u`. |
 
 ### Shared / multi-college
 
