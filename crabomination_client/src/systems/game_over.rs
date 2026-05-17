@@ -100,7 +100,10 @@ pub fn sync_game_over_modal(
         return;
     }
     let Some(cv) = view.0.as_ref() else { return };
-    let title = match winner {
+    // `subtitle_color` tints the win/loss line so the player feels the
+    // result before they read it. Border color picks the same hue at
+    // higher saturation so the modal frame matches.
+    let (title, subtitle_color, border_color) = match winner {
         Some(seat) => {
             let name = cv
                 .players
@@ -109,12 +112,24 @@ pub fn sync_game_over_modal(
                 .map(|p| p.name.clone())
                 .unwrap_or_else(|| format!("Seat {seat}"));
             if seat == cv.your_seat {
-                format!("Victory! {name} wins.")
+                (
+                    format!("Victory! {name} wins."),
+                    theme::TEXT_GOOD,
+                    theme::ACCENT_GREEN,
+                )
             } else {
-                format!("Defeat. {name} wins.")
+                (
+                    format!("Defeat. {name} wins."),
+                    theme::TEXT_DANGER,
+                    theme::BUTTON_DANGER_BG,
+                )
             }
         }
-        None => "Draw.".to_string(),
+        None => (
+            "Draw.".to_string(),
+            theme::ACCENT_GOLD,
+            theme::ACCENT_GOLD,
+        ),
     };
     let tf = |size: f32| ui_fonts.tf(size);
     let show_auto_rematch = matches!(*kind, ActiveMatchKind::SpectateBotVsBot);
@@ -142,9 +157,11 @@ pub fn sync_game_over_modal(
                     row_gap: Val::Px(20.0),
                     align_items: AlignItems::Center,
                     min_width: Val::Px(440.0),
+                    border: UiRect::all(Val::Px(3.0)),
                     ..default()
                 },
                 BackgroundColor(theme::PANEL_BG),
+                BorderColor::all(border_color),
             ))
             .with_children(|p| {
                 p.spawn((
@@ -155,7 +172,7 @@ pub fn sync_game_over_modal(
                 p.spawn((
                     Text::new(title),
                     tf(22.0),
-                    TextColor(theme::TEXT_PRIMARY),
+                    TextColor(subtitle_color),
                 ));
 
                 // Action buttons row: Rematch + New Game.

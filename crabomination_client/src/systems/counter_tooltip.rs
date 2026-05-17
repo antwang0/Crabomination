@@ -14,11 +14,22 @@
 //! a player needs when the coin column gets dense.
 
 use bevy::prelude::*;
+use bevy::window::PrimaryWindow;
 use crabomination::card::{CardId, CardType, CounterType};
 
 use crate::card::{BattlefieldCard, CardHovered, GameCardId};
 use crate::net_plugin::CurrentView;
 use crate::theme::UiFonts;
+
+/// Estimated maximum rendered size of the tooltip panel. Used to clamp
+/// the panel position so it doesn't slide off the right or bottom edge
+/// for cards near the viewport boundary. Conservative — real panels are
+/// usually narrower and shorter than this.
+const TOOLTIP_EST_WIDTH: f32 = 240.0;
+const TOOLTIP_EST_HEIGHT: f32 = 200.0;
+/// Padding from the viewport edge so the clamped tooltip doesn't look
+/// jammed against the window border.
+const TOOLTIP_EDGE_PAD: f32 = 8.0;
 
 /// Root marker for the floating tooltip panel.
 #[derive(Component)]
@@ -37,6 +48,7 @@ pub fn update_alt_tooltip(
     ui_fonts: Res<UiFonts>,
     hovered: Query<(&GameCardId, &Transform), (With<BattlefieldCard>, With<CardHovered>)>,
     cameras: Query<(&Camera, &GlobalTransform), With<Camera3d>>,
+    windows: Query<&Window, With<PrimaryWindow>>,
     mut tooltip_q: Query<(Entity, &mut Node), With<AltTooltip>>,
     mut text_q: Query<&mut Text, With<AltTooltipText>>,
 ) {
@@ -76,10 +88,24 @@ pub fn update_alt_tooltip(
         return;
     };
 
+    // Clamp the tooltip's top-left so the panel stays on-screen for
+    // cards near the right or bottom viewport edge. Without this the
+    // panel runs off-screen and the user has to chase the cursor to
+    // see counter detail.
+    let Ok(window) = windows.single() else { return };
+    let win_w = window.resolution.width();
+    let win_h = window.resolution.height();
+    let raw_left = screen.x + 18.0;
+    let raw_top = screen.y - 16.0;
+    let max_left = (win_w - TOOLTIP_EST_WIDTH - TOOLTIP_EDGE_PAD).max(TOOLTIP_EDGE_PAD);
+    let max_top = (win_h - TOOLTIP_EST_HEIGHT - TOOLTIP_EDGE_PAD).max(TOOLTIP_EDGE_PAD);
+    let left = raw_left.clamp(TOOLTIP_EDGE_PAD, max_left);
+    let top = raw_top.clamp(TOOLTIP_EDGE_PAD, max_top);
+
     if let Ok((_, mut node)) = tooltip_q.single_mut() {
         // Update existing tooltip's position and text.
-        node.left = Val::Px(screen.x + 18.0);
-        node.top = Val::Px(screen.y - 16.0);
+        node.left = Val::Px(left);
+        node.top = Val::Px(top);
         if let Ok(mut text) = text_q.single_mut()
             && text.0 != body
         {
@@ -93,8 +119,8 @@ pub fn update_alt_tooltip(
         .spawn((
             Node {
                 position_type: PositionType::Absolute,
-                left: Val::Px(screen.x + 18.0),
-                top: Val::Px(screen.y - 16.0),
+                left: Val::Px(left),
+                top: Val::Px(top),
                 padding: UiRect::all(Val::Px(8.0)),
                 ..default()
             },

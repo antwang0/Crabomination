@@ -1,19 +1,47 @@
 use bevy::prelude::*;
 use crabomination::card::CardId;
 use crabomination::mana::Color as ManaColor;
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 
-/// Per-frame log of human-readable events shown in the right-side overlay.
-#[derive(Resource, Default)]
+use crate::theme;
+
+/// One log entry with text + the color it should render in.
+#[derive(Clone)]
+pub struct LogEntry {
+    pub text: String,
+    pub color: Color,
+}
+
+/// Maximum number of log entries kept in memory. Older entries are
+/// evicted from the front (oldest-first) when this is exceeded.
+pub const GAME_LOG_CAP: usize = 200;
+
+/// Rolling log of human-readable events shown in the right-side overlay.
+#[derive(Resource)]
 pub struct GameLog {
-    pub entries: Vec<String>,
+    pub entries: VecDeque<LogEntry>,
+}
+
+impl Default for GameLog {
+    fn default() -> Self {
+        Self { entries: VecDeque::with_capacity(GAME_LOG_CAP) }
+    }
 }
 
 impl GameLog {
+    /// Push a plain log entry (default body color). Used by non-event
+    /// surfaces — menu, decision modal, export prompt, rematch banner.
     pub fn push(&mut self, msg: impl Into<String>) {
-        self.entries.push(msg.into());
-        if self.entries.len() > 16 {
-            self.entries.remove(0);
+        self.push_colored(msg, theme::TEXT_BODY);
+    }
+
+    /// Push a log entry tinted with the given color. Used by the per-event
+    /// formatter so damage / mana / step / etc. entries are visually
+    /// distinct in the scrollback.
+    pub fn push_colored(&mut self, msg: impl Into<String>, color: Color) {
+        self.entries.push_back(LogEntry { text: msg.into(), color });
+        while self.entries.len() > GAME_LOG_CAP {
+            self.entries.pop_front();
         }
     }
 }

@@ -86,6 +86,53 @@ pub fn apply_swap_front_material(
     }
 }
 
+/// Per-variant log color. Damage / death is red, life-gain green,
+/// mana / casts gold, step changes muted, combat orange, etc. Anything
+/// not specifically classified falls back to body text.
+fn event_color(ev: &crabomination::net::GameEventWire) -> Color {
+    use crabomination::net::GameEventWire as E;
+    match ev {
+        E::DamageDealt { .. }
+        | E::LifeLost { .. }
+        | E::PoisonAdded { .. }
+        | E::CreatureDied { .. }
+        | E::PlaneswalkerDied { .. } => theme::TEXT_DANGER,
+
+        E::LifeGained { .. } => theme::TEXT_GOOD,
+
+        E::StepChanged(_) | E::TurnStarted { .. } => theme::TEXT_SECONDARY,
+
+        E::CardDrawn { .. }
+        | E::CardDiscarded { .. }
+        | E::CardMilled { .. }
+        | E::ScryPerformed { .. }
+        | E::SurveilPerformed { .. }
+        | E::TopCardRevealed { .. }
+        | E::CardLeftGraveyard { .. } => theme::ACCENT_BLUE,
+
+        E::ManaAdded { .. }
+        | E::ColorlessManaAdded { .. }
+        | E::SpellCast { .. }
+        | E::AbilityActivated { .. }
+        | E::LoyaltyAbilityActivated { .. }
+        | E::SpellsCopied { .. } => theme::ACCENT_GOLD,
+
+        E::CounterAdded { .. }
+        | E::CounterRemoved { .. }
+        | E::LoyaltyChanged { .. }
+        | E::PumpApplied { .. } => theme::ACCENT_BLUE,
+
+        E::AttackerDeclared(_)
+        | E::BlockerDeclared { .. }
+        | E::CombatResolved
+        | E::FirstStrikeDamageResolved => theme::ACCENT_ORANGE,
+
+        E::GameOver { .. } => theme::ACCENT_GOLD,
+
+        _ => theme::TEXT_BODY,
+    }
+}
+
 /// Pretty-print a `GameEventWire` for the in-game log, resolving any
 /// CardId via the running `CardNames` map so the player sees real card
 /// names instead of `CardId(N)` debug strings.
@@ -189,8 +236,11 @@ pub struct PlayerStatusText;
 #[derive(Component)]
 pub struct P1StatusText;
 
+/// Container node (flex column) that holds one `Text` child per log
+/// entry. `update_log_text` despawns and rebuilds these children when
+/// `GameLog` changes.
 #[derive(Component)]
-pub struct GameLogText;
+pub struct GameLogPanel;
 
 #[derive(Component)]
 pub struct HintText;
@@ -363,19 +413,23 @@ pub fn setup_game_hud(mut commands: Commands, ui_fonts: Res<UiFonts>) {
                 row_gap: Val::Px(4.0),
                 ..default()
             },
-            BackgroundColor(Color::srgba(0.25, 0.0, 0.0, 0.82)),
+            BackgroundColor(theme::HUD_BG_DANGER),
             InGameRoot,
         ))
         .with_children(|p| {
             p.spawn((
                 Text::new(""),
                 tf(16.0),
-                TextColor(Color::srgb(1.0, 0.65, 0.65)),
+                TextColor(theme::TEXT_DANGER),
                 P1StatusText,
             ));
         });
 
-    // Right side: game log
+    // Right side: game log. Outer node owns the panel chrome (position,
+    // background, scroll behavior); inner `GameLogPanel` is the flex
+    // column whose children are one `Text` per log entry. Splitting the
+    // two lets `update_log_text` despawn + rebuild children without
+    // tearing the chrome on every change.
     commands
         .spawn((
             Node {
@@ -383,18 +437,22 @@ pub fn setup_game_hud(mut commands: Commands, ui_fonts: Res<UiFonts>) {
                 top: Val::Px(120.0),
                 right: Val::Px(10.0),
                 width: Val::Px(280.0),
+                max_height: Val::Px(420.0),
                 padding: UiRect::all(Val::Px(8.0)),
+                overflow: Overflow::scroll_y(),
                 ..default()
             },
-            BackgroundColor(Color::srgba(0.0, 0.0, 0.0, 0.62)),
+            BackgroundColor(theme::HUD_BG),
             InGameRoot,
         ))
         .with_children(|p| {
             p.spawn((
-                Text::new(""),
-                tf(12.0),
-                TextColor(Color::srgb(0.78, 0.78, 0.78)),
-                GameLogText,
+                Node {
+                    flex_direction: FlexDirection::Column,
+                    row_gap: Val::Px(2.0),
+                    ..default()
+                },
+                GameLogPanel,
             ));
         });
 
@@ -411,20 +469,20 @@ pub fn setup_game_hud(mut commands: Commands, ui_fonts: Res<UiFonts>) {
                 row_gap: Val::Px(4.0),
                 ..default()
             },
-            BackgroundColor(Color::srgba(0.0, 0.1, 0.22, 0.82)),
+            BackgroundColor(theme::HUD_BG_INFO),
             InGameRoot,
         ))
         .with_children(|p| {
             p.spawn((
                 Text::new(""),
                 tf(14.0),
-                TextColor(Color::srgb(0.65, 0.88, 1.0)),
+                TextColor(theme::TEXT_INFO),
                 PlayerStatusText,
             ));
             p.spawn((
                 Text::new(""),
                 tf(13.0),
-                TextColor(Color::srgb(1.0, 0.9, 0.35)),
+                TextColor(theme::ACCENT_GOLD),
                 HintText,
             ));
             // Action buttons row
@@ -440,7 +498,7 @@ pub fn setup_game_hud(mut commands: Commands, ui_fonts: Res<UiFonts>) {
                         padding: UiRect::all(Val::Px(8.0)),
                         ..default()
                     },
-                    BackgroundColor(Color::srgb(0.08, 0.28, 0.48)),
+                    BackgroundColor(theme::BUTTON_INFO_BG),
                     Button,
                     PassPriorityButton,
                 ))
@@ -448,7 +506,7 @@ pub fn setup_game_hud(mut commands: Commands, ui_fonts: Res<UiFonts>) {
                     p.spawn((
                         Text::new("Pass (Space)"),
                         tf(13.0),
-                        TextColor(Color::WHITE),
+                        TextColor(theme::TEXT_PRIMARY),
                         PassButtonLabel,
                     ));
                 });
@@ -458,12 +516,12 @@ pub fn setup_game_hud(mut commands: Commands, ui_fonts: Res<UiFonts>) {
                         padding: UiRect::all(Val::Px(8.0)),
                         ..default()
                     },
-                    BackgroundColor(Color::srgb(0.08, 0.38, 0.18)),
+                    BackgroundColor(theme::BUTTON_PRIMARY_BG),
                     Button,
                     EndTurnButton,
                 ))
                 .with_children(|p| {
-                    p.spawn((Text::new("End Turn (E)"), tf(13.0), TextColor(Color::WHITE)));
+                    p.spawn((Text::new("End Turn (E)"), tf(13.0), TextColor(theme::TEXT_PRIMARY)));
                 });
 
                 p.spawn((
@@ -471,7 +529,7 @@ pub fn setup_game_hud(mut commands: Commands, ui_fonts: Res<UiFonts>) {
                         padding: UiRect::all(Val::Px(8.0)),
                         ..default()
                     },
-                    BackgroundColor(Color::srgb(0.28, 0.18, 0.48)),
+                    BackgroundColor(theme::BUTTON_ACCENT_BG),
                     Button,
                     NextTurnButton,
                 ))
@@ -479,7 +537,7 @@ pub fn setup_game_hud(mut commands: Commands, ui_fonts: Res<UiFonts>) {
                     p.spawn((
                         Text::new("Next Turn (N)"),
                         tf(13.0),
-                        TextColor(Color::WHITE),
+                        TextColor(theme::TEXT_PRIMARY),
                     ));
                 });
 
@@ -488,7 +546,7 @@ pub fn setup_game_hud(mut commands: Commands, ui_fonts: Res<UiFonts>) {
                         padding: UiRect::all(Val::Px(8.0)),
                         ..default()
                     },
-                    BackgroundColor(Color::srgb(0.18, 0.18, 0.28)),
+                    BackgroundColor(theme::BUTTON_NEUTRAL_BG),
                     Button,
                     ExportStateButton,
                 ))
@@ -496,7 +554,7 @@ pub fn setup_game_hud(mut commands: Commands, ui_fonts: Res<UiFonts>) {
                     p.spawn((
                         Text::new("Export State (X)"),
                         tf(13.0),
-                        TextColor(Color::WHITE),
+                        TextColor(theme::TEXT_PRIMARY),
                     ));
                 });
             });
@@ -526,7 +584,7 @@ pub fn setup_game_hud(mut commands: Commands, ui_fonts: Res<UiFonts>) {
                     padding: UiRect::axes(Val::Px(14.0), Val::Px(10.0)),
                     ..default()
                 },
-                BackgroundColor(Color::srgb(0.55, 0.1, 0.1)),
+                BackgroundColor(theme::BUTTON_DANGER_BG),
                 Button,
                 AttackAllButton,
             ))
@@ -534,7 +592,7 @@ pub fn setup_game_hud(mut commands: Commands, ui_fonts: Res<UiFonts>) {
                 p.spawn((
                     Text::new("Attack All (A)"),
                     tf(15.0),
-                    TextColor(Color::WHITE),
+                    TextColor(theme::TEXT_PRIMARY),
                 ));
             });
         });
@@ -565,7 +623,7 @@ pub fn setup_game_hud(mut commands: Commands, ui_fonts: Res<UiFonts>) {
                     max_width: Val::Px(560.0),
                     ..default()
                 },
-                BackgroundColor(Color::srgba(0.04, 0.06, 0.16, 0.93)),
+                BackgroundColor(theme::PANEL_BG),
                 StackPanel,
             ));
         });
@@ -680,18 +738,32 @@ pub fn update_p1_text(
     t.0 = lines.join("\n");
 }
 
-/// Render the in-memory `GameLog.entries` into the `GameLogText` widget.
-/// Without this system the log resource accumulated entries that never
-/// appeared on screen.
+/// Rebuild the `GameLogPanel` children from `GameLog.entries`. Each
+/// entry becomes one `Text` row colored by `LogEntry.color`. Newest
+/// entries are rendered first so the most recent events are always
+/// visible at the top of the panel; the panel's outer container has
+/// `Overflow::scroll_y()` so older entries are reachable via scroll.
 pub fn update_log_text(
+    mut commands: Commands,
     log: Res<GameLog>,
-    mut q: Query<&mut Text, With<GameLogText>>,
+    ui_fonts: Res<UiFonts>,
+    panel_q: Query<Entity, With<GameLogPanel>>,
 ) {
     if !log.is_changed() {
         return;
     }
-    let Ok(mut t) = q.single_mut() else { return };
-    t.0 = log.entries.join("\n");
+    let Ok(panel) = panel_q.single() else { return };
+    commands.entity(panel).despawn_children();
+    commands.entity(panel).with_children(|p| {
+        for entry in log.entries.iter().rev() {
+            p.spawn((
+                Text::new(entry.text.clone()),
+                ui_fonts.tf(12.0),
+                TextColor(entry.color),
+                Pickable::IGNORE,
+            ));
+        }
+    });
 }
 
 pub fn update_phase_chart(
@@ -702,9 +774,9 @@ pub fn update_phase_chart(
     let current = cv.step;
     for (label, mut color) in &mut labels {
         *color = if label.0 == current {
-            TextColor(Color::srgb(1.0, 0.88, 0.0))
+            TextColor(theme::ACCENT_YELLOW)
         } else {
-            TextColor(Color::srgba(0.55, 0.55, 0.55, 0.8))
+            TextColor(theme::TEXT_MUTED)
         };
     }
 }
@@ -957,19 +1029,19 @@ pub fn update_pass_button(
 
     if your_priority && top_is_opp_spell {
         // Urgent: opponent has a spell on stack waiting for a response.
-        *bg = BackgroundColor(Color::srgb(0.75, 0.55, 0.05));
+        *bg = BackgroundColor(theme::BUTTON_URGENT_BG);
         label.0 = "Pass / Respond (Space)".into();
     } else if your_priority && !cv.stack.is_empty() {
         // Have priority with something on stack (own spell or trigger).
-        *bg = BackgroundColor(Color::srgb(0.08, 0.42, 0.18));
+        *bg = BackgroundColor(theme::BUTTON_PRIMARY_BG);
         label.0 = "Pass (Space)".into();
     } else if your_priority {
         // Have priority, empty stack (main phase).
-        *bg = BackgroundColor(Color::srgb(0.08, 0.28, 0.48));
+        *bg = BackgroundColor(theme::BUTTON_INFO_BG);
         label.0 = "Pass (Space)".into();
     } else {
         // Waiting for another player.
-        *bg = BackgroundColor(Color::srgba(0.08, 0.15, 0.25, 0.5));
+        *bg = BackgroundColor(theme::BUTTON_DISABLED_BG);
         label.0 = "Pass (Space)".into();
     }
 }
@@ -2147,7 +2219,7 @@ pub fn handle_game_input(
     // Update game log from server events.
     for ev in &server_events.0 {
         check_reveal_wire(std::slice::from_ref(ev), reveal);
-        log.push(format_event(ev, card_names));
+        log.push_colored(format_event(ev, card_names), event_color(ev));
     }
 
     let Some(cv) = &view.0 else { return };
@@ -2558,13 +2630,13 @@ pub fn spawn_ability_menu(
             ));
             for (ability_index, label, used) in abilities {
                 let bg = if used {
-                    // Greyed-out background for once-per-turn abilities
+                    // Darkened background for once-per-turn abilities
                     // already activated this turn — clicks still go
                     // through, but the engine returns
                     // `AbilityAlreadyUsedThisTurn`.
-                    Color::srgba(0.10, 0.10, 0.14, 0.95)
+                    theme::PANEL_BG_RAISED
                 } else {
-                    Color::srgba(0.20, 0.22, 0.32, 0.95)
+                    theme::BUTTON_NEUTRAL_BG
                 };
                 let fg = if used {
                     theme::TEXT_MUTED

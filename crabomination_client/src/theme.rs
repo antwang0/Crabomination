@@ -97,6 +97,13 @@ pub const BUTTON_DANGER_BG: Color = Color::srgba(0.45, 0.20, 0.20, 1.0);
 /// Purple accent — spectate-bots, set-tab.
 pub const BUTTON_ACCENT_BG: Color = Color::srgba(0.32, 0.20, 0.45, 1.0);
 
+/// Amber — opponent has a spell on the stack and you must respond.
+pub const BUTTON_URGENT_BG: Color = Color::srgba(0.75, 0.55, 0.05, 1.0);
+
+/// Half-alpha tint for buttons that don't apply right now (priority held
+/// by another player).
+pub const BUTTON_DISABLED_BG: Color = Color::srgba(0.08, 0.15, 0.25, 0.5);
+
 /// Used inside modal choice lists to mark a toggle as "selected".
 pub const BUTTON_SELECTED_BG: Color = Color::srgba(0.60, 0.25, 0.25, 0.95);
 
@@ -124,3 +131,9 @@ pub const TEXT_SECONDARY: Color = Color::srgba(0.70, 0.70, 0.70, 1.0);
 pub const TEXT_MUTED: Color = Color::srgba(0.55, 0.55, 0.55, 0.80);
 /// Placeholder / hint text in input fields.
 pub const TEXT_PLACEHOLDER: Color = Color::srgba(0.65, 0.65, 0.65, 1.0);
+/// Pale blue — used for the viewer's own status line.
+pub const TEXT_INFO: Color = Color::srgb(0.65, 0.88, 1.0);
+/// Pale red — used for opponent status, damage events in the log.
+pub const TEXT_DANGER: Color = Color::srgb(1.0, 0.55, 0.55);
+/// Mid-green — used for life-gain events in the log.
+pub const TEXT_GOOD: Color = Color::srgb(0.55, 0.95, 0.55);
