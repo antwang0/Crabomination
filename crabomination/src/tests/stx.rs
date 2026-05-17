@@ -15941,6 +15941,55 @@ fn conspiracy_theorist_has_attack_trigger_now() {
 }
 
 #[test]
+fn conspiracy_theorist_activation_rejected_with_cards_in_hand() {
+    // Push (modern_decks): "{1}{R}, {T}: ... Activate only if you control
+    // no cards in hand." — the empty-hand gate is wired via
+    // `ActivatedAbility.condition: Predicate::ValueEquals(HandSize, 0)`.
+    // With one card in hand the activation must be rejected.
+    let mut g = two_player_game();
+    let ct = g.add_card_to_battlefield(0, catalog::conspiracy_theorist());
+    g.clear_sickness(ct);
+    g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.add_card_to_library(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    let res = g.perform_action(GameAction::ActivateAbility {
+        card_id: ct,
+        ability_index: 0,
+        target: None,
+    });
+    assert!(res.is_err(),
+        "Activation rejected when hand_size > 0; got {:?}", res);
+    // CT should not have been tapped (cost rolled back).
+    assert!(!g.battlefield_find(ct).unwrap().tapped,
+        "Conspiracy Theorist should not have been tapped");
+}
+
+#[test]
+fn conspiracy_theorist_activation_succeeds_with_empty_hand() {
+    let mut g = two_player_game();
+    let ct = g.add_card_to_battlefield(0, catalog::conspiracy_theorist());
+    g.clear_sickness(ct);
+    // P0's hand must be empty for the activation gate to pass.
+    assert!(g.players[0].hand.is_empty());
+    g.add_card_to_library(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: ct,
+        ability_index: 0,
+        target: None,
+    })
+    .expect("Conspiracy Theorist activates when hand is empty");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand_before + 1,
+        "P0 should have drawn a card (approximation of 'exile top, may play')");
+}
+
+#[test]
 fn prismari_bauble_etb_scrys_and_can_sac_for_draw() {
     let mut g = two_player_game();
     g.add_card_to_library(0, catalog::island());

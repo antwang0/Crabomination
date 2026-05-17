@@ -339,6 +339,8 @@ pub fn combat_professor() -> CardDefinition {
 /// hand-size-conditional sorcery primitive aligned with the activation
 /// path).
 pub fn conspiracy_theorist() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    use crate::effect::Predicate;
     CardDefinition {
         name: "Conspiracy Theorist",
         cost: cost(&[generic(1), r()]),
@@ -352,7 +354,33 @@ pub fn conspiracy_theorist() -> CardDefinition {
         toughness: 1,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
+        // Push (modern_decks): empty-hand activated ability wired via
+        // `ActivatedAbility.condition: Predicate::ValueEquals(HandSizeOf,
+        // 0)`. The "exile top + may play this turn" rider still
+        // approximates to a plain Draw (cast-from-exile-with-timer
+        // primitive is engine-wide ⏳ — same gap as Suspend Aggression,
+        // Tablet of Discovery, Practiced Scrollsmith). Activating
+        // immediately puts a card in hand, so the empty-hand gate
+        // naturally rate-limits this to once per discard cycle.
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[generic(1), r()]),
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+            once_per_turn: false,
+            sorcery_speed: false,
+            sac_cost: false,
+            condition: Some(Predicate::ValueEquals(
+                Value::HandSizeOf(crate::effect::PlayerRef::You),
+                Value::Const(0),
+            )),
+            life_cost: 0,
+            from_graveyard: false,
+            exile_self_cost: false,
+            exile_other_filter: None,
+        }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
             // Approximation: "you may discard a card. If you do, draw a
@@ -6967,6 +6995,7 @@ pub fn past_in_flames() -> CardDefinition {
             evoke_sacrifice: false,
             not_your_turn_only: false,
             target_filter: None,
+            condition: None,
         }),
         back_face: None,
         opening_hand: None,
@@ -7076,6 +7105,7 @@ pub fn resurgent_belief() -> CardDefinition {
             evoke_sacrifice: false,
             not_your_turn_only: false,
             target_filter: None,
+            condition: None,
         }),
         back_face: None,
         opening_hand: None,

@@ -3220,19 +3220,19 @@ pub fn transcendent_archaic() -> CardDefinition {
 /// of colors of mana spent to cast this creature. / {2}: Put target card
 /// from a graveyard on the bottom of its owner's library."
 ///
-/// ETB Converge exile: the converge-scaled mana-value cap on the target
-/// remains approximated to "any nonland opp permanent" (no `Value`-keyed
-/// `ManaValueAtMostV` predicate yet — tracked in TODO.md). Auto-target
-/// picks a legal opponent permanent.
+/// Push (modern_decks): the converge-scaled mana-value cap is **now
+/// wired** via `Effect::If { cond: ValueAtMost(ManaValueOf(Target(0)),
+/// ConvergedValue), then: Exile(Target(0)), else_: Noop }`. The trigger
+/// no-ops cleanly when the target's MV exceeds ConvergedValue (e.g.
+/// mono-colorless cast → ConvergedValue = 0 → only MV-0 permanents
+/// are legitimate exile targets; at 1 color → MV ≤ 1; at 5 colors →
+/// MV ≤ 5). Auto-target picks any legal opp permanent first; the
+/// resolve-time gate then enforces the cap.
 ///
-/// Now wired (push XVI): the `{2}: graveyard → bottom of owner's library`
-/// activated ability. Targets any card in any graveyard (validated by
-/// `evaluate_requirement_static`'s graveyard fall-through), then issues
-/// `Effect::Move { what: Target(0), to: ZoneDest::Library { who:
-/// OwnerOf(Target(0)), pos: Bottom } }` so the card lands on the bottom
-/// of its OWNER's library (not the activator's). `move_card_to`'s
-/// graveyard branch handles the source-zone walk.
+/// The `{2}: graveyard → bottom of owner's library` activated ability
+/// is unchanged.
 pub fn sundering_archaic() -> CardDefinition {
+    use crate::card::Predicate;
     use crate::effect::{LibraryPosition, ZoneDest};
     CardDefinition {
         name: "Sundering Archaic",
@@ -3267,12 +3267,19 @@ pub fn sundering_archaic() -> CardDefinition {
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::Exile {
-                what: crate::effect::shortcut::target_filtered(
-                    SelectionRequirement::Permanent
-                        .and(SelectionRequirement::Nonland)
-                        .and(SelectionRequirement::ControlledByOpponent),
+            effect: Effect::If {
+                cond: Predicate::ValueAtMost(
+                    Value::ManaValueOf(Box::new(Selector::Target(0))),
+                    Value::ConvergedValue,
                 ),
+                then: Box::new(Effect::Exile {
+                    what: crate::effect::shortcut::target_filtered(
+                        SelectionRequirement::Permanent
+                            .and(SelectionRequirement::Nonland)
+                            .and(SelectionRequirement::ControlledByOpponent),
+                    ),
+                }),
+                else_: Box::new(Effect::Noop),
             },
         }],
         static_abilities: vec![],
@@ -3705,7 +3712,8 @@ pub fn matterbending_mage() -> CardDefinition {
 /// is wired faithfully and the printed full cost is paid
 /// unconditionally.
 pub fn orysa_tide_choreographer() -> CardDefinition {
-    use crate::card::Supertype;
+    use crate::card::{AlternativeCost, Supertype};
+    use crate::effect::Predicate;
     use crate::mana::u;
     CardDefinition {
         name: "Orysa, Tide Choreographer",
@@ -3731,7 +3739,28 @@ pub fn orysa_tide_choreographer() -> CardDefinition {
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
-        alternative_cost: None,
+        // Push (modern_decks): "{3} less if creatures you control have
+        // total toughness 10 or greater" alt-cost rider wired via
+        // `AlternativeCost.condition`. The gate evaluates
+        // `ValueAtLeast(Sum of friendly creature toughness, 10)` against
+        // the cast-time context. Alt cost is {1}{U} ({3} less than the
+        // printed {4}{U}). Lets the printed Oracle cast Orysa as an
+        // ETB-draw-2 finisher off a wide go-wide board.
+        alternative_cost: Some(AlternativeCost {
+            mana_cost: cost(&[generic(1), u()]),
+            life_cost: 0,
+            exile_filter: None,
+            evoke_sacrifice: false,
+            not_your_turn_only: false,
+            target_filter: None,
+            condition: Some(Predicate::ValueAtLeast(
+                Value::ToughnessOf(Box::new(Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou),
+                ))),
+                Value::Const(10),
+            )),
+        }),
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
@@ -4067,18 +4096,23 @@ pub fn zaffai_and_the_tempests() -> CardDefinition {
 }
 
 /// Lorehold, the Historian — {3}{R}{W} Legendary Creature — Elder Dragon.
-/// 5/5 Flying, haste. Miracle grant + opp-upkeep loot omitted.
+/// 5/5 Flying, haste.
 ///
-/// Body-only wire (5/5 Flying+Haste Legendary Elder Dragon). The "instant
-/// and sorcery cards in your hand have miracle {2}" static is omitted (no
-/// alt-cost-on-draw / miracle primitive), and the per-opp-upkeep
-/// `discard a card → draw a card` loot trigger is omitted (no
-/// AnotherPlayerUpkeep scope yet — `EventScope::OpponentControl` +
-/// `StepBegins(Upkeep)` would route, but `StepBegins` triggers fire only
-/// for the active player today). The vanilla finisher is the most
-/// impactful printed clause; both omitted clauses are tracked in TODO.md.
+/// Push (modern_decks): the per-opp-upkeep loot trigger **is now wired**
+/// via `EventSpec::new(StepBegins(Upkeep), EventScope::OpponentControl)`
+/// — the engine's step-trigger dispatcher fires `OpponentControl`-scoped
+/// triggers whose source's controller is NOT the active player, which
+/// matches the printed "at the beginning of each opponent's upkeep"
+/// wording for non-active sources. Body is `MayDo(Seq(Discard 1, Draw
+/// 1))` so the controller opts into the loot.
+///
+/// The "instant and sorcery cards in your hand have miracle {2}" static
+/// is still ⏳ (no Miracle keyword / alt-cost-on-draw primitive). The
+/// vanilla 5/5 Flying+Haste body is the headline play pattern; the
+/// per-opp-turn loot adds free card velocity.
 pub fn lorehold_the_historian() -> CardDefinition {
     use crate::card::Supertype;
+    use crate::game::types::TurnStep;
     use crate::mana::{r, w};
     CardDefinition {
         name: "Lorehold, the Historian",
@@ -4094,7 +4128,27 @@ pub fn lorehold_the_historian() -> CardDefinition {
         keywords: vec![Keyword::Flying, Keyword::Haste],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::Upkeep),
+                EventScope::OpponentControl,
+            ),
+            effect: Effect::MayDo {
+                description: "Lorehold, the Historian: discard a card to draw a card?"
+                    .into(),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::Discard {
+                        who: Selector::You,
+                        amount: Value::Const(1),
+                        random: false,
+                    },
+                    Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::Const(1),
+                    },
+                ])),
+            },
+        }],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -4535,6 +4589,7 @@ pub fn paradox_surveyor() -> CardDefinition {
 /// printed effect on a 2-color cast.
 pub fn magmablood_archaic() -> CardDefinition {
     use crate::card::CounterType;
+    use crate::effect::shortcut::magecraft;
     use crate::mana::r;
     CardDefinition {
         name: "Magmablood Archaic",
@@ -4560,6 +4615,20 @@ pub fn magmablood_archaic() -> CardDefinition {
                     amount: Value::ConvergedValue,
                 },
             },
+            // Push (modern_decks): per-cast IS pump. Each friendly creature
+            // gets +X/+0 EOT where X = colors spent on the iterated spell.
+            // Reads `Value::ConvergedValue` which is now threaded onto the
+            // spell-cast trigger via `fire_spell_cast_triggers` so each
+            // iterated cast's converge count is correctly observed.
+            magecraft(Effect::PumpPT {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+                power: Value::ConvergedValue,
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            }),
         ],
         static_abilities: vec![],
         base_loyalty: 0,
@@ -4639,8 +4708,45 @@ pub fn wildgrowth_archaic() -> CardDefinition {
 /// — we'd need a counter-transfer-on-death primitive, tracked
 /// separately).
 pub fn ambitious_augmenter() -> CardDefinition {
+    use crate::card::CounterType;
+    use crate::catalog::sets::sos::sorceries::fractal_token;
     use crate::effect::shortcut::increment_self_plus_one;
+    use crate::effect::Predicate;
     use crate::mana::g;
+    // Death trigger: if the dying creature had one or more counters on
+    // it, mint a 0/0 Fractal token and transfer the counters to it
+    // (CR 122.2 — counters persist on a card's CardInstance across the
+    // bf → gy zone change, so `Value::CountersOn(This)` reads the
+    // gy-resident card's preserved counter count at trigger-resolve
+    // time).
+    let death_trigger = TriggeredAbility {
+        event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+        effect: Effect::If {
+            cond: Predicate::ValueAtLeast(
+                Value::CountersOn {
+                    what: Box::new(Selector::This),
+                    kind: CounterType::PlusOnePlusOne,
+                },
+                Value::Const(1),
+            ),
+            then: Box::new(Effect::Seq(vec![
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: fractal_token(),
+                },
+                Effect::AddCounter {
+                    what: Selector::LastCreatedToken,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::CountersOn {
+                        what: Box::new(Selector::This),
+                        kind: CounterType::PlusOnePlusOne,
+                    },
+                },
+            ])),
+            else_: Box::new(Effect::Noop),
+        },
+    };
     CardDefinition {
         name: "Ambitious Augmenter",
         cost: cost(&[g()]),
@@ -4655,7 +4761,7 @@ pub fn ambitious_augmenter() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![increment_self_plus_one()],
+        triggered_abilities: vec![increment_self_plus_one(), death_trigger],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -4668,17 +4774,24 @@ pub fn ambitious_augmenter() -> CardDefinition {
 }
 
 /// Rubble Rouser — {2}{R} Creature — Dwarf Sorcerer.
-/// 1/4. ETB may-discard-then-draw (collapsed to always-do); the
-/// `{T}, Exile a card from your graveyard: Add {R}. When you do, this
-/// creature deals 1 damage to each opponent.` activated ability is
-/// omitted (engine has no exile-from-your-graveyard activation cost
-/// primitive, separate from `sac_cost`).
+/// 1/4. ETB may-discard-then-draw + `{T}, Exile a card from your
+/// graveyard: Add {R}. When you do, this creature deals 1 damage to
+/// each opponent.`
 ///
-/// The rummage ETB is faithfully wired: discard 1 + draw 1. The
-/// `you may` optionality collapses to "always do" since the
-/// engine has no per-effect yes/no decision (TODO.md).
+/// Push (modern_decks): the `{T}, Exile a card from your graveyard:`
+/// activation is **now wired** via the existing
+/// `ActivatedAbility.exile_other_filter: Some(Any)` field (engine's
+/// "exile another card from your gy as cost" primitive, same one
+/// powering Postmortem Professor + Lorehold Pledgemage). The body
+/// folds the `When you do` sub-trigger into the activation's main
+/// effect — once the cost is paid the engine resolves `AddMana` plus
+/// the 1-damage-each-opp simultaneously (CR 603's separate sub-trigger
+/// would resolve them on the stack independently; this approximation
+/// preserves the printed payoff with a slightly tighter timing).
 pub fn rubble_rouser() -> CardDefinition {
-    use crate::mana::r;
+    use crate::card::ActivatedAbility;
+    use crate::effect::ManaPayload;
+    use crate::mana::{r, Color, ManaCost};
     CardDefinition {
         name: "Rubble Rouser",
         cost: cost(&[generic(2), r()]),
@@ -4692,7 +4805,28 @@ pub fn rubble_rouser() -> CardDefinition {
         toughness: 4,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: ManaCost::default(),
+            effect: Effect::Seq(vec![
+                Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Colors(vec![Color::Red]),
+                },
+                Effect::DealDamage {
+                    to: Selector::Player(PlayerRef::EachOpponent),
+                    amount: Value::Const(1),
+                },
+            ]),
+            once_per_turn: false,
+            sorcery_speed: false,
+            sac_cost: false,
+            condition: None,
+            life_cost: 0,
+            from_graveyard: false,
+            exile_self_cost: false,
+            exile_other_filter: Some(SelectionRequirement::Any),
+        }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::MayDo {

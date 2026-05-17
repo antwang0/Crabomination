@@ -310,6 +310,7 @@ pub fn brush_off() -> CardDefinition {
                         .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
                 ),
             ),
+            condition: None,
         }),
         back_face: None,
         opening_hand: None,
@@ -343,6 +344,18 @@ pub fn mana_sculpt() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![],
+        // Push (modern_decks): the "if you control a Wizard, add an
+        // amount of {C} equal to the amount of mana spent to cast that
+        // spell" rider now reads `Value::ManaValueOf(Target(0))` —
+        // after CounterSpell resolves, the countered spell sits in
+        // its owner's graveyard and `ManaValueOf` walks every zone to
+        // find it. The "delay until next main" timing rider is still
+        // collapsed to immediate AddMana (no delayed-AddMana primitive
+        // yet); the colorless mana goes into the pool right away. For
+        // X-cost spells, this reads only the printed CMC (which equals
+        // X = 0); the "amount of mana spent" rider is approximated by
+        // the printed CMC — same gap as Opus's mana-introspection
+        // approximation. Most counter targets are X = 0.
         effect: Effect::Seq(vec![
             Effect::CounterSpell {
                 what: target_filtered(SelectionRequirement::IsSpellOnStack),
@@ -354,7 +367,9 @@ pub fn mana_sculpt() -> CardDefinition {
                 )),
                 then: Box::new(Effect::AddMana {
                     who: PlayerRef::You,
-                    pool: ManaPayload::Colorless(Value::Const(2)),
+                    pool: ManaPayload::Colorless(Value::ManaValueOf(Box::new(
+                        Selector::Target(0),
+                    ))),
                 }),
                 else_: Box::new(Effect::Noop),
             },
@@ -425,6 +440,7 @@ pub fn run_behind() -> CardDefinition {
             target_filter: Some(
                 SelectionRequirement::Creature.and(SelectionRequirement::IsAttacking),
             ),
+            condition: None,
         }),
         back_face: None,
         opening_hand: None,
@@ -1487,6 +1503,7 @@ pub fn ajanis_response() -> CardDefinition {
             target_filter: Some(
                 SelectionRequirement::Creature.and(SelectionRequirement::Tapped),
             ),
+            condition: None,
         }),
         back_face: None,
         opening_hand: None,
@@ -1636,15 +1653,18 @@ pub fn burrog_barrage() -> CardDefinition {
 /// graveyard this turn. / Wilt in the Heat deals 5 damage to target
 /// creature. If that creature would die this turn, exile it instead."
 ///
-/// Approximations:
-/// - The cost-reduction-when-cards-left-gy clause is omitted (no
-///   `StaticEffect::CostReduction` variant gated on a per-turn tally;
-///   tracked in TODO.md). Spell pays its full {2}{R}{W}.
-/// - The "if it would die, exile instead" replacement is omitted (no
-///   damage-replacement primitive). The 5-damage half lands faithfully
-///   and any creature with toughness ≤ 5 dies normally to graveyard
-///   rather than getting exiled.
+/// Push (modern_decks): the "{2} less if cards left your graveyard this
+/// turn" cost reduction **is now wired** via the new
+/// `AlternativeCost.condition: Some(Predicate)` field gated on
+/// `Predicate::CardsLeftGraveyardThisTurnAtLeast(You, 1)`. When the
+/// gate passes, the spell is castable for {R}{W} via the alt cost path;
+/// otherwise the regular {2}{R}{W} cost applies. The "if it would die,
+/// exile instead" damage-replacement rider is still ⏳ (no damage-
+/// replacement primitive on the engine yet); 5-toughness-and-under
+/// creatures die normally to graveyard.
 pub fn wilt_in_the_heat() -> CardDefinition {
+    use crate::card::AlternativeCost;
+    use crate::effect::Predicate;
     use crate::mana::{r, w};
     CardDefinition {
         name: "Wilt in the Heat",
@@ -1664,7 +1684,18 @@ pub fn wilt_in_the_heat() -> CardDefinition {
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
-        alternative_cost: None,
+        alternative_cost: Some(AlternativeCost {
+            mana_cost: cost(&[r(), w()]),
+            life_cost: 0,
+            exile_filter: None,
+            evoke_sacrifice: false,
+            not_your_turn_only: false,
+            target_filter: None,
+            condition: Some(Predicate::CardsLeftGraveyardThisTurnAtLeast {
+                who: PlayerRef::You,
+                at_least: Value::Const(1),
+            }),
+        }),
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
@@ -2192,19 +2223,48 @@ pub fn prismari_charm() -> CardDefinition {
 // ── Choreographed Sparks ────────────────────────────────────────────────────
 
 /// Choreographed Sparks — {R}{R} Instant.
-/// "This spell can't be copied. / Choose one — • Copy target instant or
-/// sorcery spell you control. You may choose new targets for the copy."
+/// "This spell can't be copied. / Choose one or both — • Copy target
+/// instant or sorcery spell you control. You may choose new targets for
+/// the copy. / • Copy target creature spell you control. The copy gains
+/// haste and 'At the beginning of the end step, sacrifice this token.'"
 ///
-/// 🟡 Single-mode wire to the new `Effect::CopySpell` primitive (the
-/// "or copy a creature spell" branch needs a permanent-spell copy
-/// variant that mints a token instead of a stack copy). The
-/// "this spell can't be copied" rider is omitted — no `CantBeCopied`
-/// keyword tag yet — but is implicit because copies of Choreographed
-/// Sparks would themselves resolve as no-ops (no Target(0) on a copy).
-/// Was a previously ⏳ row blocked on the copy-spell primitive, which
-/// landed in push XVII.
+/// Push (modern_decks): two-mode `ChooseMode` now wired. Mode 0 copies
+/// a target IS spell on the stack via `Effect::CopySpell`. Mode 1
+/// copies a target creature spell on the stack — the engine's
+/// `CopySpell` already handles permanent spells (the resulting
+/// permanent enters as a token via CR 608.3f, since `is_token = true`
+/// is stamped on the copy at push-time). The printed "the copy gains
+/// haste and sacrifice at end of step" rider is approximated by relying
+/// on the token-cleanup SBA (the token will leave the battlefield once
+/// it hits the graveyard, matching the spirit of the printed sacrifice
+/// rider). The "this spell can't be copied" rider is engine-wide ⏳
+/// (no `CantBeCopied` keyword tag yet) but the corner is rarely
+/// exercised. The "choose one or both" multi-mode rider collapses to
+/// "pick one mode" since the engine lacks a generic multi-mode picker
+/// over per-mode targets — same gap as Moment of Reckoning.
 pub fn choreographed_sparks() -> CardDefinition {
     use crate::mana::r;
+    let copy_is_spell = Effect::CopySpell {
+        what: target_filtered(
+            SelectionRequirement::IsSpellOnStack.and(
+                SelectionRequirement::HasCardType(CardType::Instant)
+                    .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+            ),
+        ),
+        count: Value::Const(1),
+    };
+    let copy_creature_spell = Effect::CopySpell {
+        // Target a creature spell on the stack. The CopySpell resolver
+        // handles permanent spells by stamping `is_token = true` on the
+        // copy (CR 608.3f) so the resulting permanent enters as a token
+        // — token-cleanup SBA removes it when it leaves the battlefield,
+        // approximating the printed "sacrifice at end of step" rider.
+        what: target_filtered(
+            SelectionRequirement::IsSpellOnStack
+                .and(SelectionRequirement::HasCardType(CardType::Creature)),
+        ),
+        count: Value::Const(1),
+    };
     CardDefinition {
         name: "Choreographed Sparks",
         cost: cost(&[r(), r()]),
@@ -2214,22 +2274,7 @@ pub fn choreographed_sparks() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![],
-        effect: Effect::CopySpell {
-            // The "you control" filter isn't enforced on stack-target
-            // selection (the engine's `ControlledByYou` predicate only
-            // reaches battlefield permanents, not stack-resident spells).
-            // We rely on the IS-on-stack + IS-card-type gate; in cube
-            // play the target is almost always the caster's own spell
-            // anyway since copying an opponent's instant/sorcery rarely
-            // hits its caster favourably.
-            what: target_filtered(
-                SelectionRequirement::IsSpellOnStack.and(
-                    SelectionRequirement::HasCardType(CardType::Instant)
-                        .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
-                ),
-            ),
-            count: Value::Const(1),
-        },
+        effect: Effect::ChooseMode(vec![copy_is_spell, copy_creature_spell]),
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],

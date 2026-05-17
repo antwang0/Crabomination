@@ -1650,6 +1650,7 @@ pub fn snuff_out() -> CardDefinition {
             evoke_sacrifice: false,
             not_your_turn_only: false,
             target_filter: None,
+            condition: None,
         }),
         back_face: None,
         opening_hand: None,

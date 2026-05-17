@@ -454,6 +454,7 @@ pub fn solitude() -> CardDefinition {
             evoke_sacrifice: true,
             not_your_turn_only: false,
             target_filter: None,
+            condition: None,
         }),
         back_face: None,
         opening_hand: None,

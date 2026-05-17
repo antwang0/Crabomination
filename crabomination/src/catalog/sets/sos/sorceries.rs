@@ -733,14 +733,21 @@ pub fn pull_from_the_grave() -> CardDefinition {
 /// the greatest mana value among creatures and planeswalkers they
 /// control."
 ///
-/// Approximation: the "greatest mana value" clause is approximated by
-/// targeting any opponent-controlled creature/planeswalker — the
-/// auto-decider picks the first eligible permanent (typically the
-/// largest cost one in our cube pools, since they're listed in roughly
-/// curve order). The "their choice" wording is collapsed to "we exile
-/// the chosen target", which is strictly better for the caster but
-/// matches the spell's role as targeted edict-removal.
+/// Push (modern_decks): the "greatest mana value" clause is now wired
+/// via the new `SelectionRequirement::HasGreatestManaValueAmongControlled`
+/// primitive — the inner filter is `Creature` or `Planeswalker`, and the
+/// outer wrapper enforces that the candidate's MV is at least as great
+/// as every other matching permanent under the same controller. The
+/// auto-target picker and cast-time validator both consult this
+/// predicate, so the caster can only exile the largest opp creature
+/// or planeswalker (ties pass permissively so any max-MV match is
+/// legal). The "their choice" wording is still collapsed to "we pick"
+/// since the engine has no opp-pick-from-among-their-permanents
+/// decision shape; in practice the caster's pick lands on the same MV
+/// bucket as the opponent would be forced to choose.
 pub fn end_of_the_hunt() -> CardDefinition {
+    let inner =
+        SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker);
     CardDefinition {
         name: "End of the Hunt",
         cost: cost(&[generic(1), b()]),
@@ -752,9 +759,10 @@ pub fn end_of_the_hunt() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Exile {
             what: target_filtered(
-                SelectionRequirement::ControlledByOpponent.and(
-                    SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
-                ),
+                SelectionRequirement::ControlledByOpponent
+                    .and(SelectionRequirement::HasGreatestManaValueAmongControlled(
+                        Box::new(inner),
+                    )),
             ),
         },
         activated_abilities: no_abilities(),

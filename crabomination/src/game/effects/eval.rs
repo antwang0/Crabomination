@@ -16,8 +16,16 @@ impl GameState {
         match v {
             Value::Const(n) => *n,
             Value::CountOf(s) => self.resolve_selector(s, ctx).len() as i32,
+            // CR-spec: "the power of X" returns the total across all
+            // entities X resolves to. Single-entity selectors (Target,
+            // This, TriggerSource) return that entity's power; fan-out
+            // selectors (`EachPermanent(filter)`) return the sum across
+            // every match — unblocking "total power among creatures you
+            // control" cards (Orysa Tide Choreographer's "total toughness
+            // ≥ 10" alt-cost gate, etc.). Same fan-out convention as
+            // `CountersOn`.
             Value::PowerOf(s) => self.resolve_selector(s, ctx).iter()
-                .find_map(|e| {
+                .filter_map(|e| {
                     let cid = e.as_permanent_id()?;
                     // CR 121 / Lorehold Excavation: read power from the
                     // battlefield first (live `power()` includes
@@ -45,9 +53,9 @@ impl GameState {
                     }
                     None
                 })
-                .unwrap_or(0),
+                .sum(),
             Value::ToughnessOf(s) => self.resolve_selector(s, ctx).iter()
-                .find_map(|e| {
+                .filter_map(|e| {
                     let cid = e.as_permanent_id()?;
                     if let Some(c) = self.battlefield_find(cid) {
                         return Some(c.toughness());
@@ -65,7 +73,7 @@ impl GameState {
                     }
                     None
                 })
-                .unwrap_or(0),
+                .sum(),
             Value::LifeOf(p) => self.resolve_player(p, ctx).map(|p| self.players[p].life).unwrap_or(0),
             Value::HandSizeOf(p) => self.resolve_player(p, ctx).map(|p| self.players[p].hand.len() as i32).unwrap_or(0),
             Value::GraveyardSizeOf(p) => self.resolve_player(p, ctx).map(|p| self.players[p].graveyard.len() as i32).unwrap_or(0),
@@ -586,6 +594,37 @@ impl GameState {
                         Some(src_id) => *cid != src_id,
                         None => true,
                     },
+                    // CR-spec: "the greatest mana value among [filter] they
+                    // control" — the candidate must (a) match `inner` and
+                    // (b) have an MV ≥ every other matching permanent under
+                    // the same controller. Used by SOS End of the Hunt;
+                    // ties pass permissively so the auto-target picks among
+                    // all max-MV matches.
+                    R::HasGreatestManaValueAmongControlled(inner) => {
+                        // Candidate must be a battlefield permanent that
+                        // matches the inner filter.
+                        let Some(cand) = self.battlefield_find(*cid) else {
+                            return false;
+                        };
+                        if !self.evaluate_requirement_static(inner, target, controller, source) {
+                            return false;
+                        }
+                        let cand_mv = cand.definition.cost.cmc();
+                        let cand_ctrl = cand.controller;
+                        // Walk the same controller's permanents matching
+                        // inner; reject if any has a strictly greater MV.
+                        !self.battlefield.iter().any(|other| {
+                            other.controller == cand_ctrl
+                                && other.id != *cid
+                                && self.evaluate_requirement_static(
+                                    inner,
+                                    &Target::Permanent(other.id),
+                                    controller,
+                                    source,
+                                )
+                                && other.definition.cost.cmc() > cand_mv
+                        })
+                    }
                     _ => unreachable!("handled above"),
                 }
             }
@@ -654,6 +693,10 @@ impl GameState {
             // (a card in a graveyard search can't be the source on the
             // battlefield).
             R::OtherThanSource => true,
+            // Battlefield-only ("greatest MV among controlled" walks the
+            // battlefield in the static variant; library searches don't
+            // surface this filter).
+            R::HasGreatestManaValueAmongControlled(_) => false,
             // Battlefield-state predicates can't be evaluated for library cards.
             R::Tapped | R::Untapped | R::WithCounter(_)
             | R::IsAttacking | R::IsBlocking | R::IsAttackingAlone | R::IsBlockingAlone

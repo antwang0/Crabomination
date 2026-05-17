@@ -749,7 +749,7 @@ impl GameState {
         // Threads `mana_spent` (and X / Converge) into the trigger context
         // so Increment / Opus payoffs reading `Value::CastSpellManaSpent`
         // observe the actual amount paid for *this* spell.
-        self.fire_spell_cast_triggers(p, card_id, !was_creature_spell, mana_spent);
+        self.fire_spell_cast_triggers(p, card_id, !was_creature_spell, mana_spent, converged_value);
         // CR 702.21: Ward triggers on each chosen target permanent the caster
         // doesn't control. Pushed last so Ward sits on top of the caster's
         // own SpellCast triggers (Magecraft, Prowess) — correct APNAP order
@@ -1055,6 +1055,31 @@ impl GameState {
             return Err(GameError::NoAlternativeCost);
         }
 
+        // Push (modern_decks): optional cast-time predicate gate. Used by
+        // SOS Wilt in the Heat's "{2} less if cards left your graveyard
+        // this turn" rider, where the alt cost is only legal under a
+        // specific game-state condition. Rejected before any state
+        // mutation (no card removal, no mana payment) so callers can
+        // retry the cast via the regular cost path.
+        if let Some(cond) = &alt.condition {
+            let ctx = crate::game::effects::EffectContext {
+                controller: p,
+                source: Some(card_id),
+                targets: vec![],
+                trigger_source: None,
+                mode: 0,
+                x_value: 0,
+                converged_value: 0,
+                mana_spent: 0,
+                source_name: None,
+                cast_from_hand: true,
+                event_amount: 0,
+            };
+            if !self.evaluate_predicate(cond, &ctx) {
+                return Err(GameError::NoAlternativeCost);
+            }
+        }
+
         // CR 119.4: A player can only pay an amount of life if their
         // life total is greater than or equal to the payment. Pre-flight
         // gate so we reject cleanly rather than driving life negative
@@ -1274,6 +1299,7 @@ impl GameState {
         cast_card: CardId,
         _is_noncreature: bool,
         mana_spent: u32,
+        converged_value: u32,
     ) {
         use crate::effect::{EventKind, EventScope};
         // Walk every permanent on the battlefield — `YourControl` triggers
@@ -1320,7 +1346,7 @@ impl GameState {
                     trigger_source: Some(crate::game::effects::EntityRef::Card(cast_card)),
                     mode: 0,
                     x_value: 0,
-                    converged_value: 0,
+                    converged_value,
                     mana_spent,
                     source_name: None,
                     cast_from_hand: true,
@@ -1347,7 +1373,14 @@ impl GameState {
                 target: auto_target,
                 mode,
                 x_value: 0,
-                converged_value: 0,
+                // Thread the just-cast spell's converged_value onto the trigger
+                // so per-cast `Value::ConvergedValue` reads the iterated spell's
+                // color count (Magmablood Archaic's "+1/+0 for each color spent
+                // to cast that spell" pump, Wildgrowth Archaic's "X additional
+                // counters where X = colors spent on the iterated creature
+                // spell"). Previously hard-coded to 0 → triggers reading
+                // ConvergedValue would silently no-op for converge fan-out.
+                converged_value,
                 // The trigger fires on a spell cast — preserve the cast
                 // spell's CardId so resolving effects (Effect::CopySpell,
                 // Selector::CastSpellTarget) can find it on the stack.

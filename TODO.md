@@ -12,6 +12,72 @@ Periodic spot-check of the rules document
 `MagicCompRules_20260417.txt`). Each rule below has a status tag (✅
 wired, 🟡 partial, ⏳ todo) plus a short note.
 
+- 🟡 **CR 118 — Costs** (push modern_decks batch 16, claude/modern_decks
+  branch — audit against `MagicCompRules_20260417.txt`): The cost
+  framework — what counts as a cost, payment order, replacement
+  primitives, and "X" costs. Audit:
+  (a) **118.1** "A cost is an action or payment necessary to take
+  another action…" — ✅ (the engine models costs as fields on
+  `ActivatedAbility` + `CardDefinition.cost` for spells, plus
+  `AlternativeCost` for pitch / cost-reduction-with-gate paths).
+  (b) **118.2** mana payment opens a mana-ability activation window —
+  ✅ (`try_pay_with_auto_tap` / `try_pay_after_snapshot` in
+  `game/actions.rs` allow mana-ability activation mid-payment; mana
+  abilities resolve immediately without the stack per CR 605.3).
+  (c) **118.3** "A player can't pay a cost without having the necessary
+  resources" — ✅ (`InsufficientMana` for mana, `InsufficientLife` for
+  life-cost, `CardIsTapped` for tap costs, `SelectionRequirementViolated`
+  for exile-other-from-gy preflight; all rejection paths roll back the
+  payment snapshot via `restore_payment_state`).
+  (d) **118.3a** "Paying mana is done by removing the indicated mana
+  from a player's mana pool" — ✅ (`ManaPool::try_pay`).
+  (e) **118.3b** "Paying life is done by subtracting the indicated
+  amount of life" — ✅ (`life_cost` deduction in `activate_ability`,
+  `LoseLife` event emission).
+  (f) **118.3c** "Activating mana abilities is not mandatory, even if
+  paying a cost is" — 🟡 (the auto-decider always activates mana
+  abilities to satisfy payment; a real UI player choosing not to tap a
+  source could fail a payment. Functionally indistinguishable from the
+  CR-correct outcome in bot harness).
+  (g) **118.4** "Some costs include an X" — ✅ for spells (`x_value`
+  on `CastSpell`, propagated through `ManaCost::with_x_value`), 🟡 for
+  activated abilities (Berta's `{X}{T}: …` activation has X-symbols in
+  the cost but no per-activation X prompt; the engine zeroes X for
+  activations — tracked under `Value::SacrificedToughness` row in
+  "Engine — Missing Mechanics" follow-ups).
+  (h) **118.5** "Some costs are represented by {0}" — ✅ (zero-mana
+  spells like Mox cycle, Prismari Bauble are castable with empty pool).
+  (i) **118.6** unpayable cost (mana_cost = None / empty + no alt) —
+  🟡 (engine has no general "unpayable" gate — `ManaCost::default()` is
+  paid as empty/zero, which is "free", not "unpayable". Suspended
+  creatures from exile would need this gate; not exercised by current
+  catalog).
+  (j) **118.7** cost reduction effects — 🟡 (`StaticEffect::CostReduction
+  { filter, amount }` covers "spells matching filter cost {N} less";
+  `CostReductionTargetingFilter` covers Killian, Ink Duelist–style "if
+  it targets X" reductions; 118.7a-c (color-vs-generic ordering) is
+  handled by `ManaCost::reduce_generic`. Hybrid pip reduction (118.7e)
+  is approximated — each hybrid pip is treated as its preferred color
+  half, not as a per-reduction choice. The new `AlternativeCost.condition`
+  field (push batch 16) covers "X less if [predicate]" paths via a
+  full alt-cost replacement rather than incremental reduction.
+  (k) **118.8** additional costs — 🟡 (tap, sac, life, exile-self,
+  exile-other-from-gy all supported; multi-target "as an additional
+  cost, pay X life for each X" pattern (Vicious Rivalry) collapses to
+  X-from-spell-cost rather than a separate additional-cost prompt;
+  same for "pay X life" additional costs that vary independently of
+  cast-time X). Convoke (`Effect::CastWithConvoke` path) lands as an
+  additional-cost replacement that consumes tapped creatures.
+  (l) **118.9** "Some costs are described as 'pay 0'" — ✅ (zero-mana
+  payment is a no-op, the auto-decider always pays).
+  (m) **118.10/12** other corner cases — ⏳ (cost-of-cost interactions
+  not exercised). Tests: implicit across the entire suite — every cast
+  / activation test exercises the cost framework; the new alt-cost
+  tests (Wilt in the Heat, Orysa Tide Choreographer) cover 118.7-style
+  cost-reduction-with-predicate paths. Promote to ✅ when 118.3c
+  (interactive mana-ability decline) and 118.7e (hybrid pip per-reduction
+  choice) both land.
+
 - 🟡 **CR 113 — Abilities** (push modern_decks batch 15,
   claude/modern_decks branch — newest revision audit against
   `MagicCompRules_20260417.txt`): The ability primitive — what
@@ -3538,3 +3604,77 @@ resolution time" in the Suggested next-up tasks section.
   bool` + a route through `activate_ability` / dispatcher to skip
   pre-removal ability sets. Tracked in the engine TODO row about
   `Modification::RemoveAllAbilities`.
+
+### Suggested next-up tasks (additions from push modern_decks batch 16)
+
+- ⏳ **Engine — `Value::ManaValueOf` zone-walk for stack spells** — the
+  push (modern_decks) Mana Sculpt promotion reads
+  `Value::ManaValueOf(Target(0))` after CounterSpell resolves; the
+  countered spell is in graveyard by then. The evaluator walks
+  battlefield → graveyard → hand → library → exile → stack. The stack
+  walk is the fallback for the *pre-resolve* read case (Wandering
+  Archaic's IS-cast trigger reads MV before the spell resolves).
+  The existing fallback order is correct; the new audit row in CR 118
+  documents the cost-introspection patterns.
+
+- ⏳ **Engine — multi-mode picker with per-mode targets (CR 700.2d)**
+  — Choreographed Sparks' "choose one or both" still collapses to
+  "pick one mode" today. Same gap exists for Moment of Reckoning
+  ("choose up to four. you may choose the same mode more than once").
+  A proper fix needs `Effect::ChooseN` to accept per-mode targets via
+  `ctx.targets` slot windows (mode 0 → slot 0, mode 1 → slots 1+, …)
+  or a `Decision::ModePicks` shape that surfaces N (mode, target)
+  tuples.
+
+- ⏳ **Engine — `AlternativeCost.condition` predicate framework
+  unlocked** — push batch 16's new `AlternativeCost.condition: Option<
+  Predicate>` field gates an alt cost on a cast-time game-state
+  predicate (Wilt in the Heat's "cards left your gy this turn", Orysa
+  Tide Choreographer's "total toughness ≥ 10"). The same primitive
+  unblocks Tenured Concocter's "becomes the target" alt cost shape
+  (still ⏳), Beaming Defiance-style "if you control X, alt cost N",
+  Suspend Aggression's alt cost variants, and the SOS Witherbloom
+  Decanter alt-cost-with-graveyard predicate. Add `condition` field
+  to alt-cost catalog rows when promoting these.
+
+- ⏳ **Engine — fan-out summation for `Value::PowerOf` / `Value::
+  ToughnessOf`** — push batch 16 changed `PowerOf` / `ToughnessOf` to
+  sum across fan-out selectors (`EachPermanent(filter)`) — single-
+  entity reads (Target/This/TriggerSource) unchanged. This unblocks
+  Orysa's "total toughness ≥ 10" gate, Biorhythm's "set life to total
+  power of creatures you control", Crackling Drake's "+1/+0 per
+  instant/sorcery in graveyard" via `PowerOf(EachMatching(Graveyard,
+  IS))`, and any future "sum stat across permanents" rider. Catalog
+  rows that currently approximate this with `CountOf × Const(2)` or
+  similar can promote to `PowerOf(EachPermanent(...))` once the
+  fan-out is documented as the canonical idiom.
+
+- ⏳ **Engine — `fire_spell_cast_triggers` threads converged_value
+  onto trigger** — push batch 16 fixes a long-standing zero. Per-cast
+  converge introspection now works for cast triggers (Magmablood
+  Archaic's "+1/+0 EOT per color spent" pump). The Wildgrowth Archaic
+  rider ("creatures you cast enter with X additional +1/+1 counters")
+  still needs the *next* step: when a creature spell resolves, the
+  permanent's ETB needs to read the cast spell's converged_value. That
+  requires either a CR 614.12 replacement-effect framework that
+  modifies how a permanent enters or threading the cast's
+  `converged_value` onto the resulting `CardInstance` at spell-resolve
+  time. Tracked separately.
+
+- ⏳ **Card — finish Wilt in the Heat's damage-replacement rider** —
+  the "if that creature would die this turn, exile it instead" half
+  is still ⏳ (no damage-replacement primitive). A `Effect::
+  ReplaceDamageWithExile { target, duration }` primitive would let
+  Wilt finish + future Vraska's Contempt / Path to Exile-style
+  "exile instead of destroy" cards.
+
+- ⏳ **Card — Suspend Aggression / Ark of Hunger / Tablet of Discovery
+  "may play this turn" pipeline** — three SOS Lorehold cards exile/mill
+  cards then "may play that card this turn". All blocked on the same
+  cast-from-exile-with-timer primitive. Wire shape: `Effect::
+  ExileMayPlay { what: Selector, until: Duration }` + a side-list on
+  `Player` of `(CardId, Duration)` tuples; the cast pipeline checks
+  this list when casting from exile. Same primitive unblocks
+  Practiced Scrollsmith, Conspiracy Theorist's attack trigger,
+  Archaic's Agony, Echocasting Symposium's Paradigm rider, and the
+  SOS Improvisation Capstone (the catalog's lone ⏳).

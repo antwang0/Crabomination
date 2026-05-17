@@ -3374,6 +3374,63 @@ fn end_of_the_hunt_exiles_opponent_creature() {
     );
 }
 
+#[test]
+fn end_of_the_hunt_rejects_smaller_target_when_greater_mv_exists() {
+    // Push (modern_decks): the new
+    // `SelectionRequirement::HasGreatestManaValueAmongControlled`
+    // predicate enforces "greatest MV among creatures and PWs they
+    // control". Opp controls a bear (CMC 2) + a craw wurm (CMC 6);
+    // targeting the bear must fail (bear's MV is not the greatest).
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let _wurm = g.add_card_to_battlefield(1, catalog::craw_wurm());
+    let id = g.add_card_to_hand(0, catalog::end_of_the_hunt());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    let res = g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    });
+    assert!(
+        res.is_err(),
+        "End of the Hunt should reject the bear (MV 2) when a CMC-6 wurm is on the battlefield",
+    );
+    assert!(
+        g.battlefield.iter().any(|c| c.id == bear),
+        "Bear stays on the battlefield since the cast was rejected",
+    );
+}
+
+#[test]
+fn end_of_the_hunt_picks_largest_creature_when_targeting_max() {
+    // Targeting the CMC-6 wurm is legal (it's the greatest-MV match).
+    let mut g = two_player_game();
+    let _bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let wurm = g.add_card_to_battlefield(1, catalog::craw_wurm());
+    let id = g.add_card_to_hand(0, catalog::end_of_the_hunt());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(wurm)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("End of the Hunt castable + greatest-MV target legal");
+    drain_stack(&mut g);
+
+    assert!(
+        g.exile.iter().any(|c| c.id == wurm),
+        "Wurm (greatest MV) should be exiled",
+    );
+}
+
 // ── Vicious Rivalry ─────────────────────────────────────────────────────────
 
 #[test]
@@ -4327,6 +4384,61 @@ fn orysa_etb_draws_two_cards() {
 }
 
 #[test]
+fn orysa_alt_cost_rejected_when_total_toughness_under_ten() {
+    // Push (modern_decks): "{3} less if creatures you control have total
+    // toughness ≥ 10" alt cost. With one bear (toughness 2) on the bf,
+    // the gate is 2 ≥ 10 = false → alt cast rejected.
+    let mut g = two_player_game();
+    let _bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::orysa_tide_choreographer());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    let res = g.perform_action(GameAction::CastSpellAlternative {
+        card_id: id,
+        pitch_card: None,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    });
+    assert!(res.is_err(),
+        "Alt cast rejected with total toughness < 10; got {:?}", res);
+}
+
+#[test]
+fn orysa_alt_cost_succeeds_when_total_toughness_ten_or_more() {
+    // 5 bears (5 × 2 toughness = 10) make the alt-cost {1}{U} legal.
+    let mut g = two_player_game();
+    for _ in 0..5 {
+        g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    }
+    // Seed library so the ETB draw 2 has cards to consume.
+    for _ in 0..3 {
+        let cid = g.next_id();
+        g.players[0].add_to_library_top(cid, catalog::grizzly_bears());
+    }
+    let id = g.add_card_to_hand(0, catalog::orysa_tide_choreographer());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: id,
+        pitch_card: None,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Orysa alt cost {1}{U} legal at total toughness ≥ 10");
+    drain_stack(&mut g);
+    assert!(
+        g.battlefield.iter().any(|c| c.definition.name == "Orysa, Tide Choreographer"),
+        "Orysa lands via alt cost",
+    );
+}
+
+#[test]
 fn exhibition_tidecaller_is_one_drop_blocker() {
     // Body-only test: the {U} 0/2 enters the battlefield with the
     // expected stat line and creature types. No Opus rider yet.
@@ -4936,6 +5048,62 @@ fn mana_sculpt_counters_spell() {
     assert_eq!(g.players[0].life, 20, "bolt should have been countered");
 }
 
+#[test]
+fn mana_sculpt_refunds_mana_value_of_countered_spell_with_wizard() {
+    // Push (modern_decks): the "if you control a Wizard, add an amount
+    // of {C} equal to the amount of mana spent on that spell" rider
+    // **now reads the countered spell's mana value** via
+    // `Value::ManaValueOf(Target(0))`. After CounterSpell resolves the
+    // target is in graveyard; `ManaValueOf` walks gy to find it.
+    use crate::card::CreatureType;
+    let mut g = two_player_game();
+    // P0 controls a Wizard so the gate passes.
+    // Add a Wizard creature (Eager First-Year is W, Human Student;
+    // use the Quandrix Apprentice or similar wizard). Pick a known
+    // Wizard from catalog: hydro_channeler (Merfolk Wizard).
+    let _ = CreatureType::Wizard;
+    g.add_card_to_battlefield(0, catalog::hydro_channeler());
+
+    // P1 casts a Lightning Bolt (CMC = 1).
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)),
+        additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Lightning Bolt castable for {R}");
+    let bolt_target = g
+        .stack
+        .iter()
+        .find_map(|s| match s {
+            StackItem::Spell { card, .. } => Some(card.id),
+            _ => None,
+        })
+        .unwrap();
+
+    // P0 casts Mana Sculpt countering the Bolt.
+    g.priority.player_with_priority = 0;
+    let sculpt = g.add_card_to_hand(0, catalog::mana_sculpt());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: sculpt, target: Some(Target::Permanent(bolt_target)),
+        additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Mana Sculpt castable for {1}{U}{U}");
+    drain_stack(&mut g);
+
+    // Bolt is countered (CMC = 1). Mana Sculpt's If-Wizard branch
+    // should have added 1 colorless mana (Bolt's MV) to the pool.
+    // The cast consumed all of the seeded mana, so the post-resolution
+    // pool size equals exactly the refunded amount.
+    let colorless_after = g.players[0].mana_pool.colorless_amount();
+    assert_eq!(colorless_after, 1,
+        "P0 should have gotten exactly Bolt's MV (1) colorless back; got {}",
+        colorless_after);
+}
+
 
 // ── push VI: Lorehold completion + Daydream + token-side triggers ──────────
 
@@ -5033,6 +5201,62 @@ fn wilt_in_the_heat_deals_five_to_creature() {
 
     assert!(!g.battlefield.iter().any(|c| c.id == bear), "Bear should die to 5 damage");
     assert!(g.players[1].graveyard.iter().any(|c| c.id == bear));
+}
+
+#[test]
+fn wilt_in_the_heat_alt_cost_rejected_with_empty_graveyard_history() {
+    // Push (modern_decks): alt cost {R}{W} is gated on
+    // `CardsLeftGraveyardThisTurnAtLeast(You, 1)`. At turn start with
+    // no cards leaving the graveyard, the alt cast must reject.
+    let mut g = two_player_game();
+    let _bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::wilt_in_the_heat());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    // No generic mana — only enough for the alt cost.
+    assert_eq!(g.players[0].cards_left_graveyard_this_turn, 0);
+
+    let res = g.perform_action(GameAction::CastSpellAlternative {
+        card_id: id,
+        pitch_card: None,
+        target: Some(Target::Permanent(_bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    });
+    assert!(res.is_err(),
+        "Alt cast rejected when no cards left graveyard this turn; got {:?}", res);
+    assert!(
+        g.players[0].hand.iter().any(|c| c.id == id),
+        "Wilt should still be in hand (alt cast rejected before any state mutation)",
+    );
+}
+
+#[test]
+fn wilt_in_the_heat_alt_cost_succeeds_after_graveyard_recursion() {
+    // Push (modern_decks): once a card has left the controller's
+    // graveyard this turn, the alt cost {R}{W} is legal.
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::wilt_in_the_heat());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    // Simulate "a card left your graveyard this turn" by bumping the
+    // per-turn counter directly.
+    g.players[0].cards_left_graveyard_this_turn = 1;
+
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: id,
+        pitch_card: None,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Wilt's alt cost {R}{W} is legal after a card leaves your gy this turn");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == bear),
+        "Bear takes 5 damage via the alt-cost path");
 }
 
 #[test]
@@ -5208,6 +5432,33 @@ fn topiary_lecturer_taps_for_g_equal_to_power() {
 
     // Base 1/2 → 1 power → 1 G.
     assert_eq!(g.players[0].mana_pool.amount(Color::Green), 1, "Adds G = power (1)");
+}
+
+#[test]
+fn topiary_lecturer_increment_lands_counter_on_three_mana_cast() {
+    // Increment: when you cast a spell with mana spent > P or T of this
+    // creature (1 or 2), put a +1/+1 counter. Casting a 3-mana spell
+    // satisfies the gate (3 > 2).
+    let mut g = two_player_game();
+    let lec = g.add_card_to_battlefield(0, catalog::topiary_lecturer());
+    drain_stack(&mut g);
+    let curse = g.add_card_to_hand(0, catalog::withering_curse());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: curse,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Withering Curse castable for {1}{B}{B}");
+    drain_stack(&mut g);
+    let lec_after = g.battlefield_find(lec).unwrap();
+    assert!(
+        lec_after.counter_count(CounterType::PlusOnePlusOne) >= 1,
+        "3-mana spell triggers Increment, +1/+1 counter on Topiary Lecturer",
+    );
 }
 
 #[test]
@@ -5437,6 +5688,34 @@ fn lorehold_the_historian_is_five_five_flyer_haste() {
 }
 
 #[test]
+fn lorehold_the_historian_opp_upkeep_loots_with_scripted_yes() {
+    // Push (modern_decks): per-opp-upkeep loot trigger fires off the
+    // `EventScope::OpponentControl` step trigger. With Lorehold on
+    // P0's bf and P1's upkeep step, the trigger fires; ScriptedDecider
+    // says "yes" to the MayDo, the player discards 1 + draws 1.
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::lorehold_the_historian());
+    drain_stack(&mut g);
+    // Seed P0's hand and library so loot has fuel.
+    g.add_card_to_hand(0, catalog::lightning_bolt());
+    let lib_top = g.next_id();
+    g.players[0].add_to_library_top(lib_top, catalog::lightning_bolt());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    // Set up P1 as active player at upkeep.
+    g.active_player_idx = 1;
+    let hand_before = g.players[0].hand.len();
+    let gy_before = g.players[0].graveyard.len();
+    // Fire the upkeep step for P1.
+    g.fire_step_triggers(crate::game::types::TurnStep::Upkeep);
+    drain_stack(&mut g);
+    // Hand size: -1 discard + 1 draw = 0 net change in count.
+    assert_eq!(g.players[0].hand.len(), hand_before,
+        "Hand size net unchanged: -1 discard + 1 draw = 0 net (after MayDo accepted)");
+    assert_eq!(g.players[0].graveyard.len(), gy_before + 1,
+        "P0's graveyard +1 from the discard");
+}
+
+#[test]
 fn mage_tower_referee_gets_counter_on_multicolored_cast() {
     let mut g = two_player_game();
     let referee = g.add_card_to_battlefield(0, catalog::mage_tower_referee());
@@ -5510,6 +5789,53 @@ fn rubble_rouser_etb_rummages() {
     let on_bf = g.battlefield.iter().find(|c| c.id == id).expect("Rouser on bf");
     assert_eq!(on_bf.power(), 1);
     assert_eq!(on_bf.toughness(), 4);
+}
+
+#[test]
+fn rubble_rouser_activation_exiles_gy_card_pings_opp_and_adds_red() {
+    // Push (modern_decks): `{T}, Exile a card from your graveyard:` is
+    // wired via `ActivatedAbility.exile_other_filter`. Activation drains
+    // a graveyard card (cost) and resolves: opp takes 1 damage + R goes
+    // into the player's pool.
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::rubble_rouser());
+    g.clear_sickness(id);
+    // Seed a card in P0's graveyard to exile as cost.
+    let gy_card = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    let opp_life_before = g.players[1].life;
+
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None,
+    })
+    .expect("Rubble Rouser activation w/ gy card to exile");
+    drain_stack(&mut g);
+
+    assert!(
+        g.exile.iter().any(|c| c.id == gy_card),
+        "Exiled gy card is in exile",
+    );
+    assert_eq!(g.players[1].life, opp_life_before - 1,
+        "Opp loses 1 life from the ping");
+    assert_eq!(g.players[0].mana_pool.amount(Color::Red), 1,
+        "Caster's pool has the R produced by the activation");
+}
+
+#[test]
+fn rubble_rouser_activation_rejected_with_empty_graveyard() {
+    // Activation cost requires exiling another card from your graveyard;
+    // with an empty graveyard the activation is rejected pre-payment.
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::rubble_rouser());
+    g.clear_sickness(id);
+    assert!(g.players[0].graveyard.is_empty());
+
+    let res = g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None,
+    });
+    assert!(res.is_err(),
+        "Activation rejected when gy is empty; got {:?}", res);
+    assert!(!g.battlefield_find(id).unwrap().tapped,
+        "Rouser should not be tapped (cost rolled back on gate fail)");
 }
 
 #[test]
@@ -6131,6 +6457,42 @@ fn magmablood_archaic_etb_with_converged_value_counters() {
 }
 
 #[test]
+fn magmablood_archaic_pumps_friendly_creatures_on_two_color_cast() {
+    // Push (modern_decks): IS-cast trigger pumps each of your
+    // creatures by +X/+0 EOT where X = colors of mana spent on the
+    // iterated cast. Cast a 2-color IS spell with Magmablood out;
+    // assert friendly bear gains +2/+0 (its power becomes 4).
+    let mut g = two_player_game();
+    let _mb = g.add_card_to_battlefield(0, catalog::magmablood_archaic());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    drain_stack(&mut g);
+    // Cast Quandrix Charm (a 2-color IS spell — {G}{U}).
+    let charm = g.add_card_to_hand(0, catalog::quandrix_charm());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    // ChooseMode 1 (destroy target enchantment) to avoid relying on
+    // a stack target for the spell body. Modes 0 / 2 also work but
+    // need targets.
+    g.perform_action(GameAction::CastSpell {
+        card_id: charm,
+        target: None,
+        additional_targets: vec![],
+        mode: Some(1),
+        x_value: None,
+    })
+    .expect("Quandrix Charm castable for {G}{U}");
+    drain_stack(&mut g);
+    // Magmablood's spell-cast trigger should have pumped the bear by
+    // +2/+0 EOT (G + U = 2 distinct colors).
+    let bear_after = g.battlefield_find(bear).unwrap();
+    assert!(
+        bear_after.power() >= 4,
+        "Bear should be pumped +2/+0 by Magmablood's per-cast pump (was 2; now {})",
+        bear_after.power(),
+    );
+}
+
+#[test]
 fn wildgrowth_archaic_def_is_zero_zero_avatar() {
     let card = catalog::wildgrowth_archaic();
     assert_eq!(card.power, 0);
@@ -6148,6 +6510,95 @@ fn ambitious_augmenter_is_one_one_turtle_wizard() {
     assert_eq!(card.cost.cmc(), 1);
     assert!(card.has_creature_type(crate::card::CreatureType::Turtle));
     assert!(card.has_creature_type(crate::card::CreatureType::Wizard));
+}
+
+#[test]
+fn ambitious_augmenter_increments_on_three_mana_cast() {
+    // Increment: when a 3-mana spell is cast (3 > toughness of 1), gain
+    // a +1/+1 counter. Same `increment_self_plus_one()` helper exercised
+    // by Hungry Graffalon / Cuboid Colony.
+    let mut g = two_player_game();
+    let aug = g.add_card_to_battlefield(0, catalog::ambitious_augmenter());
+    drain_stack(&mut g);
+    let bolt = g.add_card_to_hand(0, catalog::shock());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Shock castable for {R}");
+    drain_stack(&mut g);
+    // Shock costs 1 — equal to Augmenter's power/toughness (both 1).
+    // The Increment trigger checks "mana spent > P or T", so 1 > 1 is
+    // false; no counter should be added.
+    let aug_after = g.battlefield_find(aug).unwrap();
+    assert_eq!(aug_after.counter_count(CounterType::PlusOnePlusOne), 0,
+        "1-mana spell does not trigger Increment");
+    // Now cast a 2-mana spell — 2 > 1 should trigger Increment.
+    let bears = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bears, target: None,
+        additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Grizzly Bears castable for {1}{G}");
+    drain_stack(&mut g);
+    let aug_after = g.battlefield_find(aug).unwrap();
+    assert_eq!(aug_after.counter_count(CounterType::PlusOnePlusOne), 1,
+        "2-mana spell triggers Increment, +1/+1 counter on Augmenter");
+}
+
+#[test]
+fn ambitious_augmenter_death_with_counters_creates_fractal_with_counters() {
+    // CR 122.2 + push (modern_decks) death trigger: when Augmenter dies
+    // with N +1/+1 counters on it, create a Fractal token and transfer
+    // the N counters onto the Fractal.
+    let mut g = two_player_game();
+    let aug = g.add_card_to_battlefield(0, catalog::ambitious_augmenter());
+    drain_stack(&mut g);
+    // Manually stack three +1/+1 counters on Augmenter to simulate
+    // accumulated Increment.
+    if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == aug) {
+        c.add_counters(CounterType::PlusOnePlusOne, 3);
+    }
+    // Send Augmenter to the graveyard via the engine's die path so the
+    // CreatureDied trigger fires.
+    let _ = g.remove_to_graveyard_with_triggers(aug);
+    drain_stack(&mut g);
+    // Augmenter should be in graveyard and a Fractal token on the
+    // battlefield with 3 +1/+1 counters.
+    assert!(
+        g.players[0].graveyard.iter().any(|c| c.id == aug),
+        "Augmenter dies → goes to graveyard",
+    );
+    let fractal = g.battlefield.iter().find(|c| c.definition.name == "Fractal");
+    let Some(fractal) = fractal else {
+        panic!("Expected a Fractal token on the battlefield after Augmenter dies");
+    };
+    assert!(fractal.is_token, "Fractal is a token");
+    assert_eq!(
+        fractal.counter_count(CounterType::PlusOnePlusOne),
+        3,
+        "Fractal token should carry the dying Augmenter's 3 +1/+1 counters",
+    );
+}
+
+#[test]
+fn ambitious_augmenter_death_without_counters_does_not_create_fractal() {
+    let mut g = two_player_game();
+    let aug = g.add_card_to_battlefield(0, catalog::ambitious_augmenter());
+    drain_stack(&mut g);
+    let _ = g.remove_to_graveyard_with_triggers(aug);
+    drain_stack(&mut g);
+    assert!(
+        g.players[0].graveyard.iter().any(|c| c.id == aug),
+        "Augmenter dies → goes to graveyard",
+    );
+    assert!(
+        !g.battlefield.iter().any(|c| c.definition.name == "Fractal"),
+        "No Fractal token should be created when Augmenter dies without counters",
+    );
 }
 
 #[test]
@@ -8607,6 +9058,31 @@ fn felisa_no_counter_no_token() {
 }
 
 #[test]
+fn sundering_archaic_etb_converge_cap_blocks_high_mv_target() {
+    // Push (modern_decks): the converge-scaled MV cap is wired via
+    // `Effect::If { cond: ValueAtMost(ManaValueOf(Target), ConvergedValue) }`.
+    // Mono-colorless cast (ConvergedValue = 0) means MV ≤ 0 — so a CMC-2
+    // bear is NOT a legal exile target (the trigger no-ops cleanly).
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::sundering_archaic());
+    g.players[0].mana_pool.add_colorless(6);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Sundering Archaic castable for {6}");
+    drain_stack(&mut g);
+
+    // Bear still on battlefield: trigger no-ops since 2 > 0 (ConvergedValue).
+    assert!(g.battlefield.iter().any(|c| c.id == bear),
+        "Bear (CMC 2) should NOT be exiled — converge cap is 0 (no colored mana spent)");
+    assert!(!g.exile.iter().any(|c| c.id == bear),
+        "Bear should not be in exile");
+}
+
+#[test]
 fn sundering_archaic_two_mana_bottoms_graveyard_card() {
     // Activated `{2}` ability moves a graveyard card to the bottom of its
     // owner's library.
@@ -9909,11 +10385,11 @@ fn choreographed_sparks_copies_target_instant_you_control() {
     .expect("Bolt castable for {R}");
     // Bolt is on the stack now. Cast Sparks targeting the Bolt stack item by
     // its original CardId (the engine uses Target::Permanent(card_id) for
-    // stack targets, see Test of Talents).
+    // stack targets, see Test of Talents). Mode 0 = IS-spell copy.
     g.perform_action(GameAction::CastSpell {
         card_id: sparks, target: Some(Target::Permanent(bolt)),
         additional_targets: vec![],
-        mode: None, x_value: None,
+        mode: Some(0), x_value: None,
     })
     .expect("Choreographed Sparks castable for {R}{R}");
     drain_stack(&mut g);
@@ -9922,6 +10398,47 @@ fn choreographed_sparks_copies_target_instant_you_control() {
     // bear dies (2 toughness).
     assert!(!g.battlefield.iter().any(|c| c.id == bear),
         "Bear should die to original Bolt + Sparks copy (6 total damage)");
+}
+
+#[test]
+fn choreographed_sparks_mode_one_copies_target_creature_spell() {
+    // Push (modern_decks): mode 1 copies a creature spell on the stack;
+    // the copy resolves as a token (CR 608.3f), so two bears land
+    // simultaneously.
+    let mut g = two_player_game();
+    let bears = g.add_card_to_hand(0, catalog::grizzly_bears());
+    let sparks = g.add_card_to_hand(0, catalog::choreographed_sparks());
+    // Bears: {1}{G}; Sparks: {R}{R}; total {1}{G}{R}{R}.
+    g.players[0].mana_pool.add(Color::Red, 5);
+    g.players[0].mana_pool.add(Color::Green, 5);
+    g.players[0].mana_pool.add_colorless(5);
+    let bf_before = g.battlefield.len();
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: bears, target: None,
+        additional_targets: vec![],
+        mode: None, x_value: None,
+    })
+    .expect("Grizzly Bears castable for {1}{G}");
+    // Now cast Choreographed Sparks targeting the bear spell with
+    // mode 1 (creature spell copy).
+    g.perform_action(GameAction::CastSpell {
+        card_id: sparks, target: Some(Target::Permanent(bears)),
+        additional_targets: vec![],
+        mode: Some(1), x_value: None,
+    })
+    .expect("Choreographed Sparks castable for {R}{R} on creature spell");
+    drain_stack(&mut g);
+
+    // Original bears + token copy = 2 new permanents.
+    let new_bears: Vec<_> = g.battlefield.iter()
+        .filter(|c| c.definition.name == "Grizzly Bears")
+        .collect();
+    assert!(new_bears.len() >= 2, "Original + copy should both be on battlefield");
+    assert!(new_bears.iter().any(|c| c.is_token),
+        "The copy should be a token");
+    assert_eq!(g.battlefield.len(), bf_before + 2,
+        "Bf grew by 2 (original + token copy)");
 }
 
 #[test]

@@ -343,6 +343,20 @@ pub enum SelectionRequirement {
     /// targeting filters it routes through `evaluate_requirement_*`
     /// which read the source id from the resolution context.
     OtherThanSource,
+    /// True when the candidate has the greatest mana value among all
+    /// permanents that match `inner` and are controlled by the same
+    /// player as the candidate. Used by SOS End of the Hunt's
+    /// "Target opponent exiles a creature or planeswalker they control
+    /// with the greatest mana value among creatures and planeswalkers
+    /// they control" — `inner` is `Creature ∨ Planeswalker` and the
+    /// candidate must (a) match `inner` and (b) have an MV ≥ every
+    /// other permanent matching `inner` under the same controller.
+    ///
+    /// Ties are broken permissively: every candidate with the maximum
+    /// MV satisfies the predicate (the engine picks among them via the
+    /// auto-target heuristic). Battlefield-only — the predicate
+    /// returns false for entities outside the battlefield.
+    HasGreatestManaValueAmongControlled(Box<SelectionRequirement>),
     And(Box<SelectionRequirement>, Box<SelectionRequirement>),
     Or(Box<SelectionRequirement>, Box<SelectionRequirement>),
     Not(Box<SelectionRequirement>),
@@ -500,6 +514,17 @@ pub struct AlternativeCost {
     /// When `Some`, `cast_spell_alternative` validates the chosen target
     /// against this filter on top of the spell's normal target filter.
     pub target_filter: Option<SelectionRequirement>,
+    /// Optional cast-time game-state predicate. When `Some`, the alt cast
+    /// is rejected unless `condition` evaluates to true against the
+    /// caster's resolution context (no source, no target, no mode). Used
+    /// by SOS Wilt in the Heat's "{2} less if one or more cards left your
+    /// graveyard this turn" rider — the alt cost is gated on
+    /// `Predicate::CardsLeftGraveyardThisTurnAtLeast(You, 1)`. The
+    /// existing `target_filter` slot covers per-target gating; this slot
+    /// covers per-game-state gating that's independent of any chosen
+    /// target.
+    #[serde(default)]
+    pub condition: Option<crate::effect::Predicate>,
 }
 
 impl CardDefinition {
