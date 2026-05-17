@@ -185,7 +185,7 @@ via `#[path = "../tests/modern.rs"] mod tests_modern` in `game::mod`).
 | Despise | {B} | ✅ | `DiscardChosen(EachOpponent, Creature ∨ Planeswalker)`. |
 | Distress | {B}{B} | ✅ | `DiscardChosen(EachOpponent, Nonland ∧ Noncreature)`. |
 | Vryn Wingmare | {2}{W} | ✅ | 2/1 Bird Soldier Flying; `StaticEffect::AdditionalCostAfterFirstSpell(Noncreature, +1)` (Thalia mirror). |
-| Lava Coil | {1}{R} | 🟡 | `DealDamage(target Creature, 4)`. The "exile if it would die" rider collapses (no per-LTB replacement). |
+| Lava Coil | {1}{R} | ✅ (was 🟡) | Push (modern_decks): "if it would die, exile instead" rider approximated via `Effect::If { cond: ValueAtMost(ToughnessOf(Target), 4), then: Exile, else_: DealDamage 4 }`. When the target's toughness ≤ 4 (the lethal case), the engine routes directly to exile; otherwise just deals 4 damage. The prior-damage-on-creature edge case isn't captured (no general damage-replacement-with-exile primitive). Tests: `lava_coil_kills_a_four_toughness`, `lava_coil_deals_damage_without_killing_a_five_toughness`. |
 | Jaya's Greeting | {1}{R} | ✅ | `Seq([DealDamage(target Creature, 3), Scry 2])`. |
 | Telling Time | {1}{U} | ✅ | `Scry 2 + Draw 1` — same approximation as Anticipate. |
 | Read the Tides | {3}{U} | ✅ | `Draw 3` — Concentrate at off-color cost. |

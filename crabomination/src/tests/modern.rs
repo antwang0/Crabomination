@@ -6798,6 +6798,36 @@ fn lava_coil_kills_a_four_toughness() {
 
     assert!(!g.battlefield.iter().any(|c| c.id == serra),
         "Lava Coil (4 damage) should kill Serra Angel (4 toughness)");
+    // Push (modern_decks): Lava Coil now exiles creatures it would kill
+    // instead of graveyarding them, approximating the printed "if that
+    // creature would die this turn, exile it instead" rider.
+    assert!(g.exile.iter().any(|c| c.id == serra),
+        "Lava Coil should exile (not graveyard) creatures it would kill");
+    assert!(!g.players[1].graveyard.iter().any(|c| c.id == serra),
+        "Lava Coil should not put the dead creature in graveyard");
+}
+
+#[test]
+fn lava_coil_deals_damage_without_killing_a_five_toughness() {
+    // 4 damage doesn't kill a 5-toughness creature; the else branch
+    // resolves with `DealDamage` only (no exile).
+    let mut g = two_player_game();
+    let dragon = g.add_card_to_battlefield(1, catalog::shivan_dragon());  // 5/5
+    let id = g.add_card_to_hand(0, catalog::lava_coil());
+    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(dragon)),
+        additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("Lava Coil castable for {1}{R}");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == dragon),
+        "5-toughness dragon survives the 4 damage");
+    let damage = g.battlefield_find(dragon).unwrap().damage;
+    assert_eq!(damage, 4, "Dragon should have 4 damage marked");
 }
 
 /// Jaya's Greeting: 3 damage + scry 2.
@@ -9055,6 +9085,21 @@ fn tarfire_deals_two_damage_to_creature() {
     // Bear (2/2) takes 2 damage and dies.
     assert!(!g.battlefield.iter().any(|c| c.id == bear),
         "2-toughness Bear should be dead");
+}
+
+#[test]
+fn tarfire_carries_kindred_and_goblin_subtype() {
+    // Push (modern_decks): Tarfire is now "Kindred Instant — Goblin"
+    // (printed-Oracle-correct type line). Future Goblin-tribal payoffs
+    // can read `HasCreatureType(Goblin)` on the cast spell.
+    use crate::card::{CardType, CreatureType};
+    let def = catalog::tarfire();
+    assert!(def.card_types.contains(&CardType::Kindred),
+        "Tarfire is Kindred");
+    assert!(def.card_types.contains(&CardType::Instant),
+        "Tarfire is Instant");
+    assert!(def.subtypes.creature_types.contains(&CreatureType::Goblin),
+        "Tarfire has the Goblin creature subtype on its type line");
 }
 
 /// Grim Lavamancer's `{R}, {T}, Exile two from your gy:` activated

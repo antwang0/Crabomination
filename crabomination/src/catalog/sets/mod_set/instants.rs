@@ -266,19 +266,26 @@ pub fn thought_scour() -> CardDefinition {
     }
 }
 
-/// Tarfire — {R} Tribal Instant. Tarfire deals 2 damage to any target.
+/// Tarfire — {R} Kindred Instant — Goblin. Tarfire deals 2 damage to
+/// any target.
 ///
-/// Note: real Tarfire is a "Tribal Instant — Goblin", but the engine has
-/// no Tribal card type (and no card in the catalog keys off of "is Goblin
-/// spell"), so the tribal half is omitted. Damage to any target is wired
-/// faithfully.
+/// Push (modern_decks doc-sync): the `CardType::Kindred` tag is already
+/// wired (was added to the enum in a prior push). This push completes
+/// the printed type line by adding the Goblin creature subtype as well,
+/// so Goblin-tribal payoffs (Goblin Bushwhacker, Wort, Boggart Auntie,
+/// etc.) can recognise Tarfire on the stack via
+/// `Predicate::EntityMatches(TriggerSource, HasCreatureType(Goblin))`.
+/// Damage to any target is wired faithfully.
 pub fn tarfire() -> CardDefinition {
     CardDefinition {
         name: "Tarfire",
         cost: cost(&[r()]),
         supertypes: vec![],
         card_types: vec![CardType::Kindred, CardType::Instant],
-        subtypes: Subtypes::default(),
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin],
+            ..Default::default()
+        },
         power: 0,
         toughness: 0,
         keywords: vec![],

@@ -4606,18 +4606,36 @@ pub fn vryn_wingmare() -> CardDefinition {
 /// Lava Coil — {1}{R} Sorcery. Lava Coil deals 4 damage to target
 /// creature. If that creature would die this turn, exile it instead.
 ///
-/// Approximation: deal 4 damage to a creature. The exile-on-death
-/// rider isn't observable from this site (no per-LTB replacement
-/// effect), but the gameplay-relevant axis (kill 4-toughness creature
-/// for 2 mana, sorcery-speed) is preserved.
+/// Push (modern_decks): the exile-on-death rider **is now approximated**
+/// via `Effect::If { cond: ValueAtMost(ToughnessOf(Target(0)), 4),
+/// then: Exile, else_: DealDamage 4 }`. When the target's toughness is
+/// ≤ 4 (the lethal case at resolution time), the engine routes the
+/// target directly to exile instead of dealing damage that would
+/// trigger an SBA destroy → graveyard transition. When toughness > 4,
+/// the spell deals 4 damage (which by itself wouldn't kill the
+/// target, so the printed "would die" rider doesn't apply). The
+/// printed-Oracle edge case where prior damage marked on the creature
+/// would combine with Lava Coil's 4 to kill it is not captured (no
+/// general damage-replacement-with-exile primitive on the engine
+/// yet). Functionally close enough for typical play.
 pub fn lava_coil() -> CardDefinition {
+    use crate::card::Predicate;
     CardDefinition {
         name: "Lava Coil",
         cost: cost(&[generic(1), r()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::DealDamage {
-            to: target_filtered(SelectionRequirement::Creature),
-            amount: Value::Const(4),
+        effect: Effect::If {
+            cond: Predicate::ValueAtMost(
+                Value::ToughnessOf(Box::new(Selector::Target(0))),
+                Value::Const(4),
+            ),
+            then: Box::new(Effect::Exile {
+                what: target_filtered(SelectionRequirement::Creature),
+            }),
+            else_: Box::new(Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Creature),
+                amount: Value::Const(4),
+            }),
         },
         ..Default::default()
     }

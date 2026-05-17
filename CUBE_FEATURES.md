@@ -149,7 +149,7 @@ still ⏳.
 | Shivan Dragon | ✅ | Already in catalog. |
 | Balefire Dragon | 🟡 | {5}{R}{R} 6/6 Flying. `DealsCombatDamageToPlayer + SelfSource` trigger sweeps each opp creature for 6. The "that much damage" → fixed 6 collapse holds at unboosted-power play; pump-effect interactions don't retroactively boost the trigger payload. Test: `balefire_dragon_combat_damage_burns_each_opp_creature`. |
 | Pact of the Titan | ✅ | 4/4 red Giant token + delayed `PayOrLoseGame` upkeep ({4}{R}). |
-| Tarfire | 🟡 | 2 damage to any target. Tribal type omitted (engine has no Tribal card type). |
+| Tarfire | ✅ (was 🟡) | Push (modern_decks): the printed type line — "Kindred Instant — Goblin" — is now fully wired. `CardType::Kindred` + `CardType::Instant` + `CreatureType::Goblin` subtype. Goblin-tribal payoffs can recognise Tarfire on the stack. Tests: `tarfire_deals_two_damage_to_player`, `tarfire_deals_two_damage_to_creature`, `tarfire_carries_kindred_and_goblin_subtype`. |
 | Chaos Warp | 🟡 | {2}{R} Instant. `Move(target Permanent → Library(OwnerOf, Shuffled))` — the new `LibraryPosition::Shuffled` engine path actually reshuffles the library. The "reveal top, cast if permanent" half is collapsed (info-only without a cast-from-top pipeline). Test: `chaos_warp_sends_target_permanent_to_owners_library`. |
 | Big Score | ✅ | Discard + 2 Treasure + Draw 2. Treasure tokens are now fully functional — each carries its `{T}, Sac: Add one mana of any color` activated ability via `TokenDefinition::activated_abilities`. |
 | Mine Collapse | ✅ | {2}{R} sorcery. Sacrifice a Mountain on resolution (cost-as-first-step), deal 4 damage to any target. Test: `mine_collapse_sacrifices_mountain_and_deals_four`. |
