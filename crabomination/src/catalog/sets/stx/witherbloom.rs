@@ -1044,6 +1044,88 @@ pub fn witherbloom_decoctor() -> CardDefinition {
     }
 }
 
+// ── Witherbloom Glimmer (batch 19+) ────────────────────────────────────────
+
+/// Witherbloom Glimmer — {2}{B}{G}, 3/3 Plant Druid, Lifelink.
+///
+/// Printed Oracle (synthesised): "Lifelink."
+///
+/// Vanilla 4-mana 3/3 lifelink body. Lifelink is the headline rider
+/// — every combat hit gives the controller life, snowballing with
+/// the Witherbloom drain-magecraft package. Same P/T as Witherbloom
+/// Mossfeeder but trades the Pest ETB for lifelink.
+pub fn witherbloom_glimmer() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Glimmer",
+        cost: cost(&[generic(2), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Lifelink],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Pest Communion (batch 19+) ─────────────────────────────────────────────
+
+/// Pest Communion — {1}{B}{G} Sorcery.
+///
+/// Printed Oracle (synthesised): "Each opponent mills four cards.
+/// Each opponent loses 1 life and you gain 1 life."
+///
+/// 3-mana mill-and-drain combo. Mills 4 from each opponent (graveyard
+/// fill for opp combo decks + setup for delirium-style payoffs on
+/// our side) + 1 life drain. Similar to Witherbloom Command's
+/// mode 0 + 1 combo at the same cost without the mode prompt.
+pub fn pest_communion() -> CardDefinition {
+    CardDefinition {
+        name: "Pest Communion",
+        cost: cost(&[generic(1), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Mill {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(4),
+            },
+            Effect::Drain {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                to: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
 // ── Witherbloom Sapfiend (batch 19) ────────────────────────────────────────
 
 /// Witherbloom Sapfiend — {2}{G}, 2/3 Plant Beast.

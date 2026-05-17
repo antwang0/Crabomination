@@ -22735,6 +22735,217 @@ fn prismari_ember_channeler_pings_on_cast() {
     assert_eq!(g.players[1].life, life1_before - 4);
 }
 
+// ── batch 19+ extras (10 more cards) ───────────────────────────────────────
+
+#[test]
+fn silverquill_quillblade_pumps_by_creature_count() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // Add 2 more creatures to make 3 total.
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::silverquill_quillblade());
+    g.players[0].mana_pool.add(Color::White, 1);
+    let p_before = g.battlefield_find(bear).map(|c| c.power()).unwrap_or(0);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Quillblade castable");
+    drain_stack(&mut g);
+    let p_after = g.battlefield_find(bear).map(|c| c.power()).unwrap_or(0);
+    assert_eq!(p_after, p_before + 3, "Bear pumped by 3 (3 creatures controlled)");
+}
+
+#[test]
+fn inkling_decree_drains_two_and_mints_inkling() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::inkling_decree());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    let life0_before = g.players[0].life;
+    let life1_before = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Decree castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life0_before + 2);
+    assert_eq!(g.players[1].life, life1_before - 2);
+    let inklings: Vec<_> = g.battlefield.iter().filter(|c| {
+        c.controller == 0 && c.is_token && c.definition.name == "Inkling"
+    }).collect();
+    assert_eq!(inklings.len(), 1, "Decree mints 1 Inkling");
+}
+
+#[test]
+fn witherbloom_glimmer_is_a_three_three_lifelink_plant() {
+    let def = catalog::witherbloom_glimmer();
+    assert!(def.keywords.contains(&Keyword::Lifelink));
+    assert_eq!(def.power, 3);
+    assert_eq!(def.toughness, 3);
+    assert!(def.subtypes.creature_types.contains(&CreatureType::Plant));
+}
+
+#[test]
+fn pest_communion_mills_four_each_opp_and_drains_one() {
+    let mut g = two_player_game();
+    for _ in 0..10 {
+        g.add_card_to_library(1, catalog::island());
+    }
+    let id = g.add_card_to_hand(0, catalog::pest_communion());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let opp_lib_before = g.players[1].library.len();
+    let opp_gy_before = g.players[1].graveyard.len();
+    let life0_before = g.players[0].life;
+    let life1_before = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Communion castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].library.len(), opp_lib_before - 4);
+    assert_eq!(g.players[1].graveyard.len(), opp_gy_before + 4);
+    assert_eq!(g.players[0].life, life0_before + 1);
+    assert_eq!(g.players[1].life, life1_before - 1);
+}
+
+#[test]
+fn lorehold_recollect_returns_creature_from_graveyard() {
+    let mut g = two_player_game();
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::lorehold_recollect());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let bears_before = g.battlefield.iter()
+        .filter(|c| c.controller == 0 && c.definition.name == "Grizzly Bears")
+        .count();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Recollect castable");
+    drain_stack(&mut g);
+    let bears_after = g.battlefield.iter()
+        .filter(|c| c.controller == 0 && c.definition.name == "Grizzly Bears")
+        .count();
+    assert_eq!(bears_after, bears_before + 1, "Bear returned to battlefield");
+}
+
+#[test]
+fn lorehold_anthemist_anthem_buffs_other_spirits() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::lorehold_anthemist());
+    // Mint a Spirit token via Lorehold Echoist's ETB.
+    let echoist = g.add_card_to_hand(0, catalog::lorehold_echoist());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: echoist, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Echoist castable");
+    drain_stack(&mut g);
+    // Find the minted Spirit token id, then read its computed P/T via the layer system.
+    let spirit_id = g.battlefield.iter().find(|c| {
+        c.controller == 0 && c.is_token && c.definition.name == "Spirit"
+    }).map(|c| c.id).expect("Spirit minted");
+    let spirit_computed = g.compute_battlefield().into_iter()
+        .find(|c| c.id == spirit_id)
+        .expect("Spirit on computed battlefield");
+    // Lorehold Spirit token is 2/2; with +1/+1 anthem from Anthemist, should be 3/3.
+    assert_eq!(spirit_computed.power, 3, "Spirit pumped to 3/3 by Anthemist");
+    assert_eq!(spirit_computed.toughness, 3);
+}
+
+#[test]
+fn fractal_growth_adds_counter_and_pumps_by_counter_count() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::fractal_growth());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    let p_before = g.battlefield_find(bear).map(|c| c.power()).unwrap_or(0);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Growth castable");
+    drain_stack(&mut g);
+    // 0 prior counters → +1 counter (now 1) → +1/+1 EOT from 1 counter → 3/3 total (2 base + 1 counter)
+    // Then PumpPT(+1/+1) → 4/4 EOT.
+    // Actually: base 2/2, +1 counter → 3/3, then PumpPT +1/+1 → 4/4.
+    let p_after = g.battlefield_find(bear).map(|c| c.power()).unwrap_or(0);
+    assert_eq!(p_after, p_before + 2, "Bear +1 counter (+1) + EOT +1 = +2 power");
+}
+
+#[test]
+fn quandrix_calculus_etb_mills_two_and_draws_one() {
+    let mut g = two_player_game();
+    for _ in 0..5 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let id = g.add_card_to_hand(0, catalog::quandrix_calculus());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let lib_before = g.players[0].library.len();
+    let gy_before = g.players[0].graveyard.len();
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Calculus castable");
+    drain_stack(&mut g);
+    // Mill 2 + Draw 1 = library -3, graveyard +2, hand: -1 (cast) +1 (draw) = 0
+    assert_eq!(g.players[0].library.len(), lib_before - 3);
+    assert_eq!(g.players[0].graveyard.len(), gy_before + 2);
+    assert_eq!(g.players[0].hand.len(), hand_before);
+}
+
+#[test]
+fn prismari_alchemist_mints_treasure_on_instant_cast() {
+    let mut g = two_player_game();
+    let _al = g.add_card_to_battlefield(0, catalog::prismari_alchemist());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let treasures_before = g.battlefield.iter().filter(|c| {
+        c.controller == 0 && c.is_token && c.definition.name == "Treasure"
+    }).count();
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(crate::game::types::Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt castable");
+    drain_stack(&mut g);
+    let treasures_after = g.battlefield.iter().filter(|c| {
+        c.controller == 0 && c.is_token && c.definition.name == "Treasure"
+    }).count();
+    assert_eq!(treasures_after, treasures_before + 1, "Alchemist mints 1 Treasure");
+}
+
+#[test]
+fn prismari_cantrip_deals_one_damage_and_cantrips() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::prismari_cantrip());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Cantrip castable");
+    drain_stack(&mut g);
+    // -1 (cast) +1 (draw) = 0 net hand.
+    assert_eq!(g.players[0].hand.len(), hand_before);
+    // Bear took 1 damage (now 2/2 with 1 damage marked).
+    let bear_card = g.battlefield_find(bear).unwrap();
+    assert_eq!(bear_card.damage, 1);
+}
+
 #[test]
 fn prismari_flarespark_deals_two_and_cantrips() {
     let mut g = two_player_game();

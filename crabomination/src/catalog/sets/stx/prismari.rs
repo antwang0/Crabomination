@@ -788,6 +788,92 @@ pub fn prismari_ember_channeler() -> CardDefinition {
     }
 }
 
+// ── Prismari Alchemist (batch 19+) ─────────────────────────────────────────
+
+/// Prismari Alchemist — {2}{U}{R}, 2/3 Human Wizard.
+///
+/// Printed Oracle (synthesised): "Magecraft — Whenever you cast or
+/// copy an instant or sorcery spell, create a Treasure token."
+///
+/// 4-mana magecraft Treasure-mint body. Each cast feeds the ramp
+/// chain — combo with Goldspan Dragon (Treasure on attack) and
+/// Galazeth Prismari for explosive midgame mana. Slot into Prismari
+/// big-spell shells (Magma Opus, Crackle with Power).
+pub fn prismari_alchemist() -> CardDefinition {
+    use crate::game::effects::treasure_token;
+    CardDefinition {
+        name: "Prismari Alchemist",
+        cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: treasure_token(),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Prismari Cantrip (batch 19+) ───────────────────────────────────────────
+
+/// Prismari Cantrip — {U}{R} Instant.
+///
+/// Printed Oracle (synthesised): "Prismari Cantrip deals 1 damage to
+/// target creature. Draw a card."
+///
+/// 2-mana cheap cantrip-burn. Kills a 1-toughness creature for free
+/// (replaces itself) or shaves planeswalker loyalty. Bread-and-butter
+/// magecraft enabler in Prismari spell-heavy shells.
+pub fn prismari_cantrip() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Cantrip",
+        cost: cost(&[u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Creature),
+                amount: Value::Const(1),
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
 // ── Prismari Flarespark (batch 19) ─────────────────────────────────────────
 
 /// Prismari Flarespark — {1}{U}{R} Instant.

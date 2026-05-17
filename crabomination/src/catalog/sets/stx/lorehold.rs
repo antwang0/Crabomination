@@ -1252,6 +1252,106 @@ pub fn lorehold_spiritmaster() -> CardDefinition {
     }
 }
 
+// ── Lorehold Recollect (batch 19+) ─────────────────────────────────────────
+
+/// Lorehold Recollect — {1}{R}{W} Sorcery.
+///
+/// Printed Oracle (synthesised): "Return target creature or artifact
+/// card from your graveyard to the battlefield."
+///
+/// 3-mana reanimate with broader scope (creature OR artifact). Slot
+/// into Lorehold gy-recursion shells (Pillardrop Rescuer, Lorehold
+/// Reclamation). Same shape as Lorehold Reclamation but at 3 mana
+/// and accepting artifact targets too — pairs with Conjurer's Bauble.
+pub fn lorehold_recollect() -> CardDefinition {
+    use crate::card::Zone;
+    CardDefinition {
+        name: "Lorehold Recollect",
+        cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Move {
+            what: Selector::one_of(Selector::CardsInZone {
+                who: PlayerRef::You,
+                zone: Zone::Graveyard,
+                filter: SelectionRequirement::Creature.or(SelectionRequirement::Artifact),
+            }),
+            to: ZoneDest::Battlefield {
+                controller: PlayerRef::You,
+                tapped: false,
+            },
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Lorehold Anthemist (batch 19+) ─────────────────────────────────────────
+
+/// Lorehold Anthemist — {2}{R}{W}, 2/2 Spirit Cleric.
+///
+/// Printed Oracle (synthesised): "Other Spirit creatures you control
+/// get +1/+1."
+///
+/// Spirit-tribal anthem on a 2/2 frame. Boosts all other friendly
+/// Spirits — composes with Quintorius Field Historian's anthem
+/// (+1/+0), Sparring Regimen's tokens, and the Lorehold token chain
+/// (Echoist, Spiritmaster). Wired via the `tribal_anthem_for_name`
+/// compute-time injection pattern used by Tenured Inkcaster /
+/// Quintorius.
+pub fn lorehold_anthemist() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Lorehold Anthemist",
+        cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![StaticAbility {
+            description: "Other Spirit creatures you control get +1/+1.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::HasCreatureType(CreatureType::Spirit))
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                power: 1,
+                toughness: 1,
+            },
+        }],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
 // ── Lorehold Bonepriest (batch 19) ─────────────────────────────────────────
 
 /// Lorehold Bonepriest — {1}{R}{W}, 2/2 Spirit Cleric.

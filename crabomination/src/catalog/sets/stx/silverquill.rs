@@ -2158,6 +2158,98 @@ pub fn inkling_confessor() -> CardDefinition {
     }
 }
 
+// ── Silverquill Quillblade (batch 19+) ─────────────────────────────────────
+
+/// Silverquill Quillblade — {W} Instant.
+///
+/// Printed Oracle (synthesised): "Target creature you control gets
+/// +X/+0 until end of turn, where X is the number of creatures you
+/// control."
+///
+/// One-mana combat trick that scales with board count. On a 4-creature
+/// board the trigger source gets +4/+0 — same shape as Spear of
+/// Heliod for a faction-specific Silverquill tempo card. Wired via
+/// `Value::PermanentCountControlledBy(You)` filter inside a `PumpPT`.
+pub fn silverquill_quillblade() -> CardDefinition {
+    let creatures_you_control = Value::count(Selector::EachPermanent(
+        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+    ));
+    CardDefinition {
+        name: "Silverquill Quillblade",
+        cost: cost(&[w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::PumpPT {
+            what: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            ),
+            power: creatures_you_control,
+            toughness: Value::Const(0),
+            duration: Duration::EndOfTurn,
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Inkling Decree (batch 19+) ─────────────────────────────────────────────
+
+/// Inkling Decree — {3}{W}{B} Sorcery.
+///
+/// Printed Oracle (synthesised): "Each opponent loses 2 life and you
+/// gain 2 life. Create a 1/1 white and black Inkling creature token
+/// with flying."
+///
+/// 5-mana drain-and-token combo. Drains 2 (4-life swing) + mints a
+/// 1/1 Inkling flier. Mid-game stabilizer with built-in tempo body.
+pub fn inkling_decree() -> CardDefinition {
+    use crate::catalog::sets::sos::inkling_token;
+    CardDefinition {
+        name: "Inkling Decree",
+        cost: cost(&[generic(3), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Drain {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                to: Selector::You,
+                amount: Value::Const(2),
+            },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: inkling_token(),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
 // ── Inkling Inkrider (batch 19) ────────────────────────────────────────────
 
 /// Inkling Inkrider — {2}{W}{B}, 3/2 Inkling Knight, Flying +

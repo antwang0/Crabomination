@@ -950,6 +950,111 @@ pub fn quandrix_sapsprout() -> CardDefinition {
     }
 }
 
+// ── Fractal Growth (batch 19+) ─────────────────────────────────────────────
+
+/// Fractal Growth — {G}{U} Sorcery.
+///
+/// Printed Oracle (synthesised): "Put a +1/+1 counter on target
+/// creature you control. Then that creature gets +1/+1 until end of
+/// turn for each +1/+1 counter on it."
+///
+/// 2-mana combo trick — add 1 counter + temporarily double the body.
+/// On a 2/2 Bear with 0 prior counters: 1 → +1/+1 EOT → 3/3 EOT.
+/// On a creature with 3 prior counters: 4 → +4/+4 EOT → 8/8 EOT.
+/// Pure tempo burst for Quandrix counter shells.
+pub fn fractal_growth() -> CardDefinition {
+    CardDefinition {
+        name: "Fractal Growth",
+        cost: cost(&[g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::AddCounter {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+            Effect::PumpPT {
+                what: Selector::Target(0),
+                power: Value::CountersOn {
+                    what: Box::new(Selector::Target(0)),
+                    kind: CounterType::PlusOnePlusOne,
+                },
+                toughness: Value::CountersOn {
+                    what: Box::new(Selector::Target(0)),
+                    kind: CounterType::PlusOnePlusOne,
+                },
+                duration: crate::effect::Duration::EndOfTurn,
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Quandrix Calculus (batch 19+) ──────────────────────────────────────────
+
+/// Quandrix Calculus — {2}{G}{U}, 2/2 Fractal Wizard.
+///
+/// Printed Oracle (synthesised): "When this creature enters, mill
+/// two cards. Then draw a card."
+///
+/// 4-mana 2/2 ETB self-mill-and-cantrip body. Mills 2 of your own
+/// cards (graveyard fuel for Lorehold/Witherbloom recursion) and
+/// draws 1. Fractal subtype tags into Quandrix counter shells.
+pub fn quandrix_calculus() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Calculus",
+        cost: cost(&[generic(2), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::Mill {
+                    who: Selector::You,
+                    amount: Value::Const(2),
+                },
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
+            ]),
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
 // ── Fractal Multiplier (batch 19) ──────────────────────────────────────────
 
 /// Fractal Multiplier — {2}{G}{U} Sorcery.
