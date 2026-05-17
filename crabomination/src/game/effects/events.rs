@@ -71,10 +71,18 @@ pub(crate) fn event_matches_spec(
             event,
             GameEvent::CounterAdded { card_id, .. } if *card_id == source.id
         ),
+        // CR 810.8 — in Two-Headed Giant, "you" effects fan out to
+        // teammates: a "whenever you gain life" trigger on team A
+        // fires regardless of which team-A member's life event
+        // produced it. `same_team` collapses to `a == b` for solo
+        // teams (singleton FFA / 1v1 / Commander) so 1v1 behavior
+        // is unchanged. Symmetric treatment for OpponentControl —
+        // teammate actions aren't "opponent" actions, so the
+        // implicit "not me" widens to "not on my team."
         EventScope::YourControl => event_actor(state, event)
-            .is_some_and(|p| p == source.controller),
+            .is_some_and(|p| state.same_team(p, source.controller)),
         EventScope::OpponentControl => event_actor(state, event)
-            .is_some_and(|p| p != source.controller),
+            .is_some_and(|p| !state.same_team(p, source.controller)),
         EventScope::AnyPlayer | EventScope::ActivePlayer => true,
         EventScope::AnotherOfYours => {
             // ETB / die / attack triggers for "another creature/permanent

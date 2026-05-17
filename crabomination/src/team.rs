@@ -20,6 +20,21 @@ pub struct Team {
     pub id: TeamId,
     /// Seat indices of the players on this team.
     pub members: Vec<usize>,
+    /// Shared life pool. `Some(n)` means the team's members share a
+    /// single life total (Two-Headed Giant — CR 810.8). `None` means
+    /// each member keeps their own `Player.life` (solo teams / FFA /
+    /// 1v1 — the default).
+    ///
+    /// When set, every life mutation routes here instead of the
+    /// per-player field; `Player.life` is left at its initial value
+    /// and effectively ignored. `effective_life(seat)` collapses
+    /// both modes for callers that just want "what's the current
+    /// life total to consult for X."
+    ///
+    /// `#[serde(default)]` so snapshots written before the field
+    /// existed deserialize cleanly as `None` (solo-team semantics).
+    #[serde(default)]
+    pub shared_life: Option<i32>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

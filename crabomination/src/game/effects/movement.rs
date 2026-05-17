@@ -61,9 +61,18 @@ impl GameState {
                         to_card: None,
                     });
                 } else {
-                    self.players[p].life -= amount as i32;
+                    self.adjust_life(p, -(amount as i32));
                     events.push(GameEvent::DamageDealt { amount, to_player: Some(p), to_card: None });
                     events.push(GameEvent::LifeLost { player: p, amount });
+                }
+                // Phase M: direct damage from a commander source also
+                // counts toward the 21-commander-damage SBA
+                // (CR 704.5v doesn't restrict the damage type — combat
+                // and non-combat both apply).
+                if let Some(src) = source
+                    && self.is_commander(src)
+                {
+                    self.record_commander_damage(p, src, amount);
                 }
             }
             EntityRef::Permanent(cid) => {
@@ -229,6 +238,32 @@ impl GameState {
         dest: &ZoneDest,
         events: &mut Vec<GameEvent>,
     ) {
+        // Phase H — consult the replacement-effect registry. The
+        // resolver only sees the *destination kind* (a `Zone`); the
+        // origin is left unconstrained here (passed as
+        // `Zone::Battlefield` for now, which covers the Commander
+        // case since its replacement effect uses `from: None`).
+        // If the resolver redirects to a different zone, we hand off
+        // to `place_card_at_resolved_zone` which handles the
+        // terminal-zone placement uniformly. Same-zone return falls
+        // through to the existing rich `ZoneDest` logic so player /
+        // tapped / library-position information is preserved.
+        let intended = match dest {
+            ZoneDest::Hand(_) => crate::card::Zone::Hand,
+            ZoneDest::Library { .. } => crate::card::Zone::Library,
+            ZoneDest::Battlefield { .. } => crate::card::Zone::Battlefield,
+            ZoneDest::Graveyard => crate::card::Zone::Graveyard,
+            ZoneDest::Exile => crate::card::Zone::Exile,
+        };
+        let resolved = self.resolve_zone_change(
+            card.id,
+            crate::card::Zone::Battlefield,
+            intended,
+        );
+        if resolved != intended {
+            self.place_card_at_resolved_zone(card, resolved);
+            return;
+        }
         match dest {
             ZoneDest::Hand(who) => {
                 let ctx = EffectContext::for_spell(default_player, None, 0, 0);

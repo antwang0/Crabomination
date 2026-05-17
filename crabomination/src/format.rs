@@ -8,6 +8,7 @@
 use std::collections::HashMap;
 
 use crate::card::{CardDefinition, Supertype};
+use crate::mana::{ColorSet, ManaSymbol};
 
 // ── Format enum ───────────────────────────────────────────────────────────────
 
@@ -203,6 +204,19 @@ impl std::fmt::Display for DeckError {
 
 impl std::error::Error for DeckError {}
 
+/// A complete deck list. Used by the loader and by formats that
+/// distinguish main deck from sideboard / commander zone (Phase J).
+///
+/// `commanders` is plural to accommodate Partner / Background — the
+/// Commander format permits zero, one, or two commander cards. Other
+/// formats leave it empty.
+#[derive(Debug, Clone, Default)]
+pub struct Deck {
+    pub main: Vec<CardDefinition>,
+    pub commanders: Vec<CardDefinition>,
+    pub sideboard: Vec<CardDefinition>,
+}
+
 /// Basic land names that are exempt from the copies-per-deck limit.
 const BASIC_LANDS: &[&str] = &["Plains", "Island", "Swamp", "Mountain", "Forest",
                                 "Wastes", "Snow-Covered Plains", "Snow-Covered Island",
@@ -252,6 +266,143 @@ pub fn validate_deck(deck: &[CardDefinition], format: Format) -> Result<(), Vec<
     }
 
     if errors.is_empty() { Ok(()) } else { Err(errors) }
+}
+
+// ── Commander color identity (Phase K) ────────────────────────────────────
+
+/// Compute a card's *color identity* — the union of all colored mana
+/// symbols in its mana cost (CR 903.4). Hybrid pips contribute both
+/// halves; Phyrexian pips contribute their colored half. Generic /
+/// Colorless / Snow / X contribute nothing.
+///
+/// Phase K limitation: rules-text mana symbols and printed color
+/// indicators are not modeled. The format doesn't track rules text
+/// as parseable mana tokens, and no cards in scope rely on the
+/// distinction (cards like Cao Cao that grant identity via reminder
+/// text aren't in the catalog). When such a card is added, extend
+/// `CardDefinition` with a `printed_color_identity: Option<ColorSet>`
+/// override field that this helper unions in.
+pub fn color_identity(def: &CardDefinition) -> ColorSet {
+    let mut out = ColorSet::empty();
+    for s in &def.cost.symbols {
+        match s {
+            ManaSymbol::Colored(c) | ManaSymbol::Phyrexian(c) => out.insert(*c),
+            ManaSymbol::Hybrid(a, b) => {
+                out.insert(*a);
+                out.insert(*b);
+            }
+            ManaSymbol::Generic(_)
+            | ManaSymbol::Colorless(_)
+            | ManaSymbol::Snow
+            | ManaSymbol::X => {}
+        }
+    }
+    out
+}
+
+/// Errors specific to Commander deck validation (on top of the
+/// generic [`DeckError`] checks).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum CommanderDeckError {
+    /// No commander was supplied (Commander requires at least one).
+    MissingCommander,
+    /// More than two commanders were supplied (Partner / Background
+    /// caps at two — anything beyond is illegal).
+    TooManyCommanders { found: u32 },
+    /// A commander card is not a legendary creature (CR 903.3a).
+    /// Phase K accepts Planeswalkers that printed text grants
+    /// commander-eligibility via a different path; that nuance can
+    /// be added later by extending `CardDefinition` with a
+    /// `can_be_commander: bool` override.
+    NotLegendaryCreature { card_name: &'static str },
+    /// A main-deck card's color identity is not a subset of the
+    /// commander's combined color identity.
+    OffColorIdentity {
+        card_name: &'static str,
+        card_identity: ColorSet,
+        commander_identity: ColorSet,
+    },
+}
+
+impl std::fmt::Display for CommanderDeckError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            CommanderDeckError::MissingCommander => write!(f, "Commander deck requires a commander"),
+            CommanderDeckError::TooManyCommanders { found } => {
+                write!(f, "Too many commanders ({found}); maximum is 2 (Partner / Background)")
+            }
+            CommanderDeckError::NotLegendaryCreature { card_name } => {
+                write!(f, "{card_name} is not a legendary creature and cannot be a commander")
+            }
+            CommanderDeckError::OffColorIdentity {
+                card_name,
+                card_identity,
+                commander_identity,
+            } => write!(
+                f,
+                "{card_name} (identity {card_identity:?}) is outside the commander's identity ({commander_identity:?})",
+            ),
+        }
+    }
+}
+
+impl std::error::Error for CommanderDeckError {}
+
+/// Validate a Commander-format deck. Runs the generic
+/// [`validate_deck`] checks first (100-card singleton main, etc.),
+/// then layers on Commander-specific rules: at least one commander,
+/// at most two, each must be a legendary creature, every main-deck
+/// card's color identity ⊆ commander's combined identity.
+///
+/// Errors from the two layers are returned as a single combined
+/// `Vec` (generic deck errors wrapped, commander errors plain).
+pub fn validate_commander_deck(
+    deck: &Deck,
+) -> Result<(), (Vec<DeckError>, Vec<CommanderDeckError>)> {
+    let mut generic = Vec::new();
+    if let Err(es) = validate_deck(&deck.main, Format::Commander) {
+        generic = es;
+    }
+
+    let mut cmd_errors = Vec::new();
+    if deck.commanders.is_empty() {
+        cmd_errors.push(CommanderDeckError::MissingCommander);
+    } else if deck.commanders.len() > 2 {
+        cmd_errors.push(CommanderDeckError::TooManyCommanders {
+            found: deck.commanders.len() as u32,
+        });
+    }
+
+    // Each commander must be a legendary creature.
+    for cmd in &deck.commanders {
+        if !(cmd.is_legendary() && cmd.is_creature()) {
+            cmd_errors.push(CommanderDeckError::NotLegendaryCreature { card_name: cmd.name });
+        }
+    }
+
+    // Combined color identity is the union of every commander's.
+    let mut combined = ColorSet::empty();
+    for cmd in &deck.commanders {
+        combined = combined.union(color_identity(cmd));
+    }
+
+    // Every main-deck card must fit inside the commander identity.
+    for card in &deck.main {
+        let id = color_identity(card);
+        if !id.is_subset_of(combined) {
+            cmd_errors.push(CommanderDeckError::OffColorIdentity {
+                card_name: card.name,
+                card_identity: id,
+                commander_identity: combined,
+            });
+        }
+    }
+
+    if generic.is_empty() && cmd_errors.is_empty() {
+        Ok(())
+    } else {
+        Err((generic, cmd_errors))
+    }
 }
 
 #[cfg(test)]

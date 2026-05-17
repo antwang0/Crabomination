@@ -142,6 +142,23 @@ pub enum GameAction {
     DeclareBlockers(Vec<(CardId, CardId)>),
     ActivateLoyaltyAbility { card_id: CardId, ability_index: usize, target: Option<Target> },
     CastFlashback { card_id: CardId, target: Option<Target>, #[serde(default)] additional_targets: Vec<Target>, mode: Option<usize>, x_value: Option<u32> },
+    /// Cast a Commander from your command zone (Phase L). The mana
+    /// cost is the printed cost plus `{2}` for every prior time this
+    /// commander has been cast from the command zone this game
+    /// (the "commander tax", CR 903.8). Targets / modes / X follow
+    /// the same convention as `CastSpell`. The card is removed from
+    /// the command zone, pushed onto the stack as a spell, and ends
+    /// up on the battlefield (or in the appropriate zone) on
+    /// resolution — and Phase J's registered replacement effect
+    /// snags it back to the command zone when it would leave play.
+    CastFromCommandZone {
+        card_id: CardId,
+        target: Option<Target>,
+        #[serde(default)]
+        additional_targets: Vec<Target>,
+        mode: Option<usize>,
+        x_value: Option<u32>,
+    },
     PassPriority,
     SubmitDecision(DecisionAnswer),
 }

@@ -414,6 +414,12 @@ pub enum DecisionWire {
     ChooseCreatureType {
         source: CardId,
     },
+    /// CR 903.9b commander redirect — owner may send the commander to
+    /// the command zone instead of `would_be`.
+    CommanderRedirect {
+        commander: CardId,
+        would_be: crate::card::Zone,
+    },
 }
 
 impl From<&Decision> for DecisionWire {
@@ -466,6 +472,12 @@ impl From<&Decision> for DecisionWire {
             }
             Decision::ChooseCreatureType { source } => {
                 DecisionWire::ChooseCreatureType { source: *source }
+            }
+            Decision::CommanderRedirect { commander, would_be } => {
+                DecisionWire::CommanderRedirect {
+                    commander: *commander,
+                    would_be: *would_be,
+                }
             }
         }
     }

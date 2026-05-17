@@ -467,9 +467,7 @@ impl GameState {
                 if amt == 0 { return Ok(()); }
                 for ent in self.resolve_selector(who, ctx) {
                     if let EntityRef::Player(p) = ent {
-                        self.players[p].life += amt as i32;
-                        self.players[p].life_gained_this_turn =
-                            self.players[p].life_gained_this_turn.saturating_add(amt);
+                        self.adjust_life(p, amt as i32);
                         events.push(GameEvent::LifeGained { player: p, amount: amt });
                     }
                 }
@@ -481,7 +479,7 @@ impl GameState {
                 if amt == 0 { return Ok(()); }
                 for ent in self.resolve_selector(who, ctx) {
                     if let EntityRef::Player(p) = ent {
-                        self.players[p].life -= amt as i32;
+                        self.adjust_life(p, -(amt as i32));
                         events.push(GameEvent::LifeLost { player: p, amount: amt });
                     }
                 }
@@ -494,8 +492,8 @@ impl GameState {
                 let new_total = self.evaluate_value(amount, ctx);
                 for ent in self.resolve_selector(who, ctx) {
                     if let EntityRef::Player(p) = ent {
-                        let delta = new_total - self.players[p].life;
-                        self.players[p].life = new_total;
+                        let delta = new_total - self.effective_life(p);
+                        self.set_life(p, new_total);
                         if delta > 0 {
                             let amt = delta as u32;
                             self.players[p].life_gained_this_turn =
@@ -517,15 +515,13 @@ impl GameState {
                 if amt == 0 { return Ok(()); }
                 for ent in self.resolve_selector(from, ctx) {
                     if let EntityRef::Player(p) = ent {
-                        self.players[p].life -= amt as i32;
+                        self.adjust_life(p, -(amt as i32));
                         events.push(GameEvent::LifeLost { player: p, amount: amt });
                     }
                 }
                 for ent in self.resolve_selector(to, ctx) {
                     if let EntityRef::Player(p) = ent {
-                        self.players[p].life += amt as i32;
-                        self.players[p].life_gained_this_turn =
-                            self.players[p].life_gained_this_turn.saturating_add(amt);
+                        self.adjust_life(p, amt as i32);
                         events.push(GameEvent::LifeGained { player: p, amount: amt });
                     }
                 }
@@ -1350,8 +1346,8 @@ impl GameState {
                         // life than you have, so insufficient life means
                         // payment fails.
                         let n = *n as i32;
-                        if self.players[affected_controller].life >= n {
-                            self.players[affected_controller].life -= n;
+                        if self.effective_life(affected_controller) >= n {
+                            self.adjust_life(affected_controller, -n);
                             true
                         } else {
                             false
@@ -1815,7 +1811,7 @@ impl GameState {
                 let life_ok = self.players[p].life > *life_cost as i32;
                 if mana_paid && life_ok {
                     if *life_cost > 0 {
-                        self.players[p].life -= *life_cost as i32;
+                        self.adjust_life(p, -(*life_cost as i32));
                         paid_events.push(GameEvent::LifeLost { player: p, amount: *life_cost });
                     }
                     events.append(&mut paid_events);
@@ -1910,7 +1906,7 @@ impl GameState {
                 // Lose 1 life per revealed card (Spoils of the Vault rider).
                 let life = (revealed as u32).saturating_mul(*life_per_revealed);
                 if life > 0 {
-                    self.players[p].life -= life as i32;
+                    self.adjust_life(p, -(life as i32));
                     events.push(GameEvent::LifeLost { player: p, amount: life });
                 }
                 let mut sba = self.check_state_based_actions();

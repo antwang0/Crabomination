@@ -533,7 +533,10 @@ fn apply_debug(
             if delta == 0 {
                 return false;
             }
-            state.players[seat].life = state.players[seat].life.saturating_add(delta);
+            // Routes through the team-aware helper so that in 2HG the
+            // shared pool is the one nudged, not the individual seat's
+            // dormant `life` field.
+            state.adjust_life(seat, delta);
             true
         }
     };

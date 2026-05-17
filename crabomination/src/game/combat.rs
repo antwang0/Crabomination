@@ -18,12 +18,17 @@ impl GameState {
             return Err(GameError::NotYourPriority);
         }
 
-        // Validate every attack target up-front.
+        // Validate every attack target up-front. The defender must be an
+        // *opponent* — not self, not a teammate. `same_team` returns true
+        // for `a == b`, so this single check rules out both cases. In
+        // 1v1 / FFA it behaves identically to the old `target != active`
+        // check; in 2HG / team formats it correctly rejects targeting a
+        // teammate's life total or planeswalker.
         for atk in &attacks {
             match atk.target {
                 AttackTarget::Player(target_player) => {
-                    if target_player == self.active_player_idx
-                        || target_player >= self.players.len()
+                    if target_player >= self.players.len()
+                        || self.same_team(self.active_player_idx, target_player)
                         || !self.players[target_player].is_alive()
                     {
                         return Err(GameError::InvalidAttackTarget(target_player));
@@ -34,7 +39,7 @@ impl GameState {
                         .battlefield_find(pw_id)
                         .ok_or(GameError::InvalidPlaneswalkerAttackTarget(pw_id))?;
                     if !pw.definition.is_planeswalker()
-                        || pw.controller == self.active_player_idx
+                        || self.same_team(self.active_player_idx, pw.controller)
                         || !self.players[pw.controller].is_alive()
                     {
                         return Err(GameError::InvalidPlaneswalkerAttackTarget(pw_id));
@@ -186,7 +191,11 @@ impl GameState {
                 .find(|c| c.id == blocker_id)
                 .ok_or(GameError::CardNotOnBattlefield(blocker_id))?;
 
-            if blocker.controller != defender_idx {
+            // CR 509.1a: any creature controlled by the defending player
+            // (or, in team formats, a teammate of the defending player)
+            // may block. In 1v1 / FFA `same_team(a, b)` collapses to
+            // `a == b`, so this preserves the historical behavior.
+            if !self.same_team(blocker.controller, defender_idx) {
                 return Err(GameError::BlockerWrongDefender { blocker: blocker_id });
             }
 
@@ -371,9 +380,7 @@ impl GameState {
                     self.deal_combat_damage_to_target(atk, amount, &mut events);
                     if atk.has_lifelink {
                         let a = self.active_player_idx;
-                        self.players[a].life += atk.power;
-                        self.players[a].life_gained_this_turn =
-                            self.players[a].life_gained_this_turn.saturating_add(amount);
+                        self.adjust_life(a, atk.power);
                         events.push(GameEvent::LifeGained { player: a, amount });
                     }
                 }
@@ -430,9 +437,7 @@ impl GameState {
                 if atk.has_lifelink && lifelink_dealt > 0 {
                     let a = self.active_player_idx;
                     let amt = lifelink_dealt as u32;
-                    self.players[a].life += lifelink_dealt;
-                    self.players[a].life_gained_this_turn =
-                        self.players[a].life_gained_this_turn.saturating_add(amt);
+                    self.adjust_life(a, lifelink_dealt);
                     events.push(GameEvent::LifeGained { player: a, amount: amt });
                 }
 
@@ -519,9 +524,7 @@ impl GameState {
                     for (player, gained) in lifelink_by_controller {
                         if gained > 0 {
                             let amt = gained as u32;
-                            self.players[player].life += gained;
-                            self.players[player].life_gained_this_turn =
-                                self.players[player].life_gained_this_turn.saturating_add(amt);
+                            self.adjust_life(player, gained);
                             events.push(GameEvent::LifeGained { player, amount: amt });
                         }
                     }
@@ -551,7 +554,7 @@ impl GameState {
                         amount,
                     });
                 } else {
-                    self.players[p].life -= amount as i32;
+                    self.adjust_life(p, -(amount as i32));
                     events.push(GameEvent::DamageDealt {
                         amount,
                         to_player: Some(p),
@@ -561,6 +564,15 @@ impl GameState {
                         player: p,
                         amount,
                     });
+                }
+                // Phase M: bump the 21-commander-damage tally when the
+                // attacker is a Commander. Both Infect and regular
+                // damage paths credit here — CR 704.5v doesn't restrict
+                // by damage type. The SBA in `check_state_based_actions`
+                // reads this table and eliminates the player when any
+                // single (victim, commander) entry crosses 21.
+                if self.is_commander(atk.id) {
+                    self.record_commander_damage(p, atk.id, amount);
                 }
                 self.fire_combat_damage_to_player_triggers(atk.id, p);
             }

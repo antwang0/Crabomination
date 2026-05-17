@@ -3096,9 +3096,7 @@ and starting life; everything below is the runtime engine work.
 - ✅ 9 tests (singleton defaults, 2v2 partitioning, 2-1-1 mixed FFA,
   all four `assign_teams` error paths, empty-teams snapshot fallback).
 
-#### Phase C — Team-aware opponent semantics 🟡 (code complete, untested)
-**Code complete; suite blocked by an unrelated in-progress `WardCost`
-refactor — see "Blockers" below.**
+#### Phase C — Team-aware opponent semantics ✅
 - ✅ `PlayerRef::EachOpponent` routes through `opponents_of(controller)`
   instead of `i != controller` (`game/effects/mod.rs:2024, 2049`).
 - ✅ `SelectionRequirement::ControlledByOpponent` predicate now uses
@@ -3118,106 +3116,248 @@ refactor — see "Blockers" below.**
   ControlledByOpponent predicate on both permanent and player targets;
   auto-targeter avoids teammates).
 
-#### Phase D — Multiplayer combat ⏳
+#### Phase D — Multiplayer combat ✅
 Each attacking creature chooses a defending player or a planeswalker
 controlled by one of them; in 2HG the choice is the defending *team*
 and damage may be assigned to either teammate's creatures/planeswalkers.
-The `AttackTarget` enum already supports `Player(usize)` /
-`Planeswalker(CardId)` (`game/types.rs:73`) and
-`declare_attackers` already bounds-checks the target
-(`game/combat.rs:24-28`).
-- ⏳ Validate the chosen defender is an *opponent* (use
-  `opponents_of(attacker_controller)`), not just "not self."
-- ⏳ Block declaration: any creature controlled by a defending-team
-  player may block (covers 2HG without code changes once the team
-  abstraction is consulted).
-- ⏳ Tests: 3-player FFA attack, 2v2 attack where partner blocks for
-  the targeted player.
+- ✅ `declare_attackers` now validates the chosen defender via
+  `!same_team(active, target)` rather than `target != active`, so
+  attacking a teammate (Player or Planeswalker) is rejected
+  (`game/combat.rs:21-49`). `same_team(a, a) == true` collapses the
+  self-attack and teammate-attack cases into one check; 1v1 / FFA
+  behavior is unchanged.
+- ✅ `declare_blockers` consults `same_team(blocker.controller,
+  defender_idx)` so any defending-team member may block on a
+  teammate's behalf (`game/combat.rs:194-201`).
+- ✅ 5 new tests in `tests/multiplayer.rs` (3p FFA can attack either
+  opponent / self rejected; 2v2 rejects teammate-Player attack;
+  2v2 rejects teammate-Planeswalker attack; 2v2 partner blocks for
+  the attacked teammate; 2v2 attacking team can't block for the
+  defenders).
 
-#### Phase E — Priority & APNAP for N players ⏳
-- ⏳ Audit `pass_priority` for any 2-player assumptions in trigger
-  ordering (the rotation itself already iterates via `next_alive_seat`).
-- ⏳ Simultaneous triggers from one event must be sorted in APNAP order
-  (CR 603.3b), each player ordering their own triggers.
-- ⏳ Test: 4-player "deals damage to each player" event produces
-  triggers from each player's permanents, resolved AP-first.
+#### Phase E — Priority & APNAP for N players ✅
+- ✅ `pass_priority` already cycles via `alive_count` + `next_alive_seat`
+  — no 2-player assumption.
+- ✅ `dispatch_triggers_for_events` now stable-sorts candidates by an
+  APNAP rank derived from `active_player_idx` + repeated
+  `next_alive_seat` (`game/mod.rs:1169-1212`). The active player's
+  triggers push first → resolve last (CR 603.3b). Within a player's
+  group, battlefield-iteration order is preserved as their chosen
+  order (AutoDecider doesn't reorder; a UI player would pick).
+  Eliminated seats fall through to rank `n_players` so they push
+  last (resolve first) — deterministic if a dead permanent's
+  controller somehow still triggers.
+- ✅ 2 new tests in `tests/multiplayer.rs` (4-player simultaneous
+  LifeGained triggers push in APNAP order from active=1; eliminated
+  seat sorts to back of cycle).
+- Note: triggers within a single declare-attackers / declare-blockers
+  batch (`game/combat.rs:50, 110`) share one controller (the active
+  player), so APNAP within those is moot. The fix is concentrated on
+  the unified dispatcher because that's the only fan-out path where
+  multiple controllers can produce simultaneous triggers from one
+  event.
 
-#### Phase F — Shared life pool & shared turns (2HG) ⏳
-The 2HG-specific consumer of the teams abstraction. Depends on Phase E.
-- ⏳ `Team.shared_life: Option<i32>` — `Some(30)` for 2HG, `None` for
-  solo teams (each player keeps their own life).
-- ⏳ Route all life mutations through a single helper that writes to
-  the team's shared pool when set, otherwise the player's own life.
-- ⏳ Shared turn: one *team* takes a turn; both members get priority
-  in seat order during each priority window (CR 810.5). The active
-  "player" for "you"-effects remains a specific seat — the partner
-  acts on the active player's turn via timing rules.
-- ⏳ Mulligan: each player mulligans independently (current 2HG rules
-  per CR 103.5).
-- ⏳ Tests: shared life updates from either teammate's damage; life-gain
-  by one teammate triggers "whenever you gain life" for both (CR 810.8).
+#### Phase F — Shared life pool & shared turns (2HG) 🟡 (shared pool ✅; shared turn / cross-team triggers ⏳)
+The 2HG-specific consumer of the teams abstraction.
 
-#### Phase G — Team-aware loss & game end ⏳
-- ⏳ Player elimination still happens per-player on their own loss
-  condition; team elimination triggers when all members have lost
-  (in 2HG, also when shared life ≤ 0 even with players "in").
-- ⏳ Game ends when only one *team* remains, not one player. Update
-  `check_state_based_actions` (`game/stack.rs:899`).
-- ⏳ Test: 2v2 ends correctly when shared life hits 0; 3p FFA continues
-  with 2 after one elimination.
+**Shared pool — done:**
+- ✅ `Team.shared_life: Option<i32>` (`#[serde(default)]` for snapshot
+  back-compat) — `Some(30)` for 2HG teams, `None` for solo teams
+  (`team.rs:24`).
+- ✅ `GameState::effective_life(seat) -> i32`,
+  `GameState::adjust_life(seat, delta)`, and
+  `GameState::set_life(seat, new)` helpers
+  (`game/mod.rs:448-530`). Writes route to the shared pool when
+  `Some`, else to `players[seat].life`. `life_gained_this_turn`
+  stays bound to the seat receiving the change.
+- ✅ All production life-mutation sites rerouted (`combat.rs` ×4 —
+  lifelink and damage; `actions.rs` ×6 — Phyrexian-mana, alt-cost
+  life, ability life cost; `effects/mod.rs` ×6 — GainLife, LoseLife,
+  SetLifeTotal, Drain, WardCost::PayLife, alt-cost life,
+  reveal-counts-life; `effects/movement.rs` ×1 — direct damage;
+  `server/mod.rs` AdjustLife debug action).
+- ✅ `apply_format(TwoHeadedGiant)` auto-partitions consecutive seat
+  pairs (0+1, 2+3) into teams and seeds `shared_life = Some(life)`
+  on each (`game/mod.rs:368-413`). Callers can still override with
+  `assign_teams` after.
+- ✅ Phase F-3 SBA: `check_state_based_actions` checks
+  `effective_life(seat) <= 0`, so the pool draining to 0 eliminates
+  both teammates simultaneously (CR 704.5a + 810.8). Poison stays
+  per-player (CR 810.7b).
+- ✅ 6 new tests in `tests/multiplayer.rs` (2HG partition + 30-life
+  seeding; FFA baseline; one teammate takes damage / shared pool
+  drops / partner sees it; lifegain from either teammate pools;
+  shared-pool lethal → both eliminated → opposing team wins;
+  poison-is-per-player asymmetry).
 
-#### Phase H — Replacement-effect framework (Commander prerequisite) ⏳
-Phase I's "commander goes to command zone instead of [graveyard | exile
-| hand | library]" is the first true replacement effect. Build the
-infrastructure here rather than as a one-off.
-- ⏳ `ReplacementEffect` registry keyed on event
-  (`ZoneChange { from, to, card_filter }`, `DamageDealt {…}`, etc.).
-- ⏳ Resolve at the point of state change with a "would do X" hook
-  returning a (possibly modified) event.
-- ⏳ Scope tight initially — zone-change replacements only; expand as
-  more cards demand it.
+**Polish — done:**
+- ✅ Cross-team trigger fan-out (CR 810.8):
+  `EventScope::YourControl` / `OpponentControl` in
+  `game/effects/events.rs:74-83` now route through `same_team`
+  rather than exact-seat compare. A teammate's life gain / cast /
+  attack now fires the partner's "whenever you …" triggers. For
+  solo-team formats (1v1 / FFA / Commander) the helper collapses to
+  exact equality, so no behavior change. Test:
+  `two_headed_giant_lifegain_fires_partner_yourcontrol_trigger`.
+- ✅ Mulligan independence — verified via
+  `two_headed_giant_mulligan_chain_is_per_seat`. No code change
+  required (inherits per-seat chain from Phase A).
 
-#### Phase I — Command zone runtime ⏳
-- ⏳ Instantiate the already-declared `Zone::Command` (`card.rs:151`,
-  `ZoneRef::Command` in `effect.rs:56`). Add
-  `command: Vec<CardId>` to `Player` (per-player; `ZoneRef::Command`
-  already expects a `player` field).
-- ⏳ Zone-search & move-to-zone handling for `Zone::Command` in stack/
-  effect resolution.
+**Still ⏳ (low-impact polish):**
+- ⏳ Shared turn priority (CR 810.5) — strict "active team's primary
+  player first, can yield to teammate" ordering. Current rotation
+  is per-seat; both teammates already get priority in the
+  4-passes-to-advance loop, so this is cosmetic.
 
-#### Phase J — Deck model with commander slot ⏳
-- ⏳ Introduce `Deck { main, commanders: Vec<CardDefinition>,
-  sideboard }`. `Vec` for commanders supports Partner / Background.
-- ⏳ `Deck::load(format, …)` validates via existing `validate_deck()`
-  plus the Commander-specific checks below.
-- ⏳ On `GameState::new`, push each player's commander(s) into their
-  command zone before opening hand draw.
+#### Phase G — Team-aware loss & game end ✅
+**G-lite done** (independent of Phase F):
+- ✅ Player elimination still happens per-player on life ≤ 0 / 10
+  poison / empty-library draw (unchanged).
+- ✅ Game ends when only one *team* has alive members, not one player.
+  `check_state_based_actions` (`game/stack.rs:892-933`) now dedupes
+  alive seats by `team_of(seat)` and ends when surviving-team count
+  ≤ 1. `winner: Option<usize>` is reported as the surviving team's
+  lowest-numbered alive seat (a stable representative).
+- ✅ 5 new tests in `tests/multiplayer.rs` (2v2 keeps going after one
+  teammate dies; 2v2 ends when one team is fully wiped; winner
+  representative skips dead team members; 3p FFA baseline preserved;
+  4p simultaneous-elimination draw).
 
-#### Phase K — Color identity & deck validation ⏳
-- ⏳ `color_identity(card) -> ColorSet` — union of mana-cost colors,
-  mana symbols in rules text, and color indicators.
-- ⏳ Commander legality: every card's color identity ⊆ commander's
-  color identity; commander must be legendary creature (or carry a
-  `can_be_commander` attribute).
-- ⏳ Validation tests.
+**Shared-life half — now done via Phase F-3:**
+- ✅ Team-elimination via shared life: the SBA in
+  `check_state_based_actions` now reads `effective_life(seat) <= 0`,
+  so any teammate whose pool runs out is eliminated (in 2HG that's
+  the whole team simultaneously). CR 810.8 + 704.5a.
+- ✅ Test: `two_headed_giant_zero_shared_life_eliminates_both_teammates`
+  in `tests/multiplayer.rs` covers the 2v2 case end-to-end (damage
+  takes shared pool to 0 → both teammates eliminated → opposing
+  team wins with correct representative seat).
 
-#### Phase L — Cast from command zone with tax ⏳
-Depends on Phase H (replacement framework).
-- ⏳ New action `CastFromCommandZone { card }` paying
-  `mana_cost + {2} × prior_casts_this_game`.
-- ⏳ Per-player counter `commander_cast_count: HashMap<CardId, u32>`.
-- ⏳ Replacement effect: when commander would leave the battlefield to
-  any of {graveyard, exile, hand, library}, owner *may* redirect it
-  to the command zone instead (CR 903.9).
-- ⏳ Reuses the `CastSpellAlternative` plumbing (`game/actions.rs:129`).
+#### Phase H — Replacement-effect framework (Commander prerequisite) ✅
+- ✅ New module `crabomination/src/replacement.rs` with
+  `ReplacementEffect { id, source: ReplacementSource, from:
+  Option<Zone>, to_zones: Vec<Zone>, redirect_to: Zone, optional:
+  bool }` and `ReplacementId` newtype. Scope is intentionally narrow
+  — only zone-change replacements, source matches by `CardId` (the
+  Commander use case). `optional` is reserved for Phase L's
+  decision-plumbed "may redirect to command zone" semantics.
+- ✅ `GameState.replacement_effects: Vec<ReplacementEffect>` with
+  `#[serde(default)]` for snapshot back-compat; monotonic
+  `next_replacement_id` counter.
+- ✅ `register_replacement` / `unregister_replacement` /
+  `resolve_zone_change(card_id, from, to) -> Zone` helpers in
+  `game/mod.rs:597-682`. Resolver tracks already-applied ids
+  (CR 614.5 — a replacement applies at most once per event) and
+  caps iterations at `MAX_REPLACEMENT_ITERATIONS` (16) so
+  pathological chains terminate.
+- ✅ Three zone-change entry points wired through the resolver:
+  `place_card_in_dest` (`effects/movement.rs:225-265`),
+  `remove_from_battlefield_to_graveyard`, and
+  `remove_from_battlefield_to_exile` (`stack.rs:960-1027`). New
+  internal `place_card_at_resolved_zone` centralizes terminal-zone
+  placement for the post-resolver path. `Zone::Command` redirects
+  fall back to graveyard with a `debug_assert!` pending Phase I.
+- ✅ 6 new tests in `tests/multiplayer.rs` (baseline destroy goes to
+  graveyard; graveyard→exile redirect on a specific card; scoping
+  to CardId only affects the chosen card; chained graveyard↔exile
+  loop terminates via the applied-once guard; `from` filter gates
+  origin zone; `unregister_replacement` drops the entry).
+- Known limitation (acceptable for Phase H scope): inline
+  `graveyard.push` / `hand.push` / `exile.push` sites outside the
+  three wired entry points bypass the resolver. Effects routed
+  through `Effect::Destroy`, `Effect::Exile`-from-battlefield, and
+  `move_card_to` all hit the wired paths; ETB-triggered direct
+  pushes are the main gap and likely don't need replacement-effect
+  coverage for Commander.
 
-#### Phase M — Commander damage SBA ⏳
-- ⏳ `commander_damage: HashMap<(victim, source), u32>` somewhere
-  (on `GameState` or per-player).
-- ⏳ Combat / direct damage from a commander accumulates here in
-  addition to normal life loss.
-- ⏳ New SBA in `check_state_based_actions`: if any entry ≥ 21, victim
-  loses (CR 704.5v).
+#### Phase I — Command zone runtime ✅
+- ✅ `Player.command: Vec<CardInstance>` with `#[serde(default)]`
+  (`player.rs:18-30`). Per-seat ownership — Commander, Conspiracy,
+  Mox Lotus, etc. all sit here.
+- ✅ `place_card_at_resolved_zone(Zone::Command)` now pushes to
+  `players[owner].command` instead of the Phase H placeholder
+  (`stack.rs:1015`). The whole replacement-effect → command-zone
+  pipeline is live end-to-end.
+- ✅ Test coverage via Phase J's
+  `destroyed_commander_returns_to_command_zone` and
+  `seat_commanders_sets_up_command_zone_and_replacement`.
+
+#### Phase J — Deck model with commander slot ✅
+- ✅ `Deck { main, commanders, sideboard }` struct in `format.rs` —
+  `commanders` is `Vec<CardDefinition>` so Partner / Background can
+  populate two without changing shape.
+- ✅ `GameState::seat_commanders(seat, defs) -> Vec<CardId>` pushes
+  each commander as a fresh `CardInstance` into the seat's command
+  zone, records the id on `Player.commanders`, and registers the
+  CR 903.9b zone-change replacement (graveyard / exile / hand /
+  library → Command) via the Phase H registry. Optional flag is
+  set to `false` for now — Phase L's decision-plumbed "may" can
+  flip it later. (`game/mod.rs:632-687`)
+- ✅ `is_commander(card_id) -> bool` helper used by Phase L /
+  Phase M for cast and damage gates.
+- ✅ Tests for command-zone seating + leave-play bounce
+  (`seat_commanders_sets_up_command_zone_and_replacement`,
+  `destroyed_commander_returns_to_command_zone`).
+
+#### Phase K — Color identity & deck validation ✅
+- ✅ `ColorSet` bitfield in `mana.rs` with `empty`, `single`, `all`,
+  `insert`, `contains`, `is_subset_of`, `union`, `len`. Five-bit
+  WUBRG-packed `u8`.
+- ✅ `color_identity(def) -> ColorSet` in `format.rs` — unions
+  colored / hybrid / Phyrexian pips from the mana cost. Phase K
+  limitation: rules-text mana symbols and printed color indicators
+  are not parsed (no in-scope catalog cards rely on them); future
+  work can union in a `CardDefinition.printed_color_identity`
+  override.
+- ✅ `validate_commander_deck(deck) -> Result<(), (Vec<DeckError>,
+  Vec<CommanderDeckError>)>` layers on:
+  - at least one commander, at most two (Partner / Background)
+  - each commander is a Legendary Creature
+  - every main-deck card's color identity ⊆ combined commander
+    identity
+- ✅ 3 new validation tests + format::tests::commander_rules
+  (catches off-color, requires Legendary Creature, requires a
+  commander).
+
+#### Phase L — Cast from command zone with tax ✅
+- ✅ New `GameAction::CastFromCommandZone { card_id, target,
+  additional_targets, mode, x_value }` (`game/types.rs`) and
+  handler `cast_from_command_zone` in `game/actions.rs`. Mirrors the
+  `cast_spell_with_convoke` flow: sorcery-speed gate, target
+  legality, payment, push-onto-stack, `finalize_cast` for the rest.
+- ✅ `GameState.commander_cast_count: HashMap<CardId, u32>` —
+  bumped on a successful payment, consulted at cost build time to
+  add `{2}` × prior casts as generic mana.
+- ✅ The leave-play→Command replacement lives on Phase J's
+  `seat_commanders`; Phase L's job is only the cost / counter side.
+- ✅ Tests: first cast pays printed cost; after the commander
+  bounces back via the J replacement, the second cast fails on an
+  empty pool (tax unpaid) and succeeds once 2 mana is in pool;
+  counter advances to 2.
+- ✅ Polish: `Decision::CommanderRedirect { commander, would_be }`
+  + `DecisionWire` mirror. `AutoDecider` answers `Bool(true)`
+  (matching tournament default — save the commander); the resolver
+  consults the decider when a replacement has `optional: true`.
+  `seat_commanders` now registers the replacement with
+  `optional: true`. A declined redirect still counts as "applied"
+  for CR 614.5 (no double-prompt). Test:
+  `commander_redirect_can_be_declined` proves a `ScriptedDecider`
+  answering `Bool(false)` sends the commander to the graveyard.
+
+#### Phase M — Commander damage SBA ✅
+- ✅ `GameState.commander_damage: HashMap<(usize, CardId), u32>` —
+  `(victim_seat, commander_card_id)` keys, running totals. Helper
+  `record_commander_damage(victim, source, amount)` bumps an entry;
+  callers gate on `is_commander(source)` before invoking.
+- ✅ Both damage paths credit: combat damage to player
+  (`game/combat.rs:573-585`) and direct damage from effects
+  (`game/effects/movement.rs:69-77`). Combat-infect and direct
+  damage both count (CR 704.5v doesn't restrict by damage type).
+- ✅ SBA in `check_state_based_actions` eliminates a player whose
+  table has any entry ≥ 21 (`game/stack.rs:886-902`).
+- ✅ Tests: 21 commander damage eliminates even at positive life;
+  20 doesn't but the 21st point does; non-commander source never
+  populates the table.
 
 #### Phase N — Polish ⏳
 - ⏳ Audit any remaining `PlayerRef::EachOpponent` / "your"/"opponent"
@@ -3227,20 +3367,6 @@ Depends on Phase H (replacement framework).
 - ⏳ Update format coverage tests after Phase J/K land.
 
 ---
-
-#### Blockers
-- **Unfinished `WardCost` refactor** (branch `claude/modern_decks`,
-  unstaged WIP): `card.rs` introduced `enum WardCost` and changed
-  `Keyword::Ward(u32)` → `Keyword::Ward(WardCost)`. ~9 call sites
-  still pass `u32` and don't compile:
-  `crabomination/src/catalog/sets/sos/creatures.rs:5444, 5609`,
-  `crabomination/src/catalog/sets/sos/mdfcs.rs:1095, 1128, 1240`,
-  `crabomination/src/catalog/sets/stx/iconic.rs:76`,
-  `crabomination/src/game/actions.rs:809, 818`. The 7 catalog sites
-  are mechanical (`Keyword::Ward(N)` → `Keyword::Ward(WardCost::generic(N))`);
-  the two `game/actions.rs` sites need real API decisions on how the
-  Ward trigger consumes the new variant. Phase C's tests cannot run
-  until this is resolved.
 
 #### Dependency graph
 ```

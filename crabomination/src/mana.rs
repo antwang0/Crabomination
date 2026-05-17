@@ -42,6 +42,67 @@ impl fmt::Display for Color {
     }
 }
 
+/// A set of colors (subset of WUBRG). Bit-packed five-bit field with
+/// `contains` / `insert` / `is_subset_of` helpers. Used by Phase K's
+/// color-identity validator for Commander deckbuilding.
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct ColorSet(pub u8);
+
+impl ColorSet {
+    /// The empty set (colorless).
+    pub const fn empty() -> Self {
+        Self(0)
+    }
+
+    /// All five colors set ("WUBRG").
+    pub const fn all() -> Self {
+        Self(0b11111)
+    }
+
+    pub const fn single(c: Color) -> Self {
+        Self(Self::bit_for(c))
+    }
+
+    const fn bit_for(c: Color) -> u8 {
+        1 << match c {
+            Color::White => 0,
+            Color::Blue => 1,
+            Color::Black => 2,
+            Color::Red => 3,
+            Color::Green => 4,
+        }
+    }
+
+    pub fn insert(&mut self, c: Color) {
+        self.0 |= Self::bit_for(c);
+    }
+
+    pub fn contains(self, c: Color) -> bool {
+        self.0 & Self::bit_for(c) != 0
+    }
+
+    pub fn is_empty(self) -> bool {
+        self.0 == 0
+    }
+
+    /// True iff every color in `self` is also in `other`. Used by
+    /// Commander color-identity: a non-commander card is legal iff
+    /// `card_identity.is_subset_of(commander_identity)`.
+    pub fn is_subset_of(self, other: ColorSet) -> bool {
+        self.0 & !other.0 == 0
+    }
+
+    /// Union of two sets.
+    pub fn union(self, other: ColorSet) -> ColorSet {
+        ColorSet(self.0 | other.0)
+    }
+
+    /// Number of colors in the set.
+    pub fn len(self) -> u32 {
+        self.0.count_ones()
+    }
+}
+
 /// A single symbol in a mana cost.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum ManaSymbol {

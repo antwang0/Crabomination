@@ -878,28 +878,73 @@ impl GameState {
         self.exile.retain(|c| !c.is_token);
 
         // Player loss conditions (CR 704.5a/b/c). Eliminated players are
-        // removed from turn/priority rotation; the game ends when ≤ 1 alive.
+        // removed from turn/priority rotation; the game ends when ≤ 1
+        // team alive (see surviving-teams check below).
+        //
+        // Phase F: `effective_life(i)` collapses the solo-life and
+        // shared-pool (2HG) cases. When `Team.shared_life` is `Some(n)`,
+        // both teammates' effective life is `n`, so dropping the pool
+        // to ≤ 0 eliminates both members simultaneously (CR 810.8 +
+        // 704.5a). Poison stays per-player (CR 810.7b — 2HG shares
+        // life but not poison; an individual teammate hitting 10
+        // poison still loses).
         for i in 0..self.players.len() {
             if self.players[i].eliminated {
                 continue;
             }
-            let lost = self.players[i].life <= 0 || self.players[i].poison_counters >= 10;
+            // Phase M: 21-commander-damage SBA (CR 704.5v). Any
+            // single (this-player, commander) entry of ≥ 21 in
+            // `commander_damage` loses the game for this player. We
+            // collect the check separately from life / poison so
+            // the cause is debuggable.
+            let lost_to_commander = self
+                .commander_damage
+                .iter()
+                .any(|((victim, _), amt)| *victim == i && *amt >= 21);
+            let lost = self.effective_life(i) <= 0
+                || self.players[i].poison_counters >= 10
+                || lost_to_commander;
             if lost {
                 self.players[i].eliminated = true;
             }
         }
 
+        // CR 104.2 / 810.7: the game ends when only one *team* has
+        // players remaining (in solo-team formats — 1v1, FFA — a team
+        // is one seat, so this reduces to "only one alive player").
+        // Pre-Phase-G this checked alive seats directly, which in 2HG
+        // would have ended the match as soon as one of the four
+        // players died even though their teammate was still in.
         if self.game_over.is_none() {
             let alive: Vec<usize> = (0..self.players.len())
                 .filter(|i| !self.players[*i].eliminated)
                 .collect();
-            match alive.len() {
+            let mut surviving_teams: Vec<crate::team::TeamId> = alive
+                .iter()
+                .map(|&s| self.team_of(s))
+                .collect();
+            surviving_teams.sort_by_key(|t| t.0);
+            surviving_teams.dedup();
+            match surviving_teams.len() {
                 0 => {
                     self.game_over = Some(None);
                     events.push(GameEvent::GameOver { winner: None });
                 }
                 1 => {
-                    let winner = alive[0];
+                    // Report the winning team's first alive seat (by
+                    // seat number) as the `winner`. For solo-team
+                    // formats this is the literal winner; for 2HG it
+                    // identifies the surviving team via a
+                    // representative member, which is enough to let
+                    // the server / UI resolve to a team result.
+                    let winner_team = surviving_teams[0];
+                    let mut reps: Vec<usize> = alive
+                        .iter()
+                        .copied()
+                        .filter(|&s| self.team_of(s) == winner_team)
+                        .collect();
+                    reps.sort();
+                    let winner = reps[0];
                     self.game_over = Some(Some(winner));
                     events.push(GameEvent::GameOver { winner: Some(winner) });
                 }
@@ -926,10 +971,14 @@ impl GameState {
     pub(crate) fn remove_from_battlefield_to_graveyard(&mut self, id: CardId) {
         if let Some(pos) = self.battlefield.iter().position(|c| c.id == id) {
             let card = self.battlefield.remove(pos);
-            let owner = card.owner;
             self.remove_effects_from_source(id);
             self.remove_from_combat(id);
-            self.players[owner].send_to_graveyard(card);
+            let resolved = self.resolve_zone_change(
+                id,
+                crate::card::Zone::Battlefield,
+                crate::card::Zone::Graveyard,
+            );
+            self.place_card_at_resolved_zone(card, resolved);
         }
     }
 
@@ -938,7 +987,48 @@ impl GameState {
             let card = self.battlefield.remove(pos);
             self.remove_effects_from_source(id);
             self.remove_from_combat(id);
-            self.exile.push(card);
+            let resolved = self.resolve_zone_change(
+                id,
+                crate::card::Zone::Battlefield,
+                crate::card::Zone::Exile,
+            );
+            self.place_card_at_resolved_zone(card, resolved);
+        }
+    }
+
+    /// Internal: drop `card` into `zone` (the result of a replacement
+    /// resolver walk). Handles the terminal-zone shapes; for
+    /// `Zone::Command` falls back to graveyard with a debug-assert
+    /// until Phase I adds the per-player command zone storage.
+    /// `Zone::Battlefield` / `Zone::Stack` likewise fall back —
+    /// those shouldn't appear as legitimate redirect targets.
+    pub(crate) fn place_card_at_resolved_zone(
+        &mut self,
+        card: CardInstance,
+        zone: crate::card::Zone,
+    ) {
+        use crate::card::Zone;
+        let owner = card.owner;
+        match zone {
+            Zone::Graveyard => self.players[owner].send_to_graveyard(card),
+            Zone::Exile => self.exile.push(card),
+            Zone::Hand => self.players[owner].hand.push(card),
+            // Top of owner's library. Replacement effects don't carry
+            // a position field today; if a future replacement needs
+            // bottom / shuffled, extend the type.
+            Zone::Library => self.players[owner].library.insert(0, card),
+            Zone::Command => self.players[owner].command.push(card),
+            Zone::Battlefield | Zone::Stack => {
+                // Unsupported as a replacement redirect target — the
+                // card has already lost its battlefield identity
+                // (cleared damage / counters / continuous effects)
+                // by the time we reach here. Fall back to graveyard.
+                debug_assert!(
+                    false,
+                    "replacement redirect to Battlefield/Stack is unsupported"
+                );
+                self.players[owner].send_to_graveyard(card);
+            }
         }
     }
 

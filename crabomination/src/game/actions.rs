@@ -668,7 +668,7 @@ impl GameState {
             }
         };
         if receipt.side_effects.life_lost > 0 {
-            self.players[p].life -= receipt.side_effects.life_lost as i32;
+            self.adjust_life(p, -(receipt.side_effects.life_lost as i32));
         }
 
         // Compute converge: count distinct colors of mana drained from the
@@ -1018,7 +1018,7 @@ impl GameState {
         }
         let receipt = self.try_pay_with_auto_tap(p, &cost)?;
         if receipt.side_effects.life_lost > 0 {
-            self.players[p].life -= receipt.side_effects.life_lost as i32;
+            self.adjust_life(p, -(receipt.side_effects.life_lost as i32));
         }
         let mana_spent = receipt
             .pool_before
@@ -1047,6 +1047,137 @@ impl GameState {
     /// Cast a spell using its `alternative_cost` (a "pitch" cost) instead of
     /// its regular mana cost. Pays the alt cost's mana, deducts life, and
     /// exiles the chosen `pitch_card` from hand if the alt cost requires
+    /// Cast a commander from your command zone (Phase L).
+    ///
+    /// Differences vs. `cast_spell`:
+    /// * The card is sourced from `players[p].command` instead of
+    ///   `players[p].hand`.
+    /// * Cost = printed cost + `{2}` × `commander_cast_count[card_id]`
+    ///   (the commander tax, CR 903.8).
+    /// * On a successful payment the cast count is bumped so the next
+    ///   cast pays `{4}` extra, then `{6}`, etc.
+    /// * The Phase J zone-change replacement is already registered for
+    ///   each seated commander, so when the resulting permanent
+    ///   eventually leaves play it gets snagged back into the command
+    ///   zone automatically.
+    ///
+    /// Sorcery-speed / target legality / etc. piggyback off the same
+    /// helpers as `cast_spell_with_convoke` to keep behavior aligned.
+    /// X / mode / target slots are threaded through verbatim.
+    pub(crate) fn cast_from_command_zone(
+        &mut self,
+        card_id: CardId,
+        target: Option<Target>,
+        additional_targets: Vec<Target>,
+        mode: Option<usize>,
+        x_value: Option<u32>,
+    ) -> Result<Vec<GameEvent>, GameError> {
+        let p = self.priority.player_with_priority;
+
+        // Locate + remove the commander from the caster's command zone.
+        let pos = self.players[p]
+            .command
+            .iter()
+            .position(|c| c.id == card_id)
+            .ok_or(GameError::CardNotInHand(card_id))?;
+        let mut card = self.players[p].command.remove(pos);
+        card.cast_from_hand = false;
+
+        // Sorcery-speed gate (commanders are creatures by definition,
+        // which are sorcery-speed unless flash). We rebuild the same
+        // gate `cast_spell` uses so timing matches.
+        let must_be_sorcery_speed = !card.definition.is_instant_speed()
+            || self.player_locked_to_sorcery_timing(p);
+        if must_be_sorcery_speed
+            && !self.can_cast_sorcery_speed(p)
+            && !self.players[p].sorceries_as_flash
+        {
+            self.players[p].command.push(card);
+            return Err(GameError::SorcerySpeedOnly);
+        }
+
+        // Target legality (the rare commander with a targeted ETB
+        // wants the same hexproof / shroud / Leyline checks).
+        if let Some(ref tgt) = target
+            && let Err(e) = self.check_target_legality_with_source(tgt, p, Some(card_id))
+        {
+            self.players[p].command.push(card);
+            return Err(e);
+        }
+        for tgt in &additional_targets {
+            if let Err(e) = self.check_target_legality_with_source(tgt, p, Some(card_id)) {
+                self.players[p].command.push(card);
+                return Err(e);
+            }
+        }
+
+        // Build the cost: printed + commander tax. The tax is
+        // `{2}` × prior casts; it stacks on top of any X / generic
+        // tax / cost reduction the spell would normally see.
+        let base_cost = card.definition.cost.clone();
+        let mut cost = if base_cost.has_x() {
+            base_cost.with_x_value(x_value.unwrap_or(0))
+        } else {
+            base_cost
+        };
+        let prior = self.commander_cast_count.get(&card_id).copied().unwrap_or(0);
+        let commander_tax = prior.saturating_mul(2);
+        if commander_tax > 0 {
+            cost.symbols
+                .push(crate::mana::ManaSymbol::Generic(commander_tax));
+        }
+        let tax = extra_cost_for_spell(self, p, &card);
+        if tax > 0 {
+            cost.symbols
+                .push(crate::mana::ManaSymbol::Generic(tax));
+        }
+        let reduction = cost_reduction_for_spell(self, p, &card, target.as_ref());
+        if reduction > 0 {
+            cost.reduce_generic(reduction);
+        }
+
+        // Pay. On failure put the card back in the command zone.
+        let receipt = match self.try_pay_with_auto_tap(p, &cost) {
+            Ok(r) => r,
+            Err(e) => {
+                self.players[p].command.push(card);
+                return Err(e);
+            }
+        };
+        if receipt.side_effects.life_lost > 0 {
+            self.adjust_life(p, -(receipt.side_effects.life_lost as i32));
+        }
+        let converged_value = converge_count(&receipt.pool_before, &self.players[p].mana_pool);
+        let mana_spent = receipt
+            .pool_before
+            .total()
+            .saturating_sub(self.players[p].mana_pool.total());
+
+        // Bump the cast counter on success.
+        *self.commander_cast_count.entry(card_id).or_insert(0) += 1;
+
+        let mut auto_events = receipt.auto_events;
+        auto_events.push(GameEvent::SpellCast {
+            player: p,
+            card_id,
+            face: self.pending_cast_face,
+        });
+        let events = auto_events;
+
+        self.finalize_cast(
+            p,
+            card,
+            target,
+            additional_targets,
+            mode,
+            x_value.unwrap_or(0),
+            converged_value,
+            mana_spent,
+        );
+
+        Ok(events)
+    }
+
     /// one. The spell otherwise behaves identically to a normal cast (goes
     /// onto the stack, resolves later, etc.).
     pub(crate) fn cast_spell_alternative(
@@ -1208,7 +1339,7 @@ impl GameState {
             }
         };
         if receipt.side_effects.life_lost > 0 {
-            self.players[p].life -= receipt.side_effects.life_lost as i32;
+            self.adjust_life(p, -(receipt.side_effects.life_lost as i32));
         }
         let alt_mana_spent = receipt
             .pool_before
@@ -1218,7 +1349,7 @@ impl GameState {
 
         // Pay the life portion of the alt cost.
         if alt.life_cost > 0 {
-            self.players[p].life -= alt.life_cost as i32;
+            self.adjust_life(p, -(alt.life_cost as i32));
             auto_events.push(GameEvent::LifeLost {
                 player: p,
                 amount: alt.life_cost,
@@ -1839,7 +1970,7 @@ impl GameState {
         if let Some(snapshot) = pre_snapshot {
             let receipt = self.try_pay_after_snapshot(p, &ability.mana_cost, snapshot)?;
             if receipt.side_effects.life_lost > 0 {
-                self.players[p].life -= receipt.side_effects.life_lost as i32;
+                self.adjust_life(p, -(receipt.side_effects.life_lost as i32));
             }
             auto_mana_events = receipt.auto_events;
         }
@@ -1849,7 +1980,7 @@ impl GameState {
         // sufficient life). Emits a LifeLost event so trigger / replay
         // observers see the cost.
         if ability.life_cost > 0 {
-            self.players[p].life -= ability.life_cost as i32;
+            self.adjust_life(p, -(ability.life_cost as i32));
             auto_mana_events.push(GameEvent::LifeLost {
                 player: p,
                 amount: ability.life_cost,

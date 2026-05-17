@@ -268,6 +268,38 @@ pub struct GameState {
     /// number itself is set to 0 per CR 615.1).
     #[serde(default)]
     pub(crate) prevent_combat_damage_this_turn: bool,
+    /// Registered replacement effects (Phase H — Commander prerequisite).
+    /// Walked by zone-change paths (`place_card_in_dest`,
+    /// `remove_from_battlefield_to_*`) at placement time; a matching
+    /// entry rewrites the destination zone.
+    ///
+    /// `#[serde(default)]` so snapshots written before this field
+    /// existed deserialize cleanly as empty (no replacements active).
+    #[serde(default)]
+    pub replacement_effects: Vec<crate::replacement::ReplacementEffect>,
+    /// Monotonic counter handing out `ReplacementId`s. Defaults to 0
+    /// for snapshot back-compat.
+    #[serde(default)]
+    pub(crate) next_replacement_id: u32,
+    /// Per-commander cast-from-command-zone counter (Phase L).
+    /// Keyed by the commander's `CardId`; each entry tracks how many
+    /// times that commander has been cast from the command zone this
+    /// game. The commander tax is `{2}` × this value, added as
+    /// generic mana on top of the printed cost (CR 903.8).
+    ///
+    /// `#[serde(default)]` for snapshot back-compat.
+    #[serde(default)]
+    pub commander_cast_count: HashMap<CardId, u32>,
+    /// 21-commander-damage tracker (Phase M / CR 704.5v). Keyed by
+    /// `(victim_seat, commander_card_id)`; values are running totals
+    /// of combat / direct damage dealt by that commander to that
+    /// seat over the whole game. The SBA in
+    /// `check_state_based_actions` eliminates a player when any of
+    /// their entries crosses 21.
+    ///
+    /// `#[serde(default)]` for snapshot back-compat.
+    #[serde(default)]
+    pub commander_damage: HashMap<(usize, CardId), u32>,
 }
 
 /// Manual `Clone` impl so the bot can dry-run an action against a copy
@@ -308,6 +340,10 @@ impl Clone for GameState {
             pending_decision: self.pending_decision.clone(),
             suspend_signal: self.suspend_signal.clone(),
             prevent_combat_damage_this_turn: self.prevent_combat_damage_this_turn,
+            replacement_effects: self.replacement_effects.clone(),
+            next_replacement_id: self.next_replacement_id,
+            commander_cast_count: self.commander_cast_count.clone(),
+            commander_damage: self.commander_damage.clone(),
         }
     }
 }
@@ -325,6 +361,7 @@ impl GameState {
             .map(|i| crate::team::Team {
                 id: crate::team::TeamId(i),
                 members: vec![i],
+                shared_life: None,
             })
             .collect();
         Self {
@@ -360,10 +397,16 @@ impl GameState {
             pending_decision: None,
             suspend_signal: None,
             prevent_combat_damage_this_turn: false,
+            replacement_effects: Vec::new(),
+            next_replacement_id: 1,
+            commander_cast_count: HashMap::new(),
+            commander_damage: HashMap::new(),
         }
     }
 
-    /// Apply format-specific setup: starting life total and turn-1 draw rule.
+    /// Apply format-specific setup: starting life total, turn-1 draw
+    /// rule, and (for Two-Headed Giant) the team partition + shared
+    /// life pool.
     pub fn apply_format(&mut self, format: crate::format::Format) {
         let rules = format.rules();
         let life = if self.players.len() > 2 {
@@ -375,6 +418,38 @@ impl GameState {
             p.life = life;
         }
         self.skip_first_draw = self.players.len() <= 2;
+
+        // Two-Headed Giant — Phase F. Default seating partitions
+        // consecutive seat pairs into teams (0+1, 2+3, …) per
+        // CR 810.2a and seeds each team's shared pool to the format's
+        // starting life. Callers wanting a different pairing can
+        // call `assign_teams` afterwards; the shared-life seeding
+        // happens here regardless. An odd seat count leaves the
+        // trailing odd seat as a singleton (silly setup, but keeps
+        // the helper total — the caller likely wants `assign_teams`).
+        if matches!(format, crate::format::Format::TwoHeadedGiant) {
+            let n = self.players.len();
+            let mut partitions: Vec<Vec<usize>> = Vec::new();
+            let mut i = 0;
+            while i < n {
+                if i + 1 < n {
+                    partitions.push(vec![i, i + 1]);
+                    i += 2;
+                } else {
+                    partitions.push(vec![i]);
+                    i += 1;
+                }
+            }
+            self.teams = partitions
+                .into_iter()
+                .enumerate()
+                .map(|(idx, members)| crate::team::Team {
+                    id: crate::team::TeamId(idx),
+                    members,
+                    shared_life: Some(life),
+                })
+                .collect();
+        }
     }
 
     /// Number of players that have not been eliminated.
@@ -443,6 +518,305 @@ impl GameState {
     /// own teammate (returns true for `a == b`).
     pub fn same_team(&self, a: usize, b: usize) -> bool {
         self.team_of(a) == self.team_of(b)
+    }
+
+    // ── Life total helpers (Phase F) ──────────────────────────────────────
+
+    /// Effective life total visible to `seat`. In 2HG (`Team.shared_life
+    /// == Some(n)`) every member of the team sees the same number; in
+    /// solo-team formats (1v1 / FFA / Commander) this is just the
+    /// player's own `life` field. Callers checking lethal damage,
+    /// "if you have ≤ X life" predicates, "the most life total" etc.
+    /// should consult this rather than `players[seat].life`.
+    pub fn effective_life(&self, seat: usize) -> i32 {
+        if let Some(t) = self.teams.iter().find(|t| t.members.contains(&seat))
+            && let Some(shared) = t.shared_life
+        {
+            return shared;
+        }
+        self.players[seat].life
+    }
+
+    /// Apply a life delta to `seat` — gain for `delta > 0`, loss for
+    /// `delta < 0`. Routes through the team's shared pool when set
+    /// (Phase F — 2HG), else mutates `players[seat].life` directly.
+    /// Returns the post-mutation effective life total.
+    ///
+    /// Per-turn counters (`life_gained_this_turn`) are bumped on the
+    /// *seat* receiving the change — they're a "you" payoff and the
+    /// triggering side is still a specific player. For 2HG, CR 810.8
+    /// also propagates the gain to teammates' "you gain life"
+    /// triggers; that broader fan-out is handled at trigger-scope
+    /// resolution time (`EventScope::YourControl` would need a
+    /// team-aware variant), not here. This helper only owns the
+    /// state-mutation half.
+    pub fn adjust_life(&mut self, seat: usize, delta: i32) -> i32 {
+        if delta == 0 {
+            return self.effective_life(seat);
+        }
+        let team_idx = self
+            .teams
+            .iter()
+            .position(|t| t.members.contains(&seat));
+        let writes_to_shared = team_idx
+            .and_then(|i| self.teams[i].shared_life)
+            .is_some();
+
+        let new_total = if writes_to_shared {
+            let t = team_idx.unwrap();
+            let current = self.teams[t].shared_life.unwrap();
+            let next = current.saturating_add(delta);
+            self.teams[t].shared_life = Some(next);
+            next
+        } else {
+            let p = &mut self.players[seat];
+            p.life = p.life.saturating_add(delta);
+            p.life
+        };
+
+        if delta > 0 {
+            self.players[seat].life_gained_this_turn =
+                self.players[seat].life_gained_this_turn.saturating_add(delta as u32);
+        }
+        new_total
+    }
+
+    /// Overwrite the effective life total for `seat` (Effect::SetLife
+    /// path). Routes through the shared pool when set, else writes
+    /// `players[seat].life` directly. Does not bump
+    /// `life_gained_this_turn` (set-to-N isn't a "gain").
+    pub fn set_life(&mut self, seat: usize, new_total: i32) {
+        if let Some(t) = self.teams.iter_mut().find(|t| t.members.contains(&seat))
+            && t.shared_life.is_some()
+        {
+            t.shared_life = Some(new_total);
+            return;
+        }
+        self.players[seat].life = new_total;
+    }
+
+    // ── Commander identity & damage (Phase J / M) ──────────────────────────
+
+    /// True if `card_id` is a commander for any player. Used by the
+    /// Phase M 21-damage accumulator and by Phase L's cast-from-CZ
+    /// (a non-commander has no business hitting that path).
+    pub fn is_commander(&self, card_id: crate::card::CardId) -> bool {
+        self.players
+            .iter()
+            .any(|p| p.commanders.iter().any(|c| *c == card_id))
+    }
+
+    /// Add `amount` to the commander-damage tally for
+    /// `(victim_seat, source_card_id)`. Caller is responsible for
+    /// checking `is_commander(source)` before invoking — invalid
+    /// entries would otherwise pollute the SBA's view. Phase M's
+    /// damage paths gate on this check.
+    ///
+    /// The SBA (`check_state_based_actions`) consults the table
+    /// after every life mutation, so no immediate action is required
+    /// here beyond bumping the counter.
+    pub fn record_commander_damage(
+        &mut self,
+        victim_seat: usize,
+        source_card_id: crate::card::CardId,
+        amount: u32,
+    ) {
+        if amount == 0 {
+            return;
+        }
+        let entry = self
+            .commander_damage
+            .entry((victim_seat, source_card_id))
+            .or_insert(0);
+        *entry = entry.saturating_add(amount);
+    }
+
+    // ── Commander seating (Phase J) ────────────────────────────────────────
+
+    /// Place each card in `defs` into `seat`'s command zone as a new
+    /// `CardInstance`, and register the Commander zone-change
+    /// replacement effect for each — CR 903.9b's "if a commander
+    /// would be put into a graveyard, exile, hand, or library from
+    /// anywhere, its owner may put it into the command zone
+    /// instead." Phase L's cast-from-CZ machinery + commander-cast
+    /// counter consult the command zone contents; this helper sets
+    /// up that initial state.
+    ///
+    /// Returns the `CardId`s of the seated commanders so callers
+    /// can use them as `Selector::CardInZone(Command)` targets, or
+    /// pass them to test helpers.
+    ///
+    /// The replacement is registered with `optional: true` — CR 903.9b
+    /// says the redirect is "may", so the owner can elect to let the
+    /// commander land in the original zone (e.g. when they want to
+    /// reanimate it from the graveyard rather than re-pay tax).
+    /// `AutoDecider` defaults to "yes redirect" so tournament-style
+    /// play matches expectations; tests can script the opposite via
+    /// `ScriptedDecider` answering `DecisionAnswer::Bool(false)` to
+    /// the `Decision::CommanderRedirect` prompt.
+    pub fn seat_commanders(
+        &mut self,
+        seat: usize,
+        defs: Vec<crate::card::CardDefinition>,
+    ) -> Vec<crate::card::CardId> {
+        let mut ids = Vec::with_capacity(defs.len());
+        for def in defs {
+            let id = crate::card::CardId(self.next_id);
+            self.next_id = self.next_id.saturating_add(1);
+            let card = crate::card::CardInstance::new(id, def, seat);
+            self.players[seat].command.push(card);
+            self.players[seat].commanders.push(id);
+
+            // CR 903.9b replacement — graveyard / exile / hand /
+            // library from anywhere → command zone. `from: None`
+            // matches any origin; the destination set is the four
+            // zones the rule names.
+            self.register_replacement(crate::replacement::ReplacementEffect {
+                id: crate::replacement::ReplacementId(0), // overwritten
+                source: crate::replacement::ReplacementSource::Card(id),
+                from: None,
+                to_zones: vec![
+                    crate::card::Zone::Graveyard,
+                    crate::card::Zone::Exile,
+                    crate::card::Zone::Hand,
+                    crate::card::Zone::Library,
+                ],
+                redirect_to: crate::card::Zone::Command,
+                optional: true,
+            });
+            ids.push(id);
+        }
+        ids
+    }
+
+    // ── Replacement effects (Phase H) ─────────────────────────────────────
+
+    /// Register `effect` with the engine. Returns the assigned id so the
+    /// caller can `unregister_replacement` it later (e.g. when the
+    /// originating permanent leaves play). The caller-supplied `id`
+    /// field is ignored — the engine stamps a fresh monotonic id.
+    pub fn register_replacement(
+        &mut self,
+        mut effect: crate::replacement::ReplacementEffect,
+    ) -> crate::replacement::ReplacementId {
+        let id = crate::replacement::ReplacementId(self.next_replacement_id);
+        self.next_replacement_id = self.next_replacement_id.saturating_add(1);
+        effect.id = id;
+        self.replacement_effects.push(effect);
+        id
+    }
+
+    /// Drop the replacement with `id` if present. Returns true on hit.
+    pub fn unregister_replacement(&mut self, id: crate::replacement::ReplacementId) -> bool {
+        if let Some(pos) = self
+            .replacement_effects
+            .iter()
+            .position(|r| r.id == id)
+        {
+            self.replacement_effects.remove(pos);
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Walk the replacement registry for a zone change. Returns the
+    /// destination zone after applying any matching replacement. Loops
+    /// up to [`crate::replacement::MAX_REPLACEMENT_ITERATIONS`] times
+    /// so chained replacements (e.g. graveyard → exile → command) can
+    /// fully resolve while pathological loops still terminate. When
+    /// the cap is hit, the most-recent destination is returned and a
+    /// debug-assert fires.
+    ///
+    /// For `optional: true` replacements the card's owner is consulted
+    /// via the installed `Decider` (`Decision::CommanderRedirect`).
+    /// `AutoDecider` answers "yes" (matching the typical "save my
+    /// commander" play), tests can script the opposite via
+    /// `ScriptedDecider`. A declined optional replacement still
+    /// counts as "applied" for CR 614.5 purposes so the same prompt
+    /// isn't surfaced twice in one resolution walk.
+    ///
+    /// `&mut self` because the decider call is mutable. CR 616
+    /// ordering ("affected card's controller chooses") is
+    /// approximated by registration order.
+    pub fn resolve_zone_change(
+        &mut self,
+        card_id: crate::card::CardId,
+        from: crate::card::Zone,
+        mut to: crate::card::Zone,
+    ) -> crate::card::Zone {
+        use crate::replacement::{ReplacementSource, MAX_REPLACEMENT_ITERATIONS};
+        let mut applied: Vec<crate::replacement::ReplacementId> = Vec::new();
+        for _ in 0..MAX_REPLACEMENT_ITERATIONS {
+            let mut fired = false;
+            // Clone the small set of metadata we need so we can mutate
+            // `self.decider` inside the loop without borrow-conflict
+            // with `self.replacement_effects`.
+            let candidates: Vec<_> = self
+                .replacement_effects
+                .iter()
+                .map(|r| {
+                    (
+                        r.id,
+                        r.source.clone(),
+                        r.from,
+                        r.to_zones.clone(),
+                        r.redirect_to,
+                        r.optional,
+                    )
+                })
+                .collect();
+            for (rid, source, r_from, to_zones, redirect_to, optional) in candidates {
+                if applied.contains(&rid) {
+                    // CR 614.5 — a replacement effect can apply at most
+                    // once to a given event. Skip ones we've already
+                    // used in this resolution.
+                    continue;
+                }
+                match source {
+                    ReplacementSource::Card(target) if target != card_id => continue,
+                    ReplacementSource::Card(_) => {}
+                }
+                if let Some(f) = r_from
+                    && f != from
+                {
+                    continue;
+                }
+                if !to_zones.contains(&to) {
+                    continue;
+                }
+                // Optional replacement → consult the decider. Today
+                // the only optional replacement we register is the
+                // Commander redirect (CR 903.9b), so the
+                // `CommanderRedirect` decision shape is the right
+                // surface. If `optional` were used for some other
+                // redirect later, this branch would need a generic
+                // `OptionalReplacement` decision instead.
+                if optional {
+                    let answer = self.decider.decide(&crate::decision::Decision::CommanderRedirect {
+                        commander: card_id,
+                        would_be: to,
+                    });
+                    let say_yes = matches!(answer, crate::decision::DecisionAnswer::Bool(true));
+                    applied.push(rid);
+                    if !say_yes {
+                        // Don't apply, but mark as asked so we don't
+                        // re-prompt on this resolution.
+                        continue;
+                    }
+                } else {
+                    applied.push(rid);
+                }
+                to = redirect_to;
+                fired = true;
+                break;
+            }
+            if !fired {
+                return to;
+            }
+        }
+        debug_assert!(false, "replacement-effect resolution hit iteration cap");
+        to
     }
 
     /// Number of `StaticEffect::DoubleTokens` permanents `seat` controls
@@ -525,6 +899,7 @@ impl GameState {
             .map(|(i, members)| crate::team::Team {
                 id: crate::team::TeamId(i),
                 members,
+                shared_life: None,
             })
             .collect();
         Ok(())
@@ -1067,6 +1442,13 @@ impl GameState {
                 mode,
                 x_value,
             } => self.cast_flashback(card_id, target, additional_targets, mode, x_value),
+            GameAction::CastFromCommandZone {
+                card_id,
+                target,
+                additional_targets,
+                mode,
+                x_value,
+            } => self.cast_from_command_zone(card_id, target, additional_targets, mode, x_value),
             GameAction::CastSpellBack {
                 card_id,
                 target,
@@ -1166,6 +1548,43 @@ impl GameState {
                 }
             }
         }
+        // CR 603.3b — APNAP. When multiple abilities trigger off the same
+        // batch of events, the active player puts their triggers on the
+        // stack first (in any order they choose), then each non-active
+        // player in turn order. Since the stack is LIFO, the active
+        // player's triggers resolve LAST. Without this sort, candidates
+        // were pushed in battlefield-iteration order, which produced
+        // observable wrong orderings the moment more than one player
+        // controlled a triggering permanent (acute for 4-player FFA, 2HG,
+        // and Commander — invisible in 1v1 where there's only one
+        // non-active player). Within a player's group we keep the
+        // gathered order: stable sort means each player's
+        // battlefield-iteration order is preserved as their chosen
+        // order — fine for AutoDecider; a real UI player would pick.
+        let n_players = self.players.len();
+        let active = self.active_player_idx;
+        let apnap_rank = |seat: usize| -> usize {
+            if seat == active {
+                return 0;
+            }
+            let mut s = active;
+            for r in 1..=n_players {
+                s = self.next_alive_seat(s);
+                if s == seat {
+                    return r;
+                }
+                if s == active {
+                    break;
+                }
+            }
+            // Eliminated / unknown controller: sort to the back so it
+            // pushes last → resolves first. Triggers from a dead
+            // permanent's owner shouldn't really hit this path, but
+            // keep behavior deterministic if they do.
+            n_players
+        };
+        candidates.sort_by_key(|c| apnap_rank(c.controller));
+
         // Phase 2: enforce the optional `EventSpec::filter` predicate now
         // that we're free to call `&self.evaluate_predicate`. The trigger's
         // source permanent is bound as `ctx.source`, and the event's

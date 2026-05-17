@@ -9,6 +9,7 @@ pub mod game;
 pub mod mana;
 pub mod net;
 pub mod player;
+pub mod replacement;
 pub mod server;
 pub mod snapshot;
 pub mod sos_mode;

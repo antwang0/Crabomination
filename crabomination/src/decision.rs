@@ -86,6 +86,19 @@ pub enum Decision {
         /// Source permanent that's asking for the type.
         source: CardId,
     },
+
+    /// CR 903.9b — the commander would land in `would_be` from
+    /// somewhere; its owner *may* redirect to the command zone
+    /// instead. Answered with `DecisionAnswer::Bool` (true = redirect,
+    /// false = let it go to `would_be`). `AutoDecider` defaults to
+    /// `true` since the safest play is almost always to save the
+    /// commander; scripted scenarios (countering an opponent's
+    /// graveyard recursion, "draw a card off Yargle's death", etc.)
+    /// can answer `false`.
+    CommanderRedirect {
+        commander: CardId,
+        would_be: crate::card::Zone,
+    },
 }
 
 /// The decider's answer to a `Decision`. Variants must match the decision kind.
@@ -184,6 +197,11 @@ impl Decider for AutoDecider {
             ),
             Decision::SearchLibrary { .. } => DecisionAnswer::Search(None),
             Decision::OptionalTrigger { .. } => DecisionAnswer::Bool(false),
+            // Default to redirecting — saving the commander matches
+            // the typical printed-play pattern. Tests that need the
+            // opposite (let it land in the graveyard / exile) script
+            // a `Bool(false)` via `ScriptedDecider`.
+            Decision::CommanderRedirect { .. } => DecisionAnswer::Bool(true),
             Decision::PutOnLibrary { hand, count, .. } => DecisionAnswer::PutOnLibrary(
                 hand.iter().take(*count).map(|(id, _)| *id).collect(),
             ),
