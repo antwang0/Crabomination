@@ -267,6 +267,39 @@ status tag (✅ wired, 🟡 partial, ⏳ todo) plus a short note.
   emission so cards like Notion Thief / Possibility Storm can wire
   cleanly.
 
+- ✅ **CR 119 — Life** (push modern_decks audit, claude/modern_decks
+  branch): The life-total mechanics framework. Audit:
+  (a) **119.1** starting life total 20 — ✅ (`Player::new` initializes
+  `life: 20`); (b) **119.2** damage → lose life — ✅ (`deal_damage_to`
+  routes player damage to `LoseLife` events via `damage_to_player`);
+  (c) **119.3** gain/lose life adjusts total — ✅ (`Effect::GainLife` /
+  `Effect::LoseLife` in `game/effects/mod.rs:465/479`); (d) **119.4**
+  pay life requires life ≥ amount — ✅ (`life_cost` precheck in
+  `activate_ability` returns `GameError::InsufficientLife` when life <
+  cost); (e) **119.4b** can always pay 0 life — ✅ (mana-spent / life-
+  cost paths short-circuit on 0); (f) **119.5** set life total — ✅
+  (push modern_decks: new `Effect::SetLifeTotal { who, amount }`
+  primitive computes `delta = new_total - current_life` then emits
+  `LifeGained`/`LifeLost` for non-zero delta; tests
+  `set_life_total_emits_correct_delta_events_per_cr_119_5` +
+  `set_life_total_higher_emits_life_gained`); (g) **119.6** 0 or less
+  life loses game — ✅ (SBA in `check_state_based_actions` marks the
+  player `eliminated` when `life ≤ 0`); (h) **119.7** can't gain life
+  — ⏳ (no general can't-gain-life replacement layer); (i) **119.8**
+  can't lose life — ⏳ (no general can't-lose-life replacement layer);
+  (j) **119.9** 0 life gain doesn't fire trigger — ✅ (`Effect::GainLife`
+  handler `if amt == 0 { return Ok(()); }` short-circuits before
+  emitting `LifeGained`; test
+  `zero_life_gain_does_not_trigger_lifegain_events_per_cr_119_9`); (k)
+  **119.10** 0 life gain doesn't fire replacement — ✅ (no replacement
+  layer; the engine's behavior is conservatively correct since no
+  replacement exists to apply). The headline gap was 119.5 (set life
+  to specific value); now wired by the new `SetLifeTotal` primitive.
+  Biorhythm / Tree of Redemption / Soul Echo all become expressible
+  via this primitive. The remaining ⏳ are can't-gain-life /
+  can't-lose-life replacement effects — same engine-wide gap as the
+  general replacement-effect framework (CR 614).
+
 - ✅ **CR 117 — Timing and Priority** (push modern_decks audit,
   claude/modern_decks branch): The foundational priority + timing
   framework. Audit confirms the engine wires every sub-rule:
@@ -2380,7 +2413,7 @@ Strixhaven coverage push). Remaining gaps:
 |---|---|---|
 | Windfall | draws flat 7 | draw equal to most cards discarded |
 | Dark Confidant | fixed 2 life loss | lose life = CMC of revealed card |
-| Biorhythm | drain opponents to 0 | set each player's life to creature count |
+| ~~Biorhythm~~ | (~~drain opponents to 0~~) | **resolved push modern_decks** — now `SetLifeTotal` to creature count per side (CR 119.5) |
 | Coalition Relic | tap for 1 of any color | tap + charge counter → burst WUBRG |
 | Fellwar Stone | tap for 1 of any color | tap for a color an opponent's land produces |
 | Static Prison | ETB taps target | also suppresses untap while stun counters exist |

@@ -7925,15 +7925,38 @@ fn biorhythm_drops_each_opponent_to_zero_or_below() {
         g.players[0].mana_pool.add(Color::Green, 1);
     }
 
-    let opp_life_before = g.players[1].life;
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Biorhythm castable for {6}{G}{G}");
     drain_stack(&mut g);
 
-    // Opp loses 20 life — well below starting life total.
-    assert!(g.players[1].life <= opp_life_before - 20,
-        "Opp dropped by ≥20 life: {} → {}", opp_life_before, g.players[1].life);
+    // Push (modern_decks): Biorhythm now uses SetLifeTotal (CR 119.5).
+    // With 0 creatures opp controls → opp life = 0.
+    assert_eq!(g.players[1].life, 0,
+        "Opp life set to creature count (0): got {}", g.players[1].life);
+}
+
+#[test]
+fn biorhythm_sets_life_to_creature_count_per_cr_119_5() {
+    let mut g = two_player_game();
+    // You control 3 bears; opp controls 1 bear.
+    let _b1 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let _b2 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let _b3 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let _o1 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+
+    let id = g.add_card_to_hand(0, catalog::biorhythm());
+    for _ in 0..8 {
+        g.players[0].mana_pool.add(Color::Green, 1);
+    }
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Biorhythm castable for {6}{G}{G}");
+    drain_stack(&mut g);
+
+    // CR 119.5 — life total set to creature count per side.
+    assert_eq!(g.players[0].life, 3, "your life = 3 bears");
+    assert_eq!(g.players[1].life, 1, "opp life = 1 bear");
 }
 
 #[test]

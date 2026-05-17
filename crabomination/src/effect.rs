@@ -764,6 +764,18 @@ pub enum Effect {
     Fight { attacker: Selector, defender: Selector },
     GainLife  { who: Selector, amount: Value },
     LoseLife  { who: Selector, amount: Value },
+    /// Set a player's life total to a specific value (CR 119.5).
+    /// "If an effect sets a player's life total to a specific number, the
+    /// player gains or loses the necessary amount of life to end up with
+    /// the new total." Used by Biorhythm-style "set life to creature
+    /// count", Tree of Redemption-style "exchange life with toughness",
+    /// and any future effect that pins life to a specific number.
+    ///
+    /// Implementation note: the resolver computes `delta = new_total -
+    /// current_life` and emits either a `LifeGained` event (delta > 0)
+    /// or `LifeLost` event (delta < 0). Delta of 0 emits no event
+    /// (matches CR 119.9 / 119.10 zero-life-change semantics).
+    SetLifeTotal { who: Selector, amount: Value },
     /// Controller loses `amount` life, a different selector gains it.
     Drain { from: Selector, to: Selector, amount: Value },
 
@@ -1193,6 +1205,9 @@ impl Effect {
             Effect::GainLife { who, amount } | Effect::LoseLife { who, amount } => {
                 sel_has_target(who) || value_has_target(amount)
             }
+            Effect::SetLifeTotal { who, amount } => {
+                sel_has_target(who) || value_has_target(amount)
+            }
             Effect::Drain { from, to, amount } => {
                 sel_has_target(from) || sel_has_target(to) || value_has_target(amount)
             }
@@ -1302,6 +1317,7 @@ impl Effect {
             // already-on-bf source/target.
             Effect::Fight { defender, .. } => sel_filter(defender),
             Effect::GainLife { who, .. } | Effect::LoseLife { who, .. } => sel_filter(who),
+            Effect::SetLifeTotal { who, .. } => sel_filter(who),
             Effect::Destroy { what }
             | Effect::Exile { what }
             | Effect::Tap { what }
@@ -1462,6 +1478,7 @@ impl Effect {
             Effect::DealDamage { .. }
             | Effect::GainLife { .. }
             | Effect::LoseLife { .. }
+            | Effect::SetLifeTotal { .. }
             | Effect::Drain { .. }
             | Effect::Discard { .. }
             | Effect::DiscardAnyNumber { .. }
@@ -1608,6 +1625,7 @@ impl Effect {
                     sel_find(attacker, slot).or_else(|| sel_find(defender, slot))
                 }
                 Effect::GainLife { who, .. } | Effect::LoseLife { who, .. } => sel_find(who, slot),
+                Effect::SetLifeTotal { who, .. } => sel_find(who, slot),
                 Effect::Drain { from, to, .. } => sel_find(from, slot).or_else(|| sel_find(to, slot)),
                 Effect::Draw { who, .. } | Effect::Mill { who, .. } => sel_find(who, slot),
                 Effect::Discard { who, .. } => sel_find(who, slot),

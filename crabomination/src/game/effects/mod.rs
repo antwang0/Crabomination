@@ -490,6 +490,28 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::SetLifeTotal { who, amount } => {
+                let new_total = self.evaluate_value(amount, ctx);
+                for ent in self.resolve_selector(who, ctx) {
+                    if let EntityRef::Player(p) = ent {
+                        let delta = new_total - self.players[p].life;
+                        self.players[p].life = new_total;
+                        if delta > 0 {
+                            let amt = delta as u32;
+                            self.players[p].life_gained_this_turn =
+                                self.players[p].life_gained_this_turn.saturating_add(amt);
+                            events.push(GameEvent::LifeGained { player: p, amount: amt });
+                        } else if delta < 0 {
+                            let amt = (-delta) as u32;
+                            events.push(GameEvent::LifeLost { player: p, amount: amt });
+                        }
+                    }
+                }
+                let mut sba = self.check_state_based_actions();
+                events.append(&mut sba);
+                Ok(())
+            }
+
             Effect::Drain { from, to, amount } => {
                 let amt = self.evaluate_value(amount, ctx).max(0) as u32;
                 if amt == 0 { return Ok(()); }

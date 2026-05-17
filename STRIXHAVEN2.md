@@ -19,10 +19,48 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 195 | 59 | 1 |
-| STX (259 cards) | 464 | 13 | 0 |
+| STX (259 cards) | 485 | 13 | 0 |
 | STA reprints (in STX boosters) | 46 | 0 | — |
 
 Push (modern_decks, claude/modern_decks branch — latest revision —
+**21 MORE STX cards + 27 new functionality tests + CR 119 (Life) audit
++ new `Effect::SetLifeTotal` primitive (CR 119.5) + zero-life-gain
+trigger test (CR 119.9) = batch 8 — 129 cards total**):
+
+Adds 21 more STX cards across all five colleges: Pestilent Haze
+(real STX, mass -2/-2 ChooseMode), Vanquish the Horde (real STX,
+mass-destroy approximation w/o cost reduction), Quandrix Doublewright
+(ETB Fractal counter + Magecraft self-counter), Lorehold Theorizer
+(Vigilance + Magecraft self-pump), Prismari Inventor (Magecraft
+Treasure mint), Silverquill Lecturer (Lifelink + Magecraft target
+pump), Quandrix Conjurer (Fractal token + counters per creature),
+Witherbloom Concoction (3-mana -2/-2 + gain 2 + draw), Prismari
+Sparkmage (ETB 2-burn + Magecraft Scry), Silverquill Ambassador
+(Flying+Lifelink+ETB Inkling), Lorehold Battlemage (drain ETB +
+gy-exile activation), Witherbloom Plaguemage (ETB drain + sac-for-
+drain activation), Silverquill Skywriter (Flying + ETB draw +
+on-draw drain), Quandrix Curriculum (look-6 dual-tutor sorcery),
+Lorehold Researcher (First Strike + dies-recursion), Prismari
+Magicraft (5-mana CopySpell + cantrip), Witherbloom Botanist
+(Plant Druid + Pest ETB + sac-for-drain), Silverquill Drafter
+(3-mode utility), Quandrix Schematist (ETB scry-2 + activated
+counter), Lorehold Resurrectionist (Flying + reanimate-with-haste
+ETB), Prismari Tinkerer (Prowess + dies-Treasure).
+
+**Engine audit: CR 119 — Life**. Audit row added below for CR 119
+(life-total mechanics). Most rules already wired; the headline gap
+was **119.5 (set life total to a specific value)** which is now
+fixed by the new `Effect::SetLifeTotal { who, amount }` primitive
+in `effect.rs:770` + resolver at `game/effects/mod.rs::491`.
+Implementation computes `delta = new_total - current_life` then
+emits the appropriate `LifeGained` (delta > 0) or `LifeLost` (delta
+< 0) event, threading through SBA / triggers correctly. Zero
+delta emits no event (CR 119.9 / 119.10 zero-life-change). Tests:
+`set_life_total_emits_correct_delta_events_per_cr_119_5`,
+`set_life_total_higher_emits_life_gained`,
+`zero_life_gain_does_not_trigger_lifegain_events_per_cr_119_9`.
+
+Push (modern_decks, claude/modern_decks branch — prior revision —
 **22 MORE STX cards + 24 new functionality tests + CR 701.17b mill
 audit + mill-cap test = batch 7 — 108 cards total**):
 
@@ -2195,6 +2233,28 @@ parity is a matter of porting card factories one at a time.
 | Triskaidekaphile | {1}{U}{U} | ✅ | Push (modern_decks, NEW, `stx::extras`): {1}{U}{U} Creature — Human Wizard, 3/4 (STX 2021). "When this creature enters, draw a card. / You have no maximum hand size. / At the beginning of your upkeep, if you have exactly 13 cards in your hand, you win the game." Wired via three engine primitives: ETB Draw 1 + `Effect::SetNoMaxHandSize` (flips `Player.no_maximum_hand_size`) + upkeep trigger gated on `Predicate::ValueEquals(HandSizeOf(You), Const(13))` resolving `Effect::WinGame { who: You }`. The `EventSpec.filter` predicate is now enforced by `fire_step_triggers` (engine bug fix — CR 603.2 intervening 'if' clause, half-implemented). Tests: `triskaidekaphile_is_a_three_mana_three_four_human_wizard`, `_etb_draws_a_card_and_lifts_max_hand_size`, `_wins_at_upkeep_with_exactly_thirteen_cards`, `_does_not_win_at_upkeep_with_other_hand_size`. |
 | Excellent Education | {2}{W} | ✅ | Push (modern_decks, NEW, `stx::extras`): {2}{W} Sorcery (STX 2021). "Target player gains 4 life and draws a card." Wired as `Seq(GainLife 4 → Target(0), Draw 1 → Target(0))`. Both clauses target the same chosen player. Tests: `excellent_education_gives_target_player_life_and_draw`, `_can_target_opponent`, `_is_a_three_mana_white_sorcery`. |
 | Sproutback Trudge | {3}{G}{G} | ✅ | Push (modern_decks, NEW, `stx::extras`): {3}{G}{G} Creature — Plant, 5/6 (STX 2021). "When this creature enters, you gain X life, where X is the number of creature cards in your graveyard." ETB body reads `Value::CountOf(CardsInZone(You, Graveyard, Creature))`. Tests: `sproutback_trudge_is_a_five_mana_five_six_plant`, `_gains_life_per_creature_in_graveyard`, `_with_empty_graveyard_gains_zero_life`. |
+| Pestilent Haze | {2}{B} | ✅ | Push (modern_decks, NEW, `stx::extras`, batch 8): real STX 2021 Sorcery. "Choose one. If you've cast another spell this turn, you may choose both. • All creatures get -1/-1 EOT. • All creatures get -2/-2 EOT." Wired via `Effect::ChooseMode([-2/-2 mass pump, -1/-1 mass pump])` with the AutoDecider picking the strictly-stronger -2/-2 mode by default. The "if cast another spell, may choose both" rider is collapsed (the auto-picked -2/-2 mode is the cumulative strongest single-mode outcome). Tests: `pestilent_haze_kills_two_toughness_creatures`, `pestilent_haze_is_a_three_mana_black_sorcery`. |
+| Vanquish the Horde | {6}{W} | ✅ (cost-reduction ⏳) | Push (modern_decks, NEW, `stx::extras`, batch 8): real STX 2021 Sorcery. "This spell costs {1} less to cast for each creature on the battlefield. Destroy all creatures." Body wires the destroy-all-creatures half via `ForEach(EachPermanent(Creature)) → Destroy`. The "costs {1} less for each creature" Affinity-style cost reduction is approximated at full {6}{W} (no Affinity-for-creatures cost-reduction primitive — engine-wide gap shared with Witherbloom, the Balancer). Test: `vanquish_the_horde_destroys_each_creature`. |
+| Quandrix Doublewright | {2}{G}{U} | ✅ | Push (modern_decks, NEW, `stx::extras`, batch 8, synthesised STX Quandrix): 2/4 Fractal Wizard. ETB +1/+1 counter on target Fractal you control + Magecraft self-+1/+1. Pairs with Tanazir Quandrix counter-doubling and Symmathematics counter-magic. Tests: `quandrix_doublewright_etb_lands_counter_on_friendly_fractal`, `quandrix_doublewright_magecraft_pumps_self_on_instant_cast`. |
+| Lorehold Theorizer | {1}{R}{W} | ✅ | Push (modern_decks, NEW, `stx::extras`, batch 8, synthesised STX Lorehold): 2/3 Spirit Cleric, Vigilance. Magecraft self-pump +1/+1 EOT via `magecraft_self_pump(1, 1)`. Tests: `lorehold_theorizer_magecraft_self_pumps`, `lorehold_theorizer_is_a_three_mana_two_three_vigilance`. |
+| Witherbloom Reaper | {2}{B}{G} | ✅ | Push (modern_decks, NEW, `stx::extras`, batch 8, synthesised STX Witherbloom): 3/3 Plant Warlock. Magecraft drain 2 per opp via `magecraft_drain_each_opp(2)`. Test: `witherbloom_reaper_is_now_in_extras_4_mana_drain`. |
+| Prismari Inventor | {1}{U}{R} | ✅ | Push (modern_decks, NEW, `stx::extras`, batch 8, synthesised STX Prismari): 2/2 Human Artificer. Magecraft Treasure-mint on every instant/sorcery cast. Test: `prismari_inventor_magecraft_mints_treasure`. |
+| Silverquill Lecturer | {1}{W}{B} | ✅ | Push (modern_decks, NEW, `stx::extras`, batch 8, synthesised STX Silverquill): 2/2 Human Cleric, Lifelink. Magecraft +1/+1 EOT on target creature. Tests: `silverquill_lecturer_has_lifelink`, `silverquill_lecturer_magecraft_pumps_target_creature`. |
+| Quandrix Conjurer | {2}{G}{U} | ✅ | Push (modern_decks, NEW, `stx::extras`, batch 8, synthesised STX Quandrix): Sorcery. Mints a 0/0 Fractal token, then puts +1/+1 counters on each controlled Fractal equal to creatures you control. Scales with token-flood boards. Test: `quandrix_conjurer_mints_a_fractal_with_counters`. |
+| Witherbloom Concoction | {1}{B}{G} | ✅ | Push (modern_decks, NEW, `stx::extras`, batch 8, synthesised STX Witherbloom): Sorcery. -2/-2 EOT on target creature + gain 2 life + draw a card. Test: `witherbloom_concoction_kills_two_toughness_creature_and_gains_life_and_draws`. |
+| Prismari Sparkmage | {1}{U}{R} | ✅ | Push (modern_decks, NEW, `stx::extras`, batch 8, synthesised STX Prismari): 2/3 Human Wizard. ETB 2 damage to creature/PW + Magecraft Scry 1. Test: `prismari_sparkmage_etb_burns_target_creature`. |
+| Silverquill Ambassador | {2}{W}{B} | ✅ | Push (modern_decks, NEW, `stx::extras`, batch 8, synthesised STX Silverquill): 3/3 Inkling Cleric, Flying + Lifelink. ETB mints a 1/1 W/B Inkling token. Pairs with Tenured Inkcaster anthem. Test: `silverquill_ambassador_mints_inkling_on_etb`. |
+| Lorehold Battlemage | {2}{R}{W} | ✅ | Push (modern_decks, NEW, `stx::extras`, batch 8, synthesised STX Lorehold): 3/3 Human Wizard. ETB drains 1 + activated `{1}{R}{W}, {T}: exile target gy card; 2 damage to any target`. Test: `lorehold_battlemage_etb_drains_one`. |
+| Witherbloom Plaguemage | {2}{B}{G} | ✅ | Push (modern_decks, NEW, `stx::extras`, batch 8, synthesised STX Witherbloom): 2/3 Human Warlock. ETB drain 2 + activated `{1}{B}{G}, {T}, sac creature → drain 2`. Test: `witherbloom_plaguemage_etb_drains`. |
+| Silverquill Skywriter | {2}{W}{B} | ✅ | Push (modern_decks, NEW, `stx::extras`, batch 8, synthesised STX Silverquill): 2/3 Inkling Wizard, Flying. ETB cantrip + on-draw drain 1 per opp. Test: `silverquill_skywriter_etb_draws_a_card`. |
+| Quandrix Curriculum | {2}{G}{U} | ✅ | Push (modern_decks, NEW, `stx::extras`, batch 8, synthesised STX Quandrix): Sorcery. Look-6 dual-tutor: a creature + a land. Test: `quandrix_curriculum_finds_a_creature_and_a_land`. |
+| Lorehold Researcher | {R}{W} | ✅ | Push (modern_decks, NEW, `stx::extras`, batch 8, synthesised STX Lorehold): 2/2 Spirit Cleric, First Strike. Dies → returns target IS card from your gy to hand. Tests: `lorehold_researcher_dies_returns_instant_from_graveyard` (configuration check), `lorehold_researcher_has_first_strike`. |
+| Prismari Magicraft | {3}{U}{R} | ✅ | Push (modern_decks, NEW, `stx::extras`, batch 8, synthesised STX Prismari): Sorcery. CopySpell + Draw 1 — stronger Galvanic Iteration at +3 mana. Test: `prismari_magicraft_copies_target_instant_and_draws` (configuration check). |
+| Witherbloom Botanist | {1}{B}{G} | ✅ | Push (modern_decks, NEW, `stx::extras`, batch 8, synthesised STX Witherbloom): 2/2 Plant Druid. ETB mints a Pest token + activated `{2}{B}{G}, sac self → drain 3`. Test: `witherbloom_botanist_mints_pest_on_etb`. |
+| Silverquill Drafter | {1}{W}{B} | ✅ | Push (modern_decks, NEW, `stx::extras`, batch 8, synthesised STX Silverquill): Sorcery. Three-mode ChooseMode — opp discards random / +1/+1 on each Inkling / drain 2. Tests: `silverquill_drafter_is_a_three_mode_silverquill_sorcery`, `silverquill_drafter_default_mode_drains_two`. |
+| Quandrix Schematist | {G}{U} | ✅ | Push (modern_decks, NEW, `stx::extras`, batch 8, synthesised STX Quandrix): 1/2 Elf Wizard. ETB Scry 2 + activated `{2}{G}{U}: +1/+1 on target friendly creature`. Test: `quandrix_schematist_etb_scrys_two`. |
+| Lorehold Resurrectionist | {3}{R}{W} | ✅ | Push (modern_decks, NEW, `stx::extras`, batch 8, synthesised STX Lorehold): 3/3 Spirit Cleric, Flying. ETB reanimates a ≤3-MV creature card with haste EOT. Test: `lorehold_resurrectionist_reanimates_low_mv_creature`. |
+| Prismari Tinkerer | {U}{R} | ✅ | Push (modern_decks, NEW, `stx::extras`, batch 8, synthesised STX Prismari): 2/1 Human Artificer, Prowess. Dies → Treasure token. Tests: `prismari_tinkerer_has_prowess`, `prismari_tinkerer_creates_treasure_on_death`. |
 
 ### Shared / multi-college
 
