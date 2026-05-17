@@ -441,51 +441,17 @@ impl GameState {
                         }
                     }
 
-                    // AnotherOfYours creature ETB triggers.
-                    if self
-                        .battlefield
-                        .last()
-                        .map(|c| c.id == card_id && c.definition.is_creature())
-                        .unwrap_or(false)
-                    {
-                        let other_triggers: Vec<(CardId, Effect)> = self
-                            .battlefield
-                            .iter()
-                            .filter(|c| c.id != card_id && c.controller == caster)
-                            .flat_map(|c| {
-                                c.definition
-                                    .triggered_abilities
-                                    .iter()
-                                    .filter(|t| t.event.kind == EventKind::EntersBattlefield
-                                        && matches!(t.event.scope, EventScope::AnotherOfYours))
-                                    .map(|t| (c.id, t.effect.clone()))
-                            })
-                            .collect();
-                        // Elesh Norn replacement: each listener's trigger
-                        // count is determined by the listener's controller
-                        // (which equals `caster` here, so we reuse the
-                        // multiplier we'd compute for self-source above).
-                        let aoy_multiplier =
-                            crate::game::actions::etb_trigger_multiplier(self, caster);
-                        for (src, effect) in other_triggers {
-                            let auto_target =
-                                self.auto_target_for_effect_avoiding(&effect, caster, Some(src));
-                            for _ in 0..aoy_multiplier {
-                                self.stack.push(StackItem::Trigger {
-                                    source: src,
-                                    controller: caster,
-                                    effect: Box::new(effect.clone()),
-                                    target: auto_target.clone(),
-                                    mode: None,
-                                    x_value: 0,
-                                    converged_value: 0,
-                                trigger_source: None,
-                                    mana_spent: 0,
-                                    event_amount: 0,
-                                });
-                            }
-                        }
-                    }
+                    // AnotherOfYours creature-ETB triggers are dispatched
+                    // by the unified event pipeline (`dispatch_triggers_
+                    // for_events` reading the `PermanentEntered` event).
+                    // The synchronous push that used to live here was a
+                    // duplicate — it both bypassed the `EventSpec.filter`
+                    // (no CR 603.4 'if' check) and left `trigger_source`
+                    // unset, so cards like Silverquill Chastiser ("when
+                    // another Inkling ETBs, drain 1") double-fired with
+                    // their filter ignored. Removed in push (modern_decks
+                    // current revision) so the dispatcher handles it as
+                    // the sole source of truth.
                 } else {
                     let chosen_mode = mode.unwrap_or(0);
                     let mut spell_events = self.continue_spell_resolution(

@@ -19,10 +19,66 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 195 | 59 | 1 |
-| STX (259 cards) | 495 | 13 | 0 |
+| STX (259 cards) | 515 | 13 | 0 |
 | STA reprints (in STX boosters) | 46 | 0 | — |
 
 Push (modern_decks, claude/modern_decks branch — latest revision —
+**20 MORE STX cards + 24 new functionality tests + CR 603.4 intervening-
+'if' engine fix for AnotherOfYours ETB triggers + CR 122 (Counters)
+audit = batch 10 — 159 cards total in batches 9+10**):
+
+Adds 20 more synthesised STX cards across all five colleges, exercising
+existing engine primitives: **Silverquill Chastiser** (3/2 Inkling Cleric
+Flying, drains 1 on other Inkling ETB — first card validating the new
+CR 603.4 intervening-'if' fix), **Witherbloom Pestmaster** (2/3 Plant
+Warlock, ETB-mints-Pest + counter-on-other-Pest-death), **Lorehold
+Chronicler** (3/3 Spirit Cleric, ETB gy-IS-recursion + on-attack
+gy-strip), **Prismari Pyromentor** (3/4 magecraft 2-burn each opp),
+**Quandrix Equation** (Fractal mint with 2× hand-size counters),
+**Silverquill Inquisitor's Mark** (targeted Despise + gain 2 life),
+**Witherbloom Mire** (3-mana drain 3 + Surveil 2), **Lorehold
+Memorial** (gy-creature recursion + per-turn Spirit mint), **Prismari
+Ember-Trickster** (Prowess + ETB Treasure), **Quandrix Aetherist**
+(hand-size ETB counters + on-counter draw), **Silverquill Sentinel**
+(2/2 Inkling Flying Lifelink with combat-step self-pump), **Witherbloom
+Necrogale** (4/4 Plant Zombie, ETB reanimates ≤3-MV with haste),
+**Lorehold Echo** (combat trick with gy-conditional FS+Lifelink),
+**Prismari Spellforger** (ETB loot + Magecraft Treasure), **Quandrix
+Multiplier** (3/3 ETB doubles +1/+1 counters on target), **Silverquill
+Scribefall** (two Inklings + drain 2 sorcery), **Witherbloom
+Wickering** (sac-creature -2/-2 or -4/-4 by toughness), **Lorehold
+Historian** (graveyard-exile-as-cost ETB ping), **Prismari Spectacle**
+(3-mode bolt / loot / Treasure), **Quandrix Wavebreaker** (ETB
+scry-draw + on-draw counter), **Silverquill Anthemwright** (Flying
++1/+0 + lifelink anthem on Other creatures), **Witherbloom Decay**
+(2 mana removal + 2 life), **Lorehold Reverberation** (3 damage +
+3 life if creature died), **Prismari Eccentric** (Haste + ETB Treasure
++ sac-Treasure-to-draw), **Quandrix Theorem Crafter** (+1/+1 counters
+per land controlled).
+
+**Engine fix: CR 603.4 intervening-'if' clause for AnotherOfYours ETB
+triggers**. The synchronous AnotherOfYours-ETB-trigger push in
+`game/stack.rs::344+` was a duplicate of the unified-dispatcher path
+(`game/mod.rs::dispatch_triggers_for_events`) — it bypassed the
+`EventSpec.filter` predicate check entirely and left `trigger_source`
+unset, causing cards with filtered "another X ETBs" triggers
+(Silverquill Chastiser's Inkling filter, Felisa-style WithCounter
+filters) to double-fire with their filter ignored. Removed in this
+push so the dispatcher is the sole source of truth — `trigger_source`
+is correctly bound to the ETB subject and the CR 603.4 intervening-'if'
+runs the filter against the ETB subject card. Tests:
+`silverquill_chastiser_drains_on_other_inkling_etb`,
+`silverquill_chastiser_does_not_trigger_on_non_inkling_etb`.
+
+**Engine audit: CR 122 — Counters**. Audit row added below for CR 122
+covering counter placement (122.1), zero-counter no-op (122.3a/b), and
+ETB-counter replacement (122.6). Most rules already wired; the
+remaining gap is **122.4** (counters on cards in non-battlefield zones
+having no game effect for most counter types — already implicitly
+honored since most counter-reading predicates only check battlefield
+permanents).
+
+Push (modern_decks, claude/modern_decks branch — prior revision —
 **10 MORE STX cards + 11 new functionality tests = batch 9 — 139 cards
 total**):
 

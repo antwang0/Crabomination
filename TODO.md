@@ -11,6 +11,64 @@ Periodic spot-check of the rules document
 (`crabomination/MagicCompRules 20260116.txt`). Each rule below has a
 status tag (✅ wired, 🟡 partial, ⏳ todo) plus a short note.
 
+- 🟡 **CR 122 — Counters** (push modern_decks audit, claude/modern_decks
+  branch — batch 10): The counter primitive — placement, accumulation,
+  +1/+1 vs -1/-1 cancellation, ETB-with-counters, "Nth counter" trigger.
+  Audit:
+  (a) **122.1** counter is a marker with no characteristics — ✅ (the
+  `CounterType` enum at `card.rs:121+` is a tag — counters are stored
+  as `HashMap<CounterType, u32>` on `CardInstance.counters` with no
+  ability/keyword payload of their own).
+  (b) **122.1a** +X/+Y power/toughness — ✅ (layer-7c reads
+  `counter_count(PlusOnePlusOne) - counter_count(MinusOneMinusOne)`
+  and adds the delta to base P/T via `compute_battlefield`).
+  (c) **122.1b** keyword counters — ⏳ (no `CounterType::Keyword(Keyword)`
+  variant yet; cards like Decayed / Helix Pinnacle aren't in catalog).
+  (d) **122.1c** shield counters — ⏳ (no `CounterType::Shield` variant;
+  no Phyrexia-style replacement primitive). (e) **122.1d** stun
+  counters — ✅ (`CounterType::Stun`, "would untap → remove a stun
+  instead" wired in `do_untap`). (f) **122.1e** loyalty counters define
+  PW loyalty — ✅ (`CounterType::Loyalty` + PW-dies-at-0-loyalty SBA).
+  (g) **122.1f** 10+ poison → lose — ✅ (`Player.poison_counters` +
+  SBA check at `stack.rs::check_state_based_actions`). (h) **122.1g**
+  defense counters on battles — ⏳ (Battle card type not modelled).
+  (i) **122.1h** finality counters — ⏳ (no `CounterType::Finality` +
+  bf→exile replacement). (j) **122.1i** rad counters — ⏳ (no
+  `CounterType::Rad` + per-upkeep mill).
+  (k) **122.2** counters cease to exist on zone change — 🟡 (the engine
+  preserves counters across moves for the Felisa "creature with +1/+1
+  counter dies → token" pattern; printed CR says "cease to exist", so
+  the post-move counter read works only because no card has an
+  uncancel-counter-when-leaving primitive).
+  (l) **122.3** +1/+1 vs -1/-1 cancellation as SBA — ✅
+  (`check_state_based_actions` line 637-661 deducts `min(plus, minus)`
+  of each kind).
+  (m) **122.4** "can't have more than N counters" — ⏳ (no
+  `Modification::MaxCountersOfKind` rule).
+  (n) **122.5** "move a counter" — 🟡 (one-off cards like Tester of
+  the Tangential reference "move N counters from this to that"; no
+  general `Effect::MoveCounter { from, to, kind, count }` primitive
+  yet — tracked as part of Tester's promotion).
+  (o) **122.6/a** ETB-with-counters — ✅ (`CardDefinition.
+  enters_with_counters: Option<(CounterType, Value)>` is applied in
+  `stack.rs:362+` AFTER the card is pushed onto bf but BEFORE the
+  next SBA pass, so printed 0/0 bodies — Pterafractyl, Symmathematics,
+  Quandrix Calligrapher — survive ETB).
+  (p) **122.7** "When the Nth [kind] counter is put on" — ⏳ (no
+  threshold-counter trigger; the engine emits one CounterAdded per
+  add operation, but no "you went from 4 → 5 counters" notification).
+  (q) **122.8** dies-with-counters → counters move to replacement —
+  ✅ (counters persist on zone-out, so the Felisa pattern + Ambitious
+  Augmenter "creature dies with counters → Fractal token with same
+  counters" read works in principle; counter-transfer-on-death
+  primitive still ⏳). Tests: counter behaviour exercised across the
+  suite — every Quandrix counter card (Calligrapher, Doublewright,
+  Multiplier, Theorem Crafter, Aetherist) implicitly validates 122.3
+  + 122.6/a; Felisa tests validate 122.2's "counters survive
+  graveyard-move" approximation. Promote to ✅ when 122.1b (keyword
+  counters), 122.4 (cap), 122.5 (general move), and 122.7 (Nth-counter
+  threshold trigger) all land.
+
 - ✅ **CR 111 — Tokens** (push modern_decks audit, claude/modern_decks
   branch): The token primitive — what a token is, how it enters,
   how it leaves play, predefined tokens. Audit:
@@ -3160,4 +3218,72 @@ already tracked in Commander phase) — `ReplacementEffect` registry
 keyed on `ZoneChange { from: Battlefield, to: Graveyard, card_filter }`.
 Returns an `(Exile, DelayedTriggerOnExile)` 2-tuple instead of the
 default zone change.
+
+### Engine — Token subject_controller cache in CreatureDied events
+
+The `EventScope::AnotherOfYours` scope check at
+`game/effects/events.rs:79+` for CreatureDied events walks the
+battlefield then per-player graveyards to find the dying card's
+controller. For dying **tokens**, CR 111.7c's "ceases to exist" SBA
+runs in the same `check_state_based_actions` sweep as the death event
+emission, so by the time the unified `dispatch_triggers_for_events`
+runs the token is gone from every zone and `subject_controller`
+returns `None` — silently dropping every AnotherOfYours trigger that
+fires off a token death.
+
+**Repro**: Witherbloom Pestmaster ("whenever another Pest you control
+dies, +1/+1 counter on this") doesn't trigger when an STX Pest token
+dies — only when a non-token Pest creature (Witherbloom Pest Eater)
+dies. Filed for batch 10.
+
+**Fix**: cache the subject's controller (and creature types) on the
+`GameEvent::CreatureDied` payload at emission time (in
+`check_state_based_actions`), so the dispatcher reads it from the
+event rather than walking zones. Same approach as the existing
+`event_amount` cache for LifeGained / DamageDealt scalars.
+
+### Engine — `Modification::RemoveAllAbilities` only clears keywords
+
+The layer-6 `RemoveAllAbilities` modification at
+`game/layers.rs:284` does `keywords.clear()` only — activated and
+triggered abilities still run from the original `CardDefinition`.
+Cards printed "loses all abilities" (Mercurial Transformation,
+Kasmina's Transmutation, Imprisoned in the Moon, Lignify) need the
+ability sets to be cleared too.
+
+**Fix**: extend `ComputedPermanent` with `cleared_abilities: bool`
+(or `effective_activated_abilities: Vec<ActivatedAbility>` /
+`effective_triggered_abilities: Vec<TriggeredAbility>`), then route
+`activate_ability` / `fire_step_triggers` / the dispatcher through
+the computed view. Unblocks the two STX 🟡 cards above.
+
+### Engine — Stack-spell self-target validator (CR 115.5)
+
+CR 115.5: "A spell or ability can't be its own target." The engine's
+target validator at `evaluate_requirement_static` doesn't enforce
+this. Currently no card in the catalog triggers the corner (no
+spell-targets-stack-spell card targets itself), but the rule should
+be wired before adding cards like Spell Burst or Lava Spike (which
+explicitly note "can't target this spell").
+
+### Engine — Coin flip primitive (CR 705)
+
+Ral Zarek, Guest Lecturer's -7 ultimate flips five coins. No coin-
+flip primitive exists; tracked as part of Ral's promotion. Would also
+unblock Karplusan Minotaur, Krark's Thumb, Mana Clash, and the
+Goblin Pulse / Lobotomy effects.
+
+**Shape**: `Effect::FlipCoin { count: Value, on_heads: Box<Effect>,
+on_tails: Box<Effect> }` + a per-decision `Decision::CoinFlip` so
+deterministic test fixtures can script the outcome.
+
+### Engine — Skip-turn primitive (CR 716)
+
+Ral Zarek -7 skips opp's next X turns. No skip-turn flag on
+`Player`. Also blocks Time Walk's "after this turn, take another"
+shape if a Twincast user wants to copy a Time Walk.
+
+**Shape**: `Player.extra_turns: u32` already exists for extra turns;
+add `Player.skipped_turns: u32` and have `pass_priority`'s
+Cleanup-to-next-turn transition decrement and skip when non-zero.
 

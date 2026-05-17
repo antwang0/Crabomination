@@ -24923,3 +24923,1387 @@ pub fn quandrix_geologist() -> CardDefinition {
         exile_on_resolve: false,
     }
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Batch 10 (push: modern_decks) — 20+ new synthesised STX cards across all
+// five colleges. Each card uses existing engine primitives and ships with
+// at least one functionality test in `crate::tests::stx`.
+// ═══════════════════════════════════════════════════════════════════════════
+
+// ── Silverquill Chastiser (batch 10) ────────────────────────────────────────
+
+/// Silverquill Chastiser — {1}{W}{B}, 3/2 Inkling Cleric, Flying.
+///
+/// Printed Oracle (synthesised): "Flying / Whenever another Inkling
+/// you control enters, target opponent loses 1 life and you gain 1
+/// life."
+///
+/// Inkling-tribal payoff that turns every token-mint (Inkling
+/// Summoning, Defend the Campus, Silverquill Ambassador ETB) into a
+/// drain trigger. Pairs with Tenured Inkcaster's +2/+2 anthem for a
+/// Silverquill tribal shell.
+pub fn silverquill_chastiser() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Chastiser",
+        cost: cost(&[generic(1), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnotherOfYours)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::HasCreatureType(CreatureType::Inkling),
+                }),
+            effect: Effect::Drain {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                to: Selector::You,
+                amount: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Witherbloom Pestmaster (batch 10) ───────────────────────────────────────
+
+/// Witherbloom Pestmaster — {2}{B}{G}, 2/3 Plant Warlock.
+///
+/// Printed Oracle (synthesised): "When this creature enters, create a
+/// 1/1 black and green Pest creature token with 'When this token
+/// dies, you gain 1 life.' / Whenever another Pest you control dies,
+/// put a +1/+1 counter on this creature."
+///
+/// Pest-tribal payoff that snowballs counters off the engine's
+/// Pest-die-to-gain-1 loop (Pest Summoning, Tend the Pests, Hunt for
+/// Specimens). The body's 2/3 frame grows quickly with two or more
+/// pest deaths a turn.
+pub fn witherbloom_pestmaster() -> CardDefinition {
+    let pest = super::shared::stx_pest_token();
+    CardDefinition {
+        name: "Witherbloom Pestmaster",
+        cost: cost(&[generic(2), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: pest,
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours)
+                    .with_filter(Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: SelectionRequirement::HasCreatureType(CreatureType::Pest),
+                    }),
+                effect: Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                },
+            },
+        ],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Lorehold Chronicler (batch 10) ──────────────────────────────────────────
+
+/// Lorehold Chronicler — {2}{R}{W}, 3/3 Spirit Cleric.
+///
+/// Printed Oracle (synthesised): "When this creature enters, return
+/// target instant or sorcery card from your graveyard to your hand.
+/// / Whenever this creature attacks, exile target card from a
+/// graveyard."
+///
+/// Lorehold's classic ETB-recursion + on-attack graveyard hate
+/// combo. ETB grabs an IS spell from graveyard; attack triggers
+/// strip the opponent's gy engines (Lord of Extinction, Bloodghast,
+/// Past in Flames, etc.).
+pub fn lorehold_chronicler() -> CardDefinition {
+    use crate::card::Zone;
+    CardDefinition {
+        name: "Lorehold Chronicler",
+        cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: Effect::Move {
+                    what: Selector::one_of(Selector::CardsInZone {
+                        who: PlayerRef::You,
+                        zone: Zone::Graveyard,
+                        filter: SelectionRequirement::HasCardType(CardType::Instant)
+                            .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+                    }),
+                    to: ZoneDest::Hand(PlayerRef::You),
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+                effect: Effect::Move {
+                    what: Selector::one_of(Selector::CardsInZone {
+                        who: PlayerRef::EachOpponent,
+                        zone: Zone::Graveyard,
+                        filter: SelectionRequirement::Any,
+                    }),
+                    to: ZoneDest::Exile,
+                },
+            },
+        ],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Prismari Pyromentor (batch 10) ──────────────────────────────────────────
+
+/// Prismari Pyromentor — {3}{U}{R}, 3/4 Human Wizard.
+///
+/// Printed Oracle (synthesised): "Magecraft — Whenever you cast or
+/// copy an instant or sorcery spell, this creature deals 2 damage to
+/// target opponent."
+///
+/// A bigger Drannith Stinger sibling at the rare slot — every spell
+/// in a Prismari deck becomes a 2-burn ping, scaling fast with
+/// Magecraft + CopySpell triggers (Galvanic Iteration, Twinscroll
+/// Shaman).
+pub fn prismari_pyromentor() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Pyromentor",
+        cost: cost(&[generic(3), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::DealDamage {
+            to: Selector::Player(PlayerRef::EachOpponent),
+            amount: Value::Const(2),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Quandrix Equation (batch 10) ────────────────────────────────────────────
+
+/// Quandrix Equation — {2}{G}{U} Sorcery.
+///
+/// Printed Oracle (synthesised): "Create a 0/0 green and blue Fractal
+/// creature token. Put X +1/+1 counters on it, where X is twice the
+/// number of cards in your hand."
+///
+/// Hand-size scaling Fractal mint, exploiting Quandrix's draw-heavy
+/// shells. Caster with 4 cards in hand → 8/8 Fractal for 4 mana.
+/// Pairs with Manifestation Sage (X = HandSize) and Body of Research.
+pub fn quandrix_equation() -> CardDefinition {
+    let fractal = super::super::sos::fractal_token();
+    CardDefinition {
+        name: "Quandrix Equation",
+        cost: cost(&[generic(2), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: fractal,
+            },
+            Effect::AddCounter {
+                what: Selector::LastCreatedToken,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Times(
+                    Box::new(Value::Const(2)),
+                    Box::new(Value::HandSizeOf(PlayerRef::You)),
+                ),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Silverquill Inquisitor's Mark (batch 10) ────────────────────────────────
+
+/// Silverquill Inquisitor's Mark — {1}{W}{B} Sorcery.
+///
+/// Printed Oracle (synthesised): "Target opponent reveals their hand
+/// and discards a noncreature, nonland card of your choice. You gain
+/// 2 life."
+///
+/// Targeted-discard + small lifegain — a Silverquill take on
+/// Despise/Inquisition of Kozilek with a white life cushion. The
+/// auto-decider picks the first non-creature non-land card from the
+/// opp's hand.
+pub fn silverquill_inquisitors_mark() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Inquisitor's Mark",
+        cost: cost(&[generic(1), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::DiscardChosen {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                count: Value::Const(1),
+                filter: SelectionRequirement::Not(Box::new(
+                    SelectionRequirement::Creature.or(SelectionRequirement::Land),
+                )),
+            },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Witherbloom Mire (batch 10) ─────────────────────────────────────────────
+
+/// Witherbloom Mire — {2}{B}{G} Sorcery.
+///
+/// Printed Oracle (synthesised): "Each opponent loses 3 life and you
+/// gain 3 life. Surveil 2."
+///
+/// Witherbloom drain + graveyard-set-up. Pairs with `Effect::Surveil`
+/// to bin reanimation targets while padding the life total.
+pub fn witherbloom_mire() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Mire",
+        cost: cost(&[generic(2), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Drain {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                to: Selector::You,
+                amount: Value::Const(3),
+            },
+            Effect::Surveil {
+                who: PlayerRef::You,
+                amount: Value::Const(2),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Lorehold Memorial (batch 10) ────────────────────────────────────────────
+
+/// Lorehold Memorial — {2}{R}{W} Enchantment.
+///
+/// Printed Oracle (synthesised): "When this enchantment enters,
+/// return target creature card from your graveyard to your hand. /
+/// At the beginning of your end step, if a creature died this turn,
+/// you gain 1 life and create a 2/2 red and white Spirit creature
+/// token."
+///
+/// A reanimator-flavored Lorehold enchantment: front-loaded gy →
+/// hand recursion, then a per-turn Spirit-mint sustained by the
+/// game's creature-death trigger.
+pub fn lorehold_memorial() -> CardDefinition {
+    use crate::card::Zone;
+    let spirit = super::super::sos::spirit_token();
+    CardDefinition {
+        name: "Lorehold Memorial",
+        cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: Effect::Move {
+                    what: Selector::one_of(Selector::CardsInZone {
+                        who: PlayerRef::You,
+                        zone: Zone::Graveyard,
+                        filter: SelectionRequirement::Creature,
+                    }),
+                    to: ZoneDest::Hand(PlayerRef::You),
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::StepBegins(crate::game::TurnStep::End),
+                    EventScope::ActivePlayer,
+                )
+                .with_filter(Predicate::CreaturesDiedThisTurnAtLeast {
+                    who: PlayerRef::You,
+                    at_least: Value::Const(1),
+                }),
+                effect: Effect::Seq(vec![
+                    Effect::GainLife {
+                        who: Selector::You,
+                        amount: Value::Const(1),
+                    },
+                    Effect::CreateToken {
+                        who: PlayerRef::You,
+                        count: Value::Const(1),
+                        definition: spirit,
+                    },
+                ]),
+            },
+        ],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Prismari Ember-Trickster (batch 10) ─────────────────────────────────────
+
+/// Prismari Ember-Trickster — {U}{R}, 1/3 Human Wizard, Prowess.
+///
+/// Printed Oracle (synthesised): "Prowess (Whenever you cast a
+/// noncreature spell, this creature gets +1/+1 until end of turn.) /
+/// When this creature enters, create a Treasure token."
+///
+/// 2-mana 1/3 prowess body that immediately replaces itself with a
+/// Treasure — fixes a color while leaving a creature on board to
+/// trigger off subsequent spells.
+pub fn prismari_ember_trickster() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Ember-Trickster",
+        cost: cost(&[u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: crate::game::effects::treasure_token(),
+                },
+            },
+            crate::effect::shortcut::prowess(),
+        ],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Quandrix Aetherist (batch 10) ───────────────────────────────────────────
+
+/// Quandrix Aetherist — {1}{G}{U}, 2/2 Fractal Wizard.
+///
+/// Printed Oracle (synthesised): "When this creature enters, put a
+/// +1/+1 counter on it for each card in your hand. / Whenever a
+/// +1/+1 counter is put on this creature, you may draw a card."
+///
+/// Hand-size scaling ETB followed by a "draw on counter" engine —
+/// hand → counter → draw → cast → counter creates loops with
+/// proliferate / Hardened Scales-style payoffs.
+pub fn quandrix_aetherist() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Aetherist",
+        cost: cost(&[generic(1), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::HandSizeOf(PlayerRef::You),
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::CounterAdded(CounterType::PlusOnePlusOne),
+                    EventScope::SelfSource,
+                ),
+                effect: Effect::MayDo {
+                    description: String::from("draw a card"),
+                    body: Box::new(Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::Const(1),
+                    }),
+                },
+            },
+        ],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Silverquill Sentinel (batch 10) ─────────────────────────────────────────
+
+/// Silverquill Sentinel — {W}{B}, 2/2 Inkling Knight, Flying.
+///
+/// Printed Oracle (synthesised): "Flying, lifelink / At the
+/// beginning of combat on your turn, this creature gets +1/+0 until
+/// end of turn."
+///
+/// A 2/2 flier that becomes a 3/2 every combat — converts steady
+/// lifelink into both an attacker and a deterrent. Pairs with the
+/// Inkling tribal engines.
+pub fn silverquill_sentinel() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Sentinel",
+        cost: cost(&[w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying, Keyword::Lifelink],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::TurnStep::BeginCombat),
+                EventScope::ActivePlayer,
+            ),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(1),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Witherbloom Necrogale (batch 10) ────────────────────────────────────────
+
+/// Witherbloom Necrogale — {3}{B}{G}, 4/4 Plant Zombie.
+///
+/// Printed Oracle (synthesised): "When this creature enters, return
+/// target creature card with mana value 3 or less from your
+/// graveyard to the battlefield. It gains haste until end of turn."
+///
+/// Witherbloom's mid-game reanimator finisher: 4/4 body + a
+/// drop-and-swing reanimation. Pairs with the engine's `Predicate::
+/// ManaValueAtMost(3)` cap on the gy filter.
+pub fn witherbloom_necrogale() -> CardDefinition {
+    use crate::card::Zone;
+    CardDefinition {
+        name: "Witherbloom Necrogale",
+        cost: cost(&[generic(3), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Zombie],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::Move {
+                    what: Selector::one_of(Selector::CardsInZone {
+                        who: PlayerRef::You,
+                        zone: Zone::Graveyard,
+                        filter: SelectionRequirement::Creature
+                            .and(SelectionRequirement::ManaValueAtMost(3)),
+                    }),
+                    to: ZoneDest::Battlefield {
+                        controller: PlayerRef::You,
+                        tapped: false,
+                    },
+                },
+                Effect::GrantKeyword {
+                    what: Selector::LastCreatedToken,
+                    keyword: Keyword::Haste,
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Lorehold Echo (batch 10) ────────────────────────────────────────────────
+
+/// Lorehold Echo — {R}{W} Instant.
+///
+/// Printed Oracle (synthesised): "Target creature gets +2/+2 until
+/// end of turn. If a creature died this turn, that creature also
+/// gains first strike and lifelink until end of turn."
+///
+/// Lorehold's combat trick wrapped in a graveyard-conditional
+/// upgrade. Pairs with token sacrifices to flip the rider on.
+pub fn lorehold_echo() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Echo",
+        cost: cost(&[r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(2),
+                toughness: Value::Const(2),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::If {
+                cond: Predicate::CreaturesDiedThisTurnAtLeast {
+                    who: PlayerRef::You,
+                    at_least: Value::Const(1),
+                },
+                then: Box::new(Effect::Seq(vec![
+                    Effect::GrantKeyword {
+                        what: Selector::Target(0),
+                        keyword: Keyword::FirstStrike,
+                        duration: Duration::EndOfTurn,
+                    },
+                    Effect::GrantKeyword {
+                        what: Selector::Target(0),
+                        keyword: Keyword::Lifelink,
+                        duration: Duration::EndOfTurn,
+                    },
+                ])),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Prismari Spellforger (batch 10) ─────────────────────────────────────────
+
+/// Prismari Spellforger — {1}{U}{R}, 2/3 Human Artificer.
+///
+/// Printed Oracle (synthesised): "When this creature enters, draw a
+/// card, then discard a card. / Magecraft — Whenever you cast or
+/// copy an instant or sorcery spell, create a Treasure token."
+///
+/// Loot + Treasure on cast — every spell repairs your hand and
+/// fixes mana for the next one. Pairs with Prismari Inventor (1/1
+/// Treasure-on-cast) for the dedicated Treasure shell.
+pub fn prismari_spellforger() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Spellforger",
+        cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Artificer],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: Effect::Seq(vec![
+                    Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::Const(1),
+                    },
+                    Effect::Discard {
+                        who: Selector::You,
+                        amount: Value::Const(1),
+                        random: false,
+                    },
+                ]),
+            },
+            magecraft(Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: crate::game::effects::treasure_token(),
+            }),
+        ],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Quandrix Multiplier (batch 10) ──────────────────────────────────────────
+
+/// Quandrix Multiplier — {2}{G}{U}, 3/3 Fractal Druid.
+///
+/// Printed Oracle (synthesised): "When this creature enters, double
+/// the number of +1/+1 counters on target creature you control."
+///
+/// Quandrix's signature "counter doubling" — same Tanazir Quandrix
+/// shape but on a single targeted creature, at a 3/3 mid-curve
+/// body. With Symmathematics (2/2 ETB with two counters): 2 → 4 → 8.
+pub fn quandrix_multiplier() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Multiplier",
+        cost: cost(&[generic(2), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::AddCounter {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::CountersOn {
+                    what: Box::new(Selector::Target(0)),
+                    kind: CounterType::PlusOnePlusOne,
+                },
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Silverquill Scribefall (batch 10) ───────────────────────────────────────
+
+/// Silverquill Scribefall — {3}{W}{B} Sorcery.
+///
+/// Printed Oracle (synthesised): "Create two 1/1 white and black
+/// Inkling creature tokens with flying. Target opponent loses 2 life
+/// and you gain 2 life."
+///
+/// Three-for-two threat play — two Inkling tokens to attack with
+/// next turn, plus an immediate drain that beats the curve. Slotting
+/// alongside Defend the Campus (3 Inklings for 5 mana) and Silverquill
+/// Verse (modal pump+drain+Inkling).
+pub fn silverquill_scribefall() -> CardDefinition {
+    let inkling = super::super::sos::inkling_token();
+    CardDefinition {
+        name: "Silverquill Scribefall",
+        cost: cost(&[generic(3), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                definition: inkling,
+            },
+            Effect::Drain {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                to: Selector::You,
+                amount: Value::Const(2),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Witherbloom Wickering (batch 10) ────────────────────────────────────────
+
+/// Witherbloom Wickering — {B}{G} Instant.
+///
+/// Printed Oracle (synthesised): "Sacrifice a creature: Target
+/// creature gets -2/-2 until end of turn. If the sacrificed creature
+/// had toughness 3 or greater, that creature gets -4/-4 until end of
+/// turn instead."
+///
+/// Witherbloom sacrifice-driven removal that scales with the sacked
+/// creature's printed toughness. The scaling branch (`-4/-4` vs.
+/// `-2/-2`) is gated on `Predicate::ValueAtLeast(SacrificedToughness,
+/// 3)` via the engine's existing `Effect::If` primitive — no `Value::
+/// IfElse` is needed since the sub-effect-level branch suffices.
+pub fn witherbloom_wickering() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Wickering",
+        cost: cost(&[b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::SacrificeAndRemember {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::Creature,
+            },
+            Effect::If {
+                cond: Predicate::ValueAtLeast(
+                    Value::SacrificedToughness,
+                    Value::Const(3),
+                ),
+                then: Box::new(Effect::PumpPT {
+                    what: target_filtered(SelectionRequirement::Creature),
+                    power: Value::Const(-4),
+                    toughness: Value::Const(-4),
+                    duration: Duration::EndOfTurn,
+                }),
+                else_: Box::new(Effect::PumpPT {
+                    what: target_filtered(SelectionRequirement::Creature),
+                    power: Value::Const(-2),
+                    toughness: Value::Const(-2),
+                    duration: Duration::EndOfTurn,
+                }),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Lorehold Historian (batch 10) ───────────────────────────────────────────
+
+/// Lorehold Historian — {1}{R}{W}, 2/2 Spirit Cleric.
+///
+/// Printed Oracle (synthesised): "When this creature enters, you may
+/// exile a card from your graveyard. If you do, this creature deals
+/// 2 damage to any target."
+///
+/// Graveyard-exile-as-cost stapled to a 2-damage ping ETB.
+/// Synergises with Lorehold's gy fuel — every exiled card both fires
+/// the Bolt and feeds delirium / lieutenant-style payoffs.
+pub fn lorehold_historian() -> CardDefinition {
+    use crate::card::Zone;
+    CardDefinition {
+        name: "Lorehold Historian",
+        cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::MayDo {
+                description: String::from("exile a card from your graveyard"),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::Move {
+                        what: Selector::one_of(Selector::CardsInZone {
+                            who: PlayerRef::You,
+                            zone: Zone::Graveyard,
+                            filter: SelectionRequirement::Any,
+                        }),
+                        to: ZoneDest::Exile,
+                    },
+                    Effect::DealDamage {
+                        to: target_filtered(
+                            SelectionRequirement::Creature
+                                .or(SelectionRequirement::Player)
+                                .or(SelectionRequirement::Planeswalker),
+                        ),
+                        amount: Value::Const(2),
+                    },
+                ])),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Prismari Spectacle (batch 10) ───────────────────────────────────────────
+
+/// Prismari Spectacle — {1}{U}{R} Instant.
+///
+/// Printed Oracle (synthesised): "Choose one — / • Prismari
+/// Spectacle deals 3 damage to target creature. / • Draw two cards,
+/// then discard a card. / • Create two Treasure tokens."
+///
+/// A 3-mode `ChooseMode` Instant — Lightning Bolt + Tidings + ramp
+/// in one card. AutoDecider picks the burn mode (0); scripted
+/// decider can probe modes 1/2.
+pub fn prismari_spectacle() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Spectacle",
+        cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::ChooseMode(vec![
+            Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Creature),
+                amount: Value::Const(3),
+            },
+            Effect::Seq(vec![
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(2),
+                },
+                Effect::Discard {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                    random: false,
+                },
+            ]),
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                definition: crate::game::effects::treasure_token(),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Quandrix Wavebreaker (batch 10) ─────────────────────────────────────────
+
+/// Quandrix Wavebreaker — {3}{G}{U}, 4/4 Fractal Wizard.
+///
+/// Printed Oracle (synthesised): "When this creature enters, scry 2,
+/// then draw a card. / Whenever you draw a card, put a +1/+1 counter
+/// on this creature."
+///
+/// Cantrip + draw-trigger counter accumulator. Pairs with cantrips
+/// in any draw-heavy shell — at the standard draw-step that's one
+/// counter per turn for free.
+pub fn quandrix_wavebreaker() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Wavebreaker",
+        cost: cost(&[generic(3), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: Effect::Seq(vec![
+                    Effect::Scry {
+                        who: PlayerRef::You,
+                        amount: Value::Const(2),
+                    },
+                    Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::Const(1),
+                    },
+                ]),
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CardDrawn, EventScope::YourControl),
+                effect: Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                },
+            },
+        ],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Silverquill Anthemwright (batch 10) ─────────────────────────────────────
+
+/// Silverquill Anthemwright — {2}{W}{B}, 3/3 Inkling Wizard, Flying.
+///
+/// Printed Oracle (synthesised): "Flying / Other creatures you
+/// control get +1/+0 and have lifelink."
+///
+/// Anthem + lifelink for all your other creatures. Pairs with Inkling
+/// tokens to swing as 2-3 power lifelinkers. Wired via two static
+/// effects on the source itself targeting `OtherThanSource` creatures
+/// the controller owns.
+pub fn silverquill_anthemwright() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Anthemwright",
+        cost: cost(&[generic(2), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![
+            StaticAbility {
+                description: "Other creatures you control get +1/+0.",
+                effect: StaticEffect::PumpPT {
+                    applies_to: Selector::EachPermanent(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::ControlledByYou)
+                            .and(SelectionRequirement::OtherThanSource),
+                    ),
+                    power: 1,
+                    toughness: 0,
+                },
+            },
+            StaticAbility {
+                description: "Other creatures you control have lifelink.",
+                effect: StaticEffect::GrantKeyword {
+                    applies_to: Selector::EachPermanent(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::ControlledByYou)
+                            .and(SelectionRequirement::OtherThanSource),
+                    ),
+                    keyword: Keyword::Lifelink,
+                },
+            },
+        ],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Witherbloom Decay (batch 10) ────────────────────────────────────────────
+
+/// Witherbloom Decay — {1}{B}{G} Instant.
+///
+/// Printed Oracle (synthesised): "Destroy target creature with mana
+/// value 3 or less. You gain 2 life."
+///
+/// Witherbloom's efficient removal: 3 mana to kill anything CMC 3
+/// or less and pad the life total by 2. Pairs with the Witherbloom
+/// Drain/Lifegain shell.
+pub fn witherbloom_decay() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Decay",
+        cost: cost(&[generic(1), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Destroy {
+                what: target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ManaValueAtMost(3)),
+                ),
+            },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Lorehold Reverberation (batch 10) ───────────────────────────────────────
+
+/// Lorehold Reverberation — {2}{R}{W} Instant.
+///
+/// Printed Oracle (synthesised): "Lorehold Reverberation deals 3
+/// damage to target creature an opponent controls. If a creature
+/// died this turn, you gain 3 life."
+///
+/// 3-damage removal + conditional lifegain — Lorehold's "trade" play
+/// pattern at instant speed. Pairs with token sacrifice or Daemogoth
+/// Titan / Daemogoth Woe-Eater deaths to flip the rider on.
+pub fn lorehold_reverberation() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Reverberation",
+        cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByOpponent),
+                ),
+                amount: Value::Const(3),
+            },
+            Effect::If {
+                cond: Predicate::CreaturesDiedThisTurnAtLeast {
+                    who: PlayerRef::You,
+                    at_least: Value::Const(1),
+                },
+                then: Box::new(Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::Const(3),
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Prismari Eccentric (batch 10) ───────────────────────────────────────────
+
+/// Prismari Eccentric — {2}{U}{R}, 3/2 Human Wizard, Haste.
+///
+/// Printed Oracle (synthesised): "Haste / When this creature enters,
+/// create a Treasure token. / Whenever this creature attacks, you
+/// may sacrifice a Treasure. If you do, draw a card."
+///
+/// Haste body + immediate Treasure + recurring loot on attack via
+/// sac-a-Treasure. Pairs with the Prismari Treasure shell (Prismari
+/// Inventor, Prismari Spellforger, Lorehold Treasure Smith).
+pub fn prismari_eccentric() -> CardDefinition {
+    use crate::card::ArtifactSubtype;
+    CardDefinition {
+        name: "Prismari Eccentric",
+        cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Haste],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: crate::game::effects::treasure_token(),
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+                effect: Effect::MayDo {
+                    description: String::from("sacrifice a Treasure to draw a card"),
+                    body: Box::new(Effect::Seq(vec![
+                        Effect::Sacrifice {
+                            who: Selector::You,
+                            count: Value::Const(1),
+                            filter: SelectionRequirement::HasArtifactSubtype(
+                                ArtifactSubtype::Treasure,
+                            ),
+                        },
+                        Effect::Draw {
+                            who: Selector::You,
+                            amount: Value::Const(1),
+                        },
+                    ])),
+                },
+            },
+        ],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Quandrix Theorem Crafter (batch 10) ─────────────────────────────────────
+
+/// Quandrix Theorem Crafter — {2}{G}{U}, 2/4 Fractal Wizard.
+///
+/// Printed Oracle (synthesised): "When this creature enters, put a
+/// number of +1/+1 counters on target creature equal to the number
+/// of lands you control."
+///
+/// Ramp payoff: at 4 lands, 4 counters; at 6 lands, 6 counters. A
+/// classic Quandrix curve-out from a turn-3 ramp into a turn-4
+/// haymaker creature.
+pub fn quandrix_theorem_crafter() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Theorem Crafter",
+        cost: cost(&[generic(2), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::AddCounter {
+                what: target_filtered(SelectionRequirement::Creature),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::CountOf(Box::new(Selector::EachPermanent(
+                    SelectionRequirement::Land.and(SelectionRequirement::ControlledByYou),
+                ))),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
