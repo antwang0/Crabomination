@@ -19,10 +19,42 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 195 | 59 | 1 |
-| STX (280 cards) | 559 | 13 | 0 |
+| STX (280 cards) | 584 | 13 | 0 |
 | STA reprints (in STX boosters) | 46 | 0 | — |
 
 Push (modern_decks, claude/modern_decks branch — latest revision —
+**25 new synthesised STX cards + 25 new functionality tests = batch 14
+— 25 cards total**):
+
+Adds 25 new synthesised STX cards in two locations:
+
+- **15 Silverquill (W/B) expansion** (`stx::silverquill`): expands the
+  Silverquill college pool from 15 → 30 cards, adding deeper Inkling
+  tribal density (`inkling_aspirant`, `inkling_scribe`, `inkling_bloodscribe`,
+  `inkling_verselord`, `silverquill_penman`, `silverquill_anthemwriter`),
+  drain payoffs (`silverquill_drainmaster`, `witherspell_drain`,
+  `silverquill_quillmage`, `inkrise_lifedrainer`), and utility bodies
+  (`silverquill_loremender`, `silverquill_memorialist`, `silverquill_erudite`,
+  `silverquill_reprimand`, `silverquill_inquisition`).
+- **10 cross-college additions** (`stx::extras`): expands Lorehold
+  (`lorehold_phantasmist`, `lorehold_bookburner`), Prismari
+  (`prismari_lightcaster`, `prismari_stormbringer`), Quandrix
+  (`quandrix_counterspeaker`, `quandrix_tessellator`), Witherbloom
+  (`witherbloom_wanderer`, `witherbloom_pestbinder`), and colorless
+  (`strixhaven_vault`, `strixhaven_acolyte`). Each plugs into an
+  existing engine primitive (`magecraft`, `StaticEffect::GrantKeyword`,
+  `EventScope::AnotherOfYours`, `Effect::MayDo`).
+
+All 25 ship with at least one functionality test in `tests::stx`. The
+`inkling_verselord` and `lorehold_phantasmist` tests in particular
+exercise the printed "Other [type]s have [keyword]" anthem via the
+existing `OtherThanSource` selector — same shape as Hofri Ghostforge,
+Tenured Inkcaster, Quintorius. New CR audit row: **CR 116 — Special
+Actions** (the 12-special-actions framework; only 116.2a "play a
+land" is exercised today, mapped to `GameAction::PlayLand` walking
+hand → battlefield without going through the stack per 116.1).
+
+Push (modern_decks, claude/modern_decks branch — prior revision —
 **21 MORE STX cards + 25 new functionality tests = batch 12 — 203 cards
 total across batches 9-12**):
 
@@ -2195,6 +2227,21 @@ parity is a matter of porting card factories one at a time.
 | Tenured Inkcaster | {2}{W}{B} | ✅ | Push XXXI: 3/2 Vampire Warlock. "Other Inkling creatures you control get +2/+2." Tribal anthem on the Inkling creature type, wired via the engine's `AffectedPermanents::AllWithCreatureType.exclude_source: true` flag (push XXX, Quintorius pattern). The anthem is layered in via a compute-time injection in `GameState::compute_battlefield`, so all of the controller's Inkling creatures (including Inkling tokens from Inkling Summoning, Defend the Campus) get +2/+2 while Inkcaster is on the battlefield. Tests: `tenured_inkcaster_buffs_friendly_inklings_by_two_two`, `tenured_inkcaster_does_not_buff_opponent_inklings`, `tenured_inkcaster_does_not_buff_self`, `tenured_inkcaster_anthem_expires_when_inkcaster_leaves_play`. |
 | Selfless Glyphweaver | {1}{W}{W} | ✅ | Push (modern_decks, NEW, `stx::silverquill`): front-face only of the MDFC Selfless Glyphweaver // Deadly Vanity. 2/3 Human Cleric Wizard. "Sacrifice this creature: Creatures you control gain indestructible until end of turn." Wired as a `sac_cost: true` activation that grants `Keyword::Indestructible` EOT to each controlled creature; the Glyphweaver is sacrificed as cost (before resolution) so it doesn't grant indestructible to itself — matching the printed Oracle. Back-face Deadly Vanity (mass force-sacrifice with each-opp-picks-which-to-keep) is omitted (no multi-pick decision shape). Tests: `selfless_glyphweaver_sac_grants_indestructible_to_friendlies`, `selfless_glyphweaver_is_a_three_mana_two_three_cleric_wizard`. |
 | Augusta, Dean of Order | {2}{W} | 🟡 | Push (modern_decks): 2/3 Legendary Human Cleric. **Improved**: body-only wire upgraded to a per-attacker `Attacks/AnotherOfYours` trigger that pumps the attacker +1/+1 EOT and grants Vigilance EOT — simplified stand-in for the printed "your choice of flying/first strike/vigilance/lifelink" rider (auto-picks Vigilance, the most generally useful for chained attacks). The "three or more with same power" gate is omitted (no engine predicate for "attacking creatures with same power"). Partner with Plargg, Dean of Chaos is also omitted (no Partner-pair primitive). Tests: `augusta_dean_of_order_per_attacker_trigger_pumps_other_attacker`. |
+| Silverquill Loremender | {1}{W} | ✅ | Push (modern_decks batch 14, NEW, `stx::silverquill`): 2/2 Human Cleric. ETB gain 2 life. Standard Light-of-Promise enabler. Test: `silverquill_loremender_etb_gains_two_life`. |
+| Inkling Verselord | {2}{W}{B} | ✅ | Push (modern_decks batch 14, NEW, `stx::silverquill`): 3/3 Inkling Cleric Wizard, Flying. Static "Other Inkling creatures you control have lifelink" wired via `StaticEffect::GrantKeyword(applies_to: Other Inklings)`. Stacks with Tenured Inkcaster's +2/+2 anthem. Tests: `inkling_verselord_grants_lifelink_to_other_inklings`, `inkling_verselord_does_not_grant_lifelink_to_self`. |
+| Silverquill Drainmaster | {2}{W}{B} | ✅ | Push (modern_decks batch 14, NEW, `stx::silverquill`): 3/2 Vampire Warlock. ETB drain 3 (each opp loses 3, you gain 3). Test: `silverquill_drainmaster_etb_drains_three`. |
+| Inkrise Lifedrainer | {1}{B} | ✅ | Push (modern_decks batch 14, NEW, `stx::silverquill`): 2/1 Inkling Rogue, Menace. Combat-damage-to-player → gain 1 life trigger via `EventKind::DealsCombatDamageToPlayer`. Test: `inkrise_lifedrainer_combat_damage_gains_one_life`. |
+| Silverquill Penman | {1}{W}{B} | ✅ | Push (modern_decks batch 14, NEW, `stx::silverquill`): 2/2 Inkling Wizard, Flying. ETB MayDo: discard a card → draw + each opp loses 1 life. Test: `silverquill_penman_is_a_three_mana_inkling_wizard_flier`. |
+| Silverquill Anthemwriter | {3}{W}{B} | ✅ | Push (modern_decks batch 14, NEW, `stx::silverquill`): 4/4 Inkling Bard, Flying + Lifelink. Static "Other creatures you control get +1/+0" via `StaticEffect::PumpPT(OtherThanSource)`. Tests: `silverquill_anthemwriter_pumps_other_friendlies_by_one_zero`, `silverquill_anthemwriter_is_a_lifelink_flying_finisher`. |
+| Silverquill Quillmage | {W}{B} | ✅ | Push (modern_decks batch 14, NEW, `stx::silverquill`): 2/2 Human Wizard, Lifelink. Magecraft each opp loses 1 life. Test: `silverquill_quillmage_drains_on_instant_cast`. |
+| Silverquill Memorialist | {2}{W} | ✅ | Push (modern_decks batch 14, NEW, `stx::silverquill`): 2/3 Human Cleric. ETB returns target ≤2-MV creature card from your gy to hand via `Selector::one_of(CardsInZone(Graveyard, Creature & ManaValueAtMost(2)))`. Test: `silverquill_memorialist_etb_returns_low_mv_creature_from_graveyard`. |
+| Inkling Aspirant | {W}{B} | ✅ | Push (modern_decks batch 14, NEW, `stx::silverquill`): 2/1 Inkling Cleric, Flying. Vanilla Inkling 2-drop. Test: `inkling_aspirant_is_a_two_mana_inkling_flier`. |
+| Witherspell Drain | {1}{W}{B} | ✅ | Push (modern_decks batch 14, NEW, `stx::silverquill`): Instant. Drain 3 (each opp loses 3, you gain 3). Test: `witherspell_drain_drains_three_life`. |
+| Inkling Scribe | {2}{W} | ✅ | Push (modern_decks batch 14, NEW, `stx::silverquill`): 1/2 Inkling Cleric. ETB mints a 1/1 W/B Inkling flying token via the shared `inkling_token()` helper. Test: `inkling_scribe_etb_mints_an_inkling_token`. |
+| Silverquill Erudite | {3}{W} | ✅ | Push (modern_decks batch 14, NEW, `stx::silverquill`): 2/4 Human Wizard, Vigilance. Magecraft self-pump +1/+0 EOT. Test: `silverquill_erudite_self_pumps_on_instant_cast`. |
+| Inkling Bloodscribe | {3}{W}{B} | ✅ | Push (modern_decks batch 14, NEW, `stx::silverquill`): 3/3 Inkling Vampire, Lifelink. AnotherOfYours-dies trigger drains 1 — Cauldron-of-Essence template on a body. Test: `inkling_bloodscribe_is_a_five_mana_lifelink_vampire_inkling`. |
+| Silverquill Reprimand | {2}{W} | ✅ | Push (modern_decks batch 14, NEW, `stx::silverquill`): Sorcery. Exile target creature with power ≤ 2 via `Effect::Move → Exile` with `PowerAtMost(2)` target filter. Test: `silverquill_reprimand_exiles_two_power_creature`. |
+| Silverquill Inquisition | {1}{B} | ✅ | Push (modern_decks batch 14, NEW, `stx::silverquill`): Sorcery. Target opp shows hand, you pick a nonland → discard via `Effect::DiscardChosen { from: Target(0), filter: Nonland }`. Test: `silverquill_inquisition_makes_opp_discard_a_card`. |
 
 ### Witherbloom (B/G)
 

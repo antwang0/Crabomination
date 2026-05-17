@@ -1329,6 +1329,46 @@ status tag (✅ wired, 🟡 partial, ⏳ todo) plus a short note.
   Tests: `symmathematics_enters_with_two_plus_one_counters` (asserts
   the counters land on resolution).
 
+- 🟡 **CR 116 — Special Actions** (push modern_decks audit, batch 14,
+  claude/modern_decks branch): "Special actions are actions a player
+  may take when they have priority that don't use the stack."
+  Audit:
+  (a) **116.2a** playing a land — ✅ (`GameAction::PlayLand` walks
+  the controller's hand, validates `Player.lands_played_this_turn <
+  max_land_drops`, places the card onto `self.battlefield`, and bumps
+  the per-turn counter without going through the stack). The
+  per-turn cap is enforced at the action-validation site.
+  (b) **116.2b** turning a face-down creature face up — ⏳ (no
+  face-down / morph / manifest primitives — engine doesn't model
+  the face-down state).
+  (c) **116.2c** end-a-continuous-effect special actions — ⏳ (no
+  Pacifism-style "you may pay {X}: end this effect" primitive).
+  (d) **116.2d** ignore-static-effect special actions — ⏳ (no
+  static-effect bypass primitive — none of the printed catalog uses it).
+  (e) **116.2e** Circling Vultures-style "discard at instant speed" —
+  ⏳ (single-card corner; not in catalog).
+  (f) **116.2f** exile a Suspend card from hand — ⏳ (no Suspend
+  keyword primitive).
+  (g) **116.2g** Companion {3}-to-hand — ⏳ (no Companion primitive).
+  (h) **116.2h** Foretell exile from hand — ⏳ (no Foretell primitive
+  — same gap tracked under "Foretell alt-cost primitive" in the
+  Suggested next-up tasks section, exercised by Saw It Coming).
+  (i) **116.2i** Planechase planar die roll — N/A (no Planechase format).
+  (j) **116.2j** Conspiracy face-up — N/A (no Conspiracy format).
+  (k) **116.2k** Plot exile from hand — ⏳ (no Plot keyword primitive).
+  (l) **116.2m** unlock-cost on locked-half permanents — ⏳ (no
+  Room/locked-permanent primitive).
+  (m) **116.3** priority received after special action — ✅
+  (`GameAction::PlayLand` re-runs `give_priority_to_active` after
+  the land hits the battlefield, matching CR 116.3 — the active
+  player has priority to take another action immediately).
+  Tests: implicit across every test that uses `GameAction::PlayLand`
+  to ramp on curve — `play_a_land_then_pass_priority`, `cant_play_two_
+  lands_on_same_turn`, every full-game test in `tests::game`.
+  Promote to ✅ when at least one of Foretell / Suspend / Plot lands
+  — the framework already handles 116.2a (the only special action
+  actually exercised by the catalog).
+
 ## Suggested next-up tasks
 
 - ⏳ **Inkling / Pest tribal completeness** (push modern_decks
@@ -3308,3 +3348,67 @@ shape if a Twincast user wants to copy a Time Walk.
 add `Player.skipped_turns: u32` and have `pass_priority`'s
 Cleanup-to-next-turn transition decrement and skip when non-zero.
 
+
+### Card — Augusta, Dean of Order — "same-power batch" gate (push modern_decks batch 14 suggested)
+
+The simplified per-attacker Augusta trigger (push (modern_decks)) skips
+the "three or more attackers with the same power" gate. The printed
+Oracle requires the engine to look at the **set of declared attackers
+this turn** and find the largest equal-power subgroup, then pump only
+that subgroup. Wiring shape:
+- New `EventKind::AttackersDeclared` that fires once after
+  `declare_attackers` resolves, carrying the attacker list.
+- New `Selector::AttackersDeclaredThisTurn` accessible at trigger
+  resolution.
+- New `Effect::ForLargestSameXGroup { what: Selector, key: Value, then:
+  Box<Effect> }` that buckets the selector by `key`, picks the largest
+  bucket, and runs `then` against each entity in it.
+
+Until those land, Augusta stays 🟡 with the per-attacker approximation.
+
+### Card — Mavinda, Students' Advocate (push modern_decks STX Silverquill 🟡)
+
+The cast-from-graveyard activated ability needs (a) a per-player
+"this-turn cast-from-gy budget" counter, (b) a target-introspection
+at cast time ("targets only a single creature"), and (c) a delayed
+replacement to route the resolving spell to exile instead of graveyard.
+Tracked separately under "Cast-from-graveyard introspection at
+resolution time" in the Suggested next-up tasks section.
+
+### Suggested next-up tasks (additions from batch 14)
+
+- ⏳ **Anthem-on-Other static-effect helper-table** — push (modern_decks
+  batch 14) adds three new tribal anthems via the existing
+  `StaticEffect::PumpPT` + `StaticEffect::GrantKeyword` primitives
+  combined with `Selector::EachPermanent(... .and(OtherThanSource))`:
+  Inkling Verselord (Other Inklings have lifelink), Silverquill
+  Anthemwriter (Other creatures get +1/+0), Lorehold Phantasmist
+  (Other Spirits have haste). These work today but the call-site
+  noise (three nested `.and(...)` chains) suggests a `static_anthem!()`
+  macro or `tribal_anthem(creature_type, p, t, [keywords])` helper
+  that compiles down to the same shape. Same precedent as the
+  retired `tribal_anthem_for_name` table.
+
+- ⏳ **Inkling tribal cube/SOS pool injection** — push (modern_decks
+  batch 14) brings the Silverquill catalog to 30+ cards including
+  multiple Inkling lords (Tenured Inkcaster +2/+2, Inkling Verselord
+  lifelink) and 8+ Inkling minters. A new "Silverquill Inkling
+  tribal" sub-college in the SOS pool selector could lean heavily
+  into the synergy. Slot into `mono_color_pool(Color::White/Black)`
+  once the deck-construction code supports archetype weighting.
+
+- ⏳ **Spirit-tribal Lorehold subpool** — push (modern_decks batch 14)
+  adds Lorehold Phantasmist's haste anthem on Other Spirits, joining
+  Quintorius's +1/+0 anthem and Lorehold Bannerbearer's +1/+1
+  anthem. With three Spirit anthems + 4+ Spirit minters (Sparring
+  Regimen, Quintorius, Lorehold Excavation, Pillardrop Cultivator),
+  a Lorehold-Spirit subdeck is viable. Same deck-construction-
+  weighting gap as the Inkling case.
+
+- ⏳ **Self-sacrifice ping pattern (Lorehold Bookburner template)** —
+  the new Lorehold Bookburner (push batch 14) sacs itself to ping
+  for 2 damage. The shape is recurring (Mogg Fanatic, Goblin Sharpshooter
+  variants, Plaguemaster of Rakdos) — could be folded into a
+  `shortcut::sac_self_ping(amount, filter)` helper that compiles
+  the `ActivatedAbility { sac_cost: true, mana_cost, effect:
+  DealDamage(target_filtered(filter), amount), .. }` template.
