@@ -562,3 +562,200 @@ pub fn lorehold_excavation() -> CardDefinition {
     }
 }
 
+// ── Lorehold Acolyte (batch 15) ─────────────────────────────────────────────
+
+/// Lorehold Acolyte — {1}{W}, 1/3 Human Cleric.
+///
+/// Printed Oracle (synthesised): "When this creature enters, exile up
+/// to one target card from a graveyard."
+///
+/// Cheap defensive Lorehold body with a graveyard-hate ETB — exiles a
+/// reanimation target or flashback fuel. Each graveyard-leave triggers
+/// Hardened Academic, Spirit Mascot, Ark of Hunger, Owlin Historian
+/// for compounding Lorehold value.
+pub fn lorehold_acolyte() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Acolyte",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            // Target picker walks every zone (incl. graveyards) when the
+            // filter is `Any`, same as Ascendant Dustspeaker / Sundering
+            // Archaic's "{2}: gy → bottom of library" target shape.
+            effect: Effect::Move {
+                what: target_filtered(SelectionRequirement::Any),
+                to: ZoneDest::Exile,
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Lorehold Warrior-Priest (batch 15) ──────────────────────────────────────
+
+/// Lorehold Warrior-Priest — {R}{W}, 2/2 Spirit Cleric.
+///
+/// Printed Oracle (synthesised): "Whenever this creature attacks, you
+/// gain 1 life. / Whenever one or more cards leave your graveyard,
+/// put a +1/+1 counter on this creature."
+///
+/// Aggressive Lorehold 2-drop that scales with graveyard activity.
+/// Pairs with Flashback (Sacred Fire, Pursue the Past) and exile-from-
+/// graveyard activations (Lorehold Pledgemage, Stone Docent) for
+/// compounding growth.
+pub fn lorehold_warrior_priest() -> CardDefinition {
+    use crate::card::CounterType;
+    CardDefinition {
+        name: "Lorehold Warrior-Priest",
+        cost: cost(&[r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+                effect: Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CardLeftGraveyard, EventScope::YourControl),
+                effect: Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                },
+            },
+        ],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Lorehold Ember-Priest (batch 15) ────────────────────────────────────────
+
+/// Lorehold Ember-Priest — {2}{R}, 2/3 Spirit Wizard.
+///
+/// Printed Oracle (synthesised): "Magecraft — Whenever you cast or
+/// copy an instant or sorcery spell, this creature deals 1 damage
+/// to any target."
+///
+/// Steady 3-mana ping body — every cast becomes a 1-damage shot at
+/// any target. Same shape as Storm-Kiln Artist but without the
+/// Treasure rider. The Spirit subtype synergises with Lorehold
+/// Phantasmist (haste anthem) and Quintorius (+1/+0 anthem).
+pub fn lorehold_ember_priest() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Ember-Priest",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::DealDamage {
+            to: target_filtered(
+                SelectionRequirement::Creature
+                    .or(SelectionRequirement::Player)
+                    .or(SelectionRequirement::Planeswalker),
+            ),
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Lorehold Skirmish (batch 15) ────────────────────────────────────────────
+
+/// Lorehold Skirmish — {1}{R}{W} Sorcery.
+///
+/// Printed Oracle (synthesised): "Create a 2/2 red and white Spirit
+/// creature token. It gains haste until end of turn."
+///
+/// Three-mana Spirit minter that swings the turn it's cast — same
+/// shape as Sparring Regimen's ETB token but at instant tempo. The
+/// haste rider lets the Spirit immediately attack. Slots into Spirit
+/// tribal Lorehold shells (Phantasmist haste anthem + Quintorius +1/+0
+/// anthem + Sparring Regimen's per-attacker counter rider).
+pub fn lorehold_skirmish() -> CardDefinition {
+    use crate::effect::Duration;
+    CardDefinition {
+        name: "Lorehold Skirmish",
+        cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: lorehold_spirit_token(),
+            },
+            Effect::GrantKeyword {
+                what: Selector::LastCreatedToken,
+                keyword: Keyword::Haste,
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+

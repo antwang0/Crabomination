@@ -9,9 +9,10 @@
 
 use super::no_abilities;
 use crate::card::{
-    CardDefinition, CardType, CreatureType, Effect, Keyword, Selector, Subtypes, Value,
+    CardDefinition, CardType, CreatureType, Effect, EventKind, EventScope, EventSpec, Keyword,
+    Selector, Subtypes, TriggeredAbility, Value,
 };
-use crate::effect::shortcut::{magecraft, magecraft_self_pump};
+use crate::effect::shortcut::{magecraft, magecraft_self_pump, target_filtered};
 use crate::effect::{Duration, PlayerRef};
 use crate::mana::{cost, generic, r, u};
 
@@ -96,6 +97,143 @@ pub fn prismari_apprentice() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
         ]))],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Prismari Drakelord (batch 15) ───────────────────────────────────────────
+
+/// Prismari Drakelord — {1}{U}{R}, 2/3 Drake Wizard, Flying.
+///
+/// Printed Oracle (synthesised): "Flying / Magecraft — Whenever you
+/// cast or copy an instant or sorcery spell, this creature gets
+/// +1/+1 until end of turn."
+///
+/// Three-mana evasive Prismari body that snowballs with cast
+/// frequency. Single cast turns the Drakelord into a 3/4 flyer; two
+/// casts into a 4/5. Same pump shape as Spectacle Mage but with
+/// magecraft (instant/sorcery only) instead of prowess.
+pub fn prismari_drakelord() -> CardDefinition {
+    use crate::card::SelectionRequirement;
+    let _ = SelectionRequirement::Creature;
+    CardDefinition {
+        name: "Prismari Drakelord",
+        cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Drake, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::PumpPT {
+            what: Selector::This,
+            power: Value::Const(1),
+            toughness: Value::Const(1),
+            duration: Duration::EndOfTurn,
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Prismari Emberseer (batch 15) ───────────────────────────────────────────
+
+/// Prismari Emberseer — {2}{U}{R}, 3/3 Elemental, Flying.
+///
+/// Printed Oracle (synthesised): "Flying / When this creature enters,
+/// it deals 2 damage to each opponent."
+///
+/// Four-mana finisher with a built-in 2-damage swing to each opp on
+/// arrival. Pairs with Magecraft drains (Witherbloom Apprentice
+/// extension via Silverquill Stormbringer) for the cumulative drain
+/// payoff.
+pub fn prismari_emberseer() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Emberseer",
+        cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::DealDamage {
+                to: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(2),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Prismari Pyrowriter (batch 15) ──────────────────────────────────────────
+
+/// Prismari Pyrowriter — {U}{R}, 2/2 Human Wizard.
+///
+/// Printed Oracle (synthesised): "Magecraft — Whenever you cast or
+/// copy an instant or sorcery spell, this creature deals 1 damage to
+/// any target."
+///
+/// Two-mana Prismari ping body — every cast becomes a 1-damage shot
+/// that closes out games. Same shape as Lorehold Ember-Priest but
+/// without the Spirit subtype synergy. Slots into burn-style spell-
+/// slinger shells.
+pub fn prismari_pyrowriter() -> CardDefinition {
+    use crate::card::SelectionRequirement;
+    CardDefinition {
+        name: "Prismari Pyrowriter",
+        cost: cost(&[u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::DealDamage {
+            to: target_filtered(
+                SelectionRequirement::Creature
+                    .or(SelectionRequirement::Player)
+                    .or(SelectionRequirement::Planeswalker),
+            ),
+            amount: Value::Const(1),
+        })],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],

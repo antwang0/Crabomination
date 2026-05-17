@@ -21,10 +21,10 @@ use super::no_abilities;
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CreatureType, Effect, EventKind, EventScope,
     EventSpec, Keyword, Selector, SelectionRequirement, Subtypes, Supertype, TriggeredAbility,
-    Value,
+    Value, Zone,
 };
 use crate::effect::shortcut::{magecraft, magecraft_drain_each_opp, magecraft_self_pump, target_filtered};
-use crate::effect::{Duration, PlayerRef, StaticAbility, StaticEffect};
+use crate::effect::{Duration, PlayerRef, StaticAbility, StaticEffect, ZoneDest};
 use crate::mana::{cost, generic, u, w, b, x, ManaCost};
 
 // ── Spirited Companion ──────────────────────────────────────────────────────
@@ -1374,6 +1374,310 @@ pub fn silverquill_inquisition() -> CardDefinition {
             count: Value::Const(1),
             filter: SelectionRequirement::Nonland,
         },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Silverquill Archivist (batch 15) ────────────────────────────────────────
+
+/// Silverquill Archivist — {1}{W}, 1/2 Human Wizard.
+///
+/// Printed Oracle (synthesised): "When this creature enters, scry 1.
+/// You gain 1 life."
+///
+/// Cheap defensive 2-drop with a smoothing ETB + a tiny life bump.
+/// Slots into Silverquill spellslinger shells as an early body that
+/// also doubles as Light-of-Promise / aristocrats fodder.
+pub fn silverquill_archivist() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Archivist",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::Scry {
+                    who: PlayerRef::You,
+                    amount: Value::Const(1),
+                },
+                Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
+            ]),
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Silverquill Witness (batch 15) ──────────────────────────────────────────
+
+/// Silverquill Witness — {W}{B}, 2/1 Human Cleric, Lifelink.
+///
+/// Printed Oracle (synthesised): "Lifelink / Magecraft — Whenever you
+/// cast or copy an instant or sorcery spell, you gain 1 life."
+///
+/// Silverquill cleric that turns every cast into a life trickle.
+/// Pairs with Light of Promise / Honor Troll for compounding lifegain.
+pub fn silverquill_witness() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Witness",
+        cost: cost(&[w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Lifelink],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::GainLife {
+            who: Selector::You,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Silverquill Judge (batch 15) ────────────────────────────────────────────
+
+/// Silverquill Judge — {2}{W}, 2/3 Human Cleric, Vigilance.
+///
+/// Printed Oracle (synthesised): "Vigilance / Magecraft — Whenever you
+/// cast or copy an instant or sorcery spell, tap target creature an
+/// opponent controls."
+///
+/// A defensive Silverquill body that locks down an opp creature on
+/// every cast. Vigilance lets it attack and still tap when blocked,
+/// then magecraft converts spells into tempo swings.
+pub fn silverquill_judge() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Judge",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::Tap {
+            what: target_filtered(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::ControlledByOpponent),
+            ),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Inkling Brigade (batch 15) ──────────────────────────────────────────────
+
+/// Inkling Brigade — {3}{W}{B}, 3/3 Inkling Soldier, Flying.
+///
+/// Printed Oracle (synthesised): "Flying / When this creature enters,
+/// create two 1/1 white and black Inkling creature tokens with flying."
+///
+/// Big Inkling-tribal payoff: drops 3 flying bodies for 5 mana. Pairs
+/// with Tenured Inkcaster (+2/+2 anthem) for an overnight 5/5 + two
+/// 3/3 fliers swing.
+pub fn inkling_brigade() -> CardDefinition {
+    use crate::catalog::sets::sos::inkling_token;
+    CardDefinition {
+        name: "Inkling Brigade",
+        cost: cost(&[generic(3), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                definition: inkling_token(),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Silverquill Pen-Pusher (batch 15) ───────────────────────────────────────
+
+/// Silverquill Pen-Pusher — {1}{B}, 1/1 Inkling Wizard, Flying.
+///
+/// Printed Oracle (synthesised): "Flying / Magecraft — Whenever you
+/// cast or copy an instant or sorcery spell, scry 1."
+///
+/// Cheap evasive Inkling 2-drop that smooths every cast. Boosts
+/// Inkling tribal density and supports the Silverquill spellslinger
+/// shell.
+pub fn silverquill_pen_pusher() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Pen-Pusher",
+        cost: cost(&[generic(1), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::Scry {
+            who: PlayerRef::You,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Silverquill Chronicle (batch 15) ────────────────────────────────────────
+
+/// Silverquill Chronicle — {3}{W}{B} Sorcery.
+///
+/// Printed Oracle (synthesised): "Each opponent loses 2 life and you
+/// gain 2 life. Return target instant or sorcery card from your
+/// graveyard to your hand."
+///
+/// Combined drain + IS recursion in Silverquill colors — same pattern
+/// as Read the Bones flavoured for a spellslinger shell. The drain
+/// triggers Witherbloom-Silverquill lifegain payoffs (Honor Troll,
+/// Light of Promise, Inkling Bloodscribe) and the return gives the
+/// chronicle a "rebuy" upside.
+pub fn silverquill_chronicle() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Chronicle",
+        cost: cost(&[generic(3), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Drain {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                to: Selector::You,
+                amount: Value::Const(2),
+            },
+            Effect::Move {
+                what: Selector::one_of(Selector::CardsInZone {
+                    who: PlayerRef::You,
+                    zone: Zone::Graveyard,
+                    filter: SelectionRequirement::HasCardType(CardType::Instant)
+                        .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+                }),
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Inkling Vanguard (batch 15) ─────────────────────────────────────────────
+
+/// Inkling Vanguard — {2}{W}, 2/3 Inkling Soldier, Flying, Vigilance.
+///
+/// Printed Oracle (synthesised): "Flying, vigilance"
+///
+/// Slightly-bigger sibling to Inkling Sentinel — same Flying+Vigilance
+/// frame but at the 3-mana 2/3 stat line. Boosts Inkling tribal density
+/// for Tenured Inkcaster / Inkling Verselord anthems.
+pub fn inkling_vanguard() -> CardDefinition {
+    CardDefinition {
+        name: "Inkling Vanguard",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Flying, Keyword::Vigilance],
+        effect: Effect::Noop,
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],

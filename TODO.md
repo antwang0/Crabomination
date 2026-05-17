@@ -8,8 +8,89 @@ See `CUBE_FEATURES.md` (cube-card implementation status) and
 ## MagicCompRules coverage audit
 
 Periodic spot-check of the rules document
-(`crabomination/MagicCompRules 20260116.txt`). Each rule below has a
-status tag (✅ wired, 🟡 partial, ⏳ todo) plus a short note.
+(`crabomination/MagicCompRules 20260116.txt` and the newer
+`MagicCompRules_20260417.txt`). Each rule below has a status tag (✅
+wired, 🟡 partial, ⏳ todo) plus a short note.
+
+- 🟡 **CR 113 — Abilities** (push modern_decks batch 15,
+  claude/modern_decks branch — newest revision audit against
+  `MagicCompRules_20260417.txt`): The ability primitive — what
+  abilities are, the three categories on the stack vs static, how
+  they're added/removed/granted, and which zones they function in.
+  Audit:
+  (a) **113.1a/b/c** abilities as object characteristics, player
+  characteristics, and stack objects — ✅ (`CardDefinition` carries
+  `triggered_abilities`, `activated_abilities`, `static_abilities`;
+  `StackItem::Ability` represents an activated/triggered ability on
+  the stack; emblems are not modelled — see TODO row for emblems).
+  (b) **113.2c** paragraph-break = separate ability — ✅ (every
+  `TriggeredAbility` / `ActivatedAbility` is a distinct item in its
+  Vec; multiple instances of the same ability all fire/can be
+  activated independently).
+  (c) **113.3a** spell abilities = instant/sorcery body resolution
+  — ✅ (`CardDefinition.effect` runs at resolution time for IS
+  spells via `resolve_spell` in `game/stack.rs`).
+  (d) **113.3b** activated abilities have cost + effect, may activate
+  with priority — ✅ (`GameAction::ActivateAbility` checks
+  `has_priority`, pays cost via `ActivatedAbility.mana_cost` /
+  `tap_cost` / `sac_cost` / `life_cost`, then pushes
+  `StackItem::Ability`).
+  (e) **113.3c** triggered abilities have trigger condition + effect,
+  go on stack next time someone would have priority — ✅
+  (`fire_step_triggers` + `dispatch_triggers_for_events` collect
+  fired triggers and push them onto the stack at the next priority
+  check; see `game/stack.rs::push_pending_triggers`).
+  (f) **113.3d** static abilities create continuous effects while in
+  the appropriate zone — ✅ (`StaticAbility` + `StaticEffect` —
+  `compute_battlefield` re-evaluates the layered effect view every
+  state-change; see `game/layers.rs`).
+  (g) **113.4** mana abilities don't use the stack and can be
+  activated mid-cast — ✅ (`is_mana_ability` recognizer in
+  `game/actions.rs` skips the stack push for pure `AddMana` effects;
+  mid-cast activation works via the mana payment loop).
+  (h) **113.5** loyalty abilities: once-per-turn, sorcery-speed,
+  empty-stack, main-phase — ✅
+  (`activate_loyalty_ability` enforces all four constraints in
+  `game/actions.rs`).
+  (i) **113.6** zones where abilities function — 🟡 (the engine
+  honors most clauses via per-zone lookup: spell abilities resolve
+  off-stack; activated/triggered abilities of permanents fire from
+  bf; flashback abilities and gy-recursion activations fire from gy;
+  emblems / characteristic-defining abilities are ⏳).
+  (j) **113.7** source of an ability + last-known-information — ✅
+  (the trigger system captures `event.source_id` / `event.subject_id`
+  / `event_amount` at emission time so a destroyed source still
+  resolves its already-emitted trigger correctly; see
+  `event_amount` cache and `CreatureDied` last-known info plumbing).
+  (k) **113.7a** activated/triggered abilities outlive their source
+  on the stack — ✅ (same cache-at-emission pattern as 113.7).
+  (l) **113.8** controller of stack abilities — ✅ (`StackItem`
+  carries `controller: PlayerIdx` set at push time; checked by the
+  resolver and APNAP ordering).
+  (m) **113.9** stack abilities can be countered by ability-counters
+  but not spell-counters; static abilities can't be countered — 🟡
+  (general spell-vs-ability counter distinction isn't carried on
+  `Effect::Counter*`; today every counter card targets "spell" so
+  the gap doesn't bite, but Stifle/Squelch-style "counter target
+  activated/triggered ability" cards aren't in the catalog).
+  (n) **113.10/a/b/c** gaining/losing abilities (most-recent wins)
+  — 🟡 (`StaticEffect::GrantKeyword` adds keywords for a
+  duration; `Modification::RemoveAllAbilities` clears keywords only,
+  not activated/triggered abilities — see the engine TODO row about
+  `Modification::RemoveAllAbilities` only clears keywords. The full
+  layer-6 add-then-remove cycle works for keywords; abilities beyond
+  keywords are ⏳).
+  (o) **113.11** "can't have" anti-grant — ⏳ (no
+  `StaticEffect::CantHaveAbility` primitive; cards like Stony Silence
+  approximate via different anti-activate paths).
+  (p) **113.12** set-characteristic vs grant-ability distinction —
+  ✅ (`Effect::SetBasePT` / `Effect::SetBaseColor` are set-
+  characteristic; `StaticEffect::GrantKeyword` is grant-ability;
+  Muraganda Petroglyphs corner is unhit but the distinction holds at
+  the type level — `Modification` enum distinguishes the two).
+  Promote to ✅ when 113.6 (emblems + CDA), 113.9 (counter-target-
+  ability), 113.10b (full ability removal), and 113.11 (can't-have)
+  all land.
 
 - 🟡 **CR 122 — Counters** (push modern_decks audit, claude/modern_decks
   branch — batch 10): The counter primitive — placement, accumulation,
@@ -3412,3 +3493,48 @@ resolution time" in the Suggested next-up tasks section.
   `shortcut::sac_self_ping(amount, filter)` helper that compiles
   the `ActivatedAbility { sac_cost: true, mana_cost, effect:
   DealDamage(target_filtered(filter), amount), .. }` template.
+
+### Suggested next-up tasks (additions from batch 15)
+
+- ⏳ **Pest-tribal Witherbloom subpool** — push (modern_decks batch
+  15) adds 5 more Witherbloom Pest cards (Pest-Tender, Pest Swarmer,
+  Witherbloom Seer, Pest Swarm, Witherbloom Vinemaster), bringing
+  total Pest minters/payoffs to ~12 across the catalog (Pest Summoning,
+  Tend the Pests, Eyetwitch, Eyetwitch Brood, Witherbloom Pestbinder,
+  Witherbloom Pestmaster, Sedgemoor Witch, etc.). With Vinemaster as
+  a top-end Pest payoff (3/4 Trample + +1/+1 on each Pest death) +
+  Pest Swarmer as a sticky body, a Witherbloom-Pest archetype is
+  viable. Same deck-construction-weighting gap as the Inkling /
+  Spirit-tribal suggestions above.
+
+- ⏳ **Mint-then-pump helper** — push (modern_decks batch 15) adds
+  `lorehold_skirmish` (mint Spirit + grant Haste EOT) and
+  `quandrix_summoner` (mint Fractal + add +1/+1 counter) via the
+  `Selector::LastCreatedToken` plumbing. The shape is recurring —
+  any "create a token with [keyword/counter]" effect. A
+  `shortcut::create_token_with_keyword(token, kw, dur)` and
+  `shortcut::create_token_with_counter(token, counter, n)` helper
+  would replace the explicit `Seq([CreateToken, GrantKeyword(
+  LastCreatedToken, ..)])` pattern at a dozen call sites.
+
+- ⏳ **Magecraft self-pump in either-direction** — push (modern_decks
+  batch 15) Drakelord uses `magecraft(PumpPT(+1/+1, self, EOT))`
+  faithfully but the `magecraft_self_pump(power, toughness)` helper
+  only takes `(i32, i32)` ints. Could extend the helper signature to
+  also accept a Selector for "pump target friendly" payoffs to drop
+  the `magecraft(Effect::PumpPT { what: target_filtered(...) })`
+  boilerplate at Quandrix Scholar / Lorehold Apprentice style cards.
+
+- ⏳ **CR 113.9 — ability-counter primitive** — Stifle/Squelch-style
+  "counter target activated/triggered ability" cards. The engine has
+  `Effect::CounterTarget` that works on `Selector::IsSpellOnStack`
+  only; no `Selector::IsAbilityOnStack` variant. Wire when adding
+  Stifle or Squelch to the catalog.
+
+- ⏳ **CR 113.10b/c — full ability removal** — Mercurial Transformation
+  ("loses all abilities") and Kasmina's Transmutation rely on a
+  `Modification::RemoveAllAbilities` that today only clears
+  keywords. The cleaner fix is `ComputedPermanent.cleared_abilities:
+  bool` + a route through `activate_ability` / dispatcher to skip
+  pre-removal ability sets. Tracked in the engine TODO row about
+  `Modification::RemoveAllAbilities`.

@@ -10,12 +10,13 @@
 
 use super::no_abilities;
 use crate::card::{
-    ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, Effect, Selector,
-    SelectionRequirement, Subtypes, Value,
+    ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, Effect, EventKind,
+    EventScope, EventSpec, Keyword, Selector, SelectionRequirement, Subtypes, TokenDefinition,
+    TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{magecraft, target_filtered};
-use crate::effect::Duration;
-use crate::mana::{cost, generic, g, u};
+use crate::effect::{Duration, PlayerRef};
+use crate::mana::{cost, generic, g, u, Color};
 
 // ── Quandrix Apprentice ─────────────────────────────────────────────────────
 
@@ -224,6 +225,171 @@ pub fn symmathematics() -> CardDefinition {
         opening_hand: None,
         // CR 614.12 "enters with two +1/+1 counters on it" replacement.
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(2))),
+        exile_on_resolve: false,
+    }
+}
+
+// ── Quandrix Summoner (batch 15) ────────────────────────────────────────────
+
+/// 0/0 G/U Fractal token used by the new Quandrix minters.
+fn quandrix_fractal_token() -> TokenDefinition {
+    TokenDefinition {
+        name: "Fractal".to_string(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Green, Color::Blue],
+        supertypes: vec![],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal],
+            ..Default::default()
+        },
+        activated_abilities: vec![],
+        triggered_abilities: vec![],
+    }
+}
+
+/// Quandrix Summoner — {1}{G}{U}, 2/2 Elf Druid.
+///
+/// Printed Oracle (synthesised): "When this creature enters, create
+/// a 0/0 green and blue Fractal creature token, then put one +1/+1
+/// counter on it."
+///
+/// Three-mana 2/2 + 1/1 Fractal — solid early Fractal-tribal play.
+/// The Fractal scales with Quandrix +1/+1-counter doublers (Tanazir,
+/// Symmathematics, Quandrix Doubler).
+pub fn quandrix_summoner() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Summoner",
+        cost: cost(&[generic(1), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: quandrix_fractal_token(),
+                },
+                Effect::AddCounter {
+                    what: Selector::LastCreatedToken,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                },
+            ]),
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Quandrix Scholar (batch 15) ─────────────────────────────────────────────
+
+/// Quandrix Scholar — {G}{U}, 1/2 Elf Wizard.
+///
+/// Printed Oracle (synthesised): "Magecraft — Whenever you cast or
+/// copy an instant or sorcery spell, put a +1/+1 counter on target
+/// creature you control."
+///
+/// Two-mana Quandrix value engine — each cast pumps a creature you
+/// control. Pairs with Quandrix Apprentice (similar +1/+1 EOT) for
+/// double-counter chains via the same magecraft.
+pub fn quandrix_scholar() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Scholar",
+        cost: cost(&[g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::AddCounter {
+            what: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            ),
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Quandrix Ecologist (batch 15) ───────────────────────────────────────────
+
+/// Quandrix Ecologist — {3}{G}{U}, 4/4 Beast, Trample.
+///
+/// Printed Oracle (synthesised): "Trample / When this creature enters,
+/// scry 2 and put a +1/+1 counter on this creature."
+///
+/// Five-mana Quandrix beater — a 5/5 Trample after ETB with built-in
+/// smoothing. Solid mid-range finisher. The +1/+1 counter doubles
+/// under Tanazir's attack trigger.
+pub fn quandrix_ecologist() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Ecologist",
+        cost: cost(&[generic(3), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Beast],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Trample],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::Scry {
+                    who: PlayerRef::You,
+                    amount: Value::Const(2),
+                },
+                Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                },
+            ]),
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
         exile_on_resolve: false,
     }
 }
