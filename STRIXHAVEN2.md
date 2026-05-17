@@ -19,10 +19,42 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 195 | 59 | 1 |
-| STX (259 cards) | 538 | 13 | 0 |
+| STX (280 cards) | 559 | 13 | 0 |
 | STA reprints (in STX boosters) | 46 | 0 | — |
 
 Push (modern_decks, claude/modern_decks branch — latest revision —
+**21 MORE STX cards + 25 new functionality tests = batch 12 — 203 cards
+total across batches 9-12**):
+
+Adds 21 more synthesised STX cards across all five colleges plus
+colorless/shared slots. All wired with existing primitives (Magecraft
+helpers, drain templates, counter accumulators, gy-recursion bodies,
+pump-and-fight combat tricks). **Silverquill Verseweaver** (3/3 Inkling
+Cleric Wizard Flying ETB drain 2), **Inkling Choirmaster** (1/3 Cleric
++1/+1-on-lifegain self-grow + +1/+0 Inkling anthem), **Bramble Brewer**
+(2/3 Plant Druid ETB Pest + activated sac-creature draw + life),
+**Witherbloom Decanter** ({BG} Instant -2/-2 + gain 2 life), **Pestbrood
+Grovecaller** (3/4 Plant Beast ETB Pest + on-Pest-death gain-1-draw-1),
+**Lorehold Cathedral** (R/W dual land with sac-for-gy-reanimation),
+**Lorehold Bannerbearer** (3/3 First Strike Spirit tribal anthem +1/+1),
+**Lorehold Pyromage** (3/4 ETB 3 damage + magecraft 1 damage),
+**Quandrix Geomancer** (2/3 ETB mints X 1/1 Fractals per land),
+**Quandrix Fractalist** (3/3 Trample with ETB hand-size +1/+1 counters),
+**Quandrix Skybinder** (2/3 Flying attack-trigger counter on friendly),
+**Prismari Mistcaller** (2/2 Prowess ETB Scry 2 + Draw 1), **Prismari
+Conflagration** ({3UR} Instant 4 damage / counter-unless-3 modal),
+**Prismari Treasurewright** (2/3 Artificer ETB two Treasures + magecraft
+Scry 1), **Silverquill Auctioneer** (3/2 Flying Lifelink + magecraft
++1/+1 self-grow), **Witherbloom Reanimist** (3/2 ETB returns ≤2-MV
+creature + activated reanimate-for-2-life), **Lorehold Skirmisher**
+(2/2 Haste + MayPay {R} pump on attack), **Quandrix Landmapper**
+({2GU} Sorcery: Cultivate-to-bf + Scry 2), **Prismari Spellsong**
+({UR} Instant: loot + 2 damage if noncreature discarded), **Silverquill
+Reaper** (4/3 Flying ETB destroy toughness ≤ 2), **Strixhaven Reservoir**
+(3-mana 5-color rock + {3}{T}: Draw a card), **Spelltongue Statute**
+({2W} Enchantment: gain 1 life per IS cast).
+
+Push (modern_decks, claude/modern_decks branch — prior revision —
 **23 MORE STX cards + 29 new functionality tests + new
 `StaticEffect::DoubleCounters` engine primitive (CR 614.16 counter half) =
 batch 11 — 182 cards total across batches 9-11**):
