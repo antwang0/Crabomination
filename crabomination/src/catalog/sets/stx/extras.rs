@@ -28727,3 +28727,301 @@ pub fn spelltongue_statute() -> CardDefinition {
         exile_on_resolve: false,
     }
 }
+
+// ============================================================================
+// Batch 13 — 5 more synthesised STX cards (additional Lone-Rider-style
+// IsAttackingAlone payoffs, Lorehold reanimator combo, Quandrix card
+// velocity + a finisher).
+// ============================================================================
+
+// ── Solo Striker (batch 13, CR 506.5 exerciser) ────────────────────────────
+
+/// Solo Striker — {2}{W}, 3/2 Human Soldier, Vigilance.
+///
+/// Printed Oracle (synthesised): "Vigilance / Whenever this creature
+/// attacks alone, this creature gets +1/+2 and gains lifelink until end
+/// of turn."
+///
+/// Second card exercising `SelectionRequirement::IsAttackingAlone`.
+/// Pairs with Lone Rider — a White Knight's-tale combat trick: 4/4
+/// Lifelink + Vigilance is a swift, recoverable swing.
+pub fn solo_striker() -> CardDefinition {
+    use crate::card::Predicate;
+    CardDefinition {
+        name: "Solo Striker",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::This,
+                    filter: SelectionRequirement::IsAttackingAlone,
+                }),
+            effect: Effect::Seq(vec![
+                Effect::PumpPT {
+                    what: Selector::This,
+                    power: Value::Const(1),
+                    toughness: Value::Const(2),
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::GrantKeyword {
+                    what: Selector::This,
+                    keyword: Keyword::Lifelink,
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Lorehold Tomb Robber (batch 13) ────────────────────────────────────────
+
+/// Lorehold Tomb Robber — {2}{R}{W}, 3/3 Spirit Rogue.
+///
+/// Printed Oracle (synthesised): "When this creature enters, exile
+/// target creature card from your graveyard. Create a token that's
+/// a copy of that card except it has haste. Exile that token at the
+/// beginning of the next end step."
+///
+/// Approximation: since the engine has no permanent-copy primitive
+/// (Effect::CreateCopyToken is still ⏳), this ships the simpler
+/// Move(target gy creature card → battlefield, tapped) + grant haste +
+/// delayed Exile-at-end-step. That's a one-turn-rental reanimation
+/// pattern equivalent to printed Oracle for combat math.
+pub fn lorehold_tomb_robber() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Tomb Robber",
+        cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Rogue],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::Move {
+                    what: target_filtered(SelectionRequirement::Creature),
+                    to: ZoneDest::Battlefield {
+                        controller: PlayerRef::You,
+                        tapped: false,
+                    },
+                },
+                Effect::GrantKeyword {
+                    what: Selector::Target(0),
+                    keyword: Keyword::Haste,
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::DelayUntil {
+                    kind: crate::effect::DelayedTriggerKind::NextEndStep,
+                    body: Box::new(Effect::Exile {
+                        what: Selector::Target(0),
+                    }),
+                },
+            ]),
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Quandrix Loremind (batch 13) ───────────────────────────────────────────
+
+/// Quandrix Loremind — {1}{G}{U}, 1/3 Elf Wizard.
+///
+/// Printed Oracle (synthesised): "When this creature enters, draw a
+/// card. / {3}{G}{U}, Sacrifice this creature: Draw two cards."
+///
+/// Card-velocity body with a sac-for-draw outlet. The cheap activate
+/// makes the Loremind a flexible mid-game card source — sacs into 2
+/// cards when the board is settled, or fuels its own value while
+/// holding open mana for instants.
+pub fn quandrix_loremind() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Loremind",
+        cost: cost(&[generic(1), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: false,
+            mana_cost: cost(&[generic(3), g(), u()]),
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
+            once_per_turn: false,
+            sorcery_speed: false,
+            sac_cost: true,
+            condition: None,
+            life_cost: 0,
+            from_graveyard: false,
+            exile_self_cost: false,
+            exile_other_filter: None,
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Prismari Sparkbinder (batch 13) ────────────────────────────────────────
+
+/// Prismari Sparkbinder — {2}{U}{R}, 3/3 Elemental Wizard.
+///
+/// Printed Oracle (synthesised): "Whenever you cast or copy an instant
+/// or sorcery spell, this creature deals 1 damage to each opponent and
+/// you create a Treasure token."
+///
+/// Spellslinger payoff that doubles as a Treasure ramp engine. Pairs
+/// with Magma Opus / Crackle with Power to close games — each cast
+/// pings opp AND nets a Treasure. Combos with Wandering Archaic's
+/// copy trigger for triple value.
+pub fn prismari_sparkbinder() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Sparkbinder",
+        cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::Seq(vec![
+            Effect::DealDamage {
+                to: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(1),
+            },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: crate::game::effects::treasure_token(),
+            },
+        ]))],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Witherbloom Hexweaver (batch 13) ───────────────────────────────────────
+
+/// Witherbloom Hexweaver — {3}{B}{G}, 3/4 Human Warlock, Deathtouch.
+///
+/// Printed Oracle (synthesised): "Deathtouch / When this creature
+/// enters, target opponent loses 2 life and you gain 2 life. / Whenever
+/// you gain life, target creature an opponent controls gets -1/-1
+/// until end of turn."
+///
+/// Witherbloom drain + lifegain-payoff combo. The ETB drain triggers
+/// the lifegain rider on itself (immediate -1/-1), and any subsequent
+/// lifegain (Pest dies, Honor Troll trigger) keeps shrinking opp's
+/// board. A long-game grind engine.
+pub fn witherbloom_hexweaver() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Hexweaver",
+        cost: cost(&[generic(3), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Deathtouch],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![
+            // ETB drain 2 life.
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: Effect::Drain {
+                    from: Selector::Player(PlayerRef::EachOpponent),
+                    to: Selector::You,
+                    amount: Value::Const(2),
+                },
+            },
+            // Whenever you gain life, target opp creature gets -1/-1 EOT.
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::LifeGained, EventScope::YourControl),
+                effect: Effect::PumpPT {
+                    what: target_filtered(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::ControlledByOpponent),
+                    ),
+                    power: Value::Const(-1),
+                    toughness: Value::Const(-1),
+                    duration: Duration::EndOfTurn,
+                },
+            },
+        ],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}

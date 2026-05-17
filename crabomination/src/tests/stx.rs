@@ -20521,6 +20521,101 @@ fn lone_rider_does_not_pump_with_other_attackers() {
 }
 
 #[test]
+fn solo_striker_pumps_when_attacking_alone() {
+    let mut g = two_player_game();
+    let striker = g.add_card_to_battlefield(0, catalog::solo_striker());
+    g.clear_sickness(striker);
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: striker, target: AttackTarget::Player(1),
+    }])).expect("Striker attacks alone");
+    drain_stack(&mut g);
+    let view = g.computed_permanent(striker).expect("Striker on bf");
+    assert_eq!(view.power, 4, "Striker 3 + 1");
+    assert_eq!(view.toughness, 4, "Striker 2 + 2");
+    assert!(view.keywords.contains(&Keyword::Lifelink), "Lifelink granted");
+    assert!(view.keywords.contains(&Keyword::Vigilance), "Vigilance intrinsic");
+}
+
+#[test]
+fn quandrix_loremind_etb_draws_a_card() {
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
+    let id = g.add_card_to_hand(0, catalog::quandrix_loremind());
+    let hand_before = g.players[0].hand.len();
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Loremind castable");
+    drain_stack(&mut g);
+    // -1 cast +1 etb-draw = same hand size.
+    assert_eq!(g.players[0].hand.len(), hand_before);
+}
+
+#[test]
+fn quandrix_loremind_sac_draws_two() {
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
+    let id = g.add_card_to_battlefield(0, catalog::quandrix_loremind());
+    g.clear_sickness(id);
+    let hand_before = g.players[0].hand.len();
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None,
+    }).expect("Loremind activatable");
+    drain_stack(&mut g);
+    // Sacrificed → no longer on bf.
+    assert!(g.battlefield_find(id).is_none(), "Loremind sacrificed");
+    assert_eq!(g.players[0].hand.len(), hand_before + 2, "drew 2 cards");
+}
+
+#[test]
+fn prismari_sparkbinder_burns_opp_on_instant_cast() {
+    let mut g = two_player_game();
+    let _ = g.add_card_to_battlefield(0, catalog::prismari_sparkbinder());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let opp_life_before = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(crate::game::types::Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt castable");
+    drain_stack(&mut g);
+    // Opp takes 3 (bolt) + 1 (sparkbinder ping) = 4.
+    assert_eq!(g.players[1].life, opp_life_before - 4);
+    let treasures: Vec<_> = g.battlefield.iter().filter(|c| {
+        c.controller == 0 && c.is_token && c.definition.name == "Treasure"
+    }).collect();
+    assert_eq!(treasures.len(), 1, "Treasure minted from magecraft");
+}
+
+#[test]
+fn witherbloom_hexweaver_etb_drains_two() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::witherbloom_hexweaver());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    let life0_before = g.players[0].life;
+    let life1_before = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Hexweaver castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life1_before - 2, "opp loses 2");
+    assert_eq!(g.players[0].life, life0_before + 2, "you gain 2");
+    let bf = g.battlefield.iter().find(|c| c.definition.name == "Witherbloom Hexweaver")
+        .expect("Hexweaver on bf");
+    assert!(bf.has_keyword(&Keyword::Deathtouch));
+}
+
+#[test]
 fn spelltongue_statute_gains_life_on_instant_cast() {
     let mut g = two_player_game();
     let _ = g.add_card_to_battlefield(0, catalog::spelltongue_statute());
