@@ -467,6 +467,27 @@ impl GameState {
             .sum()
     }
 
+    /// Number of `StaticEffect::DoubleCounters` permanents `seat` controls
+    /// on the battlefield. Used by `Effect::AddCounter` to scale the counter
+    /// count by `2^n` per CR 614.16's "if one or more counters would be put
+    /// on a permanent" replacement. One Doubling Season → 2×; one Doubling
+    /// Season + one Hardened Scales → 4× (multiplicative, matching the
+    /// printed Oracle).
+    pub fn counter_doublers_for(&self, seat: usize) -> u32 {
+        use crate::effect::StaticEffect;
+        self.battlefield
+            .iter()
+            .filter(|c| c.controller == seat)
+            .map(|c| {
+                c.definition
+                    .static_abilities
+                    .iter()
+                    .filter(|sa| matches!(sa.effect, StaticEffect::DoubleCounters))
+                    .count() as u32
+            })
+            .sum()
+    }
+
     /// Replace the current team partition. Every seat must appear in
     /// exactly one entry; partitions must be non-empty. Used by team
     /// formats (2HG) after `new()` to group seats.
@@ -2272,7 +2293,10 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             | StaticEffect::ControllerSorceriesAsFlash
             // DoubleTokens — read at `Effect::CreateToken` resolution time
             // via `GameState::token_doublers_for(seat)`; no layer effect.
-            | StaticEffect::DoubleTokens => vec![],
+            | StaticEffect::DoubleTokens
+            // DoubleCounters — read at `Effect::AddCounter` resolution time
+            // via `GameState::counter_doublers_for(seat)`; no layer effect.
+            | StaticEffect::DoubleCounters => vec![],
         })
         .collect()
 }

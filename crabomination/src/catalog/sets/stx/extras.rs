@@ -26307,3 +26307,1162 @@ pub fn quandrix_theorem_crafter() -> CardDefinition {
         exile_on_resolve: false,
     }
 }
+
+// ============================================================================
+// Batch 11 — 22 new synthesised STX cards + 1 engine primitive
+// (StaticEffect::DoubleCounters for CR 614.16 counter-replacement half).
+// Cards exercise existing engine primitives across all five colleges plus
+// shared/colorless slots; tests in `tests::stx` lock in primary play
+// patterns end-to-end.
+// ============================================================================
+
+// ── Witherbloom Pestseed (batch 11) — DoubleCounters exerciser ──────────────
+
+/// Witherbloom Pestseed — {2}{B}{G}, 3/3 Plant Druid.
+///
+/// Printed Oracle (synthesised, Hardened-Scales template): "If one or more
+/// counters would be put on a permanent you control, twice that many of
+/// those counters are put on that permanent instead."
+///
+/// First card to wire the new `StaticEffect::DoubleCounters` primitive
+/// (CR 614.16 counter-replacement half). The static applies to every
+/// counter-placement on permanents the Pestseed's controller controls —
+/// so a "+1/+1 counter" instruction lands as 2 counters, two doublers
+/// stack multiplicatively to 4×, etc.
+pub fn witherbloom_pestseed() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Witherbloom Pestseed",
+        cost: cost(&[generic(2), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![StaticAbility {
+            description: "If one or more counters would be put on a permanent you \
+                          control, twice that many of those counters are put on \
+                          that permanent instead.",
+            effect: StaticEffect::DoubleCounters,
+        }],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Silverquill Editorialist (batch 11) ─────────────────────────────────────
+
+/// Silverquill Editorialist — {1}{W}{B}, 2/2 Inkling Wizard, Flying.
+///
+/// Printed Oracle (synthesised): "Flying / Whenever you cast an instant
+/// or sorcery spell, each opponent loses 1 life."
+///
+/// Silverquill drain-on-cast in Wizard tribal frame. Pairs with the
+/// existing Magecraft Silverquill shell (Archmage Emeritus, Eager
+/// First-Year). Uses `magecraft_drain_each_opp(1)` to lean on the same
+/// drain template as Promising Duskmage and Witherbloom Apprentice.
+pub fn silverquill_editorialist() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Editorialist",
+        cost: cost(&[generic(1), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_drain_each_opp(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Inkblot Recluse (batch 11) ──────────────────────────────────────────────
+
+/// Inkblot Recluse — {2}{W}{B}, 2/4 Spider Inkling.
+///
+/// Printed Oracle (synthesised): "Reach / When this creature enters,
+/// surveil 2."
+///
+/// Defensive Reach body that doubles as a Witherbloom-style graveyard
+/// setup. Surveil 2 lets the controller bin a reanimation target or
+/// keep top-of-library library order while smoothing the next draw.
+pub fn inkblot_recluse() -> CardDefinition {
+    CardDefinition {
+        name: "Inkblot Recluse",
+        cost: cost(&[generic(2), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spider, CreatureType::Inkling],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        keywords: vec![Keyword::Reach],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Surveil {
+                who: PlayerRef::You,
+                amount: Value::Const(2),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Quill-Lecturer (batch 11) ───────────────────────────────────────────────
+
+/// Quill-Lecturer — {3}{W}{B}, 2/4 Human Cleric, Vigilance.
+///
+/// Printed Oracle (synthesised): "Vigilance / Magecraft — Whenever you
+/// cast or copy an instant or sorcery spell, target creature an opponent
+/// controls gets -1/-1 until end of turn."
+///
+/// Anti-air Vigilance body with an opp-creature-shrink magecraft rider.
+/// Pairs the printed Lecturer pattern of Silverquill's "spells matter
+/// against the opponent" play.
+pub fn quill_lecturer() -> CardDefinition {
+    CardDefinition {
+        name: "Quill-Lecturer",
+        cost: cost(&[generic(3), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        keywords: vec![Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::PumpPT {
+            what: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+            ),
+            power: Value::Const(-1),
+            toughness: Value::Const(-1),
+            duration: Duration::EndOfTurn,
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Inkstrike Bolt (batch 11) ───────────────────────────────────────────────
+
+/// Inkstrike Bolt — {1}{W}{B} Instant.
+///
+/// Printed Oracle (synthesised): "Inkstrike Bolt deals 3 damage to target
+/// creature an opponent controls. You gain 2 life."
+///
+/// Silverquill efficient removal + lifegain at instant speed — a 3-mana
+/// Lightning Helix-shaped spell with the lifegain tied to the cast
+/// rather than the kill (always lands +2 life).
+pub fn inkstrike_bolt() -> CardDefinition {
+    CardDefinition {
+        name: "Inkstrike Bolt",
+        cost: cost(&[generic(1), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+                ),
+                amount: Value::Const(3),
+            },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Withering Spores (batch 11) ─────────────────────────────────────────────
+
+/// Withering Spores — {1}{B}{G} Sorcery.
+///
+/// Printed Oracle (synthesised): "All creatures get -1/-1 until end of
+/// turn."
+///
+/// Symmetric mini-wrath — kills X/1s on both sides. Combos with the
+/// existing Witherbloom +1/+1-counter plant package (counters survive
+/// the -1/-1 cancel SBA per CR 122.3).
+pub fn withering_spores() -> CardDefinition {
+    CardDefinition {
+        name: "Withering Spores",
+        cost: cost(&[generic(1), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::PumpPT {
+            what: Selector::EachPermanent(SelectionRequirement::Creature),
+            power: Value::Const(-1),
+            toughness: Value::Const(-1),
+            duration: Duration::EndOfTurn,
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Witherbloom Brewer (batch 11) ───────────────────────────────────────────
+
+/// Witherbloom Brewer — {1}{B}{G}, 2/3 Plant Druid.
+///
+/// Printed Oracle (synthesised): "{T}, Pay 2 life: Add {B}{G}."
+///
+/// Witherbloom's high-density mana acceleration — the Pledgemage
+/// printed shape costs 1 life per pip; the Brewer offers a 2-life
+/// fixed cost for a guaranteed two-color pip output. Activation is a
+/// real mana ability (skips the stack) per CR 605.1a; the life cost
+/// rides on `ActivatedAbility.life_cost`.
+pub fn witherbloom_brewer() -> CardDefinition {
+    use crate::mana::ManaCost;
+    CardDefinition {
+        name: "Witherbloom Brewer",
+        cost: cost(&[generic(1), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: ManaCost::default(),
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::Colors(vec![Color::Black, Color::Green]),
+            },
+            once_per_turn: false,
+            sorcery_speed: false,
+            sac_cost: false,
+            condition: None,
+            life_cost: 2,
+            from_graveyard: false,
+            exile_self_cost: false,
+            exile_other_filter: None,
+        }],
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Pestilent Brambletwig (batch 11) ────────────────────────────────────────
+
+/// Pestilent Brambletwig — {B}{G}, 2/1 Plant Pest.
+///
+/// Printed Oracle (synthesised): "When this creature dies, you gain 2
+/// life."
+///
+/// A bigger Pest body (2/1 vs the printed 1/1 token), with a printed
+/// 2-life-on-death rider that doubles the standard Pest token trickle.
+/// The on-die +2 life feeds into Witherbloom's lifegain payoffs (Pest
+/// Mascot, Honor Troll, Witherbloom Briarmage).
+pub fn pestilent_brambletwig() -> CardDefinition {
+    CardDefinition {
+        name: "Pestilent Brambletwig",
+        cost: cost(&[b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Pest],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+            effect: Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Witherbloom Soothsayer (batch 11) ───────────────────────────────────────
+
+/// Witherbloom Soothsayer — {2}{B}{G}, 2/3 Human Warlock.
+///
+/// Printed Oracle (synthesised): "When this creature enters, surveil 2.
+/// Each opponent loses 1 life and you gain 1 life."
+///
+/// Witherbloom's signature setup-and-drain ETB: bin a target while
+/// shaving 1 life off each opp. Pairs with the cheap reanimation
+/// shells (Witherbloom Necrogale, Lorehold Memorial, Cauldron of
+/// Essence).
+pub fn witherbloom_soothsayer() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Soothsayer",
+        cost: cost(&[generic(2), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::Surveil {
+                    who: PlayerRef::You,
+                    amount: Value::Const(2),
+                },
+                Effect::Drain {
+                    from: Selector::Player(PlayerRef::EachOpponent),
+                    to: Selector::You,
+                    amount: Value::Const(1),
+                },
+            ]),
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Lorehold Vanquisher (batch 11) ──────────────────────────────────────────
+
+/// Lorehold Vanquisher — {2}{R}{W}, 3/3 Knight Spirit.
+///
+/// Printed Oracle (synthesised): "First strike / Whenever this creature
+/// attacks, you gain 1 life."
+///
+/// Lorehold attack-trigger lifegain feeding the Hofri / Spirit-tribal
+/// shell. First strike makes the body durable in a stalled board, and
+/// the lifegain per swing feeds Witherbloom-cross payoffs in mixed pools.
+pub fn lorehold_vanquisher() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Vanquisher",
+        cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Knight, CreatureType::Spirit],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::FirstStrike],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Lorehold Burnscholar (batch 11) ─────────────────────────────────────────
+
+/// Lorehold Burnscholar — {R}{W}, 2/2 Human Wizard.
+///
+/// Printed Oracle (synthesised): "Magecraft — Whenever you cast or copy
+/// an instant or sorcery spell, this creature deals 1 damage to any
+/// target. You gain 1 life."
+///
+/// Lorehold's signature drain-on-cast at the cheap two-drop slot. Two
+/// spells in a turn slings 2 damage at face + 2 life gained — a tempo
+/// engine the IS-heavy Lorehold pool wants to chain off of.
+pub fn lorehold_burnscholar() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Burnscholar",
+        cost: cost(&[r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature
+                        .or(SelectionRequirement::Player)
+                        .or(SelectionRequirement::HasCardType(CardType::Planeswalker)),
+                ),
+                amount: Value::Const(1),
+            },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]))],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Pillardrop Cultivator (batch 11) ────────────────────────────────────────
+
+/// Pillardrop Cultivator — {3}{R}{W}, 2/3 Spirit Bird, Flying.
+///
+/// Printed Oracle (synthesised): "Flying / When this creature enters,
+/// return target creature card with mana value 2 or less from your
+/// graveyard to the battlefield."
+///
+/// Lorehold's ETB-reanimation shell, MV-capped to 2 to keep it from
+/// pulling oversized targets. Pairs with Daemogoth Woe-Eater and the
+/// Witherbloom Pest chain — Pillardrop minds a 1- or 2-mana creature
+/// at +flying.
+pub fn pillardrop_cultivator() -> CardDefinition {
+    use crate::card::Zone;
+    CardDefinition {
+        name: "Pillardrop Cultivator",
+        cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Bird],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Move {
+                what: Selector::one_of(Selector::CardsInZone {
+                    who: PlayerRef::You,
+                    zone: Zone::Graveyard,
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::ManaValueAtMost(2)),
+                }),
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: false,
+                },
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Prismari Skywatcher (batch 11) ──────────────────────────────────────────
+
+/// Prismari Skywatcher — {U}{R}, 1/2 Merfolk Wizard, Flying.
+///
+/// Printed Oracle (synthesised): "Flying / Magecraft — Whenever you cast
+/// or copy an instant or sorcery spell, this creature gets +1/+0 until
+/// end of turn."
+///
+/// Symmetry-Sage-styled cheap evasive Magecraft body. Two casts in a
+/// turn → 3/2 flier on the swing.
+pub fn prismari_skywatcher() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Skywatcher",
+        cost: cost(&[u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_self_pump(1, 0)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Brewmaster Pyrologist (batch 11) ────────────────────────────────────────
+
+/// Brewmaster Pyrologist — {3}{U}{R}, 4/3 Elemental, Trample.
+///
+/// Printed Oracle (synthesised): "Trample / When this creature enters,
+/// it deals 2 damage to target opponent and you draw a card."
+///
+/// Pyromentor-style ETB ping + cantrip. Big trampler body lets the
+/// damage stick after the +1 card.
+pub fn brewmaster_pyrologist() -> CardDefinition {
+    CardDefinition {
+        name: "Brewmaster Pyrologist",
+        cost: cost(&[generic(3), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 3,
+        keywords: vec![Keyword::Trample],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::DealDamage {
+                    to: target_filtered(SelectionRequirement::Player),
+                    amount: Value::Const(2),
+                },
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
+            ]),
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Prismari Spell Smith (batch 11) ─────────────────────────────────────────
+
+/// Prismari Spell Smith — {1}{U}{R}, 2/2 Human Wizard.
+///
+/// Printed Oracle (synthesised): "Magecraft — Whenever you cast or copy
+/// an instant or sorcery spell, add one mana of any color to your mana
+/// pool."
+///
+/// Prismari ramp-on-cast — every instant or sorcery refunds itself with
+/// the next pip. Curves into chain-cast Magecraft turns.
+pub fn prismari_spell_smith() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Spell Smith",
+        cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::AddMana {
+            who: PlayerRef::You,
+            pool: ManaPayload::AnyOneColor(Value::Const(1)),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Quandrix Botanist (batch 11) ────────────────────────────────────────────
+
+/// Quandrix Botanist — {G}{U}, 2/2 Elf Druid.
+///
+/// Printed Oracle (synthesised): "Magecraft — Whenever you cast or copy
+/// an instant or sorcery spell, put a +1/+1 counter on target Fractal
+/// you control."
+///
+/// Tightly tribal Quandrix payoff — feeds the Fractal counter-stacking
+/// shell (Manifestation Sage, Fractal Mascot, Body of Research) every
+/// time you Magecraft. Interacts with the new Witherbloom Pestseed
+/// (DoubleCounters) for 2× per Magecraft.
+pub fn quandrix_botanist() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Botanist",
+        cost: cost(&[g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::AddCounter {
+            what: target_filtered(
+                SelectionRequirement::HasCreatureType(CreatureType::Fractal)
+                    .and(SelectionRequirement::ControlledByYou),
+            ),
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Quandrix Augur (batch 11) ───────────────────────────────────────────────
+
+/// Quandrix Augur — {2}{G}{U}, 2/3 Fractal Wizard.
+///
+/// Printed Oracle (synthesised): "When this creature enters, scry 2,
+/// then draw a card."
+///
+/// Cheap card-velocity stapled to a 2/3 Fractal body — fits the
+/// Quandrix Symmathematics / Manifestation Sage curve and bumps the
+/// Tenured Inkcaster-cross Fractal lord with one more dies-trigger
+/// fodder.
+pub fn quandrix_augur() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Augur",
+        cost: cost(&[generic(2), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::Scry {
+                    who: PlayerRef::You,
+                    amount: Value::Const(2),
+                },
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
+            ]),
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Fractal Trefoil (batch 11) ──────────────────────────────────────────────
+
+/// Fractal Trefoil — {1}{G}{U}, 0/0 Fractal.
+///
+/// Printed Oracle (synthesised): "Trample / This creature enters with
+/// X +1/+1 counters on it, where X is the number of lands you control."
+///
+/// Quandrix's lands-scaling Fractal at the early curve: turn-3 on the
+/// play, lands == 3 → 3/3 trampler. Composes cleanly with the
+/// `enters_with_counters` field (CR 614.12) and Pestseed
+/// (`DoubleCounters`) for compounding 2× scaling.
+pub fn fractal_trefoil() -> CardDefinition {
+    CardDefinition {
+        name: "Fractal Trefoil",
+        cost: cost(&[generic(1), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 0,
+        keywords: vec![Keyword::Trample],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        // CR 614.12 — counters land before SBA so the 0/0 base survives ETB.
+        enters_with_counters: Some((
+            CounterType::PlusOnePlusOne,
+            Value::CountOf(Box::new(Selector::EachPermanent(
+                SelectionRequirement::Land.and(SelectionRequirement::ControlledByYou),
+            ))),
+        )),
+        exile_on_resolve: false,
+    }
+}
+
+// ── Quandrix Equationist (batch 11) ─────────────────────────────────────────
+
+/// Quandrix Equationist — {3}{G}{U}, 3/3 Fractal Wizard, Flying.
+///
+/// Printed Oracle (synthesised): "Flying / Whenever one or more +1/+1
+/// counters are put on a creature you control, draw a card."
+///
+/// Counter-payoff Quandrix flyer. Pairs with Pestseed (doubled
+/// counters fire once per AddCounter resolution; per-card emission
+/// matches the printed "one or more" wording). Sustains card velocity
+/// alongside Manifestation Sage / Quandrix Pledgemage / Botanist /
+/// Symmathematics shells.
+pub fn quandrix_equationist() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Equationist",
+        cost: cost(&[generic(3), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::CounterAdded(CounterType::PlusOnePlusOne),
+                EventScope::YourControl,
+            )
+            .with_filter(Predicate::EntityMatches {
+                what: Selector::TriggerSource,
+                filter: SelectionRequirement::Creature,
+            }),
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Pyrokinetic Insight (batch 11) ──────────────────────────────────────────
+
+/// Pyrokinetic Insight — {1}{U}{R} Sorcery.
+///
+/// Printed Oracle (synthesised): "Choose one — / • Pyrokinetic Insight
+/// deals 3 damage to any target. / • Draw two cards, then discard a card."
+///
+/// Prismari "burn or loot" charm shape. Mode 0 closes a game; mode 1
+/// digs for the next gas. Auto-decider picks mode 0 unless a scripted
+/// override selects mode 1.
+pub fn pyrokinetic_insight() -> CardDefinition {
+    CardDefinition {
+        name: "Pyrokinetic Insight",
+        cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::ChooseMode(vec![
+            // Mode 0: 3 damage to any target.
+            Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature
+                        .or(SelectionRequirement::Player)
+                        .or(SelectionRequirement::HasCardType(CardType::Planeswalker)),
+                ),
+                amount: Value::Const(3),
+            },
+            // Mode 1: draw 2, discard 1 (rummage).
+            Effect::Seq(vec![
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(2),
+                },
+                Effect::Discard {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                    random: false,
+                },
+            ]),
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Lorehold Spirit Tutor (batch 11) ────────────────────────────────────────
+
+/// Lorehold Spirit Tutor — {1}{R}{W} Sorcery.
+///
+/// Printed Oracle (synthesised): "Reveal cards from the top of your
+/// library until you reveal a Spirit creature card. Put that card into
+/// your hand and the rest into your graveyard."
+///
+/// Spirit-tribal tutor — feeds the Spirit Banner / Hofri / Quintorius
+/// chain. The reveal-misses go to graveyard, which is a Lorehold-
+/// favorable side effect (Pillardrop Rescuer + Lorehold Memorial fuel).
+pub fn lorehold_spirit_tutor() -> CardDefinition {
+    use crate::effect::RevealMissDest;
+    CardDefinition {
+        name: "Lorehold Spirit Tutor",
+        cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::RevealUntilFind {
+            who: PlayerRef::You,
+            find: SelectionRequirement::Creature
+                .and(SelectionRequirement::HasCreatureType(CreatureType::Spirit)),
+            to: ZoneDest::Hand(PlayerRef::You),
+            cap: Value::Const(20),
+            life_per_revealed: 0,
+            miss_dest: RevealMissDest::Graveyard,
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Strixhaven Sanctum (batch 11) ───────────────────────────────────────────
+
+/// Strixhaven Sanctum — Land (no cost).
+///
+/// Printed Oracle (synthesised): "{T}: Add {C}. / {2}, {T}: Surveil 1.
+/// (Look at the top card of your library. You may put it into your
+/// graveyard.)"
+///
+/// Colorless utility land — like the SOS school lands' surveil ability,
+/// but in mono-{C}. Fixes any deck wanting an extra Surveil source for
+/// graveyard setup (Witherbloom reanimators, Lorehold gy recursion).
+pub fn strixhaven_sanctum() -> CardDefinition {
+    use super::super::tap_add_colorless;
+    use crate::mana::ManaCost;
+    CardDefinition {
+        name: "Strixhaven Sanctum",
+        cost: ManaCost::default(),
+        supertypes: vec![],
+        card_types: vec![CardType::Land],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: vec![
+            tap_add_colorless(),
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: cost(&[generic(2)]),
+                effect: Effect::Surveil {
+                    who: PlayerRef::You,
+                    amount: Value::Const(1),
+                },
+                once_per_turn: false,
+                sorcery_speed: false,
+                sac_cost: false,
+                condition: None,
+                life_cost: 0,
+                from_graveyard: false,
+                exile_self_cost: false,
+                exile_other_filter: None,
+            },
+        ],
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Strixhaven Bloomstadium (batch 11) — Doubling-Season-style enchant ─────
+
+/// Strixhaven Bloomstadium — {3}{G}{G} Enchantment (synthesised).
+///
+/// Printed Oracle (synthesised, Doubling-Season template): "If one or
+/// more tokens would be created under your control, twice that many of
+/// those tokens are created instead. / If one or more counters would
+/// be put on a permanent you control, twice that many of those
+/// counters are put on that permanent instead."
+///
+/// Pairs the new `StaticEffect::DoubleCounters` with the existing
+/// `StaticEffect::DoubleTokens` to ship the canonical "both halves of
+/// CR 614.16" card. Composes multiplicatively with Pestseed
+/// (DoubleCounters) and Adrix and Nev (DoubleTokens): one of each
+/// + Bloomstadium → 4× counters, 4× tokens.
+pub fn strixhaven_bloomstadium() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Strixhaven Bloomstadium",
+        cost: cost(&[generic(3), g(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![
+            StaticAbility {
+                description: "If one or more tokens would be created under your \
+                              control, twice that many of those tokens are created \
+                              instead.",
+                effect: StaticEffect::DoubleTokens,
+            },
+            StaticAbility {
+                description: "If one or more counters would be put on a permanent \
+                              you control, twice that many of those counters are \
+                              put on that permanent instead.",
+                effect: StaticEffect::DoubleCounters,
+            },
+        ],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Mystic Slate (batch 11) ─────────────────────────────────────────────────
+
+/// Mystic Slate — {2} Artifact.
+///
+/// Printed Oracle (synthesised): "{T}: Scry 1. / {2}, {T}: Draw a card.
+/// Activate only as a sorcery."
+///
+/// Library-smoothing colorless artifact at the cheap slot. Pairs with
+/// any IS-heavy shell that wants library quality control without
+/// burning a card slot — feeds Magecraft / Repartee / cast-trigger
+/// chains.
+pub fn mystic_slate() -> CardDefinition {
+    use crate::mana::ManaCost;
+    CardDefinition {
+        name: "Mystic Slate",
+        cost: cost(&[generic(2)]),
+        supertypes: vec![],
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: vec![
+            // {T}: Scry 1.
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: ManaCost::default(),
+                effect: Effect::Scry {
+                    who: PlayerRef::You,
+                    amount: Value::Const(1),
+                },
+                once_per_turn: false,
+                sorcery_speed: false,
+                sac_cost: false,
+                condition: None,
+                life_cost: 0,
+                from_graveyard: false,
+                exile_self_cost: false,
+                exile_other_filter: None,
+            },
+            // {2}, {T}: Draw a card. Sorcery speed.
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: cost(&[generic(2)]),
+                effect: Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
+                once_per_turn: false,
+                sorcery_speed: true,
+                sac_cost: false,
+                condition: None,
+                life_cost: 0,
+                from_graveyard: false,
+                exile_self_cost: false,
+                exile_other_filter: None,
+            },
+        ],
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}

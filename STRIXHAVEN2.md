@@ -19,10 +19,58 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 195 | 59 | 1 |
-| STX (259 cards) | 515 | 13 | 0 |
+| STX (259 cards) | 538 | 13 | 0 |
 | STA reprints (in STX boosters) | 46 | 0 | — |
 
 Push (modern_decks, claude/modern_decks branch — latest revision —
+**23 MORE STX cards + 29 new functionality tests + new
+`StaticEffect::DoubleCounters` engine primitive (CR 614.16 counter half) =
+batch 11 — 182 cards total across batches 9-11**):
+
+Adds 22 more synthesised STX cards across all five colleges + 1 engine
+primitive: **Witherbloom Pestseed** (3/3 Plant Druid with the new
+`StaticEffect::DoubleCounters` — CR 614.16 counter-replacement half,
+Hardened-Scales-template), **Silverquill Editorialist** (2/2 Inkling
+Wizard Flying + Magecraft drain 1), **Inkblot Recluse** (2/4 Spider
+Inkling Reach + ETB Surveil 2), **Quill-Lecturer** (2/4 Vigilance +
+Magecraft -1/-1 on opp creature), **Inkstrike Bolt** (3 damage to opp
+creature + 2 life), **Withering Spores** (mass -1/-1 EOT), **Witherbloom
+Brewer** (2/3 mana ability: tap + 2 life → {B}{G}), **Pestilent
+Brambletwig** (2/1 Plant Pest with die-trigger lifegain 2),
+**Witherbloom Soothsayer** (2/3 ETB Surveil 2 + drain 1), **Lorehold
+Vanquisher** (3/3 First Strike + attack-trigger lifegain), **Lorehold
+Burnscholar** (2/2 Magecraft ping + lifegain), **Pillardrop Cultivator**
+(2/3 Spirit Bird Flying + ETB reanimate MV≤2), **Prismari Skywatcher**
+(1/2 Merfolk Wizard Flying + Magecraft self-pump), **Brewmaster
+Pyrologist** (4/3 Trample + ETB 2 damage + draw), **Prismari Spell
+Smith** (2/2 Magecraft AnyOneColor), **Quandrix Botanist** (2/2 Elf
+Druid + Magecraft +1/+1 on target Fractal), **Quandrix Augur** (2/3
+Fractal Wizard + ETB Scry 2 → Draw 1), **Fractal Trefoil** (0/0
+Fractal Trample with X +1/+1 counters per land), **Quandrix
+Equationist** (3/3 Flying + draw on +1/+1 counter add), **Pyrokinetic
+Insight** (Sorcery — 3 dmg / rummage modal), **Lorehold Spirit
+Tutor** (Spirit-tribal tutor via RevealUntilFind), **Strixhaven
+Sanctum** (colorless Land — {T}: Add {C} + {2},{T}: Surveil 1),
+**Mystic Slate** (2-mana Artifact — scry {T} + sorcery-speed draw {2}{T}),
+**Strixhaven Bloomstadium** (5-mana Enchantment with both DoubleTokens +
+DoubleCounters, Doubling-Season template — first card to ship both
+halves of CR 614.16).
+
+**Engine primitive: `StaticEffect::DoubleCounters`** — CR 614.16 counter
+half of the token/counter replacement family. Read at `Effect::AddCounter`
+resolution time via `GameState::counter_doublers_for(seat)` (mirrors
+`token_doublers_for`); the counter count is multiplied by `2^doublers`
+per affected permanent. Also wired into the `enters_with_counters`
+(CR 614.12) replacement at both call sites (`stack.rs` spell-resolution
+path + `effects/movement.rs::place_card_in_dest`), so Fractal Trefoil
+under a Pestseed lands at 2× the lands-controlled count. Composes
+multiplicatively with itself (2 Pestseeds → 4×) and with `DoubleTokens`
+(Doubling Season ships both). Witherbloom Pestseed is the canonical
+exerciser. Tests: `witherbloom_pestseed_doubles_plus_one_counter_placement`,
+`_does_not_double_opp_counters`, `_stacks_multiplicatively`,
+`fractal_trefoil_with_pestseed_doubles_counters`.
+
+Push (modern_decks, claude/modern_decks branch — prior revision —
 **20 MORE STX cards + 24 new functionality tests + CR 603.4 intervening-
 'if' engine fix for AnotherOfYours ETB triggers + CR 122 (Counters)
 audit = batch 10 — 159 cards total in batches 9+10**):

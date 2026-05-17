@@ -395,32 +395,39 @@ status tag (✅ wired, 🟡 partial, ⏳ todo) plus a short note.
   the 1v1 case. Multi-player priority (CR 117.6 shared team
   turns) is still ⏳, tracked under Format Phase F (2HG).
 
-- 🟡 **CR 614.16 — "If an effect would create tokens / put counters,
-  replacement effects apply" (token half)** (push modern_decks audit,
-  claude/modern_decks branch): "Some replacement effects apply 'if an
-  effect would create one or more tokens' or 'if an effect would put
-  one or more counters on a permanent.' These replacement effects apply
-  if the effect of a resolving spell or ability creates a token or puts
-  a counter on a permanent, and they also apply if another replacement
-  or prevention effect does so, even if the original event being
-  modified wasn't itself an effect." Push (modern_decks) lands the
-  **token half** of CR 614.16 via the new `StaticEffect::DoubleTokens`
-  primitive. Wiring shape: a per-controller continuous static effect
-  that doubles the count of every `Effect::CreateToken` resolution. The
-  resolver in `game/effects/mod.rs` (`Effect::CreateToken` handler)
-  queries `GameState::token_doublers_for(seat)` (in `game/mod.rs`) and
-  multiplies the evaluated count by `2^k` where k is the number of
-  active `DoubleTokens` permanents the controller has on the
-  battlefield. Stacking multiplies (2 Adrix → 4×, 3 → 8×, ...) — the
-  CR 614.13 "multiple replacement effects apply in any order" framing
-  in this case collapses to "multiply" because every Adrix does the
-  same doubling regardless of order. Adrix and Nev, Twincasters is the
-  canonical exerciser. Tests: `adrix_and_nev_doubles_token_creation`,
-  `adrix_and_nev_does_not_double_opponent_tokens`. The counter half
-  ("if an effect would put one or more counters on a permanent" —
-  Doubling Season, Hardened Scales, Branching Evolution) is still ⏳
-  pending a `StaticEffect::DoubleCounters` sibling that hooks into the
-  `Effect::AddCounter` resolver.
+- ✅ **CR 614.16 — "If an effect would create tokens / put counters,
+  replacement effects apply"** (push modern_decks audit,
+  claude/modern_decks branch — **batch 11 promoted to ✅**): "Some
+  replacement effects apply 'if an effect would create one or more
+  tokens' or 'if an effect would put one or more counters on a
+  permanent.' These replacement effects apply if the effect of a
+  resolving spell or ability creates a token or puts a counter on a
+  permanent, and they also apply if another replacement or prevention
+  effect does so, even if the original event being modified wasn't
+  itself an effect." Both halves now wired. **Token half** —
+  `StaticEffect::DoubleTokens` primitive (Adrix and Nev, Twincasters);
+  `GameState::token_doublers_for(seat)` reads the active doubler
+  count at `Effect::CreateToken` resolution; the count is scaled by
+  `2^doublers`. Tests: `adrix_and_nev_doubles_token_creation`,
+  `adrix_and_nev_does_not_double_opponent_tokens`. **Counter half**
+  (push modern_decks, batch 11) — `StaticEffect::DoubleCounters`
+  primitive (Witherbloom Pestseed); `GameState::counter_doublers_for(seat)`
+  reads the active doubler count at `Effect::AddCounter` resolution
+  (per-target via `battlefield_find(cid).controller` so a fan-out
+  selector spanning controllers behaves correctly), then the count
+  is scaled by `2^doublers`. Poison counters on players use the
+  affected player's own doubler count. The same `counter_doublers_for`
+  lookup is also wired into the `enters_with_counters` (CR 614.12)
+  replacement at both call sites (`stack.rs` spell-resolution path +
+  `effects/movement.rs::place_card_in_dest`) so a Fractal Trefoil
+  entering under a Pestseed correctly doubles its lands-based counter
+  count. Stacking multiplies (2 Pestseeds → 4×). Tests:
+  `witherbloom_pestseed_doubles_plus_one_counter_placement`,
+  `_does_not_double_opp_counters`, `_stacks_multiplicatively`,
+  `fractal_trefoil_with_pestseed_doubles_counters`. Doubling Season
+  itself would ship both static abilities (DoubleTokens + DoubleCounters);
+  Branching Evolution / Vorinclex / Pir / Hardened Scales (counter-only
+  doublers) all wire via single-row catalog additions.
 
 - 🟡 **CR 603.4 — Intervening 'if' clause (trigger-time half)**
   (push modern_decks audit, claude/modern_decks branch): "A triggered

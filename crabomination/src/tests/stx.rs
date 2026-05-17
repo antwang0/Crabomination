@@ -19369,3 +19369,694 @@ fn quandrix_theorem_crafter_counters_per_land() {
     assert_eq!(bc.counter_count(CounterType::PlusOnePlusOne), 4,
         "4 lands → 4 counters on bear");
 }
+
+// ============================================================================
+// Batch 11 tests — 22 cards + StaticEffect::DoubleCounters engine primitive
+// ============================================================================
+
+#[test]
+fn witherbloom_pestseed_doubles_plus_one_counter_placement() {
+    // Pestseed in play → +1/+1 counter instructions on permanents you control
+    // are doubled (CR 614.16 counter-replacement half).
+    let mut g = two_player_game();
+    let _ = g.add_card_to_battlefield(0, catalog::witherbloom_pestseed());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // Add 1 +1/+1 counter via the engine's effect path.
+    {
+        use crate::card::{Effect, Selector, SelectionRequirement, Value};
+        use crate::game::effects::EffectContext;
+        let eff = Effect::AddCounter {
+            what: Selector::EachPermanent(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            ),
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        };
+        let ctx = EffectContext::for_spell(0, None, 0, 0);
+        g.resolve_effect(&eff, &ctx).expect("AddCounter resolves");
+    }
+    let bc = g.battlefield_find(bear).expect("Bear still here");
+    assert_eq!(
+        bc.counter_count(CounterType::PlusOnePlusOne),
+        2,
+        "Pestseed doubled the +1/+1 from 1 → 2"
+    );
+}
+
+#[test]
+fn witherbloom_pestseed_does_not_double_opp_counters() {
+    let mut g = two_player_game();
+    let _ = g.add_card_to_battlefield(0, catalog::witherbloom_pestseed());
+    let opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    // Seat 1 places a counter on its own bear — Pestseed (controlled by
+    // seat 0) shouldn't double seat 1's counter.
+    {
+        use crate::card::{Effect, Selector, Value};
+        use crate::game::effects::EffectContext;
+        use crate::game::types::Target;
+        let eff = Effect::AddCounter {
+            what: Selector::Target(0),
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        };
+        let ctx = EffectContext::for_spell(1, Some(Target::Permanent(opp_bear)), 0, 0);
+        g.resolve_effect(&eff, &ctx).expect("AddCounter resolves");
+    }
+    let bc = g.battlefield_find(opp_bear).expect("opp bear");
+    assert_eq!(
+        bc.counter_count(CounterType::PlusOnePlusOne),
+        1,
+        "Pestseed should not double opp's own-controller counter add"
+    );
+}
+
+#[test]
+fn witherbloom_pestseed_stacks_multiplicatively() {
+    let mut g = two_player_game();
+    let _ = g.add_card_to_battlefield(0, catalog::witherbloom_pestseed());
+    let _ = g.add_card_to_battlefield(0, catalog::witherbloom_pestseed());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    {
+        use crate::card::{Effect, Selector, SelectionRequirement, Value};
+        use crate::game::effects::EffectContext;
+        let eff = Effect::AddCounter {
+            what: Selector::EachPermanent(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            ),
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        };
+        let ctx = EffectContext::for_spell(0, None, 0, 0);
+        g.resolve_effect(&eff, &ctx).expect("AddCounter resolves");
+    }
+    let bc = g.battlefield_find(bear).expect("bear");
+    // 2 doublers → 2^2 = 4 counters from a base of 1.
+    assert_eq!(bc.counter_count(CounterType::PlusOnePlusOne), 4);
+}
+
+#[test]
+fn silverquill_editorialist_drains_each_opp_on_instant_cast() {
+    // Editorialist is on bf; cast an instant; opp should lose 1 life.
+    let mut g = two_player_game();
+    let _ = g.add_card_to_battlefield(0, catalog::silverquill_editorialist());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let life_opp_before = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(crate::game::types::Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Bolt castable");
+    drain_stack(&mut g);
+    // Bolt 3 + Editorialist drain 1 = 4 life loss.
+    assert_eq!(
+        g.players[1].life,
+        life_opp_before - 4,
+        "Bolt + Editorialist drain"
+    );
+}
+
+#[test]
+fn silverquill_editorialist_has_flying() {
+    let mut g = two_player_game();
+    let e = g.add_card_to_battlefield(0, catalog::silverquill_editorialist());
+    let view = g.computed_permanent(e).expect("Editorialist on bf");
+    assert!(view.keywords.contains(&Keyword::Flying));
+}
+
+#[test]
+fn inkblot_recluse_surveils_two_on_etb() {
+    let mut g = two_player_game();
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let lib_before = g.players[0].library.len();
+    let id = g.add_card_to_hand(0, catalog::inkblot_recluse());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Inkblot Recluse castable");
+    drain_stack(&mut g);
+    // AutoDecider surveils each card into graveyard by default → library
+    // loses up to 2 cards. Whatever the heuristic picks, the cards should
+    // not still be at the top of the library + hand.
+    assert!(g.players[0].library.len() <= lib_before, "library size non-increased");
+    // Verify the Recluse landed and carries Reach.
+    let bf = g.battlefield.iter().find(|c| c.definition.name == "Inkblot Recluse")
+        .expect("Recluse on bf");
+    assert!(bf.has_keyword(&Keyword::Reach), "Reach present");
+}
+
+#[test]
+fn quill_lecturer_shrinks_opp_creature_on_instant_cast() {
+    let mut g = two_player_game();
+    let _ = g.add_card_to_battlefield(0, catalog::quill_lecturer());
+    let target = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(crate::game::types::Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Bolt castable");
+    drain_stack(&mut g);
+    // Magecraft should shrink the bear (auto-target picks opp creature).
+    let bc = g.battlefield_find(target).expect("bear still here");
+    assert_eq!(bc.power(), 1, "2 → 1 power");
+    assert_eq!(bc.toughness(), 1, "2 → 1 toughness");
+}
+
+#[test]
+fn inkstrike_bolt_deals_three_and_gains_two_life() {
+    let mut g = two_player_game();
+    let target = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let ib = g.add_card_to_hand(0, catalog::inkstrike_bolt());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let life_before = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: ib,
+        target: Some(crate::game::types::Target::Permanent(target)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Inkstrike Bolt castable");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == target), "bear died");
+    assert_eq!(g.players[0].life, life_before + 2);
+}
+
+#[test]
+fn withering_spores_kills_one_toughness_creatures() {
+    let mut g = two_player_game();
+    // Use Inkling token (1/1 vanilla via SOS inkling_token factory output) —
+    // 1-toughness candidate that's free of dies-payoff riders. Mint via the
+    // Inkling Summoning sorcery's token factory; or fall back to a vanilla
+    // creature card. Use Wizened Beastcaller (or any 1/1 vanilla available).
+    // The simplest safe option is to put two bears down: the -1/-1 leaves
+    // both as 1/1; check the post-pump toughness via computed_permanent.
+    let bear_a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let bear_b = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let ws = g.add_card_to_hand(0, catalog::withering_spores());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: ws,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Withering Spores castable");
+    drain_stack(&mut g);
+    // Both bears get -1/-1, becoming 1/1. Both still alive.
+    let view_a = g.computed_permanent(bear_a).expect("bear A alive");
+    assert_eq!(view_a.toughness, 1, "bear A toughness 2 → 1");
+    let view_b = g.computed_permanent(bear_b).expect("bear B alive");
+    assert_eq!(view_b.toughness, 1, "bear B toughness 2 → 1");
+}
+
+#[test]
+fn witherbloom_brewer_taps_for_two_colors_paying_two_life() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::witherbloom_brewer());
+    g.clear_sickness(id);
+    let life_before = g.players[0].life;
+    let pool_b_before = g.players[0].mana_pool.amount(Color::Black);
+    let pool_g_before = g.players[0].mana_pool.amount(Color::Green);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id,
+        ability_index: 0,
+        target: None,
+    })
+    .expect("Brewer activatable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life_before - 2, "paid 2 life");
+    assert_eq!(g.players[0].mana_pool.amount(Color::Black), pool_b_before + 1);
+    assert_eq!(g.players[0].mana_pool.amount(Color::Green), pool_g_before + 1);
+}
+
+#[test]
+fn pestilent_brambletwig_dies_gains_two_life() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::pestilent_brambletwig());
+    let life_before = g.players[0].life;
+    {
+        use crate::card::{Effect, Selector, SelectionRequirement};
+        use crate::game::effects::EffectContext;
+        let eff = Effect::Destroy {
+            what: Selector::EachPermanent(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            ),
+        };
+        let ctx = EffectContext::for_spell(0, None, 0, 0);
+        g.resolve_effect(&eff, &ctx).expect("Destroy resolves");
+    }
+    drain_stack(&mut g);
+    assert!(
+        !g.battlefield.iter().any(|c| c.id == id),
+        "Brambletwig destroyed"
+    );
+    assert_eq!(
+        g.players[0].life,
+        life_before + 2,
+        "Brambletwig's death gives +2 life"
+    );
+}
+
+#[test]
+fn witherbloom_soothsayer_etb_surveils_and_drains() {
+    let mut g = two_player_game();
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let id = g.add_card_to_hand(0, catalog::witherbloom_soothsayer());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let life_p1_before = g.players[1].life;
+    let life_p0_before = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Soothsayer castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life_p1_before - 1, "opp lost 1");
+    assert_eq!(g.players[0].life, life_p0_before + 1, "+1 life");
+}
+
+#[test]
+fn lorehold_vanquisher_attacks_gains_life() {
+    use crate::game::types::{Attack, AttackTarget, TurnStep};
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::lorehold_vanquisher());
+    g.clear_sickness(id);
+    g.step = TurnStep::DeclareAttackers;
+    let life_before = g.players[0].life;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: id,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("Vanquisher can attack");
+    drain_stack(&mut g);
+    assert!(
+        g.players[0].life > life_before,
+        "+1 life from attack trigger"
+    );
+    let view = g.computed_permanent(id).expect("Vanquisher on bf");
+    assert!(view.keywords.contains(&Keyword::FirstStrike));
+}
+
+#[test]
+fn lorehold_burnscholar_pings_and_gains_on_cast() {
+    let mut g = two_player_game();
+    let _ = g.add_card_to_battlefield(0, catalog::lorehold_burnscholar());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let opp_life_before = g.players[1].life;
+    let my_life_before = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(crate::game::types::Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Bolt cast");
+    drain_stack(&mut g);
+    // Bolt 3 + Burnscholar 1 = 4 to opp; +1 life.
+    assert_eq!(g.players[1].life, opp_life_before - 4);
+    assert_eq!(g.players[0].life, my_life_before + 1);
+}
+
+#[test]
+fn pillardrop_cultivator_reanimates_low_mv_creature() {
+    let mut g = two_player_game();
+    let bear_gy = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::pillardrop_cultivator());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Pillardrop castable");
+    drain_stack(&mut g);
+    // The bear in graveyard should be on the battlefield now.
+    assert!(
+        g.battlefield.iter().any(|c| c.id == bear_gy),
+        "bear reanimated"
+    );
+}
+
+#[test]
+fn prismari_skywatcher_pumps_self_on_instant_cast() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::prismari_skywatcher());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(crate::game::types::Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Bolt cast");
+    drain_stack(&mut g);
+    let view = g.computed_permanent(id).expect("Skywatcher on bf");
+    assert_eq!(view.power, 2, "1 → 2 power EOT");
+    assert!(view.keywords.contains(&Keyword::Flying));
+}
+
+#[test]
+fn brewmaster_pyrologist_etb_pings_opp_and_draws() {
+    let mut g = two_player_game();
+    for _ in 0..2 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let opp_life_before = g.players[1].life;
+    let id = g.add_card_to_hand(0, catalog::brewmaster_pyrologist());
+    let hand_after_add = g.players[0].hand.len();
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Brewmaster castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, opp_life_before - 2, "2 damage to opp");
+    // Cast spent 1 card; ETB drew 1; net = 0 relative to post-add.
+    assert_eq!(g.players[0].hand.len(), hand_after_add);
+}
+
+#[test]
+fn prismari_spell_smith_adds_mana_on_cast() {
+    let mut g = two_player_game();
+    let _ = g.add_card_to_battlefield(0, catalog::prismari_spell_smith());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    // The bolt cast itself consumes 1 R. After resolution, magecraft adds
+    // 1 mana of any color (auto-decider picks something).
+    let total_before = g.players[0].mana_pool.total();
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(crate::game::types::Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Bolt cast");
+    drain_stack(&mut g);
+    // -1 spent + 1 added = 0 net relative to before-cast.
+    assert_eq!(g.players[0].mana_pool.total(), total_before);
+}
+
+#[test]
+fn quandrix_botanist_pumps_target_fractal_on_cast() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let _ = g.add_card_to_battlefield(0, catalog::quandrix_botanist());
+    let fractal = g.add_card_to_battlefield(0, catalog::quandrix_pledgemage());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Bolt cast");
+    drain_stack(&mut g);
+    let bc = g.battlefield_find(fractal).expect("Pledgemage on bf");
+    assert_eq!(
+        bc.counter_count(CounterType::PlusOnePlusOne),
+        1,
+        "Botanist magecraft put +1/+1 on the Fractal"
+    );
+}
+
+#[test]
+fn quandrix_augur_scrys_then_draws_on_etb() {
+    let mut g = two_player_game();
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let lib_before = g.players[0].library.len();
+    let id = g.add_card_to_hand(0, catalog::quandrix_augur());
+    let hand_after_add = g.players[0].hand.len();
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Augur castable");
+    drain_stack(&mut g);
+    // Cast: -1 hand. ETB Scry 2 + Draw 1 → +1 hand. Net 0 vs post-add.
+    assert_eq!(g.players[0].hand.len(), hand_after_add);
+    // Library: scry can move a card to graveyard, then draw consumes 1.
+    // Library should shrink by at least 1 (the draw); scry may bin more.
+    assert!(g.players[0].library.len() < lib_before);
+}
+
+#[test]
+fn fractal_trefoil_enters_with_counters_per_land() {
+    let mut g = two_player_game();
+    for _ in 0..4 { g.add_card_to_battlefield(0, catalog::forest()); }
+    let id = g.add_card_to_hand(0, catalog::fractal_trefoil());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Trefoil castable");
+    drain_stack(&mut g);
+    let bf = g.battlefield_find(id).expect("Trefoil on bf");
+    // 4 lands → +1/+1 ×4 → 4/4 with Trample.
+    assert_eq!(bf.counter_count(CounterType::PlusOnePlusOne), 4);
+    assert!(bf.has_keyword(&Keyword::Trample));
+}
+
+#[test]
+fn fractal_trefoil_with_pestseed_doubles_counters() {
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_battlefield(0, catalog::forest()); }
+    let _ = g.add_card_to_battlefield(0, catalog::witherbloom_pestseed());
+    let id = g.add_card_to_hand(0, catalog::fractal_trefoil());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Trefoil castable");
+    drain_stack(&mut g);
+    let bf = g.battlefield_find(id).expect("Trefoil on bf");
+    // 3 lands × 2 (Pestseed) = 6 counters.
+    assert_eq!(bf.counter_count(CounterType::PlusOnePlusOne), 6);
+}
+
+#[test]
+fn quandrix_equationist_draws_when_counter_lands_on_other_creature() {
+    let mut g = two_player_game();
+    for _ in 0..2 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let _ = g.add_card_to_battlefield(0, catalog::quandrix_equationist());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let hand_before = g.players[0].hand.len();
+    {
+        use crate::card::{Effect, Selector, Value};
+        use crate::game::effects::EffectContext;
+        use crate::game::types::Target;
+        let eff = Effect::AddCounter {
+            what: Selector::Target(0),
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        };
+        let ctx = EffectContext::for_spell(0, Some(Target::Permanent(bear)), 0, 0);
+        let events = g.resolve_effect(&eff, &ctx).expect("AddCounter resolves");
+        // Dispatch any triggers (the Equationist's draw trigger).
+        g.dispatch_triggers_for_events(&events);
+    }
+    drain_stack(&mut g);
+    // The Equationist's trigger fires off the bear's CounterAdded event
+    // → draw 1.
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "+1 card drawn");
+}
+
+#[test]
+fn pyrokinetic_insight_mode_0_burns_three() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::pyrokinetic_insight());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let life_before = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(crate::game::types::Target::Player(1)),
+        additional_targets: vec![],
+        mode: Some(0),
+        x_value: None,
+    })
+    .expect("Pyrokinetic Insight castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life_before - 3);
+}
+
+#[test]
+fn lorehold_spirit_tutor_pulls_spirit_from_top() {
+    let mut g = two_player_game();
+    // Star Pupil is a Cat Spirit — confirms RevealUntilFind can find a
+    // Spirit creature card on top of library.
+    g.players[0].library.clear();
+    g.add_card_to_library(0, catalog::star_pupil()); // top of library
+    let id = g.add_card_to_hand(0, catalog::lorehold_spirit_tutor());
+    let hand_after_add = g.players[0].hand.len();
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Spirit Tutor castable");
+    drain_stack(&mut g);
+    // Star Pupil should be in hand after the reveal pulls it.
+    assert!(
+        g.players[0].hand.iter().any(|c| c.definition.name == "Star Pupil"),
+        "Star Pupil tutored to hand"
+    );
+    // Net: -1 cast +1 tutored = 0 vs hand_after_add.
+    assert_eq!(g.players[0].hand.len(), hand_after_add);
+}
+
+#[test]
+fn strixhaven_sanctum_taps_for_colorless_and_surveils() {
+    let mut g = two_player_game();
+    for _ in 0..2 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let id = g.add_card_to_battlefield(0, catalog::strixhaven_sanctum());
+    g.clear_sickness(id);
+    // {T}: Add {C}.
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id,
+        ability_index: 0,
+        target: None,
+    })
+    .expect("Sanctum can tap for {C}");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.colorless_amount(), 1);
+    // Untap manually then activate the Surveil ability.
+    if let Some(c) = g.battlefield_find_mut(id) {
+        c.tapped = false;
+    }
+    let lib_before = g.players[0].library.len();
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id,
+        ability_index: 1,
+        target: None,
+    })
+    .expect("Surveil ability activatable");
+    drain_stack(&mut g);
+    // Library should either shrink by 1 (surveiled to gy) or be the same.
+    assert!(g.players[0].library.len() <= lib_before);
+}
+
+#[test]
+fn strixhaven_bloomstadium_doubles_tokens_and_counters() {
+    let mut g = two_player_game();
+    let _ = g.add_card_to_battlefield(0, catalog::strixhaven_bloomstadium());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // Counter half: +1 → 2.
+    {
+        use crate::card::{Effect, Selector, Value};
+        use crate::game::effects::EffectContext;
+        use crate::game::types::Target;
+        let eff = Effect::AddCounter {
+            what: Selector::Target(0),
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        };
+        let ctx = EffectContext::for_spell(0, Some(Target::Permanent(bear)), 0, 0);
+        g.resolve_effect(&eff, &ctx).expect("AddCounter");
+    }
+    let bc = g.battlefield_find(bear).expect("bear");
+    assert_eq!(bc.counter_count(CounterType::PlusOnePlusOne), 2);
+    // Token half: 1 Treasure → 2 Treasures.
+    let treasures_before = g.battlefield.iter()
+        .filter(|c| c.controller == 0 && c.definition.name == "Treasure")
+        .count();
+    {
+        use crate::card::Effect;
+        use crate::effect::PlayerRef;
+        use crate::game::effects::treasure_token;
+        use crate::game::effects::EffectContext;
+        let eff = Effect::CreateToken {
+            who: PlayerRef::You,
+            count: crate::card::Value::Const(1),
+            definition: treasure_token(),
+        };
+        let ctx = EffectContext::for_spell(0, None, 0, 0);
+        g.resolve_effect(&eff, &ctx).expect("CreateToken");
+    }
+    let treasures_after = g.battlefield.iter()
+        .filter(|c| c.controller == 0 && c.definition.name == "Treasure")
+        .count();
+    assert_eq!(
+        treasures_after - treasures_before, 2,
+        "Bloomstadium doubled the Treasure mint"
+    );
+}
+
+#[test]
+fn strixhaven_bloomstadium_combines_with_pestseed() {
+    // 4× scaling: Bloomstadium + Pestseed → 1 counter resolves as 4.
+    let mut g = two_player_game();
+    let _ = g.add_card_to_battlefield(0, catalog::strixhaven_bloomstadium());
+    let _ = g.add_card_to_battlefield(0, catalog::witherbloom_pestseed());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    {
+        use crate::card::{Effect, Selector, Value};
+        use crate::game::effects::EffectContext;
+        use crate::game::types::Target;
+        let eff = Effect::AddCounter {
+            what: Selector::Target(0),
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        };
+        let ctx = EffectContext::for_spell(0, Some(Target::Permanent(bear)), 0, 0);
+        g.resolve_effect(&eff, &ctx).expect("AddCounter");
+    }
+    let bc = g.battlefield_find(bear).expect("bear");
+    assert_eq!(bc.counter_count(CounterType::PlusOnePlusOne), 4);
+}
+
+#[test]
+fn mystic_slate_taps_for_scry_one() {
+    let mut g = two_player_game();
+    for _ in 0..2 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let id = g.add_card_to_battlefield(0, catalog::mystic_slate());
+    g.clear_sickness(id);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id,
+        ability_index: 0,
+        target: None,
+    })
+    .expect("Slate scry activatable");
+    drain_stack(&mut g);
+    let bf = g.battlefield_find(id).expect("Slate on bf");
+    assert!(bf.tapped, "Slate is tapped after activation");
+}

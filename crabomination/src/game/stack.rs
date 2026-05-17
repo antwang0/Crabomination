@@ -371,17 +371,32 @@ impl GameState {
                             converged_value,
                             mana_spent,
                         );
-                        let n = self.evaluate_value(&value, &etb_ctx);
-                        if n > 0 {
+                        let base = self.evaluate_value(&value, &etb_ctx);
+                        if base > 0 {
+                            // CR 614.16: counter-doubling replacement effects
+                            // also apply to the "enters with N counters"
+                            // replacement (Pestseed / Doubling Season / etc.).
+                            let target_ctrl = self
+                                .battlefield
+                                .iter()
+                                .find(|c| c.id == card_id)
+                                .map(|c| c.controller);
+                            let mut n = base as u32;
+                            if let Some(ctrl) = target_ctrl {
+                                let doublers = self.counter_doublers_for(ctrl);
+                                for _ in 0..doublers {
+                                    n = n.saturating_mul(2);
+                                }
+                            }
                             if let Some(card_mut) =
                                 self.battlefield.iter_mut().find(|c| c.id == card_id)
                             {
-                                card_mut.add_counters(kind, n as u32);
+                                card_mut.add_counters(kind, n);
                             }
                             events.push(GameEvent::CounterAdded {
                                 card_id,
                                 counter_type: kind,
-                                count: n as u32,
+                                count: n,
                             });
                         }
                     }

@@ -991,17 +991,45 @@ impl GameState {
             }
 
             Effect::AddCounter { what, kind, amount } => {
-                let n = self.evaluate_value(amount, ctx).max(0) as u32;
-                if n == 0 { return Ok(()); }
+                let base = self.evaluate_value(amount, ctx).max(0) as u32;
+                if base == 0 { return Ok(()); }
                 for ent in self.resolve_selector(what, ctx) {
                     match ent {
                         EntityRef::Permanent(cid) => {
+                            // CR 614.16 counter-doubling replacement: each
+                            // `StaticEffect::DoubleCounters` permanent the
+                            // affected permanent's *controller* has on the
+                            // battlefield doubles the count. Stacking
+                            // doublers multiply (2^k where k is the number
+                            // of active doublers). Looked up per-target
+                            // since a fan-out (`ForEach`) could span
+                            // controllers.
+                            let target_ctrl = self.battlefield_find(cid).map(|c| c.controller);
+                            let n = if let Some(ctrl) = target_ctrl {
+                                let doublers = self.counter_doublers_for(ctrl);
+                                let mut scaled = base;
+                                for _ in 0..doublers {
+                                    scaled = scaled.saturating_mul(2);
+                                }
+                                scaled
+                            } else {
+                                base
+                            };
                             if let Some(c) = self.battlefield_find_mut(cid) {
                                 c.add_counters(*kind, n);
                                 events.push(GameEvent::CounterAdded { card_id: cid, counter_type: *kind, count: n });
                             }
                         }
                         EntityRef::Player(p) if *kind == CounterType::Poison => {
+                            // Poison counters on players also scale per
+                            // CR 614.16 (Doubling Season / Vorinclex would
+                            // double poison too); use the affected player's
+                            // own counter-doubler count.
+                            let doublers = self.counter_doublers_for(p);
+                            let mut n = base;
+                            for _ in 0..doublers {
+                                n = n.saturating_mul(2);
+                            }
                             self.players[p].poison_counters += n;
                             events.push(GameEvent::PoisonAdded { player: p, amount: n });
                         }

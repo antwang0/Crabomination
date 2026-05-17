@@ -1753,6 +1753,16 @@ pub enum StaticEffect {
     /// token count (2 doublers → 4×, 3 → 8×, …). CR 614.13 framing —
     /// the effect is a replacement that scales the create-token event.
     DoubleTokens,
+    /// "If one or more counters would be put on a permanent you control,
+    /// twice that many of those counters are put on that permanent instead."
+    /// The counter-half of CR 614.16, matching Doubling Season / Hardened
+    /// Scales / Branching Evolution-class permanents. Read at
+    /// `Effect::AddCounter` resolution time: each active `DoubleCounters`
+    /// permanent the controller has on the battlefield doubles the counter
+    /// count (2 doublers → 4×, …). Composes multiplicatively with
+    /// `DoubleTokens` for cards that print both halves (Doubling Season
+    /// itself ships both static abilities).
+    DoubleCounters,
 }
 
 // ── Triggered / activated / loyalty ability shells ───────────────────────────
