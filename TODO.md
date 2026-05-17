@@ -3465,14 +3465,22 @@ ability sets to be cleared too.
 `activate_ability` / `fire_step_triggers` / the dispatcher through
 the computed view. Unblocks the two STX 🟡 cards above.
 
-### Engine — Stack-spell self-target validator (CR 115.5)
+### Engine — Stack-spell self-target validator (CR 115.5) ✅ DONE
 
-CR 115.5: "A spell or ability can't be its own target." The engine's
-target validator at `evaluate_requirement_static` doesn't enforce
-this. Currently no card in the catalog triggers the corner (no
-spell-targets-stack-spell card targets itself), but the rule should
-be wired before adding cards like Spell Burst or Lava Spike (which
-explicitly note "can't target this spell").
+✅ Done in batch 17 (modern_decks): new
+`GameState::check_target_legality_with_source(target, caster, source)`
+wraps the existing `check_target_legality` with a CR 115.5 self-target
+gate — when the chosen target's permanent id matches the casting
+spell's own id, the cast is rejected with `GameError::InvalidTarget`.
+The cast pipeline (`cast_spell`) threads `Some(card_id)` so both the
+slot-0 target and additional-targets slots are checked. The wrapper
+form remains permissive when `source: None` so trigger / activation
+target validation (which doesn't have a spell-on-stack source) is
+unchanged. Lock-in test:
+`cr_115_5_spell_targeting_itself_is_illegal_via_permanent_id` (Bury
+in Books targeting its own card id rejected). Future Spell Burst /
+Lava Spike-style printed "can't target this spell" cards plug in
+against the same primitive.
 
 ### Engine — Coin flip primitive (CR 705)
 
@@ -3678,3 +3686,61 @@ resolution time" in the Suggested next-up tasks section.
   Practiced Scrollsmith, Conspiracy Theorist's attack trigger,
   Archaic's Agony, Echocasting Symposium's Paradigm rider, and the
   SOS Improvisation Capstone (the catalog's lone ⏳).
+
+### Suggested next-up tasks (additions from batch 17)
+
+- ⏳ **Inkling-tribal die-trigger payoffs** — push (modern_decks
+  batch 17) adds Inkling Witness as an "Other Inkling dies → +1 life"
+  payoff, joining Felisa's Inkling-minter and the Inkling Bloodscribe
+  drain. The Inkling tribal pool now has 3 distinct death-trigger
+  payoffs, making it viable to slot a dedicated Inkling-aristocrats
+  subdeck into the SOS Silverquill pool selector once
+  archetype-weighted deck construction lands.
+
+- ⏳ **Drain-plus-tempo modular** — push (modern_decks batch 17) adds
+  Defend the Inkwell as a drain-2 + scry-2 instant-speed (it's
+  sorcery in card def but the pattern is broadly portable). The
+  drain + card-selection shape is recurring (Sign in Blood, Costly
+  Plunder, Read the Bones); a `shortcut::drain_and_scry(amount,
+  scry_count)` helper would replace the explicit
+  `Seq(Drain + Scry)` pattern at multiple call sites.
+
+- ⏳ **Per-attacker batched event (CR 506.5)** — push (modern_decks
+  batch 17) wires Lorehold Loremaster and Quandrix Reckoner as
+  per-attacker `Attacks/SelfSource` triggers (Loremaster mints a
+  Spirit per attack; Reckoner gets +1/+1 per attack). The
+  per-attacker emission model matches printed batch triggers in
+  2-player play, but a true batched `EventKind::AttackersDeclared`
+  would let cards like Augusta read "creatures that attacked this
+  combat" cleanly. Tracked separately under the Augusta row.
+
+- ⏳ **Token mint + counter / keyword grant helper consolidation** —
+  Lorehold Skirmish (mint Spirit + grant Haste EOT), Quandrix
+  Summoner (mint Fractal + AddCounter), and now Lorehold Loremaster
+  (mint Spirit on attack) all share the same `Seq([CreateToken,
+  ...mutate-LastCreatedToken])` shape. A
+  `shortcut::create_token_with_keyword(token, kw, dur)` and
+  `shortcut::create_token_with_counter(token, counter, n)` helper
+  pair (proposed in batch 15) would replace the inline pattern at
+  10+ call sites.
+
+- ✅ **CR 115.5 self-target enforcement** — Done in batch 17 (see
+  the matching engine TODO row above).
+
+- ⏳ **Magecraft body fan-out helpers** — push (modern_decks batch
+  17) adds 5 magecraft creatures (Silverquill Pupil, Withergrowth
+  Apprentice, Lorehold Pyrosage, Quandrix Tutelary, Prismari
+  Pyrotechnician) that each use a hand-rolled `magecraft(Effect::...)`
+  body. A `shortcut::magecraft_ping_each_opp(amount)` and
+  `magecraft_ping_any(amount)` helper would consolidate the
+  Lorehold/Prismari ping bodies; a `magecraft_target_pump(power,
+  toughness, filter)` would handle the target-creature pump variant.
+
+- ⏳ **PlayerRef::Opponent (single-opponent helper, restating)** —
+  the existing `EachOpponent` collapses to the same player in
+  2-player games. A `PlayerRef::Opponent` (the singular non-controller
+  player) would read more naturally for single-opp effects like
+  Baleful Mastery's "target opponent draws a card", Tezzeret's
+  Gambit mode 1, and any "an opponent" wording. Workaround today is
+  `EachOpponent` which is fine in 2-player but fans out in
+  multiplayer. Low priority; cosmetic improvement.

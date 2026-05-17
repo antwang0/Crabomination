@@ -10,7 +10,7 @@
 use super::no_abilities;
 use crate::card::{
     CardDefinition, CardType, CreatureType, Effect, EventKind, EventScope, EventSpec, Keyword,
-    Selector, Subtypes, TriggeredAbility, Value,
+    SelectionRequirement, Selector, Subtypes, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{magecraft, magecraft_self_pump, target_filtered};
 use crate::effect::{Duration, PlayerRef};
@@ -292,3 +292,178 @@ pub fn symmetry_sage() -> CardDefinition {
     }
 }
 
+
+// ── Prismari Pyrotechnician (batch 17) ──────────────────────────────────────
+
+/// Prismari Pyrotechnician — {1}{U}{R}, 2/2 Human Wizard.
+///
+/// Printed Oracle (synthesised): "Magecraft — Whenever you cast or copy
+/// an instant or sorcery spell, this creature deals 1 damage to any
+/// target."
+///
+/// Cheap Prismari magecraft body that pings each cast. Pairs with
+/// every Magecraft engine — Aziza copy chains, Galvanic Iteration,
+/// Symmetry Sage stack — for explosive late-game.
+pub fn prismari_pyrotechnician() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Pyrotechnician",
+        cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::DealDamage {
+            to: target_filtered(SelectionRequirement::Creature
+                .or(SelectionRequirement::Player)
+                .or(SelectionRequirement::HasCardType(CardType::Planeswalker))),
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Prismari Looter (batch 17) ──────────────────────────────────────────────
+
+/// Prismari Looter — {U}{R}, 1/3 Human Wizard.
+///
+/// Printed Oracle (synthesised): "When this creature enters, draw a
+/// card, then discard a card."
+///
+/// Classic UR loot body — a Merfolk Looter shape on a 1/3 body. The
+/// loot smooths late-game draws and feeds Magecraft engines via the
+/// discard. Pairs with Plargg / Looter's-style discard payoffs.
+pub fn prismari_looter() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Looter",
+        cost: cost(&[u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
+            ]),
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Prismari Chromaticist (batch 17) ────────────────────────────────────────
+
+/// Prismari Chromaticist — {2}{U}{R}, 3/3 Human Wizard.
+///
+/// Printed Oracle (synthesised): "When this creature enters, create a
+/// Treasure token. (It's an artifact with '{T}, Sacrifice this artifact:
+/// Add one mana of any color.')"
+///
+/// Mid-curve Prismari ramp + body. Pairs with Prismari Treasurewright
+/// for double-Treasure ETB chains. The Treasure goes through the
+/// existing `Effect::CreateToken` + `treasure_token` plumbing.
+pub fn prismari_chromaticist() -> CardDefinition {
+    use crate::game::effects::treasure_token;
+    CardDefinition {
+        name: "Prismari Chromaticist",
+        cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: treasure_token(),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Prismari Drakeward (batch 17) ───────────────────────────────────────────
+
+/// Prismari Drakeward — {3}{U}{R}, 4/4 Drake, Flying.
+///
+/// Printed Oracle (synthesised): "Flying / When this creature enters,
+/// it deals 2 damage to each opponent."
+///
+/// Five-mana 4/4 flier with built-in 2-damage drain-equivalent ETB.
+/// Pairs naturally with Prismari Pyrotechnician's spell-pings for
+/// rapid finish.
+pub fn prismari_drakeward() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Drakeward",
+        cost: cost(&[generic(3), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Drake],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::DealDamage {
+                to: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(2),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}

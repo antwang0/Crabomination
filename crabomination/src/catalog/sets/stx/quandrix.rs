@@ -394,3 +394,177 @@ pub fn quandrix_ecologist() -> CardDefinition {
     }
 }
 
+
+// ── Quandrix Symmetrist (batch 17) ──────────────────────────────────────────
+
+/// Quandrix Symmetrist — {2}{G}{U}, 3/3 Elf Druid.
+///
+/// Printed Oracle (synthesised): "When this creature enters, scry 2,
+/// then draw a card."
+///
+/// Mid-curve Quandrix card-selection body. 3/3 for 4 with built-in
+/// smoothing + cantrip — pure value. Pairs naturally with Magecraft
+/// engines (every IS cast post-ETB is a free trigger).
+pub fn quandrix_symmetrist() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Symmetrist",
+        cost: cost(&[generic(2), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
+                Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            ]),
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Quandrix Reckoner (batch 17) ────────────────────────────────────────────
+
+/// Quandrix Reckoner — {1}{G}{U}, 2/2 Frog Druid, Trample.
+///
+/// Printed Oracle (synthesised): "Trample / Whenever this creature
+/// attacks, put a +1/+1 counter on it."
+///
+/// Per-attack +1/+1 self-grower with Trample — a 2/2 → 3/3 → 4/4
+/// progression that punches through chump blockers. Stacks with
+/// Symmathematics / Tanazir's doubling effects for explosive late-game.
+pub fn quandrix_reckoner() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Reckoner",
+        cost: cost(&[generic(1), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Frog, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Trample],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Fractal Reinforcement (batch 17) ────────────────────────────────────────
+
+/// Fractal Reinforcement — {G}{U} Sorcery.
+///
+/// Printed Oracle (synthesised): "Put a +1/+1 counter on each creature
+/// you control."
+///
+/// Strict anthem via counters — durable through layer effects (counters
+/// aren't pumps that wear off at EOT). Pairs with Tanazir (doubles
+/// counters on attack) and Symmathematics for fan-out scaling.
+pub fn fractal_reinforcement() -> CardDefinition {
+    CardDefinition {
+        name: "Fractal Reinforcement",
+        cost: cost(&[g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::ForEach {
+            selector: Selector::EachPermanent(SelectionRequirement::Creature
+                .and(SelectionRequirement::ControlledByYou)),
+            body: Box::new(Effect::AddCounter {
+                what: Selector::TriggerSource,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            }),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Quandrix Tutelary (batch 17) ────────────────────────────────────────────
+
+/// Quandrix Tutelary — {G}{U}, 1/3 Elf Wizard.
+///
+/// Printed Oracle (synthesised): "Magecraft — Whenever you cast or
+/// copy an instant or sorcery spell, you may put a +1/+1 counter on
+/// target Fractal you control."
+///
+/// Counter-on-Fractal magecraft trigger. Pairs with Fractal minters
+/// (Body of Research, Fractal Anomaly, Quandrix Summoner) for snowball
+/// growth. The optional `MayDo` is left as always-apply since the
+/// always-yes is strictly better than skipping.
+pub fn quandrix_tutelary() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Tutelary",
+        cost: cost(&[g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::AddCounter {
+            what: target_filtered(SelectionRequirement::Creature
+                .and(SelectionRequirement::HasCreatureType(CreatureType::Fractal))
+                .and(SelectionRequirement::ControlledByYou)),
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}

@@ -571,17 +571,19 @@ impl GameState {
             return Err(GameError::SorcerySpeedOnly);
         }
 
-        // Validate that the chosen target is legally targetable.
+        // Validate that the chosen target is legally targetable. Also
+        // enforces CR 115.5 — the spell being cast cannot target itself —
+        // by threading the cast card's id as `source`.
         if let Some(ref tgt) = target
-            && let Err(e) = self.check_target_legality(tgt, p)
+            && let Err(e) = self.check_target_legality_with_source(tgt, p, Some(card_id))
         {
             self.players[p].hand.push(card);
             return Err(e);
         }
         // Same legality check for each additional target slot (hexproof,
-        // shroud, protection, Leyline-of-Sanctity).
+        // shroud, protection, Leyline-of-Sanctity, CR 115.5 self-target).
         for tgt in &additional_targets {
-            if let Err(e) = self.check_target_legality(tgt, p) {
+            if let Err(e) = self.check_target_legality_with_source(tgt, p, Some(card_id)) {
                 self.players[p].hand.push(card);
                 return Err(e);
             }
@@ -1274,6 +1276,21 @@ impl GameState {
     /// or has Protection from the caster's color identity. For player targets,
     /// also checks the `ControllerHasHexproof` static (Leyline of Sanctity).
     pub(crate) fn check_target_legality(&self, target: &Target, caster: usize) -> Result<(), GameError> {
+        self.check_target_legality_with_source(target, caster, None)
+    }
+
+    /// Same as [`check_target_legality`] but also enforces CR 115.5 — "a
+    /// spell or ability on the stack is an illegal target for itself" —
+    /// when `source_card_id` is provided. Used by the cast pipeline for
+    /// spells like Stifle/Squelch that target stack spells/abilities;
+    /// passing the casting spell's own `CardId` rejects a self-target
+    /// at cast time.
+    pub(crate) fn check_target_legality_with_source(
+        &self,
+        target: &Target,
+        caster: usize,
+        source_card_id: Option<CardId>,
+    ) -> Result<(), GameError> {
         let cid = match target {
             Target::Player(p) => {
                 if *p != caster && self.player_has_static_hexproof(*p) {
@@ -1286,6 +1303,16 @@ impl GameState {
             }
             Target::Permanent(c) => c,
         };
+        // CR 115.5: A spell or ability on the stack is an illegal target
+        // for itself. When the cast pipeline passes its own source id,
+        // reject a target matching that id. Catches Spell Burst /
+        // hypothetical "counter target spell" trying to point at itself
+        // mid-cast.
+        if let Some(src) = source_card_id
+            && *cid == src
+        {
+            return Err(GameError::InvalidTarget);
+        }
         let Some(card) = self.battlefield_find(*cid) else {
             return Ok(());
         };

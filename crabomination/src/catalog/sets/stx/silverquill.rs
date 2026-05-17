@@ -1690,3 +1690,214 @@ pub fn inkling_vanguard() -> CardDefinition {
         exile_on_resolve: false,
     }
 }
+
+// ── Silverquill Marshal (batch 17) ──────────────────────────────────────────
+
+/// Silverquill Marshal — {2}{W}, 2/3 Human Soldier.
+///
+/// Printed Oracle (synthesised): "When this creature enters, you gain 2
+/// life."
+///
+/// Bread-and-butter Silverquill defensive body — a 2/3 for 3 with a
+/// 2-life ETB stabilizer. Pairs naturally with Light of Promise /
+/// Honor Troll lifegain payoffs and the Inkling Bloodscribe drain
+/// chain — every ETB lifegain ticks those engines.
+pub fn silverquill_marshal() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Marshal",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Inkling Sanctifier (batch 17) ───────────────────────────────────────────
+
+/// Inkling Sanctifier — {2}{W}, 2/3 Inkling Cleric, Flying + Lifelink.
+///
+/// Printed Oracle (synthesised): "Flying, lifelink"
+///
+/// Hard-hitting Inkling lifelinker — 2/3 Flying with Lifelink at three
+/// mana qualifies as a top-end Inkling body for the Silverquill tribal
+/// pool. Stacks with Tenured Inkcaster (+2/+2 anthem → 4/5 Lifelink
+/// Flier) and Inkling Verselord (Other Inklings have lifelink — this
+/// one already has it natively).
+pub fn inkling_sanctifier() -> CardDefinition {
+    CardDefinition {
+        name: "Inkling Sanctifier",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Flying, Keyword::Lifelink],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Silverquill Pupil (batch 17) ────────────────────────────────────────────
+
+/// Silverquill Pupil — {W}, 1/2 Human Student.
+///
+/// Printed Oracle (synthesised): "Magecraft — Whenever you cast or copy
+/// an instant or sorcery spell, this creature gets +1/+0 until end of
+/// turn."
+///
+/// Cheap one-drop magecraft body that swings bigger on every cast.
+/// Smaller cousin to Inkling Choirmaster / Eager First-Year — a +1/+0
+/// magecraft pump scales aggressively in a spell-heavy shell.
+pub fn silverquill_pupil() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Pupil",
+        cost: cost(&[w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_self_pump(1, 0)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Defend the Inkwell (batch 17) ───────────────────────────────────────────
+
+/// Defend the Inkwell — {2}{W}{B} Sorcery.
+///
+/// Printed Oracle (synthesised): "Each opponent loses 2 life and you
+/// gain 2 life. Scry 2."
+///
+/// Drain-plus-scry for {2}{W}{B} — fits the Silverquill removal / card
+/// selection slot. Pairs with Witherbloom Apprentice / Honor Troll for
+/// double-drain triggers and book-end lifegain payoffs.
+pub fn defend_the_inkwell() -> CardDefinition {
+    CardDefinition {
+        name: "Defend the Inkwell",
+        cost: cost(&[generic(2), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Drain {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                to: Selector::You,
+                amount: Value::Const(2),
+            },
+            Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Inkling Witness (batch 17) ──────────────────────────────────────────────
+
+/// Inkling Witness — {W}{B}, 2/2 Inkling Cleric, Flying.
+///
+/// Printed Oracle (synthesised): "Flying / Whenever another Inkling you
+/// control dies, you gain 1 life."
+///
+/// Per-Inkling-death lifegain via `EventKind::CreatureDied` /
+/// `EventScope::AnotherOfYours` filtered on `HasCreatureType(Inkling)`
+/// — same shape as the existing Pestmaster pattern but for the Inkling
+/// tribe. Pairs with Inkling Summoning / Felisa's Inkling minter for
+/// chained drain.
+pub fn inkling_witness() -> CardDefinition {
+    use crate::card::Predicate;
+    CardDefinition {
+        name: "Inkling Witness",
+        cost: cost(&[w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::HasCreatureType(CreatureType::Inkling),
+                }),
+            effect: Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}

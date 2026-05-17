@@ -759,3 +759,170 @@ pub fn lorehold_skirmish() -> CardDefinition {
     }
 }
 
+// ── Lorehold Pyrosage (batch 17) ────────────────────────────────────────────
+
+/// Lorehold Pyrosage — {1}{R}{W}, 2/2 Spirit Wizard.
+///
+/// Printed Oracle (synthesised): "Magecraft — Whenever you cast or copy
+/// an instant or sorcery spell, Lorehold Pyrosage deals 1 damage to
+/// each opponent."
+///
+/// Mirror of Lorehold Burnscholar / Lorehold Pyromage at the 3-mana
+/// slot — magecraft pings each opp for 1 (drain-equivalent in
+/// 2-player). Stacks aggressively with Lorehold's spell-heavy shell.
+pub fn lorehold_pyrosage() -> CardDefinition {
+    use crate::effect::shortcut::magecraft;
+    CardDefinition {
+        name: "Lorehold Pyrosage",
+        cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::DealDamage {
+            to: Selector::Player(PlayerRef::EachOpponent),
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Lorehold Loremaster (batch 17) ──────────────────────────────────────────
+
+/// Lorehold Loremaster — {3}{R}{W}, 4/4 Spirit Wizard, First Strike.
+///
+/// Printed Oracle (synthesised): "First strike / Whenever this creature
+/// attacks, create a 2/2 red and white Spirit creature token."
+///
+/// Top-end Lorehold token engine — 4/4 first strike attacker that mints
+/// a Spirit each attack. Doubles Quintorius's anthem leverage (each new
+/// Spirit gets +1/+0) and fuels Lorehold Excavation's gy-payoff chain.
+pub fn lorehold_loremaster() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Loremaster",
+        cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::FirstStrike],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: lorehold_spirit_token(),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Lorehold Aerospirit (batch 17) ──────────────────────────────────────────
+
+/// Lorehold Aerospirit — {2}{R}{W}, 3/2 Spirit Soldier, Flying + Haste.
+///
+/// Printed Oracle (synthesised): "Flying, haste"
+///
+/// Pure aerial Lorehold haste-flier finisher. The Flying+Haste pair
+/// makes Lorehold Aerospirit punch through air-defenseless boards
+/// instantly. Pairs with Spirit Banner (+1/+1 anthem) for a 4/3
+/// Flying-Haste attack on its ETB turn.
+pub fn lorehold_aerospirit() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Aerospirit",
+        cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Flying, Keyword::Haste],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Lorehold Ember-Forge (batch 17) ─────────────────────────────────────────
+
+/// Lorehold Ember-Forge — {2}{R}{W} Sorcery.
+///
+/// Printed Oracle (synthesised): "Lorehold Ember-Forge deals 3 damage
+/// to target creature and 1 damage to each opponent."
+///
+/// Single-creature removal + 1-damage drain-equivalent. The damage is
+/// dealt as two separate `DealDamage` calls so per-event lifelink /
+/// damage-trigger riders fire on each. A 4-mana 3-damage spell with a
+/// 1-life-each-opp tail makes for a solid mid-curve Lorehold removal.
+pub fn lorehold_ember_forge() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Ember-Forge",
+        cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Creature),
+                amount: Value::Const(3),
+            },
+            Effect::DealDamage {
+                to: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
