@@ -26822,3 +26822,145 @@ fn vanquish_the_horde_affinity_rejects_undercost_with_no_creatures() {
     });
     assert!(result.is_err(), "Vanquish not castable at {{3}}{{W}} with no creatures");
 }
+
+// ── Push (modern_decks) batch 26: 7 new STX cards + tests ──────────────────
+//
+// 3 new Lessons (Pest Studies, Lecture in Strategy, Advanced Cartography)
+// + 4 new iconic cards (Bombastic Strixhaven Mage, Mage Hunters' Strike,
+// Mascot Researcher, Strixhaven Tutor). All use existing primitives.
+
+#[test]
+fn pest_studies_creates_two_pests() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::pest_studies());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Pest Studies castable");
+    drain_stack(&mut g);
+    let pests = g.battlefield.iter()
+        .filter(|c| c.controller == 0 && c.definition.name == "Pest")
+        .count();
+    assert_eq!(pests, 2);
+}
+
+#[test]
+fn lecture_in_strategy_pumps_team_with_vigilance() {
+    let mut g = two_player_game();
+    let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::lecture_in_strategy());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Lecture castable");
+    drain_stack(&mut g);
+    let computed = g.compute_battlefield();
+    let bear = computed.iter().find(|c| c.id == b).unwrap();
+    assert_eq!(bear.power, 3, "Bear pumped");
+    assert!(bear.keywords.contains(&Keyword::Vigilance));
+}
+
+#[test]
+fn advanced_cartography_ramps_and_scrys() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let forest = g.add_card_to_library(0, catalog::forest());
+    g.add_card_to_library(0, catalog::island());
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Search(Some(forest)),
+        DecisionAnswer::ScryOrder { kept_top: vec![], bottom: vec![] },
+    ]));
+    let id = g.add_card_to_hand(0, catalog::advanced_cartography());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Cartography castable");
+    drain_stack(&mut g);
+    let f = g.battlefield_find(forest).expect("Forest tutored");
+    assert!(f.tapped);
+}
+
+#[test]
+fn bombastic_strixhaven_mage_etb_pings_and_magecraft_pings() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::bombastic_strixhaven_mage());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let p1_before = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Mage castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, p1_before - 2, "ETB 2 damage");
+    // Magecraft 1 damage on IS cast.
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt castable");
+    drain_stack(&mut g);
+    // -3 (bolt) + -1 (magecraft) = -4.
+    assert_eq!(g.players[1].life, p1_before - 2 - 4);
+}
+
+#[test]
+fn mage_hunters_strike_shrinks_target() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::mage_hunters_strike());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Strike castable");
+    drain_stack(&mut g);
+    // Bear 2/2 - 3/-3 → -1/-1 → dies.
+    assert!(g.battlefield_find(bear).is_none(), "Bear killed");
+}
+
+#[test]
+fn mascot_researcher_etb_adds_counters_to_self_and_other() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let other_bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::mascot_researcher());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(other_bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Researcher castable");
+    drain_stack(&mut g);
+    let body = g.battlefield_find(id).unwrap();
+    assert_eq!(body.counter_count(CounterType::PlusOnePlusOne), 1);
+    let bear = g.battlefield_find(other_bear).unwrap();
+    assert_eq!(bear.counter_count(CounterType::PlusOnePlusOne), 1);
+}
+
+#[test]
+fn strixhaven_tutor_etb_scrys_and_cantrips() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_library(0, catalog::island());
+    let id = g.add_card_to_hand(0, catalog::strixhaven_tutor());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Tutor castable");
+    drain_stack(&mut g);
+    // Hand: -1 cast +1 cantrip = 0 net.
+    assert_eq!(g.players[0].hand.len(), hand_before);
+}

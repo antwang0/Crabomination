@@ -21,12 +21,12 @@
 
 use super::no_abilities;
 use crate::card::{
-    CardDefinition, CardType, CounterType, CreatureType, Effect, Selector, SelectionRequirement,
+    CardDefinition, CardType, CounterType, CreatureType, Effect, Keyword, Selector, SelectionRequirement,
     SpellSubtype, Subtypes, TokenDefinition, Value,
 };
 use crate::effect::shortcut::target_filtered;
 use crate::effect::{Duration, PlayerRef, ZoneDest};
-use crate::mana::{cost, g, generic, r, u, w, Color};
+use crate::mana::{b, cost, g, generic, r, u, w, Color};
 
 // ── Environmental Sciences ──────────────────────────────────────────────────
 
@@ -759,6 +759,145 @@ pub fn reflective_anatomy() -> CardDefinition {
             },
             duration: Duration::EndOfTurn,
         },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+// ── Push (modern_decks) batch 26: 3 new Lessons ───────────────────────────
+
+/// Pest Studies — {1}{B}{G} Sorcery — Lesson.
+///
+/// Printed Oracle (synthesised): "Create two 1/1 black and green Pest
+/// creature tokens with 'When this creature dies, you gain 1 life.'"
+///
+/// 3-mana 2-Pest token engine — a Lesson that doubles as a board widener.
+/// Each Pest carries the standard die-trigger lifegain via the shared
+/// `stx_pest_token` helper.
+pub fn pest_studies() -> CardDefinition {
+    let pest = super::shared::stx_pest_token();
+    CardDefinition {
+        name: "Pest Studies",
+        cost: cost(&[generic(1), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes {
+            spell_subtypes: vec![SpellSubtype::Lesson],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(2),
+            definition: pest,
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lecture in Strategy — {1}{R}{W} Sorcery — Lesson.
+///
+/// Printed Oracle (synthesised): "Creatures you control get +1/+1 and gain
+/// vigilance until end of turn."
+///
+/// 3-mana go-wide combat trick that doubles as Lesson sideboard fodder.
+/// Anthems your team + adds Vigilance for a safe alpha strike.
+pub fn lecture_in_strategy() -> CardDefinition {
+    use crate::effect::shortcut::each_your_creature;
+    CardDefinition {
+        name: "Lecture in Strategy",
+        cost: cost(&[generic(1), crate::mana::r(), crate::mana::w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes {
+            spell_subtypes: vec![SpellSubtype::Lesson],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: each_your_creature(),
+                power: Value::Const(1),
+                toughness: Value::Const(1),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: each_your_creature(),
+                keyword: Keyword::Vigilance,
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Advanced Cartography — {1}{G}{U} Sorcery — Lesson.
+///
+/// Printed Oracle (synthesised): "Search your library for a basic land
+/// card, put it onto the battlefield tapped, then shuffle. Scry 2."
+///
+/// 3-mana ramp + dig. Plays as a Cultivate-lite at the Lesson slot.
+pub fn advanced_cartography() -> CardDefinition {
+    use crate::effect::ZoneDest;
+    CardDefinition {
+        name: "Advanced Cartography",
+        cost: cost(&[generic(1), crate::mana::g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes {
+            spell_subtypes: vec![SpellSubtype::Lesson],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Search {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::IsBasicLand,
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: true,
+                },
+            },
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(2),
+            },
+        ]),
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],

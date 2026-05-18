@@ -572,3 +572,209 @@ pub fn strixhaven_vigil() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Push (modern_decks) batch 26: 4 more iconic STX cards ──────────────────
+
+/// Bombastic Strixhaven Mage — {2}{R}, 2/3 Human Wizard.
+///
+/// Printed Oracle (synthesised): "When this creature enters, deal 2 damage
+/// to any target. Magecraft — Whenever you cast or copy an instant or
+/// sorcery spell, this creature deals 1 damage to any target."
+///
+/// 3-mana ETB-burn-and-stay-burning. Pings opp 2 on landing then 1 per
+/// IS cast. Closes the spellslinger Lorehold/Prismari curve at the 3-
+/// mana slot.
+pub fn bombastic_strixhaven_mage() -> CardDefinition {
+    use crate::card::{EventKind, EventScope, EventSpec, TriggeredAbility};
+    use crate::effect::shortcut::{magecraft, target_filtered};
+    CardDefinition {
+        name: "Bombastic Strixhaven Mage",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: Effect::DealDamage {
+                    to: target_filtered(
+                        SelectionRequirement::Creature
+                            .or(SelectionRequirement::Player)
+                            .or(SelectionRequirement::Planeswalker),
+                    ),
+                    amount: Value::Const(2),
+                },
+            },
+            magecraft(Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature
+                        .or(SelectionRequirement::Player)
+                        .or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::Const(1),
+            }),
+        ],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Mage Hunters' Strike — {1}{B}, instant.
+///
+/// Printed Oracle (synthesised): "Target creature gets -3/-3 until end
+/// of turn."
+///
+/// 2-mana removal-style debuff. Kills any 3-toughness creature outright;
+/// shrinks larger threats for combat trades. Pairs with deathtouch
+/// (Witherbloom Toxicaster) for an "anything dies" finisher.
+pub fn mage_hunters_strike() -> CardDefinition {
+    use crate::effect::shortcut::target_filtered;
+    CardDefinition {
+        name: "Mage Hunters' Strike",
+        cost: cost(&[generic(1), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::PumpPT {
+            what: target_filtered(SelectionRequirement::Creature),
+            power: Value::Const(-3),
+            toughness: Value::Const(-3),
+            duration: crate::effect::Duration::EndOfTurn,
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Mascot Researcher — {2}{G}, 2/2 Human Druid.
+///
+/// Printed Oracle (synthesised): "When this creature enters, put a
+/// +1/+1 counter on another target creature you control. Then put a
+/// +1/+1 counter on this creature."
+///
+/// 3-mana counter-strewer ETB. Double-trigger pumps the team for two
+/// counters total — strong with Quandrix Fractal payoffs and the
+/// Witherbloom Spore-Master Pest synergies.
+pub fn mascot_researcher() -> CardDefinition {
+    use crate::card::{CounterType, EventKind, EventScope, EventSpec, TriggeredAbility};
+    use crate::effect::shortcut::target_filtered;
+    use crate::mana::g;
+    CardDefinition {
+        name: "Mascot Researcher",
+        cost: cost(&[generic(2), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::AddCounter {
+                    what: target_filtered(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::ControlledByYou)
+                            .and(SelectionRequirement::OtherThanSource),
+                    ),
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                },
+                Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                },
+            ]),
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Strixhaven Tutor — {2}{U}, 2/2 Human Wizard.
+///
+/// Printed Oracle (synthesised): "When this creature enters, scry 2.
+/// Then draw a card."
+///
+/// 3-mana scry-and-cantrip body. Net 0 hand swap with strong card
+/// quality. Slots into any UR/UB control shell looking for filtering.
+pub fn strixhaven_tutor() -> CardDefinition {
+    use crate::card::{EventKind, EventScope, EventSpec, TriggeredAbility};
+    CardDefinition {
+        name: "Strixhaven Tutor",
+        cost: cost(&[generic(2), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::Scry {
+                    who: PlayerRef::You,
+                    amount: Value::Const(2),
+                },
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
+            ]),
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

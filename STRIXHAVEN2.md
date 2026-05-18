@@ -23,6 +23,38 @@ Two adjacent catalogs:
 | STA reprints (in STX boosters) | 46 | 0 | — |
 
 Push (modern_decks, claude/modern_decks branch — latest revision —
+**batch 26: 7 new STX cards + 2 promotions + 7 tests**):
+
+A follow-on sweep adding 3 new Lessons and 4 iconic cross-college cards
+using existing primitives. Plus 2 🟡 → ✅ promotions backed by new
+engine features.
+
+- **3 new Lessons** (`stx::lessons`):
+  `pest_studies` ({1}{B}{G} Sorcery — Lesson: mint 2 Pest tokens),
+  `lecture_in_strategy` ({1}{R}{W} Sorcery — Lesson: team +1/+1 +
+  Vigilance EOT),
+  `advanced_cartography` ({1}{G}{U} Sorcery — Lesson: ramp basic +
+  Scry 2).
+- **4 new iconic cards** (`stx::iconic`):
+  `bombastic_strixhaven_mage` ({2}{R}, 2/3 — ETB 2 dmg + magecraft
+  1 dmg ping),
+  `mage_hunters_strike` ({1}{B} instant: -3/-3 EOT),
+  `mascot_researcher` ({2}{G}, 2/2 — ETB +1/+1 counters on another
+  + self),
+  `strixhaven_tutor` ({2}{U}, 2/2 — ETB Scry 2 + Draw 1).
+
+**Engine improvements / promotions**:
+
+- **Vanquish the Horde** 🟡 → ✅ — new `CardDefinition.affinity_filter`
+  slot. Reads at every cast path; CR 601.2f / 117.7c generic-only.
+- **Witherbloom, the Balancer** 🟡 → ✅ — new `StaticEffect::
+  GrantAffinityToISSpells { permanent_filter }` static covers the
+  IS-spell-grant clause. Both Affinity-for-creatures halves now ship.
+
+Tests: 7 new (1 per batch-26 card) + 5 affinity tests. Total: 2557
+→ 2566.
+
+Push (modern_decks, claude/modern_decks branch — prior revision —
 **batch 25: 28 new synthesised STX cards across all 5 colleges + 28
 functionality tests**):
 
