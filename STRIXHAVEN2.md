@@ -19,10 +19,102 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 207 | 47 | 1 |
-| STX (327 cards) | 500 | 12 | 0 |
+| STX (327 cards) | 525 | 12 | 0 |
 | STA reprints (in STX boosters) | 46 | 0 | — |
 
 Push (modern_decks, claude/modern_decks branch — latest revision —
+**batch 28: 25 new STX cards + 30 tests + Selector::LastCreatedTokens
+plural primitive + CR 114 audit**):
+
+A new batch adding 25 cards spread evenly across all five colleges
+(5 per school) using existing primitives. Tests sit in `tests::stx`.
+Plus one new engine primitive (`Selector::LastCreatedTokens` plural,
+for multi-mint-then-counter cards like Fractal Spawning) and a fresh
+audit of CR 114 (Emblems).
+
+- **Silverquill (W/B)**:
+  `silverquill_heraldist` ({1}{W}, 2/2 Human Soldier — ETB gain 1 life
+  + mint 1/1 Inkling token with Flying),
+  `inkling_spireguard` ({2}{W}, 2/3 Inkling Soldier Flying — ETB pump
+  target friendly creature +1/+1 EOT),
+  `silverquill_quillwitch` ({1}{B}, 2/2 Inkling Warlock — dies-trigger
+  drain 2 vs each opp),
+  `silverquill_inkpurge` ({1}{W}{B} Sorcery — Each opp sacs a creature
+  + you gain 2 life via `ForEach(EachOpponent) → Sacrifice`),
+  `inkrise_schoolwarden` ({3}{W}{B}, 3/4 Inkling Cleric Flying +
+  Lifelink — ETB Draw 1).
+- **Witherbloom (B/G)**:
+  `witherbloom_vinekeeper` ({2}{B}{G}, 3/4 Plant Druid — ETB gain 2
+  life + per-AnotherOfYours-dies gain 1 life),
+  `pest_outcast` ({B}, 1/1 Pest Warlock — dies → gain 1 + draw 1),
+  `witherbloom_drainscholar` ({B}{G}, 1/2 Plant Druid Lifelink —
+  magecraft target creature -1/-1 EOT),
+  `witherbloom_coatlcaller` ({2}{G}, 2/3 Human Druid Reach — ETB mints
+  1 Pest token),
+  `witherbloom_pestbreaker` ({3}{B}{G} Sorcery — Destroy target
+  creature + mint 1 Pest).
+- **Lorehold (R/W)**:
+  `lorehold_pyresinger` ({1}{R}{W}, 2/2 Spirit Cleric — magecraft drain
+  1 vs each opp),
+  `lorehold_soulchanter` ({3}{W}, 3/2 Spirit Cleric Lifelink — ETB exile
+  target card from a graveyard),
+  `lorehold_flameherald` ({1}{R}, 2/1 Human Soldier Haste — ETB 1 dmg
+  to any target),
+  `lorehold_embercouncil` ({2}{R}{W} Sorcery — Create 2 Spirit tokens
+  + 1 damage to each opp),
+  `lorehold_cinderpriest` ({2}{R}, 2/3 Spirit Cleric — ETB +1/+1
+  counter on target friendly + magecraft +1/+0 EOT to target friendly).
+- **Quandrix (G/U)**:
+  `quandrix_sumcaster` ({G}{U}, 1/2 Elf Wizard — magecraft MayDo Draw
+  1 then Discard 1 looter),
+  `fractal_multiplicand` ({2}{G}{U}, 0/0 Fractal Wizard with 3 +1/+1
+  counters via `enters_with_counters`),
+  `quandrix_calculus_mage` ({3}{G}{U}, 4/4 Elf Wizard — ETB Scry 2 +
+  Draw 1 + magecraft +1/+1 counter on target Fractal),
+  `quandrix_tidecaller` ({1}{U}, 1/3 Merfolk Wizard Flash — ETB Tap
+  target creature),
+  `fractal_spawning` ({2}{G}{U} Sorcery — mints 2 Fractal tokens and
+  drops a +1/+1 counter on EACH via the new
+  `Selector::LastCreatedTokens` plural primitive — both Fractals
+  survive SBA as 1/1).
+- **Prismari (U/R)**:
+  `prismari_embershaper_wizard` ({2}{U}{R}, 2/3 Djinn Wizard Flying —
+  ETB Treasure + Discard 1 + Draw 1),
+  `prismari_magmaboon` ({2}{R} Sorcery — 3 dmg to target creature +
+  mint Treasure),
+  `prismari_tideburst` ({U}{R} Instant — Mana Leak rate counter unless
+  pay {2} + Scry 1),
+  `prismari_tempest_caller` ({1}{U}{R}, 2/2 Elemental Wizard Flying —
+  magecraft self-pump +1/+0 EOT),
+  `prismari_pyresurge_b28` ({3}{R} Sorcery — 3 dmg to any target +
+  Draw 1).
+- **Shared / cross-school** (`stx::extras`):
+  `strixhaven_battle_cleric` ({W}, 2/1 Human Cleric — ETB gain 1 life),
+  `strixhaven_researcher` ({2}{U}, 2/3 Human Wizard — ETB Scry 2),
+  `strixhaven_combatant` ({1}{R}, 2/2 Human Warrior Haste — attack +1/+0
+  EOT trigger),
+  `strixhaven_druid` ({1}{G}, 2/2 Elf Druid — ETB Search basic land →
+  hand),
+  `strixhaven_drainsong` ({1}{B} Instant — drain 2 from target opp).
+
+Engine improvements (push modern_decks batch 28):
+- **`Selector::LastCreatedTokens` (plural)** — new selector that
+  tracks every token created in the current effect resolution (not
+  just the most recent). Wired alongside `last_created_token` in the
+  CreateToken loop; resets at every resolution root start. Powers
+  Fractal Spawning's "create 2 Fractals, put a +1/+1 counter on
+  EACH of them" pattern faithfully (both Fractals get counters and
+  survive SBA at 1/1). Same shape as the singular variant — works
+  through `ForEach` fan-outs, replacement effects (counter doublers
+  multiply per-token), and downstream selector chains.
+- **CR 114 audit** — Emblems documented as ⏳ pending an
+  `Effect::CreateEmblem` primitive + emblem-resident command-zone
+  trigger dispatch. Tracked in `TODO.md`.
+
+Tests: 30 new (one per new card, plus the LastCreatedTokens primitive
+test). Total: 2589 → 2619 (+30). All clippy-clean.
+
+Push (modern_decks, claude/modern_decks branch — earlier revision —
 **batch 27: 22 new STX cards + 23 tests**):
 
 A new batch adding 22 cards spread across all five colleges + mono /

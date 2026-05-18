@@ -864,6 +864,233 @@ pub fn lecture_in_strategy() -> CardDefinition {
     }
 }
 
+// ── Push (modern_decks) batch 28: 5 more Lessons ───────────────────────────
+
+/// Necrotic Studies — {2}{B} Sorcery — Lesson.
+///
+/// Printed Oracle (synthesised): "Destroy target creature with mana value
+/// 3 or less."
+///
+/// 3-mana targeted removal at the Lesson slot — Doomblade-light. Slots
+/// into the Witherbloom Lesson sideboard for sticky creature problems.
+pub fn necrotic_studies() -> CardDefinition {
+    CardDefinition {
+        name: "Necrotic Studies",
+        cost: cost(&[generic(2), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes {
+            spell_subtypes: vec![SpellSubtype::Lesson],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Destroy {
+            what: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::ManaValueAtMost(3)),
+            ),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Pyromathematics — {1}{R} Sorcery — Lesson.
+///
+/// Printed Oracle (synthesised): "Pyromathematics deals 3 damage divided
+/// as you choose among any number of targets."
+///
+/// Collapsed to "3 damage to any target" at the single-target slot
+/// (engine-wide divided-damage gap). Lesson burn for Lorehold/Prismari.
+pub fn pyromathematics() -> CardDefinition {
+    CardDefinition {
+        name: "Pyromathematics",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes {
+            spell_subtypes: vec![SpellSubtype::Lesson],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::DealDamage {
+            to: target_filtered(
+                SelectionRequirement::Creature
+                    .or(SelectionRequirement::Player)
+                    .or(SelectionRequirement::Planeswalker),
+            ),
+            amount: Value::Const(3),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Inkling Lesson — {1}{W}{B} Sorcery — Lesson.
+///
+/// Printed Oracle (synthesised): "Create two 1/1 white-and-black Inkling
+/// creature tokens with flying."
+///
+/// 3-mana Lesson double-Inkling. Defend the Campus's smaller cousin.
+pub fn inkling_lesson() -> CardDefinition {
+    use crate::catalog::sets::sos::inkling_token;
+    CardDefinition {
+        name: "Inkling Lesson",
+        cost: cost(&[generic(1), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes {
+            spell_subtypes: vec![SpellSubtype::Lesson],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(2),
+            definition: inkling_token(),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Fractal Studies — {1}{G}{U} Sorcery — Lesson.
+///
+/// Printed Oracle (synthesised): "Create a 0/0 green-and-blue Fractal
+/// creature token. Put X +1/+1 counters on it, where X is the number of
+/// creatures you control."
+///
+/// 3-mana wide-board-scaling Fractal mint at the Lesson slot. Wired via
+/// `Selector::LastCreatedToken` + `Value::CountOf` reading creatures you
+/// control.
+pub fn fractal_studies() -> CardDefinition {
+    let fractal = TokenDefinition {
+        name: "Fractal".to_string(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Green, Color::Blue],
+        supertypes: vec![],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal],
+            ..Default::default()
+        },
+        activated_abilities: vec![],
+        triggered_abilities: vec![],
+    };
+    CardDefinition {
+        name: "Fractal Studies",
+        cost: cost(&[generic(1), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes {
+            spell_subtypes: vec![SpellSubtype::Lesson],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: fractal,
+            },
+            Effect::AddCounter {
+                what: Selector::LastCreatedToken,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::CountOf(Box::new(Selector::EachPermanent(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ))),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Spirit Lesson — {2}{R}{W} Sorcery — Lesson.
+///
+/// Printed Oracle (synthesised): "Create two 2/2 red-and-white Spirit
+/// creature tokens."
+///
+/// 4-mana double-Spirit-mint at the Lesson slot. Lorehold's go-wide
+/// Lesson — pairs with Quintorius / Sparring Regimen for tribal payoffs.
+pub fn spirit_lesson() -> CardDefinition {
+    use crate::catalog::sets::stx::lorehold_spirit_token;
+    CardDefinition {
+        name: "Spirit Lesson",
+        cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes {
+            spell_subtypes: vec![SpellSubtype::Lesson],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(2),
+            definition: lorehold_spirit_token(),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
 /// Advanced Cartography — {1}{G}{U} Sorcery — Lesson.
 ///
 /// Printed Oracle (synthesised): "Search your library for a basic land

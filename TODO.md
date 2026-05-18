@@ -158,6 +158,36 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   ability), 113.10b (full ability removal), and 113.11 (can't-have)
   all land.
 
+- ⏳ **CR 114 — Emblems** (push modern_decks batch 28 audit,
+  claude/modern_decks branch — `MagicCompRules_20260417.txt`): Emblems
+  represent abilities in the command zone with no other characteristics.
+  Audit:
+  (a) **114.1** "Some effects put emblems into the command zone" — ⏳
+  (no `Effect::CreateEmblem` primitive; no `Zone::CommandZone`
+  emblem-mode). Some planeswalker ults that grant emblems (Professor
+  Dellian Fel's -6, Ral Zarek's -7, Tezzeret's emblems) are doc-tracked
+  as 🟡 with the emblem half omitted — the body / earlier loyalty
+  abilities still ship.
+  (b) **114.2** "[Player] gets an emblem with [ability]" — ⏳ (no
+  emblem creation effect; the engine's command zone exists for
+  Commander/Brawl but holds only `Card` instances, not abilityless
+  emblem markers).
+  (c) **114.3** "An emblem has no characteristics other than the
+  abilities defined" — n/a (no emblem objects to characterize).
+  (d) **114.4** "Abilities of emblems function in the command zone" —
+  n/a (no emblem objects; the engine's trigger-fire pipeline already
+  walks the command zone for Commander triggers, so the dispatcher
+  infrastructure could host emblem-resident triggers without changes).
+  (e) **114.5** "An emblem is neither a card nor a permanent" — n/a
+  (no emblems to classify; `is_permanent` already returns false for
+  non-`Permanent`-type cards). Tests: no test coverage — gates on
+  Professor Dellian Fel / Ral Zarek emblem ults. Promote to 🟡 when
+  `Effect::CreateEmblem { who: PlayerRef, abilities: Vec<…> }` lands
+  alongside an `EmblemObject` shape in the command zone; promote to ✅
+  when emblem-resident triggers fire and at least one planeswalker
+  ult's emblem ships end-to-end (Professor Dellian Fel's lifegain →
+  drain emblem is the canonical first target).
+
 - 🟡 **CR 122 — Counters** (push modern_decks audit, claude/modern_decks
   branch — batch 10): The counter primitive — placement, accumulation,
   +1/+1 vs -1/-1 cancellation, ETB-with-counters, "Nth counter" trigger.
@@ -4545,3 +4575,43 @@ resolution time" in the Suggested next-up tasks section.
   controlled creatures) + `attached_to: Some(CardId)` write on
   resolution would let the engine ship Bonesplitter / Skyclave Apparition-
   style Equipment in any catalog.
+
+### Suggested next-up tasks (additions from batch 28)
+
+- ✅ **STX corpus growth via 25 new cards** — push modern_decks batch
+  28 brings the STX catalog to 525 ✅ + 12 🟡. New cards span all five
+  colleges (5 per school) plus 5 shared/multi-college shells. Tests:
+  30 new. Total: 2589 → 2619 tests (+30). All clippy-clean.
+
+- ✅ **`Selector::LastCreatedTokens` (plural)** — new engine selector
+  that tracks every token created in the current effect resolution.
+  Powers Fractal Spawning's "create 2 Fractals, put a +1/+1 counter
+  on EACH" printed Oracle faithfully (without the new selector, only
+  the last token got the counter; the others died to SBA at 0/0).
+  Same shape as the singular `LastCreatedToken` — fan-outs through
+  `ForEach`, counter doublers multiply per-token. Test:
+  `fractal_spawning_mints_two_fractals_with_counters`.
+
+- ⏳ **CR 114 — Emblems** — fresh audit (batch 28) documents the
+  emblem zone gap. Currently ⏳ — gates planeswalker ult emblems
+  (Professor Dellian Fel -6 lifegain-drain emblem, Ral Zarek -7
+  skip-turns emblem). Promote path: (1) add `Effect::CreateEmblem
+  { who, abilities }` primitive; (2) wire an `EmblemObject` shape
+  in the command zone with no characteristics other than its
+  abilities; (3) hook the trigger dispatcher to walk command-zone
+  emblems for `StepBegins` / `LifeGained` / etc. triggers.
+
+- ⏳ **Per-spell "extra counters on cast" rider** (gates Wildgrowth
+  Archaic 🟡 in SOS) — push modern_decks batch 28's emblem audit
+  bumps this gap in priority. Wildgrowth Archaic prints "Whenever
+  you cast a creature spell, that creature enters with X additional
+  +1/+1 counters on it, where X is the number of colors of mana
+  spent to cast it." Would need a per-cast static replacement that
+  injects `enters_with_counters` on the resolving creature spell.
+
+- ⏳ **`Effect::ChooseCreatureType`** — gates Crippling Fear 🟡 (STA
+  reprint) and Engineered Plague-style universal effects. The
+  collapse-to-universal approximation works but flips creature
+  killing onto your own creatures. Adding a creature-type prompt
+  + `Predicate::HasCreatureType(ChoiceResult)` would let cards
+  faithfully ship the protect-mine-but-kill-yours pattern.

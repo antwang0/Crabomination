@@ -240,8 +240,10 @@ impl GameState {
         self.sacrificed_power = None;
         self.sacrificed_toughness = None;
         // Reset last-created-token scratch — `Selector::LastCreatedToken`
-        // only refers to a token created by *this* resolution.
+        // (singular) and `Selector::LastCreatedTokens` (plural) only refer
+        // to tokens created by *this* resolution.
         self.last_created_token = None;
+        self.last_created_tokens.clear();
         // Reset cards-discarded scratch — `Value::CardsDiscardedThisEffect`
         // only counts discards from *this* resolution (Borrowed Knowledge
         // mode 1's "draw cards equal to the number discarded this way").
@@ -1173,6 +1175,11 @@ impl GameState {
                     // (e.g. a Seq's next element) can reference it. Cleared
                     // when the next resolution root starts.
                     self.last_created_token = Some(id);
+                    // Plural variant: track every token minted this
+                    // resolution. Read by `Selector::LastCreatedTokens`
+                    // (Fractal Spawning, multi-mint cards). Cleared at
+                    // resolution root start alongside the singular slot.
+                    self.last_created_tokens.push(id);
                     // Tokens entering the battlefield are still permanents
                     // entering the battlefield — fire any self-source ETB
                     // triggers on the token's definition (a TokenDefinition
@@ -2251,6 +2258,13 @@ impl GameState {
                 .filter(|id| self.battlefield.iter().any(|c| c.id == *id))
                 .map(EntityRef::Permanent)
                 .into_iter()
+                .collect(),
+            Selector::LastCreatedTokens => self
+                .last_created_tokens
+                .iter()
+                .copied()
+                .filter(|id| self.battlefield.iter().any(|c| c.id == *id))
+                .map(EntityRef::Permanent)
                 .collect(),
             Selector::CastSpellTarget(slot) => {
                 // Walk the stack for the spell whose SpellCast event fired

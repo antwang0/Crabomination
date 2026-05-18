@@ -2537,3 +2537,227 @@ pub fn prismari_igniter() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Push (modern_decks) batch 28: 5 more Prismari cards ────────────────────
+//
+// Continuing Prismari (U/R) buildout: 5 new cards using existing primitives.
+// No new engine features required.
+
+/// Prismari Embershaper-Wizard — {2}{U}{R}, 2/3 Djinn Wizard Flying.
+///
+/// Printed Oracle (synthesised): "Flying. When this creature enters, create
+/// a Treasure token and discard a card, then draw a card."
+///
+/// 4-mana evasive ramp + loot. Treasure + loot in one ETB makes for a
+/// strong tempo play in any UR spell-heavy shell.
+pub fn prismari_embershaper_wizard() -> CardDefinition {
+    use crate::game::effects::treasure_token;
+    CardDefinition {
+        name: "Prismari Embershaper-Wizard",
+        cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Djinn, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: treasure_token(),
+                },
+                Effect::Discard {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                    random: false,
+                },
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
+            ]),
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Magmaboon — {2}{R}, sorcery.
+///
+/// Printed Oracle (synthesised): "Prismari Magmaboon deals 3 damage to
+/// target creature. Create a Treasure token."
+///
+/// 3-mana burn + ramp combo. Smaller cousin of Prismari Embergem trading
+/// 1 damage for 1 less mana.
+pub fn prismari_magmaboon() -> CardDefinition {
+    use crate::game::effects::treasure_token;
+    CardDefinition {
+        name: "Prismari Magmaboon",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Creature),
+                amount: Value::Const(3),
+            },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: treasure_token(),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Tideburst — {U}{R}, instant.
+///
+/// Printed Oracle (synthesised): "Counter target spell unless its
+/// controller pays {2}. Scry 1."
+///
+/// 2-mana flexible tempo counterspell + smoothing. Mana Leak template
+/// with scry rider.
+pub fn prismari_tideburst() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Tideburst",
+        cost: cost(&[u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::CounterUnlessPaid {
+                what: target_filtered(SelectionRequirement::IsSpellOnStack),
+                mana_cost: cost(&[generic(2)]),
+            },
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Tempest-Caller — {1}{U}{R}, 2/2 Elemental Wizard Flying.
+///
+/// Printed Oracle (synthesised): "Flying. Magecraft — Whenever you cast or
+/// copy an instant or sorcery spell, this creature gets +1/+0 until end of
+/// turn."
+///
+/// 3-mana evasive prowess-on-cast body. Same shape as Spectacle Mage but
+/// with magecraft trigger rather than prowess for the IS-only payoff.
+pub fn prismari_tempest_caller() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Tempest-Caller",
+        cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_self_pump(1, 0)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Pyresurge — {3}{R}, sorcery.
+///
+/// Printed Oracle (synthesised): "Prismari Pyresurge deals 3 damage to any
+/// target. Draw a card."
+///
+/// 4-mana flexible damage + cantrip. Trades up against most 3-toughness
+/// creatures while keeping card-neutral.
+pub fn prismari_pyresurge_b28() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Pyresurge",
+        cost: cost(&[generic(3), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature
+                        .or(SelectionRequirement::Player)
+                        .or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::Const(3),
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

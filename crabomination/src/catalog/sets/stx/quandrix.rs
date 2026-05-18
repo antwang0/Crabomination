@@ -2676,3 +2676,235 @@ pub fn fractal_theorist() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Push (modern_decks) batch 28: 5 more Quandrix cards ────────────────────
+//
+// Continuing Quandrix (G/U) buildout: 5 new cards using existing primitives.
+// No new engine features required.
+
+/// Quandrix Sumcaster — {G}{U}, 1/2 Elf Wizard.
+///
+/// Printed Oracle (synthesised): "Magecraft — Whenever you cast or copy an
+/// instant or sorcery spell, you may draw a card. If you do, discard a
+/// card."
+///
+/// 2-mana magecraft looter — every IS cast offers a 1-for-1 filter. Pairs
+/// with discard-matters payoffs (Tinybones, Smallpox).
+pub fn quandrix_sumcaster() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Sumcaster",
+        cost: cost(&[g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::MayDo {
+            description: "draw a card, then discard a card".to_string(),
+            body: Box::new(Effect::Seq(vec![
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
+                Effect::Discard {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                    random: false,
+                },
+            ])),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Fractal Multiplicand — {2}{G}{U}, 0/0 Fractal Wizard with 3 +1/+1
+/// counters.
+///
+/// Printed Oracle (synthesised): "This creature enters with three +1/+1
+/// counters on it."
+///
+/// 4-mana 3/3 Fractal body via `enters_with_counters`. Substrate for the
+/// counter-doubling lineage (Tanazir / Hardened Scales / Multibinding).
+pub fn fractal_multiplicand() -> CardDefinition {
+    CardDefinition {
+        name: "Fractal Multiplicand",
+        cost: cost(&[generic(2), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(3))),
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Calculus-Mage — {3}{G}{U}, 4/4 Elf Wizard.
+///
+/// Printed Oracle (synthesised): "When this creature enters, scry 2, then
+/// draw a card. Whenever you cast or copy an instant or sorcery spell, put
+/// a +1/+1 counter on target Fractal you control."
+///
+/// 5-mana big-body card-velocity engine + Fractal grower.
+pub fn quandrix_calculus_mage() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Calculus-Mage",
+        cost: cost(&[generic(3), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: Effect::Seq(vec![
+                    Effect::Scry {
+                        who: PlayerRef::You,
+                        amount: Value::Const(2),
+                    },
+                    Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::Const(1),
+                    },
+                ]),
+            },
+            magecraft(Effect::AddCounter {
+                what: target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::HasCreatureType(CreatureType::Fractal))
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            }),
+        ],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Tidecaller — {1}{U}, 1/3 Merfolk Wizard Flash.
+///
+/// Printed Oracle (synthesised): "Flash. When this creature enters, tap
+/// target creature."
+///
+/// 2-mana flash tempo body. Doubles as a flash blocker and a tap-down
+/// tempo play during opp combat.
+pub fn quandrix_tidecaller() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Tidecaller",
+        cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![Keyword::Flash],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Tap {
+                what: target_filtered(SelectionRequirement::Creature),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Fractal Spawning — {2}{G}{U}, sorcery.
+///
+/// Printed Oracle (synthesised): "Create two 0/0 green-and-blue Fractal
+/// creature tokens. Put a +1/+1 counter on each of them."
+///
+/// 4-mana double-Fractal mint. Both Fractals get a +1/+1 counter via the
+/// new `Selector::LastCreatedTokens` (plural) primitive — both survive
+/// SBA at 1/1 each. Substrate for counter-doublers.
+pub fn fractal_spawning() -> CardDefinition {
+    CardDefinition {
+        name: "Fractal Spawning",
+        cost: cost(&[generic(2), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                definition: quandrix_fractal_token(),
+            },
+            Effect::AddCounter {
+                what: Selector::LastCreatedTokens,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

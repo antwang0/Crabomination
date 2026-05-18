@@ -31421,3 +31421,208 @@ pub fn silverquill_drain_lord() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Push (modern_decks) batch 28: 5 more shared/multi-college cards ────────
+//
+// Cross-school cards using existing primitives. No new engine features
+// required.
+
+/// Strixhaven Battle-Cleric — {W}, 2/1 Human Cleric.
+///
+/// Printed Oracle (synthesised): "When this creature enters, you gain 1
+/// life."
+///
+/// 1-mana white aggressive body + lifegain rider. Slots into Light of
+/// Promise / Inkling Bloodscribe shells.
+pub fn strixhaven_battle_cleric() -> CardDefinition {
+    CardDefinition {
+        name: "Strixhaven Battle-Cleric",
+        cost: cost(&[w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Strixhaven Researcher — {2}{U}, 2/3 Human Wizard.
+///
+/// Printed Oracle (synthesised): "When this creature enters, scry 2."
+///
+/// 3-mana sticky body + smoothing. Slots into any blue mid-curve shell.
+pub fn strixhaven_researcher() -> CardDefinition {
+    CardDefinition {
+        name: "Strixhaven Researcher",
+        cost: cost(&[generic(2), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(2),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Strixhaven Combatant — {1}{R}, 2/2 Human Warrior.
+///
+/// Printed Oracle (synthesised): "Haste. When this creature attacks, it
+/// gets +1/+0 until end of turn."
+///
+/// 2-mana hasty self-pumper. Each combat keeps it at 3/2 while connecting.
+pub fn strixhaven_combatant() -> CardDefinition {
+    CardDefinition {
+        name: "Strixhaven Combatant",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Haste],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::PumpPT {
+                what: Selector::TriggerSource,
+                power: Value::Const(1),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Strixhaven Druid — {1}{G}, 2/2 Elf Druid.
+///
+/// Printed Oracle (synthesised): "When this creature enters, search your
+/// library for a basic land card, reveal it, put it into your hand, then
+/// shuffle."
+///
+/// 2-mana ramp + body. Functionally a green Sakura-Tribe-Elder on landing.
+pub fn strixhaven_druid() -> CardDefinition {
+    CardDefinition {
+        name: "Strixhaven Druid",
+        cost: cost(&[generic(1), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Search {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::IsBasicLand,
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Strixhaven Drainsong — {1}{B}, instant.
+///
+/// Printed Oracle (synthesised): "Target opponent loses 2 life and you
+/// gain 2 life."
+///
+/// 2-mana straight drain. Witherbloom's "Drain Life" template — slots
+/// alongside Drain 2 / Drain 3 effects.
+pub fn strixhaven_drainsong() -> CardDefinition {
+    CardDefinition {
+        name: "Strixhaven Drainsong",
+        cost: cost(&[generic(1), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Drain {
+            from: Selector::Player(PlayerRef::Target(0)),
+            to: Selector::You,
+            amount: Value::Const(2),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

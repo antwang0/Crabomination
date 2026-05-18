@@ -203,6 +203,15 @@ pub struct GameState {
     /// independent resolutions.
     #[serde(skip)]
     pub(crate) last_created_token: Option<CardId>,
+    /// Transient: ids of all tokens created within the current effect
+    /// resolution. Push (modern_decks batch 28): set by `Effect::CreateToken`
+    /// alongside `last_created_token` and read by
+    /// `Selector::LastCreatedTokens` (plural) so a follow-up `AddCounter`
+    /// in the same resolution can fan over every freshly-minted token
+    /// (Fractal Spawning, Mascot Exhibition-style printed Oracles). Cleared
+    /// at every resolution root start (see `reset_effect_scratch`).
+    #[serde(skip)]
+    pub(crate) last_created_tokens: Vec<CardId>,
     /// Transient: count of cards discarded within the current effect
     /// resolution. Bumped by every `GameEvent::CardDiscarded` emission
     /// inside `Effect::Discard` / `Effect::DiscardChosen` (random and
@@ -332,6 +341,7 @@ impl Clone for GameState {
             sacrificed_power: self.sacrificed_power,
             sacrificed_toughness: self.sacrificed_toughness,
             last_created_token: self.last_created_token,
+            last_created_tokens: self.last_created_tokens.clone(),
             cards_discarded_this_resolution: self.cards_discarded_this_resolution,
             creature_cards_discarded_this_resolution: self.creature_cards_discarded_this_resolution,
             discarded_card_ids_this_resolution: self.discarded_card_ids_this_resolution.clone(),
@@ -389,6 +399,7 @@ impl GameState {
             sacrificed_power: None,
             sacrificed_toughness: None,
             last_created_token: None,
+            last_created_tokens: Vec::new(),
             cards_discarded_this_resolution: 0,
             creature_cards_discarded_this_resolution: 0,
             discarded_card_ids_this_resolution: Vec::new(),

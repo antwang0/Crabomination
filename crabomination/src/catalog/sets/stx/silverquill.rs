@@ -3959,3 +3959,230 @@ pub fn inkling_drainmaster() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Push (modern_decks) batch 28: 5 more Silverquill cards ─────────────────
+//
+// Continuing the Silverquill (W/B) buildout with 5 new cards using existing
+// primitives. No new engine features required. Each card has a paired test
+// in `tests::stx`.
+
+/// Silverquill Heraldist — {1}{W}, 2/2 Human Soldier.
+///
+/// Printed Oracle (synthesised): "When this creature enters, you gain 1 life
+/// and create a 1/1 white-and-black Inkling creature token with flying."
+///
+/// 2-mana lifegain + Inkling-mint body. Triple-threat: warm body, 1-life
+/// floor, evasive token. Feeds Light of Promise / Inkling Bloodscribe.
+pub fn silverquill_heraldist() -> CardDefinition {
+    use crate::catalog::sets::sos::inkling_token;
+    CardDefinition {
+        name: "Silverquill Heraldist",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: inkling_token(),
+                },
+            ]),
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Inkling Spireguard — {2}{W}, 2/3 Inkling Soldier Flying.
+///
+/// Printed Oracle (synthesised): "Flying. When this creature enters, target
+/// creature you control gets +1/+1 until end of turn."
+///
+/// 3-mana flying body + combat trick. Stacks with Tenured Inkcaster and
+/// Inkling Banner-Bearer for tribal payoffs.
+pub fn inkling_spireguard() -> CardDefinition {
+    CardDefinition {
+        name: "Inkling Spireguard",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::PumpPT {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                power: Value::Const(1),
+                toughness: Value::Const(1),
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Quillwitch — {1}{B}, 2/2 Inkling Warlock.
+///
+/// Printed Oracle (synthesised): "When this creature dies, target opponent
+/// loses 2 life."
+///
+/// 2-mana sticky drain — dies-to-drain template at the small slot.
+pub fn silverquill_quillwitch() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Quillwitch",
+        cost: cost(&[generic(1), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+            effect: Effect::LoseLife {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(2),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Inkpurge — {1}{W}{B}, sorcery.
+///
+/// Printed Oracle (synthesised): "Each opponent sacrifices a creature. You
+/// gain 2 life."
+///
+/// 3-mana edict + lifegain. The combined effect breaks open boards where
+/// the opponent has a single big threat. Per-opp sac picker walks each
+/// opp's creatures and picks the cheapest.
+pub fn silverquill_inkpurge() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Inkpurge",
+        cost: cost(&[generic(1), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::ForEach {
+                selector: Selector::Player(PlayerRef::EachOpponent),
+                body: Box::new(Effect::Sacrifice {
+                    who: Selector::Player(PlayerRef::Triggerer),
+                    filter: SelectionRequirement::Creature,
+                    count: Value::Const(1),
+                }),
+            },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Inkrise Schoolwarden — {3}{W}{B}, 3/4 Inkling Cleric Flying Lifelink.
+///
+/// Printed Oracle (synthesised): "Flying, lifelink. When this creature
+/// enters, draw a card."
+///
+/// 5-mana evasive lifelink finisher + cantrip. Card-neutral on landing,
+/// trades up against any non-removal interaction.
+pub fn inkrise_schoolwarden() -> CardDefinition {
+    CardDefinition {
+        name: "Inkrise Schoolwarden",
+        cost: cost(&[generic(3), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Flying, Keyword::Lifelink],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

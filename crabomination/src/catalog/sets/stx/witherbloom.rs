@@ -2810,3 +2810,232 @@ pub fn pest_brood_mother() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Push (modern_decks) batch 28: 5 more Witherbloom cards ─────────────────
+//
+// Continuing Witherbloom (B/G) buildout: 5 new cards using existing
+// primitives. No new engine features required.
+
+/// Witherbloom Vinekeeper — {2}{B}{G}, 3/4 Plant Druid.
+///
+/// Printed Oracle (synthesised): "When this creature enters, you gain 2
+/// life. Whenever another creature dies, you gain 1 life."
+///
+/// 4-mana grindy defender + lifegain engine. Stacks with the Pest token's
+/// die-to-gain trigger for double lifegain per Pest sacrifice.
+pub fn witherbloom_vinekeeper() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Vinekeeper",
+        cost: cost(&[generic(2), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::Const(2),
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours),
+                effect: Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
+            },
+        ],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Pest Outcast — {B}, 1/1 Pest Warlock.
+///
+/// Printed Oracle (synthesised): "When this creature dies, you gain 1 life
+/// and draw a card."
+///
+/// 1-mana sac fodder with built-in draw-on-death. The Pest token's lifegain
+/// effect is replicated on the body, plus a cantrip when it dies.
+pub fn pest_outcast() -> CardDefinition {
+    CardDefinition {
+        name: "Pest Outcast",
+        cost: cost(&[b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Pest, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
+            ]),
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Drainscholar — {B}{G}, 1/2 Plant Druid Lifelink.
+///
+/// Printed Oracle (synthesised): "Lifelink. Magecraft — Whenever you cast
+/// or copy an instant or sorcery spell, target creature gets -1/-1 until
+/// end of turn."
+///
+/// 2-mana lifelink body with magecraft removal — every IS cast can finish
+/// off a small attacker. Pairs with Witherbloom Apprentice's drain.
+pub fn witherbloom_drainscholar() -> CardDefinition {
+    use crate::effect::shortcut::magecraft;
+    use crate::effect::Duration;
+    CardDefinition {
+        name: "Witherbloom Drainscholar",
+        cost: cost(&[b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![Keyword::Lifelink],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::PumpPT {
+            what: target_filtered(SelectionRequirement::Creature),
+            power: Value::Const(-1),
+            toughness: Value::Const(-1),
+            duration: Duration::EndOfTurn,
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Coatlcaller — {2}{G}, 2/3 Human Druid Reach.
+///
+/// Printed Oracle (synthesised): "Reach. When this creature enters, create
+/// a 1/1 black-and-green Pest creature token with 'When this creature dies,
+/// you gain 1 life.'"
+///
+/// 3-mana anti-flier + Pest factory body. Sticky against air aggro, feeds
+/// Pestmancer / Pestkeeper sac engines.
+pub fn witherbloom_coatlcaller() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Coatlcaller",
+        cost: cost(&[generic(2), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Reach],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: stx_pest_token(),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Pestbreaker — {3}{B}{G}, sorcery.
+///
+/// Printed Oracle (synthesised): "Destroy target creature. Create a 1/1
+/// black-and-green Pest creature token."
+///
+/// 5-mana hard removal + Pest body. Net value = +1 card equivalent (kill
+/// + body) for 5 mana. Pairs with Pestmaster / Vinemaster counter-snowballs.
+pub fn witherbloom_pestbreaker() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Pestbreaker",
+        cost: cost(&[generic(3), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Destroy {
+                what: target_filtered(SelectionRequirement::Creature),
+            },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: stx_pest_token(),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

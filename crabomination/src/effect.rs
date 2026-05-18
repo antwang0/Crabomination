@@ -95,6 +95,15 @@ pub enum Selector {
     /// single `Effect::Seq`, the latest CreateToken's id is visible.
     LastCreatedToken,
 
+    /// All tokens created by `Effect::CreateToken` in the current
+    /// resolution (the multi-token variant of `LastCreatedToken`). Used
+    /// by Fractal Spawning ("create two 0/0 Fractals, put a +1/+1
+    /// counter on each of them") and any multi-mint-then-counter
+    /// printed Oracle. Resets between resolution roots; within an
+    /// `Effect::Seq`, every CreateToken from the current resolution
+    /// is included. Push: modern_decks batch 28.
+    LastCreatedTokens,
+
     /// The chosen target slot (0-indexed) of the spell whose cast
     /// triggered this ability. Resolves against the topmost matching
     /// `StackItem::Spell` (the just-cast spell whose `SpellCast` event

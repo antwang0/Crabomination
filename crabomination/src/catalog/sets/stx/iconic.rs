@@ -11,7 +11,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::{magecraft, target_filtered};
 use crate::effect::PlayerRef;
-use crate::mana::{b, cost, generic, r, u, w};
+use crate::mana::{b, cost, g, generic, r, u, w};
 
 // ── Strict Proctor ──────────────────────────────────────────────────────────
 
@@ -760,6 +760,226 @@ pub fn strixhaven_tutor() -> CardDefinition {
                 },
             ]),
         }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+// ── Push (modern_decks) batch 28: 5 more iconic cards ──────────────────────
+
+/// Strixhaven Archmage — {3}{U}{U}, 3/3 Human Wizard.
+///
+/// Printed Oracle (synthesised): "When this creature enters, draw two
+/// cards."
+///
+/// 5-mana 3/3 + draw 2 ETB. Classic blue mid-curve value engine. Card
+/// neutral on landing — -1 cast +2 draw = +1 net. Slots into Prismari
+/// / Quandrix card-velocity shells.
+pub fn strixhaven_archmage() -> CardDefinition {
+    use crate::card::{EventKind, EventScope, EventSpec, TriggeredAbility};
+    CardDefinition {
+        name: "Strixhaven Archmage",
+        cost: cost(&[generic(3), u(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Mage Hunters' Riposte — {1}{B}, instant.
+///
+/// Printed Oracle (synthesised): "Target creature gets -3/-3 until end of
+/// turn."
+///
+/// 2-mana flexible shrink-removal. Kills 1-3 power attackers and small
+/// utility creatures. Slots into Witherbloom/Silverquill removal stacks.
+pub fn mage_hunters_riposte() -> CardDefinition {
+    use crate::effect::Duration;
+    CardDefinition {
+        name: "Mage Hunters' Riposte",
+        cost: cost(&[generic(1), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::PumpPT {
+            what: target_filtered(SelectionRequirement::Creature),
+            power: Value::Const(-3),
+            toughness: Value::Const(-3),
+            duration: Duration::EndOfTurn,
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Strixhaven Field Trip — {3}{G}, sorcery.
+///
+/// Printed Oracle (synthesised): "Search your library for up to two basic
+/// land cards, put them onto the battlefield tapped, then shuffle."
+///
+/// 4-mana double-ramp. Strict 2-for-1 mana fixing in green decks. The
+/// "up to two" is collapsed to "exactly two" by the auto-decider.
+pub fn strixhaven_field_trip() -> CardDefinition {
+    use crate::effect::ZoneDest;
+    CardDefinition {
+        name: "Strixhaven Field Trip",
+        cost: cost(&[generic(3), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Search {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::IsBasicLand,
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: true,
+                },
+            },
+            Effect::Search {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::IsBasicLand,
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: true,
+                },
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Spiritbringer — {2}{R}{W}, 3/3 Spirit Cleric Vigilance.
+///
+/// Printed Oracle (synthesised): "Vigilance. When this creature enters,
+/// create two 2/2 red-and-white Spirit creature tokens."
+///
+/// 4-mana go-wide finisher — 7 power across 3 bodies, with vigilance to
+/// preserve defense. Stacks with Quintorius Field Historian anthem.
+pub fn lorehold_spiritbringer() -> CardDefinition {
+    use crate::card::{EventKind, EventScope, EventSpec, TriggeredAbility};
+    use crate::catalog::sets::stx::lorehold_spirit_token;
+    CardDefinition {
+        name: "Lorehold Spiritbringer",
+        cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                definition: lorehold_spirit_token(),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Pestcaster — {2}{B}{G}, 2/3 Plant Warlock.
+///
+/// Printed Oracle (synthesised): "Magecraft — Whenever you cast or copy an
+/// instant or sorcery spell, you may pay {B}{G}. If you do, create a 1/1
+/// black-and-green Pest creature token with 'When this creature dies, you
+/// gain 1 life.'"
+///
+/// 4-mana magecraft Pest engine with mana floor. The "pay {B}{G}" rider
+/// is collapsed to a flat magecraft mint (auto-decider always mints) —
+/// engine has no per-trigger MayPay-with-mana-cost primitive yet.
+pub fn witherbloom_pestcaster() -> CardDefinition {
+    use crate::catalog::sets::stx::shared::stx_pest_token;
+    CardDefinition {
+        name: "Witherbloom Pestcaster",
+        cost: cost(&[generic(2), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: stx_pest_token(),
+        })],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],

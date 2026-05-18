@@ -3092,3 +3092,236 @@ pub fn lorehold_outburst() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Push (modern_decks) batch 28: 5 more Lorehold cards ────────────────────
+//
+// Continuing Lorehold (R/W) buildout: 5 new cards using existing primitives.
+// No new engine features required.
+
+/// Lorehold Pyresinger — {1}{R}{W}, 2/2 Spirit Cleric.
+///
+/// Printed Oracle (synthesised): "Magecraft — Whenever you cast or copy an
+/// instant or sorcery spell, target opponent loses 1 life and you gain 1
+/// life."
+///
+/// 3-mana drain-magecraft body — Lorehold's twin to Lorehold Apprentice
+/// at the larger frame. Each IS cast nets a 2-life swing on a 2/2 chassis.
+pub fn lorehold_pyresinger() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Pyresinger",
+        cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::Drain {
+            from: Selector::Player(PlayerRef::EachOpponent),
+            to: Selector::You,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Soulchanter — {3}{W}, 3/2 Spirit Cleric Lifelink.
+///
+/// Printed Oracle (synthesised): "Lifelink. When this creature enters, exile
+/// target card from a graveyard."
+///
+/// 4-mana lifelink body + targeted gy hate. Counters reanimator and snake-
+/// in-the-grass gy combos.
+pub fn lorehold_soulchanter() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Soulchanter",
+        cost: cost(&[generic(3), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Lifelink],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Move {
+                what: target_filtered(SelectionRequirement::Any),
+                to: ZoneDest::Exile,
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Flameherald — {1}{R}, 2/1 Human Soldier Haste.
+///
+/// Printed Oracle (synthesised): "Haste. When this creature enters, it deals
+/// 1 damage to any target."
+///
+/// 2-mana hasty ping body. Aggressive 1-drop chunked with a Bolt half on
+/// landing — closes games when opponent stabilises at low life.
+pub fn lorehold_flameherald() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Flameherald",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Haste],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature
+                        .or(SelectionRequirement::Player)
+                        .or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Embercouncil — {2}{R}{W}, sorcery.
+///
+/// Printed Oracle (synthesised): "Create two 2/2 red-and-white Spirit
+/// creature tokens. Lorehold Embercouncil deals 1 damage to each
+/// opponent."
+///
+/// 4-mana double-Spirit-mint + ping rider. Same shape as Lorehold Outburst
+/// but trades the team anthem for a 1-damage-each-opp tax.
+pub fn lorehold_embercouncil() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Embercouncil",
+        cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                definition: lorehold_spirit_token(),
+            },
+            Effect::DealDamage {
+                to: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Cinderpriest — {2}{R}, 2/3 Spirit Cleric.
+///
+/// Printed Oracle (synthesised): "When this creature enters, put a +1/+1
+/// counter on target creature you control. Magecraft — Whenever you cast
+/// or copy an instant or sorcery spell, target creature you control gets
+/// +1/+0 until end of turn."
+///
+/// 3-mana grow-and-pump engine. ETB counter + ongoing magecraft pump make
+/// any small body a multi-turn threat.
+pub fn lorehold_cinderpriest() -> CardDefinition {
+    use crate::card::CounterType;
+    use crate::effect::Duration;
+    CardDefinition {
+        name: "Lorehold Cinderpriest",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: Effect::AddCounter {
+                    what: target_filtered(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::ControlledByYou),
+                    ),
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                },
+            },
+            magecraft(Effect::PumpPT {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                power: Value::Const(1),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            }),
+        ],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
