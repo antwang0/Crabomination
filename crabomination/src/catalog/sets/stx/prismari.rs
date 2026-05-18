@@ -2222,3 +2222,53 @@ pub fn prismari_sparkbright() -> CardDefinition {
         exile_on_resolve: false,
     }
 }
+
+
+// ── Push (modern_decks) batch 24++: 1 more Prismari card ───────────────────
+
+/// Prismari Drakeforge — {2}{U}{R}, 2/3 Drake Wizard Flying.
+///
+/// Printed Oracle (synthesised): "Flying. When this creature enters,
+/// create a Treasure token. Magecraft — Whenever you cast or copy an
+/// instant or sorcery spell, this creature gets +1/+0 until end of turn."
+///
+/// 4-mana evasive Prismari engine — ETB ramp + per-cast self-pump. Scales
+/// aggressively in spell-heavy shells.
+pub fn prismari_drakeforge() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_self_pump;
+    use crate::game::effects::treasure_token;
+    CardDefinition {
+        name: "Prismari Drakeforge",
+        cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Drake, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: treasure_token(),
+                },
+            },
+            magecraft_self_pump(1, 0),
+        ],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}

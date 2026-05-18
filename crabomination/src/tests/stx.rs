@@ -25871,6 +25871,118 @@ fn prismari_spitfire_etb_pings_target_with_haste() {
     assert!(catalog::prismari_spitfire().keywords.contains(&Keyword::Haste));
 }
 
+// ── Push (modern_decks) batch 24++: 5 more cards (1 per college) ────────
+
+#[test]
+fn silverquill_memorist_etb_returns_is_card_from_graveyard() {
+    let mut g = two_player_game();
+    let bolt_id = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    let id = g.add_card_to_hand(0, catalog::silverquill_memorist());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Memorist castable");
+    drain_stack(&mut g);
+    let in_hand = g.players[0].hand.iter().any(|c| c.id == bolt_id);
+    assert!(in_hand, "Bolt returned to hand");
+    assert!(catalog::silverquill_memorist().keywords.contains(&Keyword::Flying));
+}
+
+#[test]
+fn witherbloom_tendril_drains_two_and_cantrips() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let id = g.add_card_to_hand(0, catalog::witherbloom_tendril());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let p0_before = g.players[0].life;
+    let p1_before = g.players[1].life;
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Tendril castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, p0_before + 2);
+    assert_eq!(g.players[1].life, p1_before - 2);
+    assert_eq!(g.players[0].hand.len(), hand_before, "Cantrip: -1 cast +1 draw");
+}
+
+#[test]
+fn lorehold_spirit_anthem_pumps_team_with_first_strike() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::lorehold_spirit_anthem());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Spirit-Anthem castable");
+    drain_stack(&mut g);
+    let bear_c = g.battlefield_find(bear).unwrap();
+    assert_eq!(bear_c.power(), 4, "Bear pumped +2");
+    assert_eq!(bear_c.toughness(), 3, "Bear pumped +1");
+    let computed = g.compute_battlefield();
+    let bear_cp = computed.iter().find(|c| c.id == bear).unwrap();
+    assert!(bear_cp.keywords.contains(&Keyword::FirstStrike),
+        "Bear has first strike EOT");
+}
+
+#[test]
+fn quandrix_symmetrycaster_etb_scales_with_hand_size() {
+    let mut g = two_player_game();
+    // 3 cards in hand.
+    g.add_card_to_hand(0, catalog::island());
+    g.add_card_to_hand(0, catalog::island());
+    g.add_card_to_hand(0, catalog::island());
+    let id = g.add_card_to_hand(0, catalog::quandrix_symmetrycaster());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    let hand_before = g.players[0].hand.len();
+    assert_eq!(hand_before, 4, "Test seeded 4 cards (3 islands + Symmetrycaster)");
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Symmetrycaster castable");
+    drain_stack(&mut g);
+    // After casting, hand has 3 cards (4 - 1 Symmetrycaster).
+    // Symmetrycaster reads hand size at trigger resolution time → 3 counters.
+    let sc = g.battlefield_find(id).unwrap();
+    assert_eq!(sc.counter_count(CounterType::PlusOnePlusOne), 3,
+        "Symmetrycaster's ETB sized by hand size (3 islands remaining)");
+}
+
+#[test]
+fn prismari_drakeforge_etb_mints_treasure_and_magecraft_self_pumps() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::prismari_drakeforge());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Drakeforge castable");
+    drain_stack(&mut g);
+    let treasures: Vec<_> = g.battlefield.iter()
+        .filter(|c| c.controller == 0 && c.definition.name == "Treasure")
+        .collect();
+    assert_eq!(treasures.len(), 1, "Treasure minted");
+    // Cast an instant → magecraft pumps Drakeforge.
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(crate::game::types::Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt castable");
+    drain_stack(&mut g);
+    let df = g.battlefield_find(id).unwrap();
+    assert_eq!(df.power(), 3, "Drakeforge pumped +1/+0 from magecraft");
+    assert!(catalog::prismari_drakeforge().keywords.contains(&Keyword::Flying));
+}
+
 /// CR 701.14c — "If a creature fights itself, it deals damage to
 /// itself equal to twice its power." Lock-in: a 2/2 fighting itself
 /// takes 2×2 = 4 damage → dies (2 toughness < 4 damage).

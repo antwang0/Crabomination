@@ -3517,3 +3517,52 @@ pub fn inkling_sage() -> CardDefinition {
         exile_on_resolve: false,
     }
 }
+
+
+// ── Push (modern_decks) batch 24++: 1 more Silverquill card ────────────────
+
+/// Silverquill Memorist — {2}{W}{B}, 2/3 Inkling Bard.
+///
+/// Printed Oracle (synthesised): "Flying. When this creature enters, return
+/// target instant or sorcery card from your graveyard to your hand."
+///
+/// 4-mana evasive recursion body — drains opp/refills your hand of IS
+/// spells, threatens chip damage in the air. Closes the Silverquill
+/// curve at the 4-mana slot.
+pub fn silverquill_memorist() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Memorist",
+        cost: cost(&[generic(2), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Bard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Move {
+                what: Selector::one_of(Selector::CardsInZone {
+                    who: PlayerRef::You,
+                    zone: Zone::Graveyard,
+                    filter: SelectionRequirement::HasCardType(CardType::Instant)
+                        .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+                }),
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}

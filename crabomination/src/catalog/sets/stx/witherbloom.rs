@@ -2421,3 +2421,47 @@ pub fn witherbloom_reaper_hand() -> CardDefinition {
         exile_on_resolve: false,
     }
 }
+
+
+// ── Push (modern_decks) batch 24++: 1 more Witherbloom card ────────────────
+
+/// Witherbloom Tendril — {1}{B}{G}, instant.
+///
+/// Printed Oracle (synthesised): "Drain 2 (each opp loses 2 life and you
+/// gain 2 life). Draw a card."
+///
+/// 3-mana instant drain + cantrip — Witherbloom's high-value spell-slot
+/// fill. Stacks with Apprentice / Bonepicker for chained drain triggers.
+pub fn witherbloom_tendril() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Tendril",
+        cost: cost(&[generic(1), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Drain {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                to: Selector::You,
+                amount: Value::Const(2),
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}

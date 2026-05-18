@@ -2344,3 +2344,49 @@ pub fn quandrix_aether_adept() -> CardDefinition {
         exile_on_resolve: false,
     }
 }
+
+
+// ── Push (modern_decks) batch 24++: 1 more Quandrix card ───────────────────
+
+/// Quandrix Symmetrycaster — {3}{G}{U}, 3/3 Elf Wizard.
+///
+/// Printed Oracle (synthesised): "When this creature enters, put X
+/// +1/+1 counters on it, where X is the number of cards in your hand."
+///
+/// 5-mana hand-size-scaling body — drops on turn 5 with a typical 3-4
+/// card hand → 6/6 to 7/7. Snowballs harder with Quandrix card-draw
+/// engines.
+pub fn quandrix_symmetrycaster() -> CardDefinition {
+    use crate::card::CounterType;
+    CardDefinition {
+        name: "Quandrix Symmetrycaster",
+        cost: cost(&[generic(3), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::HandSizeOf(PlayerRef::You),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}

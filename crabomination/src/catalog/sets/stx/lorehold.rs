@@ -2748,3 +2748,51 @@ pub fn spirit_conduit() -> CardDefinition {
         exile_on_resolve: false,
     }
 }
+
+
+// ── Push (modern_decks) batch 24++: 1 more Lorehold card ───────────────────
+
+/// Lorehold Spirit-Anthem — {3}{R}{W}, sorcery.
+///
+/// Printed Oracle (synthesised): "Creatures you control get +2/+1 and
+/// gain first strike until end of turn."
+///
+/// 5-mana go-wide swing — team +2/+1 + first strike for alpha-strike
+/// turns. Pairs with Lorehold's Spirit-token shells for lethal damage.
+pub fn lorehold_spirit_anthem() -> CardDefinition {
+    use crate::effect::shortcut::each_your_creature;
+    use crate::effect::Duration;
+    CardDefinition {
+        name: "Lorehold Spirit-Anthem",
+        cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: each_your_creature(),
+                power: Value::Const(2),
+                toughness: Value::Const(1),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: each_your_creature(),
+                keyword: Keyword::FirstStrike,
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
