@@ -6651,6 +6651,76 @@ fn wildgrowth_archaic_def_is_zero_zero_avatar() {
     assert!(card.has_creature_type(crate::card::CreatureType::Avatar));
 }
 
+/// Wildgrowth Archaic: cast it with 2 colors of mana spent (G + 2
+/// converted = colors-of-mana = 1 if generic doesn't count, but our
+/// convergence counts distinct colors paid). Verify it lands with X
+/// +1/+1 counters per CR 614.12, where X is the number of colors of
+/// mana spent. Casting at 1 color = 1 counter (survives ETB).
+#[test]
+fn wildgrowth_archaic_enters_with_one_counter_per_color_spent() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::wildgrowth_archaic());
+    // Pay {2}{2}{G}{G} -> 1 color (Green) spent.
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Wildgrowth castable for 6 mana");
+    drain_stack(&mut g);
+    let view = g.computed_permanent(id).unwrap();
+    // 1 color spent → 1 +1/+1 counter → 1/1 with Trample + Reach.
+    assert_eq!(view.power, 1, "Wildgrowth at 1 color = 1/1");
+    assert_eq!(view.toughness, 1);
+}
+
+/// Wildgrowth Archaic's "creature spells you cast enter with X
+/// additional +1/+1 counters" static — cast Grizzly Bears AFTER
+/// Wildgrowth Archaic is on the battlefield. Bears (1 color of mana
+/// spent, Green) should land as a 3/3 (2+1).
+#[test]
+fn wildgrowth_archaic_grants_extra_counter_to_creature_spells() {
+    let mut g = two_player_game();
+    // Seed the Archaic directly on battlefield (skip cast to focus on
+    // the static rider).
+    let _archaic = g.add_card_to_battlefield(0, catalog::wildgrowth_archaic());
+    drain_stack(&mut g);
+    let bears = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bears, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bears castable for {1}{G}");
+    drain_stack(&mut g);
+    let view = g.computed_permanent(bears).unwrap();
+    // Bears (2/2) + 1 +1/+1 counter (1 color spent) = 3/3.
+    assert_eq!(view.power, 3,
+        "Grizzly Bears should land as 3/3 (printed 2/2 + 1 counter from Wildgrowth)");
+    assert_eq!(view.toughness, 3);
+}
+
+/// Wildgrowth Archaic's static does NOT apply to creature spells cast
+/// by an opponent (it's gated on `src.controller == caster`).
+#[test]
+fn wildgrowth_archaic_static_does_not_grant_to_opp_creature_spells() {
+    let mut g = two_player_game();
+    let _archaic = g.add_card_to_battlefield(0, catalog::wildgrowth_archaic());
+    drain_stack(&mut g);
+    let opp_bears = g.add_card_to_hand(1, catalog::grizzly_bears());
+    // Pass turn so opp can cast at sorcery speed.
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.players[1].mana_pool.add(Color::Green, 1);
+    g.players[1].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: opp_bears, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Opp Bears castable for {1}{G}");
+    drain_stack(&mut g);
+    let view = g.computed_permanent(opp_bears).unwrap();
+    // Opp's Bears land vanilla 2/2 (Wildgrowth doesn't pump opp's spells).
+    assert_eq!(view.power, 2);
+    assert_eq!(view.toughness, 2);
+}
+
 #[test]
 fn ambitious_augmenter_is_one_one_turtle_wizard() {
     let card = catalog::ambitious_augmenter();

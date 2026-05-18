@@ -4795,6 +4795,7 @@ pub fn magmablood_archaic() -> CardDefinition {
 /// own converged value, not the cast spell's).
 pub fn wildgrowth_archaic() -> CardDefinition {
     use crate::card::CounterType;
+    use crate::effect::{StaticAbility, StaticEffect};
     use crate::mana::g;
     CardDefinition {
         name: "Wildgrowth Archaic",
@@ -4810,15 +4811,30 @@ pub fn wildgrowth_archaic() -> CardDefinition {
         keywords: vec![Keyword::Trample, Keyword::Reach],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::AddCounter {
-                what: Selector::This,
+        triggered_abilities: vec![],
+        // Two statics: (a) the Converge "enters with X counters on it"
+        // for the Archaic itself (CR 614.12 — counters land before
+        // SBA so 0/0 + X survives); (b) the "creature spells you cast
+        // enter with X additional +1/+1 counters" rider for OTHER
+        // creature spells the controller casts. Both rely on the
+        // engine's spell-side `Value::ConvergedValue` introspection.
+        // Push (modern_decks batch 30): both halves now ship via the
+        // new `StaticEffect::ExtraEtbCountersForCreatureCasts`
+        // primitive — the static fires for every creature spell the
+        // controller casts (including the Archaic itself; the engine
+        // walks the controller's battlefield at resolve-spell time
+        // after the new permanent has been pushed, so the fresh
+        // Archaic also sees its own static).
+        static_abilities: vec![StaticAbility {
+            description: "Whenever you cast a creature spell, that creature \
+                          enters with X additional +1/+1 counters on it, \
+                          where X is the number of colors of mana spent to \
+                          cast it.",
+            effect: StaticEffect::ExtraEtbCountersForCreatureCasts {
                 kind: CounterType::PlusOnePlusOne,
-                amount: Value::ConvergedValue,
+                value: Value::ConvergedValue,
             },
         }],
-        static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,

@@ -2728,7 +2728,10 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             | StaticEffect::DoubleCounters
             // GrantAffinityToISSpells — read at cast time by
             // `cost_reduction_for_spell` directly; no layer effect.
-            | StaticEffect::GrantAffinityToISSpells { .. } => vec![],
+            | StaticEffect::GrantAffinityToISSpells { .. }
+            // ExtraEtbCountersForCreatureCasts — read at creature-spell
+            // resolution time in `stack.rs::resolve_spell`; no layer effect.
+            | StaticEffect::ExtraEtbCountersForCreatureCasts { .. } => vec![],
         })
         .collect()
 }

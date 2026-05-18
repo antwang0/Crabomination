@@ -1811,6 +1811,21 @@ pub enum StaticEffect {
     GrantAffinityToISSpells {
         permanent_filter: SelectionRequirement,
     },
+    /// "Whenever you cast a creature spell, that creature enters with
+    /// N additional counters of `kind` on it." Read at creature-spell
+    /// resolution time (`stack.rs::resolve_spell`'s ETB-counter path)
+    /// — after the card's printed `enters_with_counters` are applied
+    /// and before SBA. `value` can be `Const(N)`, `XFromCost`, or
+    /// `ConvergedValue`, so the static covers fixed-count riders
+    /// (Hardened Scales-style) AND mana-spent-scaled riders
+    /// (Wildgrowth Archaic — "X is the number of colors of mana spent
+    /// to cast it" → `Value::ConvergedValue`). Only the controlled
+    /// card's creature spells trigger the rider (the static is gated
+    /// on `src.controller == caster`).
+    ExtraEtbCountersForCreatureCasts {
+        kind: CounterType,
+        value: Value,
+    },
 }
 
 // ── Triggered / activated / loyalty ability shells ───────────────────────────

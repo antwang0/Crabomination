@@ -359,10 +359,46 @@ impl GameState {
                     // 0/0 body (Pterafractyl, Symmathematics) survives ETB.
                     let enters_spec = card.definition.enters_with_counters.clone();
                     self.battlefield.push(card);
-                    if let Some((kind, value)) = enters_spec {
+                    // Collect the printed `enters_with_counters` spec and
+                    // any active `ExtraEtbCountersForCreatureCasts` static
+                    // effects controlled by the caster. The static fires
+                    // only for creature spells (we gate on the resolving
+                    // card's type).
+                    let is_creature_resolve = self
+                        .battlefield
+                        .iter()
+                        .find(|c| c.id == card_id)
+                        .map(|c| c.definition.is_creature())
+                        .unwrap_or(false);
+                    let mut counter_specs: Vec<(crate::card::CounterType, crate::effect::Value)> =
+                        Vec::new();
+                    if let Some(spec) = enters_spec {
+                        counter_specs.push(spec);
+                    }
+                    if is_creature_resolve {
+                        for src in &self.battlefield {
+                            if src.controller != caster {
+                                continue;
+                            }
+                            for sa in &src.definition.static_abilities {
+                                if let crate::effect::StaticEffect::ExtraEtbCountersForCreatureCasts {
+                                    kind,
+                                    value,
+                                } = &sa.effect
+                                {
+                                    counter_specs.push((*kind, value.clone()));
+                                }
+                            }
+                        }
+                    }
+                    for (kind, value) in counter_specs {
                         let etb_ctx = crate::game::effects::EffectContext::for_spell_with_source(
                             card_id,
-                            self.battlefield.last().map(|c| c.definition.name).unwrap_or(""),
+                            self.battlefield
+                                .iter()
+                                .find(|c| c.id == card_id)
+                                .map(|c| c.definition.name)
+                                .unwrap_or(""),
                             caster,
                             target.clone(),
                             additional_targets.clone(),
