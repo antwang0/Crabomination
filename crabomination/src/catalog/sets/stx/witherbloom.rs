@@ -2053,6 +2053,104 @@ pub fn pestilent_bloom() -> CardDefinition {
     }
 }
 
+// ── Push (modern_decks) batch 24+: 2 more Witherbloom cards ────────────────
+
+/// Witherbloom Pest-Lord — {3}{B}{G}, 3/3 Plant Warlock.
+///
+/// Printed Oracle (synthesised): "Pest creatures you control get +1/+0.
+/// When this creature enters, create a 1/1 black and green Pest creature
+/// token."
+///
+/// 5-mana Pest tribal lord + a token on ETB. Stacks with Witherbloom
+/// Vinemaster and Pest Bequest for a wide Pest swarm.
+pub fn witherbloom_pest_lord() -> CardDefinition {
+    use crate::effect::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Witherbloom Pest-Lord",
+        cost: cost(&[generic(3), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: stx_pest_token(),
+            },
+        }],
+        static_abilities: vec![StaticAbility {
+            description: "Pest creatures you control get +1/+0.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::HasCreatureType(CreatureType::Pest))
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+                power: 1,
+                toughness: 0,
+            },
+        }],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+/// Witherbloom Drainbreath — {1}{B}, 2/1 Plant Warlock.
+///
+/// Printed Oracle (synthesised): "When this creature dies, you gain 2
+/// life and target opponent loses 2 life."
+///
+/// 2-mana drain-on-death attacker. Aggressive 2-power body that trades
+/// up into a 4-life-swing on death. Reaper-Hand template at the 2-mana
+/// slot.
+pub fn witherbloom_drainbreath() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Drainbreath",
+        cost: cost(&[generic(1), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+            effect: Effect::Drain {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                to: Selector::You,
+                amount: Value::Const(2),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
 // ── Push (modern_decks) batch 24: 5 new Witherbloom cards ──────────────────
 
 /// Witherbloom Aspersor — {B}{G}, instant.

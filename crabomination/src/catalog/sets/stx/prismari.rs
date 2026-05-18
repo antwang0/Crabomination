@@ -1846,6 +1846,104 @@ pub fn prismari_tempo_adept() -> CardDefinition {
     }
 }
 
+// ── Push (modern_decks) batch 24+: 2 more Prismari cards ───────────────────
+
+/// Prismari Hotburst — {1}{R}, instant.
+///
+/// Printed Oracle (synthesised): "Prismari Hotburst deals 2 damage to
+/// any target. Treasure token."
+///
+/// 2-mana cheap burn + Treasure ramp. Same shape as Galvanic Iteration's
+/// supporting role — gets a 2-damage Shock-equivalent and refunds part of
+/// the cost.
+pub fn prismari_hotburst() -> CardDefinition {
+    use crate::game::effects::treasure_token;
+    CardDefinition {
+        name: "Prismari Hotburst",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature
+                        .or(SelectionRequirement::Player)
+                        .or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::Const(2),
+            },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: treasure_token(),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+/// Prismari Magmaspark — {U}{R}, 1/3 Elemental Wizard.
+///
+/// Printed Oracle (synthesised): "When this creature enters, it deals 1
+/// damage to any target. Magecraft — Whenever you cast or copy an
+/// instant or sorcery spell, this creature gets +1/+0 until end of turn."
+///
+/// 2-mana ETB ping + magecraft scaling. Slots into the Prismari curve
+/// at the 2-mana spot.
+pub fn prismari_magmaspark() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_self_pump;
+    CardDefinition {
+        name: "Prismari Magmaspark",
+        cost: cost(&[u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: Effect::DealDamage {
+                    to: target_filtered(
+                        SelectionRequirement::Creature
+                            .or(SelectionRequirement::Player)
+                            .or(SelectionRequirement::Planeswalker),
+                    ),
+                    amount: Value::Const(1),
+                },
+            },
+            magecraft_self_pump(1, 0),
+        ],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
 // ── Push (modern_decks) batch 24: 5 new Prismari cards ─────────────────────
 
 /// Prismari Mindkindler — {U}{R}, 1/2 Human Wizard.

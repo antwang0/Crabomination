@@ -1984,6 +1984,110 @@ pub fn quandrix_pairweaver() -> CardDefinition {
     }
 }
 
+// ── Push (modern_decks) batch 24+: 2 more Quandrix cards ───────────────────
+
+/// Quandrix Pondkeeper — {2}{U}, 1/3 Merfolk Wizard.
+///
+/// Printed Oracle (synthesised): "When this creature enters, create a
+/// 0/0 green and blue Fractal creature token. Put X +1/+1 counters on
+/// it, where X is the number of instant and sorcery cards in your
+/// graveyard."
+///
+/// 3-mana ETB Fractal sized by your gy IS — strong late-game finisher
+/// in spell-heavy shells (8+ IS in gy → 8/8 Fractal). Pairs with
+/// Pondkeeper's own Wizard chain.
+pub fn quandrix_pondkeeper() -> CardDefinition {
+    use crate::card::CounterType;
+    use crate::catalog::sets::sos::fractal_token;
+    CardDefinition {
+        name: "Quandrix Pondkeeper",
+        cost: cost(&[generic(2), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: fractal_token(),
+                },
+                Effect::AddCounter {
+                    what: Selector::LastCreatedToken,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::count(Selector::CardsInZone {
+                        who: PlayerRef::You,
+                        zone: crate::card::Zone::Graveyard,
+                        filter: SelectionRequirement::HasCardType(CardType::Instant)
+                            .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+                    }),
+                },
+            ]),
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+/// Quandrix Counterproof — {G}{U}, instant.
+///
+/// Printed Oracle (synthesised): "Put a +1/+1 counter on target creature
+/// you control. Scry 1."
+///
+/// 2-mana counter + scry — bridges to the next turn's spell with a small
+/// growth on the curve.
+pub fn quandrix_counterproof() -> CardDefinition {
+    use crate::card::CounterType;
+    CardDefinition {
+        name: "Quandrix Counterproof",
+        cost: cost(&[g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::AddCounter {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
 // ── Push (modern_decks) batch 24: 5 new Quandrix cards ─────────────────────
 
 /// Quandrix Logician — {G}{U}, 2/2 Elf Wizard.

@@ -2361,6 +2361,114 @@ pub fn lorehold_volley() -> CardDefinition {
     }
 }
 
+// ── Push (modern_decks) batch 24+: 2 more Lorehold cards ───────────────────
+
+/// Lorehold Spirit-Caller — {2}{R}{W}, 2/2 Spirit Cleric.
+///
+/// Printed Oracle (synthesised): "When this creature enters, create two
+/// 2/2 red and white Spirit creature tokens with haste."
+///
+/// 4-mana double-Spirit ETB with haste — 6 power across 3 bodies with
+/// haste pressure on landing. Engine note: `Selector::LastCreatedToken`
+/// only returns a single id, so the haste grant needs to fan-out via
+/// `Selector::EachPermanent(Spirit & ControlledByYou)` to cover both
+/// minted tokens. The source itself (Spirit Cleric) also receives the
+/// grant — printed Oracle "tokens with haste" is approximated as
+/// "Spirits you control gain haste EOT" since the source already has
+/// summoning sickness, the broadened grant is a strict-better; the
+/// hasty self also matches some printed Lorehold haste anthems.
+pub fn lorehold_spirit_caller() -> CardDefinition {
+    use crate::effect::Duration;
+    CardDefinition {
+        name: "Lorehold Spirit-Caller",
+        cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(2),
+                    definition: lorehold_spirit_token(),
+                },
+                Effect::GrantKeyword {
+                    what: Selector::EachPermanent(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::HasCreatureType(CreatureType::Spirit))
+                            .and(SelectionRequirement::ControlledByYou),
+                    ),
+                    keyword: Keyword::Haste,
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+/// Lorehold Recital — {1}{R}{W}, instant.
+///
+/// Printed Oracle (synthesised): "Lorehold Recital deals 1 damage to
+/// any target. Create a 2/2 red and white Spirit creature token."
+///
+/// 3-mana instant burn + Spirit body. Same shape as Lorehold Skirmish
+/// (which mints a Spirit with haste at sorcery speed) but at instant
+/// tempo and adding a 1-damage ping.
+pub fn lorehold_recital() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Recital",
+        cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature
+                        .or(SelectionRequirement::Player)
+                        .or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::Const(1),
+            },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: lorehold_spirit_token(),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
 // ── Push (modern_decks) batch 24: 5 new Lorehold cards ─────────────────────
 
 /// Lorehold Pyrostriker — {1}{R}, 2/1 Spirit Warrior.

@@ -3164,6 +3164,45 @@ pub fn silverquill_battle_hymn() -> CardDefinition {
 
 // ── Push (modern_decks) batch 24: 5 new Silverquill cards ───────────────────
 
+// ── Push (modern_decks) batch 24+: 10 more STX cards (2 per college) ───────
+
+/// Silverquill Eulogist — {1}{B}, 1/3 Human Cleric.
+///
+/// Printed Oracle (synthesised): "Magecraft — Whenever you cast or copy
+/// an instant or sorcery spell, target opponent loses 1 life."
+///
+/// 2-mana defensive body + per-cast 1-drain. The Silverquill Apprentice
+/// template at the BB/WB slot, but mono-black-friendly.
+pub fn silverquill_eulogist() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Eulogist",
+        cost: cost(&[generic(1), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::LoseLife {
+            who: Selector::Player(PlayerRef::EachOpponent),
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
 /// Silverquill Notetaker — {1}{W}, 1/2 Human Wizard.
 ///
 /// Printed Oracle (synthesised): "When this creature enters, scry 1.
@@ -3378,6 +3417,43 @@ pub fn silverquill_tribunal() -> CardDefinition {
         ]),
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+/// Inkling Quillwarden — {2}{W}{B}, 2/4 Inkling Knight Flying + Vigilance.
+///
+/// Printed Oracle (synthesised): "Flying, vigilance. Whenever you cast or
+/// copy an instant or sorcery spell, this creature gets +1/+0 until end
+/// of turn."
+///
+/// 4-mana evasive Inkling that scales aggressively in spell-heavy shells.
+/// Same magecraft self-pump template as Eccentric Apprentice with a +1
+/// toughness frame.
+pub fn inkling_quillwarden() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_self_pump;
+    CardDefinition {
+        name: "Inkling Quillwarden",
+        cost: cost(&[generic(2), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        keywords: vec![Keyword::Flying, Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_self_pump(1, 0)],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
