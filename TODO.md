@@ -1150,6 +1150,36 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   Rancorous Archaic base-toughness-bump workaround. Catalog
   promotions: Pterafractyl (1/0 → 1/0 exact), Symmathematics (1/1
   → 0/0 exact), Rancorous Archaic (ETB-trigger → CR-614.12 timing).
+- ✅ **CR 701.26 — Tap and Untap** (push modern_decks batch 22 audit,
+  claude/modern_decks branch — audit against
+  `MagicCompRules_20260417.txt`): "To tap a permanent, turn it sideways
+  from an upright position. Only untapped permanents can be tapped. /
+  To untap a permanent, rotate it back to the upright position from a
+  sideways position. Only tapped permanents can be untapped." (701.26a,
+  701.26b). The engine models the tapped/untapped binary as a single
+  `CardInstance.tapped: bool` field (`card.rs:609`) — set true on tap,
+  false on untap. (a) **701.26a (tap only an untapped permanent)** —
+  ✅ (`activate_ability` in `game/actions.rs` checks
+  `card.tapped` and returns `GameError::CardIsTapped` if the source
+  carries `ActivatedAbility.tap_cost: true` and is already tapped; the
+  `Effect::Tap` handler in `game/effects/mod.rs` is also a no-op for
+  already-tapped permanents because the field-set is idempotent).
+  (b) **701.26b (untap only a tapped permanent)** — ✅ (the
+  `Effect::Untap` handler iterates resolved permanents and flips
+  `tapped: false` unconditionally; the operation is idempotent for
+  already-untapped permanents, matching the printed "only tapped can
+  be untapped" semantics — the no-op behavior on an untapped permanent
+  doesn't fire any "becomes untapped" trigger). Stun counters
+  (CR 701.46) interpose on the untap path: the engine's untap step
+  (`do_untap` in `game/stack.rs`) consults `CounterType::Stun` and
+  removes one stun counter per untap event instead of untapping the
+  permanent, which is the CR-correct replacement of the untap action.
+  Tests: implicit across the entire test suite — every spell with a
+  tap cost, every mana ability, every untap-step transition exercises
+  the tap/untap pipeline. Specific lock-in tests:
+  `stun_counter_replaces_untap_per_cr_701_46a` and the existing
+  `force_tap_target_creature_via_*` patterns.
+
 - ✅ **CR 701.25c — Surveil 0 emits no surveil event** (push modern_decks
   audit — code was already correct via the shared Scry/Surveil short-
   circuit, test coverage gap): "If a player is instructed to surveil 0,
@@ -4163,3 +4193,65 @@ resolution time" in the Suggested next-up tasks section.
   and `shortcut::search_basic_land_untapped(who)` helper would consolidate
   the `Effect::Search { filter: IsBasicLand, to: ZoneDest::Battlefield {
   controller, tapped }}` template. Low priority — only 2 call sites today.
+
+- ⏳ **Effect::LookAndDistribute primitive (Stress Dream / Adventurous
+  Impulse / Curate)** — push (modern_decks batch 22) leaves Stress Dream
+  approximated as `Scry 1 + Draw 1`. The printed "look at top N, put K
+  in hand, rest to bottom of library in any order" is a recurring
+  shape. Adding an `Effect::LookAndDistribute { who, look: Value, to_hand:
+  Value, rest_to_bottom: bool }` primitive — with a new
+  `Decision::LookAndDistribute { player, cards }` decision shape that
+  returns `LookAndDistribute { to_hand: Vec<CardId>, to_bottom: Vec<CardId> }`
+  — would let SOS Stress Dream, Curate, Adventurous Impulse, and ~6
+  other cards land at exact-printed semantics. Auto-decider picks the
+  first `to_hand` cards by hand-size + "good cards" heuristic; UI seats
+  surface the picker. Promotes ~5 SOS 🟡 → ✅.
+
+- ⏳ **Effect::CreateCopyToken primitive (Applied Geometry / Colorstorm
+  Stallion / Echocasting Symposium)** — push (modern_decks batch 22)
+  leaves the "create a token that's a copy of [permanent]" shape
+  approximated as a vanilla token mint. Real cards: Applied Geometry
+  (Fractal copy), Colorstorm Stallion (≥5-mana Opus copy of itself),
+  Echocasting Symposium (copy of any creature), Spitting Image, Quasiduplicate.
+  Adding `Effect::CreateCopyToken { source: Selector, who: PlayerRef,
+  count: Value, modifiers: Vec<CopyModifier> }` lets all five 🟡 → ✅.
+  The `CopyModifier` enum carries the "and it's also a Fractal" /
+  "and it has haste" / "and it's a 0/0" overlays that print on the
+  copy-creation spells.
+
+- ⏳ **Storm keyword grant** — Prismari, the Inspiration prints "Instant
+  and sorcery spells you cast have storm." The Storm keyword itself
+  exists in `card.rs:237` but no engine path fans out copies for prior
+  spells cast this turn. Adding a `Keyword::Storm` cast-trigger that
+  reads `Value::StormCount` and emits `Effect::CopySpell { count:
+  StormCount }` on each IS cast under a Storm grant would close this
+  card + Tendrils-of-Agony chains (currently approximated). Note that
+  `Effect::CopySpell` already has a `count` field (push modern_decks);
+  the missing piece is the conditional grant + per-cast trigger that
+  reads StormCount.
+
+- ⏳ **Per-permanent "received-counter-this-turn" flag (Fractal Tender,
+  Galvanic Iteration triggers)** — push (modern_decks batch 22) leaves
+  Fractal Tender's end-step Fractal payoff omitted. The printed Oracle:
+  "At the beginning of each end step, if you put a counter on this
+  creature this turn, create a 0/0 green and blue Fractal token with
+  three +1/+1 counters." Needs a per-permanent `received_counter_this_turn:
+  bool` field bumped from the `Effect::AddCounter` resolver and cleared
+  on each player's untap. Same primitive would let "if this creature
+  gained a counter this turn" payoff cards land — Stonecoil Serpent
+  variants, Goblin Slingshot.
+
+- ⏳ **"May play exiled card until N turns" framework (Suspend
+  Aggression, Practiced Scrollsmith, Ark of Hunger, Elemental Mascot)** —
+  push (modern_decks batch 22) leaves these 🟡 because the engine has
+  no per-card "may play from exile until end of next turn" timer. Most
+  Lorehold / Prismari exile-and-play cards need this. The engine has
+  Flashback (cast-from-gy) and Rebound (cast-from-exile-once-on-next-
+  upkeep) but no general "this exiled card has play-from-exile until
+  N turns from now" timer.
+
+  **Fix**: add a `Player.exile_with_timer: Vec<(CardId, u32)>` field
+  bumped at exile time. Each `untap_step` decrements the counter; at 0
+  the card stays in exile permanently. The cast-from-exile path
+  consults this list in `try_pay_with_auto_tap` to authorize. Promotes
+  ~6 🟡s across SOS/STX.

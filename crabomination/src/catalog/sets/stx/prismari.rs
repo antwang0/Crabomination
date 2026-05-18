@@ -1334,6 +1334,235 @@ pub fn prismari_stormspire() -> CardDefinition {
     }
 }
 
+// ── Prismari batch 22 ──────────────────────────────────────────────────────
+
+/// Prismari Sparkforger — {2}{U}{R}, 2/4 Human Wizard.
+///
+/// Printed Oracle (synthesised): "Magecraft — Whenever you cast or copy
+/// an instant or sorcery spell, target creature you control gets +1/+0
+/// and gains haste until end of turn."
+///
+/// 4-mana magecraft team-pumper. Trigger flexes between aggressive haste
+/// for a sleeping creature or +1/+0 on a hasty attacker for a 1-damage
+/// boost.
+pub fn prismari_spellforger_b22() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Sparkforger",
+        cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+                power: Value::Const(1),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: Selector::TriggerSource,
+                keyword: Keyword::Haste,
+                duration: Duration::EndOfTurn,
+            },
+        ]))],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+/// Prismari Volleyfire — {3}{R} Sorcery.
+///
+/// Printed Oracle (synthesised): "Prismari Volleyfire deals 4 damage to
+/// target creature or planeswalker. Mint a Treasure token."
+///
+/// 4-mana hard removal + ramp. Trades a card for a 4-damage shot and
+/// rebuilds a mana pip on the same resolution. Combos with Big Score-
+/// style Treasure synergies in any Prismari shell.
+pub fn prismari_volleyfire() -> CardDefinition {
+    use crate::game::effects::treasure_token;
+    CardDefinition {
+        name: "Prismari Volleyfire",
+        cost: cost(&[generic(3), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature
+                        .or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::Const(4),
+            },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: treasure_token(),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+/// Prismari Spell-Shaper — {U}{R}, 1/3 Human Wizard.
+///
+/// Printed Oracle (synthesised): "Magecraft — Whenever you cast or copy
+/// an instant or sorcery spell, scry 1, then draw a card."
+///
+/// 2-mana magecraft scry-cantrip. Smooths every draw on every IS cast —
+/// the centerpiece of a Prismari spell-control deck.
+pub fn prismari_spell_shaper() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Spell-Shaper",
+        cost: cost(&[u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::Seq(vec![
+            Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
+            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        ]))],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+/// Prismari Stormgaze — {2}{U}{R} Instant.
+///
+/// Printed Oracle (synthesised): "Draw two cards. Then discard a card.
+/// Prismari Stormgaze deals 1 damage to any target."
+///
+/// 4-mana looter + ping. Three modes: ping creature/PW for 1, soft-loot
+/// for 2-keep-1, all on one spell.
+pub fn prismari_stormgaze() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Stormgaze",
+        cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+            Effect::Discard {
+                who: Selector::You,
+                amount: Value::Const(1),
+                random: false,
+            },
+            Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature
+                        .or(SelectionRequirement::Player)
+                        .or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+/// Prismari Vortexweaver — {3}{U}{R}, 3/4 Elemental Wizard with Flying.
+///
+/// Printed Oracle (synthesised): "Flying. When this creature enters,
+/// copy target instant or sorcery spell you control. You may choose
+/// new targets for the copy."
+///
+/// 5-mana finisher Wizard with a built-in Galvanic Iteration on
+/// arrival. The ETB copy-spell only fires if you cast it after another
+/// IS spell — but in a Prismari shell that's most turns.
+pub fn prismari_vortexweaver() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Vortexweaver",
+        cost: cost(&[generic(3), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::CopySpell {
+                what: target_filtered(
+                    SelectionRequirement::IsSpellOnStack.and(
+                        SelectionRequirement::HasCardType(CardType::Instant)
+                            .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+                    ),
+                ),
+                count: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
 // ── Prismari Quickfire (batch 21) ──────────────────────────────────────────
 
 /// Prismari Quickfire — {R} Instant.

@@ -2730,3 +2730,202 @@ pub fn inkling_acolyte() -> CardDefinition {
         exile_on_resolve: false,
     }
 }
+
+// ── Silverquill batch 22 ───────────────────────────────────────────────────
+
+/// Silverquill Conviction — {W}{B} Sorcery.
+///
+/// Printed Oracle (synthesised): "Each opponent loses 2 life and you gain
+/// 2 life. Surveil 1."
+///
+/// 2-mana drain-and-fix: standard Witherbloom apprentice tax + a peek.
+/// Trades Sign-in-Blood's cards for board pressure on a fixed-mana cost.
+pub fn silverquill_conviction() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Conviction",
+        cost: cost(&[w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Drain {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                to: Selector::You,
+                amount: Value::Const(2),
+            },
+            Effect::Surveil { who: PlayerRef::You, amount: Value::Const(1) },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+/// Silverquill Bookbearer — {2}{W}, 1/4 Human Cleric Vigilance.
+///
+/// Printed Oracle (synthesised): "Vigilance / When this creature enters,
+/// scry 2."
+///
+/// 3-mana defender that smooths draws on arrival. Pairs with Tenured
+/// Inkcaster's +2/+2 (a 3/6 Vigilance smoothing engine).
+pub fn silverquill_bookbearer() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Bookbearer",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 4,
+        keywords: vec![Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+/// Inkling Inquisitor — {2}{B}, 2/3 Inkling Rogue with Flying.
+///
+/// Printed Oracle (synthesised): "Flying. When this creature enters,
+/// target opponent reveals their hand. You choose a nonland card from
+/// it. That player discards that card."
+///
+/// 3-mana flying body + targeted hand-strip — the Silverquill answer to
+/// Brainstealer Dragon at a more compact slot.
+pub fn inkling_inquisitor() -> CardDefinition {
+    CardDefinition {
+        name: "Inkling Inquisitor",
+        cost: cost(&[generic(2), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Rogue],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::DiscardChosen {
+                from: target_filtered(SelectionRequirement::Player),
+                count: Value::Const(1),
+                filter: SelectionRequirement::HasCardType(CardType::Land).negate(),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+/// Silverquill Reckoning — {3}{W}{B} Sorcery.
+///
+/// Printed Oracle (synthesised): "Destroy target creature. Create a 1/1
+/// white and black Inkling creature token with flying."
+///
+/// 5-mana removal + body — strict upgrade over Vraska's Contempt at the
+/// 5-mana slot for Inkling tribal shells: trades exile for token +
+/// Inkling-tribal payoff.
+pub fn silverquill_reckoning() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Reckoning",
+        cost: cost(&[generic(3), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Destroy { what: target_filtered(SelectionRequirement::Creature) },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: crate::catalog::sets::sos::inkling_token(),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+/// Silverquill Lifeglyph — {1}{W}{B}, 2/3 Inkling Bard Lifelink.
+///
+/// Printed Oracle (synthesised): "Lifelink. Magecraft — Whenever you cast
+/// or copy an instant or sorcery spell, target creature gets +1/+1 until
+/// end of turn."
+///
+/// 3-mana Lifelink Inkling that pumps the team incrementally on every
+/// spell. Combos with Inkling Verselord and Silverquill Anthemwriter for
+/// stacked lifelink anthems.
+pub fn silverquill_lifeglyph() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_target_pump;
+    CardDefinition {
+        name: "Silverquill Lifeglyph",
+        cost: cost(&[generic(1), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Bard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Lifelink],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_target_pump(
+            target_filtered(SelectionRequirement::Creature),
+            1,
+            1,
+        )],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}

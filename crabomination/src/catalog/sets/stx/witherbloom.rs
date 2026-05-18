@@ -1612,3 +1612,211 @@ pub fn witherbloom_pestcaller() -> CardDefinition {
         exile_on_resolve: false,
     }
 }
+
+// ── Witherbloom batch 22 ───────────────────────────────────────────────────
+
+/// Pest Swarmlord — {3}{B}{G}, 3/3 Pest Warlock.
+///
+/// Printed Oracle (synthesised): "When this creature enters, create two
+/// 1/1 black and green Pest creature tokens with 'When this creature
+/// dies, you gain 1 life.'"
+///
+/// 5-mana 3/3 + two Pests on arrival. Goes wide hard — pairs with Blech
+/// (each Pest gets a +1/+1 counter on lifegain) for a snowballing army.
+pub fn pest_swarmlord() -> CardDefinition {
+    CardDefinition {
+        name: "Pest Swarmlord",
+        cost: cost(&[generic(3), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Pest, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                definition: stx_pest_token(),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+/// Witherbloom Vinetender — {1}{G}, 2/2 Plant Druid Reach.
+///
+/// Printed Oracle (synthesised): "Reach. Magecraft — Whenever you cast or
+/// copy an instant or sorcery spell, you gain 1 life."
+///
+/// 2-mana Reach + lifegain engine. Cheaper Pest Mascot at the curve-2
+/// slot; trades the tribal +1/+1 for cheaper magecraft drip.
+pub fn witherbloom_vinetender() -> CardDefinition {
+    use crate::effect::shortcut::magecraft;
+    CardDefinition {
+        name: "Witherbloom Vinetender",
+        cost: cost(&[generic(1), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Reach],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::GainLife {
+            who: Selector::You,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+/// Toxic Bloodletting — {1}{B}{G} Instant.
+///
+/// Printed Oracle (synthesised): "Target creature gets -2/-2 until end of
+/// turn. You gain 2 life."
+///
+/// 3-mana modal removal — soft-removes 2-toughness creatures while
+/// rebuilding life. Smooth Witherbloom removal at instant speed.
+pub fn toxic_bloodletting() -> CardDefinition {
+    CardDefinition {
+        name: "Toxic Bloodletting",
+        cost: cost(&[generic(1), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(-2),
+                toughness: Value::Const(-2),
+                duration: crate::effect::Duration::EndOfTurn,
+            },
+            Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+/// Witherbloom Saproot — {2}{B}{G}, 3/3 Plant Beast.
+///
+/// Printed Oracle (synthesised): "Trample. When this creature dies, each
+/// opponent loses 2 life and you gain 2 life."
+///
+/// 4-mana trampler with a baked-in death drain — even if it trades
+/// down, you net a 2-life swing.
+pub fn witherbloom_saproot() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Saproot",
+        cost: cost(&[generic(2), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Beast],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Trample],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+            effect: Effect::Drain {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                to: Selector::You,
+                amount: Value::Const(2),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+/// Pest Mausoleum — {2}{B}{G} Sorcery.
+///
+/// Printed Oracle (synthesised): "Return target creature card from your
+/// graveyard to your hand. Create a 1/1 black and green Pest creature
+/// token with 'When this creature dies, you gain 1 life.'"
+///
+/// 4-mana reanimation + token mint. Cheap two-for-one that rebuilds the
+/// graveyard pipeline and adds a body to the battlefield.
+pub fn pest_mausoleum() -> CardDefinition {
+    CardDefinition {
+        name: "Pest Mausoleum",
+        cost: cost(&[generic(2), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Move {
+                what: Selector::one_of(Selector::CardsInZone {
+                    who: PlayerRef::You,
+                    zone: crate::card::Zone::Graveyard,
+                    filter: SelectionRequirement::Creature,
+                }),
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: stx_pest_token(),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}

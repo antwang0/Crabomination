@@ -1833,6 +1833,248 @@ pub fn lorehold_pilgrimwarden() -> CardDefinition {
     }
 }
 
+// ── Lorehold batch 22 ──────────────────────────────────────────────────────
+
+/// Lorehold Emberscribe — {2}{R}, 3/2 Spirit Warrior.
+///
+/// Printed Oracle (synthesised): "When this creature enters, exile target
+/// card from a graveyard. If that card was an instant or sorcery, this
+/// creature deals 2 damage to any target."
+///
+/// 3-mana removal + ping body. Trades a gy-exile for board pressure if
+/// the exiled card was an instant or sorcery (most common Lorehold gy
+/// fodder). Simplified to unconditional 1-damage ping in the engine
+/// since the "if it was IS, 2 dmg" rider needs a stack inspection that
+/// the current trigger machinery doesn't carry; the 1-damage payoff is
+/// still aligned with the "spell exiled" pattern.
+pub fn lorehold_emberscribe() -> CardDefinition {
+    use crate::card::Zone;
+    CardDefinition {
+        name: "Lorehold Emberscribe",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        // Body: exile a card from any graveyard, then ping each opp for 1.
+        // The unconditional "ping each opp" half stands in for the printed
+        // "1 damage to any target if it was IS" rider — auto-target picker
+        // chooses the opponent player as the default legal target, and the
+        // engine has no "if exiled card was IS" introspection at trigger-
+        // resolution time without a new primitive.
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::Move {
+                    what: Selector::one_of(Selector::CardsInZone {
+                        who: PlayerRef::EachPlayer,
+                        zone: Zone::Graveyard,
+                        filter: SelectionRequirement::Any,
+                    }),
+                    to: ZoneDest::Exile,
+                },
+                Effect::DealDamage {
+                    to: Selector::Player(PlayerRef::EachOpponent),
+                    amount: Value::Const(1),
+                },
+            ]),
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+/// Lorehold Reliquary — {2}{W} Artifact.
+///
+/// Printed Oracle (synthesised): "Whenever one or more cards leave your
+/// graveyard, put a +1/+1 counter on target creature you control."
+///
+/// 3-mana enchantment-like artifact that grows your team off gy-leaves.
+/// Powered by `EventKind::CardLeftGraveyard` (per-card emission) —
+/// straight Spirit Mascot's trigger but on an artifact + chooses target.
+pub fn lorehold_reliquary() -> CardDefinition {
+    use crate::card::CounterType;
+    CardDefinition {
+        name: "Lorehold Reliquary",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CardLeftGraveyard, EventScope::YourControl),
+            effect: Effect::AddCounter {
+                what: target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+/// Lorehold Ringleader — {3}{R}{W}, 4/3 Spirit Warrior Haste.
+///
+/// Printed Oracle (synthesised): "Haste. When this creature enters,
+/// create two 2/2 red and white Spirit creature tokens."
+///
+/// 5-mana hasty 4/3 + two Spirit bodies on arrival. Pure go-wide
+/// finisher. Pairs with Lorehold's Reliquary + per-attacker buffs to
+/// close games in two combat steps.
+pub fn lorehold_ringleader() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Ringleader",
+        cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 3,
+        keywords: vec![Keyword::Haste],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                definition: lorehold_spirit_token(),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+/// Lorehold Strikevanguard — {3}{R}, 4/2 Spirit Soldier with First Strike.
+///
+/// Printed Oracle (synthesised): "First strike. Magecraft — Whenever you
+/// cast or copy an instant or sorcery spell, this creature deals 1
+/// damage to any target."
+///
+/// 4-mana first-strike Spirit. Magecraft ping triggers across casts —
+/// stacks with Galvanic Iteration / Teach by Example for doubled ping.
+pub fn lorehold_strikevanguard() -> CardDefinition {
+    use crate::effect::shortcut::magecraft;
+    CardDefinition {
+        name: "Lorehold Strikevanguard",
+        cost: cost(&[generic(3), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 2,
+        keywords: vec![Keyword::FirstStrike],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::DealDamage {
+            to: target_filtered(
+                SelectionRequirement::Creature
+                    .or(SelectionRequirement::Player)
+                    .or(SelectionRequirement::Planeswalker),
+            ),
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+/// Lorehold Ember-Recall — {R}{W} Sorcery.
+///
+/// Printed Oracle (synthesised): "Return target creature card with mana
+/// value 2 or less from your graveyard to the battlefield. Lorehold
+/// Ember-Recall deals 1 damage to each opponent."
+///
+/// 2-mana reanimation + drain. Same shape as Lorehold Charm mode 1, but
+/// fixed at sorcery speed with a chip-damage rider.
+pub fn lorehold_ember_recall() -> CardDefinition {
+    use crate::card::Zone;
+    CardDefinition {
+        name: "Lorehold Ember-Recall",
+        cost: cost(&[r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Move {
+                what: Selector::one_of(Selector::CardsInZone {
+                    who: PlayerRef::You,
+                    zone: Zone::Graveyard,
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::ManaValueAtMost(2)),
+                }),
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: false,
+                },
+            },
+            Effect::DealDamage {
+                to: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
 // ── Lorehold Warband (batch 20) ────────────────────────────────────────────
 
 /// Lorehold Warband — {2}{R}, 3/2 Spirit Soldier.

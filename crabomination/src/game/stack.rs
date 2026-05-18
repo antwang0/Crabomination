@@ -541,9 +541,23 @@ impl GameState {
         // that's been stolen does not. Filtering by `owner` here would
         // leave stolen permanents permanently tapped (or, conversely,
         // un-tap a stolen permanent on the wrong player's turn).
+        //
+        // CR 701.46a / 122.1d — Stun counters interpose on the untap
+        // event: "If a permanent with one or more stun counters on it
+        // would become untapped, instead remove one stun counter from
+        // it." Implemented here by replacing the per-permanent untap
+        // with "remove one stun counter if present, otherwise flip
+        // tapped → false". Summoning sickness still clears
+        // unconditionally since CR 302.1 / 506.4 attaches that to the
+        // turn boundary, not the untap event.
+        use crate::card::CounterType;
         for card in &mut self.battlefield {
             if card.controller == p {
-                card.tapped = false;
+                if card.counter_count(CounterType::Stun) > 0 {
+                    card.remove_counters(CounterType::Stun, 1);
+                } else {
+                    card.tapped = false;
+                }
                 card.summoning_sick = false;
             }
         }

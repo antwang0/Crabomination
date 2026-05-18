@@ -1536,3 +1536,223 @@ pub fn quandrix_sage() -> CardDefinition {
         exile_on_resolve: false,
     }
 }
+
+// ── Quandrix batch 22 ──────────────────────────────────────────────────────
+
+/// Quandrix Counterbalance — {G}{U} Instant.
+///
+/// Printed Oracle (synthesised): "Put a +1/+1 counter on target creature
+/// you control. Draw a card."
+///
+/// 2-mana counter + cantrip — the classic Quandrix shape but compressed
+/// to instant speed at the curve-2 slot. Pure tempo combat trick.
+pub fn quandrix_counterbalance() -> CardDefinition {
+    use crate::card::CounterType;
+    CardDefinition {
+        name: "Quandrix Counterbalance",
+        cost: cost(&[g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::AddCounter {
+                what: target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+/// Fractal Bloom-Caller — {2}{G}{U}, 2/3 Fractal Wizard.
+///
+/// Printed Oracle (synthesised): "When this creature enters, create a 0/0
+/// green and blue Fractal creature token, then put two +1/+1 counters on
+/// it."
+///
+/// 4-mana 2/3 + 2/2 Fractal token on arrival — two bodies for one card.
+/// Both bodies fuel Quandrix counter-related synergies.
+pub fn fractal_bloom_caller() -> CardDefinition {
+    use crate::card::CounterType;
+    use crate::effect::shortcut::create_token_with_counter;
+    CardDefinition {
+        name: "Fractal Bloom-Caller",
+        cost: cost(&[generic(2), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: create_token_with_counter(
+                PlayerRef::You,
+                1,
+                quandrix_fractal_token(),
+                CounterType::PlusOnePlusOne,
+                2,
+            ),
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+/// Quandrix Synthesist — {1}{G}{U}, 2/2 Elf Druid.
+///
+/// Printed Oracle (synthesised): "Magecraft — Whenever you cast or copy
+/// an instant or sorcery spell, put a +1/+1 counter on each creature
+/// you control."
+///
+/// 3-mana magecraft anthem — every spell pumps the whole team. Hard
+/// snowball with cheap cantrips; one cast → +1/+1 across the board.
+pub fn quandrix_synthesist() -> CardDefinition {
+    use crate::card::CounterType;
+    use crate::effect::shortcut::magecraft;
+    CardDefinition {
+        name: "Quandrix Synthesist",
+        cost: cost(&[generic(1), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::AddCounter {
+            what: Selector::EachPermanent(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            ),
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+/// Fractal Tessellation — {3}{G}{U} Sorcery.
+///
+/// Printed Oracle (synthesised): "Create a 0/0 green and blue Fractal
+/// creature token. Put X +1/+1 counters on it, where X is the number of
+/// lands you control."
+///
+/// 5-mana ramp-payoff scaling Fractal. On turn 5 with 5 lands it lands
+/// a 5/5 Fractal; in a long game it scales to 8-10+/+/+/+.
+pub fn fractal_tessellation() -> CardDefinition {
+    use crate::card::CounterType;
+    // Inline `Seq([CreateToken, AddCounter(LastCreatedToken)])` rather
+    // than `shortcut::create_token_with_counter` since the helper takes
+    // a const `counter_n: i32` and this card needs a `Value::CountOf`
+    // for the X = lands-you-control scaling.
+    CardDefinition {
+        name: "Fractal Tessellation",
+        cost: cost(&[generic(3), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: quandrix_fractal_token(),
+            },
+            Effect::AddCounter {
+                what: Selector::LastCreatedToken,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::count(Selector::EachPermanent(
+                    SelectionRequirement::HasCardType(CardType::Land)
+                        .and(SelectionRequirement::ControlledByYou),
+                )),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+/// Quandrix Mistshaper — {U}, 1/1 Merfolk Wizard with Flash.
+///
+/// Printed Oracle (synthesised): "Flash. Magecraft — Whenever you cast
+/// or copy an instant or sorcery spell, this creature gets +1/+1 until
+/// end of turn."
+///
+/// 1-mana magecraft-pump Flash body — flashes in to block, then keeps
+/// growing on every IS cast. Tiny but snowball-able.
+pub fn quandrix_mistshaper() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_self_pump;
+    CardDefinition {
+        name: "Quandrix Mistshaper",
+        cost: cost(&[u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flash],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_self_pump(1, 1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
