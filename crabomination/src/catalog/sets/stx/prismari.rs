@@ -1163,3 +1163,210 @@ pub fn prismari_embershaper() -> CardDefinition {
         exile_on_resolve: false,
     }
 }
+
+// ── Prismari Sparkforge (batch 21) ─────────────────────────────────────────
+
+/// Prismari Sparkforge — {2}{U}{R}, 3/3 Elemental with Haste.
+///
+/// Printed Oracle (synthesised): "Haste. When this creature enters, create
+/// a Treasure token."
+///
+/// 4-mana hasty 3/3 with built-in mana ramp. Trades and replaces its
+/// initial spend, accelerating into bigger Prismari finishers.
+pub fn prismari_sparkforge() -> CardDefinition {
+    use crate::game::effects::treasure_token;
+    CardDefinition {
+        name: "Prismari Sparkforge",
+        cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Haste],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: treasure_token(),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Prismari Mindwave (batch 21) ───────────────────────────────────────────
+
+/// Prismari Mindwave — {2}{U} Instant.
+///
+/// Printed Oracle (synthesised): "Draw two cards, then discard a card."
+///
+/// 3-mana net +1 card with looter quality. Filters dead draws while
+/// digging through the deck for Prismari finishers. Functionally same
+/// effect as Brainstorm-but-3-mana with no shuffle interaction.
+pub fn prismari_mindwave() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Mindwave",
+        cost: cost(&[generic(2), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+            Effect::Discard {
+                who: Selector::You,
+                amount: Value::Const(1),
+                random: false,
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Prismari Pyrocrafter (batch 21) ────────────────────────────────────────
+
+/// Prismari Pyrocrafter — {2}{R}, 2/2 Human Wizard.
+///
+/// Printed Oracle (synthesised): "When this creature enters, it deals 1
+/// damage to each opponent. Magecraft — Whenever you cast or copy an
+/// instant or sorcery spell, this creature gets +1/+0 until end of turn."
+///
+/// 3-mana ETB ping + magecraft self-pump. Scales aggressively through
+/// the mid-game as the spell count climbs.
+pub fn prismari_pyrocrafter() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Pyrocrafter",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: Effect::DealDamage {
+                    to: Selector::Player(PlayerRef::EachOpponent),
+                    amount: Value::Const(1),
+                },
+            },
+            magecraft_self_pump(1, 0),
+        ],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Prismari Stormspire (batch 21) ─────────────────────────────────────────
+
+/// Prismari Stormspire — {4}{U}{R}, 4/4 Djinn Wizard with Flying.
+///
+/// Printed Oracle (synthesised): "Flying. When this creature enters, draw
+/// two cards."
+///
+/// 6-mana finisher Sphinx body — flying 4/4 + 2-card draw on ETB.
+/// Race-breaking top-end that immediately rebuilds the hand. Slightly
+/// undercosted Mulldrifter on a body.
+pub fn prismari_stormspire() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Stormspire",
+        cost: cost(&[generic(4), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Djinn, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Prismari Quickfire (batch 21) ──────────────────────────────────────────
+
+/// Prismari Quickfire — {R} Instant.
+///
+/// Printed Oracle (synthesised): "Prismari Quickfire deals 2 damage to
+/// target creature."
+///
+/// 1-mana 2-damage burn — efficient creature removal at the curve-1 slot.
+/// Triggers magecraft for the cheapest possible spell cost. Same shape
+/// as Burst Lightning at the {R} slot.
+pub fn prismari_quickfire() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Quickfire",
+        cost: cost(&[r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::DealDamage {
+            to: target_filtered(SelectionRequirement::Creature),
+            amount: Value::Const(2),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}

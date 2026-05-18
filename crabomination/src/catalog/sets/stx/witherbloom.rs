@@ -13,7 +13,7 @@ use crate::card::{
     EventSpec, Keyword, Predicate, SelectionRequirement, Selector, Subtypes, TriggeredAbility,
     Value,
 };
-use crate::effect::shortcut::magecraft_drain_each_opp;
+use crate::effect::shortcut::{magecraft_drain_each_opp, target_filtered};
 use crate::effect::{ManaPayload, PlayerRef, ZoneDest};
 use crate::mana::{cost, b, g, generic, Color, ManaCost};
 
@@ -1381,6 +1381,227 @@ pub fn witherbloom_crawler() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Pest Forager (batch 21) ────────────────────────────────────────────────
+
+/// Pest Forager — {1}{G}, 2/1 Pest with Trample.
+///
+/// Printed Oracle (synthesised): "Trample. When this creature dies, you
+/// gain 1 life."
+///
+/// 2-mana trampler with the standard Pest die-trigger. Pairs with
+/// Witherbloom Vinemaster for chained +1/+1 counters. The Trample push lets
+/// the 2-power swing chip life away even after a blocker trades.
+pub fn pest_forager() -> CardDefinition {
+    CardDefinition {
+        name: "Pest Forager",
+        cost: cost(&[generic(1), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Pest],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Trample],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+            effect: Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Witherbloom Carnivine (batch 21) ───────────────────────────────────────
+
+/// Witherbloom Carnivine — {3}{B}{G}, 4/4 Plant Beast with Reach.
+///
+/// Printed Oracle (synthesised): "Reach. When this creature enters, target
+/// player loses 3 life and you gain 3 life."
+///
+/// 5-mana race-breaking lifelink-flavored finisher — 4/4 reach defender +
+/// 6-life swing on ETB. Stomp on aggressive flyer-based decks while
+/// stabilising the life total.
+pub fn witherbloom_carnivine() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Carnivine",
+        cost: cost(&[generic(3), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Beast],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Reach],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Drain {
+                from: target_filtered(SelectionRequirement::Player),
+                to: Selector::You,
+                amount: Value::Const(3),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Pest Harvest (batch 21) ────────────────────────────────────────────────
+
+/// Pest Harvest — {2}{B}{G} Sorcery.
+///
+/// Printed Oracle (synthesised): "Create a 1/1 black and green Pest creature
+/// token with 'When this creature dies, you gain 1 life,' then draw a card."
+///
+/// 4-mana Pest minter + cantrip — replaces itself and leaves a sticky body.
+/// Pure curve filler in Witherbloom Pest builds.
+pub fn pest_harvest() -> CardDefinition {
+    let pest = stx_pest_token();
+    CardDefinition {
+        name: "Pest Harvest",
+        cost: cost(&[generic(2), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: pest,
+            },
+            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Witherbloom Necrosophist (batch 21) ────────────────────────────────────
+
+/// Witherbloom Necrosophist — {2}{B}, 2/3 Human Warlock.
+///
+/// Printed Oracle (synthesised): "When this creature enters, return target
+/// creature card from your graveyard to your hand."
+///
+/// 3-mana ETB graveyard-recursion body. The same shape as Gravedigger /
+/// Silverquill Memorialist — caps gy recursion at any creature card (not
+/// just ≤2-MV like Memorialist). Strong with Pest-sac shells where Pests
+/// die early game and need to come back.
+pub fn witherbloom_necrosophist() -> CardDefinition {
+    use crate::card::CardType as CT;
+    CardDefinition {
+        name: "Witherbloom Necrosophist",
+        cost: cost(&[generic(2), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Move {
+                what: Selector::one_of(Selector::CardsInZone {
+                    who: PlayerRef::You,
+                    zone: crate::card::Zone::Graveyard,
+                    filter: SelectionRequirement::HasCardType(CT::Creature),
+                }),
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Witherbloom Pestcaller (batch 21) ──────────────────────────────────────
+
+/// Witherbloom Pestcaller — {3}{G}, 2/4 Plant Druid.
+///
+/// Printed Oracle (synthesised): "Magecraft — Whenever you cast or copy an
+/// instant or sorcery spell, create a 1/1 black and green Pest creature
+/// token with 'When this creature dies, you gain 1 life.'"
+///
+/// 4-mana token-engine. Sturdier body than Sedgemoor Witch / Pestmancer
+/// (2/4 vs 3/2). Slots into the BG spellslinger pile as a chain-Pest
+/// minter. The lifelink-equivalent feedback loop (Pests die → +1 life)
+/// pairs with Witherbloom Vinemaster's grow trigger.
+pub fn witherbloom_pestcaller() -> CardDefinition {
+    use crate::effect::shortcut::magecraft;
+    CardDefinition {
+        name: "Witherbloom Pestcaller",
+        cost: cost(&[generic(3), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: stx_pest_token(),
+        })],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],

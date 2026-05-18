@@ -2176,4 +2176,78 @@ pub mod shortcut {
             },
         }
     }
+
+    /// Convenience: "Create a [token] with [keyword] until [duration]."
+    /// Mints `count` copies of `token`, then grants `keyword` to the
+    /// last-created token batch for `duration`. Used by Lorehold Skirmish
+    /// (mint Spirit + grant Haste EOT) and similar mint-then-pump shapes.
+    /// Wraps the explicit `Seq([CreateToken, GrantKeyword(LastCreatedToken, …)])`
+    /// pattern at a single call site for clarity.
+    pub fn create_token_with_keyword(
+        who: PlayerRef,
+        count: i32,
+        token: crate::card::TokenDefinition,
+        keyword: crate::card::Keyword,
+        duration: Duration,
+    ) -> Effect {
+        Effect::Seq(vec![
+            Effect::CreateToken {
+                who,
+                count: Value::Const(count),
+                definition: token,
+            },
+            Effect::GrantKeyword {
+                what: Selector::LastCreatedToken,
+                keyword,
+                duration,
+            },
+        ])
+    }
+
+    /// Convenience: "Create a [token] with N [counter] counters on it."
+    /// Mints `count` copies of `token`, then drops `counter_n` copies of
+    /// `counter` on the last-created token batch. Used by Quandrix
+    /// Summoner (mint Fractal + add +1/+1 counter), Fractal Harvest
+    /// (mint Fractal + 3 +1/+1 counters), and any "create a Fractal /
+    /// Phyrexian / generic token with N counters" pattern.
+    pub fn create_token_with_counter(
+        who: PlayerRef,
+        count: i32,
+        token: crate::card::TokenDefinition,
+        counter: crate::card::CounterType,
+        counter_n: i32,
+    ) -> Effect {
+        Effect::Seq(vec![
+            Effect::CreateToken {
+                who,
+                count: Value::Const(count),
+                definition: token,
+            },
+            Effect::AddCounter {
+                what: Selector::LastCreatedToken,
+                kind: counter,
+                amount: Value::Const(counter_n),
+            },
+        ])
+    }
+
+    /// Convenience: Magecraft trigger pumping any chosen target.
+    /// Wraps [`magecraft`] with a `PumpPT` body whose `what:` is
+    /// caller-supplied. Used for patterns like Withergrowth Apprentice
+    /// (magecraft → +1/+1 EOT to target friendly creature) or Quandrix
+    /// Scholar-style "magecraft → pump target friendly creature". The
+    /// caller passes a `target_filtered(...)` selector so the auto-target
+    /// picker still gets a chance to choose at trigger-resolve time.
+    pub fn magecraft_target_pump(
+        what: Selector,
+        power: i32,
+        toughness: i32,
+    ) -> TriggeredAbility {
+        magecraft(Effect::PumpPT {
+            what,
+            power: Value::Const(power),
+            toughness: Value::Const(toughness),
+            duration: Duration::EndOfTurn,
+        })
+    }
 }

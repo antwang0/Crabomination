@@ -378,3 +378,185 @@ pub fn lorehold_strikeforce() -> CardDefinition {
         exile_on_resolve: false,
     }
 }
+
+// ── Hunt the Library (batch 21) ────────────────────────────────────────────
+
+/// Hunt the Library — {3}{G} Sorcery.
+///
+/// Printed Oracle (synthesised): "Search your library for a basic land
+/// card, reveal it, put it onto the battlefield tapped, then shuffle."
+///
+/// 4-mana basic-land ramp + body. Same shape as Rampant Growth /
+/// Cultivate-but-only-one. Slots into Quandrix / Witherbloom ramp shells.
+pub fn hunt_the_library() -> CardDefinition {
+    use crate::effect::ZoneDest;
+    use crate::mana::{cost, g, generic};
+    CardDefinition {
+        name: "Hunt the Library",
+        cost: cost(&[generic(3), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Search {
+            who: PlayerRef::You,
+            filter: SelectionRequirement::IsBasicLand,
+            to: ZoneDest::Battlefield {
+                controller: PlayerRef::You,
+                tapped: true,
+            },
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Field Researcher (batch 21) ────────────────────────────────────────────
+
+/// Field Researcher — {2}{W}, 2/3 Human Druid with Vigilance.
+///
+/// Printed Oracle (synthesised): "Vigilance. When this creature enters,
+/// search your library for a basic land card, put it onto the battlefield
+/// tapped, then shuffle."
+///
+/// 3-mana ETB ramp + body. The all-purpose "ramp on a creature" shape
+/// (Sakura-Tribe Elder / Wood Elves family). Vigilance keeps it useful
+/// for blocking after the ramp.
+pub fn field_researcher() -> CardDefinition {
+    use crate::card::{EventKind, EventScope, EventSpec, TriggeredAbility};
+    use crate::effect::ZoneDest;
+    use crate::mana::{cost, generic, w};
+    CardDefinition {
+        name: "Field Researcher",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Search {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::IsBasicLand,
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: true,
+                },
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Spellbook Studier (batch 21) ───────────────────────────────────────────
+
+/// Spellbook Studier — {1}{U}, 1/3 Human Wizard.
+///
+/// Printed Oracle (synthesised): "When this creature enters, scry 2."
+///
+/// 2-mana scry-2 body — defensive filter that smooths out future draws.
+/// Replaces itself in card-quality and blocks 1-power attackers.
+pub fn spellbook_studier() -> CardDefinition {
+    use crate::card::{EventKind, EventScope, EventSpec, TriggeredAbility};
+    use crate::mana::{cost, generic, u};
+    CardDefinition {
+        name: "Spellbook Studier",
+        cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(2),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Strixhaven Vigil (batch 21) ────────────────────────────────────────────
+
+/// Strixhaven Vigil — {2}{W}{W} Enchantment.
+///
+/// Printed Oracle (synthesised): "At the beginning of your upkeep, you
+/// gain 1 life."
+///
+/// 4-mana incremental lifegain enchantment — a per-upkeep Soul Warden.
+/// Feeds Honor Troll, Felisa, Inkling Bloodscribe and other lifegain
+/// payoffs. Engine permanent.
+pub fn strixhaven_vigil() -> CardDefinition {
+    use crate::card::{EventKind, EventScope, EventSpec, TriggeredAbility};
+    use crate::game::types::TurnStep;
+    use crate::mana::{cost, generic, w};
+    CardDefinition {
+        name: "Strixhaven Vigil",
+        cost: cost(&[generic(2), w(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::Upkeep),
+                EventScope::ActivePlayer,
+            ),
+            effect: Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}

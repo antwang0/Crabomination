@@ -724,6 +724,7 @@ pub fn lorehold_ember_priest() -> CardDefinition {
 /// tribal Lorehold shells (Phantasmist haste anthem + Quintorius +1/+0
 /// anthem + Sparring Regimen's per-attacker counter rider).
 pub fn lorehold_skirmish() -> CardDefinition {
+    use crate::effect::shortcut::create_token_with_keyword;
     use crate::effect::Duration;
     CardDefinition {
         name: "Lorehold Skirmish",
@@ -734,18 +735,13 @@ pub fn lorehold_skirmish() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![],
-        effect: Effect::Seq(vec![
-            Effect::CreateToken {
-                who: PlayerRef::You,
-                count: Value::Const(1),
-                definition: lorehold_spirit_token(),
-            },
-            Effect::GrantKeyword {
-                what: Selector::LastCreatedToken,
-                keyword: Keyword::Haste,
-                duration: Duration::EndOfTurn,
-            },
-        ]),
+        effect: create_token_with_keyword(
+            PlayerRef::You,
+            1,
+            lorehold_spirit_token(),
+            Keyword::Haste,
+            Duration::EndOfTurn,
+        ),
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -1574,6 +1570,258 @@ pub fn lorehold_spectrescribe() -> CardDefinition {
             who: Selector::You,
             amount: Value::Const(1),
         })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Lorehold Sparkstrike (batch 21) ────────────────────────────────────────
+
+/// Lorehold Sparkstrike — {1}{R} Instant.
+///
+/// Printed Oracle (synthesised): "Lorehold Sparkstrike deals 2 damage to any
+/// target. Surveil 1."
+///
+/// 2-mana surveil-burn — Spectral Sailor's gy-fill rider on a burn body.
+/// Filters draws for late-game Lorehold gy-recursion plays while keeping
+/// the burn pressure on. Sub-Lightning Bolt damage but a card-quality rider.
+pub fn lorehold_sparkstrike() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Sparkstrike",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature
+                        .or(SelectionRequirement::Player)
+                        .or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::Const(2),
+            },
+            Effect::Surveil {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Lorehold Bonereader (batch 21) ─────────────────────────────────────────
+
+/// Lorehold Bonereader — {2}{W}, 2/3 Spirit Cleric with Vigilance.
+///
+/// Printed Oracle (synthesised): "Vigilance. When this creature enters, you
+/// gain 2 life. Magecraft — Whenever you cast or copy an instant or sorcery
+/// spell, this creature gets +1/+0 until end of turn."
+///
+/// 3-mana defensive vigilance body that also scales as the spell count
+/// climbs. Strong mid-curve in Lorehold spellslinger lists.
+pub fn lorehold_bonereader() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_self_pump;
+    CardDefinition {
+        name: "Lorehold Bonereader",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::Const(2),
+                },
+            },
+            magecraft_self_pump(1, 0),
+        ],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Lorehold Spiritarcher (batch 21) ───────────────────────────────────────
+
+/// Lorehold Spiritarcher — {3}{R}, 2/3 Spirit Archer with Reach.
+///
+/// Printed Oracle (synthesised): "Reach. When this creature enters, it deals
+/// 2 damage to any target."
+///
+/// 4-mana shock-on-a-body. Mid-curve anti-flier defender that also pings on
+/// ETB. Same shape as Flametongue Yearling at the {3}{R} slot. Combos with
+/// Lorehold Excavation for Spirit chains.
+pub fn lorehold_spiritarcher() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Spiritarcher",
+        cost: cost(&[generic(3), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Archer],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Reach],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature
+                        .or(SelectionRequirement::Player)
+                        .or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::Const(2),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Lorehold Echoflame (batch 21) ──────────────────────────────────────────
+
+/// Lorehold Echoflame — {3}{R}{W} Sorcery.
+///
+/// Printed Oracle (synthesised): "Return target instant or sorcery card from
+/// your graveyard to your hand, then create a 2/2 red and white Spirit
+/// creature token."
+///
+/// 5-mana gy-recursion + Spirit body. Pure value 2-for-1, perfect Lorehold
+/// finisher — leaves a body while replaying a spell.
+pub fn lorehold_echoflame() -> CardDefinition {
+    use crate::card::Zone;
+    CardDefinition {
+        name: "Lorehold Echoflame",
+        cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Move {
+                what: Selector::one_of(Selector::CardsInZone {
+                    who: PlayerRef::You,
+                    zone: Zone::Graveyard,
+                    filter: SelectionRequirement::HasCardType(CardType::Instant)
+                        .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+                }),
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: lorehold_spirit_token(),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Lorehold Pilgrimwarden (batch 21) ──────────────────────────────────────
+
+/// Lorehold Pilgrimwarden — {2}{R}{W}, 3/3 Spirit Soldier with First Strike.
+///
+/// Printed Oracle (synthesised): "First strike. Whenever this creature
+/// attacks, create a 1/1 white Soldier creature token."
+///
+/// 4-mana first-strike attacker that mints a Soldier per attack. Each
+/// attack converts to an extra 1/1 body the next swing-back, snowballing
+/// the board state. Soldier-tribal payoffs (if added later) get an
+/// engine.
+pub fn lorehold_pilgrimwarden() -> CardDefinition {
+    use crate::card::TokenDefinition;
+    let soldier_token = TokenDefinition {
+        name: "Soldier".into(),
+        power: 1,
+        toughness: 1,
+        keywords: vec![],
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::White],
+        supertypes: vec![],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Soldier],
+            ..Default::default()
+        },
+        activated_abilities: vec![],
+        triggered_abilities: vec![],
+    };
+    CardDefinition {
+        name: "Lorehold Pilgrimwarden",
+        cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::FirstStrike],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: soldier_token,
+            },
+        }],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],

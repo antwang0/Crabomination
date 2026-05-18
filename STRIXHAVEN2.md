@@ -19,10 +19,78 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 206 | 48 | 1 |
-| STX (280 cards) | 716 | 10 | 0 |
+| STX (280 cards) | 741 | 10 | 0 |
 | STA reprints (in STX boosters) | 46 | 0 | — |
 
 Push (modern_decks, claude/modern_decks branch — latest revision —
+**batch 21: 25 new synthesised STX cards (5 per college) + 25
+functionality tests**):
+
+A 25-card follow-up sweep across all five colleges using the same shapes
+established in batches 14–20 (magecraft / drain / token / counter /
+lifegain primitives). No new engine features required. Total test count:
+2399 → 2424.
+
+- **5 Silverquill (W/B) additions** (`stx::silverquill`):
+  `silverquill_inkscholar` (3-mana 2/3 Cleric ETB loot),
+  `inkling_battlecaster` (5-mana 3/3 Flying + Vigilance Inkling Knight
+  with attack-trigger drain 1), `silverquill_compulsion` ({1}{B} sorcery:
+  target opp discards a chosen nonland — Thoughtseize template),
+  `silverquill_sealwriter` (3-mana 2/2 Lifelink Wizard ETB drain 2),
+  `inkling_acolyte` (2-mana 1/2 Flying Inkling Cleric + ETB Inkling token
+  mint — double-Inkling for 2 mana).
+- **5 Witherbloom (B/G) additions** (`stx::witherbloom`):
+  `pest_forager` (2-mana 2/1 Trample Pest with die-to-1-life trigger),
+  `witherbloom_carnivine` (5-mana 4/4 Reach Plant Beast with ETB drain 3),
+  `pest_harvest` ({2}{B}{G} sorcery: Pest token + draw 1),
+  `witherbloom_necrosophist` (3-mana 2/3 Warlock with ETB return-creature-
+  from-graveyard-to-hand), `witherbloom_pestcaller` (4-mana 2/4 Plant
+  Druid magecraft Pest token engine).
+- **5 Lorehold (R/W) additions** (`stx::lorehold`):
+  `lorehold_sparkstrike` ({1}{R} instant: 2 damage to any target +
+  Surveil 1), `lorehold_bonereader` (3-mana 2/3 Spirit Cleric Vigilance
+  with ETB gain 2 + magecraft self-pump +1/+0 EOT), `lorehold_spiritarcher`
+  (4-mana 2/3 Spirit Archer Reach with ETB 2 damage to any target),
+  `lorehold_echoflame` ({3}{R}{W} sorcery: return target IS card from
+  graveyard + mint Spirit token), `lorehold_pilgrimwarden` (4-mana 3/3
+  First Strike Spirit Soldier that mints a 1/1 W Soldier token per attack).
+- **5 Quandrix (G/U) additions** (`stx::quandrix`):
+  `quandrix_calibrator` (3-mana 2/3 Elf Druid ETB +1/+1 counter on
+  friendly creature), `fractal_resonance` ({1}{G}{U} instant: +1/+1
+  counter on each friendly creature), `quandrix_mistweaver` (2-mana
+  1/2 Flash + Flying Merfolk Wizard ETB Draw 1), `fractal_harvest`
+  ({3}{G}{U} sorcery: 3/3 Fractal token via 3 +1/+1 counters + cantrip),
+  `quandrix_sage` (3-mana 2/2 Wizard with magecraft Seq(Scry 1 + Draw 1)).
+- **5 Prismari (U/R) additions** (`stx::prismari`):
+  `prismari_sparkforge` (4-mana 3/3 Elemental Haste with ETB Treasure
+  token), `prismari_mindwave` ({2}{U} instant: Draw 2 + Discard 1 looter),
+  `prismari_pyrocrafter` (3-mana 2/2 Human Wizard ETB pings each opp for
+  1 + magecraft self-pump +1/+0 EOT), `prismari_stormspire` (6-mana 4/4
+  Flying Djinn Wizard ETB Draw 2), `prismari_quickfire` ({R} instant:
+  2 damage to target creature — Burst Lightning at the curve-1 slot).
+- **4 cross-school / iconic additions** (`stx::iconic`):
+  `hunt_the_library` ({3}{G} sorcery: Rampant Growth template),
+  `field_researcher` (3-mana 2/3 Vigilance Druid with ETB ramp),
+  `spellbook_studier` (2-mana 1/3 Wizard with ETB Scry 2),
+  `strixhaven_vigil` ({2}{W}{W} Enchantment: per-upkeep +1 life).
+
+Engine improvements (push batch 21):
+- New `shortcut::create_token_with_keyword(who, count, token, kw, dur)`
+  helper that consolidates `Seq([CreateToken, GrantKeyword(LastCreatedToken,
+  …)])` shapes — refactored `lorehold_skirmish`.
+- New `shortcut::create_token_with_counter(who, count, token, counter, n)`
+  helper that consolidates `Seq([CreateToken, AddCounter(LastCreatedToken,
+  …)])` shapes — refactored `quandrix_summoner` + powers new
+  `fractal_harvest`.
+- New `shortcut::magecraft_target_pump(what, p, t)` helper for
+  "magecraft → pump target" patterns (sibling to `magecraft_self_pump`).
+
+CR audit: added new row **CR 701.16 — Investigate** under
+"MagicCompRules coverage audit" (see TODO.md). Wraps the existing
+clue-token pipeline as the keyword-action's CR-correct implementation —
+no new primitive needed.
+
+Push (modern_decks, claude/modern_decks branch — prior revision —
 **batch 20: 25 new synthesised STX cards (5 per college) + 26
 functionality tests**):
 

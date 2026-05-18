@@ -260,6 +260,7 @@ fn quandrix_fractal_token() -> TokenDefinition {
 /// The Fractal scales with Quandrix +1/+1-counter doublers (Tanazir,
 /// Symmathematics, Quandrix Doubler).
 pub fn quandrix_summoner() -> CardDefinition {
+    use crate::effect::shortcut::create_token_with_counter;
     CardDefinition {
         name: "Quandrix Summoner",
         cost: cost(&[generic(1), g(), u()]),
@@ -276,18 +277,13 @@ pub fn quandrix_summoner() -> CardDefinition {
         activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::Seq(vec![
-                Effect::CreateToken {
-                    who: PlayerRef::You,
-                    count: Value::Const(1),
-                    definition: quandrix_fractal_token(),
-                },
-                Effect::AddCounter {
-                    what: Selector::LastCreatedToken,
-                    kind: CounterType::PlusOnePlusOne,
-                    amount: Value::Const(1),
-                },
-            ]),
+            effect: create_token_with_counter(
+                PlayerRef::You,
+                1,
+                quandrix_fractal_token(),
+                CounterType::PlusOnePlusOne,
+                1,
+            ),
         }],
         static_abilities: vec![],
         base_loyalty: 0,
@@ -1326,6 +1322,217 @@ pub fn quandrix_hatchling() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(2))),
+        exile_on_resolve: false,
+    }
+}
+
+// ── Quandrix Calibrator (batch 21) ─────────────────────────────────────────
+
+/// Quandrix Calibrator — {2}{G}, 2/3 Elf Druid.
+///
+/// Printed Oracle (synthesised): "When this creature enters, put a +1/+1
+/// counter on target creature you control."
+///
+/// 3-mana ETB-stat-bump body — defensive Quandrix midrange that puts a
+/// counter on any friendly creature (including itself). Works as a
+/// repeatable counter source with flicker effects.
+pub fn quandrix_calibrator() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Calibrator",
+        cost: cost(&[generic(2), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::AddCounter {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Fractal Resonance (batch 21) ───────────────────────────────────────────
+
+/// Fractal Resonance — {1}{G}{U} Instant.
+///
+/// Printed Oracle (synthesised): "Put a +1/+1 counter on each creature you
+/// control."
+///
+/// 3-mana team-wide counter pump at instant speed. Strong combat trick
+/// that doubles as a permanent stat boost. Stacks with Witherbloom
+/// Pestseed for fanout into more counters.
+pub fn fractal_resonance() -> CardDefinition {
+    use crate::effect::shortcut::each_your_creature;
+    CardDefinition {
+        name: "Fractal Resonance",
+        cost: cost(&[generic(1), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::AddCounter {
+            what: each_your_creature(),
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Quandrix Mistweaver (batch 21) ─────────────────────────────────────────
+
+/// Quandrix Mistweaver — {1}{U}, 1/2 Merfolk Wizard with Flash and Flying.
+///
+/// Printed Oracle (synthesised): "Flash, flying. When this creature enters,
+/// draw a card."
+///
+/// 2-mana flash flier cantrip — replaces itself and gives a flying body
+/// for chump-blocking or instant-speed pressure. Strong with Pop Quiz /
+/// magecraft chain triggers since Flash means it can fire mid-stack.
+pub fn quandrix_mistweaver() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Mistweaver",
+        cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![Keyword::Flash, Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Fractal Harvest (batch 21) ─────────────────────────────────────────────
+
+/// Fractal Harvest — {3}{G}{U} Sorcery.
+///
+/// Printed Oracle (synthesised): "Create a 0/0 green and blue Fractal
+/// creature token. Put three +1/+1 counters on it. Draw a card."
+///
+/// 5-mana 3/3 Fractal + cantrip. Bigger fixed-size Fractal than the
+/// X-scaling minters; replaces itself via the cantrip rider.
+pub fn fractal_harvest() -> CardDefinition {
+    use crate::catalog::sets::sos::fractal_token;
+    use crate::effect::shortcut::create_token_with_counter;
+    CardDefinition {
+        name: "Fractal Harvest",
+        cost: cost(&[generic(3), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            create_token_with_counter(
+                PlayerRef::You,
+                1,
+                fractal_token(),
+                CounterType::PlusOnePlusOne,
+                3,
+            ),
+            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Quandrix Sage (batch 21) ───────────────────────────────────────────────
+
+/// Quandrix Sage — {1}{G}{U}, 2/2 Human Wizard.
+///
+/// Printed Oracle (synthesised): "Magecraft — Whenever you cast or copy an
+/// instant or sorcery spell, scry 1, then draw a card."
+///
+/// 3-mana magecraft card-quality engine — every IS cast scrys + draws.
+/// Pairs perfectly with cantrip chains like Brainstorm + Ponder.
+pub fn quandrix_sage() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Sage",
+        cost: cost(&[generic(1), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::Seq(vec![
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
+            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        ]))],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
         exile_on_resolve: false,
     }
 }

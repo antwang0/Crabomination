@@ -2512,3 +2512,221 @@ pub fn silverquill_discipline() -> CardDefinition {
         exile_on_resolve: false,
     }
 }
+
+// ── Silverquill Inkscholar (batch 21) ──────────────────────────────────────
+
+/// Silverquill Inkscholar — {2}{W}, 2/3 Human Cleric.
+///
+/// Printed Oracle (synthesised): "When this creature enters, draw a card,
+/// then discard a card."
+///
+/// Compact 3-mana looter body. Filters dead cards for Inkling Bloodscribe /
+/// Felisa lifegain payoffs. Slots into Silverquill drain shells as a
+/// midrange enabler.
+pub fn silverquill_inkscholar() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Inkscholar",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                Effect::Discard {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                    random: false,
+                },
+            ]),
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Inkling Battlecaster (batch 21) ────────────────────────────────────────
+
+/// Inkling Battlecaster — {3}{W}{B}, 3/3 Inkling Knight with Flying and
+/// Vigilance.
+///
+/// Printed Oracle (synthesised): "Flying, vigilance. Whenever this creature
+/// attacks, you gain 1 life and each opponent loses 1 life."
+///
+/// 5-mana attack-trigger drain body — combat-tempo finisher that drains for
+/// each attack. Stacks with Tenured Inkcaster anthem (→ 5/5 attack-drain).
+/// Vigilance keeps it available to block on the swing-back.
+pub fn inkling_battlecaster() -> CardDefinition {
+    CardDefinition {
+        name: "Inkling Battlecaster",
+        cost: cost(&[generic(3), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying, Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::Drain {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                to: Selector::You,
+                amount: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Silverquill Compulsion (batch 21) ──────────────────────────────────────
+
+/// Silverquill Compulsion — {1}{B} Sorcery.
+///
+/// Printed Oracle (synthesised): "Target opponent reveals their hand. You
+/// choose a nonland card from it. That player discards that card."
+///
+/// 2-mana targeted discard — Thoughtseize template at sorcery speed. Strong
+/// hand disruption for the Silverquill control build, especially against
+/// combo decks.
+pub fn silverquill_compulsion() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Compulsion",
+        cost: cost(&[generic(1), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::DiscardChosen {
+            from: target_filtered(SelectionRequirement::Player),
+            count: Value::Const(1),
+            filter: SelectionRequirement::Nonland,
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Silverquill Sealwriter (batch 21) ──────────────────────────────────────
+
+/// Silverquill Sealwriter — {2}{B}, 2/2 Human Wizard with Lifelink.
+///
+/// Printed Oracle (synthesised): "Lifelink. When this creature enters,
+/// target opponent loses 2 life and you gain 2 life."
+///
+/// 3-mana drain-on-ETB lifelink body. Combines lifelink stats with the
+/// printed 4-life-swing on ETB. Defensive body that swaps tempo for life.
+pub fn silverquill_sealwriter() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Sealwriter",
+        cost: cost(&[generic(2), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Lifelink],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Drain {
+                from: target_filtered(SelectionRequirement::Player),
+                to: Selector::You,
+                amount: Value::Const(2),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Inkling Acolyte (batch 21) ─────────────────────────────────────────────
+
+/// Inkling Acolyte — {1}{W}, 1/2 Inkling Cleric with Flying.
+///
+/// Printed Oracle (synthesised): "Flying. When this creature enters, create
+/// a 1/1 white and black Inkling creature token with flying."
+///
+/// 2-mana double-Inkling ETB body — pushes two Inkling bodies onto the
+/// battlefield from a single 2-mana cast. Maximum tribal density for
+/// Tenured Inkcaster (+2/+2 → 3/4 each) and Inkling Verselord lifelink
+/// anthems. Card+token can both attack on the same trigger budget.
+pub fn inkling_acolyte() -> CardDefinition {
+    CardDefinition {
+        name: "Inkling Acolyte",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: crate::catalog::sets::sos::inkling_token(),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}

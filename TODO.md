@@ -924,6 +924,30 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   Test of Endurance, Felidar Sovereign, Mortal Combat, Helix
   Pinnacle.
 
+- ✅ **CR 701.16 — Investigate** (push modern_decks batch 21 audit,
+  claude/modern_decks branch — audit against
+  `MagicCompRules_20260417.txt`): "'Investigate' means 'Create a Clue
+  token.' See rule 111.10f." The engine implements Investigate via the
+  general `Effect::CreateToken { definition: clue_token() }` shape — no
+  dedicated `Effect::Investigate` primitive is needed since the printed
+  rules text reduces exactly to a single CreateToken op of the
+  predefined Clue token (CR 111.10f's "Clue is a predefined token. Its
+  full text is 'Colorless artifact token named Clue with {2}, Sacrifice
+  this artifact: Draw a card.'"). The Clue token's activated ability
+  (`{2}, Sacrifice this artifact: Draw a card`) ships on the
+  `TokenDefinition.activated_abilities` of `clue_token()` in
+  `game/effects/tokens.rs`, so a freshly investigated Clue can be
+  cracked for a card draw at any priority. Catalog exerciser:
+  Tireless Tracker (`mod_set::creatures::tireless_tracker`) — "Whenever
+  a land you control enters, investigate." — fires an Investigate per
+  land ETB via `EventKind::EntersBattlefield/YourControl` filtered on
+  `SelectionRequirement::Land`. Same shape would land Lonis, Cryptozoologist
+  / Ravenous Squirrel / Tamiyo, Compleated Sage's investigate riders.
+  Tests: implicit across the existing `tireless_tracker` /
+  `tireless_tracker_clue_can_be_cracked_for_a_card` test pair. No new
+  test needed for this audit row — the framework is end-to-end correct
+  via the existing CreateToken pipeline.
+
 - ✅ **CR 701.17 — Mill** (push modern_decks audit, claude/modern_decks
   branch): "For a player to mill a number of cards, that player puts
   that many cards from the top of their library into their graveyard.
@@ -3938,23 +3962,28 @@ resolution time" in the Suggested next-up tasks section.
   viable. Same deck-construction-weighting gap as the Inkling /
   Spirit-tribal suggestions above.
 
-- ⏳ **Mint-then-pump helper** — push (modern_decks batch 15) adds
-  `lorehold_skirmish` (mint Spirit + grant Haste EOT) and
-  `quandrix_summoner` (mint Fractal + add +1/+1 counter) via the
-  `Selector::LastCreatedToken` plumbing. The shape is recurring —
-  any "create a token with [keyword/counter]" effect. A
-  `shortcut::create_token_with_keyword(token, kw, dur)` and
-  `shortcut::create_token_with_counter(token, counter, n)` helper
-  would replace the explicit `Seq([CreateToken, GrantKeyword(
-  LastCreatedToken, ..)])` pattern at a dozen call sites.
+- ✅ **Mint-then-pump helper** — push (modern_decks batch 21) lands
+  `shortcut::create_token_with_keyword(who, count, token, keyword,
+  duration)` and `shortcut::create_token_with_counter(who, count, token,
+  counter, counter_n)` in `effect.rs:shortcut`. The two helpers wrap the
+  recurring `Seq([CreateToken, GrantKeyword(LastCreatedToken, ..)])` and
+  `Seq([CreateToken, AddCounter(LastCreatedToken, ..)])` patterns into
+  one-liner call sites. Refactored to consume the helpers:
+  `lorehold_skirmish` (mint Spirit + grant Haste EOT),
+  `quandrix_summoner` (mint Fractal + add +1/+1 counter), and the new
+  batch 21 `fractal_harvest` (mint Fractal + 3 +1/+1 counters). Same
+  helpers unblock future "mint a token with [decayed / undying /
+  haste / +1/+1 counter]" patterns at a single line each.
 
-- ⏳ **Magecraft self-pump in either-direction** — push (modern_decks
-  batch 15) Drakelord uses `magecraft(PumpPT(+1/+1, self, EOT))`
-  faithfully but the `magecraft_self_pump(power, toughness)` helper
-  only takes `(i32, i32)` ints. Could extend the helper signature to
-  also accept a Selector for "pump target friendly" payoffs to drop
-  the `magecraft(Effect::PumpPT { what: target_filtered(...) })`
-  boilerplate at Quandrix Scholar / Lorehold Apprentice style cards.
+- ✅ **Magecraft pump helper for any target** — push (modern_decks batch
+  21) lands `shortcut::magecraft_target_pump(what, power, toughness)` in
+  `effect.rs:shortcut`. The helper wraps the `magecraft(Effect::PumpPT
+  { what, power, toughness, duration })` shape so a caller supplies the
+  selector (typically `target_filtered(Creature.and(ControlledByYou))`)
+  and the helper handles the EOT-pump body. Powers Quandrix Scholar /
+  Withergrowth Apprentice / similar "magecraft → pump target friendly"
+  patterns at a single line. Sibling to `magecraft_self_pump(p, t)` which
+  hard-codes `Selector::This`.
 
 - ⏳ **CR 113.9 — ability-counter primitive** — Stifle/Squelch-style
   "counter target activated/triggered ability" cards. The engine has
@@ -4101,3 +4130,36 @@ resolution time" in the Suggested next-up tasks section.
   Gambit mode 1, and any "an opponent" wording. Workaround today is
   `EachOpponent` which is fine in 2-player but fans out in
   multiplayer. Low priority; cosmetic improvement.
+
+### Suggested next-up tasks (additions from batch 21)
+
+- ⏳ **Magecraft ping helpers** — push (modern_decks batch 21) leaves
+  the `magecraft(Effect::DealDamage { to: target_filtered(_), amount: _
+  })` pattern unconsolidated. A `shortcut::magecraft_ping_each_opp(amount)`
+  for the Drainmaster / Burnscholar / Lorehold Pyromage shape (drain-each-
+  opp on cast) and a `shortcut::magecraft_ping_any(amount)` for the
+  Lorehold Apprentice / Pyrosage / Reverberator shape (any-target ping
+  on cast) would consolidate the bodies at a dozen call sites. Companion
+  to the new `magecraft_target_pump` helper already landed.
+
+- ⏳ **Lifegain enchantment subpool injection** — push (modern_decks
+  batch 21) adds Strixhaven Vigil (per-upkeep +1 life enchantment). The
+  per-upkeep-gain shape is recurring (Soul Warden, Suture Priest, etc.).
+  A new `StaticEffect::PerUpkeepLifeGain { who, amount }` primitive
+  could consolidate the StepBegins(Upkeep) trigger pattern into a single
+  static-ability row. Or, simpler: just leave each card as a trigger
+  since the engine handles step-begin triggers cleanly.
+
+- ⏳ **More magecraft shortcuts** — the printed magecraft templates
+  are recurring: GainLife N, DealDamage 1 each-opp, CreateToken(Pest/Inkling),
+  AddCounter(+1/+1 on self). A `magecraft_gain_life(n)`,
+  `magecraft_pest_token()`, `magecraft_inkling_token()`,
+  `magecraft_counter_self(counter)` set would replace the explicit
+  `magecraft(Effect::...)` shape at every catalog entry.
+
+- ⏳ **Search-to-bf "tapped" → "untapped" parameter** — push (modern_decks
+  batch 21) adds `hunt_the_library` + `field_researcher`, both of which
+  use the search-to-battlefield-tapped pattern. A `shortcut::search_basic_land_tapped(who)`
+  and `shortcut::search_basic_land_untapped(who)` helper would consolidate
+  the `Effect::Search { filter: IsBasicLand, to: ZoneDest::Battlefield {
+  controller, tapped }}` template. Low priority — only 2 call sites today.
