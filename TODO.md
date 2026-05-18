@@ -216,6 +216,65 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   counters), 122.4 (cap), 122.5 (general move), and 122.7 (Nth-counter
   threshold trigger) all land.
 
+- ✅ **CR 110 — Permanents** (push modern_decks batch 20,
+  claude/modern_decks branch — newest audit against
+  `MagicCompRules_20260417.txt`): The permanent primitive — what a
+  permanent is, owner/controller, characteristics, types, and status.
+  Audit:
+  (a) **110.1** "A permanent is a card or token on the battlefield" —
+  ✅ (`GameState.battlefield` is a `Vec<CardInstance>`; every
+  battlefield-resident card is a permanent in the engine's terminology).
+  (b) **110.2** owner = card-owner, controller = enter-controller —
+  ✅ (`CardInstance.owner` and `.controller` are both set at
+  construction; `owner` is preserved across zone changes, `controller`
+  is updated by gain-control effects like Tempted by the Oriq).
+  (c) **110.2a** "If an effect instructs a player to put an object onto
+  the battlefield, that object enters the battlefield under that
+  player's control unless the effect states otherwise" — ✅
+  (`place_card_in_dest` honors the `PlayerRef` arg of `ZoneDest::
+  Battlefield(who, tapped)` so reanimate-into-opp-control patterns
+  work via `PlayerRef::ControllerOf` / `PlayerRef::OwnerOf`).
+  (d) **110.2b** spell→permanent control transfer in multiplayer — 🟡
+  (the gain-control-of-a-spell path isn't exercised by current
+  catalogs; single-target Threaten-style works fine on permanents).
+  (e) **110.3** characteristics = printed + continuous effects — ✅
+  (`GameState::compute_battlefield` applies the layer system per CR
+  613; layers 6, 7a-c are wired).
+  (f) **110.4** six permanent types (artifact, battle, creature,
+  enchantment, land, planeswalker) — 🟡 (artifact / creature /
+  enchantment / land / planeswalker = ✅; Battle = ⏳ — `CardType` enum
+  lacks a Battle variant. STX/SOS catalogs ship no Battles).
+  (g) **110.4a/b** "permanent card" / "permanent spell" terminology — ✅
+  (implicit — the engine's spell→permanent ETB flow checks the card's
+  types in `resolve_spell`; instants/sorceries enter graveyard
+  directly, permanents move to battlefield).
+  (h) **110.4c** "If a permanent somehow loses all its permanent types,
+  it remains on the battlefield" — ✅ (no SBA in
+  `check_state_based_actions` removes a permanent for having zero
+  card types; the engine matches CR's "stays on the battlefield as a
+  non-anything object" semantics by default).
+  (i) **110.5** status = (tapped/untapped, flipped/unflipped, face up/
+  face down, phased in/phased out) — 🟡 (tapped + face-down ✅;
+  flipped = ⏳ — no flip-card support; phased in/out = ⏳ — Phasing
+  itself is unmodelled, the `phased_out` flag and its SBA-bypass
+  semantics don't exist).
+  (j) **110.5b** "Permanents enter the battlefield untapped, unflipped,
+  face up, and phased in unless a spell or ability says otherwise" —
+  ✅ (`CardInstance::new` sets `tapped: false`, `face_down: false`;
+  ETB-tapped is the explicit opt-in via `ZoneDest::Battlefield(_,
+  tapped: true)` and lands like `lorehold_excavation` tap targets via
+  `Effect::Tap`).
+  (k) **110.5d** "Only permanents have status. Cards not on the
+  battlefield do not" — ✅ (`place_card_in_dest`'s zone-change branch
+  resets `tapped = false` and `damage = 0` and `attached_to = None`
+  when a card leaves the battlefield; the engine never reads `tapped`
+  off graveyard/hand cards).
+  Tests: implicit across the entire suite — every permanent
+  interaction (ETB triggers, tap-to-mana, sacrifice, destroy, exile,
+  bounce) exercises the framework. Promote to ✅ when Battle (110.4)
+  and Phasing/Flip (110.5) land — the latter are engine-wide ⏳
+  blockers shared with multiple sets.
+
 - ✅ **CR 111 — Tokens** (push modern_decks audit, claude/modern_decks
   branch): The token primitive — what a token is, how it enters,
   how it leaves play, predefined tokens. Audit:
@@ -3601,6 +3660,35 @@ into the resolution context when `sac_cost: true` consumes the
 source. Same plumbing as `Effect::SacrificeAndRemember`.
 
 ## New TODO suggestions (push modern_decks)
+
+### Engine — Battle permanent type (CR 110.4) ⏳
+
+CR 110.4 lists six permanent types: artifact, battle, creature,
+enchantment, land, planeswalker. The engine's `CardType` enum has the
+other five but no `Battle` variant. Battles introduced in March of the
+Machine: each battle has defense counters (similar to loyalty), can be
+attacked by creatures, and "transforms" when its defense reaches 0.
+Affected cards: Mortality Spear's printed-Oracle's "destroy target
+creature, planeswalker, or battle" rider currently collapses to
+"creature/planeswalker" since no Battle exists.
+
+**Fix**: add `CardType::Battle` + a `defense_counters` field on
+`CardInstance` + an `AttackTarget::Battle(CardId)` variant. Combat
+resolution would route attacker damage to defense counters
+(similar to the planeswalker path). Engine-wide ⏳ until a card needs it.
+
+### Engine — Phasing (CR 110.5, CR 702.26) ⏳
+
+CR 110.5 lists "phased in/phased out" as a permanent status; the
+engine has tapped + face-down but no phasing flag. Phasing matters
+for Teferi-style "phase out" effects, the Fading mechanic, and the
+SBA bypass during the phased-out state.
+
+**Fix**: add a `phased_out: bool` field on `CardInstance` + a
+`Predicate::IsPhasedIn` predicate + an SBA bypass for phased-out
+permanents (they're treated as not on the battlefield for triggers,
+combat, and most checks). The phase-in turn-based action runs at
+the start of each untap step. Engine-wide ⏳ until a card needs it.
 
 ### Engine — `Value::CountersOn` fan-out summation ✅ DONE
 

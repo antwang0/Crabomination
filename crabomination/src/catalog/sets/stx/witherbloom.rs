@@ -1165,3 +1165,229 @@ pub fn witherbloom_sapfiend() -> CardDefinition {
         exile_on_resolve: false,
     }
 }
+
+// ── Witherbloom Toxicultivator (batch 20) ──────────────────────────────────
+
+/// Witherbloom Toxicultivator — {2}{B}, 2/3 Plant Druid with Deathtouch.
+///
+/// Printed Oracle (synthesised): "Deathtouch. When this creature enters,
+/// create a 1/1 black and green Pest creature token with 'When this
+/// creature dies, you gain 1 life.'"
+///
+/// 3-mana 2/3 deathtouch Pest minter — punishes attackers (deathtouch
+/// trades up) and seeds a Pest sac/drain engine. Compounds with
+/// Pestkeeper sac outlets and Vinemaster Pest-death-counter triggers.
+pub fn witherbloom_toxicultivator() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Toxicultivator",
+        cost: cost(&[generic(2), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Deathtouch],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: stx_pest_token(),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Pest Outburst (batch 20) ───────────────────────────────────────────────
+
+/// Pest Outburst — {2}{B}{G} Sorcery.
+///
+/// Printed Oracle (synthesised): "Create two 1/1 black and green Pest
+/// creature tokens with 'When this creature dies, you gain 1 life.'
+/// You gain 2 life."
+///
+/// 4-mana Pest minter with bonus lifegain — produces two Pests +
+/// immediate 2 life. Stacks with Vinemaster (Pest-death = +1/+1
+/// counter) for a counter engine.
+pub fn pest_outburst() -> CardDefinition {
+    CardDefinition {
+        name: "Pest Outburst",
+        cost: cost(&[generic(2), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                definition: stx_pest_token(),
+            },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Witherbloom Necromancer (batch 20) ─────────────────────────────────────
+
+/// Witherbloom Grand Necromancer — {3}{B}{G}, 3/3 Human Warlock.
+///
+/// Printed Oracle (synthesised): "When this creature enters, return
+/// target creature card from your graveyard to your hand. Magecraft —
+/// Whenever you cast or copy an instant or sorcery spell, each opponent
+/// loses 1 life and you gain 1 life."
+///
+/// 5-mana grindy value top-end: ETB reanimates a creature to hand
+/// (replaces itself in card economy), then magecraft drains for every
+/// IS cast.
+pub fn witherbloom_grand_necromancer() -> CardDefinition {
+    use crate::card::Zone;
+    CardDefinition {
+        name: "Witherbloom Grand Necromancer",
+        cost: cost(&[generic(3), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: Effect::Move {
+                    what: Selector::one_of(Selector::CardsInZone {
+                        who: PlayerRef::You,
+                        zone: Zone::Graveyard,
+                        filter: SelectionRequirement::Creature,
+                    }),
+                    to: ZoneDest::Hand(PlayerRef::You),
+                },
+            },
+            magecraft_drain_each_opp(1),
+        ],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Witherbloom Sapdrinker (batch 20) ──────────────────────────────────────
+
+/// Witherbloom Sapdrinker — {1}{B}{G}, 2/3 Plant Vampire with Lifelink.
+///
+/// Printed Oracle (synthesised): "Lifelink. Magecraft — Whenever you
+/// cast or copy an instant or sorcery spell, this creature gets +1/+0
+/// until end of turn."
+///
+/// 3-mana lifelink magecraft beater — every IS cast pumps power, the
+/// lifelink turns that into life gain on combat. Big spell-heavy
+/// finisher for the WB drain pile.
+pub fn witherbloom_sapdrinker() -> CardDefinition {
+    use crate::card::CounterType;
+    let _ = CounterType::PlusOnePlusOne;
+    use crate::effect::shortcut::magecraft;
+    use crate::effect::Duration;
+    CardDefinition {
+        name: "Witherbloom Sapdrinker",
+        cost: cost(&[generic(1), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Vampire],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Lifelink],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::PumpPT {
+            what: Selector::This,
+            power: Value::Const(1),
+            toughness: Value::Const(0),
+            duration: Duration::EndOfTurn,
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Witherbloom Crawler (batch 20) ─────────────────────────────────────────
+
+/// Witherbloom Crawler — {B}{G}, 2/2 Plant Insect with Deathtouch and Reach.
+///
+/// Printed Oracle (synthesised): "Deathtouch, reach."
+///
+/// 2-mana deathtouch+reach body — best-in-class anti-flier defender that
+/// also trades up on the ground. Pure stats body, no triggers, perfect
+/// curve-2 for the BG pile.
+pub fn witherbloom_crawler() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Crawler",
+        cost: cost(&[b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Insect],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Deathtouch, Keyword::Reach],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}

@@ -29594,3 +29594,206 @@ pub fn strixhaven_acolyte() -> CardDefinition {
         exile_on_resolve: false,
     }
 }
+
+// ── Strixhaven Scholar (batch 20) ──────────────────────────────────────────
+
+/// Strixhaven Scholar — {1}{U}, 2/1 Human Wizard.
+///
+/// Printed Oracle (synthesised): "Magecraft — Whenever you cast or copy
+/// an instant or sorcery spell, scry 1."
+///
+/// 2-mana magecraft scry body — slow-game card-selection engine. Pairs
+/// with Symmetrist / Wavewright for scry-into-draw stacks.
+pub fn strixhaven_scholar() -> CardDefinition {
+    CardDefinition {
+        name: "Strixhaven Scholar",
+        cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::Scry {
+            who: PlayerRef::You,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Strixhaven Quill-Mage (batch 20) ───────────────────────────────────────
+
+/// Strixhaven Quill-Mage — {2}{R}, 2/2 Human Wizard.
+///
+/// Printed Oracle (synthesised): "Magecraft — Whenever you cast or copy
+/// an instant or sorcery spell, this creature deals 1 damage to target
+/// opponent."
+///
+/// 3-mana magecraft direct-damage body. Strictly worse than Mascot
+/// Exhibition's general "any target" version but with no creature
+/// targeting constraint — pure player-burn engine.
+pub fn strixhaven_quill_mage() -> CardDefinition {
+    CardDefinition {
+        name: "Strixhaven Quill-Mage",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::DealDamage {
+            to: target_filtered(SelectionRequirement::Player),
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Strixhaven Initiate (batch 20) ─────────────────────────────────────────
+
+/// Strixhaven Initiate — {G}, 1/2 Human Druid.
+///
+/// Printed Oracle (synthesised): "Reach. {T}: Add {G}."
+///
+/// 1-mana reach defender + green mana ramp. Plays into Quandrix
+/// counter-grow shells (mana for the +1/+1-counter pump) and Witherbloom
+/// drain shells (Pest payoffs need {B}{G}).
+pub fn strixhaven_initiate() -> CardDefinition {
+    use super::super::tap_add;
+    CardDefinition {
+        name: "Strixhaven Initiate",
+        cost: cost(&[g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![Keyword::Reach],
+        effect: Effect::Noop,
+        activated_abilities: vec![tap_add(Color::Green)],
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Strixhaven Burnscholar (batch 20) ──────────────────────────────────────
+
+/// Strixhaven Burnscholar — {R}, 1/1 Human Wizard with Haste.
+///
+/// Printed Oracle (synthesised): "Haste. When this creature enters, it
+/// deals 1 damage to target opponent."
+///
+/// 1-mana haste 1/1 with ETB-ping rider. Combines tempo (haste swing
+/// for 1) with reach (ETB-1) for 2 effective damage per cast. Reachy
+/// burn fodder for the early Lorehold / Prismari curve.
+pub fn strixhaven_burnscholar() -> CardDefinition {
+    CardDefinition {
+        name: "Strixhaven Burnscholar",
+        cost: cost(&[r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Haste],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Player),
+                amount: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Strixhaven Necropact (batch 20) ────────────────────────────────────────
+
+/// Strixhaven Necropact — {2}{B} Sorcery.
+///
+/// Printed Oracle (synthesised): "Target player draws two cards and
+/// loses 2 life."
+///
+/// 3-mana Sign-in-Blood that can target either side. Classic black
+/// card-draw at a life cost — strictly worse than Sign in Blood when
+/// targeting self but with the flexibility to target opp as a drain.
+pub fn strixhaven_necropact() -> CardDefinition {
+    CardDefinition {
+        name: "Strixhaven Necropact",
+        cost: cost(&[generic(2), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Draw {
+                who: target_filtered(SelectionRequirement::Player),
+                amount: Value::Const(2),
+            },
+            Effect::LoseLife {
+                who: Selector::Target(0),
+                amount: Value::Const(2),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}

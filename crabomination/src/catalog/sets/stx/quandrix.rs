@@ -1098,3 +1098,234 @@ pub fn fractal_multiplier() -> CardDefinition {
         exile_on_resolve: false,
     }
 }
+
+// ── Fractal Bloom (batch 20) ───────────────────────────────────────────────
+
+/// Fractal Bloom — {3}{G}{U} Sorcery.
+///
+/// Printed Oracle (synthesised): "Create a 0/0 green and blue Fractal
+/// creature token. Put X +1/+1 counters on it, where X is twice your
+/// hand size."
+///
+/// 5-mana Body-of-Research-cousin — mints a Fractal scaled to 2 × hand
+/// size. With 5 cards in hand → 10/10 token. Big finisher payoff for the
+/// Quandrix card-advantage shell.
+pub fn fractal_bloom() -> CardDefinition {
+    use crate::catalog::sets::sos::fractal_token;
+    CardDefinition {
+        name: "Fractal Bloom",
+        cost: cost(&[generic(3), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: fractal_token(),
+            },
+            Effect::AddCounter {
+                what: Selector::LastCreatedToken,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Times(
+                    Box::new(Value::Const(2)),
+                    Box::new(Value::HandSizeOf(PlayerRef::You)),
+                ),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Quandrix Spellweaver (batch 20) ────────────────────────────────────────
+
+/// Quandrix Spellweaver — {2}{G}{U}, 2/4 Elf Wizard.
+///
+/// Printed Oracle (synthesised): "When this creature enters, draw two
+/// cards. Magecraft — Whenever you cast or copy an instant or sorcery
+/// spell, put a +1/+1 counter on this creature."
+///
+/// 4-mana grindy value Quandrix card-engine — ETB nets two cards (one
+/// net after the cast) and magecraft keeps a permanent counter ticking
+/// up. Stacks with Symmathematics's counter-doubling for explosive
+/// growth.
+pub fn quandrix_spellweaver() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Spellweaver",
+        cost: cost(&[generic(2), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(2),
+                },
+            },
+            magecraft(Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            }),
+        ],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Quandrix Wavedancer (batch 20) ─────────────────────────────────────────
+
+/// Quandrix Wavedancer — {1}{U}, 1/3 Merfolk Wizard with Flash.
+///
+/// Printed Oracle (synthesised): "Flash. When this creature enters,
+/// scry 2."
+///
+/// 2-mana flash blocker + scry 2 ETB — combat-tempo card-selection
+/// body. Sits behind the {U} pip cheap-flash and shapes the next two
+/// turns of draws.
+pub fn quandrix_wavedancer() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Wavedancer",
+        cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![Keyword::Flash],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(2),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Fractal Synthesis (batch 20) ───────────────────────────────────────────
+
+/// Fractal Synthesis — {2}{G}{U} Instant.
+///
+/// Printed Oracle (synthesised): "Put two +1/+1 counters on target
+/// creature. Draw a card."
+///
+/// 4-mana instant pump + cantrip. Net-neutral card economy, persistent
+/// +2/+2 counters. Slots cleanly into the Quandrix counter-grow plan.
+pub fn fractal_synthesis() -> CardDefinition {
+    CardDefinition {
+        name: "Fractal Synthesis",
+        cost: cost(&[generic(2), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::AddCounter {
+                what: target_filtered(SelectionRequirement::Creature),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(2),
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Quandrix Hatchling (batch 20) ──────────────────────────────────────────
+
+/// Quandrix Hatchling — {G}{U}, 0/0 Fractal.
+///
+/// Printed Oracle (synthesised): "Quandrix Hatchling enters with two
+/// +1/+1 counters on it. Whenever you cast or copy an instant or
+/// sorcery spell, put a +1/+1 counter on it."
+///
+/// 2-mana 2/2 magecraft-counter Fractal — enters with two counters
+/// (engine `enters_with_counters` field, CR 614.12) and grows
+/// permanently for every IS cast. Stacks with Symmathematics's
+/// double-counter static.
+pub fn quandrix_hatchling() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Hatchling",
+        cost: cost(&[g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::AddCounter {
+            what: Selector::This,
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(2))),
+        exile_on_resolve: false,
+    }
+}

@@ -2287,3 +2287,228 @@ pub fn inkling_inkrider() -> CardDefinition {
         exile_on_resolve: false,
     }
 }
+
+// ── Silverquill Lawkeeper (batch 20) ───────────────────────────────────────
+
+/// Silverquill Lawkeeper — {1}{W}, 2/2 Human Soldier with Vigilance.
+///
+/// Printed Oracle (synthesised): "Vigilance. When this creature enters,
+/// tap target creature an opponent controls."
+///
+/// 2-mana 2/2 tempo defender — comes down with vigilance, locks down an
+/// opp attacker, and stays back to block on the swing-back. The ETB tap
+/// targets an opp creature via `target_filtered`. Mirror of Master of
+/// Cruelties on a clean defensive frame; pairs with Stun-counter cards
+/// for a permanent lock.
+pub fn silverquill_lawkeeper() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Lawkeeper",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Tap {
+                what: target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByOpponent),
+                ),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Inkling Penmaster (batch 20) ───────────────────────────────────────────
+
+/// Inkling Penmaster — {2}{W}{B}, 2/3 Inkling Wizard with Flying.
+///
+/// Printed Oracle (synthesised): "Flying. Magecraft — Whenever you cast
+/// or copy an instant or sorcery spell, create a 1/1 white and black
+/// Inkling creature token with flying."
+///
+/// 4-mana magecraft Inkling minter — every instant/sorcery floods the
+/// board with another 1/1 evasive body. Major Tenured Inkcaster
+/// engine: pair with Apprentice + Sorcery to mint Tenured-buffed 3/3
+/// fliers each spell.
+pub fn inkling_penmaster() -> CardDefinition {
+    use crate::catalog::sets::sos::inkling_token;
+    CardDefinition {
+        name: "Inkling Penmaster",
+        cost: cost(&[generic(2), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: inkling_token(),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Silverquill Dictation (batch 20) ───────────────────────────────────────
+
+/// Silverquill Dictation — {1}{W}{B} Instant.
+///
+/// Printed Oracle (synthesised): "Target opponent loses 2 life. Draw a
+/// card."
+///
+/// 3-mana 2-life-drain cantrip-style instant — pure card advantage with
+/// the drain rider. Combos with Silverquill / Witherbloom drain payoffs.
+/// Slots into any control deck running B for the drain-tempo trade.
+pub fn silverquill_dictation() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Dictation",
+        cost: cost(&[generic(1), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::LoseLife {
+                who: target_filtered(SelectionRequirement::Player),
+                amount: Value::Const(2),
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Inkling Stormcaller (batch 20) ─────────────────────────────────────────
+
+/// Inkling Stormcaller — {3}{W}{B}, 3/4 Inkling Cleric with Flying and
+/// Lifelink.
+///
+/// Printed Oracle (synthesised): "Flying, lifelink. When this creature
+/// enters, target opponent loses 2 life and you gain 2 life."
+///
+/// 5-mana evasive lifelink finisher with built-in 4-life ETB swing
+/// (drain 2 + 2 = 4-life swing). Inkling-tribal anthem stacks with
+/// Tenured Inkcaster (+2/+2 → 5/6 lifelink flier). Strong race breaker.
+pub fn inkling_stormcaller() -> CardDefinition {
+    CardDefinition {
+        name: "Inkling Stormcaller",
+        cost: cost(&[generic(3), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Flying, Keyword::Lifelink],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Drain {
+                from: target_filtered(SelectionRequirement::Player),
+                to: Selector::You,
+                amount: Value::Const(2),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Silverquill Discipline (batch 20) ──────────────────────────────────────
+
+/// Silverquill Discipline — {W} Instant.
+///
+/// Printed Oracle (synthesised): "Target creature gets +2/+1 and gains
+/// lifelink until end of turn."
+///
+/// One-mana combat trick + lifelink rider — bread-and-butter pump that
+/// turns a combat trade into a life-swing. Stacks with Inkling Bloodscribe
+/// / Felisa for a counter-on-die when the buffed creature attacks.
+pub fn silverquill_discipline() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Discipline",
+        cost: cost(&[w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(2),
+                toughness: Value::Const(1),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::Lifelink,
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}

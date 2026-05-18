@@ -1396,3 +1396,245 @@ pub fn lorehold_bonepriest() -> CardDefinition {
     }
 }
 
+// ── Lorehold Battlescroll (batch 20) ───────────────────────────────────────
+
+/// Lorehold Battlescroll — {3}{R}{W} Sorcery.
+///
+/// Printed Oracle (synthesised): "Create two 2/2 red and white Spirit
+/// creature tokens. They gain haste until end of turn."
+///
+/// 5-mana double Spirit minter with built-in haste — minted Spirits
+/// can attack the turn they enter. Pairs with Lorehold Anthemist (+1/+1)
+/// for 3/3 hasty attackers worth 6 power on the swing.
+pub fn lorehold_battlescroll() -> CardDefinition {
+    use crate::effect::Duration;
+    CardDefinition {
+        name: "Lorehold Battlescroll",
+        cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                definition: lorehold_spirit_token(),
+            },
+            Effect::GrantKeyword {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::HasCreatureType(CreatureType::Spirit))
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+                keyword: Keyword::Haste,
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Lorehold Tomescholar (batch 20) ────────────────────────────────────────
+
+/// Lorehold Tomescholar — {2}{R}{W}, 2/3 Spirit Wizard.
+///
+/// Printed Oracle (synthesised): "When this creature enters, exile
+/// target card from a graveyard. If a creature card was exiled this way,
+/// create a 2/2 red and white Spirit creature token."
+///
+/// 4-mana ETB graveyard-hate Spirit minter — Soul-Guide Lantern on a
+/// body, conditional on creature-card exile. Combos with Lorehold
+/// Excavation for ramp into double-Spirit pressure.
+pub fn lorehold_tomescholar() -> CardDefinition {
+    use crate::card::{CardType as CT, Predicate};
+    CardDefinition {
+        name: "Lorehold Tomescholar",
+        cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::Move {
+                    what: target_filtered(SelectionRequirement::Any),
+                    to: ZoneDest::Exile,
+                },
+                Effect::If {
+                    cond: Predicate::EntityMatches {
+                        what: Selector::Target(0),
+                        filter: SelectionRequirement::HasCardType(CT::Creature),
+                    },
+                    then: Box::new(Effect::CreateToken {
+                        who: PlayerRef::You,
+                        count: Value::Const(1),
+                        definition: lorehold_spirit_token(),
+                    }),
+                    else_: Box::new(Effect::Noop),
+                },
+            ]),
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Lorehold Ember-Brand (batch 20) ────────────────────────────────────────
+
+/// Lorehold Ember-Brand — {1}{R} Instant.
+///
+/// Printed Oracle (synthesised): "Lorehold Ember-Brand deals 3 damage
+/// to any target."
+///
+/// 2-mana 3-damage burn at any target — Lightning Bolt template at
+/// the WR slot. Pairs with magecraft triggers for double-purpose value.
+pub fn lorehold_ember_brand() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Ember-Brand",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::DealDamage {
+            to: target_filtered(
+                SelectionRequirement::Creature
+                    .or(SelectionRequirement::Player)
+                    .or(SelectionRequirement::Planeswalker),
+            ),
+            amount: Value::Const(3),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Lorehold Spectrescribe (batch 20) ──────────────────────────────────────
+
+/// Lorehold Spectrescribe — {1}{W}, 1/3 Spirit Cleric.
+///
+/// Printed Oracle (synthesised): "Magecraft — Whenever you cast or copy
+/// an instant or sorcery spell, you gain 1 life."
+///
+/// 2-mana defensive lifegain magecraft body. Slots into Light of Promise /
+/// Felisa lifegain shells — each IS cast triggers a +1 life that compounds
+/// with payoffs.
+pub fn lorehold_spectrescribe() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Spectrescribe",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::GainLife {
+            who: Selector::You,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Lorehold Warband (batch 20) ────────────────────────────────────────────
+
+/// Lorehold Warband — {2}{R}, 3/2 Spirit Soldier.
+///
+/// Printed Oracle (synthesised): "Haste. Whenever this creature attacks,
+/// it gets +1/+0 until end of turn for each other attacking creature you
+/// control."
+///
+/// 3-mana hasty 3/2 Spirit beater that scales with the size of your
+/// attacking team — every additional attacker is +1 power on this
+/// creature. Pairs hard with Lorehold Aerospirit's haste fliers.
+pub fn lorehold_warband() -> CardDefinition {
+    use crate::effect::Duration;
+    let other_attackers = Value::count(Selector::EachPermanent(
+        SelectionRequirement::Creature
+            .and(SelectionRequirement::ControlledByYou)
+            .and(SelectionRequirement::IsAttacking)
+            .and(SelectionRequirement::OtherThanSource),
+    ));
+    CardDefinition {
+        name: "Lorehold Warband",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Haste],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: other_attackers,
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+

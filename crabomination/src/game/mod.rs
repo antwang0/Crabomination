@@ -2502,8 +2502,7 @@ impl GameState {
     #[cfg(test)]
     pub(crate) fn permanent_has_keyword(&self, id: CardId, kw: &Keyword) -> bool {
         self.computed_permanent(id)
-            .map(|c| c.keywords.contains(kw))
-            .unwrap_or(false)
+            .is_some_and(|c| c.keywords.contains(kw))
     }
 }
 

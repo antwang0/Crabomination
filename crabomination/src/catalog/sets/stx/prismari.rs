@@ -921,3 +921,245 @@ pub fn prismari_flarespark() -> CardDefinition {
         exile_on_resolve: false,
     }
 }
+
+// ── Prismari Cascade Volley (batch 20) ─────────────────────────────────────
+
+/// Prismari Cascade Volley — {2}{R} Sorcery.
+///
+/// Printed Oracle (synthesised): "Prismari Cascade Volley deals 3 damage
+/// to any target and 1 damage to each creature an opponent controls."
+///
+/// 3-mana 3-damage + 1-damage-to-each-opp-creature wrath at the burn
+/// slot. Anti-token-go-wide tech that also kills a small problem
+/// creature outright.
+pub fn prismari_cascade_volley() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Cascade Volley",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature
+                        .or(SelectionRequirement::Player)
+                        .or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::Const(3),
+            },
+            Effect::DealDamage {
+                to: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByOpponent),
+                ),
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Prismari Initiate (batch 20) ───────────────────────────────────────────
+
+/// Prismari Initiate — {1}{R}, 2/2 Human Wizard.
+///
+/// Printed Oracle (synthesised): "Magecraft — Whenever you cast or copy
+/// an instant or sorcery spell, this creature deals 1 damage to any
+/// target."
+///
+/// 2-mana magecraft ping body — each IS cast pings any target for 1.
+/// Strict-better-than-Mascot-Exhibition at this slot since it removes
+/// 1-toughness creatures or chips planeswalkers.
+pub fn prismari_initiate() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Initiate",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::DealDamage {
+            to: target_filtered(
+                SelectionRequirement::Creature
+                    .or(SelectionRequirement::Player)
+                    .or(SelectionRequirement::Planeswalker),
+            ),
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Prismari Spellbinder (batch 20) ────────────────────────────────────────
+
+/// Prismari Spellbinder — {3}{U}{R}, 3/4 Djinn Wizard with Flying.
+///
+/// Printed Oracle (synthesised): "Flying. When this creature enters,
+/// copy target instant or sorcery spell you control. You may choose new
+/// targets for the copy."
+///
+/// 5-mana ETB-copy flier — copies an instant/sorcery cast for value.
+/// Sits perfectly atop the Magma Opus / Crackle with Power chain for
+/// doubled damage / token output. Functional cousin of Snapcaster Mage
+/// reshaped as an ETB copy at the {U}{R} slot.
+pub fn prismari_spellbinder() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Spellbinder",
+        cost: cost(&[generic(3), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Djinn, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::CopySpell {
+                what: target_filtered(
+                    SelectionRequirement::IsSpellOnStack
+                        .and(
+                            SelectionRequirement::HasCardType(CardType::Instant)
+                                .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+                        )
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+                count: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Prismari Treasurer (batch 20) ──────────────────────────────────────────
+
+/// Prismari Treasurer — {1}{U}, 1/2 Merfolk Wizard.
+///
+/// Printed Oracle (synthesised): "When this creature enters, create a
+/// Treasure token."
+///
+/// 2-mana 1/2 + Treasure ETB — ramps {1} of any color for the next
+/// turn. Slots into Prismari big-spell shells.
+pub fn prismari_treasurer() -> CardDefinition {
+    use crate::game::effects::treasure_token;
+    CardDefinition {
+        name: "Prismari Treasurer",
+        cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: treasure_token(),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Prismari Embershaper (batch 20) ────────────────────────────────────────
+
+/// Prismari Embershaper — {U}{R}, 2/1 Human Wizard.
+///
+/// Printed Oracle (synthesised): "Magecraft — Whenever you cast or copy
+/// an instant or sorcery spell, you may discard a card. If you do, draw
+/// a card."
+///
+/// 2-mana magecraft loot body — every IS cast offers a discard+draw
+/// rummage. Combos with discard-payoffs (Honor of the Pure, Madness)
+/// and graveyard recursion (Lorehold) for free loot value.
+pub fn prismari_embershaper() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Embershaper",
+        cost: cost(&[u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::MayDo {
+            description: "Discard a card and draw a card".to_string(),
+            body: Box::new(Effect::Seq(vec![
+                Effect::Discard {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                    random: false,
+                },
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
+            ])),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}

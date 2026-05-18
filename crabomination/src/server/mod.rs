@@ -1069,8 +1069,7 @@ mod tests {
         assert!(
             parsed["snapshot"]["battlefield"]
                 .as_array()
-                .map(|a| a.iter().any(|c| c["name"] == "Tireless Tracker"))
-                .unwrap_or(false),
+                .is_some_and(|a| a.iter().any(|c| c["name"] == "Tireless Tracker")),
             "deadlock dump should include battlefield contents: {body}",
         );
         // Full-state dump enables bit-exact replay (preserves
