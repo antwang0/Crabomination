@@ -25871,6 +25871,40 @@ fn prismari_spitfire_etb_pings_target_with_haste() {
     assert!(catalog::prismari_spitfire().keywords.contains(&Keyword::Haste));
 }
 
+/// CR 701.14c — "If a creature fights itself, it deals damage to
+/// itself equal to twice its power." Lock-in: a 2/2 fighting itself
+/// takes 2×2 = 4 damage → dies (2 toughness < 4 damage).
+#[test]
+fn cr_701_14c_self_fight_deals_twice_power_to_self() {
+    use crate::card::{Effect, Selector};
+    use crate::game::effects::EffectContext;
+    let mut g = two_player_game();
+    // Use a simple 2/2 — vanilla Grizzly Bears has no triggers that
+    // could interact with the fight resolution.
+    let beast = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(beast);
+    let fight_effect = Effect::Fight {
+        attacker: Selector::Target(0),
+        defender: Selector::Target(1),
+    };
+    // Use the same target on both slots so the fight resolves on itself.
+    let ctx = {
+        let mut c = EffectContext::for_spell(
+            0,
+            Some(crate::game::types::Target::Permanent(beast)),
+            0,
+            0,
+        );
+        c.targets.push(crate::game::types::Target::Permanent(beast));
+        c
+    };
+    g.resolve_effect(&fight_effect, &ctx).expect("Self-fight resolves");
+    drain_stack(&mut g);
+    // The 4/4 takes 8 damage (2 × 4 power) → dies via SBA.
+    assert!(g.battlefield_find(beast).is_none(),
+        "Ironhand self-fights → 8 damage to self → dies");
+}
+
 /// Engine — `Effect::GrantKeyword` with `Duration::EndOfTurn` now uses
 /// the new `granted_keywords_eot` bag on `CardInstance`, with cleanup at
 /// the Cleanup step. Lock-in test: grant Haste EOT on a bear, verify

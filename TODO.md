@@ -1150,6 +1150,33 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   Rancorous Archaic base-toughness-bump workaround. Catalog
   promotions: Pterafractyl (1/0 → 1/0 exact), Symmathematics (1/1
   → 0/0 exact), Rancorous Archaic (ETB-trigger → CR-614.12 timing).
+- ✅ **CR 701.14 — Fight** (push modern_decks batch 24+ audit,
+  claude/modern_decks branch — audit against `MagicCompRules_20260417.txt`):
+  "A spell or ability may instruct a creature to fight another creature
+  or it may instruct two creatures to fight each other. Each of those
+  creatures deals damage equal to its power to the other creature."
+  (701.14a). The engine wires fight via `Effect::Fight { attacker,
+  defender }` resolved in `game/effects/mod.rs:427`:
+  (a) **701.14a** mutual damage with snapshot powers — ✅ (both sides'
+  power is read up-front so post-damage stats don't affect the
+  back-swing; same shape as printed Oracle).
+  (b) **701.14b** target gone → no damage — ✅ (early `let-else` return
+  when either side's selector resolves to no permanent on the battlefield;
+  matches the printed "no longer a creature, no damage is dealt").
+  (c) **701.14c** self-fight → 2× power to self — ✅ (when atk_id == def_id,
+  both `deal_damage_to` calls hit the same permanent, summing to 2P
+  damage). Tracked separately because no STX/SOS card today instructs a
+  creature to fight itself, but the engine handles it correctly by
+  construction.
+  (d) **701.14d** "damage isn't combat damage" — ✅ (fight uses the
+  general `deal_damage_to` path, NOT the `combat.rs` damage path that
+  emits `DealsCombatDamageToPlayer`; trigger-listening cards correctly
+  see this as non-combat damage). Lock-in tests:
+  `decisive_denial_mode_1_fight_via_chelonian_template` (mutual damage),
+  `academic_dispute_pumps_friendly_and_fights_opp_creature` (pump-then-
+  fight at the same step), `cr_701_14c_self_fight_deals_twice_power_to_self`
+  (batch 24+ — new self-fight lock-in).
+
 - 🟡 **CR 701.48 — Learn** (push modern_decks batch 24 audit,
   claude/modern_decks branch — audit against `MagicCompRules_20260417.txt`):
   "Learn" means "You may discard a card. If you do, draw a card. If you
