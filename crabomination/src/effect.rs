@@ -1897,6 +1897,19 @@ pub struct ActivatedAbility {
     /// Defaults to None via `#[serde(default)]`.
     #[serde(default)]
     pub exile_other_filter: Option<SelectionRequirement>,
+    /// Optional self-counter cost-reduction kind. When `Some(kind)`, the
+    /// activation's generic mana cost is reduced by one for each counter
+    /// of `kind` on the source permanent (clamped at the printed generic
+    /// total). Mirrors `affinity_filter` on spells, but reads the
+    /// source's own counter pool instead of a battlefield filter — the
+    /// shape needed by Strixhaven's Book artifacts whose printed Oracle
+    /// is "This ability costs {1} less to activate for each [counter]
+    /// counter on this artifact." Currently powers:
+    /// - Diary of Dreams's `{5}, {T}: Draw a card.` (Page counters)
+    ///
+    /// Defaults to None via `#[serde(default)]`.
+    #[serde(default)]
+    pub self_counter_cost_reduction: Option<crate::card::CounterType>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

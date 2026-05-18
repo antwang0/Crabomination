@@ -543,6 +543,17 @@ pub struct AlternativeCost {
     /// target.
     #[serde(default)]
     pub condition: Option<crate::effect::Predicate>,
+    /// Optional additional cost: exile N cards from the caster's
+    /// graveyard. Mirrors `exile_filter` (which exiles **one** card from
+    /// **hand**) but for "exile N cards from your graveyard" additional
+    /// costs. The auto-picker takes the lowest-CMC matching cards so the
+    /// caster keeps higher-value cards in their graveyard. Activation is
+    /// rejected with `GameError::SelectionRequirementViolated` if fewer
+    /// than N cards are in the graveyard. Currently powers SOS Soaring
+    /// Stoneglider's "exile two cards from your graveyard or pay {1}{W}"
+    /// alt cost.
+    #[serde(default)]
+    pub exile_from_graveyard_count: u32,
 }
 
 impl CardDefinition {

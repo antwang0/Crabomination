@@ -741,6 +741,7 @@ pub fn pyrokinesis() -> CardDefinition {
             not_your_turn_only: false,
             target_filter: None,
             condition: None,
+                    exile_from_graveyard_count: 0,
         }),
         back_face: None,
         opening_hand: None,

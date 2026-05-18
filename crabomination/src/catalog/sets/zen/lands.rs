@@ -37,6 +37,7 @@ fn fetch_ability(type_a: LandType, type_b: LandType) -> ActivatedAbility {
             life_cost: 0,
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
+            self_counter_cost_reduction: None,
     }
 }
 

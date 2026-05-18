@@ -421,6 +421,7 @@ impl GameState {
             life_cost: 0,
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
+            self_counter_cost_reduction: None,
                 },
             ];
         }
@@ -1278,6 +1279,29 @@ impl GameState {
             return Err(GameError::InsufficientLife);
         }
 
+        // Pre-flight: confirm the caster has enough cards in their
+        // graveyard for the `exile_from_graveyard_count` additional
+        // cost. Picks are committed AFTER the mana payment succeeds
+        // (mirroring `exile_other_filter` on activated abilities) so a
+        // failed mana pay rolls back cleanly. The auto-picker takes the
+        // lowest-CMC matching cards so higher-value graveyard cards
+        // stay put.
+        let exile_gy_picks: Vec<CardId> = if alt.exile_from_graveyard_count > 0 {
+            let n = alt.exile_from_graveyard_count as usize;
+            let mut picks: Vec<(CardId, i32)> = self.players[p]
+                .graveyard
+                .iter()
+                .map(|c| (c.id, c.definition.cost.cmc() as i32))
+                .collect();
+            picks.sort_by_key(|(_, cmc)| *cmc);
+            if picks.len() < n {
+                return Err(GameError::SelectionRequirementViolated);
+            }
+            picks.into_iter().take(n).map(|(cid, _)| cid).collect()
+        } else {
+            Vec::new()
+        };
+
         // Validate that the pitch card matches the filter (if any).
         if let Some(filter) = &alt.exile_filter {
             let pitch_id = pitch_card.ok_or(GameError::NoAlternativeCost)?;
@@ -1396,6 +1420,26 @@ impl GameState {
             let cid = pitch.id;
             self.exile.push(pitch);
             auto_events.push(GameEvent::PermanentExiled { card_id: cid });
+        }
+
+        // Exile-N-from-graveyard additional cost. Validated up front;
+        // commit the moves now that mana and life are paid. Emits
+        // `CardLeftGraveyard` per exile so payoffs that count cards
+        // leaving the graveyard (Ark of Hunger, Wilt in the Heat) see
+        // the event stream.
+        for gy_cid in &exile_gy_picks {
+            if let Some(idx) = self.players[p].graveyard.iter().position(|c| c.id == *gy_cid) {
+                let exiled = self.players[p].graveyard.remove(idx);
+                self.exile.push(exiled);
+                self.players[p].cards_exiled_this_turn =
+                    self.players[p].cards_exiled_this_turn.saturating_add(1);
+                auto_events.push(GameEvent::CardLeftGraveyard {
+                    player: p,
+                    card_id: *gy_cid,
+                });
+                self.players[p].cards_left_graveyard_this_turn =
+                    self.players[p].cards_left_graveyard_this_turn.saturating_add(1);
+            }
         }
 
         auto_events.push(GameEvent::SpellCast {
@@ -1978,10 +2022,27 @@ impl GameState {
             None
         };
 
+        // Apply self-counter cost reduction (Strixhaven Book artifacts).
+        // Subtracts one generic pip per counter of the specified kind on
+        // the source permanent. Clamped at the printed generic total via
+        // `ManaCost::reduce_generic`. Only applies when the source is on
+        // the battlefield (graveyard-activations skip; the source carries
+        // no live counter pool there).
+        let mut effective_mana_cost = ability.mana_cost.clone();
+        if let Some(kind) = ability.self_counter_cost_reduction
+            && !source_in_gy
+            && let Some(src) = self.battlefield_find(card_id)
+        {
+            let count = src.counter_count(kind);
+            if count > 0 {
+                effective_mana_cost.reduce_generic(count);
+            }
+        }
+
         // Snapshot pristine state before applying tap-cost so a failed mana
         // payment rolls back both the auto-tap of mana sources AND the
         // tap-cost on the source itself.
-        let needs_payment = !ability.mana_cost.symbols.is_empty();
+        let needs_payment = !effective_mana_cost.symbols.is_empty();
         let pre_snapshot = needs_payment.then(|| self.snapshot_payment_state(p));
 
         // Pay tap cost. Graveyard activations can't tap (the source is not
@@ -2000,7 +2061,7 @@ impl GameState {
 
         let mut auto_mana_events = Vec::new();
         if let Some(snapshot) = pre_snapshot {
-            let receipt = self.try_pay_after_snapshot(p, &ability.mana_cost, snapshot)?;
+            let receipt = self.try_pay_after_snapshot(p, &effective_mana_cost, snapshot)?;
             if receipt.side_effects.life_lost > 0 {
                 self.adjust_life(p, -(receipt.side_effects.life_lost as i32));
             }

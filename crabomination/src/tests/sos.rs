@@ -3056,6 +3056,82 @@ fn diary_of_dreams_gains_charge_on_instant_or_sorcery_cast() {
     );
 }
 
+/// Diary of Dreams: with 0 Page counters, the activation costs the full
+/// {5}. With < 5 mana available, activation should fail with
+/// InsufficientMana, leaving the source untapped (snapshot rollback).
+#[test]
+fn diary_of_dreams_activation_costs_five_with_no_page_counters() {
+    let mut g = two_player_game();
+    let diary = g.add_card_to_battlefield(0, catalog::diary_of_dreams());
+    g.players[0].mana_pool.add_colorless(4);
+    let res = g.perform_action(GameAction::ActivateAbility {
+        card_id: diary,
+        ability_index: 0,
+        target: None,
+    });
+    assert!(res.is_err(), "0-Page Diary activation needs {{5}}, only 4 available");
+    let d = g.battlefield.iter().find(|c| c.id == diary).unwrap();
+    assert!(!d.tapped, "Diary should not tap on a failed payment");
+}
+
+/// Diary of Dreams: with 3 Page counters, the activation costs {2}.
+/// Pay {2} and {T} → draw a card.
+#[test]
+fn diary_of_dreams_page_counters_reduce_cost_by_one_each() {
+    let mut g = two_player_game();
+    let diary = g.add_card_to_battlefield(0, catalog::diary_of_dreams());
+    // Seed 3 page counters.
+    if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == diary) {
+        c.counters.insert(CounterType::Page, 3);
+    }
+    g.add_card_to_library(0, catalog::island());
+    // {2} = generic 5 - 3 page counters.
+    g.players[0].mana_pool.add_colorless(2);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: diary,
+        ability_index: 0,
+        target: None,
+    })
+    .expect("Diary activates at {2} with 3 page counters");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.players[0].hand.len(),
+        hand_before + 1,
+        "Diary draw resolves",
+    );
+    // Source should now be tapped and pool drained.
+    let d = g.battlefield.iter().find(|c| c.id == diary).unwrap();
+    assert!(d.tapped, "Diary tapped after activation");
+    assert_eq!(g.players[0].mana_pool.total(), 0, "All 2 mana drained");
+}
+
+/// Diary of Dreams: with 5+ Page counters, the activation cost
+/// reduces to {0} (clamped at the printed generic total).
+#[test]
+fn diary_of_dreams_page_counters_clamp_at_printed_generic() {
+    let mut g = two_player_game();
+    let diary = g.add_card_to_battlefield(0, catalog::diary_of_dreams());
+    if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == diary) {
+        c.counters.insert(CounterType::Page, 8);
+    }
+    g.add_card_to_library(0, catalog::island());
+    // Zero mana available.
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: diary,
+        ability_index: 0,
+        target: None,
+    })
+    .expect("Diary should activate at {{0}} with 8 page counters");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.players[0].hand.len(),
+        hand_before + 1,
+        "Diary draw resolves",
+    );
+}
+
 // ── Spectacle Summit ────────────────────────────────────────────────────────
 
 #[test]
@@ -5378,6 +5454,76 @@ fn soaring_stoneglider_is_four_three_flier_vigilance() {
     assert_eq!(def.toughness, 3);
     assert!(def.keywords.contains(&Keyword::Flying));
     assert!(def.keywords.contains(&Keyword::Vigilance));
+}
+
+/// Soaring Stoneglider: the printed alt cost {2}{W} + exile two cards
+/// from your graveyard is wired via the new `exile_from_graveyard_count`
+/// field. With 2 cards in gy and {2}{W} available, the alt cast succeeds
+/// and both gy cards land in exile.
+#[test]
+fn soaring_stoneglider_alt_cost_exiles_two_from_graveyard() {
+    let mut g = two_player_game();
+    // Seed graveyard with 2 cards (lowest-CMC picker: takes both).
+    let bolt_id = g.next_id();
+    let mut bolt = crate::card::CardInstance::new(bolt_id, catalog::lightning_bolt(), 0);
+    bolt.controller = 0;
+    g.players[0].graveyard.push(bolt);
+    let bears_id = g.next_id();
+    let mut bears = crate::card::CardInstance::new(bears_id, catalog::grizzly_bears(), 0);
+    bears.controller = 0;
+    g.players[0].graveyard.push(bears);
+    let id = g.add_card_to_hand(0, catalog::soaring_stoneglider());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: id,
+        pitch_card: None,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Soaring Stoneglider alt-castable at {2}{W} with 2 cards in gy");
+    drain_stack(&mut g);
+
+    // Soaring Stoneglider on battlefield.
+    let on_bf = g.battlefield.iter().any(|c| c.definition.name == "Soaring Stoneglider");
+    assert!(on_bf, "Stoneglider ETBs after alt cast");
+    // Both gy cards in exile.
+    assert!(g.exile.iter().any(|c| c.id == bolt_id),
+        "Lightning Bolt should be exiled as alt cost");
+    assert!(g.exile.iter().any(|c| c.id == bears_id),
+        "Grizzly Bears should be exiled as alt cost");
+    assert!(g.players[0].graveyard.is_empty(), "Graveyard drained by 2");
+}
+
+/// Soaring Stoneglider: alt cost rejected when graveyard has < 2 cards.
+/// The caller can fall back to the printed mana cost.
+#[test]
+fn soaring_stoneglider_alt_cost_rejects_with_insufficient_graveyard() {
+    let mut g = two_player_game();
+    // Only one card in gy — alt cost requires two.
+    let bolt_id = g.next_id();
+    let mut bolt = crate::card::CardInstance::new(bolt_id, catalog::lightning_bolt(), 0);
+    bolt.controller = 0;
+    g.players[0].graveyard.push(bolt);
+    let id = g.add_card_to_hand(0, catalog::soaring_stoneglider());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+
+    let res = g.perform_action(GameAction::CastSpellAlternative {
+        card_id: id,
+        pitch_card: None,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    });
+    assert!(res.is_err(), "Alt cast should reject with only 1 gy card");
+    // The Stoneglider is still in hand (rolled back cleanly).
+    assert!(g.players[0].hand.iter().any(|c| c.id == id),
+        "Stoneglider should remain in hand on rejected alt cast");
 }
 
 #[test]

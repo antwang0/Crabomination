@@ -59,6 +59,7 @@ pub fn cauldron_of_essence() -> CardDefinition {
             life_cost: 0,
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
+            self_counter_cost_reduction: None,
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours),
@@ -85,13 +86,12 @@ pub fn cauldron_of_essence() -> CardDefinition {
 /// this artifact. / {5}, {T}: Draw a card. This ability costs {1} less
 /// to activate for each page counter on this artifact."
 ///
-/// Approximation: the page-counter cost reduction on the activated
-/// ability is omitted (the engine has no "self-counter scaled cost
-/// reduction" primitive on activated abilities). The trigger that adds
-/// page counters and the {5}, {T}: Draw a card activation are wired
-/// faithfully — at high counter counts the ability still costs {5} but
-/// the rest of the card behaves as printed. Tracked under the cost-
-/// reduction stacking section in TODO.md.
+/// Push (modern_decks): self-counter cost reduction **now wired** via
+/// `ActivatedAbility.self_counter_cost_reduction: Some(Page)`. The
+/// activation's generic mana cost reduces by 1 per Page counter on the
+/// source (clamped at the printed {5} generic total), so at 5+ page
+/// counters the ability is `{0}, {T}: Draw a card`. Page counters
+/// accrue 1 per instant/sorcery cast as before.
 pub fn diary_of_dreams() -> CardDefinition {
     use crate::card::CounterType;
     use crate::effect::shortcut::cast_is_instant_or_sorcery;
@@ -118,7 +118,9 @@ pub fn diary_of_dreams() -> CardDefinition {
             condition: None,
             life_cost: 0,
             from_graveyard: false,
-            exile_self_cost: false, exile_other_filter: None,
+            exile_self_cost: false,
+            exile_other_filter: None,
+            self_counter_cost_reduction: Some(CounterType::Page),
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
@@ -185,6 +187,7 @@ pub fn tablet_of_discovery() -> CardDefinition {
             life_cost: 0,
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
+            self_counter_cost_reduction: None,
             },
             ActivatedAbility {
                 tap_cost: true,
@@ -200,6 +203,7 @@ pub fn tablet_of_discovery() -> CardDefinition {
             life_cost: 0,
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
+            self_counter_cost_reduction: None,
             },
         ],
         triggered_abilities: vec![TriggeredAbility {
@@ -258,6 +262,7 @@ pub fn potioners_trove() -> CardDefinition {
             life_cost: 0,
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
+            self_counter_cost_reduction: None,
             },
             ActivatedAbility {
                 tap_cost: true,
@@ -281,6 +286,7 @@ pub fn potioners_trove() -> CardDefinition {
                 life_cost: 0,
                 from_graveyard: false,
                 exile_self_cost: false, exile_other_filter: None,
+            self_counter_cost_reduction: None,
             },
         ],
         triggered_abilities: vec![],
@@ -340,6 +346,7 @@ pub fn resonating_lute() -> CardDefinition {
             life_cost: 0,
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
+            self_counter_cost_reduction: None,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -394,6 +401,7 @@ pub fn ark_of_hunger() -> CardDefinition {
             life_cost: 0,
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
+            self_counter_cost_reduction: None,
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::CardLeftGraveyard, EventScope::YourControl),

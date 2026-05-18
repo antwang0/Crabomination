@@ -414,6 +414,7 @@ pub fn witherbloom_pledgemage() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false,
             exile_other_filter: None,
+            self_counter_cost_reduction: None,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -666,6 +667,7 @@ pub fn witherbloom_pestkeeper() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false,
             exile_other_filter: None,
+            self_counter_cost_reduction: None,
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -2033,6 +2035,7 @@ pub fn witherbloom_pestbroker() -> CardDefinition {
                     duration: crate::effect::Duration::EndOfTurn,
                 },
             ]),
+                    self_counter_cost_reduction: None,
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),

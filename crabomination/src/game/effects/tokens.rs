@@ -96,6 +96,7 @@ pub fn food_token() -> TokenDefinition {
             life_cost: 0,
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
+            self_counter_cost_reduction: None,
         }],
         triggered_abilities: vec![],
     }
@@ -129,6 +130,7 @@ pub fn treasure_token() -> TokenDefinition {
             life_cost: 0,
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
+            self_counter_cost_reduction: None,
         }],
         triggered_abilities: vec![],
     }
@@ -173,6 +175,7 @@ pub fn blood_token() -> TokenDefinition {
             life_cost: 0,
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
+            self_counter_cost_reduction: None,
         }],
         triggered_abilities: vec![],
     }
@@ -208,6 +211,7 @@ pub fn clue_token() -> TokenDefinition {
             life_cost: 0,
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
+            self_counter_cost_reduction: None,
         }],
         triggered_abilities: vec![],
     }

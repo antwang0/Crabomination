@@ -18,13 +18,27 @@ Two adjacent catalogs:
 
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
-| SOS (255 cards) | 207 | 47 | 1 |
-| STX (327 cards) | 525 | 12 | 0 |
+| SOS (255 cards) | 209 | 45 | 1 |
+| STX (327 cards) | 545 | 12 | 0 |
 | STA reprints (in STX boosters) | 46 | 0 | — |
 
 Push (modern_decks, claude/modern_decks branch — latest revision —
-**batch 28: 25 new STX cards + 30 tests + Selector::LastCreatedTokens
-plural primitive + CR 114 audit**):
+**batch 29: 20 new iconic STX cards + 24 new tests + 2 SOS promotions
+(Diary of Dreams + Soaring Stoneglider) + 2 new engine primitives
+(`ActivatedAbility.self_counter_cost_reduction` for page-counter
+discounts + `AlternativeCost.exile_from_graveyard_count` for
+exile-N-from-gy additional costs)**):
+
+A new batch adding 20 synthesised STX cards spread evenly across all
+five colleges (4+ per school) using existing primitives + magecraft.
+All in `stx::iconic`. Tests sit in `tests::stx`. Two SOS partial
+promotions land via two clean engine additions: page-counter cost
+reduction on activated abilities (Diary of Dreams) and exile-N-from-
+graveyard alt-cost (Soaring Stoneglider's "or exile two cards from
+your graveyard" additional cost variant). 2628 → 2656 total tests
+(+28). All clippy-clean.
+
+Prior push (batch 28):
 
 A new batch adding 25 cards spread evenly across all five colleges
 (5 per school) using existing primitives. Tests sit in `tests::stx`.
@@ -2741,7 +2755,7 @@ each 🟡 row are in the tables below.
 | Rehearsed Debater | {2}{W} | Creature — Djinn Bard | 3/3 | Vigilance / Repartee — Whenever you cast an instant or sorcery spell that targets a creature, this creature gets +1/+1 until end of turn. | ✅ | Vigilance + Repartee +1/+1 EOT, via `effect::shortcut::repartee()` + `Predicate::CastSpellTargetsMatch`. |
 | Restoration Seminar | {5}{W}{W} | Sorcery — Lesson |  | Return target nonland permanent card from your graveyard to the battlefield. / Paradigm (...) | 🟡 | Wired in `catalog::sets::sos::sorceries`. Mode 0 (`Move target Nonland gy → bf untapped`) wired faithfully. Paradigm rider omitted (no copy-spell-from-exile-at-upkeep primitive — same gap as Decorum Dissertation, Improvisation Capstone, Echocasting Symposium). |
 | Shattered Acolyte | {1}{W} | Creature — Dwarf Warlock | 2/2 | Lifelink / {1}, Sacrifice this creature: Destroy target artifact or enchantment. | ✅ | Wired in `catalog::sets::sos::creatures` with `sac_cost` activation. |
-| Soaring Stoneglider | {2}{W} | Creature — Elephant Cleric | 4/3 | As an additional cost to cast this spell, exile two cards from your graveyard or pay {1}{W}. / Flying, vigilance | 🟡 | Wired in `catalog::sets::sos::creatures` as a 4/3 Flying+Vigilance Elephant Cleric at the **paid** cost path: full {3}{W} (base {2}{W} + the {1}{W} payment fork). The alternative additional cost (exile two from gy) is omitted (no alt-cost-with-exile-from-gy primitive). |
+| Soaring Stoneglider | {2}{W} | Creature — Elephant Cleric | 4/3 | As an additional cost to cast this spell, exile two cards from your graveyard or pay {1}{W}. / Flying, vigilance | ✅ (was 🟡) | Push (modern_decks batch 29): the alt additional cost (exile two cards from graveyard) is **now wired** via the new `AlternativeCost.exile_from_graveyard_count: u32` field. Default cost {3}{W} = base {2}{W} + {1}{W} mana fork; alt cast path {2}{W} requires `exile_from_graveyard_count: 2` (rejected when gy has < 2 cards). Auto-picker takes the lowest-CMC cards so high-value gy cards stay put. Body (4/3 Flying + Vigilance) unchanged. Tests: `soaring_stoneglider_is_four_three_flier_vigilance`, `soaring_stoneglider_alt_cost_exiles_two_from_graveyard`, `soaring_stoneglider_alt_cost_rejects_with_insufficient_graveyard`. |
 | Spiritcall Enthusiast // Scrollboost | {2}{W} // {1}{W} | Creature — Cat Cleric // Sorcery | 3/3 |  | ✅ (was 🟡) | Push (modern_decks doc-sync): vanilla front + faithful back-face spell wired via the `GameAction::CastSpellBack` path (push XI/XII). The stale "Standard primitives — should be straightforward to wire" note was the original ⏳ flag from before MDFC plumbing landed; the body has been at-parity-with-printed-Oracle since push XII. Tests live in `tests::sos` keyed by the back-face spell name.|
 | Stand Up for Yourself | {2}{W} | Instant |  | Destroy target creature with power 3 or greater. | ✅ | Wired in `catalog::sets::sos::instants`. |
 | Stirring Hopesinger | {2}{W} | Creature — Bird Bard | 1/3 | Flying, lifelink / Repartee — Whenever you cast an instant or sorcery spell that targets a creature, put a +1/+1 counter on each creature you control. | ✅ | Flying/lifelink body + Repartee fan-out via `ForEach(Creature & ControlledByYou) → AddCounter`. |
@@ -3007,7 +3021,7 @@ each 🟡 row are in the tables below.
 | Card | Mana Cost | Type | P/T | Oracle Text | Status | Notes |
 |---|---|---|---|---|---|---|
 | Biblioplex Tomekeeper | {4} | Artifact Creature — Construct | 3/4 | When this creature enters, choose up to one — / • Target creature becomes prepared. (Only creatures with prepare spells can become prepared.) / • Target creature becomes unprepared. | 🟡 | Push XXV: Body wired (3/4 Construct artifact creature). The Prepare toggle is omitted — engine has no Prepare keyword nor a prepared-state flag (same gap as Skycoach Waypoint). |
-| Diary of Dreams | {2} | Artifact — Book |  | Whenever you cast an instant or sorcery spell, put a page counter on this artifact. / {5}, {T}: Draw a card. This ability costs {1} less to activate for each page counter on this artifact. | 🟡 | Page-counter accrual on instant/sorcery cast (counter type approximated as Charge — engine has no Page counter) + flat {5},{T} draw. The page-counter-scaled cost reduction is omitted (no self-counter cost-reduction primitive). |
+| Diary of Dreams | {2} | Artifact — Book |  | Whenever you cast an instant or sorcery spell, put a page counter on this artifact. / {5}, {T}: Draw a card. This ability costs {1} less to activate for each page counter on this artifact. | ✅ (was 🟡) | Push (modern_decks batch 29): the page-counter cost reduction is **now wired** via the new `ActivatedAbility.self_counter_cost_reduction: Option<CounterType>` field. The {5},{T} activation reads the source's Page counter pool at activation time and reduces the generic mana pip by one per counter (clamped at the printed generic total via `ManaCost::reduce_generic`). Page counters accrue 1 per instant/sorcery cast as before. Tests: `diary_of_dreams_activation_costs_five_with_no_page_counters`, `diary_of_dreams_page_counters_reduce_cost_by_one_each`, `diary_of_dreams_page_counters_clamp_at_printed_generic`. |
 | Great Hall of the Biblioplex |  | Land |  | {T}: Add {C}. / {T}, Pay 1 life: Add one mana of any color. Spend this mana only to cast an instant or sorcery spell. / {5}: If this land isn't a creature, it becomes a 2/4 Wizard creature with "Whenever you cast an instant or sorcery spell, this creature gets +1/+0 until end of turn." It's still a land. | 🟡 | Push XV: legendary colorless utility land. `{T}: Add {C}` faithful + `{T}, Pay 1 life: Add one mana of any color` via the new `ActivatedAbility.life_cost: u32` field — the effect is a pure mana ability (`AddMana(AnyOneColor 1)`) so it resolves immediately without going on the stack. The `{5}: becomes 2/4 Wizard creature` clause is omitted (no land-becomes-creature primitive — same gap as Mishra's Factory). The spend-restriction rider on the rainbow ability is omitted (no per-pip mana metadata yet). |
 | Mage Tower Referee | {2} | Artifact Creature — Construct | 2/1 | Whenever you cast a multicolored spell, put a +1/+1 counter on this creature. | ✅ | Wired in `catalog::sets::sos::creatures` with a `SpellCast/YourControl` trigger filtered on `EntityMatches(TriggerSource, Multicolored)` — uses the new `SelectionRequirement::Multicolored` predicate (≥ 2 distinct colored pips, hybrid both halves, Phyrexian colored side). Mono-color and colorless casts don't bump the Referee. |
 | Page, Loose Leaf | {2} | Legendary Artifact Creature — Construct | 0/2 | {T}: Add {C}. / Grandeur — Discard another card named Page, Loose Leaf: Reveal cards from the top of your library until you reveal an instant or sorcery card. Put that card into your hand and the rest on the bottom of your library in a random order. | 🟡 | Body wired (0/2 Legendary Construct artifact creature) + `{T}: Add {C}` mana ability via the shared `tap_add_colorless()` helper. Grandeur (discard-named-this-card-as-cost activation) omitted. |

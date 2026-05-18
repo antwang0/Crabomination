@@ -100,6 +100,7 @@ pub fn quandrix_pledgemage() -> CardDefinition {
             life_cost: 0,
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
+            self_counter_cost_reduction: None,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -714,6 +715,7 @@ pub fn quandrix_crystallizer() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false,
             exile_other_filter: None,
+            self_counter_cost_reduction: None,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -2380,6 +2382,7 @@ pub fn quandrix_aether_adept() -> CardDefinition {
             effect: Effect::Tap {
                 what: target_filtered(SelectionRequirement::Creature),
             },
+                    self_counter_cost_reduction: None,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],

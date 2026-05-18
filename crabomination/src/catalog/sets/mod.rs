@@ -23,6 +23,7 @@ pub fn tap_add(color: Color) -> ActivatedAbility {
             life_cost: 0,
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
+            self_counter_cost_reduction: None,
     }
 }
 
@@ -45,6 +46,7 @@ pub fn tap_add_any_color() -> ActivatedAbility {
         from_graveyard: false,
         exile_self_cost: false,
         exile_other_filter: None,
+            self_counter_cost_reduction: None,
     }
 }
 
@@ -66,6 +68,7 @@ pub fn tap_add_colorless() -> ActivatedAbility {
             life_cost: 0,
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
+            self_counter_cost_reduction: None,
     }
 }
 

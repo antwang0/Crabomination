@@ -246,6 +246,59 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   counters), 122.4 (cap), 122.5 (general move), and 122.7 (Nth-counter
   threshold trigger) all land.
 
+- ✅ **CR 405 — Stack** (push modern_decks batch 29 audit,
+  claude/modern_decks branch — audit against
+  `MagicCompRules_20260417.txt`): The stack mechanics — what goes on
+  the stack, when, in what order, and how resolution + priority
+  interact. Audit:
+  (a) **405.1** spell/ability goes on stack on cast/activate/trigger —
+  ✅ (`finalize_cast` pushes a `StackItem::Spell` for casts;
+  `activate_ability` pushes a `StackItem::Ability` for non-mana
+  activations; triggers are pushed via `fire_X_triggers` calls during
+  resolution).
+  (b) **405.2** "objects added to the stack go on top" — ✅ (engine
+  uses `self.stack.push(item)` everywhere; the Vec end is the top).
+  (c) **405.3** "objects entering simultaneously, AP-controlled first,
+  then APNAP order" — 🟡 (the engine processes triggers in
+  ResolutionBuffer one at a time but doesn't sort by AP-vs-NAP. For
+  ETB-rich boards with multiple simultaneous triggers across players,
+  the stack order is whatever queue order they were collected in;
+  observable difference only when both AP and NAP have triggers from
+  the same event).
+  (d) **405.4** "controller of spell = caster; controller of activated
+  ability = activator; controller of triggered ability = controller
+  of source when triggered" — ✅ (`StackItem::Spell.controller` is
+  set in `finalize_cast`; `StackItem::Ability.controller` is set to
+  the activator; triggered abilities resolve under
+  `source_controller` snapshotted at trigger-fire time).
+  (e) **405.5** "when all players pass, top resolves; if stack empty,
+  step ends" — ✅ (`pass_priority` advances priority through both
+  players; when both pass with empty stack, the engine advances
+  step/phase via the turn machine).
+  (f) **405.6a** effects don't go on stack — ✅ (effects resolve
+  in-place during `resolve_X` calls).
+  (g) **405.6b** static abilities don't go on stack — ✅
+  (`StaticEffect` is read by the layer system during
+  `compute_battlefield`, never pushed on stack).
+  (h) **405.6c** mana abilities resolve immediately — ✅ (`is_mana_ab`
+  check in `activate_ability` calls `continue_ability_resolution`
+  inline instead of pushing a stack item; priority isn't reset).
+  (i) **405.6d** special actions don't use stack — ✅ (`play_land`
+  bypasses the stack; mana payment doesn't either).
+  (j) **405.6e** turn-based actions don't use stack — ✅
+  (`step_begins_actions` runs the untap / draw / cleanup
+  housekeeping before priority is given).
+  (k) **405.6f** state-based actions don't use stack — ✅
+  (`check_state_based_actions` runs at priority gates and after
+  every resolve, before the next priority pass).
+  (l) **405.6g** player conceding leaves immediately — 🟡 (`Player.
+  eliminated = true` is checked at SBA time, so concession isn't
+  literally "immediate" but the next SBA cycle catches it — observable
+  difference only mid-cast).
+  Tests: implicit across the suite — every cast/activation/trigger
+  test exercises stack ordering. Promote to ✅ after 405.3's AP-vs-NAP
+  ordering for simultaneous triggers lands.
+
 - ✅ **CR 110 — Permanents** (push modern_decks batch 20,
   claude/modern_decks branch — newest audit against
   `MagicCompRules_20260417.txt`): The permanent primitive — what a
@@ -4615,3 +4668,64 @@ resolution time" in the Suggested next-up tasks section.
   killing onto your own creatures. Adding a creature-type prompt
   + `Predicate::HasCreatureType(ChoiceResult)` would let cards
   faithfully ship the protect-mine-but-kill-yours pattern.
+
+### Suggested next-up tasks (additions from batch 29)
+
+- ✅ **STX corpus growth via 20 new iconic cards** — push modern_decks
+  batch 29 brings the STX catalog to 545 ✅ + 12 🟡. New cards span
+  all five colleges (4+ per school) — Silverquill Novice/Headmaster/
+  Inkpact, Witherbloom Neophyte/Recursion + Pestpod Lurker, Lorehold
+  Neophyte/Recallmage + Battle Banner, Quandrix Reach Mage + Fractal
+  Sumcaster, Prismari Vandal/Flameseeker, plus 6 cross-college
+  Strixhaven-flavored shells (Tutor/Pondkeeper/Rotcaster/Spellfletcher/
+  Forager/Basicseeker/Curriculum + Magecraft Volley). Tests: 20 new
+  test functions covering the headline play patterns. Total: 2628 →
+  2656 tests (+28).
+
+- ✅ **`ActivatedAbility.self_counter_cost_reduction`** — new engine
+  primitive: optional `Option<CounterType>` on `ActivatedAbility`
+  that subtracts the source's counter pool of the specified kind
+  from the activation's generic mana cost, clamped at the printed
+  generic total via `ManaCost::reduce_generic`. Mirrors
+  `affinity_filter` on spells but reads the source's own counter pool
+  instead of a battlefield filter — the shape needed by Strixhaven
+  Book artifacts. Powers Diary of Dreams's "this ability costs {1}
+  less for each page counter on this artifact" rider (🟡 → ✅).
+  Future Page / Charge / Verse / Wish counter cards plug in against
+  this same field without new engine code. Tests:
+  `diary_of_dreams_activation_costs_five_with_no_page_counters`,
+  `diary_of_dreams_page_counters_reduce_cost_by_one_each`,
+  `diary_of_dreams_page_counters_clamp_at_printed_generic`.
+
+- ✅ **`AlternativeCost.exile_from_graveyard_count`** — new engine
+  primitive: an `u32` additional-cost slot on `AlternativeCost`
+  that exiles N cards from the caster's graveyard as part of the
+  alt cast. Pre-flight gate rejects if gy has < N cards (returns
+  `SelectionRequirementViolated`); auto-picker takes the lowest-CMC
+  matching cards. Emits `CardLeftGraveyard` per exile so payoffs
+  that count gy-leave events (Ark of Hunger, Wilt in the Heat) see
+  the event stream. Powers Soaring Stoneglider's "exile two cards
+  from your graveyard or pay {1}{W}" additional-cost alt path —
+  printed cost ships as the mana fork {3}{W}; the alt path is
+  {2}{W} with `exile_from_graveyard_count: 2`. Tests:
+  `soaring_stoneglider_alt_cost_exiles_two_from_graveyard`,
+  `soaring_stoneglider_alt_cost_rejects_with_insufficient_graveyard`.
+
+- ✅ **CR 405 — Stack** — fresh audit (batch 29). Wires every
+  sub-rule except 405.3 (AP-vs-NAP ordering for simultaneous
+  triggers across players, which the engine processes in
+  ResolutionBuffer queue order rather than sorted by team) and
+  405.6g (concession as a true SBA-bypass-immediate action; the
+  engine catches eliminated players at the next SBA cycle, observable
+  difference only mid-cast). Tests: implicit across the suite.
+
+- ⏳ **AP-vs-NAP stack ordering for simultaneous triggers** (CR 405.3)
+  — fresh from the CR 405 audit. When a single event (ETB, attack,
+  combat damage) triggers abilities on both AP's and NAP's
+  permanents, the engine queues them in ResolutionBuffer in
+  arrival order. Printed Oracle says AP's triggers go on the
+  stack first (lowest), then each NAP in APNAP order, with
+  each player choosing internal ordering. Observable only when
+  multiple-controller ETB cascades stack-interact (e.g. an opp's
+  Pestpod-Lurker-on-ETB-mints-Pest triggers while you have a
+  Felisa-on-counter-bearing-dies trigger from the same combat).

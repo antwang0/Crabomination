@@ -991,3 +991,887 @@ pub fn witherbloom_pestcaster() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Push (modern_decks) batch 29: 20 more iconic STX cards ─────────────────
+//
+// New synthesised college additions covering all five colleges with extra
+// "iconic" cards built on existing primitives (Magecraft, Repartee,
+// Increment, Opus, lifegain triggers, +1/+1 counter spam). Each card
+// ships with a unit test in `tests::stx`. No new engine primitives —
+// pure catalog growth.
+
+/// Silverquill Novice — {1}{W}, 2/2 Human Cleric.
+///
+/// Printed Oracle (synthesised): "Magecraft — Whenever you cast or copy
+/// an instant or sorcery spell, you gain 1 life."
+///
+/// 2-mana magecraft lifegain body. Drip-feeds Light of Promise /
+/// Felisa's death-trigger Inkling payoffs. Pairs with Spirited
+/// Companion and Eager First-Year at the 2-mana slot.
+pub fn silverquill_novice() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_gain_life;
+    CardDefinition {
+        name: "Silverquill Novice",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_gain_life(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Headmaster — {3}{W}{B}, 4/4 Human Cleric, Flying +
+/// Lifelink.
+///
+/// Printed Oracle (synthesised): "Flying, lifelink. When this creature
+/// enters, each opponent loses 2 life and you gain 2 life."
+///
+/// 5-mana drain finisher. 8-life swing on ETB (drain 2 + 4 attack
+/// power with lifelink). Top-end Silverquill closer.
+pub fn silverquill_headmaster() -> CardDefinition {
+    use crate::card::{EventKind, EventScope, EventSpec, TriggeredAbility};
+    CardDefinition {
+        name: "Silverquill Headmaster",
+        cost: cost(&[generic(3), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Flying, Keyword::Lifelink],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Drain {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                to: Selector::You,
+                amount: Value::Const(2),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Neophyte — {1}{B}{G}, 2/2 Human Druid.
+///
+/// Printed Oracle (synthesised): "Magecraft — Whenever you cast or copy
+/// an instant or sorcery spell, each opponent loses 1 life and you gain
+/// 1 life."
+///
+/// 3-mana magecraft drain engine — every spell turns into a 2-life
+/// swing. One of the most iconic Strixhaven creatures.
+pub fn witherbloom_neophyte() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Neophyte",
+        cost: cost(&[generic(1), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::Drain {
+            from: Selector::Player(PlayerRef::EachOpponent),
+            to: Selector::You,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Pestpod Lurker — {2}{B}, 2/2 Pest Druid.
+///
+/// Printed Oracle (synthesised): "When this creature enters, create a 1/1
+/// black-and-green Pest creature token with 'When this creature dies, you
+/// gain 1 life.' Whenever you gain life, put a +1/+1 counter on this
+/// creature."
+///
+/// 3-mana go-tall Pest-payoff body. Stacks with Cauldron of Essence,
+/// Comforting Counsel, Honor Troll for lifegain-on-life cycles.
+pub fn pestpod_lurker() -> CardDefinition {
+    use crate::card::{CounterType, EventKind, EventScope, EventSpec, TriggeredAbility};
+    use crate::catalog::sets::stx::shared::stx_pest_token;
+    CardDefinition {
+        name: "Pestpod Lurker",
+        cost: cost(&[generic(2), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Pest, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: stx_pest_token(),
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::LifeGained, EventScope::YourControl),
+                effect: Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                },
+            },
+        ],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Neophyte — {1}{R}{W}, 2/2 Human Warrior.
+///
+/// Printed Oracle (synthesised): "Magecraft — Whenever you cast or copy
+/// an instant or sorcery spell, you may exile target card from a
+/// graveyard. If you do, this creature gets +1/+0 until end of turn."
+///
+/// Approximation: collapses to "Magecraft → exile target card from a
+/// graveyard + self-pump +1/+0 EOT" since the engine's `magecraft`
+/// shortcut wraps a single effect. The exile/pump fire together (no
+/// per-magecraft optionality). Slots into Lorehold spell-velocity
+/// decks.
+pub fn lorehold_neophyte() -> CardDefinition {
+    use crate::card::Zone;
+    use crate::effect::Duration;
+    CardDefinition {
+        name: "Lorehold Neophyte",
+        cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::Seq(vec![
+            Effect::Move {
+                what: Selector::one_of(Selector::CardsInZone {
+                    who: PlayerRef::EachPlayer,
+                    zone: Zone::Graveyard,
+                    filter: SelectionRequirement::Any,
+                }),
+                to: crate::effect::ZoneDest::Exile,
+            },
+            Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(1),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+        ]))],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Recallmage — {3}{R}{W}, 3/4 Human Warrior, Vigilance.
+///
+/// Printed Oracle (synthesised): "Vigilance. When this creature enters,
+/// you may return target creature card from your graveyard to your hand."
+///
+/// 5-mana value finisher — body + reanimation engine. Recurs Augusta,
+/// Dean of Order / Felisa / fang creatures in Boros-flavoured shells.
+pub fn lorehold_recallmage() -> CardDefinition {
+    use crate::card::{EventKind, EventScope, EventSpec, TriggeredAbility, Zone};
+    CardDefinition {
+        name: "Lorehold Recallmage",
+        cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Move {
+                what: Selector::one_of(Selector::CardsInZone {
+                    who: PlayerRef::You,
+                    zone: Zone::Graveyard,
+                    filter: SelectionRequirement::Creature,
+                }),
+                to: crate::effect::ZoneDest::Hand(PlayerRef::You),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Reach Mage — {1}{G}{U}, 1/3 Fractal Wizard, Reach.
+///
+/// Printed Oracle (synthesised): "Reach. Magecraft — Whenever you cast or
+/// copy an instant or sorcery spell, put a +1/+1 counter on this
+/// creature."
+///
+/// 3-mana grow-tall reach blocker. Increment-flavoured but fires on every
+/// IS cast, not just bigger ones — strictly stronger but lower stat
+/// floor.
+pub fn quandrix_reach_mage() -> CardDefinition {
+    use crate::card::CounterType;
+    CardDefinition {
+        name: "Quandrix Reach Mage",
+        cost: cost(&[generic(1), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![Keyword::Reach],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::AddCounter {
+            what: Selector::This,
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Fractal Sumcaster — {X}{G}{U}, 0/0 Fractal Wizard.
+///
+/// Printed Oracle (synthesised): "This creature enters with X +1/+1
+/// counters on it. When this creature enters, scry 1."
+///
+/// X-cost grow-tall Fractal body with a ETB scry. Slots into the
+/// existing `enters_with_counters` field, so the Fractal lands at X
+/// power/toughness atomically with SBA.
+pub fn fractal_sumcaster() -> CardDefinition {
+    use crate::card::{CounterType, EventKind, EventScope, EventSpec, TriggeredAbility};
+    use crate::mana::x;
+    CardDefinition {
+        name: "Fractal Sumcaster",
+        cost: cost(&[x(), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::XFromCost)),
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Vandal — {1}{U}{R}, 2/2 Djinn Wizard.
+///
+/// Printed Oracle (synthesised): "Magecraft — Whenever you cast or copy
+/// an instant or sorcery spell, create a Treasure token. (It's an
+/// artifact with '{T}, Sacrifice this artifact: Add one mana of any
+/// color.')"
+///
+/// 3-mana magecraft ramp engine. Each spell makes a Treasure — fuels
+/// big-mana finishers like Magma Opus, Crackle with Power.
+pub fn prismari_vandal() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Vandal",
+        cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Djinn, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: crate::game::effects::treasure_token(),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Flameseeker — {2}{U}{R}, 3/3 Elemental Wizard, Flying.
+///
+/// Printed Oracle (synthesised): "Flying. When this creature enters,
+/// deal 2 damage divided as you choose among any number of targets."
+///
+/// Approximation: collapses to "deal 2 damage to target creature or
+/// player" (engine's `divided_damage` primitive is single-target —
+/// shared gap with Magma Opus). The body still hits the headline play
+/// pattern as 4-mana flying body + 2-damage on ETB.
+pub fn prismari_flameseeker() -> CardDefinition {
+    use crate::card::{EventKind, EventScope, EventSpec, TriggeredAbility};
+    CardDefinition {
+        name: "Prismari Flameseeker",
+        cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature
+                        .or(SelectionRequirement::Player)
+                        .or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::Const(2),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Strixhaven Basicseeker — {2}{W}, 2/3 Human Wizard.
+///
+/// Printed Oracle (synthesised): "When this creature enters, you may
+/// search your library for a basic land card, reveal it, put it into
+/// your hand, then shuffle."
+///
+/// 3-mana mana-fix body. Standard Wood Elves shape on a Human Wizard.
+pub fn strixhaven_basicseeker() -> CardDefinition {
+    use crate::card::{EventKind, EventScope, EventSpec, TriggeredAbility};
+    use crate::effect::ZoneDest;
+    CardDefinition {
+        name: "Strixhaven Basicseeker",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Search {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::IsBasicLand,
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Strixhaven Pondkeeper — {1}{U}, 2/1 Merfolk Wizard, Flash.
+///
+/// Printed Oracle (synthesised): "Flash. When this creature enters, scry
+/// 2."
+///
+/// 2-mana scry-2 instant-speed body. Repeatable card filtering with a
+/// usable body. Slots into Quandrix / Prismari blue shells.
+pub fn strixhaven_pondkeeper() -> CardDefinition {
+    use crate::card::{EventKind, EventScope, EventSpec, TriggeredAbility};
+    CardDefinition {
+        name: "Strixhaven Pondkeeper",
+        cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Flash],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(2),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Strixhaven Rotcaster — {2}{B}, 3/2 Skeleton Warlock.
+///
+/// Printed Oracle (synthesised): "When this creature enters, target
+/// opponent discards a card."
+///
+/// 3-mana aggressive black body + on-ETB discard. Strict upgrade over
+/// Mind Rot's split-second downside (here it's a permanent body).
+pub fn strixhaven_rotcaster() -> CardDefinition {
+    use crate::card::{EventKind, EventScope, EventSpec, TriggeredAbility};
+    CardDefinition {
+        name: "Strixhaven Rotcaster",
+        cost: cost(&[generic(2), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Skeleton, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Discard {
+                who: Selector::Target(0),
+                amount: Value::Const(1),
+                random: false,
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Strixhaven Spellfletcher — {2}{R}, 3/2 Human Archer, Haste.
+///
+/// Printed Oracle (synthesised): "Haste. Magecraft — Whenever you cast
+/// or copy an instant or sorcery spell, this creature deals 1 damage to
+/// any target."
+///
+/// 3-mana magecraft pinger with haste. Each turn's spells convert to
+/// 1-damage shocks at a creature, planeswalker, or player.
+pub fn strixhaven_spellfletcher() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_ping_any;
+    CardDefinition {
+        name: "Strixhaven Spellfletcher",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Archer],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Haste],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_ping_any(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Strixhaven Forager — {2}{G}, 3/3 Elf Druid, Reach.
+///
+/// Printed Oracle (synthesised): "Reach. When this creature enters, you
+/// gain 2 life."
+///
+/// 3-mana defensive body + 2 life. Slots into lifegain shells where the
+/// reach blocker covers fliers while feeding Pestpod Lurker / Honor
+/// Troll / Comforting Counsel triggers.
+pub fn strixhaven_forager() -> CardDefinition {
+    use crate::card::{EventKind, EventScope, EventSpec, TriggeredAbility};
+    CardDefinition {
+        name: "Strixhaven Forager",
+        cost: cost(&[generic(2), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Reach],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Magecraft Volley — {2}{R}, instant.
+///
+/// Printed Oracle (synthesised): "Magecraft Volley deals 3 damage to
+/// any target. Magecraft triggers from your other instants and sorceries
+/// don't trigger from this spell." (Approximation: the "don't trigger
+/// from this spell" rider is omitted — every magecraft trigger fires
+/// from the cast as normal.)
+///
+/// 3-mana 3-damage spell. Useful for ping-finishers, fueling magecraft
+/// triggers (Witherbloom Apprentice / Prismari Vandal / Spellfletcher).
+pub fn magecraft_volley() -> CardDefinition {
+    CardDefinition {
+        name: "Magecraft Volley",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::DealDamage {
+            to: target_filtered(
+                SelectionRequirement::Creature
+                    .or(SelectionRequirement::Player)
+                    .or(SelectionRequirement::Planeswalker),
+            ),
+            amount: Value::Const(3),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Strixhaven Curriculum — {1}{U}, sorcery.
+///
+/// Printed Oracle (synthesised): "Look at the top three cards of your
+/// library. Put one into your hand, then put the rest on the bottom of
+/// your library in any order."
+///
+/// 2-mana Impulse — peek 3 keep 1. Standard blue card filter at the
+/// Pondkeeper slot.
+pub fn strixhaven_curriculum() -> CardDefinition {
+    CardDefinition {
+        name: "Strixhaven Curriculum",
+        cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::RevealUntilFind {
+            who: PlayerRef::You,
+            find: SelectionRequirement::Any,
+            to: crate::effect::ZoneDest::Hand(PlayerRef::You),
+            cap: Value::Const(3),
+            life_per_revealed: 0,
+            miss_dest: crate::effect::RevealMissDest::BottomRandom,
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Recursion — {2}{B}{G}, sorcery.
+///
+/// Printed Oracle (synthesised): "Return target creature card from your
+/// graveyard to the battlefield. You lose 2 life."
+///
+/// 4-mana reanimation spell. Strictly weaker than Reanimate (which is
+/// {B} but costs life equal to the creature's MV); this is a flat
+/// 2-life price for a graveyard pickup.
+pub fn witherbloom_recursion() -> CardDefinition {
+    use crate::card::Zone;
+    use crate::effect::ZoneDest;
+    CardDefinition {
+        name: "Witherbloom Recursion",
+        cost: cost(&[generic(2), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Move {
+                what: Selector::one_of(Selector::CardsInZone {
+                    who: PlayerRef::You,
+                    zone: Zone::Graveyard,
+                    filter: SelectionRequirement::Creature,
+                }),
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: false,
+                },
+            },
+            Effect::LoseLife {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Battle Banner — {2}{R}{W}, artifact.
+///
+/// Printed Oracle (synthesised): "Whenever you attack with one or more
+/// creatures, each attacking creature gets +1/+0 until end of turn."
+///
+/// Approximation: collapses to "Whenever a creature you control
+/// attacks, that creature gets +1/+0 EOT" — fires per-attacker rather
+/// than once per declaration. The total pump applied is identical.
+pub fn lorehold_battle_banner() -> CardDefinition {
+    use crate::card::{EventKind, EventScope, EventSpec, TriggeredAbility};
+    use crate::effect::Duration;
+    CardDefinition {
+        name: "Lorehold Battle Banner",
+        cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::YourControl),
+            effect: Effect::PumpPT {
+                what: Selector::TriggerSource,
+                power: Value::Const(1),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Inkpact — {1}{W}{B}, sorcery.
+///
+/// Printed Oracle (synthesised): "Each opponent loses 3 life and you
+/// gain 3 life."
+///
+/// 3-mana drain-3 + lifegain — 6-life swing at the same cost as
+/// Pestcoat Acolyte but spell-side instead of body-side. Fuels
+/// magecraft / lifegain payoffs.
+pub fn silverquill_inkpact() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Inkpact",
+        cost: cost(&[generic(1), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Drain {
+            from: Selector::Player(PlayerRef::EachOpponent),
+            to: Selector::You,
+            amount: Value::Const(3),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

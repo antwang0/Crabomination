@@ -471,6 +471,7 @@ pub fn burrog_banemaker() -> CardDefinition {
             life_cost: 0,
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
+            self_counter_cost_reduction: None,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -518,6 +519,7 @@ pub fn noxious_newt() -> CardDefinition {
             life_cost: 0,
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
+            self_counter_cost_reduction: None,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -567,6 +569,7 @@ pub fn mindful_biomancer() -> CardDefinition {
             life_cost: 0,
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
+            self_counter_cost_reduction: None,
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -975,6 +978,7 @@ pub fn shattered_acolyte() -> CardDefinition {
             life_cost: 0,
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
+            self_counter_cost_reduction: None,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -1028,6 +1032,7 @@ pub fn summoned_dromedary() -> CardDefinition {
             life_cost: 0,
             from_graveyard: true,
             exile_self_cost: false, exile_other_filter: None,
+            self_counter_cost_reduction: None,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -1642,6 +1647,7 @@ pub fn teachers_pest() -> CardDefinition {
             life_cost: 0,
             from_graveyard: true,
             exile_self_cost: false, exile_other_filter: None,
+            self_counter_cost_reduction: None,
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
@@ -1888,6 +1894,7 @@ pub fn hardened_academic() -> CardDefinition {
             life_cost: 0,
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
+            self_counter_cost_reduction: None,
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::CardLeftGraveyard, EventScope::YourControl),
@@ -2257,6 +2264,7 @@ pub fn charging_strifeknight() -> CardDefinition {
             life_cost: 0,
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
+            self_counter_cost_reduction: None,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -2889,6 +2897,7 @@ pub fn eternal_student() -> CardDefinition {
             life_cost: 0,
             from_graveyard: true,
             exile_self_cost: true, exile_other_filter: None,
+            self_counter_cost_reduction: None,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -2952,6 +2961,7 @@ pub fn postmortem_professor() -> CardDefinition {
                 SelectionRequirement::HasCardType(CardType::Instant)
                     .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
             ),
+            self_counter_cost_reduction: None,
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
@@ -3214,6 +3224,7 @@ pub fn topiary_lecturer() -> CardDefinition {
             life_cost: 0,
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
+            self_counter_cost_reduction: None,
         }],
         triggered_abilities: vec![increment_self_plus_one()],
         static_abilities: vec![],
@@ -3347,6 +3358,7 @@ pub fn sundering_archaic() -> CardDefinition {
             life_cost: 0,
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
+            self_counter_cost_reduction: None,
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -3476,6 +3488,7 @@ pub fn hydro_channeler() -> CardDefinition {
             life_cost: 0,
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
+            self_counter_cost_reduction: None,
             },
             ActivatedAbility {
                 tap_cost: true,
@@ -3491,6 +3504,7 @@ pub fn hydro_channeler() -> CardDefinition {
             life_cost: 0,
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
+            self_counter_cost_reduction: None,
             },
         ],
         triggered_abilities: vec![],
@@ -3602,6 +3616,7 @@ pub fn emil_vastlands_roamer() -> CardDefinition {
             life_cost: 0,
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
+            self_counter_cost_reduction: None,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![StaticAbility {
@@ -3851,6 +3866,7 @@ pub fn orysa_tide_choreographer() -> CardDefinition {
                 ))),
                 Value::Const(10),
             )),
+                    exile_from_graveyard_count: 0,
         }),
         back_face: None,
         opening_hand: None,
@@ -4054,13 +4070,16 @@ pub fn colossus_of_the_blood_age() -> CardDefinition {
 /// "As an additional cost to cast this spell, exile two cards from your
 /// graveyard or pay {1}{W}. / Flying, vigilance"
 ///
-/// Approximation: the alternative additional cost (exile two from gy)
-/// is omitted (no alt-cost-with-exile-from-gy primitive). The card is
-/// wired at the **paid** cost path: full {3}{W} (i.e. base cost
-/// {2}{W} + the {1}{W} payment fork). Players always end up paying the
-/// mana variant, which is the more common play pattern anyway. Body
-/// (4/3 Flying + Vigilance Elephant Cleric) wired faithfully.
+/// Push (modern_decks): the alt additional cost (exile two cards from
+/// your graveyard) is **now wired** via the new
+/// `AlternativeCost.exile_from_graveyard_count: u32` field. The
+/// printed cost is modeled as **{3}{W}** (base {2}{W} + the {1}{W}
+/// mana fork — auto-decider's default path). The alt cost path
+/// {2}{W} with `exile_from_graveyard_count: 2` is available when the
+/// caster's graveyard has at least 2 cards. Auto-picker takes the
+/// lowest-CMC cards. Body (4/3 Flying + Vigilance) unchanged.
 pub fn soaring_stoneglider() -> CardDefinition {
+    use crate::card::AlternativeCost;
     use crate::mana::w;
     CardDefinition {
         name: "Soaring Stoneglider",
@@ -4080,7 +4099,16 @@ pub fn soaring_stoneglider() -> CardDefinition {
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
-        alternative_cost: None,
+        alternative_cost: Some(AlternativeCost {
+            mana_cost: cost(&[generic(2), w()]),
+            life_cost: 0,
+            exile_filter: None,
+            evoke_sacrifice: false,
+            not_your_turn_only: false,
+            target_filter: None,
+            condition: None,
+            exile_from_graveyard_count: 2,
+        }),
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
@@ -4588,6 +4616,7 @@ pub fn berta_wise_extrapolator() -> CardDefinition {
             life_cost: 0,
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
+            self_counter_cost_reduction: None,
         }],
         triggered_abilities: vec![
             // Increment (push XVII): "Whenever you cast a spell, if the
@@ -4934,6 +4963,7 @@ pub fn rubble_rouser() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false,
             exile_other_filter: Some(SelectionRequirement::Any),
+            self_counter_cost_reduction: None,
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -5369,6 +5399,7 @@ pub fn stone_docent() -> CardDefinition {
             life_cost: 0,
             from_graveyard: true,
             exile_self_cost: true, exile_other_filter: None,
+            self_counter_cost_reduction: None,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
