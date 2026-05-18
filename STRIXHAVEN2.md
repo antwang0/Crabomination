@@ -19,7 +19,7 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 206 | 48 | 1 |
-| STX (280 cards) | 712 | 10 | 0 |
+| STX (280 cards) | 716 | 10 | 0 |
 | STA reprints (in STX boosters) | 46 | 0 | — |
 
 Push (modern_decks, claude/modern_decks branch — latest revision —
@@ -74,6 +74,12 @@ features required. Total test count: 2364 → 2390.
   `strixhaven_burnscholar` ({R} 1/1 Wizard Haste with ETB 1 dmg
   target opponent), `strixhaven_necropact` ({2}{B} sorcery: target
   player draws 2 + loses 2 life).
+- **4 iconic / cross-school finishers** (`stx::iconic`):
+  `heroic_defiance` ({1}{W} instant: +1/+1 + hexproof + indestructible
+  EOT), `tome_shredder` ({2}{B} 2/2 Warlock with ETB-targeted-discard),
+  `mascot_acolyte` ({2}{G} 2/3 Druid Reach with ETB basic-land tutor),
+  `lorehold_strikeforce` ({2}{R}{W} sorcery: team-wide +2/+0 +
+  trample EOT).
 
 Plus a small engine cleanup pass: `permanent_has_keyword` and
 the `bot_deadlock_dumps_full_state` test helper migrated from

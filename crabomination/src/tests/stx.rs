@@ -23573,6 +23573,90 @@ fn strixhaven_burnscholar_etb_pings_and_has_haste() {
 }
 
 #[test]
+fn heroic_defiance_pumps_and_grants_hexproof_and_indestructible() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::heroic_defiance());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Defiance castable");
+    drain_stack(&mut g);
+    let bear_card = g.battlefield_find(bear).expect("Bear");
+    assert!(bear_card.has_keyword(&Keyword::Hexproof));
+    assert!(bear_card.has_keyword(&Keyword::Indestructible));
+    assert_eq!(bear_card.power(), 3, "Bear pumped to 3 power");
+    assert_eq!(bear_card.toughness(), 3);
+}
+
+#[test]
+fn tome_shredder_etb_makes_opp_discard() {
+    let mut g = two_player_game();
+    let _ = g.add_card_to_hand(1, catalog::lightning_bolt());
+    let _ = g.add_card_to_hand(1, catalog::island());
+    let id = g.add_card_to_hand(0, catalog::tome_shredder());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let opp_hand_before = g.players[1].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(crate::game::types::Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Tome Shredder castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].hand.len(), opp_hand_before - 1, "Opp discards 1");
+    // Opp graveyard should have the bolt (nonland chosen by auto-decider).
+    let in_gy = g.players[1].graveyard.iter().any(|c| c.definition.name == "Lightning Bolt");
+    assert!(in_gy, "Discarded card lands in graveyard");
+}
+
+#[test]
+fn mascot_acolyte_etb_ramps_forest_tapped() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let forest = g.add_card_to_library(0, catalog::forest());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(forest))]));
+    let id = g.add_card_to_hand(0, catalog::mascot_acolyte());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Acolyte castable");
+    drain_stack(&mut g);
+    let f = g.battlefield_find(forest).expect("Forest tutored");
+    assert!(f.tapped, "Tutored Forest enters tapped");
+    assert!(f.definition.is_land());
+    let def = catalog::mascot_acolyte();
+    assert!(def.keywords.contains(&Keyword::Reach));
+}
+
+#[test]
+fn lorehold_strikeforce_pumps_team_with_trample() {
+    let mut g = two_player_game();
+    let b1 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b2 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::lorehold_strikeforce());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Strikeforce castable");
+    drain_stack(&mut g);
+    let b1c = g.battlefield_find(b1).expect("Bear 1");
+    let b2c = g.battlefield_find(b2).expect("Bear 2");
+    assert_eq!(b1c.power(), 4);
+    assert_eq!(b2c.power(), 4);
+    assert!(b1c.has_keyword(&Keyword::Trample));
+    assert!(b2c.has_keyword(&Keyword::Trample));
+}
+
+#[test]
 fn strixhaven_necropact_draws_two_and_loses_two() {
     let mut g = two_player_game();
     g.add_card_to_library(0, catalog::island());
