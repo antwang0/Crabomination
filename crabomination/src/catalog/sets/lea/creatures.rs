@@ -32,6 +32,7 @@ pub fn savannah_lions() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -60,6 +61,7 @@ pub fn white_knight() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -88,6 +90,7 @@ pub fn serra_angel() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -116,6 +119,7 @@ pub fn mahamoti_djinn() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -155,6 +159,7 @@ pub fn prodigal_sorcerer() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -183,6 +188,7 @@ pub fn black_knight() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -227,6 +233,7 @@ pub fn hypnotic_specter() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -255,6 +262,7 @@ pub fn sengir_vampire() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -283,6 +291,7 @@ pub fn shivan_dragon() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -311,6 +320,7 @@ pub fn grizzly_bears() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -353,6 +363,7 @@ pub fn birds_of_paradise() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -381,6 +392,7 @@ pub fn llanowar_elves() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -409,6 +421,7 @@ pub fn elvish_archers() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -437,5 +450,6 @@ pub fn craw_wurm() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }

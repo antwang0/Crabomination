@@ -49,6 +49,7 @@ pub fn pact_of_negation() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -115,6 +116,7 @@ pub fn plunge_into_darkness() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -166,6 +168,7 @@ pub fn serum_powder() -> CardDefinition {
         opening_hand: Some(OpeningHandEffect::MulliganHelper),
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -209,6 +212,7 @@ pub fn spoils_of_the_vault() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -251,6 +255,7 @@ pub fn summoners_pact() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -294,6 +299,7 @@ pub fn thud() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -330,6 +336,7 @@ pub fn inquisition_of_kozilek() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -372,6 +379,7 @@ pub fn leyline_of_sanctity() -> CardDefinition {
         }),
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -427,6 +435,7 @@ pub fn ephemerate() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -484,6 +493,7 @@ pub fn faithful_mending() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -522,6 +532,7 @@ pub fn force_of_negation() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -579,6 +590,7 @@ pub fn goryos_vengeance() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -622,6 +634,7 @@ pub fn prismatic_ending() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -658,6 +671,7 @@ pub fn thoughtseize() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -707,6 +721,7 @@ pub fn consign_to_memory() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -757,6 +772,7 @@ pub fn damping_sphere() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -801,6 +817,7 @@ pub fn mystical_dispute() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -845,6 +862,7 @@ pub fn pest_control() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -894,5 +912,6 @@ pub fn wrath_of_the_skies() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }

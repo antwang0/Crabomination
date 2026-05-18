@@ -25,6 +25,7 @@ pub fn mox_pearl() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -50,6 +51,7 @@ pub fn mox_sapphire() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -75,6 +77,7 @@ pub fn mox_jet() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -100,6 +103,7 @@ pub fn mox_ruby() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -125,6 +129,7 @@ pub fn mox_emerald() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -164,6 +169,7 @@ pub fn black_lotus() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -203,6 +209,7 @@ pub fn sol_ring() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -249,5 +256,6 @@ pub fn nevinyrrals_disk() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }

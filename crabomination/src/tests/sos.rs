@@ -148,6 +148,7 @@ fn stand_up_for_yourself_only_targets_power_three_or_more() {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     };
     let mut g = two_player_game();
     let big_id = g.add_card_to_battlefield(1, big);
@@ -1922,6 +1923,7 @@ fn quandrix_charm_mode_1_destroys_enchantment() {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     };
     let mut g = two_player_game();
     let ench = g.add_card_to_battlefield(1, ench_def);
@@ -2406,6 +2408,7 @@ fn arnyn_drains_when_a_one_power_creature_you_control_dies() {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     };
     let weak_id = g.add_card_to_battlefield(0, weak);
 
@@ -10953,4 +10956,28 @@ fn steal_the_show_mode_one_burns_creature_by_is_graveyard_count() {
         !g.battlefield.iter().any(|c| c.id == bear),
         "Bear destroyed by 3 damage from Steal the Show mode 1"
     );
+}
+
+#[test]
+fn witherbloom_balancer_affinity_for_creatures_reduces_cost() {
+    // Affinity for creatures: "{1} less for each creature you control."
+    // With 4 of your creatures, Witherbloom, the Balancer should cost
+    // {2}{B}{G} instead of {6}{B}{G}.
+    let mut g = two_player_game();
+    for _ in 0..4 {
+        g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    }
+    // Opp creatures should NOT count (ControlledByYou narrows).
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::witherbloom_the_balancer());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Witherbloom Balancer castable at {2}{B}{G} via affinity discount");
+    drain_stack(&mut g);
+    let drag = g.battlefield.iter().find(|c| c.definition.name == "Witherbloom, the Balancer");
+    assert!(drag.is_some(), "Witherbloom Balancer on battlefield");
 }

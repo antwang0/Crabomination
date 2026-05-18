@@ -27,6 +27,7 @@ pub fn wrath_of_god() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -54,6 +55,7 @@ pub fn armageddon() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -83,6 +85,7 @@ pub fn demonic_tutor() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -121,5 +124,6 @@ pub fn wheel_of_fortune() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }

@@ -76,6 +76,7 @@ pub fn cauldron_of_essence() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -136,6 +137,7 @@ pub fn diary_of_dreams() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -215,6 +217,7 @@ pub fn tablet_of_discovery() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -289,6 +292,7 @@ pub fn potioners_trove() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -346,6 +350,7 @@ pub fn resonating_lute() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -411,6 +416,7 @@ pub fn ark_of_hunger() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -464,6 +470,7 @@ pub fn strixhaven_skycoach() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 

@@ -4395,3 +4395,57 @@ resolution time" in the Suggested next-up tasks section.
   the card stays in exile permanently. The cast-from-exile path
   consults this list in `try_pay_with_auto_tap` to authorize. Promotes
   ~6 🟡s across SOS/STX.
+
+### Suggested next-up tasks (additions from batch 25)
+
+- ✅ **Card-intrinsic Affinity-for-[filter] cost reduction** (push
+  modern_decks batch 25) — new `CardDefinition.affinity_filter:
+  Option<SelectionRequirement>` slot bakes a per-spell "{1} less to
+  cast for each [filter]" discount onto the printed card. Read by
+  `cost_reduction_for_spell` (`game/actions.rs`) at every cast path —
+  hand-cast, alt-cost, back-face, flashback — so the discount applies
+  consistently. Generic-only per CR 601.2f / 117.7c via the existing
+  `ManaCost::reduce_generic` clamp. Promotes:
+  - **Vanquish the Horde** 🟡 → ✅ (Creature filter, all battlefield)
+  - **Witherbloom, the Balancer** 🟡 → 🟡 self-cast ✅ (Creature &
+    ControlledByYou; the second IS-spell-grant-affinity static is still ⏳)
+  Future Affinity-for-X (Artifacts, Lands, Pests) cards plug in
+  without engine changes. Three lock-in tests:
+  `vanquish_the_horde_affinity_for_creatures_reduces_cost`,
+  `vanquish_the_horde_affinity_rejects_undercost_with_no_creatures`,
+  `witherbloom_balancer_affinity_for_creatures_reduces_cost`.
+
+- 🟡 **CR 705 — Flipping a Coin** (push modern_decks batch 25 — rules
+  audit against `MagicCompRules_20260417.txt`): Coin-flipping primitive.
+  Audit:
+  (a) **705.1** "A coin used in a flip must be a two-sided object with
+  easily distinguished sides and equal likelihood that either side
+  lands face up" — ⏳ (no coin-flip primitive in the engine; tracked
+  separately as the `Effect::FlipCoin` row in this file). The two
+  outcomes ("heads" / "tails") would be modeled as a `Decision::CoinFlip`
+  so tests can script them deterministically.
+  (b) **705.2** "If the call matches the result, the player wins the
+  flip. Otherwise, the player loses the flip." — ⏳ (no win/lose
+  tracking on flips; `Effect::FlipCoin { on_heads, on_tails }` covers
+  the "care only about heads/tails" case; a parallel `Effect::FlipCoinAndCall`
+  with `on_win`/`on_lose` covers the call-and-match case).
+  (c) **705.3** "An effect may state that a coin flip has a certain
+  result and/or that a certain player wins a coin flip. In that case,
+  ignore the actual results of that flip and use the indicated
+  results instead." — ⏳ (no coin-flip-result override primitive;
+  Krark's Thumb-style "if you would flip one, flip two and ignore one"
+  needs the override on top of base flips). Blocked on the base
+  `Effect::FlipCoin` primitive landing. Promote to ✅ when Karplusan
+  Minotaur / Mana Clash / Krark's Thumb test fixtures pass.
+
+- ⏳ **`StaticEffect::GrantAffinityToInstantsOrSorceries { filter }`** —
+  Witherbloom, the Balancer's second printed clause is "Instant and
+  sorcery spells you cast have affinity for creatures." The engine's
+  new `affinity_filter` slot is per-card (baked at printing time); a
+  static that *grants* affinity to every IS spell the controller casts
+  needs a separate path. Wiring shape: at cast time, check every
+  battlefield permanent for this static, and if found, treat the
+  caster's IS spells as if they had `affinity_filter:
+  Some(spell_filter)`. The cost reduction layer already handles the
+  rest. Same primitive shape unblocks any future "your IS spells have
+  [keyword]" grant (storm, cascade, etc.).

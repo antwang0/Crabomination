@@ -59,6 +59,7 @@ pub fn quandrix_apprentice() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -109,6 +110,7 @@ pub fn quandrix_pledgemage() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -166,6 +168,7 @@ pub fn decisive_denial() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -226,6 +229,7 @@ pub fn symmathematics() -> CardDefinition {
         // CR 614.12 "enters with two +1/+1 counters on it" replacement.
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(2))),
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -293,6 +297,7 @@ pub fn quandrix_summoner() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -337,6 +342,7 @@ pub fn quandrix_scholar() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -387,6 +393,7 @@ pub fn quandrix_ecologist() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -431,6 +438,7 @@ pub fn quandrix_symmetrist() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -475,6 +483,7 @@ pub fn quandrix_reckoner() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -517,6 +526,7 @@ pub fn fractal_reinforcement() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -562,6 +572,7 @@ pub fn quandrix_tutelary() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -614,6 +625,7 @@ pub fn quandrix_fractalflow() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -655,6 +667,7 @@ pub fn quandrix_scrycharmer() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -711,6 +724,7 @@ pub fn quandrix_crystallizer() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -764,6 +778,7 @@ pub fn quandrix_multibinding() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -808,6 +823,7 @@ pub fn quandrix_geomyst() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -851,6 +867,7 @@ pub fn quandrix_doublecaster() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -901,6 +918,7 @@ pub fn quandrix_wavewright() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -943,6 +961,7 @@ pub fn quandrix_sapsprout() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -999,6 +1018,7 @@ pub fn fractal_growth() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1048,6 +1068,7 @@ pub fn quandrix_calculus() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1092,6 +1113,7 @@ pub fn fractal_multiplier() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1142,6 +1164,7 @@ pub fn fractal_bloom() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1194,6 +1217,7 @@ pub fn quandrix_spellweaver() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1237,6 +1261,7 @@ pub fn quandrix_wavedancer() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1280,6 +1305,7 @@ pub fn fractal_synthesis() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1323,6 +1349,7 @@ pub fn quandrix_hatchling() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(2))),
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1369,6 +1396,7 @@ pub fn quandrix_calibrator() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1408,6 +1436,7 @@ pub fn fractal_resonance() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1448,6 +1477,7 @@ pub fn quandrix_mistweaver() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1492,6 +1522,7 @@ pub fn fractal_harvest() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1534,6 +1565,7 @@ pub fn quandrix_sage() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1578,6 +1610,7 @@ pub fn quandrix_counterbalance() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1624,6 +1657,7 @@ pub fn fractal_bloom_caller() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1667,6 +1701,7 @@ pub fn quandrix_synthesist() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1718,6 +1753,7 @@ pub fn fractal_tessellation() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1754,6 +1790,7 @@ pub fn quandrix_mistshaper() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1806,6 +1843,7 @@ pub fn quandrix_polymath() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1841,6 +1879,7 @@ pub fn fractal_avenger() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(4))),
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1884,6 +1923,7 @@ pub fn quandrix_cartographer() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1932,6 +1972,7 @@ pub fn fractal_sovereign() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1981,6 +2022,7 @@ pub fn quandrix_pairweaver() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -2041,6 +2083,7 @@ pub fn quandrix_pondkeeper() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -2085,6 +2128,7 @@ pub fn quandrix_counterproof() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -2139,6 +2183,7 @@ pub fn quandrix_logician() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -2200,6 +2245,7 @@ pub fn fractal_echoist() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -2247,6 +2293,7 @@ pub fn quandrix_mathenotaur() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -2294,6 +2341,7 @@ pub fn fractal_surge() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -2342,6 +2390,7 @@ pub fn quandrix_aether_adept() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -2388,5 +2437,242 @@ pub fn quandrix_symmetrycaster() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+// ── Push (modern_decks) batch 25: 5 more Quandrix cards ────────────────────
+//
+// Continuing Quandrix (G/U) buildout: 3 new creatures + 2 spells using
+// existing Fractal token / +1/+1 counter / magecraft primitives. No new
+// engine features required.
+
+/// Quandrix Pondweaver — {G}{U}, 1/1 Elf Druid.
+///
+/// Printed Oracle (synthesised): "Magecraft — Whenever you cast or copy
+/// an instant or sorcery spell, scry 1."
+///
+/// 2-mana scry engine — every IS spell smooths future draws. Slots into
+/// any blue-green spell-heavy / Fractal shell.
+pub fn quandrix_pondweaver() -> CardDefinition {
+    use crate::effect::shortcut::magecraft;
+    CardDefinition {
+        name: "Quandrix Pondweaver",
+        cost: cost(&[g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::Scry {
+            who: PlayerRef::You,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Fractalseed — {1}{G}{U}, 2/2 Fractal.
+///
+/// Printed Oracle (synthesised): "When this creature enters, put a
+/// +1/+1 counter on this creature for each instant and sorcery card in
+/// your graveyard."
+///
+/// 3-mana counter-scaling Fractal — grows by the size of your IS gy
+/// pile. Combines with Galvanic Iteration / Flashback to refill the
+/// graveyard and pump itself.
+pub fn quandrix_fractalseed() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Fractalseed",
+        cost: cost(&[generic(1), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::CountOf(Box::new(Selector::CardsInZone {
+                    who: PlayerRef::You,
+                    zone: crate::card::Zone::Graveyard,
+                    filter: SelectionRequirement::HasCardType(CardType::Instant)
+                        .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+                })),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Mapmaker — {2}{G}, 2/3 Elf Druid.
+///
+/// Printed Oracle (synthesised): "When this creature enters, search your
+/// library for a basic Forest or Island card, put it onto the battlefield
+/// tapped, then shuffle."
+///
+/// 3-mana 2/3 ramper. Targeted basic-fetch for the next turn's color
+/// fixing. Slots into any Quandrix curve.
+pub fn quandrix_mapmaker() -> CardDefinition {
+    use crate::effect::ZoneDest;
+    CardDefinition {
+        name: "Quandrix Mapmaker",
+        cost: cost(&[generic(2), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Search {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::IsBasicLand,
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: true,
+                },
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Fractalwave — {2}{G}{U}, sorcery.
+///
+/// Printed Oracle (synthesised): "Create a 0/0 green and blue Fractal
+/// creature token. Put X +1/+1 counters on it, where X is the number of
+/// instant and sorcery cards in your graveyard."
+///
+/// 4-mana Fractal-creator scaling on graveyard size. With a 3+ card IS
+/// pile this becomes a 3/3+ for 4 mana. Slots into any spell-recursion
+/// Quandrix shell.
+pub fn quandrix_fractalwave() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Fractalwave",
+        cost: cost(&[generic(2), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: quandrix_fractal_token(),
+            },
+            Effect::AddCounter {
+                what: Selector::LastCreatedToken,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::CountOf(Box::new(Selector::CardsInZone {
+                    who: PlayerRef::You,
+                    zone: crate::card::Zone::Graveyard,
+                    filter: SelectionRequirement::HasCardType(CardType::Instant)
+                        .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+                })),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Fractal Theorist — {2}{G}{U}, 3/3 Fractal Wizard Trample.
+///
+/// Printed Oracle (synthesised): "Trample. Whenever you cast or copy an
+/// instant or sorcery spell, put a +1/+1 counter on target Fractal you
+/// control."
+///
+/// 4-mana 3/3 trampler that pumps your Fractals on every IS cast. Pairs
+/// with Quandrix Fractalseed / Quandrix Fractalwave for layered growth.
+pub fn fractal_theorist() -> CardDefinition {
+    use crate::effect::shortcut::magecraft;
+    CardDefinition {
+        name: "Fractal Theorist",
+        cost: cost(&[generic(2), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Trample],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::AddCounter {
+            what: target_filtered(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::HasCreatureType(CreatureType::Fractal))
+                    .and(SelectionRequirement::ControlledByYou),
+            ),
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
     }
 }

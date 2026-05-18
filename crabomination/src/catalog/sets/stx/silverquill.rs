@@ -64,6 +64,7 @@ pub fn spirited_companion() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -107,6 +108,7 @@ pub fn eyetwitch() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -150,6 +152,7 @@ pub fn closing_statement() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -189,6 +192,7 @@ pub fn vanishing_verse() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -235,6 +239,7 @@ pub fn killian_ink_duelist() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -276,6 +281,7 @@ pub fn devastating_mastery() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -334,6 +340,7 @@ pub fn felisa_fang_of_silverquill() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -371,6 +378,7 @@ pub fn mavinda_students_advocate() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -415,6 +423,7 @@ pub fn eager_first_year() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -463,6 +472,7 @@ pub fn hunt_for_specimens() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -501,6 +511,7 @@ pub fn silverquill_pledgemage() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -542,6 +553,7 @@ pub fn archmage_emeritus() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -583,6 +595,7 @@ pub fn promising_duskmage() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -639,6 +652,7 @@ pub fn tenured_inkcaster() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -705,6 +719,7 @@ pub fn selfless_glyphweaver() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -758,6 +773,7 @@ pub fn silverquill_loremender() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -809,6 +825,7 @@ pub fn inkling_verselord() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -852,6 +869,7 @@ pub fn silverquill_drainmaster() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -899,6 +917,7 @@ pub fn inkrise_lifedrainer() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -958,6 +977,7 @@ pub fn silverquill_penman() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1008,6 +1028,7 @@ pub fn silverquill_anthemwriter() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1051,6 +1072,7 @@ pub fn silverquill_quillmage() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1102,6 +1124,7 @@ pub fn silverquill_memorialist() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1138,6 +1161,7 @@ pub fn inkling_aspirant() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1176,6 +1200,7 @@ pub fn witherspell_drain() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1221,6 +1246,7 @@ pub fn inkling_scribe() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1259,6 +1285,7 @@ pub fn silverquill_erudite() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1305,6 +1332,7 @@ pub fn inkling_bloodscribe() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1345,6 +1373,7 @@ pub fn silverquill_reprimand() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1384,6 +1413,7 @@ pub fn silverquill_inquisition() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1433,6 +1463,7 @@ pub fn silverquill_archivist() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1472,6 +1503,7 @@ pub fn silverquill_witness() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1515,6 +1547,7 @@ pub fn silverquill_judge() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1560,6 +1593,7 @@ pub fn inkling_brigade() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1600,6 +1634,7 @@ pub fn silverquill_pen_pusher() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1652,6 +1687,7 @@ pub fn silverquill_chronicle() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1688,6 +1724,7 @@ pub fn inkling_vanguard() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1732,6 +1769,7 @@ pub fn silverquill_marshal() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1770,6 +1808,7 @@ pub fn inkling_sanctifier() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1808,6 +1847,7 @@ pub fn silverquill_pupil() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1849,6 +1889,7 @@ pub fn defend_the_inkwell() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1899,6 +1940,7 @@ pub fn inkling_witness() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1938,6 +1980,7 @@ pub fn inkling_coursebinder() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1978,6 +2021,7 @@ pub fn silverquill_sermon() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -2027,6 +2071,7 @@ pub fn silverquill_censure() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -2072,6 +2117,7 @@ pub fn silverquill_castigant() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -2117,6 +2163,7 @@ pub fn silverquill_heartrender() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -2155,6 +2202,7 @@ pub fn inkling_confessor() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -2201,6 +2249,7 @@ pub fn silverquill_quillblade() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -2247,6 +2296,7 @@ pub fn inkling_decree() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -2285,6 +2335,7 @@ pub fn inkling_inkrider() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -2332,6 +2383,7 @@ pub fn silverquill_lawkeeper() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -2376,6 +2428,7 @@ pub fn inkling_penmaster() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -2419,6 +2472,7 @@ pub fn silverquill_dictation() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -2464,6 +2518,7 @@ pub fn inkling_stormcaller() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -2510,6 +2565,7 @@ pub fn silverquill_discipline() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -2557,6 +2613,7 @@ pub fn silverquill_inkscholar() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -2602,6 +2659,7 @@ pub fn inkling_battlecaster() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -2640,6 +2698,7 @@ pub fn silverquill_compulsion() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -2683,6 +2742,7 @@ pub fn silverquill_sealwriter() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -2728,6 +2788,7 @@ pub fn inkling_acolyte() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -2768,6 +2829,7 @@ pub fn silverquill_conviction() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -2805,6 +2867,7 @@ pub fn silverquill_bookbearer() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -2847,6 +2910,7 @@ pub fn inkling_inquisitor() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -2886,6 +2950,7 @@ pub fn silverquill_reckoning() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -2927,6 +2992,7 @@ pub fn silverquill_lifeglyph() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -2970,6 +3036,7 @@ pub fn inkling_aristocrat() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -3026,6 +3093,7 @@ pub fn silverquill_quillscribe() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -3069,6 +3137,7 @@ pub fn silverquill_hush() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -3115,6 +3184,7 @@ pub fn inkling_lorewright() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -3159,6 +3229,7 @@ pub fn silverquill_battle_hymn() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -3200,6 +3271,7 @@ pub fn silverquill_eulogist() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -3252,6 +3324,7 @@ pub fn silverquill_notetaker() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -3293,6 +3366,7 @@ pub fn inkling_pamphleteer() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -3336,6 +3410,7 @@ pub fn silverquill_indictment() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -3383,6 +3458,7 @@ pub fn inkling_banner_bearer() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -3425,6 +3501,7 @@ pub fn silverquill_tribunal() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -3462,6 +3539,7 @@ pub fn inkling_quillwarden() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -3515,6 +3593,7 @@ pub fn inkling_sage() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -3564,5 +3643,319 @@ pub fn silverquill_memorist() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+// ── Push (modern_decks) batch 25: 7 more Silverquill cards ─────────────────
+//
+// Continuing Silverquill (W/B) buildout: 4 new creatures + 3 spells using
+// existing magecraft / drain / counter / token primitives. No new engine
+// features required.
+
+/// Silverquill Inkmaster — {1}{W}{B}, 2/2 Inkling Wizard.
+///
+/// Printed Oracle (synthesised): "Magecraft — Whenever you cast or copy an
+/// instant or sorcery spell, each opponent loses 1 life and you gain 1
+/// life."
+///
+/// 3-mana drain-magecraft body — Witherbloom Apprentice template in
+/// Silverquill colors. Every IS spell drains 2 life total (1 from
+/// each opp, 1 to you). Pairs with Tenured Inkcaster's +2/+2 anthem.
+pub fn silverquill_inkmaster() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Inkmaster",
+        cost: cost(&[generic(1), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_drain_each_opp(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Inkling Censurer — {2}{W}, 2/3 Inkling Cleric Vigilance.
+///
+/// Printed Oracle (synthesised): "Vigilance. When this creature enters, tap
+/// target creature an opponent controls."
+///
+/// 3-mana Vigilance defender + free tap-down trick on ETB. Removes a
+/// blocker for your alpha-strike turn or shuts down opp's attacker for a
+/// round. Same shape as Frost Trickster but at sorcery speed.
+pub fn inkling_censurer() -> CardDefinition {
+    CardDefinition {
+        name: "Inkling Censurer",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Tap {
+                what: target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByOpponent),
+                ),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Loredrain — {2}{B}, instant.
+///
+/// Printed Oracle (synthesised): "Target creature gets -2/-2 until end of
+/// turn. You gain 2 life."
+///
+/// 3-mana mass-removal-for-small + lifegain. Kills any 1- or 2-toughness
+/// creature outright, weakens larger threats for combat trades. Feeds the
+/// Silverquill drain shell's lifegain triggers (Light of Promise, Felisa).
+pub fn silverquill_loredrain() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Loredrain",
+        cost: cost(&[generic(2), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(-2),
+                toughness: Value::Const(-2),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Inkling Verseweaver — {3}{W}{B}, 3/3 Inkling Bard Flying.
+///
+/// Printed Oracle (synthesised): "Flying. Magecraft — Whenever you cast or
+/// copy an instant or sorcery spell, create a 2/1 white and black Inkling
+/// creature token with flying."
+///
+/// 5-mana evasive Inkling factory. Each IS spell makes another 2/1
+/// flying Inkling — turns a stocked hand of spells into a flying horde.
+/// Slot into any Silverquill spell-heavy shell.
+pub fn inkling_verseweaver() -> CardDefinition {
+    use crate::card::TokenDefinition;
+    let inkling = TokenDefinition {
+        name: "Inkling".to_string(),
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        card_types: vec![CardType::Creature],
+        colors: vec![crate::mana::Color::White, crate::mana::Color::Black],
+        supertypes: vec![],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling],
+            ..Default::default()
+        },
+        activated_abilities: vec![],
+        triggered_abilities: vec![],
+    };
+    CardDefinition {
+        name: "Inkling Verseweaver",
+        cost: cost(&[generic(3), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Bard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: inkling,
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Hightutor — {1}{W}, sorcery.
+///
+/// Printed Oracle (synthesised): "Search your library for an instant or
+/// sorcery card with mana value 2 or less, reveal it, and put it into
+/// your hand. Then shuffle."
+///
+/// 2-mana tutor for cheap spells — finds removal or a counterspell when
+/// you need it. Slots into Silverquill / Lorehold / Prismari spellslinger
+/// shells looking for redundancy.
+pub fn silverquill_hightutor() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Hightutor",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Search {
+            who: PlayerRef::You,
+            filter: SelectionRequirement::HasCardType(CardType::Instant)
+                .or(SelectionRequirement::HasCardType(CardType::Sorcery))
+                .and(SelectionRequirement::ManaValueAtMost(2)),
+            to: ZoneDest::Hand(PlayerRef::You),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Lifebinder — {2}{W}, 2/3 Human Cleric Lifelink.
+///
+/// Printed Oracle (synthesised): "Lifelink. When this creature enters,
+/// you gain 2 life."
+///
+/// 3-mana lifegain stapled to a body. Solid defensive lifelinker, feeds
+/// Light of Promise / Honor Troll / Bookwurm payoffs immediately on
+/// arrival.
+pub fn silverquill_lifebinder() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Lifebinder",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Lifelink],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Inkling Drainmaster — {3}{B}, 2/4 Inkling Warlock.
+///
+/// Printed Oracle (synthesised): "When this creature enters, target
+/// opponent loses 3 life and you gain 3 life."
+///
+/// 4-mana high-toughness drain body. 6-life-swing on ETB + 2/4 stats
+/// makes it brutally efficient against aggro decks while feeding any
+/// lifegain payoffs in the shell.
+pub fn inkling_drainmaster() -> CardDefinition {
+    CardDefinition {
+        name: "Inkling Drainmaster",
+        cost: cost(&[generic(3), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Drain {
+                from: Selector::Player(PlayerRef::Target(0)),
+                to: Selector::You,
+                amount: Value::Const(3),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
     }
 }

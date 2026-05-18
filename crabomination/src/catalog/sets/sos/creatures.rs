@@ -66,6 +66,7 @@ pub fn eager_glyphmage() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -119,6 +120,7 @@ pub fn stirring_hopesinger() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -154,6 +156,7 @@ pub fn rehearsed_debater() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -194,6 +197,7 @@ pub fn informed_inkwright() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -251,6 +255,7 @@ pub fn owlin_historian() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -301,6 +306,7 @@ pub fn inkshape_demonstrator() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -348,6 +354,7 @@ pub fn inkling_mascot() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -383,6 +390,7 @@ pub fn imperious_inkmage() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -427,6 +435,7 @@ pub fn sneering_shadewriter() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -472,6 +481,7 @@ pub fn burrog_banemaker() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -518,6 +528,7 @@ pub fn noxious_newt() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -572,6 +583,7 @@ pub fn mindful_biomancer() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -608,6 +620,7 @@ pub fn shopkeepers_bane() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -656,6 +669,7 @@ pub fn studious_first_year() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     };
     CardDefinition {
         name: "Studious First-Year",
@@ -680,6 +694,7 @@ pub fn studious_first_year() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -725,6 +740,7 @@ pub fn bogwater_lumaret() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -763,6 +779,7 @@ pub fn pest_mascot() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -823,6 +840,7 @@ pub fn blech_loafing_pest() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -854,6 +872,7 @@ pub fn rearing_embermare() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -917,6 +936,7 @@ pub fn ascendant_dustspeaker() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -965,6 +985,7 @@ pub fn shattered_acolyte() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1017,6 +1038,7 @@ pub fn summoned_dromedary() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1080,6 +1102,7 @@ pub fn stirring_honormancer() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1163,6 +1186,7 @@ pub fn conciliators_duelist() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1201,6 +1225,7 @@ pub fn lecturing_scornmage() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1236,6 +1261,7 @@ pub fn melancholic_poet() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1298,6 +1324,7 @@ pub fn snooping_page() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1385,6 +1412,7 @@ pub fn scolding_administrator() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1430,6 +1458,7 @@ pub fn zealous_lorecaster() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1472,6 +1501,7 @@ pub fn environmental_scientist() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1517,6 +1547,7 @@ pub fn pestbrood_sloth() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1571,6 +1602,7 @@ pub fn old_growth_educator() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1626,6 +1658,7 @@ pub fn teachers_pest() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1679,6 +1712,7 @@ pub fn arnyn_deathbloom_botanist() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1742,6 +1776,7 @@ pub fn aziza_mage_tower_captain() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1792,6 +1827,7 @@ pub fn startled_relic_sloth() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1872,6 +1908,7 @@ pub fn hardened_academic() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1932,6 +1969,7 @@ pub fn slumbering_trudge() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1971,6 +2009,7 @@ pub fn tenured_concocter() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -2013,6 +2052,7 @@ pub fn rancorous_archaic() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::ConvergedValue)),
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -2064,6 +2104,7 @@ pub fn pterafractyl() -> CardDefinition {
         // cast's `Value::XFromCost`, applied before SBA / ETB.
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::XFromCost)),
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -2112,6 +2153,7 @@ pub fn fractal_mascot() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -2173,6 +2215,7 @@ pub fn stadium_tidalmage() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -2224,6 +2267,7 @@ pub fn charging_strifeknight() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -2272,6 +2316,7 @@ pub fn cuboid_colony() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -2311,6 +2356,7 @@ pub fn fractal_tender() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -2349,6 +2395,7 @@ pub fn thornfist_striker() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -2385,6 +2432,7 @@ pub fn hungry_graffalon() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -2445,6 +2493,7 @@ pub fn pensive_professor() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -2483,6 +2532,7 @@ pub fn tester_of_the_tangential() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -2536,6 +2586,7 @@ pub fn muse_seeker() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -2580,6 +2631,7 @@ pub fn aberrant_manawurm() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -2631,6 +2683,7 @@ pub fn tackle_artist() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -2681,6 +2734,7 @@ pub fn thunderdrum_soloist() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -2740,6 +2794,7 @@ pub fn molten_core_maestro() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -2797,6 +2852,7 @@ pub fn expressive_firedancer() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -2843,6 +2899,7 @@ pub fn eternal_student() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -2912,6 +2969,7 @@ pub fn postmortem_professor() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -2958,6 +3016,7 @@ pub fn spirit_mascot() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -2977,7 +3036,7 @@ pub fn spirit_mascot() -> CardDefinition {
 /// + lifegain themes (Bogwater Lumaret's friendly-ETB lifegain, Pest
 ///   Mascot's lifegain → +1/+1 counters, etc.).
 pub fn witherbloom_the_balancer() -> CardDefinition {
-    use crate::card::Supertype;
+    use crate::card::{SelectionRequirement, Supertype};
     use crate::mana::g;
     CardDefinition {
         name: "Witherbloom, the Balancer",
@@ -3002,6 +3061,17 @@ pub fn witherbloom_the_balancer() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        // "Affinity for creatures (This spell costs {1} less to cast for each
+        // creature you control.)" — counts only creatures you control, per
+        // CR 702.40b. The card-intrinsic `affinity_filter` is matched against
+        // every battlefield permanent; restricting to ControlledByYou narrows
+        // to creatures the caster controls. The second printed Affinity-for-
+        // creatures clause on IS spells the controller casts is still
+        // engine-wide ⏳ (would need a `cast_filter_grants_affinity` static
+        // primitive applied at cast time on every IS spell).
+        affinity_filter: Some(
+            SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+        ),
     }
 }
 
@@ -3041,6 +3111,7 @@ pub fn quandrix_the_proof() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -3084,6 +3155,7 @@ pub fn garrison_excavator() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -3143,6 +3215,7 @@ pub fn topiary_lecturer() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -3211,6 +3284,7 @@ pub fn transcendent_archaic() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -3290,6 +3364,7 @@ pub fn sundering_archaic() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -3346,6 +3421,7 @@ pub fn poisoners_apprentice() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -3417,6 +3493,7 @@ pub fn hydro_channeler() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -3457,6 +3534,7 @@ pub fn ulna_alley_shopkeep() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -3537,6 +3615,7 @@ pub fn emil_vastlands_roamer() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -3590,6 +3669,7 @@ pub fn abstract_paintmage() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -3642,6 +3722,7 @@ pub fn geometers_arthropod() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -3698,6 +3779,7 @@ pub fn matterbending_mage() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -3765,6 +3847,7 @@ pub fn orysa_tide_choreographer() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -3816,6 +3899,7 @@ pub fn exhibition_tidecaller() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -3880,6 +3964,7 @@ pub fn practiced_scrollsmith() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -3950,6 +4035,7 @@ pub fn colossus_of_the_blood_age() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -3990,6 +4076,7 @@ pub fn soaring_stoneglider() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -4049,6 +4136,7 @@ pub fn spectacular_skywhale() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -4092,6 +4180,7 @@ pub fn zaffai_and_the_tempests() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -4157,6 +4246,7 @@ pub fn lorehold_the_historian() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -4208,6 +4298,7 @@ pub fn mage_tower_referee() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -4309,6 +4400,7 @@ pub fn ennis_debate_moderator() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -4373,6 +4465,7 @@ pub fn tragedy_feaster() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -4420,6 +4513,7 @@ pub fn forum_necroscribe() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -4513,6 +4607,7 @@ pub fn berta_wise_extrapolator() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -4565,6 +4660,7 @@ pub fn paradox_surveyor() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -4638,6 +4734,7 @@ pub fn magmablood_archaic() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -4691,6 +4788,7 @@ pub fn wildgrowth_archaic() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -4770,6 +4868,7 @@ pub fn ambitious_augmenter() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -4852,6 +4951,7 @@ pub fn rubble_rouser() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -4928,6 +5028,7 @@ pub fn professor_dellian_fel() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -5007,6 +5108,7 @@ pub fn ral_zarek_guest_lecturer() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -5060,6 +5162,7 @@ pub fn textbook_tabulator() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -5125,6 +5228,7 @@ pub fn deluge_virtuoso() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -5213,6 +5317,7 @@ pub fn moseo_veins_new_dean() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -5265,6 +5370,7 @@ pub fn stone_docent() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -5306,6 +5412,7 @@ pub fn page_loose_leaf() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -5378,6 +5485,7 @@ pub fn essenceknit_scholar() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -5416,6 +5524,7 @@ pub fn biblioplex_tomekeeper() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -5458,6 +5567,7 @@ pub fn the_dawning_archaic() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -5498,6 +5608,7 @@ pub fn silverquill_the_disputant() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -5541,6 +5652,7 @@ pub fn nita_forum_conciliator() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -5600,6 +5712,7 @@ pub fn mica_reader_of_ruins() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -5657,6 +5770,7 @@ pub fn colorstorm_stallion() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -5713,6 +5827,7 @@ pub fn elemental_mascot() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -5752,5 +5867,6 @@ pub fn prismari_the_inspiration() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }

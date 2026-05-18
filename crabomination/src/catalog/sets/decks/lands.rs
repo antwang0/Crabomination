@@ -92,6 +92,7 @@ fn pathway_face(name: &'static str, land_type: LandType, color: Color) -> CardDe
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -295,6 +296,7 @@ pub fn gemstone_mine() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -397,6 +399,7 @@ pub fn gemstone_caverns() -> CardDefinition {
         }),
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -467,6 +470,7 @@ pub fn cavern_of_souls() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -530,5 +534,6 @@ pub fn cephalid_coliseum() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }

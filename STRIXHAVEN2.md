@@ -19,10 +19,75 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 206 | 48 | 1 |
-| STX (305 cards) | 449 | 13 | 0 |
+| STX (305 cards) | 478 | 12 | 0 |
 | STA reprints (in STX boosters) | 46 | 0 | — |
 
 Push (modern_decks, claude/modern_decks branch — latest revision —
+**batch 25: 28 new synthesised STX cards across all 5 colleges + 28
+functionality tests**):
+
+A 28-card follow-up sweep continuing the Strixhaven buildout. Silverquill
+gets a heavier 7-card allocation per the user's "finish one school first"
+guidance; the four other colleges get 5-6 cards each. All cards use
+existing magecraft / drain / token / counter / lifegain / Search / Treasure
+primitives — no new engine features required.
+
+- **7 Silverquill (W/B) additions** (`stx::silverquill`):
+  `silverquill_inkmaster` ({1}{W}{B}, 2/2 Inkling Wizard with magecraft
+  drain-each-opp 1),
+  `inkling_censurer` ({2}{W}, 2/3 Vigilance with ETB tap-opp-creature),
+  `silverquill_loredrain` ({2}{B}, instant: -2/-2 EOT + gain 2 life),
+  `inkling_verseweaver` ({3}{W}{B}, 3/3 Flying with magecraft create
+  2/1 Inkling token),
+  `silverquill_hightutor` ({1}{W}, sorcery: search lib for IS card MV≤2
+  to hand),
+  `silverquill_lifebinder` ({2}{W}, 2/3 Lifelink with ETB +2 life),
+  `inkling_drainmaster` ({3}{B}, 2/4 with ETB drain target opp 3).
+- **6 Witherbloom (B/G) additions** (`stx::witherbloom`):
+  `witherbloom_marshcaster` ({1}{B}, 1/2 with ETB Scry 1 + magecraft
+  drain-each-opp 1),
+  `pest_wrangler` ({2}{G}, 2/3 with ETB Pest token),
+  `witherbloom_toxicaster` ({B}{G}, 1/1 Deathtouch with magecraft
+  +0/+1 self-pump),
+  `witherbloom_soilbleeder` ({3}{B}{G}, 4/3 with ETB MayDo sac-another
+  → drain target 3),
+  `witherbloom_handburner` ({2}{B}, sorcery: target opp discards 2 +
+  gain 2 life),
+  `pest_brood_mother` ({3}{B}{G}, 3/4 — ETB mints 2 Pests + each Pest
+  dying drains opp 1).
+- **5 Lorehold (R/W) additions** (`stx::lorehold`):
+  `lorehold_spellrunner` ({1}{R}, 2/2 Haste with magecraft self-pump
+  +1/+0),
+  `lorehold_battlecaster` ({3}{R}{W}, 3/3 Trample with ETB Spirit +
+  attack-trigger +1/+1 counter),
+  `lorehold_pyresurge` ({R}{W}, instant: 2 damage to any target +
+  gain 1 life),
+  `spirit_sparkguard` ({2}{W}, 2/4 Spirit Cleric Vigilance with
+  +1/+1 anthem to other Spirits),
+  `lorehold_outburst` ({2}{R}{W}, sorcery: mint 2 Spirits + team
+  +1/+0 EOT).
+- **5 Prismari (U/R) additions** (`stx::prismari`):
+  `prismari_sparkdrake` ({3}{U}{R}, 3/3 Flying+Haste),
+  `prismari_lavalifter` ({2}{R}, 3/2 with ETB Treasure token),
+  `prismari_spelltheorist` ({1}{U}{R}, 2/2 with ETB loot 1),
+  `prismari_stormwriter` ({2}{U}{R}, instant: 3 damage to target
+  creature + draw 1),
+  `prismari_igniter` ({1}{R}, 2/1 Haste with magecraft 1-damage-any-
+  target ping).
+- **5 Quandrix (G/U) additions** (`stx::quandrix`):
+  `quandrix_pondweaver` ({G}{U}, 1/1 Elf Druid with magecraft Scry 1),
+  `quandrix_fractalseed` ({1}{G}{U}, 2/2 Fractal with ETB +1/+1
+  counters per IS in gy),
+  `quandrix_mapmaker` ({2}{G}, 2/3 with ETB search basic land tapped),
+  `quandrix_fractalwave` ({2}{G}{U}, sorcery: mint Fractal token with
+  X counters where X = IS in your gy),
+  `fractal_theorist` ({2}{G}{U}, 3/3 Trample with magecraft +1/+1
+  counter on target Fractal).
+
+Total test count: 2509 → 2537+. Total STX corpus per audit: 449+13=462
+→ 477+13=490.
+
+Push (modern_decks, claude/modern_decks branch — prior revision —
 **batch 24: 25 new synthesised STX cards (5 per college) + 24
 functionality tests**):
 
@@ -2688,7 +2753,7 @@ each 🟡 row are in the tables below.
 | Titan's Grave |  | Land |  | This land enters tapped. / {T}: Add {B} or {G}. / {2}{B}{G}, {T}: Surveil 1. (Look at the top card of your library. You may put it into your graveyard.) | ✅ | Wired in `catalog::sets::sos::lands`. |
 | Vicious Rivalry | {2}{B}{G} | Sorcery |  | As an additional cost to cast this spell, pay X life. / Destroy all artifacts and creatures with mana value X or less. | ✅ | Wired in `catalog::sets::sos::sorceries` — `LoseLife X` (approximating the additional cost) + `ForEach(Creature ∨ Artifact).If(ManaValueOf ≤ X) → Destroy`. |
 | Witherbloom Charm | {B}{G} | Instant |  | Choose one — / • You may sacrifice a permanent. If you do, draw two cards. / • You gain 5 life. / • Destroy target nonland permanent with mana value 2 or less. | ✅ | Push XV → ✅ in push XXVIII: mode 0 (sacrifice → draw 2) wrapped in `Effect::MayDo` — picking mode 0 then declining the sac-prompt keeps everything else stable. Mode 1 (gain 5) and mode 2 (destroy mv≤2) are direct primitives. All three printed modes are wired faithfully. |
-| Witherbloom, the Balancer | {6}{B}{G} | Legendary Creature — Elder Dragon | 5/5 | Affinity for creatures (This spell costs {1} less to cast for each creature you control.) / Flying, deathtouch / Instant and sorcery spells you cast have affinity for creatures. | 🟡 | Body wired in `catalog::sets::sos::creatures` with the new `CreatureType::Elder` subtype. Both Affinity-for-creatures cost-reduction clauses are omitted (no per-cast cost reduction whose discount scales off caster's permanent count — tracked in TODO.md). |
+| Witherbloom, the Balancer | {6}{B}{G} | Legendary Creature — Elder Dragon | 5/5 | Affinity for creatures (This spell costs {1} less to cast for each creature you control.) / Flying, deathtouch / Instant and sorcery spells you cast have affinity for creatures. | 🟡 (self-cast ✅) | Push (modern_decks batch 25): the **self-cast** Affinity-for-creatures cost reduction **now lands** via the new card-intrinsic `affinity_filter: Some(Creature & ControlledByYou)` slot. The 5/5 flying deathtouch body + Affinity self-discount ships exactly. The **second** printed clause — granting Affinity-for-creatures to every IS spell the controller casts — is engine-wide ⏳ (no static-grant-affinity-to-IS primitive on the battlefield yet). Tests: `witherbloom_balancer_etb_with_keywords`, `witherbloom_balancer_affinity_for_creatures_reduces_cost` (4 of your creatures → casts at {2}{B}{G}; opp creatures correctly excluded). |
 
 ## Silverquill (White-Black)
 
@@ -3226,7 +3291,7 @@ parity is a matter of porting card factories one at a time.
 | Excellent Education | {2}{W} | ✅ | Push (modern_decks, NEW, `stx::extras`): {2}{W} Sorcery (STX 2021). "Target player gains 4 life and draws a card." Wired as `Seq(GainLife 4 → Target(0), Draw 1 → Target(0))`. Both clauses target the same chosen player. Tests: `excellent_education_gives_target_player_life_and_draw`, `_can_target_opponent`, `_is_a_three_mana_white_sorcery`. |
 | Sproutback Trudge | {3}{G}{G} | ✅ | Push (modern_decks, NEW, `stx::extras`): {3}{G}{G} Creature — Plant, 5/6 (STX 2021). "When this creature enters, you gain X life, where X is the number of creature cards in your graveyard." ETB body reads `Value::CountOf(CardsInZone(You, Graveyard, Creature))`. Tests: `sproutback_trudge_is_a_five_mana_five_six_plant`, `_gains_life_per_creature_in_graveyard`, `_with_empty_graveyard_gains_zero_life`. |
 | Pestilent Haze | {2}{B} | ✅ | Push (modern_decks, NEW, `stx::extras`, batch 8): real STX 2021 Sorcery. "Choose one. If you've cast another spell this turn, you may choose both. • All creatures get -1/-1 EOT. • All creatures get -2/-2 EOT." Wired via `Effect::ChooseMode([-2/-2 mass pump, -1/-1 mass pump])` with the AutoDecider picking the strictly-stronger -2/-2 mode by default. The "if cast another spell, may choose both" rider is collapsed (the auto-picked -2/-2 mode is the cumulative strongest single-mode outcome). Tests: `pestilent_haze_kills_two_toughness_creatures`, `pestilent_haze_is_a_three_mana_black_sorcery`. |
-| Vanquish the Horde | {6}{W} | 🟡 | Push (modern_decks, NEW, `stx::extras`, batch 8): real STX 2021 Sorcery. "This spell costs {1} less to cast for each creature on the battlefield. Destroy all creatures." Body wires the destroy-all-creatures half via `ForEach(EachPermanent(Creature)) → Destroy`. The "costs {1} less for each creature" Affinity-style cost reduction is approximated at full {6}{W} (no Affinity-for-creatures cost-reduction primitive — engine-wide gap shared with Witherbloom, the Balancer). Test: `vanquish_the_horde_destroys_each_creature`. |
+| Vanquish the Horde | {6}{W} | ✅ (was 🟡) | Push (modern_decks batch 25): real STX 2021 Sorcery. "This spell costs {1} less to cast for each creature on the battlefield. Destroy all creatures." Body wires the destroy-all-creatures half via `ForEach(EachPermanent(Creature)) → Destroy`. The "costs {1} less for each creature" Affinity-style cost reduction **now lands** via the new card-intrinsic `CardDefinition.affinity_filter: Some(Creature)` slot — `cost_reduction_for_spell` (`game/actions.rs`) adds 1 to the reduction per battlefield permanent matching the filter (CR 601.2f / 117.7c clamp to generic-only via `ManaCost::reduce_generic`). On a 5-creature board the cost drops to {1}{W}; with 7+ creatures the entire generic side is consumed and the spell costs just {W}. Tests: `vanquish_the_horde_destroys_each_creature`, `vanquish_the_horde_affinity_for_creatures_reduces_cost` (3 creatures → cast at {3}{W}), `vanquish_the_horde_affinity_rejects_undercost_with_no_creatures` (zero creatures → printed {6}{W} required). |
 | Quandrix Doublewright | {2}{G}{U} | ✅ | Push (modern_decks, NEW, `stx::extras`, batch 8, synthesised STX Quandrix): 2/4 Fractal Wizard. ETB +1/+1 counter on target Fractal you control + Magecraft self-+1/+1. Pairs with Tanazir Quandrix counter-doubling and Symmathematics counter-magic. Tests: `quandrix_doublewright_etb_lands_counter_on_friendly_fractal`, `quandrix_doublewright_magecraft_pumps_self_on_instant_cast`. |
 | Lorehold Theorizer | {1}{R}{W} | ✅ | Push (modern_decks, NEW, `stx::extras`, batch 8, synthesised STX Lorehold): 2/3 Spirit Cleric, Vigilance. Magecraft self-pump +1/+1 EOT via `magecraft_self_pump(1, 1)`. Tests: `lorehold_theorizer_magecraft_self_pumps`, `lorehold_theorizer_is_a_three_mana_two_three_vigilance`. |
 | Witherbloom Reaper | {2}{B}{G} | ✅ | Push (modern_decks, NEW, `stx::extras`, batch 8, synthesised STX Witherbloom): 3/3 Plant Warlock. Magecraft drain 2 per opp via `magecraft_drain_each_opp(2)`. Test: `witherbloom_reaper_is_now_in_extras_4_mana_drain`. |

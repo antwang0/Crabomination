@@ -4391,6 +4391,7 @@ fn mill_caps_at_library_size_per_cr_701_17b() {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     };
     let mill = g.add_card_to_hand(0, mill_def);
     g.perform_action(GameAction::CastSpell {

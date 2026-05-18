@@ -90,6 +90,7 @@ pub fn lorehold_apprentice() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -147,6 +148,7 @@ pub fn lorehold_pledgemage() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -193,6 +195,7 @@ pub fn pillardrop_rescuer() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -232,6 +235,7 @@ pub fn heated_debate() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -290,6 +294,7 @@ pub fn sparring_regimen() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -346,6 +351,7 @@ pub fn storm_kiln_artist() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -435,6 +441,7 @@ pub fn reconstruct_history() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -559,6 +566,7 @@ pub fn lorehold_excavation() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -606,6 +614,7 @@ pub fn lorehold_acolyte() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -662,6 +671,7 @@ pub fn lorehold_warrior_priest() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -708,6 +718,7 @@ pub fn lorehold_ember_priest() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -752,6 +763,7 @@ pub fn lorehold_skirmish() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -794,6 +806,7 @@ pub fn lorehold_pyrosage() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -838,6 +851,7 @@ pub fn lorehold_loremaster() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -875,6 +889,7 @@ pub fn lorehold_aerospirit() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -919,6 +934,7 @@ pub fn lorehold_ember_forge() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -976,6 +992,7 @@ pub fn lorehold_spiritcaller() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1020,6 +1037,7 @@ pub fn lorehold_pyrebrand() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1069,6 +1087,7 @@ pub fn lorehold_reclamation() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1114,6 +1133,7 @@ pub fn lorehold_reverberator() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1155,6 +1175,7 @@ pub fn lorehold_pyrescribe() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1200,6 +1221,7 @@ pub fn lorehold_echoist() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1245,6 +1267,7 @@ pub fn lorehold_spiritmaster() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1291,6 +1314,7 @@ pub fn lorehold_recollect() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1345,6 +1369,7 @@ pub fn lorehold_anthemist() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1389,6 +1414,7 @@ pub fn lorehold_bonepriest() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1439,6 +1465,7 @@ pub fn lorehold_battlescroll() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1498,6 +1525,7 @@ pub fn lorehold_tomescholar() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1538,6 +1566,7 @@ pub fn lorehold_ember_brand() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1578,6 +1607,7 @@ pub fn lorehold_spectrescribe() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1625,6 +1655,7 @@ pub fn lorehold_sparkstrike() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1672,6 +1703,7 @@ pub fn lorehold_bonereader() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1719,6 +1751,7 @@ pub fn lorehold_spiritarcher() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1769,6 +1802,7 @@ pub fn lorehold_echoflame() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1830,6 +1864,7 @@ pub fn lorehold_pilgrimwarden() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1894,6 +1929,7 @@ pub fn lorehold_emberscribe() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1937,6 +1973,7 @@ pub fn lorehold_reliquary() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1979,6 +2016,7 @@ pub fn lorehold_ringleader() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -2022,6 +2060,7 @@ pub fn lorehold_strikevanguard() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -2072,6 +2111,7 @@ pub fn lorehold_ember_recall() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -2125,6 +2165,7 @@ pub fn lorehold_warband() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -2179,6 +2220,7 @@ pub fn lorehold_phoenix() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -2225,6 +2267,7 @@ pub fn lorehold_battlechronicler() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -2275,6 +2318,7 @@ pub fn lorehold_searing_wisdom() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -2311,6 +2355,7 @@ pub fn lorehold_saint() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -2358,6 +2403,7 @@ pub fn lorehold_volley() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -2420,6 +2466,7 @@ pub fn lorehold_spirit_caller() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -2466,6 +2513,7 @@ pub fn lorehold_recital() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -2521,6 +2569,7 @@ pub fn lorehold_pyrostriker() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -2563,6 +2612,7 @@ pub fn lorehold_soulshaper() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -2603,6 +2653,7 @@ pub fn lorehold_ironhand() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -2652,6 +2703,7 @@ pub fn lorehold_revival() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -2691,6 +2743,7 @@ pub fn lorehold_sparkflare() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -2746,6 +2799,7 @@ pub fn spirit_conduit() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -2794,5 +2848,247 @@ pub fn lorehold_spirit_anthem() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+// ── Push (modern_decks) batch 25: 5 more Lorehold cards ────────────────────
+//
+// Continuing Lorehold (R/W) buildout: 3 new creatures + 2 spells using
+// existing magecraft / Spirit token / counter / pump primitives. No new
+// engine features required.
+
+/// Lorehold Spellrunner — {1}{R}, 2/2 Soldier Haste.
+///
+/// Printed Oracle (synthesised): "Haste. Magecraft — Whenever you cast or
+/// copy an instant or sorcery spell, this creature gets +1/+0 until end
+/// of turn."
+///
+/// 2-mana Haste body with per-cast pump — turn-2 immediate threat that
+/// grows on every IS spell. Slot into any Lorehold/Boros spell-heavy
+/// aggro shell.
+pub fn lorehold_spellrunner() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_self_pump;
+    CardDefinition {
+        name: "Lorehold Spellrunner",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Haste],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_self_pump(1, 0)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Battlecaster — {3}{R}{W}, 3/3 Soldier Trample.
+///
+/// Printed Oracle (synthesised): "Trample. When this creature enters,
+/// create a 2/2 red and white Spirit creature token. Whenever this
+/// creature attacks, put a +1/+1 counter on it."
+///
+/// 5-mana 3/3 trample → 2/2 Spirit token + per-attack growth. Builds
+/// itself into a 4/4, 5/5, 6/6 Trampler in long games. Spirit-token
+/// synergy with Sparring Regimen / Quintorius.
+pub fn lorehold_battlecaster() -> CardDefinition {
+    use crate::card::CounterType;
+    CardDefinition {
+        name: "Lorehold Battlecaster",
+        cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Trample],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: lorehold_spirit_token(),
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+                effect: Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                },
+            },
+        ],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Pyresurge — {R}{W}, instant.
+///
+/// Printed Oracle (synthesised): "Lorehold Pyresurge deals 2 damage to any
+/// target. You gain 1 life."
+///
+/// 2-mana drain at instant speed — flexible removal + lifegain. Boros
+/// Charm template at the {R}{W} slot, optimized for a Silverquill-
+/// friendly lifegain shell.
+pub fn lorehold_pyresurge() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Pyresurge",
+        cost: cost(&[r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature
+                        .or(SelectionRequirement::Player)
+                        .or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::Const(2),
+            },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Spirit Sparkguard — {2}{W}, 2/4 Spirit Cleric Vigilance.
+///
+/// Printed Oracle (synthesised): "Vigilance. Other Spirit creatures you
+/// control get +1/+1."
+///
+/// 3-mana Spirit lord — pumps every other Spirit (including Lorehold's
+/// 2/2 R/W tokens) +1/+1 while serving as a 2/4 Vigilance blocker.
+pub fn spirit_sparkguard() -> CardDefinition {
+    use crate::effect::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Spirit Sparkguard",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        keywords: vec![Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![StaticAbility {
+            description: "Other Spirit creatures you control get +1/+1.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::HasCreatureType(CreatureType::Spirit))
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                power: 1,
+                toughness: 1,
+            },
+        }],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Outburst — {2}{R}{W}, sorcery.
+///
+/// Printed Oracle (synthesised): "Create two 2/2 red and white Spirit
+/// creature tokens. Each creature you control gets +1/+0 until end of
+/// turn."
+///
+/// 4-mana go-wide play — mints 2 Spirit tokens then anthems the whole
+/// team. 4+ power across 3 bodies at one card. Pairs with the rest of
+/// Lorehold's Spirit minters.
+pub fn lorehold_outburst() -> CardDefinition {
+    use crate::effect::shortcut::each_your_creature;
+    use crate::effect::Duration;
+    CardDefinition {
+        name: "Lorehold Outburst",
+        cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                definition: lorehold_spirit_token(),
+            },
+            Effect::PumpPT {
+                what: each_your_creature(),
+                power: Value::Const(1),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
     }
 }

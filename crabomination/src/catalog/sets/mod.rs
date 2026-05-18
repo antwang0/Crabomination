@@ -169,6 +169,7 @@ pub fn dual_land_with(
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 

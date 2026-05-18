@@ -46,6 +46,7 @@ pub fn witherbloom_apprentice() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -95,6 +96,7 @@ pub fn pest_summoning() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -145,6 +147,7 @@ pub fn bayou_groff() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -190,6 +193,7 @@ pub fn witherbloom_pest_tender() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -235,6 +239,7 @@ pub fn pest_swarmer() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -273,6 +278,7 @@ pub fn witherbloom_seer() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -313,6 +319,7 @@ pub fn pest_swarm() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -363,6 +370,7 @@ pub fn witherbloom_vinemaster() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -416,6 +424,7 @@ pub fn witherbloom_pledgemage() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -462,6 +471,7 @@ pub fn witherbloom_mossfeeder() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -500,6 +510,7 @@ pub fn witherbloom_reverie() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -546,6 +557,7 @@ pub fn pest_cultivator() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -592,6 +604,7 @@ pub fn withergrowth_apprentice() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -670,6 +683,7 @@ pub fn witherbloom_pestkeeper() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -713,6 +727,7 @@ pub fn witherbloom_bonepicker() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -768,6 +783,7 @@ pub fn pest_swarm_inheritance() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -815,6 +831,7 @@ pub fn witherbloom_decayblossom() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -869,6 +886,7 @@ pub fn witherbloom_recourse() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -913,6 +931,7 @@ pub fn witherbloom_pestmancer() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -952,6 +971,7 @@ pub fn witherbloom_lifebleeder() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -997,6 +1017,7 @@ pub fn pest_marauder() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1041,6 +1062,7 @@ pub fn witherbloom_decoctor() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1078,6 +1100,7 @@ pub fn witherbloom_glimmer() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1123,6 +1146,7 @@ pub fn pest_communion() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1163,6 +1187,7 @@ pub fn witherbloom_sapfiend() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1208,6 +1233,7 @@ pub fn witherbloom_toxicultivator() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1253,6 +1279,7 @@ pub fn pest_outburst() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1306,6 +1333,7 @@ pub fn witherbloom_grand_necromancer() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1353,6 +1381,7 @@ pub fn witherbloom_sapdrinker() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1389,6 +1418,7 @@ pub fn witherbloom_crawler() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1432,6 +1462,7 @@ pub fn pest_forager() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1476,6 +1507,7 @@ pub fn witherbloom_carnivine() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1517,6 +1549,7 @@ pub fn pest_harvest() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1566,6 +1599,7 @@ pub fn witherbloom_necrosophist() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1610,6 +1644,7 @@ pub fn witherbloom_pestcaller() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1654,6 +1689,7 @@ pub fn pest_swarmlord() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1692,6 +1728,7 @@ pub fn witherbloom_vinetender() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1731,6 +1768,7 @@ pub fn toxic_bloodletting() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1772,6 +1810,7 @@ pub fn witherbloom_saproot() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1818,6 +1857,7 @@ pub fn pest_mausoleum() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1862,6 +1902,7 @@ pub fn pest_ravager() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1897,6 +1938,7 @@ pub fn witherbloom_famine() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1938,6 +1980,7 @@ pub fn witherbloom_greenrot() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -2007,6 +2050,7 @@ pub fn witherbloom_pestbroker() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -2050,6 +2094,7 @@ pub fn pestilent_bloom() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -2106,6 +2151,7 @@ pub fn witherbloom_pest_lord() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -2148,6 +2194,7 @@ pub fn witherbloom_drainbreath() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -2193,6 +2240,7 @@ pub fn witherbloom_aspersor() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -2240,6 +2288,7 @@ pub fn pest_reanimator() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -2282,6 +2331,7 @@ pub fn witherbloom_spore_master() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -2325,6 +2375,7 @@ pub fn witherbloom_withercut() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -2378,6 +2429,7 @@ pub fn pest_cultivator_adept() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -2419,6 +2471,7 @@ pub fn witherbloom_reaper_hand() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -2463,5 +2516,297 @@ pub fn witherbloom_tendril() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+// ── Push (modern_decks) batch 25: 6 more Witherbloom cards ─────────────────
+//
+// Continuing Witherbloom (B/G) buildout: 4 new creatures + 2 spells using
+// existing magecraft / drain / Pest token / counter primitives. No new
+// engine features required.
+
+/// Witherbloom Marshcaster — {1}{B}, 1/2 Plant Druid.
+///
+/// Printed Oracle (synthesised): "When this creature enters, scry 1.
+/// Magecraft — Whenever you cast or copy an instant or sorcery spell,
+/// target opponent loses 1 life."
+///
+/// 2-mana scry-1 + per-cast 1-drain body. Defensive shape that smooths
+/// future draws and trickles damage on every spell.
+pub fn witherbloom_marshcaster() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Marshcaster",
+        cost: cost(&[generic(1), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: Effect::Scry {
+                    who: PlayerRef::You,
+                    amount: Value::Const(1),
+                },
+            },
+            magecraft_drain_each_opp(1),
+        ],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Pest Wrangler — {2}{G}, 2/3 Plant Druid.
+///
+/// Printed Oracle (synthesised): "When this creature enters, create a
+/// 1/1 black and green Pest creature token."
+///
+/// 3-mana 2/3 + Pest token. Same body as Bayou Groff but with a Pest
+/// minter instead of pay-1-to-return. Stocks the Witherbloom Pest pool
+/// for chained drain payoffs.
+pub fn pest_wrangler() -> CardDefinition {
+    CardDefinition {
+        name: "Pest Wrangler",
+        cost: cost(&[generic(2), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: stx_pest_token(),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Toxicaster — {B}{G}, 1/1 Plant Warlock Deathtouch.
+///
+/// Printed Oracle (synthesised): "Deathtouch. Magecraft — Whenever you
+/// cast or copy an instant or sorcery spell, this creature gets +0/+1
+/// until end of turn."
+///
+/// 2-mana deathtouch + per-cast +0/+1 toughness scaling. Trades with
+/// anything; in a spell-heavy shell grows to a 1/4+ deathtouch wall.
+pub fn witherbloom_toxicaster() -> CardDefinition {
+    use crate::effect::Duration;
+    CardDefinition {
+        name: "Witherbloom Toxicaster",
+        cost: cost(&[b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Deathtouch],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![
+            crate::effect::shortcut::magecraft(Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(0),
+                toughness: Value::Const(1),
+                duration: Duration::EndOfTurn,
+            }),
+        ],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Soilbleeder — {3}{B}{G}, 4/3 Plant Warlock.
+///
+/// Printed Oracle (synthesised): "When this creature enters, you may
+/// sacrifice another creature. If you do, target opponent loses 3 life
+/// and you gain 3 life."
+///
+/// 5-mana sac outlet with a 6-life-swing payoff. Trades surplus Pest
+/// tokens for a Black-style execution removal/finisher.
+pub fn witherbloom_soilbleeder() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Soilbleeder",
+        cost: cost(&[generic(3), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::MayDo {
+                description: "sacrifice another creature".into(),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::Sacrifice {
+                        who: Selector::You,
+                        count: Value::Const(1),
+                        filter: SelectionRequirement::Creature
+                            .and(SelectionRequirement::OtherThanSource),
+                    },
+                    Effect::Drain {
+                        from: Selector::Player(PlayerRef::Target(0)),
+                        to: Selector::You,
+                        amount: Value::Const(3),
+                    },
+                ])),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Handburner — {2}{B}, sorcery.
+///
+/// Printed Oracle (synthesised): "Target opponent discards two cards.
+/// You gain 2 life."
+///
+/// 3-mana 2-for-1 hand attack + lifegain. Strong in attrition wars —
+/// strips two cards while feeding the Witherbloom lifegain shell.
+pub fn witherbloom_handburner() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Handburner",
+        cost: cost(&[generic(2), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Discard {
+                who: Selector::Player(PlayerRef::Target(0)),
+                amount: Value::Const(2),
+                random: false,
+            },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Pest Brood-Mother — {3}{B}{G}, 3/4 Plant Druid.
+///
+/// Printed Oracle (synthesised): "When this creature enters, create two
+/// 1/1 black and green Pest creature tokens. Whenever a Pest you control
+/// dies, target opponent loses 1 life."
+///
+/// 5-mana 3/4 with a Pest factory + Pest-death-payoff combo. Lifegain
+/// floor + extra drain on every Pest exit creates a punishing tempo lock.
+pub fn pest_brood_mother() -> CardDefinition {
+    let pest_death_drain = TriggeredAbility {
+        event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours)
+            .with_filter(crate::effect::Predicate::EntityMatches {
+                what: Selector::TriggerSource,
+                filter: SelectionRequirement::HasCreatureType(CreatureType::Pest),
+            }),
+        effect: Effect::LoseLife {
+            who: Selector::Player(PlayerRef::EachOpponent),
+            amount: Value::Const(1),
+        },
+    };
+    CardDefinition {
+        name: "Pest Brood-Mother",
+        cost: cost(&[generic(3), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(2),
+                    definition: stx_pest_token(),
+                },
+            },
+            pest_death_drain,
+        ],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
     }
 }

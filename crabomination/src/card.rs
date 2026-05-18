@@ -484,6 +484,24 @@ pub struct CardDefinition {
     /// Defaults to `false` via `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub exile_on_resolve: bool,
+    /// "This spell costs {1} less to cast for each [filter] (on the
+    /// battlefield)" — Affinity-class generic cost reduction whose discount
+    /// scales off the caster's permanent count matching `filter`.
+    ///
+    /// Affects only the generic-pip side of the cost (CR 601.2f / 117.7c),
+    /// clamped at the spell's printed generic total. Read by
+    /// `cost_reduction_for_spell` at cast time. Powers:
+    /// - **Vanquish the Horde** (`SelectionRequirement::Creature`)
+    /// - **Witherbloom, the Balancer** (`SelectionRequirement::Creature
+    ///   .and(ControlledByYou)`) — its second Affinity-for-creatures static
+    ///   the engine's separate per-cast static still won't model, only the
+    ///   self-cast discount.
+    /// - Future Affinity-for-X (Artifacts, Lands, Pests) cards plug in
+    ///   against this same primitive without any new engine code.
+    ///
+    /// Defaults to `None` via `#[serde(default)]` for snapshot back-compat.
+    #[serde(default)]
+    pub affinity_filter: Option<SelectionRequirement>,
 }
 
 /// An alternative (pitch) cost. Replaces the normal mana cost when the

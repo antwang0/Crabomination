@@ -48,6 +48,7 @@ pub fn prismari_pledgemage() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -105,6 +106,7 @@ pub fn prismari_apprentice() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -149,6 +151,7 @@ pub fn prismari_drakelord() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -193,6 +196,7 @@ pub fn prismari_emberseer() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -240,6 +244,7 @@ pub fn prismari_pyrowriter() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -287,6 +292,7 @@ pub fn symmetry_sage() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -331,6 +337,7 @@ pub fn prismari_pyrotechnician() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -374,6 +381,7 @@ pub fn prismari_looter() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -420,6 +428,7 @@ pub fn prismari_chromaticist() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -463,6 +472,7 @@ pub fn prismari_drakeward() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -510,6 +520,7 @@ pub fn prismari_spellsmith() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -557,6 +568,7 @@ pub fn prismari_storm_caller() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -606,6 +618,7 @@ pub fn prismari_ignite_apprentice() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -653,6 +666,7 @@ pub fn prismari_volley() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -702,6 +716,7 @@ pub fn prismari_stormcaster() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -740,6 +755,7 @@ pub fn prismari_sparkmaster() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -785,6 +801,7 @@ pub fn prismari_ember_channeler() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -828,6 +845,7 @@ pub fn prismari_alchemist() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -871,6 +889,7 @@ pub fn prismari_cantrip() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -919,6 +938,7 @@ pub fn prismari_flarespark() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -969,6 +989,7 @@ pub fn prismari_cascade_volley() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1014,6 +1035,7 @@ pub fn prismari_initiate() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1066,6 +1088,7 @@ pub fn prismari_spellbinder() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1110,6 +1133,7 @@ pub fn prismari_treasurer() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1161,6 +1185,7 @@ pub fn prismari_embershaper() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1205,6 +1230,7 @@ pub fn prismari_sparkforge() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1245,6 +1271,7 @@ pub fn prismari_mindwave() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1291,6 +1318,7 @@ pub fn prismari_pyrocrafter() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1331,6 +1359,7 @@ pub fn prismari_stormspire() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1384,6 +1413,7 @@ pub fn prismari_spellforger_b22() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1430,6 +1460,7 @@ pub fn prismari_volleyfire() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1467,6 +1498,7 @@ pub fn prismari_spell_shaper() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1513,6 +1545,7 @@ pub fn prismari_stormgaze() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1560,6 +1593,7 @@ pub fn prismari_vortexweaver() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1597,6 +1631,7 @@ pub fn prismari_quickfire() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1646,6 +1681,7 @@ pub fn prismari_treasurer_surge() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1680,6 +1716,7 @@ pub fn prismari_pyreburst() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1744,6 +1781,7 @@ pub fn prismari_vorthos() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1788,6 +1826,7 @@ pub fn prismari_cinderspark() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1843,6 +1882,7 @@ pub fn prismari_tempo_adept() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1892,6 +1932,7 @@ pub fn prismari_hotburst() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1941,6 +1982,7 @@ pub fn prismari_magmaspark() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -1980,6 +2022,7 @@ pub fn prismari_mindkindler() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -2022,6 +2065,7 @@ pub fn prismari_embergem() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -2084,6 +2128,7 @@ pub fn prismari_pyromancer() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -2128,6 +2173,7 @@ pub fn prismari_spitfire() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -2176,6 +2222,7 @@ pub fn prismari_wildform() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -2220,6 +2267,7 @@ pub fn prismari_sparkbright() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
     }
 }
 
@@ -2270,5 +2318,222 @@ pub fn prismari_drakeforge() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+// ── Push (modern_decks) batch 25: 5 more Prismari cards ────────────────────
+//
+// Continuing Prismari (U/R) buildout: 3 new creatures + 2 spells using
+// existing Treasure / magecraft / loot / damage primitives. No new engine
+// features required.
+
+/// Prismari Sparkdrake — {3}{U}{R}, 3/3 Drake Flying Haste.
+///
+/// Printed Oracle (synthesised): "Flying, haste."
+///
+/// 5-mana 3/3 flying haste — immediate evasive pressure. Slots into Prismari
+/// aggro shells looking for a finisher that ignores ground stalls.
+pub fn prismari_sparkdrake() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Sparkdrake",
+        cost: cost(&[generic(3), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Drake],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying, Keyword::Haste],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Lavalifter — {2}{R}, 3/2 Elemental.
+///
+/// Printed Oracle (synthesised): "When this creature enters, create a
+/// Treasure token."
+///
+/// 3-mana 3/2 + Treasure-ramp. Net cost: 2-mana 3/2 with a future-turn
+/// {1} discount. Slots into any artifact-aware or treasure-payoff shell.
+pub fn prismari_lavalifter() -> CardDefinition {
+    use crate::game::effects::treasure_token;
+    CardDefinition {
+        name: "Prismari Lavalifter",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: treasure_token(),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Spelltheorist — {1}{U}{R}, 2/2 Human Wizard.
+///
+/// Printed Oracle (synthesised): "When this creature enters, draw a card,
+/// then discard a card."
+///
+/// 3-mana looter ETB — replaces itself in card quality and fuels the
+/// graveyard for Flashback / Hofri / Lorehold recursion shells.
+pub fn prismari_spelltheorist() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Spelltheorist",
+        cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
+                Effect::Discard {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                    random: false,
+                },
+            ]),
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Stormwriter — {2}{U}{R}, instant.
+///
+/// Printed Oracle (synthesised): "Prismari Stormwriter deals 3 damage to
+/// target creature. Draw a card."
+///
+/// 4-mana burn-and-cantrip — kills 3-toughness creatures + replaces itself
+/// in hand. Bread-and-butter UR card advantage.
+pub fn prismari_stormwriter() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Stormwriter",
+        cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Creature),
+                amount: Value::Const(3),
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Igniter — {1}{R}, 2/1 Elemental.
+///
+/// Printed Oracle (synthesised): "Haste. Magecraft — Whenever you cast or
+/// copy an instant or sorcery spell, this creature deals 1 damage to any
+/// target."
+///
+/// 2-mana haste-pinger with per-cast burn. The Magma Hammer template at
+/// the {1}{R} slot — every IS spell becomes a free 1-damage shot.
+pub fn prismari_igniter() -> CardDefinition {
+    use crate::effect::shortcut::magecraft;
+    CardDefinition {
+        name: "Prismari Igniter",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Haste],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::DealDamage {
+            to: target_filtered(
+                SelectionRequirement::Creature
+                    .or(SelectionRequirement::Player)
+                    .or(SelectionRequirement::Planeswalker),
+            ),
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
     }
 }

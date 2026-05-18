@@ -159,6 +159,20 @@ pub(crate) fn cost_reduction_for_spell(
             }
         }
     }
+    // Card-intrinsic Affinity-for-[filter] cost reduction: "{1} less for
+    // each [filter]" baked onto the spell card itself. Counts every
+    // battlefield permanent matching `affinity_filter`. CR 601.2f / 117.7c —
+    // generic-only, the colored-pip clamp happens in
+    // `ManaCost::reduce_generic` once the caller folds this back into the
+    // cost.
+    if let Some(filter) = &card.definition.affinity_filter {
+        let count = state
+            .battlefield
+            .iter()
+            .filter(|c| state.evaluate_requirement_on_card(filter, c, caster))
+            .count();
+        reduction = reduction.saturating_add(count as u32);
+    }
     reduction
 }
 
