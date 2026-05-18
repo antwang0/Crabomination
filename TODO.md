@@ -1382,6 +1382,34 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   graveyard composition is unchanged (only the spell itself enters
   graveyard). Closes a CR-coverage row tracked alongside CR 701.22b.
 
+- ✅ **CR 701.7 — Create (tokens)** (push modern_decks batch 30 audit,
+  claude/modern_decks branch — audit against `MagicCompRules_20260417.txt`):
+  "To create one or more tokens with certain characteristics, put the
+  specified number of tokens with the specified characteristics onto
+  the battlefield." (701.7a). The engine wires `Effect::CreateToken
+  { who, count, definition }` in `game/effects/tokens.rs` with three
+  guarantees: (a) the `TokenDefinition` carries every printed
+  characteristic — name, P/T, colors, supertypes, card types, creature
+  types, keywords, activated and triggered abilities, mana cost (for
+  copy-of-creature tokens). (b) the `count` value is evaluated per
+  resolution (so `Value::ConvergedValue` / `Value::XFromCost` /
+  `Value::CountOf(...)` all work for variable-count token creators —
+  Tend the Pests, Quandrix Cultivator). (c) the resulting battlefield
+  state is mutated *before* SBA passes so newly-minted 0/0 tokens
+  (Fractal token) survive SBA when `enters_with_counters` is set.
+  Per 701.7b: replacement effects targeting token creation (Doubling
+  Season, Anointed Procession-class anthems) apply before continuous
+  effects modifying the token's characteristics — the engine's
+  `replacement::replace_create_token` pass runs before
+  `compute_battlefield`'s layering pass, matching the printed rule.
+  Tests: implicit across the entire suite — every Spirit / Pest /
+  Inkling / Treasure / Fractal mint exercises the create-token
+  pipeline. Specific lock-in tests in batch 30: `lorehold_pyrescroll_burns_and_mints_spirit`
+  (per-resolution mint), `silverquill_pact_gains_four_and_mints_two_inklings`
+  (count: 2 mint via `Value::Const(2)`), `witherbloom_lichenkeeper_etb_mints_pest`
+  (ETB token-mint trigger), `prismari_treasurewright_b30_etb_mints_treasure_and_magecraft_scrys`
+  (treasure-token mint).
+
 - ✅ **CR 701.22b — Scry 0 emits no scry event** (push XXXVIII audit):
   "If a player is instructed to scry 0, no scry event occurs. Abilities
   that trigger whenever a player scries won't trigger." Push XXXVIII
@@ -4729,3 +4757,56 @@ resolution time" in the Suggested next-up tasks section.
   multiple-controller ETB cascades stack-interact (e.g. an opp's
   Pestpod-Lurker-on-ETB-mints-Pest triggers while you have a
   Felisa-on-counter-bearing-dies trigger from the same combat).
+
+### Suggested next-up tasks (additions from batch 30)
+
+- ⏳ **`Effect::Search` with `count` / `tap` / `from-zone` parameters** —
+  the current `Effect::Search { who, filter, to }` only supports
+  single-card library-to-zone tutors. Quandrix Geomancer's printed
+  "search for a basic Forest or Island, put it into your hand, then
+  shuffle" works at body level but a future "search for up to two
+  lands" or "search and put onto battlefield tapped" wants count
+  and tap parameters. Cards needing this: Manifestation Sage (already
+  ✅ via different path), future "search up to two basic lands"
+  effects. Engine extension shape: add optional `count: Option<Value>`
+  + `tap: bool` + `from: ZoneKind` fields, defaulted for compat.
+
+- ⏳ **Auto-shuffle after tutor effects** — `Effect::Search` currently
+  does not shuffle the library after the search resolves. Most printed
+  Oracles ending in "then shuffle" rely on the shuffle to randomize
+  the remaining library order. Engine extension: append a
+  `Effect::ShuffleLibrary { who }` step after every Search resolution,
+  or fold it into the Search primitive. Tests would need to assert
+  library order changes; the auto-decider's library walk currently
+  preserves order.
+
+- ⏳ **Combat-step test harness** — `g.fast_forward_to_step_for_test`
+  and `GameAction::DeclareAttackers` aren't available in the public
+  test surface; batch 30's Lorehold Sparkknight test collapsed to a
+  body sanity check rather than walking through DeclareAttackers. A
+  helper that fast-forwards to DeclareAttackers, declares N attackers,
+  and resolves combat would unlock per-attacker trigger tests for
+  the entire Lorehold combat-trigger pool (Sparring Regimen,
+  Loremaster, Spirit Champion, Aerospirit, Sparkknight, etc.).
+  Same gap as the existing "no public combat helpers" doc note.
+
+- ⏳ **Token name disambiguation** — batch 30's `silverquill_drafter_b30`
+  / `silverquill_scrivener_b30` / `prismari_treasurewright_b30` /
+  `quandrix_geomancer_b30` factory names collide with earlier extras-
+  module cards of the same printed Oracle name. The factory name carries
+  the disambiguator; the printed token name does not (the b30 card's
+  `name` field still says "Silverquill Drafter B30"). Future cleanup:
+  reconcile the duplicate Oracle slots — either retire one, merge to a
+  single canonical printed Oracle, or rename the b30 cards with a
+  printed-Oracle-distinct name.
+
+- ⏳ **CR 701.7 audit — token-creation replacement layer** (push batch
+  30): the create-token resolver in `game/effects/tokens.rs` runs
+  before `compute_battlefield`'s continuous-effect layer, matching
+  CR 701.7b's "replacement effects apply before continuous effects
+  that modify token characteristics." The remaining gap is the
+  printed Doubling Season / Anointed Procession-class replacement
+  primitive — `replacement::replace_create_token` exists as a hook
+  but no current card subscribes to it. Adding a Doubling-Season-class
+  card would lock in the replacement layering test (count doubles,
+  characteristics don't).

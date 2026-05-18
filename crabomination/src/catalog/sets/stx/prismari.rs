@@ -2761,3 +2761,207 @@ pub fn prismari_pyresurge_b28() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 30: 5 new Prismari cards ─────────────────────────────────────────
+
+/// Prismari Sparksong — {2}{U}{R}, instant.
+///
+/// Synthesised Oracle: "Prismari Sparksong deals 3 damage to target creature
+/// or planeswalker. Draw a card."
+///
+/// 4-mana burn + cantrip — fuels Magecraft chains.
+pub fn prismari_sparksong() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Sparksong",
+        cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::Const(3),
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Glasscaster — {U}{R}, 2/2 Elemental Wizard.
+///
+/// Synthesised Oracle: "Magecraft — Whenever you cast or copy an instant or
+/// sorcery spell, this creature gets +1/+1 until end of turn."
+pub fn prismari_glasscaster() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Glasscaster",
+        cost: cost(&[u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_self_pump(1, 1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Treasurewright — {2}{R}, 2/3 Djinn Wizard.
+///
+/// Synthesised Oracle: "When this creature enters, create a Treasure token.
+/// Magecraft — Whenever you cast or copy an instant or sorcery spell, scry 1."
+pub fn prismari_treasurewright_b30() -> CardDefinition {
+    use crate::game::effects::treasure_token;
+    CardDefinition {
+        name: "Prismari Treasurewright B30",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Djinn, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: treasure_token(),
+                },
+            },
+            magecraft(Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            }),
+        ],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Tideforger — {1}{U}, 2/1 Merfolk Wizard, Flash.
+///
+/// Synthesised Oracle: "Flash. Magecraft — Whenever you cast or copy an
+/// instant or sorcery spell, this creature gets +1/+0 until end of turn."
+///
+/// Flash-in surprise blocker + magecraft self-pump finisher.
+pub fn prismari_tideforger() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Tideforger",
+        cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Flash],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_self_pump(1, 0)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Splashcaster — {2}{U}{R}, sorcery.
+///
+/// Synthesised Oracle: "Prismari Splashcaster deals 2 damage to any target
+/// and 2 damage to each opponent. Create a Treasure token."
+pub fn prismari_splashcaster() -> CardDefinition {
+    use crate::game::effects::treasure_token;
+    CardDefinition {
+        name: "Prismari Splashcaster",
+        cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature
+                        .or(SelectionRequirement::Player)
+                        .or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::Const(2),
+            },
+            Effect::DealDamage {
+                to: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(2),
+            },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: treasure_token(),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

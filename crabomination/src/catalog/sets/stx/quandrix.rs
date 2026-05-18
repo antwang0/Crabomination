@@ -2911,3 +2911,212 @@ pub fn fractal_spawning() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 30: 5 new Quandrix cards ─────────────────────────────────────────
+
+/// Quandrix Hydronaut — {1}{G}{U}, 2/2 Merfolk Wizard.
+///
+/// Synthesised Oracle: "When this creature enters, target creature you
+/// control gets +1/+1 counter."
+///
+/// 3-mana grow body that immediately drops a counter on the chosen creature.
+pub fn quandrix_hydronaut() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Hydronaut",
+        cost: cost(&[generic(1), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::AddCounter {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Fractalweaver — {3}{G}{U}, 3/3 Fractal Wizard.
+///
+/// Synthesised Oracle: "When this creature enters, mill 2. Magecraft —
+/// Whenever you cast or copy an instant or sorcery spell, put a +1/+1
+/// counter on this creature."
+pub fn quandrix_fractalweaver() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Fractalweaver",
+        cost: cost(&[generic(3), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: Effect::Mill {
+                    who: Selector::You,
+                    amount: Value::Const(2),
+                },
+            },
+            magecraft(Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            }),
+        ],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Geomancer — {2}{G}, 2/3 Elf Druid.
+///
+/// Synthesised Oracle: "When this creature enters, search your library for
+/// a basic Forest or Island card, reveal it, put it into your hand, then
+/// shuffle." Approximated as basic-land tutor → hand.
+pub fn quandrix_geomancer_b30() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Geomancer B30",
+        cost: cost(&[generic(2), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Search {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::IsBasicLand,
+                to: crate::effect::ZoneDest::Hand(PlayerRef::You),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Mindforge — {U}, instant.
+///
+/// Synthesised Oracle: "Scry 2, then draw a card."
+///
+/// 1-mana selection + cantrip. Same shape as Preordain.
+pub fn quandrix_mindforge() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Mindforge",
+        cost: cost(&[u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(2),
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Branchwarden — {2}{G}{U}, 3/4 Fractal Druid Reach.
+///
+/// Synthesised Oracle: "Reach. When this creature enters, draw a card."
+///
+/// 4-mana defensive body + cantrip. Trades a counter for raw card draw.
+pub fn quandrix_branchwarden() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Branchwarden",
+        cost: cost(&[generic(2), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Reach],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

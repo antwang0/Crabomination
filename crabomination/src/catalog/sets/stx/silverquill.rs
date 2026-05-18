@@ -4188,3 +4188,208 @@ pub fn inkrise_schoolwarden() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 30: 5 new Silverquill cards ──────────────────────────────────────
+
+/// Silverquill Drafter — {1}{B}, 2/2 Inkling Wizard, Flying.
+///
+/// Synthesised Oracle: "Flying. When this creature enters, target opponent
+/// loses 2 life."
+///
+/// 2-mana evasive flier with stapled drain — fuels Tenured Inkcaster tribal
+/// + life-matters payoffs.
+pub fn silverquill_drafter_b30() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Drafter B30",
+        cost: cost(&[generic(1), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::LoseLife {
+                who: target_filtered(SelectionRequirement::Player),
+                amount: Value::Const(2),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Scrivener — {2}{W}, 2/3 Human Cleric.
+///
+/// Synthesised Oracle: "When this creature enters, look at the top three
+/// cards of your library; put one into your hand and the rest on the bottom
+/// of your library in any order." Approximated as Scry 2 + Draw 1.
+pub fn silverquill_scrivener_b30() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Scrivener B30",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::Scry {
+                    who: PlayerRef::You,
+                    amount: Value::Const(2),
+                },
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
+            ]),
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Inkling Cantor — {W}{B}, 2/2 Inkling Wizard, Flying.
+///
+/// Synthesised Oracle: "Flying. Magecraft — Whenever you cast or copy an
+/// instant or sorcery spell, target creature you control gets +1/+1 until
+/// end of turn."
+pub fn inkling_cantor() -> CardDefinition {
+    CardDefinition {
+        name: "Inkling Cantor",
+        cost: cost(&[w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::PumpPT {
+            what: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            ),
+            power: Value::Const(1),
+            toughness: Value::Const(1),
+            duration: Duration::EndOfTurn,
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Pact — {3}{W}{B}, sorcery.
+///
+/// Synthesised Oracle: "You gain 4 life and create two 1/1 white-and-black
+/// Inkling creature tokens with flying."
+///
+/// 5-mana lifegain + double-Inkling minter — Silverquill go-wide finisher.
+pub fn silverquill_pact() -> CardDefinition {
+    use crate::catalog::sets::sos::inkling_token;
+    CardDefinition {
+        name: "Silverquill Pact",
+        cost: cost(&[generic(3), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(4),
+            },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                definition: inkling_token(),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Vellumweaver — {1}{W}, 1/3 Human Cleric, Vigilance.
+///
+/// Synthesised Oracle: "Vigilance. Whenever you cast or copy an instant or
+/// sorcery spell, you gain 1 life."
+///
+/// Defensive lifegain-on-cast that pairs with Light of Promise / Felisa.
+pub fn silverquill_vellumweaver() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_gain_life;
+    CardDefinition {
+        name: "Silverquill Vellumweaver",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_gain_life(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

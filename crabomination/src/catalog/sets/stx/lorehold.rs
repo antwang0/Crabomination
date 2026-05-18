@@ -10,11 +10,12 @@
 
 use super::no_abilities;
 use crate::card::{
-    CardDefinition, CardType, CreatureType, Effect, EventKind, EventScope, EventSpec, Keyword,
-    Selector, SelectionRequirement, Subtypes, TokenDefinition, TriggeredAbility, Value, Zone,
+    CardDefinition, CardType, CounterType, CreatureType, Effect, EventKind, EventScope, EventSpec,
+    Keyword, Selector, SelectionRequirement, Subtypes, TokenDefinition, TriggeredAbility, Value,
+    Zone,
 };
-use crate::effect::shortcut::{magecraft, target_filtered};
-use crate::effect::{PlayerRef, ZoneDest};
+use crate::effect::shortcut::{magecraft, magecraft_self_pump, target_filtered};
+use crate::effect::{Duration, PlayerRef, ZoneDest};
 use crate::mana::{cost, generic, r, w, Color, ManaCost};
 
 // ── Lorehold spirit token ───────────────────────────────────────────────────
@@ -3281,8 +3282,6 @@ pub fn lorehold_embercouncil() -> CardDefinition {
 /// 3-mana grow-and-pump engine. ETB counter + ongoing magecraft pump make
 /// any small body a multi-turn threat.
 pub fn lorehold_cinderpriest() -> CardDefinition {
-    use crate::card::CounterType;
-    use crate::effect::Duration;
     CardDefinition {
         name: "Lorehold Cinderpriest",
         cost: cost(&[generic(2), r()]),
@@ -3315,6 +3314,300 @@ pub fn lorehold_cinderpriest() -> CardDefinition {
                 ),
                 power: Value::Const(1),
                 toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            }),
+        ],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+// ── Batch 30: 7 new Lorehold cards ─────────────────────────────────────────
+
+/// Lorehold Sparkscholar — {1}{R}, 2/1 Spirit Wizard.
+///
+/// Synthesised Oracle: "Magecraft — Whenever you cast or copy an instant or
+/// sorcery spell, this creature gets +1/+0 until end of turn."
+///
+/// Magecraft self-pump body that scales aggressively in spell-heavy shells.
+pub fn lorehold_sparkscholar() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Sparkscholar",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_self_pump(1, 0)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Ironscribe — {2}{W}, 2/4 Spirit Cleric with Vigilance.
+///
+/// Synthesised Oracle: "Vigilance. When this creature enters, you gain 3 life."
+///
+/// Defensive vigilance lifegain body that feeds Felisa / Light of Promise.
+pub fn lorehold_ironscribe() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Ironscribe",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        keywords: vec![Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(3),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Spiritflame — {R}{W}, instant.
+///
+/// Synthesised Oracle: "Lorehold Spiritflame deals 2 damage to any target.
+/// You gain 1 life."
+///
+/// 2-mana burn-and-gain rider — small drain-burn for tempo + lifematter shells.
+pub fn lorehold_spiritflame() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Spiritflame",
+        cost: cost(&[r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature
+                        .or(SelectionRequirement::Player)
+                        .or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::Const(2),
+            },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Sparkknight — {1}{R}{W}, 3/2 Spirit Knight, First Strike.
+///
+/// Synthesised Oracle: "First strike. Whenever this creature attacks,
+/// another target attacking creature you control gets +1/+0 until end of turn."
+pub fn lorehold_sparkknight() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Sparkknight",
+        cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::FirstStrike],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::PumpPT {
+                what: target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::IsAttacking)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                power: Value::Const(1),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Stoneweaver — {3}{W}, 2/5 Spirit Cleric.
+///
+/// Synthesised Oracle: "Vigilance, lifelink. When this creature enters,
+/// exile target card from a graveyard."
+pub fn lorehold_stoneweaver() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Stoneweaver",
+        cost: cost(&[generic(3), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 5,
+        keywords: vec![Keyword::Vigilance, Keyword::Lifelink],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Move {
+                what: target_filtered(SelectionRequirement::Any),
+                to: ZoneDest::Exile,
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Pyrescroll — {2}{R}, sorcery.
+///
+/// Synthesised Oracle: "Lorehold Pyrescroll deals 2 damage to target
+/// creature or planeswalker. Create a 2/2 red-and-white Spirit creature token."
+pub fn lorehold_pyrescroll() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Pyrescroll",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::Const(2),
+            },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: lorehold_spirit_token(),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Battle Witness — {3}{R}{W}, 3/4 Spirit Wizard.
+///
+/// Synthesised Oracle: "When this creature enters, return target creature
+/// card from your graveyard to your hand. Whenever you cast or copy an
+/// instant or sorcery spell, this creature gets +1/+1 until end of turn."
+pub fn lorehold_battle_witness() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Battle Witness",
+        cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: Effect::Move {
+                    what: Selector::one_of(Selector::CardsInZone {
+                        zone: Zone::Graveyard,
+                        who: PlayerRef::You,
+                        filter: SelectionRequirement::Creature,
+                    }),
+                    to: ZoneDest::Hand(PlayerRef::You),
+                },
+            },
+            magecraft(Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(1),
+                toughness: Value::Const(1),
                 duration: Duration::EndOfTurn,
             }),
         ],
