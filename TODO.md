@@ -222,10 +222,13 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   of each kind).
   (m) **122.4** "can't have more than N counters" — ⏳ (no
   `Modification::MaxCountersOfKind` rule).
-  (n) **122.5** "move a counter" — 🟡 (one-off cards like Tester of
-  the Tangential reference "move N counters from this to that"; no
-  general `Effect::MoveCounter { from, to, kind, count }` primitive
-  yet — tracked as part of Tester's promotion).
+  (n) **122.5** "move a counter" — ✅ (the `Effect::MoveCounter
+  { from, to, kind, amount }` primitive at `effect.rs:883` walks the
+  source's counter pool, deducts up to `amount`, and adds to the
+  destination; resolver at `effect.rs:1352` honours both objects being
+  in different zones (counters live on `CardInstance.counters` in any
+  zone). Push (modern_decks batch 31 audit): primitive shipped; smoke
+  test in `tests::stx::effect_move_counter_*`.
   (o) **122.6/a** ETB-with-counters — ✅ (`CardDefinition.
   enters_with_counters: Option<(CounterType, Value)>` is applied in
   `stack.rs:362+` AFTER the card is pushed onto bf but BEFORE the
@@ -4810,3 +4813,48 @@ resolution time" in the Suggested next-up tasks section.
   but no current card subscribes to it. Adding a Doubling-Season-class
   card would lock in the replacement layering test (count doubles,
   characteristics don't).
+
+- ⏳ **Transient triggered-ability grants from pump spells** (push
+  modern_decks batch 31 follow-up — claude/modern_decks branch):
+  Root Manipulation ({3}{B}{G} sorcery, SOS Witherbloom) grants
+  "Whenever this creature attacks, you gain 1 life" to every creature
+  you control EOT. The engine has no `Effect::GrantTriggeredAbility`
+  primitive — a slot like `CardInstance.granted_triggers_eot:
+  Vec<TriggeredAbility>` that the EventKind dispatcher walks alongside
+  `definition.triggered_abilities` would unlock this. Affected cards:
+  Root Manipulation (combat-trigger lifegain), Sparring Regimen-style
+  "your creatures gain X trigger" payoffs, Aether Vial-style ability
+  grants. The grant duration honoring (EOT cleanup) would mirror the
+  existing `granted_keywords_eot` Vec layout.
+
+- ⏳ **Permanent-copy primitive** (push modern_decks batch 31 follow-up):
+  Applied Geometry ({2}{G}{U} sorcery, SOS Quandrix), Colorstorm
+  Stallion's Opus rider, Echocasting Symposium's body, Mirror Image-
+  style cards all need an `Effect::CopyPermanent { source, … }` that
+  creates a *non-spell* token copy of a battlefield permanent (vs.
+  `CopySpell` which copies a stack item). Wiring shape: take the source
+  permanent's `CardDefinition` (resolving CounterType / damage / etc.
+  via its current characteristic state per CR 707), instantiate a
+  fresh `CardInstance` with `is_token: true`, and place onto the
+  battlefield under the chosen controller. Layered effects (anthems,
+  Lordship buffs) apply to the copy at compute time.
+
+- ⏳ **Casualty keyword (CR 702.140)** (push modern_decks batch 31
+  follow-up — claude/modern_decks branch): Silverquill the Disputant
+  (SOS) grants Casualty 1 to all your IS spells. Wiring shape: a new
+  `Keyword::Casualty(u32)` keyword on `CardDefinition`, a cast-time
+  optional additional cost "sacrifice a creature with power N+"
+  enforced via the `AlternativeCost` pipeline, and a copy-the-spell
+  trigger fired when the casualty is paid. Like Affinity, the keyword
+  exposure surface is in `StaticEffect::GrantKeywordToISSpells`-class
+  primitives to allow conditional grants.
+
+- ⏳ **Nth-counter threshold trigger (CR 122.7)** (push modern_decks
+  batch 31 audit — claude/modern_decks branch): "Whenever the Nth
+  +1/+1 counter is placed on this creature" needs the engine to
+  compare pre/post counter totals at each AddCounter resolution and
+  fire only when the count crosses the threshold. Today `EventKind::
+  CounterAdded(CounterType)` fires unconditionally on each add, which
+  approximates the per-add Berta pattern but doesn't gate on a target
+  count. Affected cards: would unlock Spike Tiller, Carnival of Souls,
+  Vish Kal's "+5 counters → ult" pattern, etc.

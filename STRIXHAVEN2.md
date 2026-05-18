@@ -19,10 +19,32 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 217 | 38 | 0 |
-| STX (327 cards) | 573 | 12 | 0 |
+| STX (327 cards) | 601 | 12 | 0 |
 | STA reprints (in STX boosters) | 46 | 0 | — |
 
 Push (modern_decks, claude/modern_decks branch — latest revision —
+**batch 31: 28 new STX cards (12 Lorehold + 12 Witherbloom +
+4 Silverquill) + 28 new tests (all clippy-clean)**):
+
+A second clean sweep distributing 28 fresh synthesised STX cards
+across three colleges. Lorehold gets 12 new bodies and tricks
+(Battlescholar exile-on-attack, Pyrokineticist hasty drain,
+Wargleam ETB-pump, Stoneglyph 2-damage instant, Reverend lifelink
+ETB, Recountmage MayDo self-damage cantrip, Inscribe two-mode
+sorcery, Reenactor hasty reanimator, Ardent Pyromage self-pump,
+Memorial Reliquary mana-fix + reanimator artifact, Spirit Sentinel
+Spirit-tribal anthem payoff, Pyrotechnician ETB ping); Witherbloom
+gets 12 (Bloomweaver Pest mint + magecraft drain, Drainpath
+Surveil + drain, Vinekeeper II attack-drain finisher, Sapcurse
+-2/-2 shrink, Pestreaver mill + lifegain, Vinemender ETB lifegain,
+Devourer edict-on-a-body Menace, Lifebloom defensive lifegain
+sorcery, Rotmancer magecraft 1-each-opp, Sapseeker Trample attack
+lifegain, Pestlich reanimator-on-a-body, Mireguide BG mana dork);
+Silverquill gets 4 (Inkling Sermon drain + token, Lorescribe ETB
+loot, Inkling Warden Inkling-tribal +1/+1, Inkletter drain + surveil).
+Prior batch 30:
+
+Push (modern_decks, claude/modern_decks branch — prior revision —
 **batch 30: 28 new STX cards across all 5 colleges + 28 new tests
 (all clippy-clean)**):
 
@@ -3193,6 +3215,10 @@ parity is a matter of porting card factories one at a time.
 | Silverquill Indictment | {2}{W}{B} | ✅ | Push (modern_decks batch 24, NEW, `stx::silverquill`): Instant. Seq(Move(target Creature ∧ MV≤3 → Exile) + GainLife 2). 4-mana clean exile-removal for the small-creature slot + lifegain rider. Test: `silverquill_indictment_exiles_low_mv_creature`. |
 | Inkling Banner-Bearer | {3}{W} | ✅ | Push (modern_decks batch 24, NEW, `stx::silverquill`): 2/3 Inkling Soldier Flying + Vigilance. Static "Other Inkling creatures you control get +1/+0" via `StaticEffect::PumpPT` + `OtherThanSource`. Stacks with Tenured Inkcaster. Test: `inkling_banner_bearer_buffs_other_inklings`. |
 | Silverquill Tribunal | {2}{B} | ✅ | Push (modern_decks batch 24, NEW, `stx::silverquill`): Sorcery. Seq(target opp sacrifices a creature + GainLife 1). Edict-with-lifegain. Test: `silverquill_tribunal_forces_opp_sacrifice_and_gains_one_life`. |
+| Inkling Sermon | {1}{W}{B} | ✅ | Push (modern_decks batch 31, NEW, `stx::silverquill`): Sorcery. Seq(Drain 2 + CreateToken 1 Inkling). 3-mana drain + Inkling mint. Test: `inkling_sermon_drains_two_and_mints_inkling`. |
+| Silverquill Lorescribe | {1}{W} | ✅ | Push (modern_decks batch 31, NEW, `stx::silverquill`): 2/2 Human Cleric. ETB Seq(Draw 1 + Discard 1). 2-mana loot body. Test: `silverquill_lorescribe_etb_loots`. |
+| Inkling Warden | {2}{W}{B} | ✅ | Push (modern_decks batch 31, NEW, `stx::silverquill`): 2/4 Inkling Knight Flying + Vigilance. Triggered ability via `EntersBattlefield/AnotherOfYours + Predicate::EntityMatches(TriggerSource, HasCreatureType(Inkling))` puts a +1/+1 counter on self. 4-mana Inkling-tribal payoff. Test: `inkling_warden_pumps_on_friendly_inkling_etb`. |
+| Silverquill Inkletter | {W}{B} | ✅ | Push (modern_decks batch 31, NEW, `stx::silverquill`): Instant. Seq(Drain 1 + Surveil 1). 2-mana drain + selection. Test: `silverquill_inkletter_drains_one_and_surveils`. |
 
 ### Witherbloom (B/G)
 
@@ -3253,6 +3279,18 @@ parity is a matter of porting card factories one at a time.
 | Witherbloom Spore-Master | {3}{B}{G} | ✅ | Push (modern_decks batch 24, NEW, `stx::witherbloom`): 4/4 Plant Druid. ETB mints 2 Pest tokens. 5-mana go-wide finisher (8 power across 3 bodies). Test: `witherbloom_spore_master_etb_mints_two_pests`. |
 | Witherbloom Withercut | {1}{B}{G} | ✅ | Push (modern_decks batch 24, NEW, `stx::witherbloom`): Instant. Seq(PumpPT -3/-1 EOT + Draw 1). 3-mana shrink-and-cantrip. Test: `witherbloom_withercut_shrinks_creature_and_cantrips`. |
 | Pest Cultivator-Adept | {2}{B}{G} | ✅ | Push (modern_decks batch 24, NEW, `stx::witherbloom`): 2/3 Plant Druid. ETB mints a Pest + magecraft permanent +1/+1 counter on self. 4-mana Pest engine + counter-builder. Test: `pest_cultivator_adept_etb_mints_pest_and_grows_on_cast`. |
+| Witherbloom Bloomweaver | {2}{B}{G} | ✅ | Push (modern_decks batch 31, NEW, `stx::witherbloom`): 3/3 Plant Warlock. ETB mints a Pest + magecraft 1 to each opp via `magecraft_ping_each_opp(1)`. 4-mana double-payoff body. Test: `witherbloom_bloomweaver_etb_mints_pest_and_magecraft_drains`. |
+| Witherbloom Drainpath | {2}{B} | ✅ | Push (modern_decks batch 31, NEW, `stx::witherbloom`): Sorcery. Seq(Drain 2 + Surveil 1). 3-mana drain + selection. Test: `witherbloom_drainpath_drains_two_and_surveils`. |
+| Witherbloom Vinekeeper II | {3}{B}{G} | ✅ | Push (modern_decks batch 31, NEW, `stx::witherbloom`): 4/4 Plant Druid. Attacks/SelfSource → Drain 2. 5-mana attack drain engine. Test: `witherbloom_vinekeeper_b30_attack_drains_two`. |
+| Witherbloom Sapcurse | {B}{G} | ✅ | Push (modern_decks batch 31, NEW, `stx::witherbloom`): Instant. -2/-2 EOT to target creature. 2-mana shrink-removal. Test: `witherbloom_sapcurse_shrinks_target`. |
+| Witherbloom Pestreaver | {1}{B}{G} | ✅ | Push (modern_decks batch 31, NEW, `stx::witherbloom`): 2/3 Pest Warlock. ETB Seq(Mill 2 + GainLife 1). 3-mana mill + lifegain. Test: `witherbloom_pestreaver_etb_mills_and_gains_life`. |
+| Witherbloom Vinemender | {2}{G} | ✅ | Push (modern_decks batch 31, NEW, `stx::witherbloom`): 2/2 Plant Druid. ETB gain 3 life. 3-mana defensive lifegain body — feeds Infusion gates, Blech, Apprentice drain stacks. Test: `witherbloom_vinemender_etb_gains_three_life`. |
+| Witherbloom Devourer | {3}{B} | ✅ | Push (modern_decks batch 31, NEW, `stx::witherbloom`): 3/2 Pest Warlock Menace. ETB target opp sacrifices a creature via `Effect::Sacrifice { who: EachOpponent, count: 1 }`. 4-mana edict-on-a-body. Test: `witherbloom_devourer_etb_forces_sac`. |
+| Witherbloom Lifebloom | {1}{G} | ✅ | Push (modern_decks batch 31, NEW, `stx::witherbloom`): Sorcery. Seq(GainLife 4 + Surveil 1). 2-mana lifegain + selection. Test: `witherbloom_lifebloom_gains_four_and_surveils`. |
+| Witherbloom Rotmancer | {1}{B} | ✅ | Push (modern_decks batch 31, NEW, `stx::witherbloom`): 2/2 Pest Warlock. Magecraft 1 to each opp. Test: `witherbloom_rotmancer_magecraft_pings_each_opp`. |
+| Witherbloom Sapseeker | {2}{G} | ✅ | Push (modern_decks batch 31, NEW, `stx::witherbloom`): 3/3 Plant Druid Trample. Attacks/SelfSource → GainLife 1. 3-mana big body + combat-trigger lifegain. Test: `witherbloom_sapseeker_attack_gains_one_life`. |
+| Witherbloom Pestlich | {3}{B}{G} | ✅ | Push (modern_decks batch 31, NEW, `stx::witherbloom`): 3/4 Pest Warlock. ETB returns target creature card from your gy → bf. 5-mana reanimator-on-a-body. Test: `witherbloom_pestlich_etb_reanimates_creature`. |
+| Witherbloom Mireguide | {1}{G} | ✅ | Push (modern_decks batch 31, NEW, `stx::witherbloom`): 1/2 Plant Druid. `{T}: Add {B}` + `{T}: Add {G}`. 2-mana mana dork for Witherbloom shells. Test: `witherbloom_mireguide_taps_for_black_or_green`. |
 
 ### Lorehold (R/W)
 
@@ -3310,6 +3348,18 @@ parity is a matter of porting card factories one at a time.
 | Lorehold Ironhand | {3}{R}{W} | ✅ | Push (modern_decks batch 24, NEW, `stx::lorehold`): 4/4 Spirit Soldier First Strike + Trample. ETB DealDamage 2 to target creature. 5-mana high-power finisher with built-in removal. Test: `lorehold_ironhand_etb_pings_target_creature`. |
 | Lorehold Revival | {2}{R}{W} | ✅ | Push (modern_decks batch 24, NEW, `stx::lorehold`): Sorcery. Seq(Move(target Creature from gy → Battlefield) + GrantKeyword(Target, Haste, EOT)). 4-mana reanimator-with-haste. Test: `lorehold_revival_returns_creature_with_haste`. |
 | Lorehold Sparkflare | {R} | ✅ | Push (modern_decks batch 24, NEW, `stx::lorehold`): Instant. 2 damage to any target. Shock template at the {R} slot. Test: `lorehold_sparkflare_deals_two_damage`. |
+| Lorehold Battlescholar | {2}{R}{W} | ✅ | Push (modern_decks batch 31, NEW, `stx::lorehold`): 3/3 Spirit Wizard First Strike. Per-attack `Attacks/SelfSource → Move(target → Exile)` exiles a graveyard card on each swing. 4-mana first-strike body + sustained graveyard hate. Test: `lorehold_battlescholar_attack_exiles_target_graveyard_card`. |
+| Lorehold Pyrokineticist | {1}{R} | ✅ | Push (modern_decks batch 31, NEW, `stx::lorehold`): 2/1 Spirit Wizard Haste. Magecraft 1 dmg to each opp via `magecraft_ping_each_opp(1)`. 2-mana hasty drain body. Tests: `lorehold_pyrokineticist_magecraft_pings_each_opp`, `lorehold_pyrokineticist_has_haste`. |
+| Lorehold Wargleam | {1}{R}{W} | ✅ | Push (modern_decks batch 31, NEW, `stx::lorehold`): 2/2 Spirit Knight Vigilance. ETB +1/+1 counter on another target creature you control. 3-mana sticky pumper. Test: `lorehold_wargleam_etb_pumps_other_creature`. |
+| Lorehold Stoneglyph | {R}{W} | ✅ | Push (modern_decks batch 31, NEW, `stx::lorehold`): Instant. 2 damage to any target. Approximated — the conditional retarget gate ("if a creature died this turn") is engine-wide gap. Test: `lorehold_stoneglyph_burns_target`. |
+| Lorehold Reverend | {2}{W} | ✅ | Push (modern_decks batch 31, NEW, `stx::lorehold`): 2/3 Spirit Cleric Vigilance + Lifelink. ETB gain 2 life. Defensive value body. Test: `lorehold_reverend_etb_gains_two_life`. |
+| Lorehold Recountmage | {2}{R}{W} | ✅ | Push (modern_decks batch 31, NEW, `stx::lorehold`): 2/4 Spirit Wizard. Magecraft MayDo Seq(DealDamage(2, This) + Draw 1). AutoDecider declines by default (preserves toughness). Test: `lorehold_recountmage_magecraft_may_decline_by_default`. |
+| Lorehold Inscribe | {R}{W} | ✅ | Push (modern_decks batch 31, NEW, `stx::lorehold`): Sorcery. Two-mode `ChooseMode` — 1 damage to any target or first strike EOT to target creature you control. Test: `lorehold_inscribe_burns_target`. |
+| Lorehold Reenactor | {3}{R}{W} | ✅ | Push (modern_decks batch 31, NEW, `stx::lorehold`): 3/4 Spirit Soldier Haste. ETB Seq(Move(gy creature MV≤2 → bf) + GrantKeyword(Haste, EOT)). 5-mana hasty reanimator-on-a-body. Test: `lorehold_reenactor_etb_returns_low_mv_creature_with_haste`. |
+| Lorehold Ardent Pyromage | {1}{R} | ✅ | Push (modern_decks batch 31, NEW, `stx::lorehold`): 2/2 Spirit Wizard. Magecraft +1/+0 EOT self-pump via `magecraft_self_pump(1, 0)`. 2-mana magecraft scaler. Test: `lorehold_ardent_pyromage_magecraft_self_pumps`. |
+| Lorehold Memorial Reliquary | {2} | ✅ | Push (modern_decks batch 31, NEW, `stx::lorehold`): Artifact. `{T}: Add {R}`, `{T}: Add {W}`, `{3}{R}{W}, {T}, Sac: return creature from gy → bf` (sorcery-speed reanimator). 2-mana fix + reanimator. Test: `lorehold_memorial_taps_for_red_or_white`. |
+| Lorehold Spirit Sentinel | {2}{W} | ✅ | Push (modern_decks batch 31, NEW, `stx::lorehold`): 2/3 Spirit Soldier Vigilance. Triggered ability via `EntersBattlefield/AnotherOfYours + Predicate::EntityMatches(TriggerSource, HasCreatureType(Spirit))` puts a +1/+1 counter on self. 3-mana Spirit-tribal anthem payoff. Test: `lorehold_spirit_sentinel_pumps_on_friendly_spirit_etb`. |
+| Lorehold Pyrotechnician | {2}{R} | ✅ | Push (modern_decks batch 31, NEW, `stx::lorehold`): 2/2 Spirit Wizard. ETB DealDamage(2, target opp creature). 3-mana ETB ping body. Test: `lorehold_pyrotechnician_etb_burns_opp_creature`. |
 
 ### Quandrix (G/U)
 
