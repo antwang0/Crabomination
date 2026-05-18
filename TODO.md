@@ -1150,6 +1150,26 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   Rancorous Archaic base-toughness-bump workaround. Catalog
   promotions: Pterafractyl (1/0 → 1/0 exact), Symmathematics (1/1
   → 0/0 exact), Rancorous Archaic (ETB-trigger → CR-614.12 timing).
+- 🟡 **CR 701.48 — Learn** (push modern_decks batch 24 audit,
+  claude/modern_decks branch — audit against `MagicCompRules_20260417.txt`):
+  "Learn" means "You may discard a card. If you do, draw a card. If you
+  didn't discard a card, you may reveal a Lesson card you own from outside
+  the game and put it into your hand." (701.48a). The engine ships **only**
+  the discard-and-draw half — and even that half is collapsed to "draw a
+  card" without the discard fork because no STX card in the current
+  catalog has a different effect when you discard vs reveal-a-Lesson.
+  The full CR 701.48a primitive needs: (a) a per-player **Lesson
+  sideboard** zone (tracked separately as the "Lesson sideboard model"
+  TODO row); (b) a **MayDo nested-Or** primitive — the printed "may
+  discard ... if you do, draw / if you didn't discard, may reveal a
+  Lesson" is a two-stage may-choose; (c) a **reveal-from-outside-game**
+  effect (currently no engine support for revealing a sideboard card).
+  Cards affected today: Eyetwitch ✅, Hunt for Specimens ✅, Pest
+  Summoning ✅, Igneous Inspiration ✅, Field Trip ✅, Environmental
+  Sciences ✅, Mascot Interception ✅, Containment Breach ✅ — all use
+  the same "Learn → Draw 1" approximation. Promote to ✅ when the
+  Lesson sideboard model lands.
+
 - ✅ **CR 701.21 — Sacrifice** (push modern_decks batch 23 audit,
   claude/modern_decks branch — audit against `MagicCompRules_20260417.txt`):
   "To sacrifice a permanent, its controller moves it from the battlefield
@@ -1799,6 +1819,31 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   remainder is wired.
 
 ## Suggested next-up tasks
+
+- ✅ **`Effect::GrantKeyword` duration honoring** (push modern_decks
+  batch 24) — Previously mutated `c.definition.keywords` directly with
+  no EOT cleanup, so an "EOT haste" grant on a reanimated bear would
+  persist forever. Engine fix: added `CardInstance.granted_keywords_eot:
+  Vec<Keyword>` for EOT grants, with cleanup at the Cleanup step
+  alongside `power_bonus`/`toughness_bonus`. `has_keyword()` now checks
+  both vectors. `compute_battlefield()` merges the granted EOT keywords
+  into the layered view. `Effect::GrantKeyword` routes EOT to the new
+  field, Permanent stays on the direct mutation path. Lock-in tests:
+  `granted_keyword_eot_clears_at_cleanup_per_batch_24`,
+  `lorehold_revival_returns_creature_with_haste`. Affected cards:
+  Lorehold Skirmish, Lorehold Battlescroll, Lorehold Revival,
+  Mascot Interception, Practiced Offense (Lifelink/DoubleStrike
+  mode), Tempted by the Oriq, Prismari Wildform, Silverquill
+  Discipline, Silverquill Battle Hymn, Selfless Glyphweaver
+  Indestructible grant, and others.
+
+- ⏳ **Layered-effect `Effect::GrantKeyword` for `UntilNextTurn`** —
+  The batch-24 fix above honors `EndOfTurn` and `Permanent` durations.
+  `UntilNextTurn`/`UntilYourNextUntap` is wired to permanent mutation
+  (no cleanup), which is incorrect. Needs a separate `granted_keywords_
+  untilnext: Vec<Keyword>` slot or routing through the proper layered
+  system. No STX/SOS card uses this duration today, so the gap is
+  doc-tracked but unaddressed.
 
 - ⏳ **Batched sacrifice picker for cost-paid filters** (push
   modern_decks batch 18 suggested) — `Effect::Sacrifice { filter, …}`

@@ -975,13 +975,33 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::GrantKeyword { what, keyword, duration: _ } => {
+            Effect::GrantKeyword { what, keyword, duration } => {
+                // Per-instance granted keyword. Previously mutated
+                // `definition.keywords` directly with no cleanup, so an
+                // "EOT haste" grant would persist forever. Now distinguishes
+                // EOT vs Permanent: EOT grants enter the `granted_keywords_eot`
+                // bag (cleared at Cleanup along with `power_bonus`), while
+                // Permanent grants still mutate the printed keyword list
+                // (a leak-free no-op since indefinite grants don't expire).
+                use crate::effect::Duration as EffectDur;
+                let is_eot = matches!(
+                    duration,
+                    EffectDur::EndOfTurn | EffectDur::EndOfCombat
+                );
                 for ent in self.resolve_selector(what, ctx) {
                     if let Some(cid) = ent.as_permanent_id()
                         && let Some(c) = self.battlefield_find_mut(cid)
-                        && !c.definition.keywords.contains(keyword) {
+                    {
+                        if is_eot {
+                            if !c.granted_keywords_eot.contains(keyword)
+                                && !c.definition.keywords.contains(keyword)
+                            {
+                                c.granted_keywords_eot.push(keyword.clone());
+                            }
+                        } else if !c.definition.keywords.contains(keyword) {
                             c.definition.keywords.push(keyword.clone());
                         }
+                    }
                 }
                 Ok(())
             }

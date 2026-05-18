@@ -220,6 +220,14 @@ fn compute_permanent(
     let mut subtypes = card.definition.subtypes.clone();
     let mut colors = colors_from_card(card);
     let mut keywords = card.definition.keywords.clone();
+    // Merge in EOT-granted keywords so a computed view sees them just like
+    // the layered-effect ones. Cleared at Cleanup via
+    // `clear_end_of_turn_effects`.
+    for kw in &card.granted_keywords_eot {
+        if !keywords.contains(kw) {
+            keywords.push(kw.clone());
+        }
+    }
 
     // Base P/T from definition + counters (applied after layer 7c).
     let base_power = card.definition.base_power() + card.power_bonus;

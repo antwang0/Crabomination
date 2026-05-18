@@ -1846,6 +1846,241 @@ pub fn prismari_tempo_adept() -> CardDefinition {
     }
 }
 
+// ── Push (modern_decks) batch 24: 5 new Prismari cards ─────────────────────
+
+/// Prismari Mindkindler — {U}{R}, 1/2 Human Wizard.
+///
+/// Printed Oracle (synthesised): "Magecraft — Whenever you cast or copy
+/// an instant or sorcery spell, target creature can't block this turn."
+///
+/// 2-mana Prismari evasion enabler — every cast unblocks an attacker.
+/// Pairs with Sparkmage Apprentice / Prismari Sparkbright for chained
+/// damage.
+pub fn prismari_mindkindler() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Mindkindler",
+        cost: cost(&[u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::Tap {
+            what: target_filtered(SelectionRequirement::Creature),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+/// Prismari Embergem — {2}{R}, sorcery.
+///
+/// Printed Oracle (synthesised): "Prismari Embergem deals 4 damage to
+/// target creature. Create a Treasure token."
+///
+/// 3-mana headline burn + ramp — kills a 4-toughness body and refunds
+/// part of the mana into a Treasure.
+pub fn prismari_embergem() -> CardDefinition {
+    use crate::game::effects::treasure_token;
+    CardDefinition {
+        name: "Prismari Embergem",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Creature),
+                amount: Value::Const(4),
+            },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: treasure_token(),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+/// Prismari Pyromancer — {2}{U}{R}, 3/2 Human Wizard.
+///
+/// Printed Oracle (synthesised): "When this creature enters, deal 2
+/// damage to any target. Magecraft — Whenever you cast or copy an
+/// instant or sorcery spell, you may discard a card. If you do, draw a
+/// card."
+///
+/// 4-mana ETB burn + magecraft loot — Prismari's signature value engine
+/// at a moderate cost.
+pub fn prismari_pyromancer() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Pyromancer",
+        cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: Effect::DealDamage {
+                    to: target_filtered(
+                        SelectionRequirement::Creature
+                            .or(SelectionRequirement::Player)
+                            .or(SelectionRequirement::Planeswalker),
+                    ),
+                    amount: Value::Const(2),
+                },
+            },
+            magecraft(Effect::MayDo {
+                description: "discard a card to draw one".to_string(),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::Discard {
+                        who: Selector::You,
+                        amount: Value::Const(1),
+                        random: false,
+                    },
+                    Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::Const(1),
+                    },
+                ])),
+            }),
+        ],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+/// Prismari Spitfire — {3}{R}, 3/3 Elemental Haste.
+///
+/// Printed Oracle (synthesised): "Haste. When this creature enters, it
+/// deals 2 damage to any target."
+///
+/// 4-mana ETB-burn finisher — a Flametongue-Kavu-on-a-haster shape
+/// (haste + ETB damage). Pure tempo finisher in the Prismari burn shell.
+pub fn prismari_spitfire() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Spitfire",
+        cost: cost(&[generic(3), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Haste],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature
+                        .or(SelectionRequirement::Player)
+                        .or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::Const(2),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+/// Prismari Wildform — {U}{R}, instant.
+///
+/// Printed Oracle (synthesised): "Target creature gets +2/+1 and gains
+/// haste until end of turn. Draw a card."
+///
+/// 2-mana combat trick + cantrip in Prismari colors — pump + haste makes
+/// for surprise lethal lines off freshly-cast creatures.
+pub fn prismari_wildform() -> CardDefinition {
+    use crate::effect::Duration;
+    CardDefinition {
+        name: "Prismari Wildform",
+        cost: cost(&[u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(2),
+                toughness: Value::Const(1),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::Haste,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
 /// Prismari Sparkbright — {1}{R}, 2/1 Elemental Wizard Haste.
 ///
 /// Printed Oracle (synthesised): "Haste. Whenever this creature attacks,

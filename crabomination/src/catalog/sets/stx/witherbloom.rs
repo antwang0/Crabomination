@@ -2053,6 +2053,236 @@ pub fn pestilent_bloom() -> CardDefinition {
     }
 }
 
+// ── Push (modern_decks) batch 24: 5 new Witherbloom cards ──────────────────
+
+/// Witherbloom Aspersor — {B}{G}, instant.
+///
+/// Printed Oracle (synthesised): "Target creature gets -2/-1 until end
+/// of turn. You gain 1 life."
+///
+/// 2-mana cheap shrink-removal for 1-toughness creatures + small lifegain
+/// — versatile combat trick / sweeper-tail for the Witherbloom drain
+/// shell.
+pub fn witherbloom_aspersor() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Aspersor",
+        cost: cost(&[b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(-2),
+                toughness: Value::Const(-1),
+                duration: crate::effect::Duration::EndOfTurn,
+            },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+/// Pest Reanimator — {2}{B}{G}, 3/2 Plant Warlock.
+///
+/// Printed Oracle (synthesised): "When this creature enters, return target
+/// creature card with mana value 3 or less from your graveyard to your
+/// hand."
+///
+/// 4-mana reanimator engine in Witherbloom. Pairs with the Pest token
+/// die-trigger lifegain — chain dying Pests + small creatures back into
+/// the hand for repeated drain payoffs.
+pub fn pest_reanimator() -> CardDefinition {
+    CardDefinition {
+        name: "Pest Reanimator",
+        cost: cost(&[generic(2), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Move {
+                what: Selector::one_of(Selector::CardsInZone {
+                    who: PlayerRef::You,
+                    zone: crate::card::Zone::Graveyard,
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::ManaValueAtMost(3)),
+                }),
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+/// Witherbloom Spore-Master — {3}{B}{G}, 4/4 Plant Druid.
+///
+/// Printed Oracle (synthesised): "When this creature enters, create two
+/// 1/1 black and green Pest creature tokens."
+///
+/// 5-mana go-wide finisher — 4/4 body + 2 Pest tokens for 8 power across
+/// three bodies. Strict-upgrade frame over Pest Ravager (a 4/4 vs a 4/4
+/// trampler, but with 2 Pest tokens instead of 2 trampler tokens).
+pub fn witherbloom_spore_master() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Spore-Master",
+        cost: cost(&[generic(3), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                definition: stx_pest_token(),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+/// Witherbloom Withercut — {1}{B}{G}, instant.
+///
+/// Printed Oracle (synthesised): "Target creature gets -3/-1 until end
+/// of turn. Draw a card."
+///
+/// 3-mana shrink-and-cantrip in Witherbloom. Better than Toxic Bloodletting
+/// at the same slot when you're behind on cards but worse on damage
+/// (-3/-1 vs -2/-2 + 2 life).
+pub fn witherbloom_withercut() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Withercut",
+        cost: cost(&[generic(1), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(-3),
+                toughness: Value::Const(-1),
+                duration: crate::effect::Duration::EndOfTurn,
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+/// Pest Cultivator-Adept — {2}{B}{G}, 2/3 Plant Druid.
+///
+/// Printed Oracle (synthesised): "When this creature enters, create a
+/// 1/1 black and green Pest creature token. Magecraft — Whenever you cast
+/// or copy an instant or sorcery spell, put a +1/+1 counter on this
+/// creature."
+///
+/// 4-mana Pest engine + magecraft counter-builder. Same shape as
+/// Witherbloom Vinemaster but with a different trigger source — counters
+/// on any spell cast vs only on Pest death.
+pub fn pest_cultivator_adept() -> CardDefinition {
+    use crate::card::CounterType;
+    use crate::effect::shortcut::magecraft;
+    CardDefinition {
+        name: "Pest Cultivator-Adept",
+        cost: cost(&[generic(2), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: stx_pest_token(),
+                },
+            },
+            magecraft(Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            }),
+        ],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
 /// Witherbloom Reaper-Hand — {2}{B}{G}, 3/3 Plant Warlock Deathtouch.
 ///
 /// Printed Oracle (synthesised): "Deathtouch. When this creature dies,

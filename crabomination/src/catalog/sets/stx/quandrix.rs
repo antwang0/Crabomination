@@ -1984,6 +1984,215 @@ pub fn quandrix_pairweaver() -> CardDefinition {
     }
 }
 
+// ── Push (modern_decks) batch 24: 5 new Quandrix cards ─────────────────────
+
+/// Quandrix Logician — {G}{U}, 2/2 Elf Wizard.
+///
+/// Printed Oracle (synthesised): "When this creature enters, scry 2.
+/// Magecraft — Whenever you cast or copy an instant or sorcery spell,
+/// put a +1/+1 counter on target Fractal you control."
+///
+/// 2-mana ETB selection body + per-cast Fractal pumper. Pairs with every
+/// Quandrix Fractal minter for tribal grow plays.
+pub fn quandrix_logician() -> CardDefinition {
+    use crate::card::CounterType;
+    CardDefinition {
+        name: "Quandrix Logician",
+        cost: cost(&[g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: Effect::Scry {
+                    who: PlayerRef::You,
+                    amount: Value::Const(2),
+                },
+            },
+            magecraft(Effect::AddCounter {
+                what: target_filtered(
+                    SelectionRequirement::HasCreatureType(CreatureType::Fractal)
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            }),
+        ],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+/// Fractal Echoist — {2}{G}{U}, 1/1 Fractal Wizard.
+///
+/// Printed Oracle (synthesised): "Fractal Echoist enters with X +1/+1
+/// counters on it, where X is the number of instant and sorcery cards in
+/// your graveyard. Whenever Fractal Echoist attacks, put a +1/+1 counter
+/// on it."
+///
+/// Engine-simplification: the `enters_with_counters` field doesn't support
+/// `Value::CountOf` yet for the count, so we collapse to a flat ETB
+/// `Seq(GameEntered, AddCounter ×CountOf(IS in gy))` body. The 1/1 base
+/// scales with delve-style gy fill.
+pub fn fractal_echoist() -> CardDefinition {
+    use crate::card::CounterType;
+    CardDefinition {
+        name: "Fractal Echoist",
+        cost: cost(&[generic(2), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::count(Selector::CardsInZone {
+                        who: PlayerRef::You,
+                        zone: crate::card::Zone::Graveyard,
+                        filter: SelectionRequirement::HasCardType(CardType::Instant)
+                            .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+                    }),
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+                effect: Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                },
+            },
+        ],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+/// Quandrix Mathenotaur — {3}{G}{U}, 4/4 Centaur Wizard Trample.
+///
+/// Printed Oracle (synthesised): "Trample. When this creature enters,
+/// double the number of +1/+1 counters on target creature you control."
+///
+/// 5-mana finisher that supercharges the Quandrix counters package —
+/// drops on a Fractal with 4 counters → 4/4 Centaur + 8/8 Fractal.
+pub fn quandrix_mathenotaur() -> CardDefinition {
+    use crate::card::CounterType;
+    CardDefinition {
+        name: "Quandrix Mathenotaur",
+        cost: cost(&[generic(3), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Centaur, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Trample],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::AddCounter {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::CountersOn {
+                    what: Box::new(Selector::Target(0)),
+                    kind: CounterType::PlusOnePlusOne,
+                },
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+/// Fractal Surge — {1}{G}{U}, sorcery.
+///
+/// Printed Oracle (synthesised): "Create a 0/0 green and blue Fractal
+/// creature token. Put X +1/+1 counters on it, where X is the number of
+/// creatures you control."
+///
+/// 3-mana token-with-creature-count-counters — scales with go-wide
+/// boards (5 creatures → 5/5 Fractal for 3 mana).
+pub fn fractal_surge() -> CardDefinition {
+    use crate::card::CounterType;
+    use crate::catalog::sets::sos::fractal_token;
+    CardDefinition {
+        name: "Fractal Surge",
+        cost: cost(&[generic(1), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: fractal_token(),
+            },
+            Effect::AddCounter {
+                what: Selector::LastCreatedToken,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::count(Selector::EachPermanent(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                )),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
 /// Quandrix Aether Adept — {U}, 0/3 Merfolk Wizard Defender.
 ///
 /// Printed Oracle (synthesised): "Defender. {T}: Tap target creature."

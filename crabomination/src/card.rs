@@ -637,6 +637,12 @@ pub struct CardInstance {
     /// `clean_per_turn_state`. Empty for the common case (most abilities
     /// don't have the flag set).
     pub once_per_turn_used: Vec<usize>,
+    /// Keywords granted with `Duration::EndOfTurn` via `Effect::GrantKeyword`.
+    /// Cleared at the Cleanup step alongside `power_bonus`/`toughness_bonus`.
+    /// Stored separately from `definition.keywords` so the printed-Oracle
+    /// keywords aren't permanently mutated by an EOT pump (engine fix —
+    /// push modern_decks batch 24). `has_keyword` checks both vectors.
+    pub granted_keywords_eot: Vec<Keyword>,
 }
 
 impl CardInstance {
@@ -668,6 +674,7 @@ impl CardInstance {
             cast_from_hand: false,
             chosen_creature_type: None,
             once_per_turn_used: Vec::new(),
+            granted_keywords_eot: Vec::new(),
         }
     }
 
@@ -711,7 +718,7 @@ impl CardInstance {
     }
 
     pub fn has_keyword(&self, kw: &Keyword) -> bool {
-        self.definition.keywords.contains(kw)
+        self.definition.keywords.contains(kw) || self.granted_keywords_eot.contains(kw)
     }
 
     pub fn has_protection_from(&self, color: Color) -> bool {
@@ -734,6 +741,7 @@ impl CardInstance {
         self.toughness_bonus = 0;
         self.used_loyalty_ability_this_turn = false;
         self.once_per_turn_used.clear();
+        self.granted_keywords_eot.clear();
     }
 }
 

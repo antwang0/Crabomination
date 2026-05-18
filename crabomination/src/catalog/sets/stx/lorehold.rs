@@ -2361,6 +2361,231 @@ pub fn lorehold_volley() -> CardDefinition {
     }
 }
 
+// ── Push (modern_decks) batch 24: 5 new Lorehold cards ─────────────────────
+
+/// Lorehold Pyrostriker — {1}{R}, 2/1 Spirit Warrior.
+///
+/// Printed Oracle (synthesised): "Haste. Whenever this creature attacks,
+/// you may exile target card from a graveyard. If you do, this creature
+/// deals 1 damage to any target."
+///
+/// 2-mana hasty Spirit + repeating ping when graveyards have fuel —
+/// Pairs with Lorehold gy engines (Pillardrop Rescuer, Sparring Regimen,
+/// Lorehold Excavation) to chew through opp's gy.
+pub fn lorehold_pyrostriker() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Pyrostriker",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Haste],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::Move {
+                    what: target_filtered(SelectionRequirement::Any),
+                    to: ZoneDest::Exile,
+                },
+                Effect::DealDamage {
+                    to: Selector::TargetFiltered {
+                        slot: 1,
+                        filter: SelectionRequirement::Creature
+                            .or(SelectionRequirement::Player)
+                            .or(SelectionRequirement::Planeswalker),
+                    },
+                    amount: Value::Const(1),
+                },
+            ]),
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+/// Lorehold Soulshaper — {2}{W}, 1/4 Spirit Cleric Vigilance.
+///
+/// Printed Oracle (synthesised): "Vigilance. When this creature enters,
+/// create a 2/2 red and white Spirit creature token."
+///
+/// 3-mana defensive vigilance body + a 2/2 R/W Spirit token on ETB. Same
+/// shape as Lorehold Echoist with bigger toughness, vigilance, and a 2/2
+/// instead of a 1/1 Spirit body.
+pub fn lorehold_soulshaper() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Soulshaper",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 4,
+        keywords: vec![Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: lorehold_spirit_token(),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+/// Lorehold Ironhand — {3}{R}{W}, 4/4 Spirit Soldier First Strike + Trample.
+///
+/// Printed Oracle (synthesised): "First strike, trample. When this
+/// creature enters, this creature deals 2 damage to target creature."
+///
+/// 5-mana high-power finisher — ETB pings a 2-toughness creature in
+/// addition to the first-strike trample body.
+pub fn lorehold_ironhand() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Ironhand",
+        cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::FirstStrike, Keyword::Trample],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Creature),
+                amount: Value::Const(2),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+/// Lorehold Revival — {2}{R}{W}, sorcery.
+///
+/// Printed Oracle (synthesised): "Return target creature card from your
+/// graveyard to the battlefield. It gains haste until end of turn."
+///
+/// 4-mana reanimator-with-haste in Lorehold colors — drops a hasty
+/// finisher straight into combat for the alpha strike.
+pub fn lorehold_revival() -> CardDefinition {
+    use crate::effect::Duration;
+    CardDefinition {
+        name: "Lorehold Revival",
+        cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Move {
+                what: Selector::one_of(Selector::CardsInZone {
+                    who: PlayerRef::You,
+                    zone: crate::card::Zone::Graveyard,
+                    filter: SelectionRequirement::Creature,
+                }),
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: false,
+                },
+            },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::Haste,
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+/// Lorehold Sparkflare — {R}, instant.
+///
+/// Printed Oracle (synthesised): "Lorehold Sparkflare deals 2 damage to
+/// any target."
+///
+/// Classic Shock template at the Lorehold {R} slot — strict cost-parity
+/// with Shock, slotted into the Lorehold burn package alongside Heated
+/// Debate and Lorehold Ember-Brand.
+pub fn lorehold_sparkflare() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Sparkflare",
+        cost: cost(&[r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::DealDamage {
+            to: target_filtered(
+                SelectionRequirement::Creature
+                    .or(SelectionRequirement::Player)
+                    .or(SelectionRequirement::Planeswalker),
+            ),
+            amount: Value::Const(2),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
 /// Spirit Conduit — {2}, 0/2 Artifact Creature — Spirit.
 ///
 /// Printed Oracle (synthesised): "{R}, {T}: This creature deals 1 damage

@@ -3162,6 +3162,233 @@ pub fn silverquill_battle_hymn() -> CardDefinition {
     }
 }
 
+// ── Push (modern_decks) batch 24: 5 new Silverquill cards ───────────────────
+
+/// Silverquill Notetaker — {1}{W}, 1/2 Human Wizard.
+///
+/// Printed Oracle (synthesised): "When this creature enters, scry 1.
+/// Magecraft — Whenever you cast or copy an instant or sorcery spell,
+/// you may pay {1}. If you do, draw a card."
+///
+/// 2-mana Silverquill velocity body — ETB selection + every cast becomes a
+/// rate-of-1 mana loot. Pairs with Tenured Inkcaster anthem and feeds the
+/// drain payoffs.
+pub fn silverquill_notetaker() -> CardDefinition {
+    use crate::effect::shortcut::magecraft;
+    CardDefinition {
+        name: "Silverquill Notetaker",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: Effect::Scry {
+                    who: PlayerRef::You,
+                    amount: Value::Const(1),
+                },
+            },
+            magecraft(Effect::MayDo {
+                description: "draw a card".to_string(),
+                body: Box::new(Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                }),
+            }),
+        ],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+/// Inkling Pamphleteer — {W}{B}, 2/2 Inkling Cleric Flying.
+///
+/// Printed Oracle (synthesised): "Flying. When this creature enters,
+/// each opponent loses 1 life and you gain 1 life."
+///
+/// 2-mana evasive Inkling with a built-in drain ETB. Same shape as
+/// Inkling Acolyte but trades the Inkling token for a drain on landing.
+pub fn inkling_pamphleteer() -> CardDefinition {
+    CardDefinition {
+        name: "Inkling Pamphleteer",
+        cost: cost(&[w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Drain {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                to: Selector::You,
+                amount: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+/// Silverquill Indictment — {2}{W}{B}, instant.
+///
+/// Printed Oracle (synthesised): "Exile target creature with mana value
+/// 3 or less. You gain 2 life."
+///
+/// 4-mana exile-removal for the small-creature slot + a lifegain rider.
+/// Cleanly answers most 1-3 MV threats while feeding Light of Promise /
+/// Felisa-style lifegain payoffs.
+pub fn silverquill_indictment() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Indictment",
+        cost: cost(&[generic(2), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Move {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ManaValueAtMost(3)),
+                ),
+                to: ZoneDest::Exile,
+            },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+/// Inkling Banner-Bearer — {3}{W}, 2/3 Inkling Soldier Flying + Vigilance.
+///
+/// Printed Oracle (synthesised): "Flying, vigilance. Other Inkling
+/// creatures you control get +1/+0."
+///
+/// 4-mana tribal lord for the Inkling deck — pumps every other Inkling
+/// for +1 power. Stacks with Tenured Inkcaster (+2/+2 anthem) and
+/// Silverquill Anthemwriter (+1/+0 anthem) for absurd evasive damage.
+pub fn inkling_banner_bearer() -> CardDefinition {
+    CardDefinition {
+        name: "Inkling Banner-Bearer",
+        cost: cost(&[generic(3), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Flying, Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![StaticAbility {
+            description: "Other Inkling creatures you control get +1/+0.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::HasCreatureType(CreatureType::Inkling))
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                power: 1,
+                toughness: 0,
+            },
+        }],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+/// Silverquill Tribunal — {2}{B}, sorcery.
+///
+/// Printed Oracle (synthesised): "Target opponent sacrifices a creature.
+/// You gain 1 life."
+///
+/// Cruel Edict with a small lifegain rider in Silverquill colors. The
+/// 1-life is enough to feed Light of Promise's trigger and any +1-life
+/// payoff in the Silverquill drain shell.
+pub fn silverquill_tribunal() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Tribunal",
+        cost: cost(&[generic(2), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Sacrifice {
+                who: Selector::Player(PlayerRef::Target(0)),
+                count: Value::Const(1),
+                filter: SelectionRequirement::Creature,
+            },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
 /// Inkling Sage — {1}{W}, 1/2 Inkling Wizard.
 ///
 /// Printed Oracle (synthesised): "Flying. {2}{W}{B}: This creature gets
