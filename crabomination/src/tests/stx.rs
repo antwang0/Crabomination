@@ -28605,3 +28605,88 @@ fn silverquill_inkpact_drains_three() {
     assert_eq!(g.players[0].life, life_p0 + 3, "P0 gains 3 from drain");
     assert_eq!(g.players[1].life, life_p1 - 3, "P1 loses 3 from drain");
 }
+
+// ── Effect::MoveCounter ─────────────────────────────────────────────────────
+
+/// Engine smoke test: `Effect::MoveCounter` moves N +1/+1 counters
+/// from one permanent to another. Per CR 122.5, the move is NOT
+/// counter creation, so DoubleCounters (Doubling Season) does not
+/// double the move count.
+#[test]
+fn move_counter_transfers_counters_between_permanents() {
+    use crate::card::CounterType;
+    use crate::effect::{Effect, Selector, Value};
+    use crate::game::effects::EffectContext;
+    let mut g = two_player_game();
+    let src = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let dst = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // Seed 3 counters on src.
+    if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == src) {
+        c.counters.insert(CounterType::PlusOnePlusOne, 3);
+    }
+    let ctx = EffectContext {
+        controller: 0,
+        source: Some(src),
+        targets: vec![Target::Permanent(dst)],
+        trigger_source: None,
+        mode: 0,
+        x_value: 0,
+        converged_value: 0,
+        mana_spent: 0,
+        source_name: None,
+        cast_from_hand: true,
+        event_amount: 0,
+    };
+    let effect = Effect::MoveCounter {
+        from: Selector::This,
+        to: Selector::Target(0),
+        kind: CounterType::PlusOnePlusOne,
+        amount: Value::Const(2),
+    };
+    let _ = g.resolve_effect(&effect, &ctx);
+    let src_after = g.battlefield.iter().find(|c| c.id == src).unwrap();
+    let dst_after = g.battlefield.iter().find(|c| c.id == dst).unwrap();
+    assert_eq!(src_after.counter_count(CounterType::PlusOnePlusOne), 1);
+    assert_eq!(dst_after.counter_count(CounterType::PlusOnePlusOne), 2);
+}
+
+/// MoveCounter clamps at the source's actual counter pool — moving
+/// more than available transfers only what's there.
+#[test]
+fn move_counter_clamps_at_source_pool() {
+    use crate::card::CounterType;
+    use crate::effect::{Effect, Selector, Value};
+    use crate::game::effects::EffectContext;
+    let mut g = two_player_game();
+    let src = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let dst = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == src) {
+        c.counters.insert(CounterType::PlusOnePlusOne, 1);
+    }
+    let ctx = EffectContext {
+        controller: 0,
+        source: Some(src),
+        targets: vec![Target::Permanent(dst)],
+        trigger_source: None,
+        mode: 0,
+        x_value: 0,
+        converged_value: 0,
+        mana_spent: 0,
+        source_name: None,
+        cast_from_hand: true,
+        event_amount: 0,
+    };
+    let effect = Effect::MoveCounter {
+        from: Selector::This,
+        to: Selector::Target(0),
+        kind: CounterType::PlusOnePlusOne,
+        amount: Value::Const(99),
+    };
+    let _ = g.resolve_effect(&effect, &ctx);
+    let src_after = g.battlefield.iter().find(|c| c.id == src).unwrap();
+    let dst_after = g.battlefield.iter().find(|c| c.id == dst).unwrap();
+    assert_eq!(src_after.counter_count(CounterType::PlusOnePlusOne), 0,
+        "Source drained even though we asked for more than available");
+    assert_eq!(dst_after.counter_count(CounterType::PlusOnePlusOne), 1,
+        "Destination only got the actually-removed count");
+}

@@ -864,6 +864,16 @@ pub enum Effect {
     GrantKeyword { what: Selector, keyword: Keyword, duration: Duration },
     AddCounter    { what: Selector, kind: CounterType, amount: Value },
     RemoveCounter { what: Selector, kind: CounterType, amount: Value },
+    /// CR 122.5 — move `amount` counters of `kind` from `from` to `to`.
+    /// Clamped at the source's actual counter count; emits a single
+    /// `CounterRemoved` for the source and a single `CounterAdded` for
+    /// each target. The doubling-counter replacement (CR 614.16) does
+    /// NOT apply to the destination — moves are explicitly NOT counter
+    /// creation under CR 122.5 (the counters already exist; they're
+    /// being relocated). Powers Tester of the Tangential's "pay {X}.
+    /// When you do, move X +1/+1 counters from this creature onto
+    /// another target creature" combat trigger.
+    MoveCounter   { from: Selector, to: Selector, kind: CounterType, amount: Value },
     Proliferate,
     GainControl { what: Selector, duration: Duration },
     /// Create `count` copies of the given token under `who`'s control.
@@ -1270,6 +1280,9 @@ impl Effect {
             Effect::AddCounter { what, amount, .. }
             | Effect::RemoveCounter { what, amount, .. } => {
                 sel_has_target(what) || value_has_target(amount)
+            }
+            Effect::MoveCounter { from, to, amount, .. } => {
+                sel_has_target(from) || sel_has_target(to) || value_has_target(amount)
             }
             Effect::Proliferate => false,
             Effect::GainControl { what, .. } => sel_has_target(what),

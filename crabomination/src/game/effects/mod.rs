@@ -1074,6 +1074,47 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::MoveCounter { from, to, kind, amount } => {
+                // CR 122.5: moving counters is a single zone-internal
+                // transfer, not a remove-then-add (DoubleCounters does
+                // NOT apply). The actual move is clamped at the source's
+                // current counter pool.
+                let request = self.evaluate_value(amount, ctx).max(0) as u32;
+                if request == 0 { return Ok(()); }
+                // Pick the source (singular — moves typically target one
+                // permanent; if multiple, take the first).
+                let source_cids: Vec<_> = self.resolve_selector(from, ctx)
+                    .into_iter()
+                    .filter_map(|e| e.as_permanent_id())
+                    .collect();
+                let Some(src_cid) = source_cids.first().copied() else { return Ok(()); };
+                let removed = if let Some(s) = self.battlefield_find_mut(src_cid) {
+                    s.remove_counters(*kind, request)
+                } else {
+                    0
+                };
+                if removed == 0 { return Ok(()); }
+                events.push(GameEvent::CounterRemoved {
+                    card_id: src_cid, counter_type: *kind, count: removed,
+                });
+                // Pick the first destination and add the removed counter
+                // count (no doubling per CR 122.5 — moves preserve the
+                // counter identity, they're not "put counters").
+                for ent in self.resolve_selector(to, ctx) {
+                    if let Some(cid) = ent.as_permanent_id()
+                        && let Some(d) = self.battlefield_find_mut(cid) {
+                            d.add_counters(*kind, removed);
+                            events.push(GameEvent::CounterAdded {
+                                card_id: cid, counter_type: *kind, count: removed,
+                            });
+                            break;
+                        }
+                }
+                let mut sba = self.check_state_based_actions();
+                events.append(&mut sba);
+                Ok(())
+            }
+
             Effect::Proliferate => {
                 // CR 701.34a — "To proliferate means to choose any number
                 // of permanents and/or players that have a counter, then
