@@ -10981,3 +10981,46 @@ fn witherbloom_balancer_affinity_for_creatures_reduces_cost() {
     let drag = g.battlefield.iter().find(|c| c.definition.name == "Witherbloom, the Balancer");
     assert!(drag.is_some(), "Witherbloom Balancer on battlefield");
 }
+
+#[test]
+fn witherbloom_balancer_grants_affinity_to_is_spells() {
+    // With Balancer + 1 bear (2 creatures you control), the caster's
+    // Mind Rot ({2}{B}) gets {2} less = costs {B}.
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::witherbloom_the_balancer());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // Stock opp hand to discard.
+    g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.add_card_to_hand(1, catalog::lightning_bolt());
+    drain_stack(&mut g);
+    let id = g.add_card_to_hand(0, catalog::mind_rot());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    // {B} only — Mind Rot is normally {2}{B} but with 2 creatures you
+    // control the generic side is consumed.
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(crate::game::types::Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Mind Rot castable at {B} via Balancer's grant");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].hand.len(), 0, "Opp discarded both bolts");
+}
+
+#[test]
+fn witherbloom_balancer_static_does_not_affect_opp_spells() {
+    // Opp's IS spell should NOT get any Affinity discount from our Balancer.
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::witherbloom_the_balancer());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_hand(0, catalog::lightning_bolt());
+    drain_stack(&mut g);
+    let id = g.add_card_to_hand(1, catalog::mind_rot());
+    g.players[1].mana_pool.add(Color::Black, 1);
+    // Opp has only {B} — Mind Rot costs {2}{B}. With no Affinity grant
+    // for opp, the cast should fail (no generic mana available).
+    g.priority.player_with_priority = 1;
+    let result = g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(crate::game::types::Target::Player(0)),
+        additional_targets: vec![], mode: None, x_value: None,
+    });
+    assert!(result.is_err(), "Opp's Mind Rot not discounted by our Balancer");
+}

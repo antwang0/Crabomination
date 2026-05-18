@@ -18,7 +18,7 @@ Two adjacent catalogs:
 
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
-| SOS (255 cards) | 206 | 48 | 1 |
+| SOS (255 cards) | 207 | 47 | 1 |
 | STX (305 cards) | 478 | 12 | 0 |
 | STA reprints (in STX boosters) | 46 | 0 | — |
 
@@ -2753,7 +2753,7 @@ each 🟡 row are in the tables below.
 | Titan's Grave |  | Land |  | This land enters tapped. / {T}: Add {B} or {G}. / {2}{B}{G}, {T}: Surveil 1. (Look at the top card of your library. You may put it into your graveyard.) | ✅ | Wired in `catalog::sets::sos::lands`. |
 | Vicious Rivalry | {2}{B}{G} | Sorcery |  | As an additional cost to cast this spell, pay X life. / Destroy all artifacts and creatures with mana value X or less. | ✅ | Wired in `catalog::sets::sos::sorceries` — `LoseLife X` (approximating the additional cost) + `ForEach(Creature ∨ Artifact).If(ManaValueOf ≤ X) → Destroy`. |
 | Witherbloom Charm | {B}{G} | Instant |  | Choose one — / • You may sacrifice a permanent. If you do, draw two cards. / • You gain 5 life. / • Destroy target nonland permanent with mana value 2 or less. | ✅ | Push XV → ✅ in push XXVIII: mode 0 (sacrifice → draw 2) wrapped in `Effect::MayDo` — picking mode 0 then declining the sac-prompt keeps everything else stable. Mode 1 (gain 5) and mode 2 (destroy mv≤2) are direct primitives. All three printed modes are wired faithfully. |
-| Witherbloom, the Balancer | {6}{B}{G} | Legendary Creature — Elder Dragon | 5/5 | Affinity for creatures (This spell costs {1} less to cast for each creature you control.) / Flying, deathtouch / Instant and sorcery spells you cast have affinity for creatures. | 🟡 (self-cast ✅) | Push (modern_decks batch 25): the **self-cast** Affinity-for-creatures cost reduction **now lands** via the new card-intrinsic `affinity_filter: Some(Creature & ControlledByYou)` slot. The 5/5 flying deathtouch body + Affinity self-discount ships exactly. The **second** printed clause — granting Affinity-for-creatures to every IS spell the controller casts — is engine-wide ⏳ (no static-grant-affinity-to-IS primitive on the battlefield yet). Tests: `witherbloom_balancer_etb_with_keywords`, `witherbloom_balancer_affinity_for_creatures_reduces_cost` (4 of your creatures → casts at {2}{B}{G}; opp creatures correctly excluded). |
+| Witherbloom, the Balancer | {6}{B}{G} | Legendary Creature — Elder Dragon | 5/5 | Affinity for creatures (This spell costs {1} less to cast for each creature you control.) / Flying, deathtouch / Instant and sorcery spells you cast have affinity for creatures. | ✅ (was 🟡) | Push (modern_decks batch 25): both Affinity-for-creatures clauses **now land**. The **self-cast** discount uses the new card-intrinsic `CardDefinition.affinity_filter` slot (Creature & ControlledByYou). The **IS-spell grant** is wired via the new `StaticEffect::GrantAffinityToISSpells { permanent_filter }` static — `cost_reduction_for_spell` reads this at every IS cast on the controller's side and adds 1 per matching battlefield permanent (only fires when the source is an instant or sorcery and the caster matches). Tests: `witherbloom_balancer_etb_with_keywords`, `witherbloom_balancer_affinity_for_creatures_reduces_cost` (4 of your creatures → casts at {2}{B}{G}), `witherbloom_balancer_grants_affinity_to_is_spells` (Mind Rot {2}{B} → {B} with Balancer + 1 bear), `witherbloom_balancer_static_does_not_affect_opp_spells` (opp's Mind Rot still costs {2}{B}). |
 
 ## Silverquill (White-Black)
 

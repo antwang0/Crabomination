@@ -2714,7 +2714,10 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             | StaticEffect::DoubleTokens
             // DoubleCounters — read at `Effect::AddCounter` resolution time
             // via `GameState::counter_doublers_for(seat)`; no layer effect.
-            | StaticEffect::DoubleCounters => vec![],
+            | StaticEffect::DoubleCounters
+            // GrantAffinityToISSpells — read at cast time by
+            // `cost_reduction_for_spell` directly; no layer effect.
+            | StaticEffect::GrantAffinityToISSpells { .. } => vec![],
         })
         .collect()
 }

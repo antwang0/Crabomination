@@ -3037,6 +3037,7 @@ pub fn spirit_mascot() -> CardDefinition {
 ///   Mascot's lifegain → +1/+1 counters, etc.).
 pub fn witherbloom_the_balancer() -> CardDefinition {
     use crate::card::{SelectionRequirement, Supertype};
+    use crate::effect::{StaticAbility, StaticEffect};
     use crate::mana::g;
     CardDefinition {
         name: "Witherbloom, the Balancer",
@@ -3053,7 +3054,18 @@ pub fn witherbloom_the_balancer() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
+        // "Instant and sorcery spells you cast have affinity for creatures."
+        // Wired via `StaticEffect::GrantAffinityToISSpells` (batch 25): at
+        // cast time, every IS spell the controller casts gets {1} less per
+        // battlefield permanent matching `permanent_filter`. Restricts to
+        // creatures you control via `ControlledByYou`.
+        static_abilities: vec![StaticAbility {
+            description: "Instant and sorcery spells you cast have affinity for creatures.",
+            effect: StaticEffect::GrantAffinityToISSpells {
+                permanent_filter: SelectionRequirement::Creature
+                    .and(SelectionRequirement::ControlledByYou),
+            },
+        }],
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
@@ -3063,12 +3075,9 @@ pub fn witherbloom_the_balancer() -> CardDefinition {
         exile_on_resolve: false,
         // "Affinity for creatures (This spell costs {1} less to cast for each
         // creature you control.)" — counts only creatures you control, per
-        // CR 702.40b. The card-intrinsic `affinity_filter` is matched against
-        // every battlefield permanent; restricting to ControlledByYou narrows
-        // to creatures the caster controls. The second printed Affinity-for-
-        // creatures clause on IS spells the controller casts is still
-        // engine-wide ⏳ (would need a `cast_filter_grants_affinity` static
-        // primitive applied at cast time on every IS spell).
+        // CR 702.40b. The card-intrinsic `affinity_filter` covers Witherbloom
+        // the Balancer's *own* self-cast discount; the static above covers
+        // every other IS spell the controller casts.
         affinity_filter: Some(
             SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
         ),

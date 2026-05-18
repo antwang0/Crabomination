@@ -155,6 +155,24 @@ pub(crate) fn cost_reduction_for_spell(
                         reduction += amount;
                     }
                 }
+                StaticEffect::GrantAffinityToISSpells { permanent_filter } => {
+                    // "Instant and sorcery spells you cast have Affinity for
+                    // [permanent_filter]" — only fires on the controller's
+                    // IS spells. Counts every battlefield permanent matching
+                    // `permanent_filter` and reduces by 1 per match.
+                    if src.controller != caster {
+                        continue;
+                    }
+                    if !card.definition.is_instant() && !card.definition.is_sorcery() {
+                        continue;
+                    }
+                    let count = state
+                        .battlefield
+                        .iter()
+                        .filter(|c| state.evaluate_requirement_on_card(permanent_filter, c, caster))
+                        .count();
+                    reduction = reduction.saturating_add(count as u32);
+                }
                 _ => {}
             }
         }

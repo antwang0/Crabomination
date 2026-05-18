@@ -1772,6 +1772,23 @@ pub enum StaticEffect {
     /// `DoubleTokens` for cards that print both halves (Doubling Season
     /// itself ships both static abilities).
     DoubleCounters,
+    /// "Instant and sorcery spells you cast have Affinity for [filter]"
+    /// (CR 702.40). The static grants every IS spell the controller casts
+    /// an Affinity-style discount of {1} per battlefield permanent matching
+    /// `permanent_filter`. Applied during `cost_reduction_for_spell` —
+    /// stacks additively with the spell's own card-intrinsic
+    /// `CardDefinition.affinity_filter` (so Witherbloom, the Balancer's
+    /// own Affinity-for-creatures self-cast doesn't double-dip; non-Balancer
+    /// IS spells the controller casts only get the static grant).
+    ///
+    /// CR 601.2f / 117.7c: generic-only via the existing
+    /// `ManaCost::reduce_generic` clamp. Powers Witherbloom, the Balancer's
+    /// "Instant and sorcery spells you cast have affinity for creatures"
+    /// printed second clause. Future "your IS spells have affinity for
+    /// [Artifacts / Lands / Pests]" cards plug in unchanged.
+    GrantAffinityToISSpells {
+        permanent_filter: SelectionRequirement,
+    },
 }
 
 // ── Triggered / activated / loyalty ability shells ───────────────────────────
