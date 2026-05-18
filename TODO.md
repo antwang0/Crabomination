@@ -1150,6 +1150,61 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   Rancorous Archaic base-toughness-bump workaround. Catalog
   promotions: Pterafractyl (1/0 → 1/0 exact), Symmathematics (1/1
   → 0/0 exact), Rancorous Archaic (ETB-trigger → CR-614.12 timing).
+- ✅ **CR 701.21 — Sacrifice** (push modern_decks batch 23 audit,
+  claude/modern_decks branch — audit against `MagicCompRules_20260417.txt`):
+  "To sacrifice a permanent, its controller moves it from the battlefield
+  directly to its owner's graveyard. A player can't sacrifice something
+  that isn't a permanent, or something that's a permanent they don't
+  control." (701.21a). The engine wires sacrifice via three orthogonal
+  shapes: (a) **cost-paid sacrifice of the source itself** via
+  `ActivatedAbility.sac_cost: bool` (Mind Stone, Cathar Commando,
+  Selfless Glyphweaver, Lorehold Bookburner) — fires before the effect
+  resolves so the source is in the graveyard when the trigger goes on
+  the stack; (b) **resolution-time effect sacrifice** via
+  `Effect::Sacrifice { who: Selector, count: Value, filter:
+  SelectionRequirement }` (Witherbloom Pestkeeper's sac-a-Pest cost-as-
+  first-step, Witherbloom Pestbroker's sac-fodder body); the player picks
+  fodder (or AutoDecider auto-picks first matching) and the chosen
+  permanent moves bf → owner's graveyard; (c) **cost-paid sacrifice with
+  remembered power** via `Effect::SacrificeAndRemember` (Tend the
+  Pests's "sacrifice a creature, then mint X Pests where X = sacrificed
+  creature's power" uses `Value::SacrificedPower`). The engine also
+  honors the "controlled by you" restriction (701.21a final clause)
+  via `SelectionRequirement::ControlledByYou` filters on the sacrifice
+  picker. Tests: implicit across the entire test suite — every Pest
+  sac engine, every Tend the Pests / Plumb the Forbidden / Witherbloom
+  Pestkeeper test exercises the sacrifice pipeline. Specific lock-in
+  tests: `plumb_the_forbidden_at_x_two_sacs_two_draws_two_loses_two`,
+  `witherbloom_pestkeeper_etb_mints_pest_and_sac_shrinks_target`,
+  `witherbloom_pestbroker_etb_drains_two`. The "cost-time filter on
+  sacrifice (gating activation legality)" form — printed Oracles like
+  "{1}{B}, Sacrifice a Pest: …" where the sacrifice is a cost — is
+  approximated as a first-step `Effect::Sacrifice` body that resolves
+  but doesn't gate activation legality. The strict form would extend
+  `ActivatedAbility` with an `Option<SelectionRequirement>` cost-side
+  sacrifice filter; tracked as the "Batched sacrifice picker for
+  cost-paid filters" TODO row.
+
+- ✅ **CR 603.10a — Die-trigger scope filtering for the dying card**
+  (push modern_decks batch 23 audit, claude/modern_decks branch —
+  audit against `MagicCompRules_20260417.txt`): "Some zone-change
+  triggers look back in time. These are leaves-the-battlefield
+  abilities, …". The dying creature's own `CreatureDied`-keyed
+  triggered abilities are collected before SBA moves it to the
+  graveyard so they fire from the "looked-back" battlefield view.
+  Push batch 23 closes a long-standing bug: the die-trigger fast path
+  in `check_state_based_actions` collected EVERY die-trigger on the
+  dying card regardless of `EventScope`, so an `AnotherOfYours` trigger
+  on the dying card itself would incorrectly fire on its own death
+  (Inkling Aristocrat would gain 1 life from its own demise). Fixed by
+  filtering the collection to only include scopes that can self-fire
+  (SelfSource / YourControl / AnyPlayer / ActivePlayer); AnotherOfYours
+  / OpponentControl / FromYourGraveyard are correctly excluded — the
+  dying card can't be "another" creature you control. Tests:
+  `inkling_aristocrat_gains_life_when_another_creature_dies` (positive
+  control), `inkling_aristocrat_does_not_trigger_on_self` (negative
+  control).
+
 - ✅ **CR 701.26 — Tap and Untap** (push modern_decks batch 22 audit,
   claude/modern_decks branch — audit against
   `MagicCompRules_20260417.txt`): "To tap a permanent, turn it sideways
@@ -4240,6 +4295,19 @@ resolution time" in the Suggested next-up tasks section.
   on each player's untap. Same primitive would let "if this creature
   gained a counter this turn" payoff cards land — Stonecoil Serpent
   variants, Goblin Slingshot.
+
+- ⏳ **Cost-paid `sacrifice_other_filter` on `ActivatedAbility`** (push
+  modern_decks batch 23 suggested) — printed Oracles like "{1}{B}, Sacrifice
+  a Pest: …" cost-time-sacrifice-of-an-other-permanent are currently
+  approximated as `Effect::Sacrifice` first-step bodies (which lets the
+  rest of the body resolve even if no fodder exists). The strict form
+  needs a new `ActivatedAbility.sacrifice_other_filter: Option<
+  SelectionRequirement>` field that gates activation legality (no fodder
+  → activation rejected with `SelectionRequirementViolated`). Wiring
+  shape: parallel to `exile_other_filter` (push XVIII). Affected cards
+  today: Witherbloom Pestbroker (push batch 23), Witherbloom Pestkeeper
+  (could promote from first-step-sac to cost-time-sac), and any future
+  "sacrifice a [type]" cost.
 
 - ⏳ **"May play exiled card until N turns" framework (Suspend
   Aggression, Practiced Scrollsmith, Ark of Hunger, Elemental Mascot)** —

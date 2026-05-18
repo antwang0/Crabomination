@@ -16,7 +16,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::{magecraft, target_filtered};
 use crate::effect::{Duration, PlayerRef};
-use crate::mana::{cost, generic, g, u, Color};
+use crate::mana::{cost, generic, g, u, Color, ManaCost};
 
 // ── Quandrix Apprentice ─────────────────────────────────────────────────────
 
@@ -1746,6 +1746,281 @@ pub fn quandrix_mistshaper() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_self_pump(1, 1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+// ── Push (modern_decks) batch 23: 5 new Quandrix cards ─────────────────────
+
+/// Quandrix Polymath — {1}{G}{U}, 2/2 Elf Wizard.
+///
+/// Printed Oracle (synthesised): "When this creature enters, draw a card.
+/// Then, you may put a +1/+1 counter on target creature you control."
+///
+/// 3-mana ETB cantrip + +1/+1 growth. Pairs with Tanazir / Symmathematics
+/// counter doublers and rivals Quandrix Apprentice as a magecraft engine.
+pub fn quandrix_polymath() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Polymath",
+        cost: cost(&[generic(1), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
+                Effect::AddCounter {
+                    what: target_filtered(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::ControlledByYou),
+                    ),
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                },
+            ]),
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+/// Fractal Avenger — {3}{G}{U}, 0/0 Fractal Soldier.
+///
+/// Printed Oracle (synthesised): "This creature enters with four +1/+1
+/// counters on it. Trample."
+///
+/// 5-mana 4/4 trampler with growth potential. The base 0/0 + 4 counters
+/// scales beautifully with Hardened Scales / Tanazir / Pestseed doublers
+/// → an 8/8 trampler on cast.
+pub fn fractal_avenger() -> CardDefinition {
+    CardDefinition {
+        name: "Fractal Avenger",
+        cost: cost(&[generic(3), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 0,
+        keywords: vec![Keyword::Trample],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(4))),
+        exile_on_resolve: false,
+    }
+}
+
+/// Quandrix Cartographer — {2}{G}, 2/3 Elf Druid.
+///
+/// Printed Oracle (synthesised): "When this creature enters, search your
+/// library for a basic land card, reveal it, put it into your hand, then
+/// shuffle."
+///
+/// 3-mana fixing ramp body — Quandrix's premier "find a basic" engine.
+pub fn quandrix_cartographer() -> CardDefinition {
+    use crate::card::Supertype;
+    CardDefinition {
+        name: "Quandrix Cartographer",
+        cost: cost(&[generic(2), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Search {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::HasSupertype(Supertype::Basic)
+                    .and(SelectionRequirement::HasCardType(CardType::Land)),
+                to: crate::effect::ZoneDest::Hand(PlayerRef::You),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+/// Fractal Sovereign — {3}{G}{U}, 3/4 Fractal Wizard.
+///
+/// Printed Oracle (synthesised): "When this creature enters, target
+/// creature you control gets +1/+1 counters equal to the number of lands
+/// you control."
+///
+/// 5-mana ramp payoff — a 6/7 trampler with 3 lands feels like a real
+/// finisher.
+pub fn fractal_sovereign() -> CardDefinition {
+    CardDefinition {
+        name: "Fractal Sovereign",
+        cost: cost(&[generic(3), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::AddCounter {
+                what: target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::count(Selector::EachPermanent(
+                    SelectionRequirement::HasCardType(CardType::Land)
+                        .and(SelectionRequirement::ControlledByYou),
+                )),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+/// Quandrix Pairweaver — {G}{U}, instant.
+///
+/// Printed Oracle (synthesised): "Put a +1/+1 counter on each of up to two
+/// target creatures you control."
+///
+/// 2-mana double pump — feeds Quandrix counter doublers and tribal Fractal
+/// shells.
+pub fn quandrix_pairweaver() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Pairweaver",
+        cost: cost(&[g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::AddCounter {
+                what: target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+            Effect::AddCounter {
+                what: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou),
+                },
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+/// Quandrix Aether Adept — {U}, 0/3 Merfolk Wizard Defender.
+///
+/// Printed Oracle (synthesised): "Defender. {T}: Tap target creature."
+///
+/// 1-mana defensive tap-engine. Holds the line + repeatable tempo
+/// disruption — turns into a wall every turn.
+pub fn quandrix_aether_adept() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Quandrix Aether Adept",
+        cost: cost(&[u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 3,
+        keywords: vec![Keyword::Defender],
+        effect: Effect::Noop,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: ManaCost::default(),
+            tap_cost: true,
+            sac_cost: false,
+            life_cost: 0,
+            exile_other_filter: None,
+            condition: None,
+            exile_self_cost: false,
+            from_graveyard: false,
+            sorcery_speed: false,
+            once_per_turn: false,
+            effect: Effect::Tap {
+                what: target_filtered(SelectionRequirement::Creature),
+            },
+        }],
+        triggered_abilities: vec![],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],

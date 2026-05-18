@@ -2128,3 +2128,290 @@ pub fn lorehold_warband() -> CardDefinition {
     }
 }
 
+
+// ── Push (modern_decks) batch 23: 5 new Lorehold cards ─────────────────────
+
+/// Lorehold Phoenix — {3}{R}, 3/3 Phoenix Spirit Flying + Haste.
+///
+/// Printed Oracle (synthesised): "Flying, haste. {R}{W}: Return this card
+/// from your graveyard to your hand. Activate only as a sorcery."
+///
+/// 4-mana 3/3 hasty flier with built-in recursion — premium aggressive
+/// top-end that comes back from removal. The graveyard activation respects
+/// the printed sorcery-speed gate.
+pub fn lorehold_phoenix() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Lorehold Phoenix",
+        cost: cost(&[generic(3), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phoenix, CreatureType::Spirit],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying, Keyword::Haste],
+        effect: Effect::Noop,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[r(), w()]),
+            tap_cost: false,
+            sac_cost: false,
+            life_cost: 0,
+            exile_other_filter: None,
+            condition: None,
+            exile_self_cost: false,
+            from_graveyard: true,
+            sorcery_speed: true,
+            once_per_turn: false,
+            effect: Effect::Move {
+                what: Selector::This,
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+        }],
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+/// Lorehold Battlechronicler — {2}{R}{W}, 3/3 Spirit Soldier.
+///
+/// Printed Oracle (synthesised): "Whenever this creature attacks, return
+/// target creature card from your graveyard to your hand."
+///
+/// 4-mana attack-trigger reanimator that fuels the Lorehold graveyard
+/// engine. Same shape as Pillardrop Rescuer's ETB return but recurring
+/// each attack.
+pub fn lorehold_battlechronicler() -> CardDefinition {
+    use crate::card::Zone;
+    CardDefinition {
+        name: "Lorehold Battlechronicler",
+        cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::Move {
+                what: Selector::one_of(Selector::CardsInZone {
+                    who: PlayerRef::You,
+                    zone: Zone::Graveyard,
+                    filter: SelectionRequirement::Creature,
+                }),
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+/// Lorehold Searing Wisdom — {3}{R}, sorcery.
+///
+/// Printed Oracle (synthesised): "Exile target card from a graveyard. This
+/// spell deals 3 damage to any target."
+///
+/// 4-mana gy-removal + burn for 3 — answers Tarmogoyf-style gy fuel and
+/// burn-finishes wounded opponents in a single card.
+pub fn lorehold_searing_wisdom() -> CardDefinition {
+    use crate::card::Zone;
+    CardDefinition {
+        name: "Lorehold Searing Wisdom",
+        cost: cost(&[generic(3), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Move {
+                what: Selector::one_of(Selector::CardsInZone {
+                    who: PlayerRef::EachPlayer,
+                    zone: Zone::Graveyard,
+                    filter: SelectionRequirement::Any,
+                }),
+                to: ZoneDest::Exile,
+            },
+            Effect::DealDamage {
+                to: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: SelectionRequirement::Creature
+                        .or(SelectionRequirement::Player)
+                        .or(SelectionRequirement::Planeswalker),
+                },
+                amount: Value::Const(3),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+/// Lorehold Saint — {1}{W}, 2/2 Spirit Cleric Lifelink.
+///
+/// Printed Oracle (synthesised): "Lifelink. Magecraft — Whenever you cast
+/// or copy an instant or sorcery spell, this creature gets +1/+0 until end
+/// of turn."
+///
+/// 2-mana lifelink body that grows with each spell — a sticky-life-link
+/// magecraft engine reminiscent of Spectacle Mage on a smaller frame.
+pub fn lorehold_saint() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_self_pump;
+    CardDefinition {
+        name: "Lorehold Saint",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Lifelink],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_self_pump(1, 0)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+/// Lorehold Volley — {2}{R}{W}, instant.
+///
+/// Printed Oracle (synthesised): "Lorehold Volley deals 2 damage to any
+/// target and 1 damage to each other creature."
+///
+/// 4-mana asymmetric burn — 2 to a chosen face/creature/PW + 1 to every
+/// other creature on the battlefield. Anti-aggro sweeper that picks off
+/// X/1s while the targeted source takes 2.
+pub fn lorehold_volley() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Volley",
+        cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature
+                        .or(SelectionRequirement::Player)
+                        .or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::Const(2),
+            },
+            Effect::DealDamage {
+                to: Selector::EachPermanent(
+                    SelectionRequirement::Creature.and(SelectionRequirement::OtherThanSource),
+                ),
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+/// Spirit Conduit — {2}, 0/2 Artifact Creature — Spirit.
+///
+/// Printed Oracle (synthesised): "{R}, {T}: This creature deals 1 damage
+/// to any target."
+///
+/// Cheap repeatable ping body — drops on turn 2, taps for 1 damage per
+/// turn after. Tribal Spirit synergies (Quintorius, Sparring Regimen) +
+/// artifact-counts (Galazeth, Affinity).
+pub fn spirit_conduit() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Spirit Conduit",
+        cost: cost(&[generic(2)]),
+        supertypes: vec![],
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[r()]),
+            tap_cost: true,
+            sac_cost: false,
+            life_cost: 0,
+            exile_other_filter: None,
+            condition: None,
+            exile_self_cost: false,
+            from_graveyard: false,
+            sorcery_speed: false,
+            once_per_turn: false,
+            effect: Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature
+                        .or(SelectionRequirement::Player)
+                        .or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::Const(1),
+            },
+        }],
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}

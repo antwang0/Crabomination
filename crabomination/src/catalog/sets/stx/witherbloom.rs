@@ -1820,3 +1820,276 @@ pub fn pest_mausoleum() -> CardDefinition {
         exile_on_resolve: false,
     }
 }
+
+// ── Push (modern_decks) batch 23: 5 new Witherbloom cards ───────────────────
+
+/// Pest Ravager — {3}{B}{G}, 4/4 Plant Beast Trample.
+///
+/// Printed Oracle (synthesised): "Trample. When this creature enters, create
+/// two 1/1 black and green Pest creature tokens with 'When this creature
+/// dies, you gain 1 life.'"
+///
+/// 5-mana 4/4 trampler with two Pest tokens in tow — a single card that
+/// lands 6 power on board with a built-in 2-life buffer on each Pest death.
+pub fn pest_ravager() -> CardDefinition {
+    CardDefinition {
+        name: "Pest Ravager",
+        cost: cost(&[generic(3), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Beast],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Trample],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                definition: stx_pest_token(),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+/// Witherbloom Famine — {3}{B}, sorcery.
+///
+/// Printed Oracle (synthesised): "Each opponent loses 4 life and you gain
+/// 4 life."
+///
+/// 4-mana drain-4 finisher — 8-life swing per cast. Standard Witherbloom
+/// burn-out tail to finish damaged opponents.
+pub fn witherbloom_famine() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Famine",
+        cost: cost(&[generic(3), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Drain {
+            from: Selector::Player(PlayerRef::EachOpponent),
+            to: Selector::You,
+            amount: Value::Const(4),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+/// Witherbloom Greenrot — {1}{G}, 2/2 Plant Druid Reach.
+///
+/// Printed Oracle (synthesised): "Reach. When this creature enters, you gain
+/// 2 life."
+///
+/// 2-mana ground / anti-flier defender with a small life buffer. The
+/// lifegain ETB stacks with Honor Troll's conditional pump and Inkling
+/// Bloodscribe drain.
+pub fn witherbloom_greenrot() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Greenrot",
+        cost: cost(&[generic(1), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Reach],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+/// Witherbloom Pestbroker — {2}{B}, 2/3 Human Warlock.
+///
+/// Printed Oracle (synthesised): "When this creature enters, target opponent
+/// loses 2 life and you gain 2 life. {1}{B}, Sacrifice a Pest: target
+/// creature gets -1/-1 until end of turn."
+///
+/// 3-mana drain ETB + a sac-a-Pest sink that doubles as removal-against-
+/// 1-toughness or shrink-and-fight enabler. The sacrifice-a-Pest cost is
+/// expressed as a first-step `Effect::Sacrifice` in the activation body
+/// (same shape as Witherbloom Pestkeeper).
+pub fn witherbloom_pestbroker() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Pestbroker",
+        cost: cost(&[generic(2), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), b()]),
+            tap_cost: false,
+            sac_cost: false,
+            life_cost: 0,
+            exile_other_filter: None,
+            condition: None,
+            exile_self_cost: false,
+            from_graveyard: false,
+            sorcery_speed: false,
+            once_per_turn: false,
+            effect: Effect::Seq(vec![
+                Effect::Sacrifice {
+                    who: Selector::You,
+                    count: Value::Const(1),
+                    filter: SelectionRequirement::HasCreatureType(CreatureType::Pest)
+                        .and(SelectionRequirement::ControlledByYou),
+                },
+                Effect::PumpPT {
+                    what: target_filtered(SelectionRequirement::Creature),
+                    power: Value::Const(-1),
+                    toughness: Value::Const(-1),
+                    duration: crate::effect::Duration::EndOfTurn,
+                },
+            ]),
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Drain {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                to: Selector::You,
+                amount: Value::Const(2),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+/// Pestilent Bloom — {B}{G}, instant.
+///
+/// Printed Oracle (synthesised): "Target creature gets -3/-3 until end of
+/// turn. Create a 1/1 black and green Pest creature token."
+///
+/// 2-mana shrink-removal + a fresh Pest body. Quickly answers most
+/// 3-toughness creatures while padding the Witherbloom Pest engine.
+pub fn pestilent_bloom() -> CardDefinition {
+    CardDefinition {
+        name: "Pestilent Bloom",
+        cost: cost(&[b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(-3),
+                toughness: Value::Const(-3),
+                duration: crate::effect::Duration::EndOfTurn,
+            },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: stx_pest_token(),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+/// Witherbloom Reaper-Hand — {2}{B}{G}, 3/3 Plant Warlock Deathtouch.
+///
+/// Printed Oracle (synthesised): "Deathtouch. When this creature dies,
+/// target opponent loses 2 life and you gain 2 life."
+///
+/// 4-mana deathtouch attacker with a built-in 4-life-swing on death.
+/// Trade up into removal and still get the drain on the way out.
+pub fn witherbloom_reaper_hand() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Reaper-Hand",
+        cost: cost(&[generic(2), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Deathtouch],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+            effect: Effect::Drain {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                to: Selector::You,
+                amount: Value::Const(2),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}

@@ -2929,3 +2929,288 @@ pub fn silverquill_lifeglyph() -> CardDefinition {
         exile_on_resolve: false,
     }
 }
+
+// ── Push (modern_decks) batch 23: 5 new Silverquill cards ───────────────────
+
+/// Inkling Aristocrat — {1}{B}, 1/2 Inkling Cleric.
+///
+/// Printed Oracle (synthesised): "Whenever another creature you control
+/// dies, you gain 1 life."
+///
+/// A compact Cauldron-of-Essence-style aristocrat payoff for 2 mana. Triggers
+/// on tokens and non-tokens alike, so Pest / Inkling / Spirit sacrifice
+/// engines all feed it.
+pub fn inkling_aristocrat() -> CardDefinition {
+    CardDefinition {
+        name: "Inkling Aristocrat",
+        cost: cost(&[generic(1), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours),
+            effect: Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+/// Silverquill Inscriber — {2}{W}{B}, 3/3 Human Wizard.
+///
+/// Printed Oracle (synthesised): "When this creature enters, create a 1/1
+/// white and black Inkling creature token with flying. Magecraft — Whenever
+/// you cast or copy an instant or sorcery spell, put a +1/+1 counter on
+/// target Inkling you control."
+///
+/// 4-mana Inkling engine: comes with a token in tow and grows the tribe on
+/// every spell. Pairs with Tenured Inkcaster for stacked anthems.
+pub fn silverquill_quillscribe() -> CardDefinition {
+    use crate::card::CounterType;
+    use crate::effect::shortcut::magecraft;
+    CardDefinition {
+        name: "Silverquill Quillscribe",
+        cost: cost(&[generic(2), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: crate::catalog::sets::sos::inkling_token(),
+                },
+            },
+            magecraft(Effect::AddCounter {
+                what: target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::HasCreatureType(CreatureType::Inkling))
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            }),
+        ],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+/// Silverquill Hush — {W}{B}, instant.
+///
+/// Printed Oracle (synthesised): "Target creature gets -2/-2 until end of
+/// turn. You gain 2 life."
+///
+/// 2-mana removal-for-toughness-2-and-under + a defensive lifegain rider.
+/// Cleanly trades into 2-toughness creatures while feeding Light of Promise
+/// and the Inkling drain payoffs.
+pub fn silverquill_hush() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Hush",
+        cost: cost(&[w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(-2),
+                toughness: Value::Const(-2),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+/// Inkling Lorewright — {3}{W}{B}, 2/4 Inkling Wizard Flying.
+///
+/// Printed Oracle (synthesised): "Flying. When this creature enters, draw a
+/// card and you lose 1 life."
+///
+/// 5-mana defensive flyer + a built-in card. The 1-life cost is a small
+/// drawback that's negligible in lifegain shells with Lifelink anthems.
+pub fn inkling_lorewright() -> CardDefinition {
+    CardDefinition {
+        name: "Inkling Lorewright",
+        cost: cost(&[generic(3), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
+                Effect::LoseLife {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
+            ]),
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+/// Silverquill Battle Hymn — {2}{W}, sorcery.
+///
+/// Printed Oracle (synthesised): "Creatures you control get +1/+1 and gain
+/// vigilance until end of turn."
+///
+/// 3-mana team anthem with vigilance for the alpha-strike-then-block turn.
+/// Pair with Inkling Brigade or Silverquill Sermon for a wide swarm.
+pub fn silverquill_battle_hymn() -> CardDefinition {
+    use crate::effect::shortcut::each_your_creature;
+    CardDefinition {
+        name: "Silverquill Battle Hymn",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: each_your_creature(),
+                power: Value::Const(1),
+                toughness: Value::Const(1),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: each_your_creature(),
+                keyword: Keyword::Vigilance,
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+/// Inkling Sage — {1}{W}, 1/2 Inkling Wizard.
+///
+/// Printed Oracle (synthesised): "Flying. {2}{W}{B}: This creature gets
+/// +1/+1 until end of turn."
+///
+/// 2-mana flying body with a mid-game pump sink — turns excess mana into
+/// damage in attrition wars.
+pub fn inkling_sage() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    use crate::effect::Duration;
+    CardDefinition {
+        name: "Inkling Sage",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), w(), b()]),
+            tap_cost: false,
+            sac_cost: false,
+            life_cost: 0,
+            exile_other_filter: None,
+            condition: None,
+            exile_self_cost: false,
+            from_graveyard: false,
+            sorcery_speed: false,
+            once_per_turn: false,
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(1),
+                toughness: Value::Const(1),
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}

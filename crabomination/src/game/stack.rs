@@ -758,11 +758,27 @@ impl GameState {
                 .iter()
                 .find(|c| c.id == id)
                 .map(|c| {
+                    // CR 603.10a — "leaves-the-battlefield" triggers look
+                    // back in time at the dying card. Only fire the dying
+                    // card's own die-triggers whose scope says they can
+                    // fire from self — i.e. SelfSource or YourControl /
+                    // AnyPlayer. AnotherOfYours / OpponentControl /
+                    // FromYourGraveyard are NOT self-fire scopes; skipping
+                    // them here matches the printed Oracle semantics for
+                    // "Whenever another creature you control dies" (must
+                    // be another, not this dying card).
                     let triggers: Vec<(CardId, Effect, usize)> = c
                         .definition
                         .triggered_abilities
                         .iter()
                         .filter(|t| t.event.kind == EventKind::CreatureDied)
+                        .filter(|t| matches!(
+                            t.event.scope,
+                            crate::effect::EventScope::SelfSource
+                                | crate::effect::EventScope::YourControl
+                                | crate::effect::EventScope::AnyPlayer
+                                | crate::effect::EventScope::ActivePlayer,
+                        ))
                         .map(|t| (c.id, t.effect.clone(), c.controller))
                         .collect();
                     let has_persist = c.definition.keywords.contains(&Keyword::Persist);

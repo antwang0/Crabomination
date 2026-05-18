@@ -1599,3 +1599,293 @@ pub fn prismari_quickfire() -> CardDefinition {
         exile_on_resolve: false,
     }
 }
+
+// ── Push (modern_decks) batch 23: 5 new Prismari cards ─────────────────────
+
+/// Prismari Treasurer-Surge — {3}{U}{R}, 4/3 Elemental Wizard.
+///
+/// Printed Oracle (synthesised): "When this creature enters, create two
+/// Treasure tokens. Magecraft — Whenever you cast or copy an instant or
+/// sorcery spell, this creature gets +1/+0 until end of turn."
+///
+/// 5-mana ramp engine + cast scaling. Two Treasure tokens on ETB means the
+/// next 2 spells cast for free in terms of mana sources, and each cast
+/// pumps the body for the alpha-strike turn.
+pub fn prismari_treasurer_surge() -> CardDefinition {
+    use crate::game::effects::treasure_token;
+    CardDefinition {
+        name: "Prismari Treasurer-Surge",
+        cost: cost(&[generic(3), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(2),
+                    definition: treasure_token(),
+                },
+            },
+            magecraft_self_pump(1, 0),
+        ],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+/// Prismari Conflagration — {3}{R}, sorcery.
+///
+/// Printed Oracle (synthesised): "Prismari Conflagration deals 3 damage to
+/// each creature."
+///
+/// 4-mana board sweep — Anger of the Gods at the {3}{R} slot without the
+/// exile rider.
+pub fn prismari_pyreburst() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Pyreburst",
+        cost: cost(&[generic(3), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::DealDamage {
+            to: Selector::EachPermanent(SelectionRequirement::Creature),
+            amount: Value::Const(3),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+/// Prismari Vorthos — {2}{U}{R}, 3/3 Human Wizard.
+///
+/// Printed Oracle (synthesised): "When this creature enters, draw a card,
+/// then discard a card. If you discarded an instant or sorcery card, this
+/// creature deals 2 damage to any target."
+///
+/// 4-mana looter that converts a discarded IS card into 2 burn damage —
+/// rewards Prismari's IS-discard payoff theme.
+pub fn prismari_vorthos() -> CardDefinition {
+    use crate::card::Predicate;
+    CardDefinition {
+        name: "Prismari Vorthos",
+        cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
+                Effect::Discard {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                    random: false,
+                },
+                Effect::If {
+                    cond: Predicate::ValueAtLeast(
+                        Value::CardsDiscardedThisEffect,
+                        Value::Const(1),
+                    ),
+                    then: Box::new(Effect::DealDamage {
+                        to: target_filtered(
+                            SelectionRequirement::Creature
+                                .or(SelectionRequirement::Player)
+                                .or(SelectionRequirement::Planeswalker),
+                        ),
+                        amount: Value::Const(2),
+                    }),
+                    else_: Box::new(Effect::Noop),
+                },
+            ]),
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+/// Prismari Cinderspark — {R}, instant.
+///
+/// Printed Oracle (synthesised): "Prismari Cinderspark deals 1 damage to
+/// any target. Scry 1."
+///
+/// 1-mana ping + scry — the Prismari cantrip slot. Combines burn flexibility
+/// with deck smoothing and feeds magecraft triggers.
+pub fn prismari_cinderspark() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Cinderspark",
+        cost: cost(&[r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature
+                        .or(SelectionRequirement::Player)
+                        .or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::Const(1),
+            },
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+/// Prismari Tempo Adept — {U}{R}, 2/2 Human Wizard Prowess.
+///
+/// Printed Oracle (synthesised): "Prowess (Whenever you cast a noncreature
+/// spell, this creature gets +1/+1 until end of turn.) When this creature
+/// enters, you may discard a card. If you do, draw a card."
+///
+/// 2-mana prowess body with a built-in optional loot ETB — slots into any
+/// IS-heavy Prismari shell and triggers magecraft chains.
+pub fn prismari_tempo_adept() -> CardDefinition {
+    use crate::effect::shortcut::prowess;
+    CardDefinition {
+        name: "Prismari Tempo Adept",
+        cost: cost(&[u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Prowess],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: Effect::MayDo {
+                    description: "discard a card to draw a card".to_string(),
+                    body: Box::new(Effect::Seq(vec![
+                        Effect::Discard {
+                            who: Selector::You,
+                            amount: Value::Const(1),
+                            random: false,
+                        },
+                        Effect::Draw {
+                            who: Selector::You,
+                            amount: Value::Const(1),
+                        },
+                    ])),
+                },
+            },
+            prowess(),
+        ],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
+
+/// Prismari Sparkbright — {1}{R}, 2/1 Elemental Wizard Haste.
+///
+/// Printed Oracle (synthesised): "Haste. Whenever this creature attacks,
+/// it deals 1 damage to any target."
+///
+/// 2-mana hasty 2/1 with built-in ping on every attack. Cleanly threatens
+/// PWs (knocks 1 loyalty) and answers X/1s.
+pub fn prismari_sparkbright() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Sparkbright",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Haste],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature
+                        .or(SelectionRequirement::Player)
+                        .or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+    }
+}
