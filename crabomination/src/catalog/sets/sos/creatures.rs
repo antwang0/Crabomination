@@ -3933,21 +3933,28 @@ pub fn exhibition_tidecaller() -> CardDefinition {
 /// nonland card from your graveyard. Until the end of your next turn,
 /// you may cast that card."
 ///
-/// Approximations:
-/// - The hybrid `{R/W}` pip is treated as `{R}` (cost becomes
-///   `{R}{R}{W}` for cube purposes). The hybrid mana pip primitive
-///   isn't wired through `cost(&[...])`.
-/// - The "until end of your next turn, you may cast" rider is omitted
-///   (no cast-from-exile-with-time-limit primitive). The exile half is
-///   wired faithfully — the chosen noncreature/nonland gy card is
-///   removed from the graveyard into exile, leaving the controller
-///   without their planned recursion target. Functionally this is a
-///   3/2 first striker with mild graveyard-hate.
+/// Push (modern_decks): the "until end of your next turn, you may cast"
+/// rider is **now wired** via the new `Effect::GrantMayPlay` primitive.
+/// ETB body is `Seq([Move(target → Exile), GrantMayPlay(...,
+/// EndOfControllersNextTurn)])`. The same `Selector::Take(_, 1)` selects
+/// the lifted card so the permission targets exactly the card that just
+/// went to exile. The controller then invokes
+/// `GameAction::CastFromZoneWithoutPaying` during a later sorcery-speed
+/// window to recur the card for free. The hybrid `{R/W}` pip is still
+/// approximated as `{R}` (cost: `{R}{R}{W}`).
 pub fn practiced_scrollsmith() -> CardDefinition {
     use crate::effect::ZoneDest;
     use crate::mana::{r, w as wm};
     let nonperm_in_gy = SelectionRequirement::Nonland
         .and(SelectionRequirement::Not(Box::new(SelectionRequirement::Creature)));
+    let target_card = Selector::take(
+        Selector::CardsInZone {
+            who: PlayerRef::You,
+            zone: crate::card::Zone::Graveyard,
+            filter: nonperm_in_gy,
+        },
+        Value::Const(1),
+    );
     CardDefinition {
         name: "Practiced Scrollsmith",
         cost: cost(&[r(), r(), wm()]),
@@ -3964,22 +3971,21 @@ pub fn practiced_scrollsmith() -> CardDefinition {
         activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            // Scrollsmith only exiles **one** matching card (the printed
-            // "exile target noncreature, nonland card from your gy"). We
-            // wrap the matching set in `Selector::Take(_, 1)` so a gy
-            // with multiple noncreature/nonland cards loses only one,
-            // matching the printed semantics.
-            effect: Effect::Move {
-                what: Selector::take(
-                    Selector::CardsInZone {
-                        who: PlayerRef::You,
-                        zone: crate::card::Zone::Graveyard,
-                        filter: nonperm_in_gy,
-                    },
-                    Value::Const(1),
-                ),
-                to: ZoneDest::Exile,
-            },
+            effect: Effect::Seq(vec![
+                Effect::Move {
+                    what: target_card,
+                    to: ZoneDest::Exile,
+                },
+                // Read the card we just moved via the resolution-scoped
+                // `Selector::LastMoved` scratch — the second step in the
+                // Seq targets exactly the card the first step lifted.
+                Effect::GrantMayPlay {
+                    what: Selector::LastMoved,
+                    duration: crate::card::MayPlayDuration::EndOfControllersNextTurn,
+                    to_owner: false,
+                    exile_after: false,
+                },
+            ]),
         }],
         static_abilities: vec![],
         base_loyalty: 0,
@@ -5593,13 +5599,16 @@ pub fn biblioplex_tomekeeper() -> CardDefinition {
 /// without paying its mana cost. If that spell would be put into your
 /// graveyard, exile it instead."
 ///
-/// 🟡 Body wired (7/7 Legendary Avatar with Reach). Both the IS-in-gy
-/// cost-reduction static and the attack-trigger cast-from-graveyard
-/// rider are omitted — the engine has neither a per-graveyard-IS-count
-/// cost-reduction primitive nor a cast-from-graveyard-without-paying
-/// pipeline for arbitrary cards. Tracked in TODO.md.
+/// Push (modern_decks): the attack-triggered free-cast-from-graveyard
+/// rider is **now wired** via `Effect::CastWithoutPayingImmediate`
+/// targeting a target IS card in the controller's graveyard, with
+/// `exile_after = true` (per printed "if that spell would go to a
+/// graveyard, exile it instead"). The IS-in-gy cost-reduction static
+/// is still omitted — engine has no per-graveyard-IS-count cost-
+/// reduction primitive (tracked in TODO.md).
 pub fn the_dawning_archaic() -> CardDefinition {
-    use crate::card::Supertype;
+    use crate::card::{Supertype, Zone};
+    use crate::effect::shortcut::target_filtered;
     CardDefinition {
         name: "The Dawning Archaic",
         cost: cost(&[generic(10)]),
@@ -5614,7 +5623,17 @@ pub fn the_dawning_archaic() -> CardDefinition {
         keywords: vec![Keyword::Reach],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::CastWithoutPayingImmediate {
+                what: target_filtered(
+                    SelectionRequirement::HasCardType(CardType::Instant)
+                        .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+                ),
+                source_zone: Zone::Graveyard,
+                exile_after: true,
+            },
+        }],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -5677,14 +5696,31 @@ pub fn silverquill_the_disputant() -> CardDefinition {
 /// may cast it this turn, and mana of any type can be spent to cast
 /// that spell. Activate only as a sorcery."
 ///
-/// 🟡 Body wired (2/3 Legendary Human Advisor). Both the "cast spell
-/// you don't own" trigger and the activated cast-from-opp-graveyard
-/// ability are omitted — the engine has no "owned by you vs owned by
-/// opp" predicate on cast spells (cube cards default to owner=
-/// controller), and no cast-from-graveyard-without-paying for arbitrary
-/// cards. Tracked in TODO.md.
+/// Push (modern_decks): the `{2}, Sacrifice another creature` activation
+/// is **now wired** via the new cast-from-exile primitives. The activation
+/// exiles a target IS card from an opponent's graveyard and grants
+/// `may_play_until: EndOfThisTurn` with `exile_after: true` (so the
+/// resolved spell routes to exile, matching "if that spell would be put
+/// into a graveyard, exile it instead"). Sorcery-speed gate via
+/// `sorcery_speed: true`; sacrifice-another-creature cost via
+/// `sac_cost: true`.
+///
+/// The "cast a spell you don't own" trigger is still omitted (engine has
+/// no owned-vs-controlled-spell predicate). The "mana of any type" rider
+/// is auto-satisfied since the free-cast path skips mana payment.
 pub fn nita_forum_conciliator() -> CardDefinition {
     use crate::card::Supertype;
+    use crate::effect::ZoneDest;
+    let is_in_opp_gy = SelectionRequirement::HasCardType(CardType::Instant)
+        .or(SelectionRequirement::HasCardType(CardType::Sorcery));
+    let target_card = Selector::take(
+        Selector::CardsInZone {
+            who: PlayerRef::EachOpponent,
+            zone: crate::card::Zone::Graveyard,
+            filter: is_in_opp_gy,
+        },
+        Value::Const(1),
+    );
     CardDefinition {
         name: "Nita, Forum Conciliator",
         cost: cost(&[generic(1), w(), b()]),
@@ -5698,7 +5734,31 @@ pub fn nita_forum_conciliator() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: false,
+            mana_cost: cost(&[generic(2)]),
+            effect: Effect::Seq(vec![
+                Effect::Move {
+                    what: target_card,
+                    to: ZoneDest::Exile,
+                },
+                Effect::GrantMayPlay {
+                    what: Selector::LastMoved,
+                    duration: crate::card::MayPlayDuration::EndOfThisTurn,
+                    to_owner: false,
+                    exile_after: true,
+                },
+            ]),
+            once_per_turn: false,
+            sorcery_speed: true,
+            sac_cost: true,
+            condition: None,
+            life_cost: 0,
+            from_graveyard: false,
+            exile_self_cost: false,
+            exile_other_filter: None,
+            self_counter_cost_reduction: None,
+        }],
         triggered_abilities: vec![],
         static_abilities: vec![],
         base_loyalty: 0,
@@ -5838,13 +5898,14 @@ pub fn colorstorm_stallion() -> CardDefinition {
 /// mana was spent to cast that spell, exile the top card of your
 /// library. You may play that card until the end of your next turn."
 ///
-/// 🟡 Body wired: 1/4 Flying + Vigilance Elemental Bird. The Opus
-/// rider (+1/+0 EOT + conditional exile-and-may-play) is omitted —
-/// no mana-spent-on-cast introspection and no cast-from-exile pipeline
-/// (tracked in TODO.md). The vanilla 1/4 flying / vigilance body is
-/// still a fine evasive blocker.
+/// Push (modern_decks): full Opus rider now wired. Small body (<5
+/// mana) — +1/+0 EOT. Big body (≥5 mana) — +1/+0 EOT **plus** exile
+/// the top card of your library + `GrantMayPlay(...,
+/// EndOfControllersNextTurn)` so the controller can free-cast the
+/// exiled card during a later sorcery-speed window via
+/// `GameAction::CastFromZoneWithoutPaying`.
 pub fn elemental_mascot() -> CardDefinition {
-    use crate::effect::Duration;
+    use crate::effect::{Duration, ZoneDest};
     use crate::effect::shortcut::opus_trigger;
     use crate::mana::{r, u};
     let pump = || Effect::PumpPT {
@@ -5853,6 +5914,22 @@ pub fn elemental_mascot() -> CardDefinition {
         toughness: Value::Const(0),
         duration: Duration::EndOfTurn,
     };
+    let big_body = Effect::Seq(vec![
+        pump(),
+        Effect::Move {
+            what: Selector::TopOfLibrary {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+            },
+            to: ZoneDest::Exile,
+        },
+        Effect::GrantMayPlay {
+            what: Selector::LastMoved,
+            duration: crate::card::MayPlayDuration::EndOfControllersNextTurn,
+            to_owner: false,
+            exile_after: false,
+        },
+    ]);
     CardDefinition {
         name: "Elemental Mascot",
         cost: cost(&[generic(1), u(), r()]),
@@ -5867,14 +5944,7 @@ pub fn elemental_mascot() -> CardDefinition {
         keywords: vec![Keyword::Flying, Keyword::Vigilance],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        // 🟡 Opus small body (<5 mana) wired: +1/+0 EOT. Big body
-        // (≥5 mana) prints "exile the top card of your library. You
-        // may play that card until the end of your next turn." Without
-        // a cast-from-exile-with-timer primitive the big body
-        // collapses to the same +1/+0 EOT pump. The pump fires on
-        // every IS cast you control; mana-spent introspection
-        // resolves through `Predicate::CastSpellManaSpentAtLeast(5)`.
-        triggered_abilities: vec![opus_trigger(pump(), pump())],
+        triggered_abilities: vec![opus_trigger(pump(), big_body)],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],

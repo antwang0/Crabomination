@@ -104,6 +104,13 @@ pub enum Selector {
     /// is included. Push: modern_decks batch 28.
     LastCreatedTokens,
 
+    /// All cards moved by `Effect::Move` (and Mill / Exile shortcuts)
+    /// in the current resolution. Used by Practiced Scrollsmith,
+    /// Suspend Aggression, Tablet of Discovery, Ark of Hunger, etc.
+    /// to chain a `GrantMayPlay` immediately after the Move targets
+    /// the same card(s). Cleared between resolution roots.
+    LastMoved,
+
     /// The chosen target slot (0-indexed) of the spell whose cast
     /// triggered this ability. Resolves against the topmost matching
     /// `StackItem::Spell` (the just-cast spell whose `SpellCast` event
@@ -951,6 +958,67 @@ pub enum Effect {
         count: Value,
     },
 
+    // ── Cast-without-paying / may-play ───────────────────────────────────────
+    /// "Until [duration], you may cast/play that card [from where it is]."
+    /// Stamps `CardInstance.may_play_until` on every card matched by `what`
+    /// (typically a single target in graveyard or exile). The granted
+    /// player then invokes `GameAction::CastFromZoneWithoutPaying` during
+    /// a sorcery-speed (or instant-speed if the card is an instant) window
+    /// to actually cast it.
+    ///
+    /// `to_owner` flips the recipient from "this effect's controller" to
+    /// "the matched card's owner" — used by Suspend Aggression's "its
+    /// owner may play it until the end of their next turn."
+    ///
+    /// `exile_after` propagates to the permission so casts pay this off
+    /// land the resolved instant/sorcery in exile (Nita, The Dawning
+    /// Archaic). For permanent spells the flag is ignored — they enter
+    /// the battlefield normally.
+    GrantMayPlay {
+        what: Selector,
+        duration: crate::card::MayPlayDuration,
+        #[serde(default)]
+        to_owner: bool,
+        #[serde(default)]
+        exile_after: bool,
+    },
+    /// Resolve-now equivalent of `GrantMayPlay`: at effect resolution
+    /// time, ask the controller "cast `what` without paying its mana
+    /// cost?" via `Decision::OptionalTrigger`. On yes, the card is
+    /// pushed through the free-cast helper from `source_zone` with
+    /// auto-targets / auto-decisions; on no (or no match), nothing
+    /// happens.
+    ///
+    /// Used by Improvisation Capstone (each exiled non-land card),
+    /// The Dawning Archaic (attack trigger), Nita Forum Conciliator
+    /// (could use either model; we use this for the trigger half).
+    /// `source_zone` is `Graveyard` for "cast it from your graveyard"
+    /// and `Exile` for "cast it from exile."
+    CastWithoutPayingImmediate {
+        what: Selector,
+        source_zone: crate::card::Zone,
+        #[serde(default)]
+        exile_after: bool,
+    },
+    /// Paradigm (SOS supplemental keyword) — registers a non-one-shot
+    /// `DelayedKind::YourNextMainPhase` trigger that on each of the
+    /// controller's pre-combat main phases offers them "cast a copy of
+    /// this from exile without paying its mana cost?" via
+    /// `Effect::CastFreeParadigmCopy`. Used as the trailing effect of
+    /// the Paradigm Lesson cycle (Restoration Seminar, Decorum
+    /// Dissertation, Germination Practicum, Echocasting Symposium,
+    /// Improvisation Capstone). Pairs with `exile_on_resolve = true` so
+    /// the card lands in exile and stays reachable for the recurring
+    /// copy trigger.
+    RegisterParadigm,
+    /// Paradigm body. At trigger-fire time, locates the trigger's
+    /// `source` (the Paradigm-exiled card) in exile, asks the controller
+    /// "cast a copy?" via OptionalTrigger, and on yes mints a tokenized
+    /// copy of the card's definition + free-casts it with auto-targets.
+    /// The original exiled card is left untouched so the recurrence
+    /// continues each main phase.
+    CastFreeParadigmCopy,
+
     // ── Sacrifice ────────────────────────────────────────────────────────────
     Sacrifice { who: Selector, count: Value, filter: SelectionRequirement },
     /// "Sacrifice a [filter] with the greatest mana value" picker.
@@ -1296,6 +1364,9 @@ impl Effect {
             Effect::CopySpellUnlessPaid { what, count, .. } => {
                 sel_has_target(what) || value_has_target(count)
             }
+            Effect::GrantMayPlay { what, .. } => sel_has_target(what),
+            Effect::CastWithoutPayingImmediate { what, .. } => sel_has_target(what),
+            Effect::RegisterParadigm | Effect::CastFreeParadigmCopy => false,
             Effect::Sacrifice { who, count, .. } => sel_has_target(who) || value_has_target(count),
             Effect::SacrificeGreatestMV { who, count, .. } => {
                 sel_has_target(who) || value_has_target(count)
@@ -1794,6 +1865,25 @@ pub enum StaticEffect {
     /// `DoubleTokens` for cards that print both halves (Doubling Season
     /// itself ships both static abilities).
     DoubleCounters,
+    /// CR 614.x — "Permanents entering the battlefield don't cause
+    /// abilities of permanents your opponents control to trigger. If a
+    /// permanent entering the battlefield causes a triggered ability of
+    /// a permanent you control to trigger, that ability triggers an
+    /// additional time." Elesh Norn, Mother of Machines. Read at ETB
+    /// trigger dispatch via `etb_trigger_multiplier`: any opponent's
+    /// permanent with this static suppresses your ETB triggers
+    /// (multiplier = 0); each of your own adds one extra fire.
+    EtbTriggerSpotlight,
+    /// CR 702.x — "Creature spells you cast of the chosen type can't be
+    /// countered." Cavern of Souls. The chosen creature type lives on
+    /// the permanent's `chosen_creature_type` field (set at ETB) — the
+    /// engine reads it at cast time via
+    /// `caster_grants_uncounterable_with_x`. A creature spell whose
+    /// caster controls any permanent carrying this static AND whose
+    /// types match the chosen type is flagged uncounterable.
+    /// `chosen_creature_type == None` falls back to "unrestricted" so
+    /// legacy test fixtures that bypass the ETB still work.
+    UncounterableCreaturesOfChosenType,
     /// "Instant and sorcery spells you cast have Affinity for [filter]"
     /// (CR 702.40). The static grants every IS spell the controller casts
     /// an Affinity-style discount of {1} per battlefield permanent matching

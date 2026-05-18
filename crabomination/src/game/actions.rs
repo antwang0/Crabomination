@@ -244,15 +244,23 @@ pub(crate) fn etb_trigger_multiplier(
     state: &crate::game::GameState,
     etb_controller: usize,
 ) -> usize {
+    use crate::effect::StaticEffect;
     let mut your_norns = 0usize;
     let mut opp_norns = 0usize;
     for c in &state.battlefield {
-        if c.definition.name == "Elesh Norn, Mother of Machines" {
-            if c.controller == etb_controller {
-                your_norns += 1;
-            } else {
-                opp_norns += 1;
-            }
+        let count_spotlight = c
+            .definition
+            .static_abilities
+            .iter()
+            .filter(|sa| matches!(sa.effect, StaticEffect::EtbTriggerSpotlight))
+            .count();
+        if count_spotlight == 0 {
+            continue;
+        }
+        if c.controller == etb_controller {
+            your_norns += count_spotlight;
+        } else {
+            opp_norns += count_spotlight;
         }
     }
     if opp_norns > 0 {
@@ -298,32 +306,50 @@ impl crate::game::GameState {
         if card.definition.keywords.contains(&Keyword::CantBeCountered) {
             return true;
         }
-        // Banefire: "If X is 5 or more, this spell can't be countered
-        // and the damage can't be prevented." We honor the can't-be-
-        // countered half by flipping the `uncounterable` flag at cast
-        // time. The damage-can't-be-prevented half is a no-op since
-        // the engine has no general damage-prevention layer.
-        if card.definition.name == "Banefire" && x_value >= 5 {
+        // Conditional "if X is N or more, this spell can't be countered"
+        // rider (Banefire-style). Threshold lives on the card's printed
+        // keywords as `CantBeCounteredIfXAtLeast(threshold)`; checked
+        // against the actual paid X. Any future card with the same
+        // shape plugs in by carrying the keyword — no engine change.
+        let xcc_threshold = card.definition.keywords.iter().find_map(|kw| {
+            if let Keyword::CantBeCounteredIfXAtLeast(n) = kw {
+                Some(*n)
+            } else {
+                None
+            }
+        });
+        if let Some(n) = xcc_threshold
+            && x_value >= n
+        {
             return true;
         }
-        // Cavern of Souls: a creature spell whose caster controls a Cavern
-        // whose chosen creature type matches one of the spell's types.
-        // Caverns whose ETB hasn't yet resolved (`chosen_creature_type =
-        // None`) — typical for `add_card_to_battlefield`-built test fixtures
-        // — fall back to the legacy "any creature is uncounterable" rule so
-        // pre-existing tests don't break on the tighter check. The
-        // mana-provenance gate (must spend Cavern mana on the cast) is still
-        // collapsed.
+        // Cavern of Souls–style: any permanent the caster controls
+        // whose static abilities include
+        // `UncounterableCreaturesOfChosenType` makes a matching-type
+        // creature spell uncounterable. Permanents whose ETB hasn't yet
+        // resolved (`chosen_creature_type == None`) fall back to
+        // "unrestricted" so legacy test fixtures that bypass the ETB
+        // still work. The mana-provenance gate (must spend the
+        // permanent's mana on the cast) is collapsed — see Cavern's
+        // catalog doc-comment.
+        use crate::effect::StaticEffect;
         if !card.definition.is_creature() {
             return false;
         }
         self.battlefield.iter().any(|c| {
-            c.controller == caster
-                && c.definition.name == "Cavern of Souls"
-                && match c.chosen_creature_type {
-                    None => true, // ETB not resolved → unrestricted (legacy)
-                    Some(t) => card.definition.has_creature_type(t),
-                }
+            if c.controller != caster {
+                return false;
+            }
+            let has_static = c.definition.static_abilities.iter().any(|sa| {
+                matches!(sa.effect, StaticEffect::UncounterableCreaturesOfChosenType)
+            });
+            if !has_static {
+                return false;
+            }
+            match c.chosen_creature_type {
+                None => true, // ETB not resolved → unrestricted (legacy)
+                Some(t) => card.definition.has_creature_type(t),
+            }
         })
     }
 
@@ -404,26 +430,37 @@ impl GameState {
         if self.lands_tap_colorless_only_active()
             && multi_mana_ability_count(&card.definition)
         {
-            card.definition.activated_abilities = vec![
-                crate::card::ActivatedAbility {
-                    tap_cost: true,
-                    mana_cost: crate::mana::ManaCost::default(),
-                    effect: crate::effect::Effect::AddMana {
-                        who: crate::effect::PlayerRef::You,
-                        pool: crate::effect::ManaPayload::Colorless(
-                            crate::effect::Value::Const(1),
-                        ),
-                    },
-                    once_per_turn: false,
-                    sorcery_speed: false,
-                    sac_cost: false,
-                    condition: None,
-            life_cost: 0,
-            from_graveyard: false,
-            exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None,
+            // Drop the printed mana abilities and replace them with a
+            // single `{T}: Add {C}`. Non-mana activated abilities
+            // (fetchland sac, manland animate, channel, cycling) survive
+            // — Damping Sphere's Oracle only affects mana production.
+            let mut kept: Vec<crate::card::ActivatedAbility> = card
+                .definition
+                .activated_abilities
+                .iter()
+                .filter(|a| !is_mana_ability(&a.effect))
+                .cloned()
+                .collect();
+            kept.push(crate::card::ActivatedAbility {
+                tap_cost: true,
+                mana_cost: crate::mana::ManaCost::default(),
+                effect: crate::effect::Effect::AddMana {
+                    who: crate::effect::PlayerRef::You,
+                    pool: crate::effect::ManaPayload::Colorless(
+                        crate::effect::Value::Const(1),
+                    ),
                 },
-            ];
+                once_per_turn: false,
+                sorcery_speed: false,
+                sac_cost: false,
+                condition: None,
+                life_cost: 0,
+                from_graveyard: false,
+                exile_self_cost: false,
+                exile_other_filter: None,
+                self_counter_cost_reduction: None,
+            });
+            card.definition.activated_abilities = kept;
         }
         self.players[p].lands_played_this_turn += 1;
         self.battlefield.push(card);
@@ -501,27 +538,29 @@ impl GameState {
         if !self.players[p].has_in_hand(card_id) {
             return Err(GameError::CardNotInHand(card_id));
         }
-        // Look up the back face on the front-face definition.
-        let back_def = {
+        // Snapshot the front-face definition AND look up the back face.
+        // On a rejected cast the inner path returns the card to the hand
+        // with its (then-swapped) back-face definition; we restore the
+        // front face here so the player can still cast either face on
+        // retry. Without the restore, one failed back-face cast burns the
+        // front face for the rest of the game.
+        let (front_def, back_def) = {
             let card = self
                 .players[p]
                 .hand
                 .iter()
                 .find(|c| c.id == card_id)
                 .expect("has_in_hand verified");
-            match card.definition.back_face.clone() {
+            let back = match card.definition.back_face.clone() {
                 Some(b) => *b,
                 None => return Err(GameError::NotALand(card_id)),
-            }
+            };
+            (card.definition.clone(), back)
         };
-        // Swap the in-hand definition to the back face. The hand card
-        // mutates in place — successful cast removes it; rejected cast
-        // means the cast machinery already restored the card with the
-        // swapped definition, but since the front face no longer
-        // appears in hand the user can still cast either face on retry
-        // (back face's `back_face` is None, but front-face revival is
-        // out of scope; in practice MDFCs are committed to one face per
-        // game).
+        // Swap the in-hand definition to the back face in place. The
+        // hand card's back_face slot is kept (it points at the back
+        // we just installed), so a later restore can flip back without
+        // a second catalog lookup.
         if let Some(c) = self.players[p].hand.iter_mut().find(|c| c.id == card_id) {
             c.definition = back_def;
         }
@@ -531,6 +570,14 @@ impl GameState {
         self.pending_cast_face = CastFace::Back;
         let result = self.cast_spell(card_id, target, additional_targets, mode, x_value);
         self.pending_cast_face = CastFace::Front;
+        // On rejection, the inner cast pushed the card (with the
+        // back-face definition) back into the hand. Restore the front
+        // face so the player can retry either face.
+        if result.is_err()
+            && let Some(c) = self.players[p].hand.iter_mut().find(|c| c.id == card_id)
+        {
+            c.definition = front_def;
+        }
         result
     }
 
@@ -1062,8 +1109,9 @@ impl GameState {
         let mut card = self.players[p].graveyard.remove(graveyard_pos);
         self.players[p].cards_left_graveyard_this_turn =
             self.players[p].cards_left_graveyard_this_turn.saturating_add(1);
-        // Mark as cast via flashback so it goes to exile on resolution.
-        card.kicked = true; // reuse kicked flag to signal flashback exile
+        // Mark as cast via flashback so the resolver routes the card to
+        // exile (CR 702.34d) instead of its owner's graveyard.
+        card.cast_via_flashback = true;
 
         let events = vec![
             GameEvent::CardLeftGraveyard { player: p, card_id },
@@ -1075,6 +1123,148 @@ impl GameState {
         ];
         self.finalize_cast(p, card, target, additional_targets, mode, x_value.unwrap_or(0), 0, mana_spent);
         Ok(events)
+    }
+
+    /// Cast a spell from an arbitrary zone (graveyard or exile) without
+    /// paying any mana cost. The card is lifted out of `source_zone`,
+    /// stamped with `cast_via_flashback = true` when `exile_after` is
+    /// set (so the resolver routes it to exile), and threaded through
+    /// `finalize_cast` with `mana_spent = 0` / `converged_value = 0`.
+    /// No timing / target / cost / alt-cost checks run — the caller is
+    /// responsible for any timing window enforcement at the call site.
+    ///
+    /// Used by:
+    /// - `GameAction::CastFromZoneWithoutPaying` (player invokes a
+    ///   `may_play_until` permission, e.g. Practiced Scrollsmith's
+    ///   exiled card)
+    /// - `Effect::CastWithoutPayingImmediate` (immediate resolve-time
+    ///   cast — Improvisation Capstone, The Dawning Archaic, Nita)
+    /// - `Effect::CastFreeParadigmCopy` (per-main-phase paradigm copy)
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) fn cast_card_for_free(
+        &mut self,
+        p: usize,
+        card_id: CardId,
+        source_zone: crate::card::Zone,
+        target: Option<Target>,
+        additional_targets: Vec<Target>,
+        mode: Option<usize>,
+        x_value: Option<u32>,
+        exile_after: bool,
+    ) -> Result<Vec<GameEvent>, GameError> {
+        use crate::card::Zone;
+        // Lift the card out of the named zone. Owner-based zones
+        // (graveyard, hand, library) walk all players to locate it.
+        let mut card = match source_zone {
+            Zone::Exile => {
+                let pos = self
+                    .exile
+                    .iter()
+                    .position(|c| c.id == card_id)
+                    .ok_or(GameError::CardNotInHand(card_id))?;
+                self.exile.remove(pos)
+            }
+            Zone::Graveyard => {
+                let mut found: Option<crate::card::CardInstance> = None;
+                for player in self.players.iter_mut() {
+                    if let Some(pos) = player.graveyard.iter().position(|c| c.id == card_id) {
+                        found = Some(player.graveyard.remove(pos));
+                        break;
+                    }
+                }
+                found.ok_or(GameError::CardNotInHand(card_id))?
+            }
+            _ => return Err(GameError::CardNotInHand(card_id)),
+        };
+
+        // Clear any outstanding may-play permission — once the card is
+        // cast, the grant is consumed.
+        card.may_play_until = None;
+        // Route to exile on resolve when the granting effect demands it
+        // (Nita's "if would go to graveyard, exile instead").
+        if exile_after {
+            card.cast_via_flashback = true;
+        }
+        // Bump the "card left graveyard this turn" counter for gy casts.
+        if matches!(source_zone, Zone::Graveyard) {
+            let owner = card.owner;
+            self.players[owner].cards_left_graveyard_this_turn =
+                self.players[owner].cards_left_graveyard_this_turn.saturating_add(1);
+        }
+
+        let mut events = Vec::new();
+        if matches!(source_zone, Zone::Graveyard) {
+            events.push(GameEvent::CardLeftGraveyard {
+                player: card.owner,
+                card_id,
+            });
+        }
+        events.push(GameEvent::SpellCast {
+            player: p,
+            card_id,
+            face: CastFace::Front,
+        });
+        self.finalize_cast(
+            p,
+            card,
+            target,
+            additional_targets,
+            mode,
+            x_value.unwrap_or(0),
+            0,
+            0,
+        );
+        Ok(events)
+    }
+
+    /// `GameAction::CastFromZoneWithoutPaying` entry point. Validates
+    /// that the priority-holding player has an outstanding
+    /// `may_play_until` permission on `card_id`, that the permission
+    /// hasn't expired, and that the printed-Oracle timing (sorcery vs
+    /// instant) allows casting at this window — then hands off to
+    /// `cast_card_for_free`.
+    pub(crate) fn cast_from_zone_without_paying(
+        &mut self,
+        card_id: CardId,
+        target: Option<Target>,
+        additional_targets: Vec<Target>,
+        mode: Option<usize>,
+        x_value: Option<u32>,
+    ) -> Result<Vec<GameEvent>, GameError> {
+        let p = self.priority.player_with_priority;
+        let zone = self
+            .find_card_zone(card_id)
+            .ok_or(GameError::CardNotInHand(card_id))?;
+        // Locate the permission + card definition without holding a long
+        // borrow across the cast helper.
+        let card_ref = self
+            .find_card_anywhere(card_id)
+            .ok_or(GameError::CardNotInHand(card_id))?;
+        let permission = card_ref
+            .may_play_until
+            .ok_or(GameError::CardNotInHand(card_id))?;
+        if permission.player != p {
+            return Err(GameError::CardNotInHand(card_id));
+        }
+        // Expiry check: EndOfThisTurn => only valid this turn;
+        // EndOfControllersNextTurn => one full controller-turn later.
+        // Defensive — the cleanup hook also clears expired permissions.
+        let is_instant = card_ref.definition.is_instant_speed();
+        let exile_after = permission.exile_after;
+        let must_be_sorcery_speed = !is_instant || self.player_locked_to_sorcery_timing(p);
+        if must_be_sorcery_speed && !self.can_cast_sorcery_speed(p) {
+            return Err(GameError::SorcerySpeedOnly);
+        }
+        self.cast_card_for_free(
+            p,
+            card_id,
+            zone,
+            target,
+            additional_targets,
+            mode,
+            x_value,
+            exile_after,
+        )
     }
 
     /// Cast a spell using its `alternative_cost` (a "pitch" cost) instead of

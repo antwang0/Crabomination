@@ -142,6 +142,23 @@ pub enum GameAction {
     DeclareBlockers(Vec<(CardId, CardId)>),
     ActivateLoyaltyAbility { card_id: CardId, ability_index: usize, target: Option<Target> },
     CastFlashback { card_id: CardId, target: Option<Target>, #[serde(default)] additional_targets: Vec<Target>, mode: Option<usize>, x_value: Option<u32> },
+    /// Cast a card from its current zone (graveyard or exile) without
+    /// paying its mana cost — consumes the `CardInstance.may_play_until`
+    /// permission stamped by `Effect::GrantMayPlay`. Used by Practiced
+    /// Scrollsmith, Suspend Aggression, Elemental Mascot, Tablet of
+    /// Discovery, Ark of Hunger, Archaic's Agony, and the Paradigm cards'
+    /// upkeep recurrence. Source zone is read off the permission target's
+    /// current zone (single-pass `find_card_zone`); the action rejects
+    /// when no permission exists, has expired, or the card has moved to a
+    /// zone where the cast no longer makes sense.
+    CastFromZoneWithoutPaying {
+        card_id: CardId,
+        target: Option<Target>,
+        #[serde(default)]
+        additional_targets: Vec<Target>,
+        mode: Option<usize>,
+        x_value: Option<u32>,
+    },
     /// Cast a Commander from your command zone (Phase L). The mana
     /// cost is the printed cost plus `{2}` for every prior time this
     /// commander has been cast from the command zone this game

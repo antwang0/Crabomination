@@ -108,9 +108,19 @@ pub struct CardSnapshot {
     pub used_loyalty_ability_this_turn: bool,
     pub evoked: bool,
     pub cast_from_hand: bool,
+    /// `#[serde(default)]` so snapshots predating the field load as
+    /// `false`. Flags a card that was cast via Flashback; the resolver
+    /// routes it to exile instead of the graveyard on resolution.
+    #[serde(default)]
+    pub cast_via_flashback: bool,
     pub chosen_creature_type: Option<CreatureType>,
     #[serde(default)]
     pub once_per_turn_used: Vec<usize>,
+    /// `Some` if this card has a "you may cast it without paying its mana
+    /// cost" permission outstanding. `#[serde(default)]` so snapshots
+    /// predating cast-from-exile load as `None`.
+    #[serde(default)]
+    pub may_play_until: Option<crate::card::MayPlayPermission>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -231,8 +241,10 @@ fn card_snap(c: &CardInstance) -> CardSnapshot {
         used_loyalty_ability_this_turn: c.used_loyalty_ability_this_turn,
         evoked: c.evoked,
         cast_from_hand: c.cast_from_hand,
+        cast_via_flashback: c.cast_via_flashback,
         chosen_creature_type: c.chosen_creature_type,
         once_per_turn_used: c.once_per_turn_used.clone(),
+        may_play_until: c.may_play_until,
     }
 }
 
@@ -390,8 +402,10 @@ fn restore_card(cs: CardSnapshot) -> Result<CardInstance, LoadError> {
     c.used_loyalty_ability_this_turn = cs.used_loyalty_ability_this_turn;
     c.evoked = cs.evoked;
     c.cast_from_hand = cs.cast_from_hand;
+    c.cast_via_flashback = cs.cast_via_flashback;
     c.chosen_creature_type = cs.chosen_creature_type;
     c.once_per_turn_used = cs.once_per_turn_used;
+    c.may_play_until = cs.may_play_until;
     Ok(c)
 }
 
@@ -630,8 +644,10 @@ mod tests {
             used_loyalty_ability_this_turn: false,
             evoked: false,
             cast_from_hand: false,
+            cast_via_flashback: false,
             chosen_creature_type: None,
             once_per_turn_used: vec![],
+            may_play_until: None,
         };
         match restore_card(cs) {
             Err(LoadError::UnknownCard(name)) => {

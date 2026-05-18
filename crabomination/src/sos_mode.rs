@@ -104,6 +104,7 @@ impl College {
                 spirit_mascot,
                 ark_of_hunger,
                 wilt_in_the_heat,
+                improvisation_capstone,
             ],
             // ↑ Fields of Strife is the school land, included via school_land();
             //   keep it out of the multi pool to avoid double-counting at cap time.

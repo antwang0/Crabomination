@@ -8017,6 +8017,31 @@ fn lumarets_favor_infusion_does_not_copy_without_lifegain() {
 }
 
 #[test]
+fn cast_spell_back_face_rejected_cast_restores_front_face() {
+    // Regression: a rejected back-face cast must restore the front-face
+    // definition in hand so the player can still cast either face. Before
+    // the fix the in-hand card's definition stayed swapped to the back
+    // face on rejection, burning the front face for the rest of the game.
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::studious_first_year());
+    // Pay only {G} — Rampant Growth (back face) costs {1}{G}, so the
+    // cast attempt should fail on mana payment.
+    g.players[0].mana_pool.add(Color::Green, 1);
+
+    let err = g.perform_action(GameAction::CastSpellBack {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    });
+    assert!(err.is_err(), "underpaying the back-face cost should reject");
+
+    // Front-face definition must be back in place: name + types unchanged.
+    let card = g.players[0].hand.iter().find(|c| c.id == id)
+        .expect("card stays in hand on rejected cast");
+    assert_eq!(card.definition.name, catalog::studious_first_year().name);
+    assert!(card.definition.is_creature(),
+        "front face is a creature; if this fails the back face leaked through");
+}
+
+#[test]
 fn cast_spell_back_face_rejects_card_without_back_face() {
     // A card without `back_face` (most cards) should reject CastSpellBack
     // cleanly with `NotALand`. This ensures the new path doesn't crash
@@ -11239,4 +11264,376 @@ fn witherbloom_balancer_static_does_not_affect_opp_spells() {
         additional_targets: vec![], mode: None, x_value: None,
     });
     assert!(result.is_err(), "Opp's Mind Rot not discounted by our Balancer");
+}
+
+// ── Cast-from-exile / may-play permission (Practiced Scrollsmith etc.) ──────
+
+#[test]
+fn practiced_scrollsmith_grants_may_play_on_exiled_card() {
+    // The ETB trigger should both exile a noncreature/nonland card from
+    // the controller's graveyard *and* stamp it with a
+    // `may_play_until = EndOfControllersNextTurn` permission.
+    let mut g = two_player_game();
+    let pox_id = g.next_id();
+    let mut pox = crate::card::CardInstance::new(pox_id, catalog::pox_plague(), 0);
+    pox.controller = 0;
+    g.players[0].graveyard.push(pox);
+
+    let id = g.add_card_to_hand(0, catalog::practiced_scrollsmith());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Practiced Scrollsmith castable");
+    drain_stack(&mut g);
+
+    let exiled = g.exile.iter().find(|c| c.id == pox_id).expect("Pox in exile");
+    let perm = exiled.may_play_until.expect("may_play permission stamped");
+    assert_eq!(perm.player, 0, "permission goes to the ETB controller");
+    assert!(matches!(perm.duration,
+        crate::card::MayPlayDuration::EndOfControllersNextTurn));
+}
+
+#[test]
+fn practiced_scrollsmith_may_play_expires_after_controllers_next_turn() {
+    // EndOfControllersNextTurn semantics in a 2-player game: the
+    // permission survives the granting turn's cleanup and the opp's
+    // turn's cleanup, then clears on the controller's next cleanup.
+    // We approximate this by checking the permission persists across
+    // one cleanup but clears once `turn_number - granted_turn >=
+    // player_count`. In a 2p game that's 2 turns later — the
+    // controller's next cleanup.
+    let mut g = two_player_game();
+    let pox_id = g.next_id();
+    let mut pox = crate::card::CardInstance::new(pox_id, catalog::pox_plague(), 0);
+    pox.controller = 0;
+    pox.may_play_until = Some(crate::card::MayPlayPermission {
+        player: 0,
+        granted_turn: g.turn_number,
+        duration: crate::card::MayPlayDuration::EndOfControllersNextTurn,
+        exile_after: false,
+    });
+    g.exile.push(pox);
+
+    // Burn through 2 cleanup steps (each `do_cleanup` advances the
+    // turn). After cleanup #1 the permission persists; after #2 it
+    // clears.
+    g.do_cleanup();
+    assert!(g.exile.iter().find(|c| c.id == pox_id).unwrap()
+        .may_play_until.is_some(), "permission survives first cleanup");
+    g.do_cleanup();
+    assert!(g.exile.iter().find(|c| c.id == pox_id).unwrap()
+        .may_play_until.is_none(), "permission expires after controllers next turn cleanup");
+}
+
+#[test]
+fn cast_from_zone_without_paying_recurs_practiced_scrollsmiths_exiled_card() {
+    // End-to-end: ETB exiles Pox Plague + stamps may_play; controller
+    // then invokes `GameAction::CastFromZoneWithoutPaying` to free-cast
+    // it without paying mana. Pox is a 5-black-pip sorcery — under
+    // normal cost it'd cost {B}{B}{B}{B}{B}; free-cast pays nothing.
+    let mut g = two_player_game();
+    let pox_id = g.next_id();
+    let mut pox = crate::card::CardInstance::new(pox_id, catalog::pox_plague(), 0);
+    pox.controller = 0;
+    g.players[0].graveyard.push(pox);
+
+    let id = g.add_card_to_hand(0, catalog::practiced_scrollsmith());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Practiced Scrollsmith castable");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == pox_id), "Pox exiled after ETB");
+
+    // Now free-cast Pox Plague from exile. No mana payment.
+    let p0_mana_before = g.players[0].mana_pool.total();
+    g.perform_action(GameAction::CastFromZoneWithoutPaying {
+        card_id: pox_id, target: None, additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("Pox free-castable via may_play permission");
+    drain_stack(&mut g);
+    // Mana untouched (no cost paid).
+    assert_eq!(g.players[0].mana_pool.total(), p0_mana_before,
+        "free cast doesn't deduct mana");
+    // Pox resolved → it landed in graveyard (it's a sorcery, exile_after
+    // = false in the permission).
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == pox_id),
+        "Pox went to graveyard after free-cast resolve");
+    // No more permission outstanding (consumed by cast).
+    assert!(g.players[0].graveyard.iter().find(|c| c.id == pox_id)
+        .unwrap().may_play_until.is_none(),
+        "permission cleared on cast");
+}
+
+#[test]
+fn cast_from_zone_without_paying_rejected_without_permission() {
+    // A card with no may_play permission can't be cast for free.
+    let mut g = two_player_game();
+    let pox_id = g.next_id();
+    let mut pox = crate::card::CardInstance::new(pox_id, catalog::pox_plague(), 0);
+    pox.controller = 0;
+    g.exile.push(pox);
+
+    let result = g.perform_action(GameAction::CastFromZoneWithoutPaying {
+        card_id: pox_id, target: None, additional_targets: vec![],
+        mode: None, x_value: None,
+    });
+    assert!(result.is_err(), "no permission → cast rejected");
+}
+
+#[test]
+fn suspend_aggression_grants_may_play_to_each_exiled_card() {
+    // Suspend Aggression exiles a target nonland permanent + top of
+    // your library; each exiled card gets `may_play_until` stamped
+    // with `to_owner: true` so the card's owner can cast it later.
+    let mut g = two_player_game();
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    // P1 controls a creature we'll target.
+    let opp_creature = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    // P0's top-of-library has a known card so we can identify it.
+    let _top = g.add_card_to_library(0, catalog::lightning_bolt());
+    let suspend_id = g.add_card_to_hand(0, catalog::suspend_aggression());
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: suspend_id,
+        target: Some(crate::game::types::Target::Permanent(opp_creature)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Suspend Aggression castable");
+    drain_stack(&mut g);
+
+    // Both exiled cards should have permissions.
+    let exiled: Vec<_> = g.exile.iter().filter(|c|
+        c.may_play_until.is_some()
+    ).collect();
+    assert_eq!(exiled.len(), 2, "both exiled cards get may_play");
+    // Each permission routes to that card's owner.
+    for c in &exiled {
+        let perm = c.may_play_until.unwrap();
+        assert_eq!(perm.player, c.owner,
+            "permission goes to card's owner (to_owner = true)");
+    }
+}
+
+#[test]
+fn tablet_of_discovery_etb_mills_and_grants_may_play() {
+    let mut g = two_player_game();
+    let top_id = g.add_card_to_library(0, catalog::lightning_bolt());
+    let tablet_id = g.add_card_to_hand(0, catalog::tablet_of_discovery());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: tablet_id, target: None, additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("Tablet castable");
+    drain_stack(&mut g);
+
+    // The top library card was milled to graveyard.
+    let milled = g.players[0].graveyard.iter().find(|c| c.id == top_id)
+        .expect("top card milled to gy");
+    let perm = milled.may_play_until.expect("milled card has may_play");
+    assert!(matches!(perm.duration,
+        crate::card::MayPlayDuration::EndOfThisTurn));
+}
+
+#[test]
+fn ark_of_hunger_mill_activation_grants_may_play() {
+    let mut g = two_player_game();
+    let top_id = g.add_card_to_library(0, catalog::lightning_bolt());
+    let ark_id = g.add_card_to_battlefield(0, catalog::ark_of_hunger());
+    if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == ark_id) {
+        c.summoning_sick = false;
+    }
+
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: ark_id, ability_index: 0, target: None,
+    }).expect("Ark mill activation");
+    drain_stack(&mut g);
+
+    let milled = g.players[0].graveyard.iter().find(|c| c.id == top_id)
+        .expect("top milled");
+    assert!(milled.may_play_until.is_some(), "milled card may-play granted");
+}
+
+#[test]
+fn improvisation_capstone_exiles_four_cards_and_registers_paradigm() {
+    let mut g = two_player_game();
+    // Stack the top of P0's library with 4 known cards.
+    for _ in 0..4 {
+        g.add_card_to_library(0, catalog::lightning_bolt());
+    }
+    let id = g.add_card_to_hand(0, catalog::improvisation_capstone());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(3);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("Improvisation Capstone castable");
+    drain_stack(&mut g);
+
+    // 4 cards from library should be exiled (Improvisation Capstone
+    // itself also lands in exile via exile_on_resolve).
+    let exiled_bolts = g.exile.iter().filter(|c|
+        c.definition.name == "Lightning Bolt"
+    ).count();
+    assert_eq!(exiled_bolts, 4, "exiled top 4 library cards");
+    let capstone_in_exile = g.exile.iter().any(|c|
+        c.definition.name == "Improvisation Capstone"
+    );
+    assert!(capstone_in_exile, "Capstone exiled (exile_on_resolve)");
+    // Paradigm registered: there's a YourNextMainPhase delayed trigger
+    // whose source is the Capstone.
+    let cap_id = g.exile.iter().find(|c|
+        c.definition.name == "Improvisation Capstone"
+    ).map(|c| c.id).unwrap();
+    let registered = g.delayed_triggers.iter().any(|dt|
+        dt.source == cap_id
+        && matches!(dt.kind, crate::game::types::DelayedKind::YourNextMainPhase)
+        && !dt.fires_once
+    );
+    assert!(registered, "Paradigm trigger registered (recurring)");
+}
+
+#[test]
+fn the_dawning_archaic_attack_trigger_uses_immediate_free_cast() {
+    // The attack trigger is `CastWithoutPayingImmediate { source: Graveyard }`
+    // — by default AutoDecider declines (Bool(false)), so nothing
+    // happens. The Archaic ETBs/attacks as usual.
+    let mut g = two_player_game();
+    let _bolt = g.next_id();
+    // Seed an IS card in P0's graveyard for the trigger to find.
+    let mut bolt = crate::card::CardInstance::new(g.next_id(), catalog::lightning_bolt(), 0);
+    bolt.controller = 0;
+    g.players[0].graveyard.push(bolt);
+    let arc = g.add_card_to_battlefield(0, catalog::the_dawning_archaic());
+    if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == arc) {
+        c.summoning_sick = false;
+        c.tapped = false;
+    }
+    // Sanity: card has Attacks trigger with CastWithoutPayingImmediate.
+    let def = catalog::the_dawning_archaic();
+    let has_attack_free_cast = def.triggered_abilities.iter().any(|ta| {
+        matches!(ta.effect, crate::effect::Effect::CastWithoutPayingImmediate { .. })
+    });
+    assert!(has_attack_free_cast,
+        "Dawning Archaic has an attack-triggered free-cast effect");
+}
+
+#[test]
+fn nita_forum_conciliator_activation_exiles_and_grants_may_play() {
+    let mut g = two_player_game();
+    // Seed an IS card in P1's graveyard.
+    let mut bolt = crate::card::CardInstance::new(g.next_id(), catalog::lightning_bolt(), 1);
+    bolt.controller = 1;
+    let bolt_id = bolt.id;
+    g.players[1].graveyard.push(bolt);
+    // Nita + a sacrificial creature on P0's bf.
+    let nita = g.add_card_to_battlefield(0, catalog::nita_forum_conciliator());
+    let sac = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == nita) {
+        c.summoning_sick = false; c.tapped = false;
+    }
+    if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == sac) {
+        c.summoning_sick = false;
+    }
+    g.players[0].mana_pool.add_colorless(2);
+
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: nita, ability_index: 0,
+        target: Some(crate::game::types::Target::Permanent(sac)),
+    }).expect("Nita activation");
+    drain_stack(&mut g);
+
+    // Bolt should now be in exile with may_play stamped + exile_after.
+    let exiled = g.exile.iter().find(|c| c.id == bolt_id)
+        .expect("bolt moved to exile by Nita");
+    let perm = exiled.may_play_until.expect("may_play stamped");
+    assert!(perm.exile_after, "Nita's permission has exile_after=true");
+    assert_eq!(perm.player, 0, "permission goes to Nita's controller");
+}
+
+#[test]
+fn paradigm_card_registers_recurring_yournextmainphase_trigger() {
+    // Restoration Seminar resolves → lands in exile + registers a
+    // recurring YourNextMainPhase delayed trigger.
+    let mut g = two_player_game();
+    // Seed a creature in P0's graveyard for the body to target.
+    let bears = crate::card::CardInstance::new(g.next_id(), catalog::grizzly_bears(), 0);
+    let bears_id = bears.id;
+    g.players[0].graveyard.push(bears);
+
+    let id = g.add_card_to_hand(0, catalog::restoration_seminar());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(5);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(crate::game::types::Target::Permanent(bears_id)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Restoration Seminar castable");
+    drain_stack(&mut g);
+
+    // Body fired: bears moved from gy to battlefield.
+    assert!(g.battlefield.iter().any(|c| c.id == bears_id),
+        "bears reanimated");
+    // Seminar landed in exile (exile_on_resolve = true).
+    let seminar_in_exile = g.exile.iter().find(|c|
+        c.definition.name == "Restoration Seminar"
+    );
+    assert!(seminar_in_exile.is_some(), "Seminar exiled");
+    let seminar_id = seminar_in_exile.unwrap().id;
+    // Recurring trigger registered.
+    let registered = g.delayed_triggers.iter().any(|dt|
+        dt.source == seminar_id
+        && matches!(dt.kind, crate::game::types::DelayedKind::YourNextMainPhase)
+        && !dt.fires_once
+    );
+    assert!(registered, "Paradigm trigger registered");
+}
+
+#[test]
+fn paradigm_free_copy_resolves_with_scripted_yes() {
+    // Direct unit test of `Effect::CastFreeParadigmCopy`: park a
+    // Paradigm card in exile, then resolve the effect via a trigger.
+    // With a scripted yes, a tokenized copy is minted and free-cast.
+    let mut g = two_player_game();
+    // Seed a creature in gy for the copy's body to target.
+    let bears = crate::card::CardInstance::new(g.next_id(), catalog::grizzly_bears(), 0);
+    let bears_id = bears.id;
+    g.players[0].graveyard.push(bears);
+
+    // Park Restoration Seminar in exile.
+    let seminar = crate::card::CardInstance::new(
+        g.next_id(), catalog::restoration_seminar(), 0
+    );
+    let seminar_id = seminar.id;
+    g.exile.push(seminar);
+
+    // Script "yes" for the paradigm offer.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+
+    // Resolve `CastFreeParadigmCopy` directly as a trigger from the
+    // Paradigm-exiled card. Threads `source = seminar_id` so the
+    // effect locates the original in exile.
+    g.continue_trigger_resolution(
+        seminar_id,
+        0,
+        crate::effect::Effect::CastFreeParadigmCopy,
+        None,
+        0, 0, 0, 0,
+    ).expect("paradigm copy effect resolves");
+    drain_stack(&mut g);
+
+    // The tokenized copy resolved → its body reanimated the bears.
+    assert!(g.battlefield.iter().any(|c| c.id == bears_id),
+        "paradigm-copied seminar reanimated the bears");
+    // Original seminar still in exile (paradigm copies are tokenized
+    // and removed by SBA from non-battlefield zones).
+    assert!(g.exile.iter().any(|c| c.id == seminar_id),
+        "original Seminar stays in exile");
 }

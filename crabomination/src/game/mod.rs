@@ -212,6 +212,15 @@ pub struct GameState {
     /// at every resolution root start (see `reset_effect_scratch`).
     #[serde(skip)]
     pub(crate) last_created_tokens: Vec<CardId>,
+    /// Transient: ids of every card moved within the current effect
+    /// resolution. Populated by `Effect::Move` (and the mill/exile
+    /// helpers) and read by `Selector::LastMoved` so a follow-up
+    /// `GrantMayPlay` in the same `Effect::Seq` can target exactly the
+    /// card(s) that were just lifted to exile/graveyard (Practiced
+    /// Scrollsmith, Suspend Aggression, Tablet of Discovery, etc.).
+    /// Cleared between resolutions.
+    #[serde(skip)]
+    pub(crate) last_moved_cards: Vec<CardId>,
     /// Transient: count of cards discarded within the current effect
     /// resolution. Bumped by every `GameEvent::CardDiscarded` emission
     /// inside `Effect::Discard` / `Effect::DiscardChosen` (random and
@@ -342,6 +351,7 @@ impl Clone for GameState {
             sacrificed_toughness: self.sacrificed_toughness,
             last_created_token: self.last_created_token,
             last_created_tokens: self.last_created_tokens.clone(),
+            last_moved_cards: self.last_moved_cards.clone(),
             cards_discarded_this_resolution: self.cards_discarded_this_resolution,
             creature_cards_discarded_this_resolution: self.creature_cards_discarded_this_resolution,
             discarded_card_ids_this_resolution: self.discarded_card_ids_this_resolution.clone(),
@@ -400,6 +410,7 @@ impl GameState {
             sacrificed_toughness: None,
             last_created_token: None,
             last_created_tokens: Vec::new(),
+            last_moved_cards: Vec::new(),
             cards_discarded_this_resolution: 0,
             creature_cards_discarded_this_resolution: 0,
             discarded_card_ids_this_resolution: Vec::new(),
@@ -961,39 +972,35 @@ impl GameState {
             }
             all_effects.extend(effects);
         }
-        // Tarmogoyf-style dynamic P/T: a few cards' power/toughness depend on
-        // graveyard contents and so can't be expressed via static `PumpPT`
-        // ahead of time. Inject the per-card SetPT effect at compute-time.
+        // CR 604.x — characteristic-defining dynamic P/T injection. The
+        // per-card formula lookup lives in `dynamic_pt_for_name`; we
+        // resolve it here on every layer recompute and emit a layer-7
+        // SetPT effect. Adding a new dynamic-P/T card is one row in that
+        // table — no engine-side `if name == "..."` branch.
         let goyf_n = self.distinct_card_types_in_all_graveyards() as i32;
         for card in &self.battlefield {
+            let Some(formula) = dynamic_pt_for_name(card.definition.name) else { continue };
+            let (power, toughness) = match formula {
+                crate::card::DynamicPt::DistinctTypesInAllGraveyards => {
+                    (goyf_n, goyf_n + 1)
+                }
+                crate::card::DynamicPt::ControllerGraveyardSize => {
+                    let n = self.players[card.controller].graveyard.len() as i32;
+                    (n, n)
+                }
+            };
+            all_effects.push(ContinuousEffect {
+                timestamp: card.id.0 as u64,
+                source: card.id,
+                affected: AffectedPermanents::Source,
+                layer: Layer::L7PowerTough,
+                sublayer: Some(PtSublayer::CharDefining),
+                duration: EffectDuration::WhileSourceOnBattlefield,
+                modification: Modification::SetPowerToughness(power, toughness),
+            });
+        }
+        for card in &self.battlefield {
             let name = card.definition.name;
-            if name == "Cosmogoyf" || name == "Tarmogoyf" {
-                all_effects.push(ContinuousEffect {
-                    timestamp: card.id.0 as u64,
-                    source: card.id,
-                    affected: AffectedPermanents::Source,
-                    layer: Layer::L7PowerTough,
-                    sublayer: Some(PtSublayer::CharDefining),
-                    duration: EffectDuration::WhileSourceOnBattlefield,
-                    modification: Modification::SetPowerToughness(goyf_n, goyf_n + 1),
-                });
-            }
-            // Cruel Somnophage: P/T equals the number of cards in your graveyard.
-            // Same hardcoded compute-time injection pattern as Tarmogoyf, but
-            // gated on the controller's graveyard size rather than distinct
-            // card types in *all* graveyards.
-            if name == "Cruel Somnophage" {
-                let n = self.players[card.controller].graveyard.len() as i32;
-                all_effects.push(ContinuousEffect {
-                    timestamp: card.id.0 as u64,
-                    source: card.id,
-                    affected: AffectedPermanents::Source,
-                    layer: Layer::L7PowerTough,
-                    sublayer: Some(PtSublayer::CharDefining),
-                    duration: EffectDuration::WhileSourceOnBattlefield,
-                    modification: Modification::SetPowerToughness(n, n),
-                });
-            }
             // "As long as you've gained life this turn, +P/+T [and KW]"
             // self-pump consolidation: name lookup table at
             // `lifegain_selfpump_for_name`. Adds one helper-table row per
@@ -1453,6 +1460,15 @@ impl GameState {
                 mode,
                 x_value,
             } => self.cast_flashback(card_id, target, additional_targets, mode, x_value),
+            GameAction::CastFromZoneWithoutPaying {
+                card_id,
+                target,
+                additional_targets,
+                mode,
+                x_value,
+            } => self.cast_from_zone_without_paying(
+                card_id, target, additional_targets, mode, x_value,
+            ),
             GameAction::CastFromCommandZone {
                 card_id,
                 target,
@@ -2276,15 +2292,12 @@ impl GameState {
             self.exile.push(card);
             return Ok(events);
         }
-        // Flashback: a spell cast via its Flashback cost is exiled on
-        // resolution instead of going to the graveyard. `cast_flashback`
-        // marks the card with `kicked = true` to flag the path. (Use of the
-        // `kicked` field as the marker is a small overload — there's no
-        // clash because a card can't be cast normally and via flashback
-        // simultaneously, and flashback cards never have actual kicker.)
-        if card.kicked
-            && card.definition.keywords.iter().any(|k| matches!(k, crate::card::Keyword::Flashback(_)))
-        {
+        // Flashback (CR 702.34d): a spell cast via its Flashback cost is
+        // exiled on resolution instead of going to the graveyard.
+        // `cast_flashback` sets `cast_via_flashback = true`; the
+        // resolver consults that flag (it used to overload `kicked`,
+        // which collided with cards that have both Kicker and Flashback).
+        if card.cast_via_flashback {
             self.exile.push(card);
             return Ok(events);
         }
@@ -2471,6 +2484,57 @@ impl GameState {
         None
     }
 
+    /// Mutable variant of `find_card_anywhere` — walks battlefield,
+    /// each player's hand/library/graveyard, and exile (in that order).
+    /// Used by `Effect::GrantMayPlay` to stamp `may_play_until` on a
+    /// card regardless of where the granting effect happens to find it.
+    pub(crate) fn find_card_anywhere_mut(
+        &mut self,
+        id: CardId,
+    ) -> Option<&mut CardInstance> {
+        if self.battlefield.iter().any(|c| c.id == id) {
+            return self.battlefield.iter_mut().find(|c| c.id == id);
+        }
+        for p in &mut self.players {
+            if let Some(c) = p.hand.iter_mut().find(|c| c.id == id) {
+                return Some(c);
+            }
+            if let Some(c) = p.graveyard.iter_mut().find(|c| c.id == id) {
+                return Some(c);
+            }
+            if let Some(c) = p.library.iter_mut().find(|c| c.id == id) {
+                return Some(c);
+            }
+        }
+        self.exile.iter_mut().find(|c| c.id == id)
+    }
+
+    /// Look up which zone a card currently occupies. Returns `None` if
+    /// the card isn't in any visible zone (battlefield, hand, library,
+    /// graveyard, exile, stack). Used by the cast-from-zone path to
+    /// confirm the card is still in the expected zone before lifting it.
+    pub(crate) fn find_card_zone(&self, id: CardId) -> Option<crate::card::Zone> {
+        use crate::card::Zone;
+        if self.battlefield.iter().any(|c| c.id == id) {
+            return Some(Zone::Battlefield);
+        }
+        for p in &self.players {
+            if p.hand.iter().any(|c| c.id == id) {
+                return Some(Zone::Hand);
+            }
+            if p.graveyard.iter().any(|c| c.id == id) {
+                return Some(Zone::Graveyard);
+            }
+            if p.library.iter().any(|c| c.id == id) {
+                return Some(Zone::Library);
+            }
+        }
+        if self.exile.iter().any(|c| c.id == id) {
+            return Some(Zone::Exile);
+        }
+        None
+    }
+
     /// Look up the owner (seat index) of `id` across every public zone:
     /// battlefield, each player's graveyard, each player's hand, the
     /// stack, and exile. Returns `None` if no card with that id exists
@@ -2559,6 +2623,25 @@ fn event_amount(event: &GameEvent) -> u32 {
         | GameEvent::PoisonAdded { amount, .. } => *amount,
         GameEvent::CounterAdded { count, .. } => *count,
         _ => 0,
+    }
+}
+
+/// Characteristic-defining dynamic P/T table (CR 604.x). Maps a card
+/// name to the formula the layer system should use to set its printed
+/// P/T every recompute. Adding a new dynamic-P/T card is one row here;
+/// formula variants live in `card::DynamicPt`.
+///
+/// Current entries:
+/// - Tarmogoyf (MOR): P=N, T=N+1 where N = distinct card types in all
+///   graveyards.
+/// - Cosmogoyf (modern reprint of the same mechanic): same formula.
+/// - Cruel Somnophage (MOM): P=T = controller's graveyard size.
+fn dynamic_pt_for_name(name: &'static str) -> Option<crate::card::DynamicPt> {
+    use crate::card::DynamicPt;
+    match name {
+        "Tarmogoyf" | "Cosmogoyf" => Some(DynamicPt::DistinctTypesInAllGraveyards),
+        "Cruel Somnophage" => Some(DynamicPt::ControllerGraveyardSize),
+        _ => None,
     }
 }
 
@@ -2731,7 +2814,13 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             | StaticEffect::GrantAffinityToISSpells { .. }
             // ExtraEtbCountersForCreatureCasts — read at creature-spell
             // resolution time in `stack.rs::resolve_spell`; no layer effect.
-            | StaticEffect::ExtraEtbCountersForCreatureCasts { .. } => vec![],
+            | StaticEffect::ExtraEtbCountersForCreatureCasts { .. }
+            // EtbTriggerSpotlight — read at ETB trigger dispatch via
+            // `etb_trigger_multiplier`; no layer effect.
+            | StaticEffect::EtbTriggerSpotlight
+            // UncounterableCreaturesOfChosenType — read at cast time by
+            // `caster_grants_uncounterable_with_x`; no layer effect.
+            | StaticEffect::UncounterableCreaturesOfChosenType => vec![],
         })
         .collect()
 }

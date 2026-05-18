@@ -1744,14 +1744,15 @@ pub fn wilt_in_the_heat() -> CardDefinition {
 /// each of those cards, its owner may play it until the end of their next
 /// turn."
 ///
-/// Wired faithfully on the exile half: a `Move { Selector::Target(0), to:
-/// Exile }` against a nonland permanent target, plus a `Move {
-/// Selector::TopOfLibrary, to: Exile }` against the caster's library.
-/// Library-source moves were unblocked in push III (`Effect::Move` now
-/// walks libraries when locating the source card). The "may play those
-/// cards until next end step" rider is omitted — engine has no per-card
-/// "may-play-from-exile-until-EOT" primitive (same gap as Tablet of
-/// Discovery, Ark of Hunger).
+/// Push (modern_decks): all three clauses now ship. The "you may play
+/// those cards until next end step" rider is **now wired** via the new
+/// `Effect::GrantMayPlay` primitive + `Selector::LastMoved` reading the
+/// just-exiled card ids from the resolution-scoped scratch. Both exiled
+/// cards (the targeted permanent and the caster's top-of-library card)
+/// get a permission stamped to their respective owners (`to_owner =
+/// true`) for `EndOfControllersNextTurn`. The recipients then invoke
+/// `GameAction::CastFromZoneWithoutPaying` at a later sorcery-speed
+/// window to recur the card without paying its mana cost.
 pub fn suspend_aggression() -> CardDefinition {
     use crate::effect::ZoneDest;
     use crate::mana::{r, w};
@@ -1777,6 +1778,15 @@ pub fn suspend_aggression() -> CardDefinition {
                     count: Value::Const(1),
                 },
                 to: ZoneDest::Exile,
+            },
+            // Grant may-play to both moved cards. `to_owner: true`
+            // routes each permission to that card's owner (per
+            // printed Oracle: "its owner may play it").
+            Effect::GrantMayPlay {
+                what: Selector::LastMoved,
+                duration: crate::card::MayPlayDuration::EndOfControllersNextTurn,
+                to_owner: true,
+                exile_after: false,
             },
         ]),
         activated_abilities: no_abilities(),

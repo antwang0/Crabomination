@@ -182,6 +182,44 @@ impl WardCost {
     }
 }
 
+/// How long a "you may play/cast that card without paying its mana cost"
+/// permission stays valid after the granting effect resolves. The window
+/// closes during the controller's cleanup at the named boundary; once
+/// expired the `CardInstance.may_play_until` slot clears.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum MayPlayDuration {
+    /// "...until end of turn" — clears at the end of the granting turn.
+    EndOfThisTurn,
+    /// "...until the end of your next turn" — clears at the end of the
+    /// controller's next turn (i.e. one full untap-to-cleanup cycle later).
+    EndOfControllersNextTurn,
+}
+
+/// Per-instance permission for "you may cast that card without paying its
+/// mana cost" — granted by Practiced Scrollsmith, Suspend Aggression,
+/// Elemental Mascot, Tablet of Discovery, Ark of Hunger, Archaic's Agony,
+/// Nita (Forum Conciliator), and similar. Lives on the *card* (not the
+/// player) so it survives zone changes and so the engine can drop it
+/// cleanly when the card moves to a zone where casting it would no longer
+/// make sense (e.g. battlefield, hand).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct MayPlayPermission {
+    /// Who has permission to cast. Most cards grant to the granter's
+    /// controller; Suspend Aggression's "its owner may play it" instead
+    /// grants to the card's owner — the caller sets this accordingly.
+    pub player: usize,
+    /// Turn number when the permission was granted. Used together with
+    /// `duration` to compute expiry.
+    pub granted_turn: u32,
+    pub duration: MayPlayDuration,
+    /// If `true`, the cast resolves with an instance-level
+    /// "exile instead of graveyard" replacement (Nita Forum Conciliator,
+    /// The Dawning Archaic). Sets `cast_via_flashback`-equivalent routing
+    /// at finalize-cast time.
+    #[serde(default)]
+    pub exile_after: bool,
+}
+
 /// Keyword abilities supported by the engine.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Keyword {
@@ -208,6 +246,12 @@ pub enum Keyword {
     Hexproof,
     Shroud,
     CantBeCountered,
+    /// CR 117.x — "If X is N or more, this spell can't be countered."
+    /// Banefire's printed rider. Threaded through cast time:
+    /// `caster_grants_uncounterable_with_x` flips the
+    /// `StackItem::Spell.uncounterable` flag when the X paid is at
+    /// least the threshold.
+    CantBeCounteredIfXAtLeast(u32),
     Indestructible,
     Regenerate(u32),
     Persist,
@@ -504,6 +548,26 @@ pub struct CardDefinition {
     pub affinity_filter: Option<SelectionRequirement>,
 }
 
+/// Characteristic-defining dynamic P/T formula. Read by
+/// `compute_battlefield` to inject a layer-7 `SetPowerToughness` for
+/// the named card. Each variant encodes both the power and toughness
+/// expression so the engine doesn't have to know the printed Oracle's
+/// wording — just the two scalars to set.
+///
+/// Mapping from card name to formula lives in
+/// `game::mod::dynamic_pt_for_name` — matches the lookup-table pattern
+/// used by `lifegain_selfpump_for_name`, `graveyard_anthem_for_name`,
+/// etc. Adding a new dynamic-P/T card is one row in that table.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum DynamicPt {
+    /// Power = N, toughness = N+1 where N is the count of distinct card
+    /// types across every player's graveyard. Tarmogoyf, Cosmogoyf.
+    DistinctTypesInAllGraveyards,
+    /// Power = toughness = size of the controller's graveyard. Cruel
+    /// Somnophage.
+    ControllerGraveyardSize,
+}
+
 /// An alternative (pitch) cost. Replaces the normal mana cost when the
 /// player chooses to cast via this path. Models pitch (Force of Will,
 /// Force of Negation) and evoke (Solitude) — the latter additionally
@@ -654,6 +718,12 @@ pub struct CardInstance {
     /// distinguish hand-casts (rebound triggers) from re-casts from exile
     /// (rebound does **not** chain).
     pub cast_from_hand: bool,
+    /// True if this card was cast from a graveyard via its Flashback
+    /// cost. On resolution the resolver routes the card to exile instead
+    /// of the owner's graveyard. Replaces an earlier overload of the
+    /// `kicked` flag so that a card with both Kicker and Flashback can
+    /// be disambiguated cleanly.
+    pub cast_via_flashback: bool,
     /// "As [this] enters, choose a creature type." Cavern of Souls. The
     /// chosen type narrows which creature spells the controller can cast as
     /// uncounterable through this permanent. `None` until the ETB choice
@@ -672,6 +742,14 @@ pub struct CardInstance {
     /// keywords aren't permanently mutated by an EOT pump (engine fix —
     /// push modern_decks batch 24). `has_keyword` checks both vectors.
     pub granted_keywords_eot: Vec<Keyword>,
+    /// "You may cast/play this card without paying its mana cost" permission
+    /// granted by Practiced Scrollsmith, Suspend Aggression, Nita, …
+    /// Set by `Effect::GrantMayPlay`; consumed by
+    /// `GameAction::CastFromZoneWithoutPaying`; cleared on expiry by
+    /// `clean_per_turn_state` / next-turn cleanup, and also cleared
+    /// whenever the card changes zones (the grantor's "that card" stops
+    /// referring to it once it moves).
+    pub may_play_until: Option<MayPlayPermission>,
 }
 
 impl CardInstance {
@@ -701,9 +779,11 @@ impl CardInstance {
             used_loyalty_ability_this_turn: false,
             evoked: false,
             cast_from_hand: false,
+            cast_via_flashback: false,
             chosen_creature_type: None,
             once_per_turn_used: Vec::new(),
             granted_keywords_eot: Vec::new(),
+            may_play_until: None,
         }
     }
 
@@ -803,9 +883,15 @@ struct CardInstanceWire {
     used_loyalty_ability_this_turn: bool,
     evoked: bool,
     cast_from_hand: bool,
+    /// `#[serde(default)]` so snapshots predating the field deserialize
+    /// as `false` (matching the old "not cast via flashback" path).
+    #[serde(default)]
+    cast_via_flashback: bool,
     chosen_creature_type: Option<CreatureType>,
     #[serde(default)]
     once_per_turn_used: Vec<usize>,
+    #[serde(default)]
+    may_play_until: Option<MayPlayPermission>,
 }
 
 impl serde::Serialize for CardInstance {
@@ -828,8 +914,10 @@ impl serde::Serialize for CardInstance {
             used_loyalty_ability_this_turn: self.used_loyalty_ability_this_turn,
             evoked: self.evoked,
             cast_from_hand: self.cast_from_hand,
+            cast_via_flashback: self.cast_via_flashback,
             chosen_creature_type: self.chosen_creature_type,
             once_per_turn_used: self.once_per_turn_used.clone(),
+            may_play_until: self.may_play_until,
         };
         wire.serialize(ser)
     }
@@ -856,8 +944,10 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         c.used_loyalty_ability_this_turn = wire.used_loyalty_ability_this_turn;
         c.evoked = wire.evoked;
         c.cast_from_hand = wire.cast_from_hand;
+        c.cast_via_flashback = wire.cast_via_flashback;
         c.chosen_creature_type = wire.chosen_creature_type;
         c.once_per_turn_used = wire.once_per_turn_used;
+        c.may_play_until = wire.may_play_until;
         Ok(c)
     }
 }

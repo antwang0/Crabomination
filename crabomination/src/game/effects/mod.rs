@@ -244,6 +244,11 @@ impl GameState {
         // to tokens created by *this* resolution.
         self.last_created_token = None;
         self.last_created_tokens.clear();
+        // Reset last-moved-cards scratch — `Selector::LastMoved` only
+        // refers to cards moved by *this* resolution (Practiced
+        // Scrollsmith's ETB chains Move → GrantMayPlay on the same
+        // moved card via this scratch).
+        self.last_moved_cards.clear();
         // Reset cards-discarded scratch — `Value::CardsDiscardedThisEffect`
         // only counts discards from *this* resolution (Borrowed Knowledge
         // mode 1's "draw cards equal to the number discarded this way").
@@ -622,6 +627,12 @@ impl GameState {
                             let cid = card.id;
                             self.players[p].graveyard.push(card);
                             events.push(GameEvent::CardMilled { player: p, card_id: cid });
+                            // Stash the milled id so a follow-up
+                            // `Selector::LastMoved` in the same Seq can
+                            // target the milled card (Tablet of
+                            // Discovery, Ark of Hunger's "you may play
+                            // that card this turn" rider).
+                            self.last_moved_cards.push(cid);
                         }
                     }
                 }
@@ -1621,6 +1632,11 @@ impl GameState {
                         _ => continue,
                     };
                     self.move_card_to(cid, to, ctx, events);
+                    // Stash the moved id so a downstream
+                    // `Selector::LastMoved` in the same Seq can target
+                    // it (Practiced Scrollsmith's Move → GrantMayPlay
+                    // chain).
+                    self.last_moved_cards.push(cid);
                 }
                 Ok(())
             }
@@ -2232,6 +2248,179 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::GrantMayPlay {
+                what,
+                duration,
+                to_owner,
+                exile_after,
+            } => {
+                // Resolve `what` to a set of cards and stamp each with a
+                // `MayPlayPermission`. The selector can match cards in
+                // any zone — graveyard (Practiced Scrollsmith's target
+                // from your graveyard), exile (Suspend Aggression's
+                // exiled cards), or even hand. The cast-from-zone game
+                // action consults `may_play_until` regardless of zone.
+                let entities = self.resolve_selector(what, ctx);
+                let granter_player = ctx.controller;
+                let granted_turn = self.turn_number;
+                for ent in entities {
+                    let cid = match ent {
+                        EntityRef::Card(id) => id,
+                        _ => continue,
+                    };
+                    // Determine recipient before we take a mut borrow.
+                    let recipient = if *to_owner {
+                        self.find_card_owner(cid).unwrap_or(granter_player)
+                    } else {
+                        granter_player
+                    };
+                    if let Some(card) = self.find_card_anywhere_mut(cid) {
+                        card.may_play_until = Some(crate::card::MayPlayPermission {
+                            player: recipient,
+                            granted_turn,
+                            duration: *duration,
+                            exile_after: *exile_after,
+                        });
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::CastWithoutPayingImmediate {
+                what,
+                source_zone,
+                exile_after,
+            } => {
+                // Resolve `what` to a single card in `source_zone`, ask
+                // the controller via OptionalTrigger, and on yes hand
+                // off to the free-cast helper. The helper auto-targets /
+                // auto-modes the card; ScriptedDecider can override.
+                let entities = self.resolve_selector(what, ctx);
+                let card_id = entities.into_iter().find_map(|e| match e {
+                    EntityRef::Card(id) => Some(id),
+                    _ => None,
+                });
+                let Some(card_id) = card_id else { return Ok(()); };
+                // Confirm the card is actually in the named zone — the
+                // selector may have read a stale target.
+                if self.find_card_zone(card_id) != Some(*source_zone) {
+                    return Ok(());
+                }
+                // Lands are played, not cast — skip them silently. This
+                // makes `ForEach LastMoved → CastWithoutPayingImmediate`
+                // safe to use over a mixed top-of-library exile (e.g.
+                // Improvisation Capstone exiles whatever's on top).
+                let is_land = self
+                    .find_card_anywhere(card_id)
+                    .map(|c| c.definition.card_types.contains(&crate::card::CardType::Land))
+                    .unwrap_or(false);
+                if is_land { return Ok(()); }
+                use crate::decision::{Decision, DecisionAnswer};
+                let source_for_ask = ctx.source.unwrap_or(CardId(0));
+                let answer = self.decider.decide(&Decision::OptionalTrigger {
+                    source: source_for_ask,
+                    description: "Cast without paying?".to_string(),
+                });
+                let yes = matches!(answer, DecisionAnswer::Bool(true));
+                if !yes {
+                    return Ok(());
+                }
+                // Auto-pick a target for the freshly-cast spell. Targets
+                // are picked from the controller's perspective (avoiding
+                // the cast card itself).
+                let card_def = self
+                    .find_card_anywhere(card_id)
+                    .map(|c| c.definition.clone());
+                let Some(card_def) = card_def else { return Ok(()); };
+                let auto_target = self.auto_target_for_effect_avoiding(
+                    &card_def.effect,
+                    ctx.controller,
+                    Some(card_id),
+                );
+                let cast_events = self.cast_card_for_free(
+                    ctx.controller,
+                    card_id,
+                    *source_zone,
+                    auto_target,
+                    vec![],
+                    None,
+                    None,
+                    *exile_after,
+                )?;
+                events.extend(cast_events);
+                Ok(())
+            }
+
+            Effect::RegisterParadigm => {
+                // Register a recurring `YourNextMainPhase` delayed
+                // trigger whose body is `Effect::CastFreeParadigmCopy`.
+                // The trigger's `source` is the resolving Paradigm
+                // card's id; combined with `CardDefinition.exile_on_resolve
+                // = true`, the card lands in exile and stays reachable
+                // for the recurrence. `fires_once: false` so the trigger
+                // survives each firing and fans out again next turn.
+                use crate::game::types::{DelayedKind, DelayedTrigger};
+                let Some(source) = ctx.source else { return Ok(()); };
+                self.delayed_triggers.push(DelayedTrigger {
+                    controller: ctx.controller,
+                    source,
+                    kind: DelayedKind::YourNextMainPhase,
+                    effect: Effect::CastFreeParadigmCopy,
+                    target: None,
+                    fires_once: false,
+                });
+                Ok(())
+            }
+
+            Effect::CastFreeParadigmCopy => {
+                // Find the original Paradigm-exiled card by id (the
+                // trigger's `source`). If it's missing from exile (e.g.
+                // someone Bojuka-Bogged the exile zone — unlikely in
+                // SOS but defensive), drop the trigger.
+                use crate::card::Zone;
+                let source = ctx.source.unwrap_or(CardId(0));
+                let original_def = self
+                    .exile
+                    .iter()
+                    .find(|c| c.id == source)
+                    .map(|c| c.definition.clone());
+                let Some(def) = original_def else { return Ok(()); };
+                // Ask the controller "cast a copy?"
+                use crate::decision::{Decision, DecisionAnswer};
+                let answer = self.decider.decide(&Decision::OptionalTrigger {
+                    source,
+                    description: format!("Paradigm: cast a copy of {}?", def.name),
+                });
+                if !matches!(answer, DecisionAnswer::Bool(true)) {
+                    return Ok(());
+                }
+                // Mint a tokenized copy of the exiled card in exile.
+                let new_id = self.next_id();
+                let mut copy = crate::card::CardInstance::new(new_id, def.clone(), ctx.controller);
+                copy.is_token = true;
+                self.exile.push(copy);
+                // Auto-target for the copy.
+                let auto_target = self.auto_target_for_effect_avoiding(
+                    &def.effect,
+                    ctx.controller,
+                    Some(new_id),
+                );
+                // Free-cast from exile. Drop the result events into our
+                // surrounding events buffer.
+                let cast_events = self.cast_card_for_free(
+                    ctx.controller,
+                    new_id,
+                    Zone::Exile,
+                    auto_target,
+                    vec![],
+                    None,
+                    None,
+                    false,
+                )?;
+                events.extend(cast_events);
+                Ok(())
+            }
+
             Effect::WinGame { who } => {
                 // CR 104.2a — "you win the game". Resolve `who` to a single
                 // player and eliminate every other (non-eliminated) player.
@@ -2306,6 +2495,12 @@ impl GameState {
                 .copied()
                 .filter(|id| self.battlefield.iter().any(|c| c.id == *id))
                 .map(EntityRef::Permanent)
+                .collect(),
+            Selector::LastMoved => self
+                .last_moved_cards
+                .iter()
+                .copied()
+                .map(EntityRef::Card)
                 .collect(),
             Selector::CastSpellTarget(slot) => {
                 // Walk the stack for the spell whose SpellCast event fired

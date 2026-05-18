@@ -18,7 +18,7 @@ Two adjacent catalogs:
 
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
-| SOS (255 cards) | 210 | 44 | 1 |
+| SOS (255 cards) | 217 | 38 | 0 |
 | STX (327 cards) | 573 | 12 | 0 |
 | STA reprints (in STX boosters) | 46 | 0 | — |
 

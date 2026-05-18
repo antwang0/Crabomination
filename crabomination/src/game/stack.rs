@@ -691,6 +691,37 @@ impl GameState {
         // fires on Untap entry).
         self.active_player_idx = self.next_alive_seat(self.active_player_idx);
         self.turn_number += 1;
+        // Sweep expired `may_play_until` permissions across every zone.
+        // Runs *after* the turn-number bump so `elapsed = turn_number -
+        // granted_turn` reflects the cleanups that have actually
+        // completed. EndOfThisTurn → expires after one bump (elapsed
+        // ≥ 1). EndOfControllersNextTurn → expires after one full
+        // controller-turn loop (elapsed ≥ player_count) — in a 2p game
+        // that's 2 turn bumps later, i.e. the controller's *next*
+        // cleanup.
+        let player_count = self.players.len() as u32;
+        let turn_number = self.turn_number;
+        let sweep = |c: &mut crate::card::CardInstance| {
+            if let Some(perm) = c.may_play_until {
+                let elapsed = turn_number.saturating_sub(perm.granted_turn);
+                let expired = match perm.duration {
+                    crate::card::MayPlayDuration::EndOfThisTurn => elapsed >= 1,
+                    crate::card::MayPlayDuration::EndOfControllersNextTurn => {
+                        elapsed >= player_count.max(1)
+                    }
+                };
+                if expired {
+                    c.may_play_until = None;
+                }
+            }
+        };
+        for c in self.battlefield.iter_mut() { sweep(c); }
+        for c in self.exile.iter_mut() { sweep(c); }
+        for p in self.players.iter_mut() {
+            for c in p.hand.iter_mut() { sweep(c); }
+            for c in p.graveyard.iter_mut() { sweep(c); }
+            for c in p.library.iter_mut() { sweep(c); }
+        }
         self.give_priority_to_active();
     }
 

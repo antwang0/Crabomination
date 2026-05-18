@@ -149,10 +149,12 @@ pub fn diary_of_dreams() -> CardDefinition {
 /// graveyard.) / {T}: Add {R}. / {T}: Add {R}{R}. Spend this mana only
 /// to cast instant and sorcery spells."
 ///
-/// ETB-mill is wired faithfully via `Effect::Mill { count: 1 }`. The
-/// "you may play that card this turn" rider is omitted (engine has no
-/// per-card "may-play-from-graveyard-until-EOT" primitive — same gap as
-/// Suspend Aggression's "may play exiled cards until end of next turn").
+/// Push (modern_decks): the "you may play that card this turn" rider is
+/// **now wired** via `Effect::GrantMayPlay` + `Selector::LastMoved`
+/// (which reads the freshly-milled card's id from the resolution-scoped
+/// scratch). The controller invokes
+/// `GameAction::CastFromZoneWithoutPaying` during a later sorcery-speed
+/// window to recur the milled card for free.
 ///
 /// Both mana abilities are wired as plain `{T}: Add {R}` adders — the
 /// "spend only on instant/sorcery" restriction on the {T}: Add {R}{R}
@@ -208,10 +210,18 @@ pub fn tablet_of_discovery() -> CardDefinition {
         ],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::Mill {
-                who: Selector::You,
-                amount: Value::Const(1),
-            },
+            effect: Effect::Seq(vec![
+                Effect::Mill {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
+                Effect::GrantMayPlay {
+                    what: Selector::LastMoved,
+                    duration: crate::card::MayPlayDuration::EndOfThisTurn,
+                    to_owner: false,
+                    exile_after: false,
+                },
+            ]),
         }],
         static_abilities: vec![],
         base_loyalty: 0,
@@ -371,10 +381,11 @@ pub fn resonating_lute() -> CardDefinition {
 /// per-card emission, same approximation as Hardened Academic / Spirit
 /// Mascot / Garrison Excavator).
 ///
-/// The {T}: Mill activation is wired faithfully; the "you may play that
-/// card this turn" rider is omitted (engine has no per-card "may-play-
-/// from-graveyard-until-EOT" primitive — same gap as Tablet of Discovery
-/// and Suspend Aggression).
+/// Push (modern_decks): the {T}: Mill's "you may play that card this
+/// turn" rider is **now wired** via `Effect::GrantMayPlay` +
+/// `Selector::LastMoved`. After the mill, the controller can free-cast
+/// the milled card during a later sorcery-speed window via
+/// `GameAction::CastFromZoneWithoutPaying`.
 pub fn ark_of_hunger() -> CardDefinition {
     use crate::mana::{r, w};
     CardDefinition {
@@ -390,10 +401,18 @@ pub fn ark_of_hunger() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             mana_cost: ManaCost::default(),
-            effect: Effect::Mill {
-                who: Selector::You,
-                amount: Value::Const(1),
-            },
+            effect: Effect::Seq(vec![
+                Effect::Mill {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
+                Effect::GrantMayPlay {
+                    what: Selector::LastMoved,
+                    duration: crate::card::MayPlayDuration::EndOfThisTurn,
+                    to_owner: false,
+                    exile_after: false,
+                },
+            ]),
             once_per_turn: false,
             sorcery_speed: false,
             sac_cost: false,

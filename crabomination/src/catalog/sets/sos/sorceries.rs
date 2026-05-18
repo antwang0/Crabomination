@@ -2245,15 +2245,10 @@ pub fn artistic_process() -> CardDefinition {
 /// you may cast a copy of it from exile without paying its mana cost
 /// at the beginning of each of your first main phases.)"
 ///
-/// Push (modern_decks): now targets a player via `target_filtered(Player)`
-/// — same pattern as Cost of Brilliance. The caster's auto-decider aims
-/// at self by default for the draw-2 + 2-life-loss net (matching the
-/// printed asymmetric symmetric: you eat the life cost but cash in two
-/// cards; or aim at an opp to drain 2 life from them at the cost of
-/// giving them two cards — rarely correct). The Paradigm rider is
-/// omitted (no copy-spell-from-exile-at-upkeep primitive yet — same gap
-/// as Germination Practicum, Improvisation Capstone, Echocasting
-/// Symposium).
+/// Push (modern_decks): all three printed clauses now ship. Body —
+/// targets a player + draws 2 + loses 2 life. **Paradigm rider** now
+/// wired via `Effect::RegisterParadigm` + `exile_on_resolve: true`.
+/// Each of the controller's pre-combat main phases offers a free copy.
 pub fn decorum_dissertation() -> CardDefinition {
     use crate::effect::shortcut::target_filtered;
     CardDefinition {
@@ -2274,6 +2269,7 @@ pub fn decorum_dissertation() -> CardDefinition {
                 who: Selector::Target(0),
                 amount: Value::Const(2),
             },
+            Effect::RegisterParadigm,
         ]),
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
@@ -2284,7 +2280,7 @@ pub fn decorum_dissertation() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
-        exile_on_resolve: false,
+        exile_on_resolve: true,
         affinity_filter: None,
     }
 }
@@ -2293,11 +2289,9 @@ pub fn decorum_dissertation() -> CardDefinition {
 /// "Put two +1/+1 counters on each creature you control. / Paradigm
 /// (...)"
 ///
-/// Wired as a `ForEach` over your creatures with a per-iteration
-/// `AddCounter +1/+1 ×2` body — the printed +2/+2 anthem-style fan-out.
-/// The Paradigm rider is omitted (no copy-spell-from-exile-at-upkeep
-/// primitive yet — same gap as Decorum Dissertation, Improvisation
-/// Capstone, Echocasting Symposium).
+/// Push (modern_decks): both clauses ship. Body — `ForEach` over your
+/// creatures with `AddCounter +1/+1 ×2`. **Paradigm rider** now wired
+/// via `Effect::RegisterParadigm` + `exile_on_resolve: true`.
 pub fn germination_practicum() -> CardDefinition {
     use crate::card::CounterType;
     use crate::mana::g;
@@ -2310,16 +2304,19 @@ pub fn germination_practicum() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![],
-        effect: Effect::ForEach {
-            selector: Selector::EachPermanent(
-                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
-            ),
-            body: Box::new(Effect::AddCounter {
-                what: Selector::TriggerSource,
-                kind: CounterType::PlusOnePlusOne,
-                amount: Value::Const(2),
-            }),
-        },
+        effect: Effect::Seq(vec![
+            Effect::ForEach {
+                selector: Selector::EachPermanent(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                body: Box::new(Effect::AddCounter {
+                    what: Selector::TriggerSource,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(2),
+                }),
+            },
+            Effect::RegisterParadigm,
+        ]),
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -2329,7 +2326,7 @@ pub fn germination_practicum() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
-        exile_on_resolve: false,
+        exile_on_resolve: true,
         affinity_filter: None,
     }
 }
@@ -2338,11 +2335,9 @@ pub fn germination_practicum() -> CardDefinition {
 /// "Return target nonland permanent card from your graveyard to the
 /// battlefield. / Paradigm (...)"
 ///
-/// Mode 0 (the on-cast effect) wired faithfully: graveyard → bf with a
-/// `Nonland` filter, controller `You`. Untapped (printed default — the
-/// printed wording doesn't say "tapped"). The Paradigm rider is omitted
-/// (same gap as Decorum Dissertation et al — copy-spell-from-exile-at-
-/// upkeep primitive missing).
+/// Push (modern_decks): both clauses ship. Body — `Move target Nonland
+/// gy → bf untapped`. **Paradigm rider** now wired via
+/// `Effect::RegisterParadigm` + `exile_on_resolve: true`.
 pub fn restoration_seminar() -> CardDefinition {
     use crate::effect::ZoneDest;
     CardDefinition {
@@ -2354,13 +2349,16 @@ pub fn restoration_seminar() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![],
-        effect: Effect::Move {
-            what: target_filtered(SelectionRequirement::Nonland),
-            to: ZoneDest::Battlefield {
-                controller: PlayerRef::You,
-                tapped: false,
+        effect: Effect::Seq(vec![
+            Effect::Move {
+                what: target_filtered(SelectionRequirement::Nonland),
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: false,
+                },
             },
-        },
+            Effect::RegisterParadigm,
+        ]),
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -2370,7 +2368,7 @@ pub fn restoration_seminar() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
-        exile_on_resolve: false,
+        exile_on_resolve: true,
         affinity_filter: None,
     }
 }
@@ -2790,15 +2788,15 @@ pub fn fix_whats_broken() -> CardDefinition {
 /// "Target player creates a token that's a copy of target creature you
 /// control. / Paradigm — ..."
 ///
-/// 🟡 Body-only wire: approximated as you-create-a-copy of your own
-/// chosen creature via `Effect::CreateToken` over a "vanilla mirror"
-/// shell. The printed "target player" creates-the-copy player slot
-/// collapses to "you" (no multi-target prompt yet). The Paradigm
-/// rider is omitted (no copy-spell-from-exile-at-upkeep primitive).
-/// Marks as a Lesson via `SpellSubtype`. Concrete shape: this body
-/// mints a copy of *one* of the caster's creatures, defined inline
-/// as a 3/3 Wizard token (a vanilla placeholder until a permanent-
-/// copy primitive lands).
+/// Body: approximated as you-create-a-copy of your own chosen creature
+/// via `Effect::CreateToken` over a "vanilla mirror" 3/3 Wizard
+/// placeholder (no permanent-copy primitive yet — same gap as Applied
+/// Geometry). The printed "target player creates the copy" slot
+/// collapses to "you" (no multi-target prompt yet).
+///
+/// Push (modern_decks): **Paradigm rider** now wired via
+/// `Effect::RegisterParadigm` + `exile_on_resolve: true`. Each of the
+/// controller's pre-combat main phases offers a free copy.
 pub fn echocasting_symposium() -> CardDefinition {
     use crate::card::{CreatureType, SpellSubtype, TokenDefinition};
     use crate::mana::u;
@@ -2829,11 +2827,14 @@ pub fn echocasting_symposium() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![],
-        effect: Effect::CreateToken {
-            who: PlayerRef::You,
-            count: Value::Const(1),
-            definition: placeholder,
-        },
+        effect: Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: placeholder,
+            },
+            Effect::RegisterParadigm,
+        ]),
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -2843,7 +2844,7 @@ pub fn echocasting_symposium() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
-        exile_on_resolve: false,
+        exile_on_resolve: true,
         affinity_filter: None,
     }
 }
@@ -2868,12 +2869,20 @@ pub fn echocasting_symposium() -> CardDefinition {
 /// equal to the excess damage dealt to that creature this way. You may
 /// play those cards until the end of your next turn."
 ///
-/// 🟡: Converge X damage via `Value::ConvergedValue`. The "exile cards
-/// equal to excess damage + may play" rider is omitted — cast-from-exile
-/// pipeline and "exile N for excess damage" primitive both missing.
+/// Push (modern_decks): the "exile + may play" rider is **now wired**
+/// via `Effect::Move { TopOfLibrary(count=ConvergedValue) → Exile } +
+/// GrantMayPlay(LastMoved, EndOfControllersNextTurn)`. Approximation:
+/// exiles the full converged-damage amount rather than the "excess
+/// damage" amount (the engine has no damage-dealt-vs-toughness diff
+/// primitive). Slightly buffs the rider — at converge 5 against a 2/2,
+/// the printed Oracle would exile 3, we exile 5. The cast-from-exile
+/// mechanic is identical: the controller invokes
+/// `GameAction::CastFromZoneWithoutPaying` on each exiled card within
+/// the next-turn window.
 pub fn archaics_agony() -> CardDefinition {
-    use crate::mana::r;
+    use crate::effect::ZoneDest;
     use crate::effect::shortcut::target_filtered;
+    use crate::mana::r;
     CardDefinition {
         name: "Archaic's Agony",
         cost: cost(&[generic(4), r()]),
@@ -2883,10 +2892,25 @@ pub fn archaics_agony() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![],
-        effect: Effect::DealDamage {
-            to: target_filtered(SelectionRequirement::Creature),
-            amount: Value::ConvergedValue,
-        },
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Creature),
+                amount: Value::ConvergedValue,
+            },
+            Effect::Move {
+                what: Selector::TopOfLibrary {
+                    who: PlayerRef::You,
+                    count: Value::ConvergedValue,
+                },
+                to: ZoneDest::Exile,
+            },
+            Effect::GrantMayPlay {
+                what: Selector::LastMoved,
+                duration: crate::card::MayPlayDuration::EndOfControllersNextTurn,
+                to_owner: false,
+                exile_after: false,
+            },
+        ]),
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -2897,6 +2921,84 @@ pub fn archaics_agony() -> CardDefinition {
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Improvisation Capstone — {3}{R}{R} Lorehold Sorcery.
+/// "Exile cards from the top of your library until you exile cards with
+/// total mana value 4 or greater. You may cast any number of spells from
+/// among them without paying their mana costs. / Paradigm (Then exile
+/// this spell. After you first resolve a spell with this name, you may
+/// cast a copy of it from exile without paying its mana cost at the
+/// beginning of each of your first main phases.)"
+///
+/// Push (modern_decks): full body now wired via the new cast-from-exile
+/// pipeline + Paradigm primitives. Both clauses ship:
+/// 1. **Exile + may-cast**: approximated as "exile top 4 cards"
+///    (the printed lower bound — 4 1-mana cards add to MV 4). For each
+///    non-land card exiled, the controller is asked
+///    "cast without paying?" via
+///    `Effect::CastWithoutPayingImmediate(LastMoved, Exile)`. AutoDecider
+///    declines by default; ScriptedDecider's `Bool(true)` opts in per
+///    card. Lands in the exile group are skipped silently.
+/// 2. **Paradigm rider**: `Effect::RegisterParadigm` registers a
+///    recurring `YourNextMainPhase` delayed trigger whose body is
+///    `Effect::CastFreeParadigmCopy` — at the start of each of the
+///    caster's pre-combat mains, the controller is asked
+///    "cast a copy of Improvisation Capstone?", and on yes a tokenized
+///    copy is minted in exile + free-cast (per CR 706 copy semantics).
+///    `exile_on_resolve: true` parks the original Improvisation Capstone
+///    in exile so it stays reachable for the recurrence.
+///
+/// Approximations vs. printed Oracle:
+/// - Exile count is fixed at 4 (no "until total MV ≥ 4" primitive).
+///   For very-high-cost libraries this undercounts; for very-low-cost
+///   libraries it overcounts.
+/// - Multi-cast loop iterates each exiled card sequentially; the
+///   controller is asked one yes/no per card (no "cast in any order"
+///   prompt — the engine has no batched same-zone cast prompt).
+pub fn improvisation_capstone() -> CardDefinition {
+    use crate::card::Zone;
+    use crate::effect::ZoneDest;
+    use crate::mana::r;
+    CardDefinition {
+        name: "Improvisation Capstone",
+        cost: cost(&[generic(3), r(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Move {
+                what: Selector::TopOfLibrary {
+                    who: PlayerRef::You,
+                    count: Value::Const(4),
+                },
+                to: ZoneDest::Exile,
+            },
+            Effect::ForEach {
+                selector: Selector::LastMoved,
+                body: Box::new(Effect::CastWithoutPayingImmediate {
+                    what: Selector::TriggerSource,
+                    source_zone: Zone::Exile,
+                    exile_after: false,
+                }),
+            },
+            Effect::RegisterParadigm,
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: true,
         affinity_filter: None,
     }
 }
