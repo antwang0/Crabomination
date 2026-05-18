@@ -2267,4 +2267,44 @@ pub mod shortcut {
             duration: Duration::EndOfTurn,
         })
     }
+
+    /// Convenience: Magecraft trigger dealing `amount` damage to any
+    /// chosen target (Creature ∨ Player ∨ Planeswalker). Wraps
+    /// [`magecraft`] with a `DealDamage` body whose target is a
+    /// generic "any target" selector. Used by ~20 STX cards
+    /// (Lorehold Apprentice, Bombastic Strixhaven Mage's magecraft half,
+    /// Prismari Pyrowriter, Reverberator, Strikevanguard, Sparkmage,
+    /// etc.) to collapse the recurring 6-line pattern into one line.
+    pub fn magecraft_ping_any(amount: i32) -> TriggeredAbility {
+        use crate::card::SelectionRequirement;
+        magecraft(Effect::DealDamage {
+            to: target_filtered(
+                SelectionRequirement::Creature
+                    .or(SelectionRequirement::Player)
+                    .or(SelectionRequirement::Planeswalker),
+            ),
+            amount: Value::Const(amount),
+        })
+    }
+
+    /// Convenience: Magecraft trigger dealing `amount` damage to each
+    /// opponent. The drain-burn template for Prismari/Lorehold ping-each-
+    /// opp creatures (Lorehold Pyrescribe, Pyrosage, Bombastic spell-
+    /// slingers).
+    pub fn magecraft_ping_each_opp(amount: i32) -> TriggeredAbility {
+        magecraft(Effect::DealDamage {
+            to: Selector::Player(PlayerRef::EachOpponent),
+            amount: Value::Const(amount),
+        })
+    }
+
+    /// Convenience: Magecraft trigger gaining `amount` life. Used by
+    /// Silverquill Lifeglyph / Spectrescribe / Witness / Vinetender style
+    /// "gain N life on each IS cast" payoffs.
+    pub fn magecraft_gain_life(amount: i32) -> TriggeredAbility {
+        magecraft(Effect::GainLife {
+            who: Selector::You,
+            amount: Value::Const(amount),
+        })
+    }
 }

@@ -586,7 +586,7 @@ pub fn strixhaven_vigil() -> CardDefinition {
 /// mana slot.
 pub fn bombastic_strixhaven_mage() -> CardDefinition {
     use crate::card::{EventKind, EventScope, EventSpec, TriggeredAbility};
-    use crate::effect::shortcut::{magecraft, target_filtered};
+    use crate::effect::shortcut::target_filtered;
     CardDefinition {
         name: "Bombastic Strixhaven Mage",
         cost: cost(&[generic(2), r()]),
@@ -613,14 +613,7 @@ pub fn bombastic_strixhaven_mage() -> CardDefinition {
                     amount: Value::Const(2),
                 },
             },
-            magecraft(Effect::DealDamage {
-                to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
-                ),
-                amount: Value::Const(1),
-            }),
+            crate::effect::shortcut::magecraft_ping_any(1),
         ],
         static_abilities: vec![],
         base_loyalty: 0,
