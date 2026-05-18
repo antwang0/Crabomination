@@ -3928,7 +3928,10 @@ pub fn banefire() -> CardDefinition {
         subtypes: Subtypes::default(),
         power: 0,
         toughness: 0,
-        keywords: vec![],
+        // "If X is 5 or more, this spell can't be countered."
+        // `caster_grants_uncounterable_with_x` reads the threshold off
+        // this keyword at cast time instead of matching on the name.
+        keywords: vec![Keyword::CantBeCounteredIfXAtLeast(5)],
         effect: Effect::DealDamage {
             to: Selector::Target(0),
             amount: Value::XFromCost,

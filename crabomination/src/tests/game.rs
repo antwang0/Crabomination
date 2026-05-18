@@ -3615,6 +3615,81 @@ fn damping_sphere_downgrades_dual_lands_to_colorless() {
 }
 
 #[test]
+fn damping_sphere_preserves_non_mana_activated_abilities() {
+    // Regression: Damping Sphere downgrades a land's *mana* abilities to
+    // {T}: Add {C} — it must not erase non-mana activated abilities
+    // (fetchland sac, manland animate, etc.). Build a synthetic land
+    // with both a multi-color mana ability and a non-mana sac ability
+    // and assert that the sac ability survives the downgrade.
+    use crate::card::{ActivatedAbility, CardDefinition, CardType};
+    use crate::effect::{Effect, ManaPayload, PlayerRef};
+    use crate::mana::{Color, ManaCost};
+
+    let mana_ability = ActivatedAbility {
+        tap_cost: true,
+        mana_cost: ManaCost::default(),
+        effect: Effect::AddMana {
+            who: PlayerRef::You,
+            pool: ManaPayload::Colors(vec![Color::White, Color::Blue]),
+        },
+        once_per_turn: false,
+        sorcery_speed: false,
+        sac_cost: false,
+        condition: None,
+        life_cost: 0,
+        from_graveyard: false,
+        exile_self_cost: false,
+        exile_other_filter: None,
+        self_counter_cost_reduction: None,
+    };
+    // Sentinel non-mana ability: tap + sacrifice the land. The body is
+    // Noop — what matters is that it's not a mana ability so the
+    // downgrade preserves it.
+    let sac_ability = ActivatedAbility {
+        tap_cost: true,
+        mana_cost: ManaCost::default(),
+        effect: Effect::Noop,
+        once_per_turn: false,
+        sorcery_speed: false,
+        sac_cost: true,
+        condition: None,
+        life_cost: 0,
+        from_graveyard: false,
+        exile_self_cost: false,
+        exile_other_filter: None,
+        self_counter_cost_reduction: None,
+    };
+    let fancy_land = CardDefinition {
+        name: "Fancy Test Land",
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![mana_ability, sac_ability],
+        ..Default::default()
+    };
+
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::damping_sphere());
+    let id = g.add_card_to_hand(0, fancy_land);
+    g.perform_action(GameAction::PlayLand(id)).expect("play fancy land");
+
+    let land = g.battlefield_find(id).expect("land on battlefield");
+    assert_eq!(
+        land.definition.activated_abilities.len(),
+        2,
+        "non-mana sac ability must survive the Damping Sphere downgrade"
+    );
+    // The surviving abilities should be: the original non-mana sac, and
+    // the inserted {T}: Add {C}. Order: non-mana retained first, then
+    // the inserted colorless mana ability appended.
+    assert!(land.definition.activated_abilities[0].sac_cost,
+        "the non-mana sac ability should be preserved at its original slot");
+    let mana_ab = &land.definition.activated_abilities[1];
+    assert!(matches!(
+        mana_ab.effect,
+        Effect::AddMana { pool: ManaPayload::Colorless(_), .. }
+    ));
+}
+
+#[test]
 fn damping_sphere_leaves_basic_lands_alone() {
     // A single-color basic (Forest) should pass through unchanged: still
     // exactly one ability, still produces {G}.

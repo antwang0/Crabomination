@@ -557,7 +557,18 @@ pub fn elesh_norn_mother_of_machines() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
+        // The ETB-trigger-spotlight static; `etb_trigger_multiplier`
+        // scans the battlefield for any permanent carrying this static
+        // ability (rather than matching on the printed name).
+        static_abilities: vec![crate::card::StaticAbility {
+            description:
+                "Permanents entering the battlefield don't cause abilities of \
+                 permanents your opponents control to trigger. If a permanent \
+                 entering the battlefield causes a triggered ability of a \
+                 permanent you control to trigger, that ability triggers an \
+                 additional time.",
+            effect: crate::effect::StaticEffect::EtbTriggerSpotlight,
+        }],
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,

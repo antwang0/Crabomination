@@ -466,7 +466,15 @@ pub fn cavern_of_souls() -> CardDefinition {
                 what: Selector::This,
             },
         }],
-        static_abilities: vec![],
+        // The "creature spells of the chosen type can't be countered"
+        // half. `caster_grants_uncounterable_with_x` scans for this
+        // static instead of matching on the printed name, then reads
+        // `chosen_creature_type` off the permanent for the gate.
+        static_abilities: vec![crate::card::StaticAbility {
+            description:
+                "Creature spells you cast of the chosen type can't be countered.",
+            effect: crate::effect::StaticEffect::UncounterableCreaturesOfChosenType,
+        }],
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
