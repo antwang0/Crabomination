@@ -4438,14 +4438,41 @@ resolution time" in the Suggested next-up tasks section.
   `Effect::FlipCoin` primitive landing. Promote to ✅ when Karplusan
   Minotaur / Mana Clash / Krark's Thumb test fixtures pass.
 
-- ⏳ **`StaticEffect::GrantAffinityToInstantsOrSorceries { filter }`** —
-  Witherbloom, the Balancer's second printed clause is "Instant and
-  sorcery spells you cast have affinity for creatures." The engine's
-  new `affinity_filter` slot is per-card (baked at printing time); a
-  static that *grants* affinity to every IS spell the controller casts
-  needs a separate path. Wiring shape: at cast time, check every
-  battlefield permanent for this static, and if found, treat the
-  caster's IS spells as if they had `affinity_filter:
-  Some(spell_filter)`. The cost reduction layer already handles the
-  rest. Same primitive shape unblocks any future "your IS spells have
-  [keyword]" grant (storm, cascade, etc.).
+- ✅ **`StaticEffect::GrantAffinityToISSpells { permanent_filter }`**
+  (push modern_decks batch 25 follow-on) — Witherbloom, the Balancer's
+  second printed clause "Instant and sorcery spells you cast have
+  affinity for creatures" **now lands** via the new static. At cast
+  time, `cost_reduction_for_spell` checks every battlefield permanent
+  for this static and adds 1 to the reduction per matching permanent.
+  Restricted to the controller's IS spells; opp's IS spells correctly
+  unaffected. Promotes **Witherbloom, the Balancer** 🟡 → ✅. Future
+  "your IS spells have affinity for [Artifacts/Lands/Pests]" cards
+  plug in unchanged. Tests: `witherbloom_balancer_grants_affinity_
+  to_is_spells`, `witherbloom_balancer_static_does_not_affect_opp_
+  spells`.
+
+### Suggested next-up tasks (additions from batch 26)
+
+- ✅ **STX corpus growth via 7 follow-on cards** — push modern_decks
+  batch 26 brings the STX catalog to 485 ✅ + 12 🟡. New cards:
+  `pest_studies` ({1}{B}{G} Pest Lesson), `lecture_in_strategy`
+  ({1}{R}{W} team-pump Lesson), `advanced_cartography` ({1}{G}{U}
+  ramp+Scry Lesson), `bombastic_strixhaven_mage` ({2}{R} 2/3 ETB-ping
+  + magecraft ping), `mage_hunters_strike` ({1}{B} -3/-3 instant),
+  `mascot_researcher` ({2}{G} 2/2 counter-strewer), `strixhaven_tutor`
+  ({2}{U} 2/2 Scry-Cantrip). All using existing primitives; 7 new
+  tests lock in the play patterns.
+
+- ⏳ **`StaticEffect::ClearAbilities { applies_to, duration }` for
+  Mercurial Transformation / Kasmina's Transmutation** — the existing
+  `Modification::RemoveAllAbilities` clears keywords on the layer-6
+  computed view but doesn't suppress activated / triggered / static
+  abilities. Wiring shape: add a `cleared_abilities: bool` field on
+  `ComputedPermanent`, set it whenever a `RemoveAllAbilities`
+  modification affects the source. Then:
+  - `activate_ability` rejects activations from cleared sources
+  - `dispatch_triggers_for_events` skips cleared sources
+  - `compute_battlefield` filters `static_ability_to_effects` calls
+    for cleared sources
+  Promotes both STA reprint 🟡s and the future Imprisoned in the Moon
+  / Lignify / Kenrith's Transformation series.
