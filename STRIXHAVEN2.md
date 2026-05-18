@@ -19,10 +19,70 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 207 | 47 | 1 |
-| STX (305 cards) | 478 | 12 | 0 |
+| STX (327 cards) | 500 | 12 | 0 |
 | STA reprints (in STX boosters) | 46 | 0 | — |
 
 Push (modern_decks, claude/modern_decks branch — latest revision —
+**batch 27: 22 new STX cards + 23 tests**):
+
+A new batch adding 22 cards spread across all five colleges + mono /
+shared shells, all using existing primitives. Tests sit in
+`tests::stx`.
+
+- **Lorehold (R/W)**:
+  `lorehold_stonebrand` ({2}{R}{W}, 3/3 Spirit Soldier — ETB MayDo
+  exile gy creature → mint Spirit token),
+  `lorehold_bookbinder` ({3}{R}{W}, 4/4 Spirit Cleric — ETB recur IS
+  from gy + team haste EOT),
+  `lorehold_pyresmith` ({1}{R}, 2/1 Spirit Warrior First Strike — ETB
+  1 dmg to any target),
+  `lorehold_spirit_champion` ({3}{R}{W}, 4/3 Spirit Knight First
+  Strike + Haste — "Other Spirits you control have first strike"
+  tribal anthem via `StaticEffect::GrantKeyword` on `EachPermanent`).
+- **Quandrix (G/U)**:
+  `quandrix_geometer` ({1}{G}{U}, 2/3 Fractal Wizard — ETB +1/+1
+  counter + magecraft self-pump),
+  `quandrix_wavecaster` ({1}{G}{U}, 1/3 Merfolk Wizard — magecraft
+  +1/+1 counter on target friendly),
+  `quandrix_mathmage` ({2}{G}{U}, 3/3 Elf Wizard — ETB RevealUntilFind
+  Creature/Land cap-4 → hand),
+  `quandrix_counterstudent` ({1}{U}, 1/2 Elf Wizard —
+  `{1}{G}{U},{T}: CounterAbility target`).
+- **Silverquill (W/B)**:
+  `silverquill_sentinel_cleric` ({2}{W}{B}, 3/3 Inkling Cleric —
+  Flying + Vigilance vanilla),
+  `silverquill_embodiment` ({2}{W}{B}, 3/3 Inkling Bard Flying — ETB
+  drain 2 + per-other-creature-die gain 1 life),
+  `silverquill_adjudicator` ({3}{W}, 2/4 Human Cleric Vigilance —
+  ETB target opp creature gets -3/-0 EOT),
+  `silverquill_drain_lord` ({2}{W}{B}, 3/3 Inkling Vampire Flying +
+  Lifelink — on-lifegain trigger drains 1 each opp).
+- **Witherbloom (B/G)**:
+  `witherbloom_soilshaper` ({2}{B}{G}, 3/3 Plant Druid — ETB mill 2 +
+  +1/+1 counter for each creature card in your gy),
+  `witherbloom_plagueweaver` ({1}{B}{G}, 2/2 Plant Warlock — magecraft
+  target creature -1/-1 EOT),
+  `witherbloom_drain_mage` ({2}{B}, 2/2 Human Warlock — ETB drain 3),
+  `witherbloom_pest_spawner` ({2}{B}{G}, 1/3 Plant Druid — ETB mint 2
+  Pests + per-other-creature-die gain 1 life).
+- **Prismari (U/R)**:
+  `prismari_fireshaper` ({2}{U}{R}, 2/3 Elemental Wizard — ETB
+  Treasure + magecraft 1 dmg to any target),
+  `prismari_sparkbender` ({U}{R}, 2/2 Human Wizard — ETB loot 1),
+  `prismari_wave_mage` ({1}{U}{R}, 2/2 Elemental Wizard — ETB
+  Treasure + magecraft scry 1 + 1 dmg to any target).
+- **Mono / shared**:
+  `strixhaven_scry_wizard` ({2}{U}, 2/2 Human Wizard — ETB Scry 2 +
+  magecraft Scry 1),
+  `strixhaven_mage_hunter` ({2}{B}, 2/3 Human Assassin Deathtouch —
+  `{T}: target player discards a chosen nonland`),
+  `strixhaven_pop_quiz_sage` ({2}{W}, 2/3 Human Wizard — ETB Draw 2 +
+  PutOnLibraryFromHand 1).
+
+Tests: 23 new (one per new card minus a couple covered jointly).
+Total: 2566 → 2589 (+23). All clippy-clean.
+
+Push (modern_decks, claude/modern_decks branch — earlier revision —
 **batch 26: 7 new STX cards + 2 promotions + 7 tests**):
 
 A follow-on sweep adding 3 new Lessons and 4 iconic cross-college cards

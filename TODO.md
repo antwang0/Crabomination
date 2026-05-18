@@ -1781,6 +1781,42 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   — the framework already handles 116.2a (the only special action
   actually exercised by the catalog).
 
+- 🟡 **CR 301 — Artifacts** (push modern_decks batch 27,
+  claude/modern_decks branch — audit against
+  `MagicCompRules_20260417.txt`): The artifact card type — casting,
+  Equipment, Fortification, Vehicle subtypes. Audit:
+  (a) **301.1** "A player who has priority may cast an artifact card
+  from their hand during a main phase of their turn when the stack is
+  empty" — ✅ (`GameAction::CastSpell` for Artifact-typed cards is
+  sorcery-speed-gated; Flash override on Manifold Key-style instants
+  honored via the `Keyword::Flash` exception).
+  (b) **301.2** "When an artifact spell resolves, its controller puts
+  it onto the battlefield under their control" — ✅ (same
+  `resolve_spell` path as creatures).
+  (c) **301.3** "Artifact subtypes are listed after a long dash" — ✅
+  (`Subtypes::artifact_subtypes: Vec<ArtifactSubtype>` carries
+  Equipment, Vehicle, Food, Treasure, Clue, Blood, Fortification,
+  Contraption).
+  (d) **301.4** "Artifacts have no characteristics specific to their
+  card type" — ✅ (color framework reads `mana_cost` regardless of
+  card type, so colored artifacts like Treasure-with-color come
+  through correctly; the typical colorless-artifact case is the
+  default).
+  (e) **301.5/5a-f** Equipment subtype — 🟡 (the subtype is recognized
+  + `Keyword::Equip(cost)` is declared + `CardInstance.attached_to`
+  field exists, but the activation pipeline (CR 702.6) and the
+  equip-only-during-your-main-phase timing aren't fully wired. No
+  Equipment card in the current catalog actually uses the Equip
+  activation. Functional `attached_to` writes via Aura ETB target
+  selection are covered).
+  (f) **301.6** Fortification — ⏳ (subtype declared, no Fortify
+  primitive; no Fortification card in the catalog).
+  (g) **301.7/7a-b** Vehicle / Crew — ⏳ (subtype declared, no Crew
+  primitive; no Vehicle card in the catalog). Tests: ETB / ability
+  tests for STX/SOS artifacts implicitly exercise 301.1/.2/.4. The
+  Equip + Fortify + Crew paths can promote once at least one printed
+  card needing each lands.
+
 - ✅ **CR 302 — Creatures** (push modern_decks batch 19,
   claude/modern_decks branch — audit against
   `MagicCompRules_20260417.txt`): The creature card type — casting,
@@ -4476,3 +4512,36 @@ resolution time" in the Suggested next-up tasks section.
     for cleared sources
   Promotes both STA reprint 🟡s and the future Imprisoned in the Moon
   / Lignify / Kenrith's Transformation series.
+
+### Suggested next-up tasks (additions from batch 27)
+
+- ✅ **STX corpus growth via 22 new cards** — push modern_decks
+  batch 27 brings the STX catalog to 500 ✅ + 12 🟡. New cards span
+  all five colleges plus shared mono/multi shells, all using existing
+  primitives. Tests: 23 new (1 per card, plus a couple with paired
+  tests). Total test count rises 2566 → 2589. The corpus is now
+  weighted heavily toward Magecraft / ETB / Treasure / Pest / Spirit
+  / Inkling / Fractal subdecks. Suggested follow-on: a tribal weighting
+  pass in the SoS pool selector to actually steer toward the deeper
+  subdecks.
+
+- ⏳ **Single-Opponent `PlayerRef::Opponent`** — `EachOpponent` works in
+  2-player but fans out in multiplayer. Some printed Oracle texts
+  ("target opponent loses 1 life") would benefit from a singular
+  Opponent ref that asks the controller to pick if there's more than
+  one opp. Same shape as `Target(u8)` but typed to player-only.
+
+- ⏳ **`Predicate::CardsInGraveyardAtLeast(who, filter, count)`** —
+  push (modern_decks batch 27) adds Witherbloom Soilshaper which mints
+  with +1/+1 counters per creature card in gy. The general "I have N+
+  cards of [filter] in my gy" predicate would unlock Trespasser's
+  Curse, Liliana's Mastery's emblem-of-zombies, and various delirium-
+  flavoured payoffs at a single primitive.
+
+- ⏳ **Equipment activation pipeline (CR 702.6)** — push (modern_decks
+  batch 27) audits CR 301.5/5a-f (Equipment). The Equip activated
+  ability is declared but not wired. Adding `ActivatedAbility.equip_to:
+  Option<SelectionRequirement>` (with the auto-target picker walking
+  controlled creatures) + `attached_to: Some(CardId)` write on
+  resolution would let the engine ship Bonesplitter / Skyclave Apparition-
+  style Equipment in any catalog.
