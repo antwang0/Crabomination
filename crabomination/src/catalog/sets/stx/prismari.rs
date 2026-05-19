@@ -3604,6 +3604,88 @@ pub fn prismari_mirror_mage() -> CardDefinition {
     }
 }
 
+// ── Batch 37: more Prismari cards ───────────────────────────────────────────
+
+/// Prismari Sparkmage — {2}{R}, 2/2 Human Wizard.
+/// Synthesised Oracle: "When this creature enters, deal 2 damage to any
+/// target. Magecraft — ping 1 each opponent."
+pub fn prismari_sparkmage_v2() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Sparkmage II",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: Effect::DealDamage {
+                    to: target_filtered(
+                        SelectionRequirement::Creature
+                            .or(SelectionRequirement::Player)
+                            .or(SelectionRequirement::Planeswalker),
+                    ),
+                    amount: Value::Const(2),
+                },
+            },
+            magecraft_ping_each_opp(1),
+        ],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Eddy — {U}, Instant.
+/// Synthesised Oracle: "Draw a card. Scry 1."
+pub fn prismari_eddy() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Eddy",
+        cost: cost(&[u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
 /// Prismari Cinderdrake — {4}{U}{R}, 4/4 Elemental Dragon with Flying.
 /// Synthesised Oracle: "When this creature enters, deal 3 damage to any
 /// target."
