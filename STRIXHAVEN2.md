@@ -19,18 +19,18 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 217 | 38 | 0 |
-| STX (327 cards) | 655 | 12 | 0 |
+| STX (327 cards) | 660 | 12 | 0 |
 | STA reprints (in STX boosters) | 46 | 0 | — |
 
 Push (modern_decks, claude/modern_decks branch — latest revision —
-**batch 32: 54 new STX cards (12 Witherbloom + 15 Lorehold +
-8 Silverquill + 8 Quandrix + 5 Prismari + 5 Lessons + 1 Cross-school)
-+ 56 new tests (all clippy-clean) + CR 107 audit**):
+**batch 32: 59 new STX cards (12 Witherbloom + 15 Lorehold +
+8 Silverquill + 8 Quandrix + 5 Prismari + 5 Lessons + 5 extras +
+1 Cross-school) + 61 new tests (all clippy-clean) + CR 107 audit**):
 
-A clean five-college sweep distributing 54 fresh synthesised STX cards
-across every college plus 5 new Lessons. All built on existing engine
-primitives — no engine work needed. Tests sit in `tests::stx::*` keyed
-by card name. Total tests: 2789 (was 2733).
+A clean five-college sweep distributing 59 fresh synthesised STX cards
+across every college plus 5 new Lessons + 5 cross-school extras. All
+built on existing engine primitives — no engine work needed. Tests sit
+in `tests::stx::*` keyed by card name. Total tests: 2794 (was 2733).
 
 - **Witherbloom (B/G)** — 12 new cards:
   `witherbloom_pestswarm` ({2}{B}{G} 3/2 Plant Warrior — ETB mints 2 Pests),
@@ -111,12 +111,21 @@ by card name. Total tests: 2789 (was 2733).
   Lesson — 4 dmg to creature/PW), `plant_adept_lesson` ({1}{G} Lesson
   — +2/+2 EOT + Trample).
 
+- **Strixhaven extras (cross-school)** — 5 new cards:
+  `strixhaven_honor_guard` ({1}{W} 2/2 Human Soldier Vigilance — ETB
+  gain 1 life + on-lifegain +0/+1 EOT), `strixhaven_sapper` ({1}{B} 1/2
+  Human Rogue Menace — ETB each opp loses 1), `strixhaven_cartographer_b32`
+  ({1}{G} 1/2 Elf Druid — ETB RevealUntilFind cap=3 → Land to hand),
+  `strixhaven_glyphmage` ({2}{U} 2/3 Human Wizard — magecraft Scry 1),
+  `strixhaven_field_researcher` ({2}{G} 2/3 Human Druid — ETB +1/+1
+  counter on each creature you control).
+
 CR 107 audit added to TODO.md covering numbers/symbols framework
 (integers, X-cost handling, mana symbols). Two new lock-in tests
 (`cr_107_1c_x_zero_for_x_cost_spell_resolves_cleanly`,
 `cr_107_3g_non_stack_x_treated_as_zero`).
 
-Tests: 56 new (54 cards + 2 CR 107 audit). Total: 2733 → 2789 (+56).
+Tests: 61 new (59 cards + 2 CR 107 audit). Total: 2733 → 2794 (+61).
 All clippy-clean. Prior batch 31:
 
 Prior push (modern_decks, claude/modern_decks branch — prior revision —

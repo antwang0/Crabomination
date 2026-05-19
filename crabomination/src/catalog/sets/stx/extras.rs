@@ -31688,3 +31688,218 @@ pub fn strixhaven_drainsong() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 32 — Additional STX extras ────────────────────────────────────────
+
+/// Strixhaven Honor Guard — {1}{W}, 2/2 Human Soldier Vigilance.
+///
+/// Synthesised Oracle: "When this creature enters, gain 1 life. Whenever
+/// you gain life, this creature gets +0/+1 until end of turn."
+///
+/// 2-mana sticky lifegain enabler. Pairs with Light of Promise / Felisa for
+/// chained scaling.
+pub fn strixhaven_honor_guard() -> CardDefinition {
+    CardDefinition {
+        name: "Strixhaven Honor Guard",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::LifeGained, EventScope::YourControl),
+                effect: Effect::PumpPT {
+                    what: Selector::This,
+                    power: Value::Const(0),
+                    toughness: Value::Const(1),
+                    duration: Duration::EndOfTurn,
+                },
+            },
+        ],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Strixhaven Sapper — {1}{B}, 1/2 Human Rogue Menace.
+///
+/// Synthesised Oracle: "When this creature enters, each opponent loses 1
+/// life."
+pub fn strixhaven_sapper() -> CardDefinition {
+    CardDefinition {
+        name: "Strixhaven Sapper",
+        cost: cost(&[generic(1), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Rogue],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![Keyword::Menace],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::LoseLife {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Strixhaven Cartographer — {1}{G}, 1/2 Elf Druid.
+///
+/// Synthesised Oracle: "When this creature enters, look at the top three
+/// cards of your library. You may reveal a land card from among them and
+/// put it into your hand. Put the rest on the bottom of your library in a
+/// random order."
+pub fn strixhaven_cartographer_b32() -> CardDefinition {
+    CardDefinition {
+        name: "Strixhaven Cartographer",
+        cost: cost(&[generic(1), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::RevealUntilFind {
+                who: PlayerRef::You,
+                find: SelectionRequirement::HasCardType(CardType::Land),
+                cap: Value::Const(3),
+                to: ZoneDest::Hand(PlayerRef::You),
+                life_per_revealed: 0,
+                miss_dest: crate::effect::RevealMissDest::BottomRandom,
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Strixhaven Glyphmage — {2}{U}, 2/3 Human Wizard.
+///
+/// Synthesised Oracle: "Magecraft — Whenever you cast or copy an instant or
+/// sorcery spell, scry 1."
+pub fn strixhaven_glyphmage() -> CardDefinition {
+    CardDefinition {
+        name: "Strixhaven Glyphmage",
+        cost: cost(&[generic(2), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::Scry {
+            who: PlayerRef::You,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Strixhaven Field Researcher — {2}{G}, 2/3 Human Druid.
+///
+/// Synthesised Oracle: "When this creature enters, put a +1/+1 counter on
+/// each creature you control."
+pub fn strixhaven_field_researcher() -> CardDefinition {
+    CardDefinition {
+        name: "Strixhaven Field Researcher",
+        cost: cost(&[generic(2), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::ForEach {
+                selector: Selector::EachPermanent(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                body: Box::new(Effect::AddCounter {
+                    what: Selector::TriggerSource,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                }),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

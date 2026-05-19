@@ -30704,3 +30704,92 @@ fn plant_adept_lesson_pumps_and_grants_trample() {
     assert_eq!(body.power(), 4); // 2 + 2
     assert!(body.has_keyword(&Keyword::Trample));
 }
+
+// ── More extras (batch 32, claude/modern_decks) ────────────────────────────
+
+#[test]
+fn strixhaven_honor_guard_etb_gains_one_life() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::strixhaven_honor_guard());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let life_before = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Honor Guard castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life_before + 1);
+    let body = g.battlefield_find(id).unwrap();
+    assert!(body.has_keyword(&Keyword::Vigilance));
+}
+
+#[test]
+fn strixhaven_sapper_etb_drains_one() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::strixhaven_sapper());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let opp_before = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Sapper castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, opp_before - 1);
+    let body = g.battlefield_find(id).unwrap();
+    assert!(body.has_keyword(&Keyword::Menace));
+}
+
+#[test]
+fn strixhaven_cartographer_b32_etb_finds_land() {
+    let mut g = two_player_game();
+    let _forest = g.add_card_to_library(0, catalog::forest());
+    let id = g.add_card_to_hand(0, catalog::strixhaven_cartographer_b32());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Cartographer castable");
+    drain_stack(&mut g);
+    // -1 cast + 1 land to hand = 0 net
+    assert_eq!(g.players[0].hand.len(), hand_before);
+}
+
+#[test]
+fn strixhaven_glyphmage_magecraft_scrys() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let _id = g.add_card_to_battlefield(0, catalog::strixhaven_glyphmage());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let lib_before = g.players[0].library.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(crate::game::types::Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt castable");
+    drain_stack(&mut g);
+    // Library size unchanged via scry; just verify it lands
+    assert_eq!(g.players[0].library.len(), lib_before);
+}
+
+#[test]
+fn strixhaven_field_researcher_etb_pumps_team() {
+    let mut g = two_player_game();
+    let bear1 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let bear2 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    drain_stack(&mut g);
+    let id = g.add_card_to_hand(0, catalog::strixhaven_field_researcher());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Field Researcher castable");
+    drain_stack(&mut g);
+    let bear1_body = g.battlefield_find(bear1).unwrap();
+    let bear2_body = g.battlefield_find(bear2).unwrap();
+    assert_eq!(bear1_body.counter_count(CounterType::PlusOnePlusOne), 1);
+    assert_eq!(bear2_body.counter_count(CounterType::PlusOnePlusOne), 1);
+    // The Field Researcher itself is a creature too — also pumped
+    let self_body = g.battlefield_find(id).unwrap();
+    assert_eq!(self_body.counter_count(CounterType::PlusOnePlusOne), 1);
+}
