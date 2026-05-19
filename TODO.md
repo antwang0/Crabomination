@@ -580,6 +580,62 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   `tests::sos::copied_spell_does_not_linger_in_graveyard_after_resolution`
   and any "creature token dies and leaves graveyard" test.
 
+- 🟡 **CR 510 — Combat Damage Step** (push modern_decks batch 38,
+  claude/modern_decks branch — audit against `MagicCompRules_20260417.txt`):
+  Combat damage assignment and dealing. Audit:
+  (a) **510.1** "active player announces how each attacking creature
+  assigns its combat damage, then the defending player announces" — ✅
+  (`resolve_combat_damage_with_filter` in `game/combat.rs` walks
+  `self.attacking` first for the active player's damage dealing, then
+  iterates `self.block_map` for blocker damage — turn-based action, no
+  stack push).
+  (b) **510.1a** "Each attacking creature and each blocking creature
+  assigns combat damage equal to its power" — ✅ (`AttackerInfo.power`
+  reads `ComputedPermanent.power` which honors layer-7 P/T modifications;
+  `blocker_damage_to_attacker` reads blocker's power similarly).
+  (c) **510.1b** unblocked attacker assigns to player/PW it's attacking —
+  ✅ (`deal_combat_damage_to_target` matches on `AttackTarget::Player`
+  vs `Planeswalker` and routes to `deal_damage_to_player` or
+  `deal_damage_to_planeswalker`).
+  (d) **510.1c** blocked attacker assigns to creatures blocking it (split
+  by controller if multiple blockers) — ✅ for the single-blocker case;
+  🟡 for the multi-blocker split (engine assigns all damage to the first
+  blocker in declaration order — the player-chooses-split rider isn't
+  surfaced through a Decision prompt; AutoDecider fans out the "deal all
+  to first blocker" path which is CR-legal but not optimal).
+  (e) **510.1d** blocking creature assigns to creatures it's blocking —
+  ✅ for the single-attacker case; same multi-attacker split 🟡 gap.
+  (f) **510.1e** total damage assignment validity check — n/a (the
+  assignment is computed by the engine, not by an external player, so it
+  can't be illegal by construction).
+  (g) **510.2** "Second, all combat damage that's been assigned is dealt
+  simultaneously. No player has the chance to cast spells or activate
+  abilities between assigned and dealt" — ✅ (`resolve_combat_damage_with_
+  filter` computes attacker damage then resolves it in one pass — no
+  priority interlude, no `give_priority` calls between the assignment
+  loop and the application loop).
+  (h) **510.3** "Third, the active player gets priority" — ✅
+  (`give_priority_to_active` at the end of the damage step).
+  (i) **510.4** first-strike split: the regular combat damage step is
+  skipped if no attackers/blockers have first/double strike — ✅
+  (`step_advance` checks for first-strike presence and inserts the
+  `FirstStrikeDamage` step when needed; the regular damage step always
+  fires for the survivors).
+  (j) **510.5** Lifelink trigger — ✅ (the `Keyword::Lifelink` branch
+  in `deal_combat_damage_to_target` emits a `LifeGained` event for the
+  damage dealer's controller equal to the actual damage dealt; the
+  `prevent_combat_damage` flag zeroes the gain for symmetry).
+  (k) **510.6** "Damage that's prevented isn't dealt" / "damage from
+  multiple creatures with deathtouch" — ✅ (deathtouch lethal-damage
+  logic in `is_lethal_for_blocker` flips the bookkeeping; replacement
+  effects like Owlin Shieldmage's `prevent_combat_damage_this_turn` clear
+  during cleanup).
+  Tests: extensive combat-coverage in `crabomination/src/tests/game.rs`
+  (single-blocker damage, lifelink swing, first-strike clears blocker
+  before regular damage, prevent_combat_damage zeros damage and
+  lifelink). Promote to ✅ when the multi-blocker damage-split player
+  prompt lands (CR 510.1c-d).
+
 - 🟡 **CR 506 — Combat Phase** (push modern_decks audit,
   claude/modern_decks branch): The combat-phase framework — five
   steps, attacker/blocker declaration, removed-from-combat semantics,
