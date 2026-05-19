@@ -6821,3 +6821,66 @@ pub fn silverquill_inkflame() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+/// Silverquill Penlord — {3}{W}{B}, 4/4 Vampire Cleric Flying + Lifelink.
+/// Synthesised Oracle: "Flying, lifelink. When this creature enters,
+/// each opponent loses 3 life and you gain 3 life." A 5-mana flying
+/// drain finisher.
+pub fn silverquill_penlord() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Penlord",
+        cost: cost(&[generic(3), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Flying, Keyword::Lifelink],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_drain(3)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Inkling Disciple — {1}{W}, 1/1 Inkling Cleric Flying.
+/// Synthesised Oracle: "Flying. When this creature enters, you gain
+/// 1 life." 2-mana defensive evasive lifegain.
+pub fn inkling_disciple() -> CardDefinition {
+    CardDefinition {
+        name: "Inkling Disciple",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_gain_life(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

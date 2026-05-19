@@ -5063,3 +5063,74 @@ pub fn quandrix_equation_v2() -> CardDefinition {
     }
 }
 
+
+/// Quandrix Synthsage — {2}{G}{U}, 3/3 Elf Wizard.
+/// Synthesised Oracle: "Magecraft — Whenever you cast or copy an instant
+/// or sorcery spell, put a +1/+1 counter on this creature. When this
+/// creature enters, you gain 2 life." 4-mana defensive magecraft body
+/// that grows over the game.
+pub fn quandrix_synthsage() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Synthsage",
+        cost: cost(&[generic(2), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![
+            crate::effect::shortcut::etb_gain_life(2),
+            magecraft(Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            }),
+        ],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Fractal Tidecaller II — {2}{U}, 0/0 Fractal Wizard.
+/// Synthesised Oracle: "Flying. This creature enters with two +1/+1
+/// counters on it." 3-mana 2/2 evasive Fractal body.
+pub fn fractal_tidecaller_v2() -> CardDefinition {
+    CardDefinition {
+        name: "Fractal Tidecaller II",
+        cost: cost(&[generic(2), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 0,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(2))),
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

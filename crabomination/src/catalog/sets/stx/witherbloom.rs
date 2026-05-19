@@ -5957,3 +5957,79 @@ pub fn witherbloom_bloomstalk() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+/// Witherbloom Coatlcoiler — {2}{B}{G}, 3/3 Snake Druid Deathtouch.
+/// Synthesised Oracle: "Deathtouch. When this creature enters, target
+/// player loses 2 life." 4-mana deathtouch body that also disrupts.
+pub fn witherbloom_coatlcoiler() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Coatlcoiler",
+        cost: cost(&[generic(2), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Snake, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Deathtouch],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![crate::effect::shortcut::etb(Effect::LoseLife {
+            who: target_filtered(SelectionRequirement::Player),
+            amount: Value::Const(2),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Cinderscribe — {3}{B}{G}, 3/4 Plant Warrior Trample.
+/// Synthesised Oracle: "Trample. When this creature enters, create two
+/// 1/1 black-and-green Pest tokens. Each opponent loses 2 life."
+/// 5-mana 3-for-1 finisher that establishes board presence and pressure.
+pub fn witherbloom_cinderscribe() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Cinderscribe",
+        cost: cost(&[generic(3), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Trample],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![crate::effect::shortcut::etb(Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                definition: stx_pest_token(),
+                count: Value::Const(2),
+            },
+            Effect::LoseLife {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(2),
+            },
+        ]))],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

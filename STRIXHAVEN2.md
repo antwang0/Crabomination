@@ -19,13 +19,38 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 221 | 35 | 0 |
-| STX (327 cards) | 883 | 10 | 0 |
+| STX (327 cards) | 893 | 10 | 0 |
 | STA reprints (in STX boosters) | 47 | 0 | — |
 
 Push (modern_decks, claude/modern_decks branch — latest revision —
-**batch 42: 25 new STX cards across all five colleges (5 Silverquill +
-5 Witherbloom + 5 Lorehold + 5 Quandrix + 5 Prismari) + 25 new tests.
-Total tests: 3038 (was 3013).**
+**batch 42: 35 new STX cards across all five colleges (7 Silverquill +
+7 Witherbloom + 7 Lorehold + 7 Quandrix + 7 Prismari) + 35 new tests.
+Total tests: 3048 (was 3013).**
+
+- **Lorehold follow-up** — 2 more cards:
+  `lorehold_knight_champion` ({3}{R}{W} 3/3 Spirit Knight Vigilance +
+  Lifelink — attacks-gain 2 life), `lorehold_pyrelancer` ({2}{R}{W}
+  2/3 Spirit Soldier First Strike — ETB 2 damage to target opp creature).
+
+- **Witherbloom follow-up** — 2 more cards:
+  `witherbloom_coatlcoiler` ({2}{B}{G} 3/3 Snake Druid Deathtouch — ETB
+  target player loses 2 life), `witherbloom_cinderscribe` ({3}{B}{G}
+  3/4 Plant Warrior Trample — ETB mint 2 Pests + each opp loses 2).
+
+- **Silverquill follow-up** — 2 more cards:
+  `silverquill_penlord` ({3}{W}{B} 4/4 Vampire Cleric Flying +
+  Lifelink — ETB drain 3), `inkling_disciple` ({1}{W} 1/1 Inkling
+  Cleric Flying — ETB gain 1 life).
+
+- **Quandrix follow-up** — 2 more cards:
+  `quandrix_synthsage` ({2}{G}{U} 3/3 Elf Wizard — ETB gain 2 life +
+  magecraft self +1/+1 counter), `fractal_tidecaller_v2` ({2}{U} 0/0
+  Fractal Wizard Flying — enters_with 2 +1/+1 counters → 2/2 evasive).
+
+- **Prismari follow-up** — 2 more cards:
+  `prismari_pyroartist` ({2}{R} 2/3 Human Wizard — magecraft 1 dmg to
+  target Creature/Player), `prismari_brushpyre` ({2}{U}{R} 4/3
+  Elemental Wizard Haste — magecraft +1/+0 EOT).
 
 - **Silverquill (W/B)** — 5 new cards:
   `silverquill_spellbinder` ({2}{W}{B} 2/3 Vampire Cleric Lifelink —

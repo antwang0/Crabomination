@@ -4619,3 +4619,73 @@ pub fn prismari_soundsmith() -> CardDefinition {
     }
 }
 
+
+/// Prismari Pyroartist — {2}{R}, 2/3 Human Wizard.
+/// Synthesised Oracle: "Magecraft — Whenever you cast or copy an instant
+/// or sorcery spell, deal 1 damage to target creature or player." A
+/// 3-mana magecraft ping body with a sturdier toughness than
+/// Prismari Emberscribe.
+pub fn prismari_pyroartist() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Pyroartist",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::DealDamage {
+            to: target_filtered(
+                SelectionRequirement::Creature.or(SelectionRequirement::Player),
+            ),
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Brushpyre — {2}{U}{R}, 4/3 Elemental Wizard Haste.
+/// Synthesised Oracle: "Haste. Magecraft — Whenever you cast or copy an
+/// instant or sorcery spell, this creature gets +1/+0 until end of turn."
+/// 4-mana haste threat that becomes a magecraft snowballer.
+pub fn prismari_brushpyre() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Brushpyre",
+        cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 3,
+        keywords: vec![Keyword::Haste],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_self_pump(1, 0)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

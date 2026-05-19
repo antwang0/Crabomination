@@ -6526,3 +6526,78 @@ pub fn spirit_bookburner() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+/// Lorehold Knight-Champion — {3}{R}{W}, 3/3 Spirit Knight.
+/// Synthesised Oracle: "Vigilance, lifelink. Whenever this creature
+/// attacks, you gain 2 life." 5-mana stabilizer that converts attacks
+/// into a defensive lifegain stream.
+pub fn lorehold_knight_champion() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Knight-Champion",
+        cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Vigilance, Keyword::Lifelink],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Pyrelancer — {2}{R}{W}, 2/3 Spirit Soldier First Strike.
+/// Synthesised Oracle: "First strike. When this creature enters, it
+/// deals 2 damage to target creature an opponent controls." A 4-mana
+/// removal-on-a-body with a sturdy combat-ready frame.
+pub fn lorehold_pyrelancer() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Pyrelancer",
+        cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::FirstStrike],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![crate::effect::shortcut::etb(Effect::DealDamage {
+            to: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+            ),
+            amount: Value::Const(2),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
