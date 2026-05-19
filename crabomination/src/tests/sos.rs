@@ -2714,7 +2714,144 @@ fn tenured_concocter_infusion_pumps_self_when_life_gained() {
     assert_eq!(pumped.toughness, 5);
 }
 
-// ── Traumatic Critique ──────────────────────────────────────────────────────
+#[test]
+fn tenured_concocter_draws_when_opp_targets_it_with_scripted_yes() {
+    // Opp casts Lightning Bolt targeting P0's Tenured Concocter. The
+    // BecameTarget trigger fires with caster=P1 (opponent). ScriptedDecider
+    // says yes → P0 draws a card.
+    let mut g = two_player_game();
+    let conc = g.add_card_to_battlefield(0, catalog::tenured_concocter());
+    g.clear_sickness(conc);
+    // Seed P0's library so the draw has something to pull.
+    g.add_card_to_library(0, catalog::island());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    // P1 has priority by default (turn 0 has P0 active but we'll just
+    // give P1 priority for the cast).
+    g.priority.player_with_priority = 1;
+    let hand_before = g.players[0].hand.len();
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Permanent(conc)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Bolt castable for {R}");
+    drain_stack(&mut g);
+
+    assert_eq!(
+        g.players[0].hand.len(),
+        hand_before + 1,
+        "P0 should draw 1 card after Concocter is targeted by opp's Bolt"
+    );
+}
+
+#[test]
+fn tenured_concocter_does_not_trigger_when_owner_self_targets() {
+    // P0 casts Lightning Bolt targeting their own Tenured Concocter
+    // (an unusual but legal play). The trigger should NOT fire because
+    // the caster is not an opponent. Hand-before contains the Bolt;
+    // hand-after = hand-before - 1 (Bolt cast) if no draw.
+    let mut g = two_player_game();
+    let conc = g.add_card_to_battlefield(0, catalog::tenured_concocter());
+    g.clear_sickness(conc);
+    g.add_card_to_library(0, catalog::island());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    // Scripted yes — but the trigger shouldn't even ask.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let hand_before = g.players[0].hand.len();
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Permanent(conc)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Bolt castable for {R}");
+    drain_stack(&mut g);
+
+    // No draw — hand lost just the Bolt (cast).
+    assert_eq!(
+        g.players[0].hand.len(),
+        hand_before - 1,
+        "P0 should NOT draw — Concocter targeted by its own controller"
+    );
+}
+
+#[test]
+fn tenured_concocter_does_not_draw_with_auto_decider_no_default() {
+    // AutoDecider's MayDo default is false (decline). Verify the
+    // trigger fires but the draw is declined when no scripted answer
+    // is provided.
+    let mut g = two_player_game();
+    let conc = g.add_card_to_battlefield(0, catalog::tenured_concocter());
+    g.clear_sickness(conc);
+    g.add_card_to_library(0, catalog::island());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    let hand_before = g.players[0].hand.len();
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Permanent(conc)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Bolt castable for {R}");
+    drain_stack(&mut g);
+
+    // AutoDecider declines MayDo — no draw.
+    assert_eq!(
+        g.players[0].hand.len(),
+        hand_before,
+        "AutoDecider declines the may-draw; hand unchanged"
+    );
+}
+
+#[test]
+fn tenured_concocter_does_not_trigger_when_opp_targets_other_permanent() {
+    // Opp targets a different permanent (their own creature or P0's
+    // bear) — the BecameTarget event fires for the OTHER permanent,
+    // not Concocter. Concocter's trigger checks target == source.id
+    // so it should NOT fire here.
+    let mut g = two_player_game();
+    let conc = g.add_card_to_battlefield(0, catalog::tenured_concocter());
+    g.clear_sickness(conc);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    g.add_card_to_library(0, catalog::island());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let hand_before = g.players[0].hand.len();
+
+    // Bolt targets P0's bear, not the Concocter.
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Bolt castable for {R}");
+    drain_stack(&mut g);
+
+    // Concocter's BecameTarget trigger checks target == source.id;
+    // since opp's Bolt targeted the bear (not Concocter), no trigger.
+    assert_eq!(
+        g.players[0].hand.len(),
+        hand_before,
+        "Concocter shouldn't trigger when opp targets a different permanent"
+    );
+}
 
 #[test]
 fn traumatic_critique_x_damage_loots() {
@@ -5839,6 +5976,119 @@ fn divergent_equation_returns_instant_from_graveyard() {
     assert!(g.players[0].hand.iter().any(|c| c.id == bolt_id), "Bolt in hand");
     assert!(!g.players[0].graveyard.iter().any(|c| c.id == bolt_id),
         "Bolt left graveyard");
+}
+
+#[test]
+fn divergent_equation_returns_x_cards_from_graveyard_at_x_two() {
+    // X=2 → return 2 instants from gy. Seed 3 instants; only 2 should
+    // come back to hand (the engine walks gy iteration order).
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::divergent_equation());
+    let bolt_a = g.next_id();
+    let mut a = crate::card::CardInstance::new(bolt_a, catalog::lightning_bolt(), 0);
+    a.controller = 0;
+    g.players[0].graveyard.push(a);
+    let bolt_b = g.next_id();
+    let mut b = crate::card::CardInstance::new(bolt_b, catalog::lightning_bolt(), 0);
+    b.controller = 0;
+    g.players[0].graveyard.push(b);
+    let bolt_c = g.next_id();
+    let mut c = crate::card::CardInstance::new(bolt_c, catalog::lightning_bolt(), 0);
+    c.controller = 0;
+    g.players[0].graveyard.push(c);
+
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(4); // X=2 → 2+2+U = 5 mana
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: Some(2),
+    })
+    .expect("Divergent Equation castable for {X=2}{X=2}{U}");
+    drain_stack(&mut g);
+
+    // Two of three Bolts should be in hand; one stays in graveyard.
+    let in_hand = [bolt_a, bolt_b, bolt_c]
+        .iter()
+        .filter(|&&bid| g.players[0].hand.iter().any(|c| c.id == bid))
+        .count();
+    assert_eq!(in_hand, 2, "X=2 returns exactly two cards from graveyard");
+    let in_gy = [bolt_a, bolt_b, bolt_c]
+        .iter()
+        .filter(|&&bid| g.players[0].graveyard.iter().any(|c| c.id == bid))
+        .count();
+    assert_eq!(in_gy, 1, "one card stays in graveyard");
+}
+
+#[test]
+fn divergent_equation_returns_zero_at_x_zero() {
+    // X=0 → take no cards from gy. The cantrip-with-no-effect mode.
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::divergent_equation());
+    let bolt_a = g.next_id();
+    let mut a = crate::card::CardInstance::new(bolt_a, catalog::lightning_bolt(), 0);
+    a.controller = 0;
+    g.players[0].graveyard.push(a);
+
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: Some(0),
+    })
+    .expect("Divergent Equation castable for {X=0}{X=0}{U}");
+    drain_stack(&mut g);
+
+    assert!(!g.players[0].hand.iter().any(|c| c.id == bolt_a),
+        "Bolt should stay in graveyard at X=0");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == bolt_a),
+        "Bolt should remain in graveyard");
+}
+
+#[test]
+fn divergent_equation_caps_at_available_cards() {
+    // X=3 but only 1 IS card in gy — return the one card, no error.
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::divergent_equation());
+    let bolt_a = g.next_id();
+    let mut a = crate::card::CardInstance::new(bolt_a, catalog::lightning_bolt(), 0);
+    a.controller = 0;
+    g.players[0].graveyard.push(a);
+
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(6); // X=3 → 3+3+U
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: Some(3),
+    })
+    .expect("Divergent Equation castable for {X=3}{X=3}{U}");
+    drain_stack(&mut g);
+
+    assert!(g.players[0].hand.iter().any(|c| c.id == bolt_a),
+        "the only IS card should be in hand");
+}
+
+#[test]
+fn divergent_equation_filters_to_instants_and_sorceries() {
+    // Seed a creature card alongside IS — only the IS comes back.
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::divergent_equation());
+    let bolt = g.next_id();
+    let mut b = crate::card::CardInstance::new(bolt, catalog::lightning_bolt(), 0);
+    b.controller = 0;
+    g.players[0].graveyard.push(b);
+    let bear = g.next_id();
+    let mut br = crate::card::CardInstance::new(bear, catalog::grizzly_bears(), 0);
+    br.controller = 0;
+    g.players[0].graveyard.push(br);
+
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: Some(2),
+    })
+    .expect("Divergent Equation castable for {X=2}");
+    drain_stack(&mut g);
+
+    assert!(g.players[0].hand.iter().any(|c| c.id == bolt),
+        "Bolt (instant) returns to hand");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == bear),
+        "Grizzly Bears (creature) stays in graveyard");
 }
 
 #[test]
@@ -10247,6 +10497,145 @@ fn skycoach_waypoint_taps_for_colorless() {
     assert_eq!(g.players[0].mana_pool.colorless_amount(), c_before + 1);
     let c = g.battlefield.iter().find(|c| c.id == land).unwrap();
     assert!(c.tapped, "land should be tapped");
+}
+
+// ── Prepare mechanic (Biblioplex Tomekeeper, Skycoach Waypoint) ─────────────
+
+#[test]
+fn skycoach_waypoint_prepare_activation_adds_prepared_counter() {
+    // {3}, {T}: Target creature becomes prepared.
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(0, catalog::skycoach_waypoint());
+    g.clear_sickness(land);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_colorless(3);
+
+    let target_bear = g.battlefield.iter().find(|c| c.id == bear).unwrap();
+    assert_eq!(
+        target_bear.counter_count(CounterType::Prepared), 0,
+        "bear starts unprepared"
+    );
+
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: land, ability_index: 1, target: Some(Target::Permanent(bear)),
+    })
+    .expect("Skycoach Waypoint {3}, {T}: prepare activation");
+    drain_stack(&mut g);
+
+    let prepared = g.battlefield.iter().find(|c| c.id == bear).unwrap();
+    assert_eq!(
+        prepared.counter_count(CounterType::Prepared), 1,
+        "bear should have one Prepared counter"
+    );
+    let c = g.battlefield.iter().find(|c| c.id == land).unwrap();
+    assert!(c.tapped, "Waypoint should be tapped after prepare activation");
+}
+
+#[test]
+fn skycoach_waypoint_prepare_rejected_without_three_mana() {
+    // Tap cost without {3} should fail to activate.
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(0, catalog::skycoach_waypoint());
+    g.clear_sickness(land);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // No mana in pool — activation should be rejected.
+
+    let result = g.perform_action(GameAction::ActivateAbility {
+        card_id: land, ability_index: 1, target: Some(Target::Permanent(bear)),
+    });
+    assert!(
+        result.is_err(),
+        "prepare activation should fail without {{3}} in pool"
+    );
+    let c = g.battlefield.iter().find(|c| c.id == land).unwrap();
+    assert!(!c.tapped, "Waypoint should not be tapped on failed activation");
+}
+
+#[test]
+fn biblioplex_tomekeeper_etb_prepares_target_creature() {
+    // ETB ChooseMode auto-picks mode 0 (becomes prepared).
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::biblioplex_tomekeeper());
+    g.players[0].mana_pool.add_colorless(4);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Tomekeeper castable for {4}");
+    drain_stack(&mut g);
+
+    let prepared = g.battlefield.iter().find(|c| c.id == bear).unwrap();
+    assert_eq!(
+        prepared.counter_count(CounterType::Prepared), 1,
+        "auto-decider picks mode 0 → bear gets a Prepared counter"
+    );
+}
+
+#[test]
+fn biblioplex_tomekeeper_etb_unprepares_via_scripted_mode_one() {
+    // Seed a Prepared counter on the bear, then ETB Tomekeeper with
+    // a scripted mode-1 decision — it should remove the counter.
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    if let Some(c) = g.battlefield_find_mut(bear) {
+        c.counters.insert(CounterType::Prepared, 1);
+    }
+
+    let id = g.add_card_to_hand(0, catalog::biblioplex_tomekeeper());
+    g.players[0].mana_pool.add_colorless(4);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Mode(1)]));
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Tomekeeper castable for {4}");
+    drain_stack(&mut g);
+
+    let target = g.battlefield.iter().find(|c| c.id == bear).unwrap();
+    assert_eq!(
+        target.counter_count(CounterType::Prepared), 0,
+        "mode 1 should remove the Prepared counter from the bear"
+    );
+}
+
+#[test]
+fn skycoach_waypoint_then_biblioplex_tomekeeper_round_trip() {
+    // Prepare a bear via Waypoint, then unprepare via Tomekeeper mode 1.
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(0, catalog::skycoach_waypoint());
+    g.clear_sickness(land);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_colorless(3);
+
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: land, ability_index: 1, target: Some(Target::Permanent(bear)),
+    })
+    .expect("Skycoach Waypoint prepare activation");
+    drain_stack(&mut g);
+
+    assert_eq!(
+        g.battlefield.iter().find(|c| c.id == bear).unwrap()
+            .counter_count(CounterType::Prepared), 1,
+        "Waypoint prepares the bear"
+    );
+
+    // Now ETB Tomekeeper with mode 1 to unprepare.
+    let id = g.add_card_to_hand(0, catalog::biblioplex_tomekeeper());
+    g.players[0].mana_pool.add_colorless(4);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Mode(1)]));
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Tomekeeper castable for {4}");
+    drain_stack(&mut g);
+
+    assert_eq!(
+        g.battlefield.iter().find(|c| c.id == bear).unwrap()
+            .counter_count(CounterType::Prepared), 0,
+        "Tomekeeper mode 1 unprepares the bear"
+    );
 }
 
 #[test]

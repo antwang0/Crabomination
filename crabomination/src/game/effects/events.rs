@@ -39,10 +39,24 @@ pub(crate) fn event_matches_spec(
         (EventKind::CounterAdded(k), GameEvent::CounterAdded { counter_type, .. }) => counter_type == k,
         (EventKind::AbilityActivated, GameEvent::AbilityActivated { .. }) => true,
         (EventKind::CardLeftGraveyard, GameEvent::CardLeftGraveyard { .. }) => true,
+        (EventKind::BecameTarget, GameEvent::BecameTarget { .. }) => true,
         _ => false,
     };
     if !kind_ok {
         return false;
+    }
+
+    // BecameTarget has an implicit "the trigger source is the targeted
+    // permanent" check — the trigger fires for the targeted permanent
+    // by design (CR 603.x — "this permanent becomes the target …"
+    // triggers always reference the source as the target). The scope
+    // check below then refines on the caster.
+    if let (EventKind::BecameTarget, GameEvent::BecameTarget { target, .. }) =
+        (&spec.kind, event)
+    {
+        if *target != source.id {
+            return false;
+        }
     }
 
     let scope_ok = match spec.scope {
@@ -154,6 +168,11 @@ fn event_player(event: &GameEvent) -> Option<usize> {
         | GameEvent::ColorlessManaAdded { player }
         | GameEvent::CardLeftGraveyard { player, .. }
         | GameEvent::TurnStarted { player, .. } => Some(*player),
+        // For BecameTarget the "actor" is the caster of the spell or
+        // ability that picked the target. This drives YourControl /
+        // OpponentControl scope checks (Tenured Concocter wants
+        // OpponentControl → caster is opponent of source's controller).
+        GameEvent::BecameTarget { caster, .. } => Some(*caster),
         _ => None,
     }
 }
@@ -191,6 +210,10 @@ pub(crate) fn event_subject(event: &GameEvent, kind: &EventKind) -> Option<Entit
         | GameEvent::ManaAdded { player, .. }
         | GameEvent::ColorlessManaAdded { player } => Some(EntityRef::Player(*player)),
         GameEvent::CardLeftGraveyard { card_id, .. } => Some(EntityRef::Card(*card_id)),
+        // The "subject" of a BecameTarget event is the permanent that
+        // became the target — what `Selector::TriggerSource` should bind
+        // to for any filter predicate.
+        GameEvent::BecameTarget { target, .. } => Some(EntityRef::Permanent(*target)),
         _ => None,
     }
 }
@@ -206,6 +229,9 @@ fn event_card(event: &GameEvent) -> Option<CardId> {
         | GameEvent::CounterAdded { card_id, .. }
         | GameEvent::AttackerDeclared(card_id) => Some(*card_id),
         GameEvent::BlockerDeclared { blocker, .. } => Some(*blocker),
+        // BecameTarget's card is the targeted permanent (used by
+        // AnotherOfYours scope checks if any card uses it).
+        GameEvent::BecameTarget { target, .. } => Some(*target),
         _ => None,
     }
 }

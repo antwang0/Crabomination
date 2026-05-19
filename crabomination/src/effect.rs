@@ -160,6 +160,21 @@ pub enum Selector {
     /// like `Value::CountersOn(...)` work as expected.
     Take { inner: Box<Selector>, count: Box<Value> },
 
+    /// Walk `inner` in iteration order, accumulating `value_of_each`
+    /// per entity, and take entities greedily while the running sum
+    /// stays ≤ `cap`. Entities whose value would push the sum over
+    /// `cap` are skipped; iteration continues so smaller items can
+    /// still fit. Used by Spell Satchel's "Choose any number of
+    /// target IS cards in your graveyard with total mana value 4 or
+    /// less. Return them to your hand." The greedy walk gives the
+    /// AutoDecider a deterministic pick; a real UI player would
+    /// surface a per-card pick prompt with the same running cap.
+    TakeWithSumCap {
+        inner: Box<Selector>,
+        cap: Box<Value>,
+        value_of_each: Box<Value>,
+    },
+
     /// No entities (placeholder/default).
     None,
 }
@@ -590,6 +605,17 @@ pub enum EventKind {
     /// across batches (Strixhaven cards say "one or more cards" but the
     /// engine fires per-card and lets the trigger fire as many times).
     CardLeftGraveyard,
+    /// A permanent became the target of a spell or activated ability.
+    /// Fires once per Permanent target at announce-time (when the spell
+    /// hits the stack or the activated ability is pushed). Multi-target
+    /// spells emit one event per target. For BecameTarget triggers the
+    /// trigger source must be the targeted permanent (an implicit
+    /// "target == source" check applied by `event_matches_spec`); the
+    /// EventScope refines on the caster (`OpponentControl` → caster is
+    /// an opponent, `YourControl` → caster is you). Used by SOS Tenured
+    /// Concocter's "Whenever this creature becomes the target of a
+    /// spell or ability an opponent controls, you may draw a card".
+    BecameTarget,
 }
 
 /// Whose events does this trigger listen for?
@@ -1241,6 +1267,11 @@ impl Effect {
                 Selector::Take { inner, count } => {
                     sel_has_target(inner) || value_has_target(count)
                 }
+                Selector::TakeWithSumCap { inner, cap, value_of_each } => {
+                    sel_has_target(inner)
+                        || value_has_target(cap)
+                        || value_has_target(value_of_each)
+                }
                 Selector::TopOfLibrary { who, .. }
                 | Selector::BottomOfLibrary { who, .. }
                 | Selector::CardsInZone { who, .. }
@@ -1420,6 +1451,7 @@ impl Effect {
                 Selector::CardsInZone { filter, .. } => Some(filter),
                 Selector::TargetFiltered { filter, .. } => Some(filter),
                 Selector::Take { inner, .. } => sel_filter(inner),
+                Selector::TakeWithSumCap { inner, .. } => sel_filter(inner),
                 _ => None,
             }
         }
@@ -1698,6 +1730,7 @@ impl Effect {
                 Selector::TargetFiltered { slot: s2, filter } if *s2 == slot => Some(filter),
                 Selector::AttachedTo(i) | Selector::AttachedToMe(i) => sel_find(i, slot),
                 Selector::Take { inner, .. } => sel_find(inner, slot),
+                Selector::TakeWithSumCap { inner, .. } => sel_find(inner, slot),
                 _ => None,
             }
         }

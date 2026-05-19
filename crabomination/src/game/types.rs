@@ -391,6 +391,13 @@ pub enum GameEvent {
     /// exiled from there). Fires per card removed. Used by Strixhaven
     /// "cards leave your graveyard" payoffs.
     CardLeftGraveyard { player: usize, card_id: CardId },
+    /// A permanent became the target of a spell or activated ability.
+    /// `target` is the permanent being targeted; `caster` is the player
+    /// who cast the spell / activated the ability. Fires per target at
+    /// announce-time (immediately after the spell hits the stack or the
+    /// ability is pushed). Used by SOS Tenured Concocter and any future
+    /// "whenever this becomes the target of …" trigger.
+    BecameTarget { target: CardId, caster: usize },
     GameOver { winner: Option<usize> },
 }
 

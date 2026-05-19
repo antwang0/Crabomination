@@ -477,14 +477,17 @@ pub fn beaming_defiance() -> CardDefinition {
 /// cards in your graveyard with total mana value 4 or less. Return them
 /// to your hand."
 ///
-/// 🟡 Body half wired. The `{T}: Add {C}` mana ability is faithful via
-/// `ManaPayload::Colorless(1)`. The `{3},{T},Sac:` graveyard-return
-/// activation is approximated: we return one target instant or sorcery
-/// from the graveyard (mana-value cap omitted — tracked in TODO.md
-/// pending a "list of targets matching X" picker). The "any number /
-/// total ≤ 4" multi-target picker is the engine gap. For typical play
-/// a single-target return is the most common play pattern anyway.
+/// ✅ (was 🟡): "any number with total MV ≤ 4" is now wired via the
+/// new `Selector::TakeWithSumCap { inner, cap, value_of_each }`
+/// primitive — walks the caster's gy in iteration order, accumulating
+/// each card's mana value, and takes them greedily while the running
+/// sum stays ≤ 4. Skips cards that would push the sum over (so a 4-MV
+/// Cancel + 1-MV Bolt picks Bolt-and-Cancel = 5 → skip Cancel, take
+/// Bolt = 1, then if a 3-MV Lightning Helix is next take it = 4 total).
+/// The auto-decider walks gy-iteration order; a real UI player would
+/// pick. The `{T}: Add {C}` mana ability and sac-as-cost are wired.
 pub fn spell_satchel() -> CardDefinition {
+    use crate::card::Zone;
     CardDefinition {
         name: "Spell Satchel",
         cost: cost(&[generic(3)]),
@@ -517,11 +520,18 @@ pub fn spell_satchel() -> CardDefinition {
                 tap_cost: true,
                 mana_cost: cost(&[generic(3)]),
                 effect: Effect::Move {
-                    what: target_filtered(
-                        (SelectionRequirement::HasCardType(CardType::Instant)
-                            .or(SelectionRequirement::HasCardType(CardType::Sorcery)))
-                        .and(SelectionRequirement::ManaValueAtMost(4)),
-                    ),
+                    what: Selector::TakeWithSumCap {
+                        inner: Box::new(Selector::CardsInZone {
+                            who: PlayerRef::You,
+                            zone: Zone::Graveyard,
+                            filter: SelectionRequirement::HasCardType(CardType::Instant)
+                                .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+                        }),
+                        cap: Box::new(Value::Const(4)),
+                        value_of_each: Box::new(Value::ManaValueOf(Box::new(
+                            Selector::TriggerSource,
+                        ))),
+                    },
                     to: ZoneDest::Hand(PlayerRef::You),
                 },
                 once_per_turn: false,

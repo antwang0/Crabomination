@@ -2089,15 +2089,18 @@ pub fn fractalize() -> CardDefinition {
 /// "Return up to X target instant and/or sorcery cards from your graveyard
 /// to your hand. / Exile Divergent Equation."
 ///
-/// 🟡 (cost ✅): the engine has no count-bounded "select up to N from
-/// graveyard" primitive, so we collapse the multi-target pick to a single
-/// target — return one instant or sorcery card from your graveyard to
-/// your hand. The "Exile Divergent Equation" rider is **now wired**
-/// (push: modern_decks) via the new `CardDefinition.exile_on_resolve`
-/// flag — the resolved instant lands in exile, not the graveyard, so
-/// it can't be looped via flashback/recursion. The X-cost gating is
-/// preserved through the natural mana-cost path.
+/// ✅ (was 🟡): The "up to X" multi-target picker now wires via
+/// `Selector::take(CardsInZone(You, Graveyard, IS), Value::XFromCost)`
+/// — walks the controller's gy in iteration order and returns the
+/// first X matching cards. AutoDecider gets the gy iteration order;
+/// a real UI player would surface a per-card pick (the cap-N picker
+/// is already a precedent — Pull from the Grave, Mind Roots). At
+/// X=0 the selector yields zero entities and the spell becomes a
+/// 1-blue cantrip (exile-on-resolve removes the IS from the gy).
+/// "Exile Divergent Equation" rider is wired via the
+/// `CardDefinition.exile_on_resolve` flag.
 pub fn divergent_equation() -> CardDefinition {
+    use crate::card::Zone;
     use crate::effect::ZoneDest;
     use crate::mana::{u, x};
     CardDefinition {
@@ -2110,9 +2113,14 @@ pub fn divergent_equation() -> CardDefinition {
         toughness: 0,
         keywords: vec![],
         effect: Effect::Move {
-            what: target_filtered(
-                SelectionRequirement::HasCardType(CardType::Instant)
-                    .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+            what: Selector::take(
+                Selector::CardsInZone {
+                    who: PlayerRef::You,
+                    zone: Zone::Graveyard,
+                    filter: SelectionRequirement::HasCardType(CardType::Instant)
+                        .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+                },
+                Value::XFromCost,
             ),
             to: ZoneDest::Hand(PlayerRef::You),
         },

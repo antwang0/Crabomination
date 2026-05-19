@@ -548,6 +548,11 @@ pub enum GameEventWire {
     /// can animate "card returned from graveyard" or highlight Lorehold
     /// "cards left graveyard this turn" payoffs.
     CardLeftGraveyard { player: usize, card_id: CardId },
+    /// Wire mirror of `GameEvent::BecameTarget`. Surfaced so client UIs
+    /// can highlight a permanent that just got targeted by a spell or
+    /// ability (Tenured Concocter's "you may draw" trigger, future
+    /// targeting-payoff cards).
+    BecameTarget { target: CardId, caster: usize },
     GameOver { winner: Option<usize> },
 }
 
@@ -703,6 +708,10 @@ impl From<&GameEvent> for GameEventWire {
                     card_id: *card_id,
                 }
             }
+            GameEvent::BecameTarget { target, caster } => GameEventWire::BecameTarget {
+                target: *target,
+                caster: *caster,
+            },
             GameEvent::GameOver { winner } => GameEventWire::GameOver { winner: *winner },
         }
     }

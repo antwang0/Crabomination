@@ -2695,6 +2695,34 @@ impl GameState {
                 all.truncate(n);
                 all
             }
+
+            Selector::TakeWithSumCap { inner, cap, value_of_each } => {
+                let cap_n = self.evaluate_value(cap, ctx).max(0);
+                if cap_n == 0 {
+                    return vec![];
+                }
+                let candidates = self.resolve_selector(inner, ctx);
+                let mut running_total: i32 = 0;
+                let mut kept: Vec<EntityRef> = Vec::new();
+                for ent in candidates {
+                    // Bind the candidate to `ctx.trigger_source` so that
+                    // `value_of_each` can reference it via
+                    // `Selector::TriggerSource` (mirrors `Effect::ForEach`'s
+                    // binding convention). Per-iteration sub-ctx clone keeps
+                    // outer ctx untouched after evaluation.
+                    let mut sub_ctx = ctx.clone();
+                    sub_ctx.trigger_source = Some(ent);
+                    let v = self.evaluate_value(value_of_each, &sub_ctx).max(0);
+                    if running_total + v <= cap_n {
+                        running_total += v;
+                        kept.push(ent);
+                    }
+                    // Otherwise skip this candidate; iteration continues so
+                    // smaller items can still fit. Greedy walk gives the
+                    // AutoDecider a deterministic pick.
+                }
+                kept
+            }
         }
     }
 

@@ -501,13 +501,15 @@ impl GameState {
         for effect in etb_triggers {
             let auto_target =
                 self.auto_target_for_effect_avoiding(&effect, controller, Some(card_id));
+            // CR 700.2b — modal ETB trigger mode pick at push-time.
+            let mode = self.pick_trigger_mode(&effect, card_id);
             for _ in 0..multiplier {
                 self.stack.push(StackItem::Trigger {
                     source: card_id,
                     controller,
                     effect: Box::new(effect.clone()),
                     target: auto_target.clone(),
-                    mode: None,
+                    mode,
                     x_value: 0,
                     converged_value: 0,
                 trigger_source: None,
@@ -864,7 +866,51 @@ impl GameState {
         // nonactive player. Ward resolves first and may counter the spell
         // unless the caster pays the Ward cost.
         self.push_ward_triggers_for_cast(p, card_id);
+        // BecameTarget triggers — fired through the unified dispatcher so
+        // APNAP order is correct and the trigger's `EventSpec.filter` is
+        // honored. One event per permanent target on the just-pushed
+        // spell. Used by SOS Tenured Concocter's "may draw" trigger.
+        self.dispatch_became_target_events_for_cast(p, card_id);
         self.give_priority_to_active();
+    }
+
+    /// Walk the just-pushed `StackItem::Spell` and emit one
+    /// `GameEvent::BecameTarget` for every permanent target slot, then
+    /// dispatch the events through the unified trigger pipeline.
+    pub(crate) fn dispatch_became_target_events_for_cast(
+        &mut self,
+        caster: usize,
+        cast_card_id: CardId,
+    ) {
+        let (target, additional_targets): (Option<Target>, Vec<Target>) = match self
+            .stack
+            .iter()
+            .rev()
+            .find_map(|si| match si {
+                StackItem::Spell { card, target, additional_targets, .. }
+                    if card.id == cast_card_id =>
+                {
+                    Some((target.clone(), additional_targets.clone()))
+                }
+                _ => None,
+            }) {
+            Some(t) => t,
+            None => return,
+        };
+        let events: Vec<GameEvent> = target
+            .into_iter()
+            .chain(additional_targets)
+            .filter_map(|t| match t {
+                Target::Permanent(id) => Some(GameEvent::BecameTarget {
+                    target: id,
+                    caster,
+                }),
+                _ => None,
+            })
+            .collect();
+        if !events.is_empty() {
+            self.dispatch_triggers_for_events(&events);
+        }
     }
 
     /// CR 702.21 — push a Ward triggered ability onto the stack for each
@@ -2405,7 +2451,17 @@ impl GameState {
             // an opp's Ward permanent (the "or ability" half of 702.21a).
             // Push Ward triggers above the just-queued ability so they
             // resolve first.
-            self.push_ward_triggers_for_activated_ability(p, card_id, ability_target);
+            self.push_ward_triggers_for_activated_ability(p, card_id, ability_target.clone());
+            // BecameTarget — fire per permanent target the activation
+            // chose (CR 603.x). The unified dispatcher handles APNAP and
+            // the trigger filter.
+            if let Some(Target::Permanent(target_id)) = ability_target {
+                let evs = vec![GameEvent::BecameTarget {
+                    target: target_id,
+                    caster: p,
+                }];
+                self.dispatch_triggers_for_events(&evs);
+            }
             self.give_priority_to_active();
         }
 

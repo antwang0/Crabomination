@@ -474,13 +474,17 @@ impl GameState {
                             caster,
                             Some(card_id),
                         );
+                        // CR 700.2b — modal ETB trigger mode pick at
+                        // push-time (Biblioplex Tomekeeper's "choose up
+                        // to one — prepare / unprepare").
+                        let mode = self.pick_trigger_mode(&effect, card_id);
                         for _ in 0..etb_multiplier {
                             self.stack.push(StackItem::Trigger {
                                 source: card_id,
                                 controller: caster,
                                 effect: Box::new(effect.clone()),
                                 target: auto_target.clone(),
-                                mode: None,
+                                mode,
                                 x_value,
                                 converged_value,
                                 trigger_source: Some(

@@ -196,15 +196,36 @@ pub fn great_hall_of_the_biblioplex() -> CardDefinition {
 /// Real Oracle: "{T}: Add {C}. / {3}, {T}: Target creature becomes
 /// prepared. (Only creatures with prepare spells can become prepared.)"
 ///
-/// 🟡 Approximation: we ship the printed `{T}: Add {C}` mana ability
-/// via the shared `tap_add_colorless` helper. The "{3}, {T}: Target
-/// creature becomes prepared" toggle is omitted — the engine has no
-/// Prepare keyword / prepared-state flag yet (same gap as Biblioplex
-/// Tomekeeper). The mana ability alone is enough to let the card slot
-/// into colorless utility roles; the prepare toggle is tracked in
-/// TODO.md under "Prepare keyword".
+/// ✅ Both abilities wired. `{T}: Add {C}` via the shared
+/// `tap_add_colorless` helper. `{3}, {T}: Target creature becomes
+/// prepared` via `AddCounter` of `CounterType::Prepared`. The
+/// "(only creatures with prepare spells can become prepared)"
+/// reminder is naturally enforced — only Biblioplex Tomekeeper +
+/// Skycoach Waypoint create Prepared counters, so no other card path
+/// can prepare a creature.
 pub fn skycoach_waypoint() -> CardDefinition {
     use super::super::tap_add_colorless;
+    use crate::card::{CounterType, SelectionRequirement};
+    use crate::effect::shortcut::target_filtered;
+    use crate::effect::ActivatedAbility;
+    let prepare_target = ActivatedAbility {
+        tap_cost: true,
+        mana_cost: cost(&[generic(3)]),
+        effect: Effect::AddCounter {
+            what: target_filtered(SelectionRequirement::Creature),
+            kind: CounterType::Prepared,
+            amount: Value::Const(1),
+        },
+        once_per_turn: false,
+        sorcery_speed: false,
+        sac_cost: false,
+        condition: None,
+        life_cost: 0,
+        from_graveyard: false,
+        exile_self_cost: false,
+        exile_other_filter: None,
+        self_counter_cost_reduction: None,
+    };
     CardDefinition {
         name: "Skycoach Waypoint",
         cost: ManaCost::default(),
@@ -215,7 +236,7 @@ pub fn skycoach_waypoint() -> CardDefinition {
         toughness: 0,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: vec![tap_add_colorless()],
+        activated_abilities: vec![tap_add_colorless(), prepare_target],
         triggered_abilities: vec![],
         static_abilities: vec![],
         base_loyalty: 0,

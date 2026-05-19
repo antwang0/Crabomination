@@ -1985,12 +1985,16 @@ pub fn slumbering_trudge() -> CardDefinition {
 /// ability an opponent controls, you may draw a card. / Infusion — This
 /// creature gets +2/+0 as long as you gained life this turn."
 ///
-/// Approximation: the becomes-targeted draw trigger is omitted (no
-/// `BecameTarget` event yet); the Infusion static pump is omitted (no
-/// "static gain X/Y while predicate" primitive yet — the engine's
-/// `Predicate::LifeGainedThisTurnAtLeast` is currently used only on
-/// `Effect::If` gates, not on continuous static abilities). Vigilant
-/// 4/5 body is wired so the card lands on-curve.
+/// ✅ (was 🟡): the becomes-targeted draw trigger is now wired via the
+/// new `EventKind::BecameTarget` (push: modern_decks). Spec is
+/// `BecameTarget + OpponentControl`; the dispatcher checks
+/// `target == source.id` implicitly and the scope refines on the
+/// caster (caster must be an opponent). Effect wraps `Draw 1` in
+/// `Effect::MayDo` so the printed "you may" optionality is honored —
+/// AutoDecider declines (skips the draw); `ScriptedDecider` can flip
+/// to "yes". The Infusion +2/+0 lives in the
+/// `lifegain_selfpump_for_name` helper table (compute-time injection
+/// while you gained life this turn). All three printed clauses ship.
 pub fn tenured_concocter() -> CardDefinition {
     use crate::mana::g;
     CardDefinition {
@@ -2007,7 +2011,16 @@ pub fn tenured_concocter() -> CardDefinition {
         keywords: vec![Keyword::Vigilance],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::BecameTarget, EventScope::OpponentControl),
+            effect: Effect::MayDo {
+                description: "Tenured Concocter: may draw a card?".into(),
+                body: Box::new(Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                }),
+            },
+        }],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -5557,12 +5570,13 @@ pub fn essenceknit_scholar() -> CardDefinition {
 /// "When this creature enters, choose up to one — / • Target creature
 /// becomes prepared. / • Target creature becomes unprepared."
 ///
-/// 🟡 Body wired (3/4 Construct artifact creature). The "Prepare"
-/// toggle is omitted — the engine has no Prepare keyword nor a
-/// prepared-state flag yet (same gap as Skycoach Waypoint). The body
-/// still slots into the colorless artifact-creature pool. Tracked in
-/// TODO.md under "Prepare keyword".
+/// ✅ ETB ChooseMode wired via `AddCounter`/`RemoveCounter` of
+/// `CounterType::Prepared`. "Choose up to one" is approximated as
+/// "choose exactly one" — auto-decider picks mode 0 (prepare) by
+/// default; ScriptedDecider can switch to mode 1 (unprepare).
 pub fn biblioplex_tomekeeper() -> CardDefinition {
+    use crate::card::CounterType;
+    use crate::effect::shortcut::target_filtered;
     CardDefinition {
         name: "Biblioplex Tomekeeper",
         cost: cost(&[generic(4)]),
@@ -5577,7 +5591,23 @@ pub fn biblioplex_tomekeeper() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::ChooseMode(vec![
+                // Mode 0: target creature becomes prepared.
+                Effect::AddCounter {
+                    what: target_filtered(SelectionRequirement::Creature),
+                    kind: CounterType::Prepared,
+                    amount: Value::Const(1),
+                },
+                // Mode 1: target creature becomes unprepared.
+                Effect::RemoveCounter {
+                    what: target_filtered(SelectionRequirement::Creature),
+                    kind: CounterType::Prepared,
+                    amount: Value::Const(1),
+                },
+            ]),
+        }],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],

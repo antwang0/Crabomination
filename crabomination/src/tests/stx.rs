@@ -1622,6 +1622,146 @@ fn spell_satchel_sacrifice_returns_low_cmc_spell_from_graveyard() {
         "Spell Satchel should be sacrificed to graveyard");
 }
 
+#[test]
+fn spell_satchel_returns_multiple_low_mv_instants_within_cap() {
+    // Three Lightning Bolts (MV 1 each, total MV 3 ≤ 4) — all three
+    // should return to hand. Tests the multi-card pickup.
+    let mut g = two_player_game();
+    let satchel = g.add_card_to_battlefield(0, catalog::spell_satchel());
+    g.clear_sickness(satchel);
+    let bolt_a = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    let bolt_b = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    let bolt_c = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+
+    g.players[0].mana_pool.add_colorless(3);
+
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: satchel,
+        ability_index: 1,
+        target: None,
+    })
+    .expect("Spell Satchel grave-return activation");
+    drain_stack(&mut g);
+
+    let in_hand = [bolt_a, bolt_b, bolt_c]
+        .iter()
+        .filter(|&&bid| g.players[0].hand.iter().any(|c| c.id == bid))
+        .count();
+    assert_eq!(in_hand, 3, "all three Bolts (MV 1 each, total 3 ≤ 4) return to hand");
+}
+
+#[test]
+fn spell_satchel_picks_bolt_and_cancel_at_exactly_four_total() {
+    // 1x Bolt (MV 1) + 1x Cancel (MV 3) = total 4 ≤ 4. Both return.
+    let mut g = two_player_game();
+    let satchel = g.add_card_to_battlefield(0, catalog::spell_satchel());
+    g.clear_sickness(satchel);
+    let bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    let cancel = g.add_card_to_graveyard(0, catalog::cancel());
+
+    g.players[0].mana_pool.add_colorless(3);
+
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: satchel,
+        ability_index: 1,
+        target: None,
+    })
+    .expect("Spell Satchel grave-return activation");
+    drain_stack(&mut g);
+
+    assert!(g.players[0].hand.iter().any(|c| c.id == bolt),
+        "Bolt should return (MV 1)");
+    assert!(g.players[0].hand.iter().any(|c| c.id == cancel),
+        "Cancel should return (MV 3, total 4)");
+}
+
+#[test]
+fn spell_satchel_skips_cards_that_would_overflow_cap() {
+    // Two Cancels (MV 3 each, total 6 > 4). First Cancel fits (3 ≤ 4),
+    // second would push to 6 → skip.
+    let mut g = two_player_game();
+    let satchel = g.add_card_to_battlefield(0, catalog::spell_satchel());
+    g.clear_sickness(satchel);
+    let cancel_a = g.add_card_to_graveyard(0, catalog::cancel());
+    let cancel_b = g.add_card_to_graveyard(0, catalog::cancel());
+
+    g.players[0].mana_pool.add_colorless(3);
+
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: satchel,
+        ability_index: 1,
+        target: None,
+    })
+    .expect("Spell Satchel grave-return activation");
+    drain_stack(&mut g);
+
+    let in_hand = [cancel_a, cancel_b]
+        .iter()
+        .filter(|&&cid| g.players[0].hand.iter().any(|c| c.id == cid))
+        .count();
+    assert_eq!(in_hand, 1, "only first Cancel returns (3 ≤ 4); second overflows");
+    let in_gy = [cancel_a, cancel_b]
+        .iter()
+        .filter(|&&cid| g.players[0].graveyard.iter().any(|c| c.id == cid))
+        .count();
+    assert_eq!(in_gy, 1, "second Cancel stays in graveyard");
+}
+
+#[test]
+fn spell_satchel_greedy_walk_still_fits_smaller_after_skipping_bigger() {
+    // Cancel (MV 3, fits as first) + Cancel (MV 3, skip — running 6) +
+    // Bolt (MV 1, fits — running 3+1 = 4). The greedy walk continues
+    // past the skipped Cancel and picks up the Bolt that still fits.
+    let mut g = two_player_game();
+    let satchel = g.add_card_to_battlefield(0, catalog::spell_satchel());
+    g.clear_sickness(satchel);
+    let cancel_a = g.add_card_to_graveyard(0, catalog::cancel());
+    let cancel_b = g.add_card_to_graveyard(0, catalog::cancel());
+    let bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+
+    g.players[0].mana_pool.add_colorless(3);
+
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: satchel,
+        ability_index: 1,
+        target: None,
+    })
+    .expect("Spell Satchel grave-return activation");
+    drain_stack(&mut g);
+
+    assert!(g.players[0].hand.iter().any(|c| c.id == cancel_a),
+        "first Cancel returns (MV 3)");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == cancel_b),
+        "second Cancel stays (would overflow)");
+    assert!(g.players[0].hand.iter().any(|c| c.id == bolt),
+        "Bolt returns (MV 1, fits as 3+1=4)");
+}
+
+#[test]
+fn spell_satchel_filters_to_instants_and_sorceries() {
+    // Bear in gy alongside Bolt — only Bolt comes back, Bear stays.
+    let mut g = two_player_game();
+    let satchel = g.add_card_to_battlefield(0, catalog::spell_satchel());
+    g.clear_sickness(satchel);
+    let bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+
+    g.players[0].mana_pool.add_colorless(3);
+
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: satchel,
+        ability_index: 1,
+        target: None,
+    })
+    .expect("Spell Satchel grave-return activation");
+    drain_stack(&mut g);
+
+    assert!(g.players[0].hand.iter().any(|c| c.id == bolt),
+        "Bolt (instant) returns");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == bear),
+        "Grizzly Bears (creature) stays in graveyard");
+}
+
 // ── Curate ──────────────────────────────────────────────────────────────────
 
 #[test]

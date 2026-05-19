@@ -144,6 +144,12 @@ pub enum CounterType {
     /// growth counters …"). Distinct from `Charge` so the static-toggle
     /// variants don't collide.
     Growth,
+    /// Prepared counter — SOS Prepare mechanic (Biblioplex Tomekeeper,
+    /// Skycoach Waypoint). A pure state flag with no inherent gameplay
+    /// effect; the "Only creatures with prepare spells can become
+    /// prepared" reminder is naturally enforced by having only these
+    /// two cards emit AddCounter(Prepared).
+    Prepared,
 }
 
 /// Every zone a card can occupy.
