@@ -5399,17 +5399,211 @@ pub fn witherbloom_thresher() -> CardDefinition {
         keywords: vec![Keyword::Deathtouch],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
+        // Refactored in batch 40 to use the `etb_drain` shortcut.
         triggered_abilities: vec![
-            TriggeredAbility {
-                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-                effect: Effect::Drain {
-                    from: Selector::Player(PlayerRef::EachOpponent),
-                    to: Selector::You,
-                    amount: Value::Const(1),
-                },
-            },
+            crate::effect::shortcut::etb_drain(1),
             magecraft_drain_each_opp(1),
         ],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+// ── Batch 40: more Witherbloom cards ────────────────────────────────────────
+
+/// Witherbloom Toxicologist — {1}{B}{G}, 2/2 Human Druid Deathtouch.
+/// Synthesised Oracle: "Magecraft — Whenever you cast or copy an instant
+/// or sorcery spell, target creature gets -1/-1 until end of turn."
+/// A removal-oriented magecraft creature — drips -1/-1 onto opp's bears
+/// while the deathtouch body trades up.
+pub fn witherbloom_toxicologist() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Toxicologist",
+        cost: cost(&[generic(1), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Deathtouch],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::PumpPT {
+            what: target_filtered(SelectionRequirement::Creature),
+            power: Value::Const(-1),
+            toughness: Value::Const(-1),
+            duration: Duration::EndOfTurn,
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Pest Husk — {B}{G}, 1/1 Pest Zombie.
+/// Synthesised Oracle: "Deathtouch / When this creature dies, you gain
+/// 1 life." A canonical Pest body (1/1 with the death lifegain rider)
+/// plus deathtouch — trades up on the ground.
+pub fn pest_husk() -> CardDefinition {
+    CardDefinition {
+        name: "Pest Husk",
+        cost: cost(&[b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Pest, CreatureType::Zombie],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Deathtouch],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![crate::effect::shortcut::on_dies(Effect::GainLife {
+            who: Selector::You,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Bloodglyph — {1}{B}{G}, Sorcery.
+/// Synthesised Oracle: "Drain 2 life. Create a 1/1 black and green Pest
+/// creature token with 'When this creature dies, you gain 1 life.'"
+/// 3-mana double-up: drain 2 + Pest token (with on-die lifegain).
+pub fn witherbloom_bloodglyph() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Bloodglyph",
+        cost: cost(&[generic(1), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Drain {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                to: Selector::You,
+                amount: Value::Const(2),
+            },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: stx_pest_token(),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Rotsage — {2}{B}{G}, 3/3 Zombie Druid.
+/// Synthesised Oracle: "When this creature enters, you may sacrifice a
+/// creature. If you do, draw a card and gain 1 life." A
+/// disposable-fodder enabler that turns a Pest into a card.
+pub fn witherbloom_rotsage() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Rotsage",
+        cost: cost(&[generic(2), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![crate::effect::shortcut::etb(Effect::MayDo {
+            description: "Sacrifice a creature: draw a card and gain 1 life".to_string(),
+            body: Box::new(Effect::Seq(vec![
+                Effect::Sacrifice {
+                    who: Selector::You,
+                    count: Value::Const(1),
+                    filter: SelectionRequirement::Creature,
+                },
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
+                Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
+            ])),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Sproutchant — {1}{G}, 1/2 Elf Druid.
+/// Synthesised Oracle: "Magecraft — Whenever you cast or copy an instant
+/// or sorcery spell, put a +1/+1 counter on this creature." A
+/// self-growing magecraft body that scales over a multi-spell turn.
+pub fn witherbloom_sproutchant() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Sproutchant",
+        cost: cost(&[generic(1), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::AddCounter {
+            what: Selector::This,
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        })],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],

@@ -12,6 +12,75 @@ Periodic spot-check of the rules document
 `MagicCompRules_20260417.txt`). Each rule below has a status tag (✅
 wired, 🟡 partial, ⏳ todo) plus a short note.
 
+- 🟡 **CR 121 — Drawing a Card** (push modern_decks batch 40,
+  claude/modern_decks branch — audit against
+  `MagicCompRules_20260417.txt`): The card-draw primitive — what
+  drawing means, how multiple draws are sequenced, what happens when
+  the library is empty, and the replacement-effect framework. Audit:
+  (a) **121.1** "A player draws a card by putting the top card of
+  their library into their hand" — ✅ (`Effect::Draw` in
+  `game/effects/mod.rs` pops the top of `Player.library` and pushes
+  to `Player.hand`; emits `GameEvent::CardDrawn`).
+  (b) **121.2** "Cards may only be drawn one at a time. If a player
+  is instructed to draw multiple cards, that player performs that
+  many individual card draws" — ✅ (`Effect::Draw { amount }` loops
+  `amount` times, each iteration pulling exactly one card; each
+  iteration emits its own `CardDrawn` event so triggers fire per
+  card).
+  (c) **121.2a** "Multiple-draw modifications via replacement
+  effects" — 🟡 (Replacement-effect framework landed in Phase H of
+  the Commander rollout but is sparsely used for draws today. No STX/
+  SOS card prints a "draw N additional cards as part of each draw"
+  rider, so the gap is doc-tracked).
+  (d) **121.2b** "Can't draw more than one card each turn" rider —
+  ⏳ (no `StaticEffect::CapDrawsPerTurn(N)` primitive; Maralen of the
+  Mornsong / Future Sight-class no-draw effects aren't in the
+  catalog).
+  (e) **121.2c** "APNAP order for multiple-player draws" — 🟡
+  (multi-player draws fan out via `Selector::Player(EachPlayer)`'s
+  iteration order which is seat-index; the active player is seat 0
+  in 1v1, so the order is APNAP-correct. In multiplayer the
+  fan-out walks `0..N` rather than starting from `active_player`).
+  (f) **121.3** "If library is empty AND effect offers a *choice* to
+  draw, that player can choose to do so" — ⏳ (engine doesn't model
+  "choose to draw" via decision; `Effect::Draw` always draws
+  unconditionally, so the choice path collapses to "always-draw"
+  whether or not the library is empty).
+  (g) **121.4** "Player attempting to draw from empty library loses
+  next time priority is given" — ✅ (`Effect::Draw` increments
+  `Player.draws_from_empty_library` when the library is empty; the
+  SBA loop in `state_based_actions.rs` reads this and emits a
+  `PlayerLost` event at the next priority window per CR 704).
+  (h) **121.5** "Move from library to hand without 'draw'" — ✅
+  (`Effect::Move { from: Library, to: Hand }` doesn't emit
+  `CardDrawn` events, so draw-triggers don't fire on tutored cards;
+  this is exactly the printed-Oracle semantics for Demonic Tutor /
+  Diabolic Tutor / Gamble — they don't trigger Niv-Mizzet, Parun /
+  Sphinx's Revelation-class draw triggers).
+  (i) **121.6** Replacement-effect framework for draws — 🟡
+  (Commander Phase H landed the generic replacement primitive;
+  draw-replacement specifically is wired for Anvil of Bogardan,
+  Notion Thief, etc. The framework supports the printed shape but
+  card-count is small).
+  (j) **121.7** "Replacement effects that result in card draws" —
+  🟡 (Same coverage as 121.6 — works for the cards that use it).
+  (k) **121.8** "Card drawn during a spell cast is kept face down
+  until the cast completes" — ⏳ (no face-down-pending-draw queue;
+  the engine resolves a draw mid-cast immediately, so a hypothetical
+  "as you cast this spell, draw a card" rider sees the drawn card
+  immediately. No card in the catalog actually leans on this
+  ordering, so it's doc-tracked).
+  (l) **121.9** "Effect that gives a player the option to reveal a
+  card as they draw it, that player may look at that card as they
+  draw it before choosing whether to reveal" — ⏳ (no
+  reveal-on-draw decision shape).
+  Tests: `archmage_emeritus_draws_on_instant_cast` exercises basic
+  draw-trigger fire (121.1); `gambit_player_loses_with_empty_library`
+  covers 121.4. Promote to ✅ when 121.2b (no-draw caps), 121.3
+  (choose-to-draw with empty library), 121.6c (additional
+  post-draw actions on replaced draws), and 121.8 (mid-cast
+  face-down draws) all land.
+
 - 🟡 **CR 502 — Untap Step** (push modern_decks batch 39,
   claude/modern_decks branch — audit against
   `MagicCompRules_20260417.txt`): The untap step's turn-based actions.
@@ -5303,3 +5372,69 @@ resolution time" in the Suggested next-up tasks section.
   on duration). The trigger dispatcher already walks per-permanent
   abilities; just need to extend it to walk the ephemeral list too.
   Affected cards: Root Manipulation, Rabid Attack (die-to-draw rider).
+
+### Suggested next-up tasks (additions from batch 40)
+
+- ⏳ **`Effect::CastFromGraveyardPayingCost` primitive** (push
+  modern_decks batch 40 follow-up): Mavinda, Students' Advocate's
+  `{3}{W}{W}: cast target IS card from your graveyard that targets only
+  a creature, exile it if it would die` activated ability needs a new
+  primitive distinct from the existing `Effect::CastWithoutPayingImmediate`
+  / `GameAction::CastFromZoneWithoutPaying` pair. The Mavinda activation
+  pays {3}{W}{W} as the activation cost, then the resolved effect
+  asks the controller "pick an IS card from your graveyard that
+  targets a creature, then *cast it paying its normal cost*, exiling
+  it on resolution". Wiring shape: extend
+  `Effect::CastWithoutPayingImmediate` with a `paying_mana: bool` flag
+  (default true matches the current free-cast behavior; flipping to
+  false invokes the standard cost-payment pipeline). The
+  "targets only a creature" gate already has a sibling in the
+  `CastSpellTargetsMatch` predicate. Unlocks Mavinda 🟡 → ✅ and
+  future "cast-from-gy paying cost" cards (Past in Flames-style).
+
+- ⏳ **`AlternativeCost.tap_count` for Flashback variants** (push
+  modern_decks batch 40 follow-up — re-raised from batch 39): Group
+  Project's Flashback cost is "Tap three untapped creatures you
+  control" (no mana), which doesn't fit the current
+  `AlternativeCost { mana_cost, exile_from_graveyard_count, condition,
+   target_filter }` shape. Extend `AlternativeCost` with
+  `tap_count: Option<(u32, SelectionRequirement)>` so the cost-paid
+  validator can require N untapped permanents matching the filter at
+  payment time. Promotes Group Project 🟡 → ✅. The same primitive
+  would land Asmoranomardicadaistinaculdacar's Convoke-as-flashback
+  hybrid and Convoke-flashback combos.
+
+- ⏳ **Spirit-tribal Lorehold archetype expansion** (push modern_decks
+  batch 40 follow-up): Spirit Cantor (+1/+0 anthem for Spirits)
+  joins Quintorius's pre-existing Spirit lord and the Lorehold token
+  chain (Sparring Regimen, Lorehold Excavation, Quintorius). With
+  this in place plus the new `lorehold_wraithcaller` flying-Spirit
+  ETB minter, a Spirit-tribal Lorehold variant deck is now even more
+  viable. Slot into the SoS Lorehold pool selector.
+
+- ⏳ **`Effect::CastFreeOnCombatDamage` primitive** (push modern_decks
+  batch 40 noted): Prismari Maestro's printed "Whenever this creature
+  deals combat damage to a player, you may cast an instant or sorcery
+  spell from your hand without paying its mana cost" rider is
+  currently approximated as plain Draw 2 (the closest analog within
+  existing primitives). The proper wiring uses a
+  `DealsCombatDamageToPlayer/SelfSource` trigger with an
+  `Effect::MayDo(CastWithoutPayingImmediate { what:
+  Selector::OneOf(CardsInZone(Hand, Instant ∨ Sorcery)),
+  source_zone: Hand })` body. The `OneOf` selector + free-cast-from-
+  hand pipeline both exist; just need a hand-source variant of the
+  cast-for-free helper.
+
+- ✅ **Canonical `etb_drain`/`etb_gain_life` shortcut refactor**
+  (push modern_decks batch 40): 11 existing Silverquill/Witherbloom
+  cards refactored to the new shortcuts from batch 39
+  (`silverquill_penitent`, `silverquill_castigant`,
+  `inkling_pamphleteer`, `silverquill_drainwriter`,
+  `silverquill_drainlord`, `silverquill_drainmaster`,
+  `inkling_scriptwarden`, `inkling_maverick`,
+  `silverquill_loremender`, `inkling_cardinal`,
+  `witherbloom_thresher`). Each refactor replaces a 7-line
+  `TriggeredAbility { event, effect }` literal with a 1-line helper
+  call — net diff ~110 lines smaller. ~30 more candidate cards
+  remain across stx::lorehold (Skydefender), stx::sos (Cauldron
+  Familiar, Sedgemoor Witch, etc.) for future cleanup passes.

@@ -4532,3 +4532,125 @@ pub fn quandrix_equalizer() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 40: more Quandrix cards ───────────────────────────────────────────
+
+/// Quandrix Loomweaver — {2}{G}{U}, 2/3 Elf Wizard.
+/// Synthesised Oracle: "Magecraft — Whenever you cast or copy an instant
+/// or sorcery spell, draw a card, then discard a card." 4-mana Looter
+/// magecraft body for spell-heavy shells. Pairs with Diary of Dreams's
+/// page-counter accrual and feeds graveyard recursion via the loot.
+pub fn quandrix_loomweaver() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Loomweaver",
+        cost: cost(&[generic(2), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::Seq(vec![
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+            Effect::Discard {
+                who: Selector::You,
+                amount: Value::Const(1),
+                random: false,
+            },
+        ]))],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Fractal Stargazer — {G}{U}, 1/2 Fractal Druid.
+/// Synthesised Oracle: "ETB scry 2." A 2-mana selection body — gives
+/// every Quandrix shell a top-of-deck smoothing line at the early-game.
+pub fn fractal_stargazer() -> CardDefinition {
+    CardDefinition {
+        name: "Fractal Stargazer",
+        cost: cost(&[g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![crate::effect::shortcut::etb(Effect::Scry {
+            who: PlayerRef::You,
+            amount: Value::Const(2),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Bountycaller — {3}{G}{U}, 3/3 Frog Druid.
+/// Synthesised Oracle: "When this creature enters, create a 0/0 green
+/// and blue Fractal creature token. Put four +1/+1 counters on it."
+/// 5-mana Fractal-payoff body that ETBs into a 3/3 + 4/4 board.
+pub fn quandrix_bountycaller() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Bountycaller",
+        cost: cost(&[generic(3), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Frog, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![crate::effect::shortcut::etb(Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: quandrix_fractal_token(),
+            },
+            Effect::AddCounter {
+                what: Selector::LastCreatedToken,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(4),
+            },
+        ]))],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

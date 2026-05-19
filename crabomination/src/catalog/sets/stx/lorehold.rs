@@ -5977,3 +5977,172 @@ pub fn spirit_warbearer() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 40: more Lorehold cards ───────────────────────────────────────────
+
+/// Lorehold Ember-Reader — {R}{W}, 2/1 Spirit Cleric Haste.
+/// Synthesised Oracle: "Magecraft — Whenever you cast or copy an instant
+/// or sorcery spell, this creature deals 1 damage to any target." A
+/// haste magecraft ping creature for the burn-into-face plan.
+pub fn lorehold_ember_reader() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Ember-Reader",
+        cost: cost(&[r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Haste],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_ping_any(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Spirit Cantor — {1}{W}, 1/3 Spirit Cleric.
+/// Synthesised Oracle: "Other Spirit creatures you control get +1/+0."
+/// A Spirit-tribal anthem at the 2-drop slot — boosts the Lorehold
+/// Spirit-token plan.
+pub fn spirit_cantor() -> CardDefinition {
+    CardDefinition {
+        name: "Spirit Cantor",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![crate::effect::StaticAbility {
+            description: "Other Spirit creatures you control get +1/+0.",
+            effect: crate::effect::StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::HasCreatureType(CreatureType::Spirit))
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                power: 1,
+                toughness: 0,
+            },
+        }],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Wraithcaller — {2}{R}{W}, 2/3 Spirit Wizard.
+/// Synthesised Oracle: "When this creature enters, create a 1/1 white
+/// Spirit creature token with flying." 4-mana body that mints a flying
+/// Spirit for the air-attack plan.
+pub fn lorehold_wraithcaller() -> CardDefinition {
+    let spirit_flying = TokenDefinition {
+        name: "Spirit".into(),
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
+        colors: vec![Color::White],
+        triggered_abilities: vec![],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Lorehold Wraithcaller",
+        cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![crate::effect::shortcut::etb(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: spirit_flying,
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Ballad — {R}{W}, Instant.
+/// Synthesised Oracle: "Lorehold Ballad deals 2 damage to any target.
+/// You gain 2 life." 2-mana Lightning Helix-flavoured burn-and-gain.
+pub fn lorehold_ballad() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Ballad",
+        cost: cost(&[r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature
+                        .or(SelectionRequirement::Player)
+                        .or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::Const(2),
+            },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

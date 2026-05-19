@@ -4164,3 +4164,121 @@ pub fn prismari_cinderdrake() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 40: more Prismari cards ───────────────────────────────────────────
+
+/// Prismari Cinderbolt — {1}{U}{R}, 2/2 Human Wizard.
+/// Synthesised Oracle: "Magecraft — Whenever you cast or copy an instant
+/// or sorcery spell, this creature deals 1 damage to any target."
+/// 3-mana magecraft ping body — the canonical Prismari aggro line.
+pub fn prismari_cinderbolt() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Cinderbolt",
+        cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![crate::effect::shortcut::magecraft_ping_any(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Stormblade — {1}{R}, Instant.
+/// Synthesised Oracle: "Prismari Stormblade deals 2 damage to any target.
+/// Draw a card." 2-mana Bolt + cantrip — slow but reliable removal that
+/// also fuels the spellslinger plan.
+pub fn prismari_stormblade() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Stormblade",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature
+                        .or(SelectionRequirement::Player)
+                        .or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::Const(2),
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Maestro — {2}{U}{R}, 2/4 Elemental Wizard.
+/// Synthesised Oracle: "Whenever this creature deals combat damage to a
+/// player, you may cast an instant or sorcery spell from your hand
+/// without paying its mana cost." — approximated as plain combat-damage
+/// "draw 2 cards" (no may-cast-free primitive on combat-damage).
+pub fn prismari_maestro() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Maestro",
+        cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::DealsCombatDamageToPlayer,
+                EventScope::SelfSource,
+            ),
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
