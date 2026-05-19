@@ -4830,6 +4830,91 @@ pub fn pest_hauntwing() -> CardDefinition {
     }
 }
 
+// ── Batch 36: more Witherbloom cards ────────────────────────────────────────
+
+/// Witherbloom Verdancer — {2}{G}, 2/3 Plant Druid Reach.
+/// Synthesised Oracle: "When this creature enters, gain 1 life. Magecraft —
+/// gain 1 life."
+pub fn witherbloom_verdancer() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Verdancer",
+        cost: cost(&[generic(2), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Reach],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
+            },
+            magecraft_gain_life(1),
+        ],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Pest Vinekin — {3}{B}{G}, 3/3 Pest Plant with Trample.
+/// Synthesised Oracle: When dies, you gain 3 life and create 2 Pest tokens.
+pub fn pest_vinekin() -> CardDefinition {
+    CardDefinition {
+        name: "Pest Vinekin",
+        cost: cost(&[generic(3), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Pest, CreatureType::Plant],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Trample],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::Const(3),
+                },
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(2),
+                    definition: stx_pest_token(),
+                },
+            ]),
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
 /// Witherbloom Soulrender — {2}{B}{G}, Sorcery.
 /// Synthesised Oracle: "Drain 3. Mill 3."
 pub fn witherbloom_soulrender() -> CardDefinition {

@@ -32454,3 +32454,94 @@ fn batch_35_silverquill_drainwriter_remains_consistent() {
     let _id = g.add_card_to_battlefield(0, catalog::silverquill_drainwriter());
     drain_stack(&mut g);
 }
+
+// ── Batch 36: more STX cards ────────────────────────────────────────────────
+
+#[test]
+fn silverquill_stylepoint_pumps_and_grants_first_strike() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    drain_stack(&mut g);
+    let id = g.add_card_to_hand(0, catalog::silverquill_stylepoint());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(crate::game::types::Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Stylepoint castable");
+    drain_stack(&mut g);
+    let card = g.battlefield_find(bear).unwrap();
+    assert_eq!(card.power(), 3);
+    assert_eq!(card.toughness(), 3);
+    assert!(card.has_keyword(&Keyword::FirstStrike));
+}
+
+#[test]
+fn inkling_b36_sentinel_is_a_three_mana_flying_soldier() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::inkling_b36_sentinel());
+    drain_stack(&mut g);
+    let card = g.battlefield_find(id).unwrap();
+    assert_eq!(card.power(), 2);
+    assert_eq!(card.toughness(), 3);
+    assert!(card.has_keyword(&Keyword::Flying));
+    assert!(card.definition.subtypes.creature_types.contains(&CreatureType::Soldier));
+}
+
+#[test]
+fn silverquill_forge_mints_two_inklings_and_drains() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::silverquill_forge());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    let tokens_before = g.battlefield.iter().filter(|c| c.is_token).count();
+    let opp_before = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Forge castable");
+    drain_stack(&mut g);
+    let tokens_after = g.battlefield.iter().filter(|c| c.is_token).count();
+    assert_eq!(tokens_after, tokens_before + 2);
+    assert_eq!(g.players[1].life, opp_before - 1);
+}
+
+#[test]
+fn witherbloom_verdancer_etb_and_magecraft_each_gain_one() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::witherbloom_verdancer());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let life_before = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Verdancer castable");
+    drain_stack(&mut g);
+    // ETB gain 1
+    assert_eq!(g.players[0].life, life_before + 1);
+    // Now cast a bolt → magecraft gains 1 more
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(crate::game::types::Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life_before + 2);
+}
+
+#[test]
+fn pest_vinekin_dies_gains_three_life_and_mints_two_pests() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::pest_vinekin());
+    g.clear_sickness(id);
+    drain_stack(&mut g);
+    let tokens_before = g.battlefield.iter().filter(|c| c.is_token).count();
+    let life_before = g.players[0].life;
+    let _ = g.remove_to_graveyard_with_triggers(id);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life_before + 3);
+    let tokens_after = g.battlefield.iter().filter(|c| c.is_token).count();
+    assert_eq!(tokens_after, tokens_before + 2);
+}

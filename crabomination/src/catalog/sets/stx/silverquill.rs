@@ -5517,6 +5517,117 @@ pub fn silverquill_antiphony() -> CardDefinition {
     }
 }
 
+// ── Batch 36: more Silverquill cards ────────────────────────────────────────
+
+/// Silverquill Stylepoint — {W}, Instant.
+/// Synthesised Oracle: "Target creature gets +1/+1 EOT and gains First
+/// Strike until end of turn."
+pub fn silverquill_stylepoint() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Stylepoint",
+        cost: cost(&[w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(1),
+                toughness: Value::Const(1),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: target_filtered(SelectionRequirement::Creature),
+                keyword: Keyword::FirstStrike,
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Inkling Sentinel — {2}{W}, 2/3 Inkling Soldier with Flying.
+/// Synthesised Oracle: vanilla Inkling at the 3-mana slot.
+pub fn inkling_b36_sentinel() -> CardDefinition {
+    CardDefinition {
+        name: "Inkling Sentinel II",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Forge — {3}{W}{B}, Sorcery.
+/// Synthesised Oracle: "Create two 1/1 W/B Inkling creature tokens with
+/// flying. Each opponent loses 1 life and you gain 1 life."
+pub fn silverquill_forge() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Forge",
+        cost: cost(&[generic(3), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                definition: inkling_token(),
+            },
+            Effect::Drain {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                to: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
 /// Inkling Cardinal — {3}{W}{B}, 3/4 Inkling Cleric, Flying + Vigilance.
 /// Synthesised Oracle: "When this creature enters, you gain 2 life."
 pub fn inkling_cardinal() -> CardDefinition {
