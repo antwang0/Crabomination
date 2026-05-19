@@ -6641,3 +6641,183 @@ pub fn silverquill_convocation() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 42 (modern_decks) — Silverquill expansion ─────────────────────────
+
+/// Silverquill Spellbinder — {2}{W}{B}, 2/3 Vampire Cleric Lifelink.
+/// Synthesised Oracle: "Magecraft — Whenever you cast or copy an instant
+/// or sorcery spell, each opponent loses 1 life and you gain 1 life."
+/// A 4-mana drain-each-spell body that anchors the Silverquill drain
+/// engine alongside Witherbloom Apprentice and Tenured Inkcaster's pump.
+pub fn silverquill_spellbinder() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Spellbinder",
+        cost: cost(&[generic(2), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Lifelink],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_drain_each_opp(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Inkling Recruiter — {W}{B}, 1/2 Inkling Soldier Flying.
+/// Synthesised Oracle: "When this creature enters, create a 1/1 white
+/// and black Inkling creature token with flying." A 2-mana 1/2 flier
+/// that immediately mints a second body, doubling the air force.
+pub fn inkling_recruiter() -> CardDefinition {
+    CardDefinition {
+        name: "Inkling Recruiter",
+        cost: cost(&[w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![crate::effect::shortcut::etb(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: inkling_token(),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Censure II — {1}{W} Instant.
+/// Synthesised Oracle: "Target creature gets -3/-3 until end of turn."
+/// A 2-mana removal trick that handles X/3-and-smaller creatures while
+/// also softening up larger bodies for combat tricks.
+pub fn silverquill_censure_v2() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Censure II",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::PumpPT {
+            what: target_filtered(SelectionRequirement::Creature),
+            power: Value::Const(-3),
+            toughness: Value::Const(-3),
+            duration: Duration::EndOfTurn,
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Drafter II — {1}{B}, 2/2 Human Rogue.
+/// Synthesised Oracle: "When this creature enters, target opponent
+/// discards a card." 3-mana ETB hand attack body — symmetric to Inkling
+/// Proxy but discard-of-opponent's-choice rather than random.
+pub fn silverquill_drafter_v2() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Drafter II",
+        cost: cost(&[generic(1), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Rogue],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![crate::effect::shortcut::etb(Effect::Discard {
+            who: target_filtered(SelectionRequirement::Player),
+            amount: Value::Const(1),
+            random: false,
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Inkflame — {1}{W}{B} Sorcery.
+/// Synthesised Oracle: "Each opponent loses 2 life. You gain 2 life and
+/// draw a card." 3-mana drain-and-cantrip — net +1 card and a 4-life
+/// swing per cast.
+pub fn silverquill_inkflame() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Inkflame",
+        cost: cost(&[generic(1), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Drain {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                to: Selector::You,
+                amount: Value::Const(2),
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

@@ -2496,6 +2496,50 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   test. Promote-eligible when Regenerate primitive lands; the
   remainder is wired.
 
+- 🟡 **CR 701.8 — Destroy** (push modern_decks batch 42 audit,
+  claude/modern_decks branch — audit against
+  `MagicCompRules_20260417.txt`): "To destroy a permanent, move it
+  from the battlefield to its owner's graveyard. The only ways a
+  permanent can be destroyed are as a result of an effect that uses
+  the word 'destroy' or as a result of the state-based actions that
+  check for lethal damage (see rule 704.5g) or damage from a source
+  with deathtouch (see rule 704.5h). If a permanent is put into its
+  owner's graveyard for any other reason, it hasn't been 'destroyed.'
+  A regeneration effect replaces a destruction event." Audit:
+  (a) **701.8a body** — ✅ (`Effect::Destroy` in
+  `game/effects/mod.rs:843` resolves the selector, walks each
+  permanent, and routes via `remove_to_graveyard_with_triggers`;
+  creatures emit `CreatureDied` event before the dies-trigger
+  dispatcher fans out to LTB / dies / gy-leave triggers).
+  (b) **701.8b destruction sources** — ✅ for the named `destroy`
+  primitive (Effect::Destroy) and for both SBA paths: lethal damage
+  (CR 704.5g) is wired in `check_state_based_actions` reading the
+  `damage` field against the computed toughness; deathtouch (CR 704.5h)
+  routes via `Keyword::Deathtouch` on the damage source — any nonzero
+  combat/effect damage from a deathtouch source destroys the affected
+  creature. Other graveyard-going paths (`Effect::Sacrifice`,
+  `Effect::Exile`, mill, discard, return-to-hand bounce) correctly do
+  **not** emit a `CreatureDied`-with-destroy semantics; the
+  `creatures_died_this_turn` counter still bumps on sacrifice (CR
+  701.16 sacrifice puts a permanent into its owner's graveyard, which
+  is a "die" event but not a "destroyed" event — the engine collapses
+  both into the same `CreatureDied` emission today; doc-tracked).
+  (c) **701.8c regeneration shield** — ⏳ (no Regenerate primitive;
+  printed cards with Regenerate carry the regenerate rider stubbed.
+  No STX/SOS card uses Regenerate; tracked engine-wide).
+  (d) **Indestructible guard** — ✅ (`Effect::Destroy` checks
+  `Keyword::Indestructible` before routing to the graveyard;
+  indestructible creatures pass straight through with no event
+  emission and no dies-trigger fanout). Same gate applies in
+  `check_state_based_actions` for lethal-damage SBA path.
+  (e) **CR 704.5g lethal-damage SBA** — ✅ tested across every PumpPT
+  combat test; e.g. Grizzly Bears at 2 marked damage with 2 toughness
+  is destroyed at the next SBA check.
+  Tests: lethal-damage SBA + deathtouch destroys exercised across
+  ~80 combat tests; `Effect::Destroy` exercised by Doom Blade,
+  Murder, Vanishing Verse, Witherbloom Withercut, and many more.
+  Promote to ✅ when CR 701.19 (Regenerate) lands.
+
 ## Suggested next-up tasks
 
 - ✅ **`Effect::GrantKeyword` duration honoring** (push modern_decks
@@ -5570,3 +5614,39 @@ resolution time" in the Suggested next-up tasks section.
   prompt loop slot 0..N, accepting "skip this slot" (None) when slot
   index >= min. Auto-decider fills slot 0 and stops; scripted decider
   can fill more.
+
+### Suggested next-up tasks (additions from batch 42)
+
+- ⏳ **`Effect::PreventDamageThisTurn { source, amount }`** (push
+  modern_decks batch 42 surfaced): SOS Wilt in the Heat ("If that
+  creature would die this turn, exile it instead") and several
+  STX/SOS cards print damage-replacement riders that need a
+  prevent-or-replace primitive at the damage stack. Engine shape:
+  add `Effect::ReplaceDeathThisTurn { who: Selector, replacement:
+  Box<Effect> }` to allow "if a creature would die, exile instead"
+  shape via the existing replacement-effects framework (Phase H).
+  Promotes Wilt in the Heat, Light of Promise's lifegain triggers,
+  and any printed "would die, exile" rider.
+
+- ⏳ **`StaticEffect::GrantMiracle { cost }`** (push modern_decks
+  batch 42 surfaced): Lorehold, the Historian's "Each instant and
+  sorcery card in your hand has miracle {2}" rider blocks the full
+  promotion to ✅. Engine shape: (a) static ability that adds a
+  miracle alt-cost to spell cards in the controller's hand;
+  (b) a "first card drawn this turn" cast-time check (the engine
+  tracks `cards_drawn_this_turn` per player), and (c) a Miracle
+  alt-cost pathway in `AlternativeCost` (similar to Flashback).
+  Promotes Lorehold, the Historian to ✅ + opens the door for the
+  Avacyn Restored miracle cycle (Bonfire of the Damned, Temporal
+  Mastery, Reforge the Soul).
+
+- ⏳ **More STX college expansions** (push modern_decks batch 42
+  continuation): With the current Silverquill = 158 cards,
+  Witherbloom = 141 cards, the existing core is dense. Future
+  expansions should focus on (a) printing remaining iconic Stx
+  cards like Quandrix Pledgemage, Strixhaven Mascot, Mascot
+  Interception once `Effect::CreateCopyToken` lands; (b) finishing
+  the 10 remaining 🟡 STX cards by addressing the engine gaps each
+  surfaces; (c) rebalancing tribal density (Inkling, Pest, Spirit,
+  Fractal, Elemental Wizard) across colleges to support sealed
+  tribal pools.

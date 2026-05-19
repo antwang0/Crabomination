@@ -5770,3 +5770,190 @@ pub fn witherbloom_pestsage() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 42 (modern_decks) — Witherbloom expansion ─────────────────────────
+
+/// Witherbloom Bramblevine — {1}{B}{G}, 3/2 Plant Warrior with Reach.
+/// Synthesised Oracle: "Reach. Whenever you gain life, put a +1/+1 counter
+/// on this creature." A 3-mana lifegain-tribal payoff body that scales
+/// off Witherbloom Apprentice / Pest token death triggers.
+pub fn witherbloom_bramblevine() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Bramblevine",
+        cost: cost(&[generic(1), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Reach],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::LifeGained, EventScope::YourControl),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Sapglyph — {B}{G} Sorcery.
+/// Synthesised Oracle: "Target opponent loses 2 life and you gain 2 life."
+/// 2-mana drain — the cheapest direct drain spell in the Witherbloom
+/// catalog, ideal alongside Apprentice / Pestreaver for life-swing turns.
+pub fn witherbloom_sapglyph() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Sapglyph",
+        cost: cost(&[b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Drain {
+            from: target_filtered(SelectionRequirement::Player),
+            to: Selector::You,
+            amount: Value::Const(2),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Pest Cultivator II — {2}{G}, 2/3 Pest Druid.
+/// Synthesised Oracle: "When this creature enters, create a 1/1 black-and-
+/// green Pest token." 3-mana 2-for-1 (3/2 body + 1/1 Pest with death
+/// rider).
+pub fn pest_cultivator_v2() -> CardDefinition {
+    CardDefinition {
+        name: "Pest Cultivator II",
+        cost: cost(&[generic(2), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Pest, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![crate::effect::shortcut::etb(Effect::CreateToken {
+            who: PlayerRef::You,
+            definition: stx_pest_token(),
+            count: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Pestpicker — {1}{B}, 2/1 Pest Rogue Menace.
+/// Synthesised Oracle: "Menace. Whenever this creature attacks, each
+/// opponent loses 1 life." 2-mana aggressive evasion + drain trigger.
+pub fn witherbloom_pestpicker() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Pestpicker",
+        cost: cost(&[generic(1), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Pest, CreatureType::Rogue],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Menace],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::LoseLife {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Bloomstalk — {2}{G}, 2/4 Plant Druid.
+/// Synthesised Oracle: "When this creature enters, you gain 2 life.
+/// Magecraft — Whenever you cast or copy an instant or sorcery spell,
+/// put a +1/+1 counter on this creature." 3-mana lifegain + self-grow
+/// magecraft body.
+pub fn witherbloom_bloomstalk() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Bloomstalk",
+        cost: cost(&[generic(2), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![
+            crate::effect::shortcut::etb_gain_life(2),
+            magecraft(Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            }),
+        ],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

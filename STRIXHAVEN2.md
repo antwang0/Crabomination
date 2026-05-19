@@ -19,10 +19,58 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 221 | 35 | 0 |
-| STX (327 cards) | 858 | 10 | 0 |
+| STX (327 cards) | 883 | 10 | 0 |
 | STA reprints (in STX boosters) | 47 | 0 | — |
 
 Push (modern_decks, claude/modern_decks branch — latest revision —
+**batch 42: 25 new STX cards across all five colleges (5 Silverquill +
+5 Witherbloom + 5 Lorehold + 5 Quandrix + 5 Prismari) + 25 new tests.
+Total tests: 3038 (was 3013).**
+
+- **Silverquill (W/B)** — 5 new cards:
+  `silverquill_spellbinder` ({2}{W}{B} 2/3 Vampire Cleric Lifelink —
+  magecraft drain 1), `inkling_recruiter` ({W}{B} 1/2 Inkling Soldier
+  Flying — ETB mint 1 Inkling token), `silverquill_censure_v2` ({1}{W}
+  Instant — target creature -3/-3 EOT), `silverquill_drafter_v2`
+  ({1}{B} 2/2 Human Rogue — ETB target opp discards), `silverquill_inkflame`
+  ({1}{W}{B} Sorcery — drain 2 + draw 1).
+
+- **Witherbloom (B/G)** — 5 new cards:
+  `witherbloom_bramblevine` ({1}{B}{G} 3/2 Plant Warrior Reach —
+  lifegain-triggers add +1/+1 counter), `witherbloom_sapglyph`
+  ({B}{G} Sorcery — drain 2 from target player), `pest_cultivator_v2`
+  ({2}{G} 2/3 Pest Druid — ETB mint 1 Pest token), `witherbloom_pestpicker`
+  ({1}{B} 2/1 Pest Rogue Menace — attacks-drain 1 from each opp),
+  `witherbloom_bloomstalk` ({2}{G} 2/4 Plant Druid — ETB gain 2 life +
+  magecraft self +1/+1 counter).
+
+- **Lorehold (R/W)** — 5 new cards:
+  `lorehold_stoneguard` ({2}{W} 2/4 Spirit Soldier Vigilance — ETB gain
+  2 life), `spirit_vanguard_v2` ({1}{R} 2/2 Spirit Knight Haste),
+  `lorehold_pyresummon` ({R}{W} Instant — 1 damage any + mint 2/2 R/W
+  Spirit), `lorehold_saberspirit` ({3}{R}{W} 3/4 Spirit Warrior First
+  Strike + Lifelink), `spirit_bookburner` ({R} 1/1 Spirit Wizard —
+  magecraft self +1/+0 EOT).
+
+- **Quandrix (G/U)** — 5 new cards:
+  `fractal_mathmage` ({1}{G}{U} 0/0 Fractal Wizard — enters_with 3
+  +1/+1 counters → 3/3 body), `quandrix_geometer_v2` ({2}{G}{U} 2/2
+  Elf Druid — ETB scry 1 + draw 1, magecraft +1/+1 counter on target
+  friendly Creature), `fractal_sproutling` ({G} 0/0 Fractal —
+  enters_with 1 +1/+1 counter → 1/1), `quandrix_calligrapher_v2`
+  ({1}{U} 1/2 Merfolk Wizard — ETB draw 1), `quandrix_equation_v2`
+  ({G}{U} Instant — two +1/+1 counters on target friendly Creature).
+
+- **Prismari (U/R)** — 5 new cards:
+  `prismari_inferno_v2` ({2}{R} Sorcery — 3 damage to any target),
+  `prismari_glasshammer` ({1}{R} 2/2 Elemental Warrior — magecraft 1
+  damage to each opp), `prismari_skywarp` ({U} Instant — bounce target
+  creature), `prismari_stagewright` ({2}{U}{R} 3/3 Human Wizard — ETB
+  draw 1 + magecraft 1 dmg to target Creature/Player), `prismari_soundsmith`
+  ({U}{R} 2/2 Elemental Wizard — magecraft self +1/+0 EOT).
+
+Prior push:
+
 **batch 41: 23 new STX cards across all five colleges (5 Silverquill +
 5 Witherbloom + 4 Lorehold + 4 Quandrix + 5 Prismari) + 23 new tests.
 Total tests: 3013 (was 2990).**

@@ -4882,3 +4882,184 @@ pub fn fractal_bloomweaver() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 42 (modern_decks) — Quandrix expansion ────────────────────────────
+
+/// Fractal Mathmage — {1}{G}{U}, 0/0 Fractal Wizard.
+/// Synthesised Oracle: "This creature enters with three +1/+1 counters on
+/// it." A clean 3-mana 3/3 Fractal body via the enters_with_counters
+/// path (CR 614.12).
+pub fn fractal_mathmage() -> CardDefinition {
+    CardDefinition {
+        name: "Fractal Mathmage",
+        cost: cost(&[generic(1), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(3))),
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Geometer II — {2}{G}{U}, 2/2 Elf Druid.
+/// Synthesised Oracle: "When this creature enters, scry 1, then draw a
+/// card. Magecraft — Put a +1/+1 counter on target creature you control."
+/// 4-mana cantrip body with magecraft fan-out.
+pub fn quandrix_geometer_v2() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Geometer II",
+        cost: cost(&[generic(2), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![
+            crate::effect::shortcut::etb(Effect::Seq(vec![
+                Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
+                Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            ])),
+            magecraft(Effect::AddCounter {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            }),
+        ],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Fractal Sproutling — {G}, 0/0 Fractal.
+/// Synthesised Oracle: "This creature enters with a +1/+1 counter on it."
+/// 1-mana 1/1 Fractal — the cheapest Fractal body in the catalog,
+/// scaling targets for Growth Curve and Quandrix Seedling.
+pub fn fractal_sproutling() -> CardDefinition {
+    CardDefinition {
+        name: "Fractal Sproutling",
+        cost: cost(&[g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(1))),
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Calligrapher II — {1}{U}, 1/2 Merfolk Wizard.
+/// Synthesised Oracle: "When this creature enters, draw a card." A
+/// clean 2-mana cantrip body — STX flavor of Spirited Companion (W) and
+/// Elvish Visionary (G).
+pub fn quandrix_calligrapher_v2() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Calligrapher II",
+        cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![crate::effect::shortcut::etb(Effect::Draw {
+            who: Selector::You,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Equation II — {G}{U} Instant.
+/// Synthesised Oracle: "Put two +1/+1 counters on target creature you
+/// control." 2-mana clean +2/+2 — composes against the rest of the
+/// Quandrix counter package (Growth Curve doubles after).
+pub fn quandrix_equation_v2() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Equation II",
+        cost: cost(&[g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::AddCounter {
+            what: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            ),
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(2),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+

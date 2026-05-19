@@ -6354,3 +6354,175 @@ pub fn lorehold_recital_v2() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 42 (modern_decks) — Lorehold expansion ────────────────────────────
+
+/// Lorehold Stoneguard — {2}{W}, 2/4 Spirit Soldier Vigilance.
+/// Synthesised Oracle: "Vigilance. When this creature enters, you gain
+/// 2 life." 3-mana defensive body that stabilises against burn while
+/// still attacking.
+pub fn lorehold_stoneguard() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Stoneguard",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        keywords: vec![Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![crate::effect::shortcut::etb_gain_life(2)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Spirit Vanguard II — {1}{R}, 2/2 Spirit Knight Haste.
+/// Synthesised Oracle: "Haste." A clean 2-mana 2/2 haste body — the
+/// hasted Lorehold curve play before Magecraft pings stack up.
+pub fn spirit_vanguard_v2() -> CardDefinition {
+    CardDefinition {
+        name: "Spirit Vanguard II",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Haste],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Pyresummon — {R}{W}, Instant.
+/// Synthesised Oracle: "Lorehold Pyresummon deals 1 damage to any target.
+/// Create a 2/2 red and white Spirit creature token." 2-mana
+/// burn-plus-body trick — turns one cast into a 2/2 + 1 dmg.
+pub fn lorehold_pyresummon() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Pyresummon",
+        cost: cost(&[r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature
+                        .or(SelectionRequirement::Player)
+                        .or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::Const(1),
+            },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                definition: lorehold_spirit_token(),
+                count: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Saberspirit — {3}{R}{W}, 3/4 Spirit Warrior.
+/// Synthesised Oracle: "First strike, lifelink." 5-mana fat body with
+/// both combat keywords — the kind of late-game stabiliser that closes
+/// in any aggressive shell.
+pub fn lorehold_saberspirit() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Saberspirit",
+        cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::FirstStrike, Keyword::Lifelink],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Spirit Bookburner — {R}, 1/1 Spirit Wizard.
+/// Synthesised Oracle: "Magecraft — Whenever you cast or copy an instant
+/// or sorcery spell, this creature gets +1/+0 until end of turn." A
+/// 1-mana mini-Monastery-Swiftspear in Lorehold colors.
+pub fn spirit_bookburner() -> CardDefinition {
+    CardDefinition {
+        name: "Spirit Bookburner",
+        cost: cost(&[r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_self_pump(1, 0)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

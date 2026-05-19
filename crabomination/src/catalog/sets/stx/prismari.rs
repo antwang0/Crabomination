@@ -4438,3 +4438,184 @@ pub fn prismari_scryer() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+
+// ── Batch 42 (modern_decks) — Prismari expansion ────────────────────────────
+
+/// Prismari Inferno II — {2}{R} Sorcery.
+/// Synthesised Oracle: "Prismari Inferno deals 3 damage to any target."
+/// 3-mana 3 damage Lava Spike-with-flexibility — Volcanic Hammer in
+/// Prismari shells.
+pub fn prismari_inferno_v2() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Inferno II",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::DealDamage {
+            to: target_filtered(
+                SelectionRequirement::Creature
+                    .or(SelectionRequirement::Player)
+                    .or(SelectionRequirement::Planeswalker),
+            ),
+            amount: Value::Const(3),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Glasshammer — {1}{R}, 2/2 Elemental Warrior.
+/// Synthesised Oracle: "Magecraft — Whenever you cast or copy an instant
+/// or sorcery spell, this creature deals 1 damage to each opponent." A
+/// 2-mana spellslinger payoff in mono-red that doubles down on burn.
+pub fn prismari_glasshammer() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Glasshammer",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_ping_each_opp(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Skywarp — {U}, Instant.
+/// Synthesised Oracle: "Return target creature to its owner's hand."
+/// 1-mana hard bounce — Unsummon flavour in Prismari colors.
+pub fn prismari_skywarp() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Skywarp",
+        cost: cost(&[u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Move {
+            what: target_filtered(SelectionRequirement::Creature),
+            to: crate::effect::ZoneDest::Hand(crate::effect::PlayerRef::OwnerOf(Box::new(
+                Selector::Target(0),
+            ))),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Stagewright — {2}{U}{R}, 3/3 Human Wizard.
+/// Synthesised Oracle: "When this creature enters, draw a card. Magecraft
+/// — Whenever you cast or copy an instant or sorcery spell, this creature
+/// deals 1 damage to target creature or player." 4-mana value engine.
+pub fn prismari_stagewright() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Stagewright",
+        cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![
+            crate::effect::shortcut::etb(Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            }),
+            magecraft(Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature.or(SelectionRequirement::Player),
+                ),
+                amount: Value::Const(1),
+            }),
+        ],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Soundsmith — {U}{R}, 2/2 Elemental Wizard.
+/// Synthesised Oracle: "Magecraft — Whenever you cast or copy an instant
+/// or sorcery spell, this creature gets +1/+0 until end of turn." 2-mana
+/// Prowess-shaped magecraft attacker — Monastery Swiftspear in Prismari
+/// drag.
+pub fn prismari_soundsmith() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Soundsmith",
+        cost: cost(&[u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_self_pump(1, 0)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
