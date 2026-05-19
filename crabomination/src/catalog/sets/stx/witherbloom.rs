@@ -9,12 +9,14 @@
 use super::no_abilities;
 use super::shared::stx_pest_token;
 use crate::card::{
-    ActivatedAbility, CardDefinition, CardType, CreatureType, Effect, EventKind, EventScope,
+    ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, Effect, EventKind, EventScope,
     EventSpec, Keyword, Predicate, SelectionRequirement, Selector, Subtypes, TriggeredAbility,
-    Value,
+    Value, Zone,
 };
-use crate::effect::shortcut::{magecraft, magecraft_drain_each_opp, target_filtered};
-use crate::effect::{ManaPayload, PlayerRef, ZoneDest};
+use crate::effect::shortcut::{
+    magecraft, magecraft_drain_each_opp, magecraft_gain_life, magecraft_self_pump, target_filtered,
+};
+use crate::effect::{Duration, ManaPayload, PlayerRef, ZoneDest};
 use crate::mana::{cost, b, g, generic, Color, ManaCost};
 
 // ── Witherbloom Apprentice ──────────────────────────────────────────────────
@@ -3776,6 +3778,477 @@ pub fn witherbloom_mireguide() -> CardDefinition {
             },
         ],
         triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+// ── Batch 32 (modern_decks) — Witherbloom expansion ─────────────────────────
+
+/// Witherbloom Pestswarm — {2}{B}{G}, 3/2 Plant Warrior.
+/// Synthesised Oracle: "When this creature enters, create two 1/1 black-green
+/// Pest creature tokens with 'When this creature dies, you gain 1 life.'"
+pub fn witherbloom_pestswarm() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Pestswarm",
+        cost: cost(&[generic(2), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                definition: stx_pest_token(),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Acolyte — {1}{B}, 1/2 Human Warlock.
+/// Synthesised Oracle: "Magecraft — Whenever you cast or copy an instant or
+/// sorcery spell, you gain 1 life."
+pub fn witherbloom_lifeleecher() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Lifeleecher",
+        cost: cost(&[generic(1), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_gain_life(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Rootcaster — {2}{G}, 2/3 Plant Druid.
+/// Synthesised Oracle: "Magecraft — Whenever you cast or copy an instant or
+/// sorcery spell, this creature gets +1/+1 until end of turn."
+pub fn witherbloom_rootcaster() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Rootcaster",
+        cost: cost(&[generic(2), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_self_pump(1, 1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Caulhound — {3}{B}{G}, 4/4 Plant Beast Trample.
+/// Synthesised Oracle: "When this creature enters, each opponent loses 2
+/// life and you gain 2 life."
+pub fn witherbloom_caulhound() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Caulhound",
+        cost: cost(&[generic(3), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Beast],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Trample],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Drain {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                to: Selector::You,
+                amount: Value::Const(2),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Necromancer — {3}{B}, 2/3 Human Wizard.
+/// Synthesised Oracle: "When this creature enters, return target creature
+/// card with mana value 3 or less from your graveyard to your hand."
+pub fn witherbloom_gravecaller() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Gravecaller",
+        cost: cost(&[generic(3), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Move {
+                what: Selector::one_of(Selector::CardsInZone {
+                    zone: Zone::Graveyard,
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::ManaValueAtMost(3)),
+                }),
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Bloodvine — {B}{G}, 1/3 Plant Vampire Lifelink.
+/// Synthesised Oracle: "Magecraft — Whenever you cast or copy an instant or
+/// sorcery spell, you gain 1 life."
+pub fn witherbloom_bloodvine() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Bloodvine",
+        cost: cost(&[b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Vampire],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![Keyword::Lifelink],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_gain_life(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Vitalist — {1}{G}, 2/2 Human Druid.
+/// Synthesised Oracle: "Whenever you gain life, put a +1/+1 counter on this
+/// creature." Same shape as Ajani's Pridemate.
+pub fn witherbloom_vitalist() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Vitalist",
+        cost: cost(&[generic(1), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::LifeGained, EventScope::YourControl),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Toxinkeeper — {2}{B}, 2/2 Human Warlock Deathtouch.
+/// Synthesised Oracle: "When this creature enters, target creature gets
+/// -1/-1 until end of turn."
+pub fn witherbloom_toxinkeeper() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Toxinkeeper",
+        cost: cost(&[generic(2), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Deathtouch],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(-1),
+                toughness: Value::Const(-1),
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Bloodroot — {3}{B}{G}, sorcery.
+/// Synthesised Oracle: "Drain 4 (each opponent loses 4 life and you gain
+/// 4 life)."
+pub fn witherbloom_bloodroot() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Bloodroot",
+        cost: cost(&[generic(3), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Drain {
+            from: Selector::Player(PlayerRef::EachOpponent),
+            to: Selector::You,
+            amount: Value::Const(4),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Pesthatch — {1}{B}{G}, sorcery.
+/// Synthesised Oracle: "Create a 1/1 black-green Pest creature token with
+/// 'When this creature dies, you gain 1 life,' then put a +1/+1 counter on
+/// target creature you control."
+pub fn witherbloom_pesthatch() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Pesthatch",
+        cost: cost(&[generic(1), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: stx_pest_token(),
+            },
+            Effect::AddCounter {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Diviner — {2}{B}{G}, 2/3 Human Warlock.
+/// Synthesised Oracle: "When this creature enters, mill three cards, then
+/// you may return target creature card from your graveyard to your hand."
+pub fn witherbloom_diviner() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Diviner",
+        cost: cost(&[generic(2), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::Mill {
+                    who: Selector::You,
+                    amount: Value::Const(3),
+                },
+                Effect::MayDo {
+                    description: "Return a creature card from your graveyard to your hand"
+                        .to_string(),
+                    body: Box::new(Effect::Move {
+                        what: Selector::one_of(Selector::CardsInZone {
+                            zone: Zone::Graveyard,
+                            who: PlayerRef::You,
+                            filter: SelectionRequirement::Creature,
+                        }),
+                        to: ZoneDest::Hand(PlayerRef::You),
+                    }),
+                },
+            ]),
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Sapfeeder — {1}{B}{G}, 2/2 Plant Beast.
+/// Synthesised Oracle: "When this creature enters, target opponent loses
+/// 2 life. {1}{B}, Sacrifice a creature: Target opponent loses 1 life and
+/// you gain 1 life."
+pub fn witherbloom_pestwarden() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Pestwarden",
+        cost: cost(&[generic(1), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Beast],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), b()]),
+            tap_cost: false,
+            sac_cost: false,
+            life_cost: 0,
+            exile_other_filter: None,
+            condition: None,
+            exile_self_cost: false,
+            from_graveyard: false,
+            sorcery_speed: false,
+            once_per_turn: false,
+            effect: Effect::Drain {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                to: Selector::You,
+                amount: Value::Const(1),
+            },
+            self_counter_cost_reduction: None,
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Drain {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                to: Selector::You,
+                amount: Value::Const(2),
+            },
+        }],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],

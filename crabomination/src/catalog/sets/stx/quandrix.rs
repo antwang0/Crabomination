@@ -14,8 +14,8 @@ use crate::card::{
     EventScope, EventSpec, Keyword, Selector, SelectionRequirement, Subtypes, TokenDefinition,
     TriggeredAbility, Value,
 };
-use crate::effect::shortcut::{magecraft, target_filtered};
-use crate::effect::{Duration, PlayerRef};
+use crate::effect::shortcut::{magecraft, magecraft_self_pump, target_filtered};
+use crate::effect::{Duration, PlayerRef, ZoneDest};
 use crate::mana::{cost, generic, g, u, Color, ManaCost};
 
 // ── Quandrix Apprentice ─────────────────────────────────────────────────────
@@ -3108,6 +3108,323 @@ pub fn quandrix_branchwarden() -> CardDefinition {
                 who: Selector::You,
                 amount: Value::Const(1),
             },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+// ── Batch 32 (modern_decks) — Quandrix expansion ────────────────────────────
+
+/// Quandrix Tidewright — {1}{U}, 2/1 Merfolk Wizard Flash.
+/// Synthesised Oracle: "Flash. When this creature enters, target creature
+/// gets -2/-0 until end of turn."
+pub fn quandrix_tidewright() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Tidewright",
+        cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Flash],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(-2),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Wavebreaker — {2}{G}{U}, 3/3 Fractal Wizard.
+/// Synthesised Oracle: "Magecraft — Whenever you cast or copy an instant or
+/// sorcery spell, put a +1/+1 counter on this creature."
+pub fn quandrix_wavewriter() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Wavewriter",
+        cost: cost(&[generic(2), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::AddCounter {
+            what: Selector::This,
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Scribe — {G}{U}, 1/2 Elf Wizard.
+/// Synthesised Oracle: "Magecraft — Whenever you cast or copy an instant or
+/// sorcery spell, this creature gets +1/+1 until end of turn."
+pub fn quandrix_scribe() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Scribe",
+        cost: cost(&[g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_self_pump(1, 1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Geometer — {3}{G}{U}, 4/4 Fractal Wizard.
+/// Synthesised Oracle: "When this creature enters, create a 0/0 green-and-
+/// blue Fractal creature token, then put X +1/+1 counters on it, where X
+/// is the number of cards in your hand."
+pub fn quandrix_handmage() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Handmage",
+        cost: cost(&[generic(3), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: quandrix_fractal_token(),
+                },
+                Effect::AddCounter {
+                    what: Selector::LastCreatedToken,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::HandSizeOf(PlayerRef::You),
+                },
+            ]),
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Equation — {2}{G}{U}, sorcery.
+/// Synthesised Oracle: "Draw a card, then put X +1/+1 counters on target
+/// creature you control, where X is the number of cards in your hand."
+pub fn quandrix_equipoise() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Equipoise",
+        cost: cost(&[generic(2), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+            Effect::AddCounter {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::HandSizeOf(PlayerRef::You),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Visionary — {U}, 1/1 Merfolk Wizard.
+/// Synthesised Oracle: "When this creature enters, scry 1."
+pub fn quandrix_visionary() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Visionary",
+        cost: cost(&[u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Wilderwright — {3}{G}, 3/4 Elf Druid Reach.
+/// Synthesised Oracle: "When this creature enters, search your library for
+/// a basic land card, reveal it, put it onto the battlefield tapped, then
+/// shuffle."
+pub fn quandrix_wilderwright() -> CardDefinition {
+    use crate::card::Supertype;
+    CardDefinition {
+        name: "Quandrix Wilderwright",
+        cost: cost(&[generic(3), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Reach],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Search {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::HasSupertype(Supertype::Basic)
+                    .and(SelectionRequirement::HasCardType(CardType::Land)),
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: true,
+                },
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Topologist — {2}{U}, 2/2 Merfolk Wizard.
+/// Synthesised Oracle: "When this creature enters, draw a card, then
+/// discard a card."
+pub fn quandrix_topologist() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Topologist",
+        cost: cost(&[generic(2), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
+                Effect::Discard {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                    random: false,
+                },
+            ]),
         }],
         static_abilities: vec![],
         base_loyalty: 0,

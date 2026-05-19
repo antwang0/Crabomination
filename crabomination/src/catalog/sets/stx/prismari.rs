@@ -12,7 +12,7 @@ use crate::card::{
     CardDefinition, CardType, CreatureType, Effect, EventKind, EventScope, EventSpec, Keyword,
     SelectionRequirement, Selector, Subtypes, TriggeredAbility, Value,
 };
-use crate::effect::shortcut::{magecraft, magecraft_self_pump, target_filtered};
+use crate::effect::shortcut::{magecraft, magecraft_ping_each_opp, magecraft_self_pump, target_filtered};
 use crate::effect::{Duration, PlayerRef};
 use crate::mana::{cost, generic, r, u};
 
@@ -2954,6 +2954,203 @@ pub fn prismari_splashcaster() -> CardDefinition {
         ]),
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+// ── Batch 32 (modern_decks) — Prismari expansion ────────────────────────────
+
+/// Prismari Embertongue — {1}{R}, 2/1 Human Wizard.
+/// Synthesised Oracle: "Magecraft — Whenever you cast or copy an instant or
+/// sorcery spell, this creature deals 1 damage to each opponent."
+pub fn prismari_embertongue() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Embertongue",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_ping_each_opp(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Treasurewright — {U}{R}, 2/2 Human Artificer.
+/// Synthesised Oracle: "When this creature enters, create a Treasure token."
+pub fn prismari_treasurewright_b32() -> CardDefinition {
+    use crate::game::effects::treasure_token;
+    CardDefinition {
+        name: "Prismari Treasurewright (b32)",
+        cost: cost(&[u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Artificer],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: treasure_token(),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Sparkpainter — {2}{U}{R}, 3/3 Elemental Wizard.
+/// Synthesised Oracle: "Magecraft — Whenever you cast or copy an instant or
+/// sorcery spell, this creature gets +1/+0 until end of turn and you may
+/// draw a card. If you do, discard a card." (Loot rider attached via the
+/// magecraft trigger.)
+pub fn prismari_sparkpainter() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Sparkpainter",
+        cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::Seq(vec![
+            Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(1),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::MayDo {
+                description: "Loot 1".to_string(),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::Const(1),
+                    },
+                    Effect::Discard {
+                        who: Selector::You,
+                        amount: Value::Const(1),
+                        random: false,
+                    },
+                ])),
+            },
+        ]))],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Burning Lesson — {U}{R}, sorcery.
+/// Synthesised Oracle: "Prismari Burning Lesson deals 3 damage to any
+/// target. Scry 1."
+pub fn prismari_burning_lesson() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Burning Lesson",
+        cost: cost(&[u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature
+                        .or(SelectionRequirement::Player)
+                        .or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::Const(3),
+            },
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Flameforger — {3}{R}, 3/3 Djinn Wizard Haste.
+/// Synthesised Oracle: "Magecraft — Whenever you cast or copy an instant or
+/// sorcery spell, this creature gets +2/+0 until end of turn."
+pub fn prismari_flameforger() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Flameforger",
+        cost: cost(&[generic(3), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Djinn, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Haste],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_self_pump(2, 0)],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],

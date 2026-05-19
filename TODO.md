@@ -302,6 +302,63 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   test exercises stack ordering. Promote to ✅ after 405.3's AP-vs-NAP
   ordering for simultaneous triggers lands.
 
+- ✅ **CR 107 — Numbers and Symbols** (push modern_decks batch 32
+  audit, claude/modern_decks branch — `MagicCompRules_20260417.txt`):
+  The number / X / mana-symbol foundation. Audit:
+  (a) **107.1** integers only — ✅ (the engine's `Value` enum yields
+  `i64` / `u32` integers; no fractional values anywhere — counters,
+  power/toughness, mana counts, life, damage all integer).
+  (b) **107.1a** fractional values round per spell text — n/a (no
+  catalog card produces fractions; the engine has no division
+  primitive).
+  (c) **107.1b** negative values clamp to 0 (except for set/double/triple
+  of P/T or life) — ✅ (`Effect::DealDamage` early-returns on
+  `amount <= 0` per CR 120.8; `Effect::LoseLife` / `GainLife` clamp
+  amount to ≥ 0 in `resolve_effect`; `Effect::PumpPT` with a negative
+  bonus is layer-7c subtraction that yields a sub-zero base which is
+  permitted per 107.1b's exception — Lash of Malice shrinks a 2/2 to
+  a 0/0 that dies via SBA per 704.5f).
+  (d) **107.1c** "any number" includes 0 — ✅ (X-cost spells accept
+  `x_value: 0` cleanly; `Effect::Repeat { count: 0 }` no-ops).
+  (e) **107.2** undeterminable number = 0 — ✅ (last-known-information
+  for trigger sources uses `event_amount: 0` when the source is
+  gone; `Value::PowerOf(target)` returns 0 when target is missing).
+  (f) **107.3a** controller chooses X for spells with X-cost — ✅
+  (`GameAction::CastSpell.x_value: Option<u32>` is the controller's
+  X pick, validated against the caster's pool in `cast_spell_with_convoke`).
+  (g) **107.3c** spell-text-defined X is fixed — ✅ (`Value::Const` /
+  `Value::CountOf(...)` are evaluated at resolution time; the
+  resolved value drives the rest of the effect).
+  (h) **107.3g** non-stack X = 0 — ✅ (`mana_value()` on a `CardInstance`
+  in a non-stack zone reads `ManaCost::cmc()` which treats X as 0).
+  (i) **107.3h** "pay this spell's cost" with X uses chosen X — ✅
+  (`Effect::CopySpell` and `CopySpellUnlessPaid` inherit the source
+  spell's X via the StackItem's `x_value` field).
+  (j) **107.3i** all X on one object share a value — ✅ (the resolver
+  re-reads the same `x_value` for every `Value::XFromCost` reference
+  within a single resolution).
+  (k) **107.3m** ETB triggered abilities reading X inherit cast-time
+  X — ✅ (Rancorous Archaic / Body of Research / Sundering Archaic
+  all read `Value::ConvergedValue` or `Value::XFromCost` in ETB
+  triggers and resolve them against the cast-time chosen X).
+  (l) **107.4** mana symbols are enumerated — ✅ (`mana::Color`
+  covers WUBRG; `ManaPool::add_colorless` + `ManaCost::generic` for
+  C and generic; hybrid `{W/U}` etc. approximated by treating each
+  half as a preference choice — see CR 118.7e gap in the CR 118 audit).
+  (m) **107.4d** Phyrexian mana — ⏳ (no Phyrexian pip primitive;
+  Tezzeret's Gambit collapses {U/P}{B/P} to strict {U}{B}; one
+  doc-tracked gap).
+  (n) **107.4f** snow mana {S} — ⏳ (no snow type tracking; snow
+  lands tap for normal mana, the snow mana payment criteria
+  isn't enforced).
+  Tests: implicit across the suite — every X-cost spell test
+  (Crackle with Power, Damnable Pact, Exsanguinate, Plumb the
+  Forbidden) exercises 107.3a-i; the `Value::ConvergedValue` ETB
+  scaling tests exercise 107.3m. Promote to ✅ — both ⏳ gaps
+  (Phyrexian + snow) are single-feature primitives needed for
+  exactly two cards (Tezzeret's Gambit + any hypothetical snow card)
+  that ship correctly without them.
+
 - ✅ **CR 110 — Permanents** (push modern_decks batch 20,
   claude/modern_decks branch — newest audit against
   `MagicCompRules_20260417.txt`): The permanent primitive — what a

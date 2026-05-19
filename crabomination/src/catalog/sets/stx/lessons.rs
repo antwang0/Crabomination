@@ -1138,3 +1138,217 @@ pub fn advanced_cartography() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 32 (modern_decks) — Lesson expansion ──────────────────────────────
+
+/// Mascot Interpretation (Lesson) — {2}{W} Sorcery — Lesson (batch 32).
+/// Synthesised Oracle: "Create a 2/2 white-and-black Inkling token with
+/// flying."
+pub fn mascot_lesson_b32() -> CardDefinition {
+    let inkling = TokenDefinition {
+        name: "Inkling".to_string(),
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::White, Color::Black],
+        supertypes: vec![],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling],
+            ..Default::default()
+        },
+        activated_abilities: vec![],
+        triggered_abilities: vec![],
+    };
+    CardDefinition {
+        name: "Mascot Interpretation",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes {
+            spell_subtypes: vec![SpellSubtype::Lesson],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: inkling,
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Confront the Doubt — {2}{B} Sorcery — Lesson.
+/// Synthesised Oracle: "Target opponent reveals their hand. You choose a
+/// noncreature, nonland card from it. That player discards that card. You
+/// gain 2 life."
+pub fn confront_the_doubt() -> CardDefinition {
+    CardDefinition {
+        name: "Confront the Doubt",
+        cost: cost(&[generic(2), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes {
+            spell_subtypes: vec![SpellSubtype::Lesson],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::DiscardChosen {
+                from: Selector::Player(PlayerRef::Target(0)),
+                count: Value::Const(1),
+                filter: SelectionRequirement::Nonland
+                    .and(SelectionRequirement::Not(Box::new(SelectionRequirement::Creature))),
+            },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Test of Patience — {2}{U} Sorcery — Lesson.
+/// Synthesised Oracle: "Counter target activated or triggered ability. Draw
+/// a card."
+/// 🟡 Approximation: the counter-ability primitive currently targets only
+/// activated abilities on the stack (see Stifle in TODO.md). Body just
+/// draws a card at this point.
+pub fn test_of_patience() -> CardDefinition {
+    CardDefinition {
+        name: "Test of Patience",
+        cost: cost(&[generic(2), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes {
+            spell_subtypes: vec![SpellSubtype::Lesson],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Draw {
+            who: Selector::You,
+            amount: Value::Const(2),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Reduce to Ashes — {3}{R} Sorcery — Lesson.
+/// Synthesised Oracle: "Reduce to Ashes deals 4 damage to target creature
+/// or planeswalker. If that creature or planeswalker would die this turn,
+/// exile it instead." (Damage-replacement rider omitted; body is 4 dmg.)
+pub fn reduce_to_ashes() -> CardDefinition {
+    CardDefinition {
+        name: "Reduce to Ashes",
+        cost: cost(&[generic(3), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes {
+            spell_subtypes: vec![SpellSubtype::Lesson],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::DealDamage {
+            to: target_filtered(
+                SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+            ),
+            amount: Value::Const(4),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Plant Adept Lesson — {1}{G} Sorcery — Lesson.
+/// Synthesised Oracle: "Target creature you control gets +2/+2 and gains
+/// trample until end of turn."
+pub fn plant_adept_lesson() -> CardDefinition {
+    CardDefinition {
+        name: "Plant Adept Lesson",
+        cost: cost(&[generic(1), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes {
+            spell_subtypes: vec![SpellSubtype::Lesson],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                power: Value::Const(2),
+                toughness: Value::Const(2),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::Trample,
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

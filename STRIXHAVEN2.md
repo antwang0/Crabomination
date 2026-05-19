@@ -19,10 +19,107 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 217 | 38 | 0 |
-| STX (327 cards) | 601 | 12 | 0 |
+| STX (327 cards) | 655 | 12 | 0 |
 | STA reprints (in STX boosters) | 46 | 0 | — |
 
 Push (modern_decks, claude/modern_decks branch — latest revision —
+**batch 32: 54 new STX cards (12 Witherbloom + 15 Lorehold +
+8 Silverquill + 8 Quandrix + 5 Prismari + 5 Lessons + 1 Cross-school)
++ 56 new tests (all clippy-clean) + CR 107 audit**):
+
+A clean five-college sweep distributing 54 fresh synthesised STX cards
+across every college plus 5 new Lessons. All built on existing engine
+primitives — no engine work needed. Tests sit in `tests::stx::*` keyed
+by card name. Total tests: 2789 (was 2733).
+
+- **Witherbloom (B/G)** — 12 new cards:
+  `witherbloom_pestswarm` ({2}{B}{G} 3/2 Plant Warrior — ETB mints 2 Pests),
+  `witherbloom_lifeleecher` ({1}{B} 1/2 Human Warlock — magecraft gain 1),
+  `witherbloom_rootcaster` ({2}{G} 2/3 Plant Druid — magecraft +1/+1 EOT),
+  `witherbloom_caulhound` ({3}{B}{G} 4/4 Plant Beast Trample — ETB drain 2),
+  `witherbloom_gravecaller` ({3}{B} 2/3 Human Wizard — ETB return ≤3-MV
+  creature from gy → hand), `witherbloom_bloodvine` ({B}{G} 1/3 Plant
+  Vampire Lifelink — magecraft gain 1), `witherbloom_vitalist` ({1}{G}
+  2/2 Human Druid — +1/+1 counter on lifegain), `witherbloom_toxinkeeper`
+  ({2}{B} 2/2 Human Warlock Deathtouch — ETB -1/-1 EOT target creature),
+  `witherbloom_bloodroot` ({3}{B}{G} Sorcery — Drain 4),
+  `witherbloom_pesthatch` ({1}{B}{G} Sorcery — mint Pest + +1/+1 counter
+  on friendly), `witherbloom_diviner` ({2}{B}{G} 2/3 Human Warlock — ETB
+  Mill 3 + MayDo return creature from gy → hand), `witherbloom_pestwarden`
+  ({1}{B}{G} 2/2 Plant Beast — ETB drain 2 + activated sac drain 1).
+
+- **Lorehold (R/W)** — 15 new cards:
+  `lorehold_spectrebrand` ({1}{R}{W} 2/3 Spirit Warrior — Attacks pumps
+  +1/+0 target attacker), `lorehold_charwarden` ({2}{R} 3/2 Spirit
+  Warrior Haste — magecraft 1 dmg any target), `lorehold_lightcleric`
+  ({1}{W} 1/3 Spirit Cleric Lifelink — magecraft gain 1),
+  `lorehold_grave_crusader` ({2}{R}{W} 3/3 Spirit Knight First Strike —
+  ETB exile target gy card), `lorehold_pyrescholar` ({R}{W} 2/2 Spirit
+  Wizard — +1/+1 EOT on each gy-leave), `lorehold_vow` ({1}{R}{W}
+  Sorcery — 2 dmg + mint Spirit), `lorehold_spectrecaster` ({2}{R}{W}
+  3/3 Spirit Wizard — ETB return IS from gy → hand), `lorehold_forgemaster`
+  ({3}{R} 3/3 Spirit Wizard — magecraft +1/+1 counter on self),
+  `lorehold_skirmlord` ({1}{R} 2/1 Spirit Soldier Haste — Attacks scales
+  +X/+0 by other attackers), `lorehold_memoirist` ({2}{R}{W} 2/3 Human
+  Cleric Vigilance — ETB exile + 2 life + Spirit token), `lorehold_ardent_acolyte`
+  ({R} 1/2 Spirit Cleric — magecraft 1 dmg each opp), `lorehold_bequeathing`
+  ({2}{R}{W} Sorcery — reanimate target creature with haste EOT),
+  `lorehold_pyromaster` ({1}{R}{W} 2/2 Spirit Wizard — {2}{R}{W},{T}:
+  3 dmg any target), `lorehold_spirit_hymn` ({1}{W} Instant — each
+  your creature +1/+1 + first strike EOT), `lorehold_spirit_legion`
+  ({2}{R}{W} 2/3 Spirit Cleric — ETB mint 2 Spirits + +1/+1 counter
+  on each Spirit you control).
+
+- **Silverquill (W/B)** — 8 new cards:
+  `silverquill_drainlord` ({3}{W}{B} 3/4 Vampire Warlock Lifelink —
+  ETB drain 3), `inkling_quillbearer` ({W}{B} 2/2 Inkling Knight
+  Flying — magecraft -1/-1 EOT target creature), `silverquill_indoctrinator`
+  ({2}{W} 2/3 Human Cleric Vigilance — ETB each opp discards),
+  `inkling_choirsinger` ({1}{W}{B} 2/2 Inkling Cleric Flying Lifelink —
+  magecraft gain 1), `silverquill_ovation` ({3}{W}{B} Sorcery — mint 2
+  Inklings + +1/+1 counter on each Inkling), `inkling_loremaster`
+  ({2}{W}{B} 2/4 Inkling Wizard Flying — ETB return IS from gy + 1 life),
+  `silverquill_litany` ({1}{B} Instant — -2/-1 EOT + 1 life),
+  `silverquill_standardbearer` ({2}{W} 2/2 Human Soldier Vigilance —
+  Other creatures +1/+1 anthem).
+
+- **Quandrix (G/U)** — 8 new cards:
+  `quandrix_tidewright` ({1}{U} 2/1 Merfolk Wizard Flash — ETB -2/-0
+  EOT target creature), `quandrix_wavewriter` ({2}{G}{U} 3/3 Fractal
+  Wizard — magecraft +1/+1 counter on self), `quandrix_scribe` ({G}{U}
+  1/2 Elf Wizard — magecraft +1/+1 EOT self-pump), `quandrix_handmage`
+  ({3}{G}{U} 4/4 Fractal Wizard — ETB mint Fractal scaled by hand size),
+  `quandrix_equipoise` ({2}{G}{U} Sorcery — Draw + +X/+X counter on
+  target friendly creature where X = hand size), `quandrix_visionary`
+  ({U} 1/1 Merfolk Wizard — ETB Scry 1), `quandrix_wilderwright` ({3}{G}
+  3/4 Elf Druid Reach — ETB search basic land → bf tapped),
+  `quandrix_topologist` ({2}{U} 2/2 Merfolk Wizard — ETB loot).
+
+- **Prismari (U/R)** — 5 new cards:
+  `prismari_embertongue` ({1}{R} 2/1 Human Wizard — magecraft 1 dmg
+  each opp), `prismari_treasurewright_b32` ({U}{R} 2/2 Human Artificer
+  — ETB Treasure), `prismari_sparkpainter` ({2}{U}{R} 3/3 Elemental
+  Wizard — magecraft +1/+0 EOT + MayDo Loot), `prismari_burning_lesson`
+  ({U}{R} Sorcery — 3 dmg any target + Scry 1), `prismari_flameforger`
+  ({3}{R} 3/3 Djinn Wizard Haste — magecraft +2/+0 EOT self-pump).
+
+- **Lessons (cross-school)** — 5 new cards:
+  `mascot_lesson_b32` ({2}{W} Lesson — mint 2/2 W/B Inkling Flying),
+  `confront_the_doubt` ({2}{B} Lesson — discard chosen nonland/noncreature
+  + gain 2 life), `test_of_patience` ({2}{U} Lesson — draw 2 (counter-
+  ability rider omitted — engine gap)), `reduce_to_ashes` ({3}{R}
+  Lesson — 4 dmg to creature/PW), `plant_adept_lesson` ({1}{G} Lesson
+  — +2/+2 EOT + Trample).
+
+CR 107 audit added to TODO.md covering numbers/symbols framework
+(integers, X-cost handling, mana symbols). Two new lock-in tests
+(`cr_107_1c_x_zero_for_x_cost_spell_resolves_cleanly`,
+`cr_107_3g_non_stack_x_treated_as_zero`).
+
+Tests: 56 new (54 cards + 2 CR 107 audit). Total: 2733 → 2789 (+56).
+All clippy-clean. Prior batch 31:
+
+Prior push (modern_decks, claude/modern_decks branch — prior revision —
 **batch 31: 28 new STX cards (12 Lorehold + 12 Witherbloom +
 4 Silverquill) + 28 new tests (all clippy-clean)**):
 

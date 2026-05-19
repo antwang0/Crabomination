@@ -18,12 +18,15 @@
 //! playable as a 4/3 lifelink flier or whatever.
 
 use super::no_abilities;
+use crate::catalog::sets::sos::inkling_token;
 use crate::card::{
-    ActivatedAbility, CardDefinition, CardType, CreatureType, Effect, EventKind, EventScope,
-    EventSpec, Keyword, Selector, SelectionRequirement, Subtypes, Supertype, TriggeredAbility,
-    Value, Zone,
+    ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, Effect, EventKind,
+    EventScope, EventSpec, Keyword, Selector, SelectionRequirement, Subtypes, Supertype,
+    TriggeredAbility, Value, Zone,
 };
-use crate::effect::shortcut::{magecraft, magecraft_drain_each_opp, magecraft_self_pump, target_filtered};
+use crate::effect::shortcut::{
+    magecraft, magecraft_drain_each_opp, magecraft_gain_life, magecraft_self_pump, target_filtered,
+};
 use crate::effect::{Duration, PlayerRef, StaticAbility, StaticEffect, ZoneDest};
 use crate::mana::{cost, generic, u, w, b, x, ManaCost};
 
@@ -4548,6 +4551,327 @@ pub fn silverquill_inkletter() -> CardDefinition {
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+// ── Batch 32 (modern_decks) — Silverquill expansion ─────────────────────────
+
+/// Silverquill Drainlord — {3}{W}{B}, 3/4 Vampire Warlock Lifelink.
+/// Synthesised Oracle: "When this creature enters, each opponent loses 3
+/// life and you gain 3 life."
+pub fn silverquill_drainlord() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Drainlord",
+        cost: cost(&[generic(3), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Lifelink],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Drain {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                to: Selector::You,
+                amount: Value::Const(3),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Inkling Squire — {W}{B}, 2/2 Inkling Knight Flying.
+/// Synthesised Oracle: "Magecraft — Whenever you cast or copy an instant or
+/// sorcery spell, target creature gets -1/-1 until end of turn."
+pub fn inkling_quillbearer() -> CardDefinition {
+    CardDefinition {
+        name: "Inkling Quillbearer",
+        cost: cost(&[w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::PumpPT {
+            what: target_filtered(SelectionRequirement::Creature),
+            power: Value::Const(-1),
+            toughness: Value::Const(-1),
+            duration: Duration::EndOfTurn,
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Indoctrinator — {2}{W}, 2/3 Human Cleric Vigilance.
+/// Synthesised Oracle: "When this creature enters, each opponent discards
+/// a card."
+pub fn silverquill_indoctrinator() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Indoctrinator",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Discard {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(1),
+                random: false,
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Inkling Choirsinger — {1}{W}{B}, 2/2 Inkling Cleric Flying Lifelink.
+/// Synthesised Oracle: "Magecraft — Whenever you cast or copy an instant or
+/// sorcery spell, you gain 1 life."
+pub fn inkling_choirsinger() -> CardDefinition {
+    CardDefinition {
+        name: "Inkling Choirsinger",
+        cost: cost(&[generic(1), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying, Keyword::Lifelink],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_gain_life(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Ovation — {3}{W}{B}, sorcery.
+/// Synthesised Oracle: "Create two 1/1 white-and-black Inkling creature
+/// tokens with flying, then put a +1/+1 counter on each Inkling you control."
+pub fn silverquill_ovation() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Ovation",
+        cost: cost(&[generic(3), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                definition: inkling_token(),
+            },
+            Effect::ForEach {
+                selector: Selector::EachPermanent(
+                    SelectionRequirement::HasCreatureType(CreatureType::Inkling)
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+                body: Box::new(Effect::AddCounter {
+                    what: Selector::TriggerSource,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                }),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Inkling Loremaster — {2}{W}{B}, 2/4 Inkling Wizard Flying.
+/// Synthesised Oracle: "When this creature enters, return target instant
+/// or sorcery card from your graveyard to your hand. You gain 1 life."
+pub fn inkling_loremaster() -> CardDefinition {
+    CardDefinition {
+        name: "Inkling Loremaster",
+        cost: cost(&[generic(2), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::Move {
+                    what: Selector::one_of(Selector::CardsInZone {
+                        zone: Zone::Graveyard,
+                        who: PlayerRef::You,
+                        filter: SelectionRequirement::HasCardType(CardType::Instant)
+                            .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+                    }),
+                    to: ZoneDest::Hand(PlayerRef::You),
+                },
+                Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
+            ]),
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Litany — {1}{B}, instant.
+/// Synthesised Oracle: "Target creature gets -2/-1 until end of turn. You
+/// gain 1 life."
+pub fn silverquill_litany() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Litany",
+        cost: cost(&[generic(1), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(-2),
+                toughness: Value::Const(-1),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Standardbearer — {2}{W}, 2/2 Human Soldier Vigilance.
+/// Synthesised Oracle: "Other creatures you control get +1/+1 as long as
+/// you control an Inkling." (Approximated as unconditional anthem since
+/// the conditional gate would require static gating not yet wired; played
+/// in an Inkling-themed deck this is functionally identical.)
+pub fn silverquill_standardbearer() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Standardbearer",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![StaticAbility {
+            description: "Other creatures you control get +1/+1.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                power: 1,
+                toughness: 1,
+            },
+        }],
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
