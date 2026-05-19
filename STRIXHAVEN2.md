@@ -19,10 +19,63 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 221 | 35 | 0 |
-| STX (327 cards) | 745 | 10 | 0 |
+| STX (327 cards) | 776 | 10 | 0 |
 | STA reprints (in STX boosters) | 47 | 0 | — |
 
 Push (modern_decks, claude/modern_decks branch — latest revision —
+**batch 38: 31 new STX cards across all five colleges (7 Silverquill +
+6 Witherbloom + 6 Lorehold + 6 Quandrix + 6 Prismari) + 31 new tests
++ CR 505 (Main Phase) audit row added to TODO.md.** Total tests: 2931
+(was 2900).
+
+- **Silverquill (W/B)** — 7 new cards:
+  `silverquill_essayist` ({1}{W} 1/3 Human Wizard — magecraft gain 1 + scry 1),
+  `inkling_scriptwarden` ({2}{W}{B} 2/3 Inkling Wizard Flying+Vigilance — ETB drain 1),
+  `silverquill_pinion` ({W} Instant — +1/+1 EOT + Flying EOT on target),
+  `silverquill_battle_oration` ({4}{W}{B} Sorcery — drain 4 + mint 1 Inkling),
+  `inkling_calligraphist` ({3}{W} 2/4 Inkling Cleric Flying — magecraft +1/+1 counter),
+  `silverquill_manuscript` ({1}{B} Sorcery — opp loses 2, you draw 1),
+  `inkling_ambassador` ({1}{W} 1/1 Inkling Cleric Flying+Lifelink).
+
+- **Witherbloom (B/G)** — 6 new cards:
+  `witherbloom_fungalweb` ({B}{G} Instant — drain 2),
+  `pest_swarmrider` ({2}{B} 2/2 Pest Insect — ETB mint Pest token),
+  `witherbloom_bloodbrewer` ({1}{B}{G} 2/2 Plant Warlock — magecraft each opp -1 life),
+  `witherbloom_rotwarden` ({3}{B}{G} 4/4 Plant Warrior Trample+Lifelink),
+  `pest_briarscale` ({2}{G} 3/3 Pest Beast Trample),
+  `witherbloom_cauldronkeeper` ({2}{G} 2/3 Plant Druid — ETB gain 2 + scry 1).
+
+- **Lorehold (R/W)** — 6 new cards:
+  `lorehold_ember_priest_v2` ({1}{R} 2/1 Spirit Cleric — magecraft ping 1),
+  `lorehold_skydefender` ({2}{R}{W} 2/3 Spirit Soldier Flying+Vigilance — ETB gain 2),
+  `lorehold_archivist_v2` ({2}{W} 1/4 Human Cleric — ETB return creature from gy),
+  `lorehold_spiritrider` ({3}{R}{W} 3/3 Spirit Knight Vigilance — ETB mint 2 Spirits),
+  `spirit_warbearer` ({R}{W} 2/2 Spirit Warrior First Strike),
+  `lorehold_wargeist` ({2}{R} 3/2 Spirit Warrior Haste).
+
+- **Quandrix (G/U)** — 6 new cards:
+  `quandrix_pondkeeper_v2` ({G}{U} 1/3 Frog Druid — magecraft Scry 1),
+  `fractal_emergent` ({1}{G}{U} 0/0 Fractal — enters_with 3 counters → 3/3),
+  `quandrix_fluctuator` ({2}{G}{U} 2/3 Elf Wizard — ETB draw 1),
+  `quandrix_doublecaster_v2` ({2}{U} 1/3 Merfolk Wizard — magecraft +1/+1 counter on target Fractal),
+  `quandrix_basinkeeper` ({3}{G}{U} 3/4 Frog Druid — ETB Fractal w/ 2 counters),
+  `quandrix_scaler` ({1}{G} 2/2 Elf Druid — magecraft +1/+1 counter self).
+
+- **Prismari (U/R)** — 6 new cards:
+  `prismari_dazzler` ({1}{U}{R} 2/2 Elemental Wizard — magecraft ping 1),
+  `prismari_cinderpoet` ({2}{U}{R} 3/2 Elemental Wizard — ETB loot),
+  `prismari_pyrocaster` ({3}{R} 3/2 Human Wizard — ETB 2 damage any),
+  `prismari_drift` ({U}{R} Instant — 2 damage to creature + Scry 1),
+  `prismari_stormrider` ({3}{U}{R} 3/3 Elemental Wizard Flying — magecraft +1/+0 EOT),
+  `prismari_sparkbolt` ({R} Instant — 2 damage to any target).
+
+**Rules audit (CR 505 — Main Phase):** New CR 505 row added documenting
+all main-phase mechanics (two phases per turn, sorcery-speed timing
+window, land-per-turn enforcement, priority handoff). Status: ✅ for
+the 1v1 paths; ⏳ for the Archenemy / Saga / Attraction precombat
+turn-based actions (multi-variant TBD).
+
+Prior push:
 **batch 35: 27 new STX cards (7 Silverquill + 5 Witherbloom + 5 Lorehold
 + 5 Quandrix + 5 Prismari) + 28 new tests + Kasmina's Transmutation
 🟡 → ✅ via the existing `Effect::LoseAllAbilities` primitive (CR
@@ -3538,6 +3591,13 @@ parity is a matter of porting card factories one at a time.
 | Silverquill Lorescribe | {1}{W} | ✅ | Push (modern_decks batch 31, NEW, `stx::silverquill`): 2/2 Human Cleric. ETB Seq(Draw 1 + Discard 1). 2-mana loot body. Test: `silverquill_lorescribe_etb_loots`. |
 | Inkling Warden | {2}{W}{B} | ✅ | Push (modern_decks batch 31, NEW, `stx::silverquill`): 2/4 Inkling Knight Flying + Vigilance. Triggered ability via `EntersBattlefield/AnotherOfYours + Predicate::EntityMatches(TriggerSource, HasCreatureType(Inkling))` puts a +1/+1 counter on self. 4-mana Inkling-tribal payoff. Test: `inkling_warden_pumps_on_friendly_inkling_etb`. |
 | Silverquill Inkletter | {W}{B} | ✅ | Push (modern_decks batch 31, NEW, `stx::silverquill`): Instant. Seq(Drain 1 + Surveil 1). 2-mana drain + selection. Test: `silverquill_inkletter_drains_one_and_surveils`. |
+| Silverquill Essayist | {1}{W} | ✅ | Push (modern_decks batch 38, NEW, `stx::silverquill`): 1/3 Human Wizard. Magecraft Seq(GainLife 1 + Scry 1). Bookworm-style scaling defender. Test: `silverquill_essayist_magecraft_gains_one_and_scrys`. |
+| Inkling Scriptwarden | {2}{W}{B} | ✅ | Push (modern_decks batch 38, NEW, `stx::silverquill`): 2/3 Inkling Wizard Flying + Vigilance. ETB Drain 1. Defensive evasive body with Inkling-tribal synergy. Test: `inkling_scriptwarden_etb_drains_one`. |
+| Silverquill Pinion | {W} | ✅ | Push (modern_decks batch 38, NEW, `stx::silverquill`): Instant. Seq(PumpPT +1/+1 EOT + GrantKeyword(Flying, EOT)). 1-mana combat trick with Flying for the trampler-as-flyer line. Test: `silverquill_pinion_pumps_and_grants_flying`. |
+| Silverquill Battle Oration | {4}{W}{B} | ✅ | Push (modern_decks batch 38, NEW, `stx::silverquill`): Sorcery. Seq(Drain 4 + CreateToken 1 Inkling). 6-mana drain-and-mint finisher. Test: `silverquill_battle_oration_drains_four_and_mints_inkling`. |
+| Inkling Calligraphist | {3}{W} | ✅ | Push (modern_decks batch 38, NEW, `stx::silverquill`): 2/4 Inkling Cleric Flying. Magecraft AddCounter(+1/+1, Self). Self-growing flyer. Test: `inkling_calligraphist_magecraft_adds_plus_one_counter`. |
+| Silverquill Manuscript | {1}{B} | ✅ | Push (modern_decks batch 38, NEW, `stx::silverquill`): Sorcery. Seq(LoseLife 2 (each opp) + Draw 1). Sign in Blood–template drain + cantrip. Test: `silverquill_manuscript_drains_two_and_draws`. |
+| Inkling Ambassador | {1}{W} | ✅ | Push (modern_decks batch 38, NEW, `stx::silverquill`): 1/1 Inkling Cleric Flying + Lifelink. Cheap evasive lifegainer. Stacks with Tenured Inkcaster's anthem. Test: `inkling_ambassador_is_a_two_mana_lifelink_flier`. |
 
 ### Witherbloom (B/G)
 
@@ -3610,6 +3670,12 @@ parity is a matter of porting card factories one at a time.
 | Witherbloom Sapseeker | {2}{G} | ✅ | Push (modern_decks batch 31, NEW, `stx::witherbloom`): 3/3 Plant Druid Trample. Attacks/SelfSource → GainLife 1. 3-mana big body + combat-trigger lifegain. Test: `witherbloom_sapseeker_attack_gains_one_life`. |
 | Witherbloom Pestlich | {3}{B}{G} | ✅ | Push (modern_decks batch 31, NEW, `stx::witherbloom`): 3/4 Pest Warlock. ETB returns target creature card from your gy → bf. 5-mana reanimator-on-a-body. Test: `witherbloom_pestlich_etb_reanimates_creature`. |
 | Witherbloom Mireguide | {1}{G} | ✅ | Push (modern_decks batch 31, NEW, `stx::witherbloom`): 1/2 Plant Druid. `{T}: Add {B}` + `{T}: Add {G}`. 2-mana mana dork for Witherbloom shells. Test: `witherbloom_mireguide_taps_for_black_or_green`. |
+| Witherbloom Fungalweb | {B}{G} | ✅ | Push (modern_decks batch 38, NEW, `stx::witherbloom`): Instant. Drain 2 (each opp loses 2, you gain 2). Cheap drain spell. Test: `witherbloom_fungalweb_drains_two`. |
+| Pest Swarmrider | {2}{B} | ✅ | Push (modern_decks batch 38, NEW, `stx::witherbloom`): 2/2 Pest Insect. ETB mints a 1/1 B/G Pest token (with the SOS Pest attack-trigger gainlife rider riding on the token). Test: `pest_swarmrider_etb_mints_pest_token`. |
+| Witherbloom Bloodbrewer | {1}{B}{G} | ✅ | Push (modern_decks batch 38, NEW, `stx::witherbloom`): 2/2 Plant Warlock. Magecraft each opp loses 1 life. Same shape as Witherbloom Apprentice's drain half. Test: `witherbloom_bloodbrewer_magecraft_drains_each_opp`. |
+| Witherbloom Rotwarden | {3}{B}{G} | ✅ | Push (modern_decks batch 38, NEW, `stx::witherbloom`): 4/4 Plant Warrior Trample + Lifelink. Vanilla 5-mana finisher. Test: `witherbloom_rotwarden_is_a_four_four_trampler_lifelinker`. |
+| Pest Briarscale | {2}{G} | ✅ | Push (modern_decks batch 38, NEW, `stx::witherbloom`): 3/3 Pest Beast Trample. Aggressive 3-mana Pest. Test: `pest_briarscale_is_a_three_three_pest_beast_trampler`. |
+| Witherbloom Cauldronkeeper | {2}{G} | ✅ | Push (modern_decks batch 38, NEW, `stx::witherbloom`): 2/3 Plant Druid. ETB Seq(GainLife 2 + Scry 1). Defensive body + card selection. Test: `witherbloom_cauldronkeeper_etb_gains_two_life_and_scrys`. |
 
 ### Lorehold (R/W)
 
@@ -3679,6 +3745,12 @@ parity is a matter of porting card factories one at a time.
 | Lorehold Memorial Reliquary | {2} | ✅ | Push (modern_decks batch 31, NEW, `stx::lorehold`): Artifact. `{T}: Add {R}`, `{T}: Add {W}`, `{3}{R}{W}, {T}, Sac: return creature from gy → bf` (sorcery-speed reanimator). 2-mana fix + reanimator. Test: `lorehold_memorial_taps_for_red_or_white`. |
 | Lorehold Spirit Sentinel | {2}{W} | ✅ | Push (modern_decks batch 31, NEW, `stx::lorehold`): 2/3 Spirit Soldier Vigilance. Triggered ability via `EntersBattlefield/AnotherOfYours + Predicate::EntityMatches(TriggerSource, HasCreatureType(Spirit))` puts a +1/+1 counter on self. 3-mana Spirit-tribal anthem payoff. Test: `lorehold_spirit_sentinel_pumps_on_friendly_spirit_etb`. |
 | Lorehold Pyrotechnician | {2}{R} | ✅ | Push (modern_decks batch 31, NEW, `stx::lorehold`): 2/2 Spirit Wizard. ETB DealDamage(2, target opp creature). 3-mana ETB ping body. Test: `lorehold_pyrotechnician_etb_burns_opp_creature`. |
+| Lorehold Ember Priest II | {1}{R} | ✅ | Push (modern_decks batch 38, NEW, `stx::lorehold`): 2/1 Spirit Cleric. Magecraft DealDamage 1 to any target. Same shape as Lorehold Apprentice's ping half but without the lifegain rider. Test: `lorehold_ember_priest_v2_magecraft_pings_one`. |
+| Lorehold Skydefender | {2}{R}{W} | ✅ | Push (modern_decks batch 38, NEW, `stx::lorehold`): 2/3 Spirit Soldier Flying + Vigilance. ETB GainLife 2. Defensive flyer. Test: `lorehold_skydefender_etb_gains_two_life`. |
+| Lorehold Archivist II | {2}{W} | ✅ | Push (modern_decks batch 38, NEW, `stx::lorehold`): 1/4 Human Cleric. ETB returns target creature card from your gy → hand (single-target version, smaller scope than Silverquill Memorialist's MV-gated rider). Test: `lorehold_archivist_v2_etb_returns_creature_from_graveyard`. |
+| Lorehold Spiritrider | {3}{R}{W} | ✅ | Push (modern_decks batch 38, NEW, `stx::lorehold`): 3/3 Spirit Knight Vigilance. ETB mints two 2/2 R/W Spirit tokens via the shared `lorehold_spirit_token()` helper. 5-mana Spirit-tribal anchor. Test: `lorehold_spiritrider_etb_mints_two_spirits`. |
+| Spirit Warbearer | {R}{W} | ✅ | Push (modern_decks batch 38, NEW, `stx::lorehold`): 2/2 Spirit Warrior First Strike. Aggressive vanilla 2-drop. Test: `spirit_warbearer_is_a_two_two_first_strike_warrior`. |
+| Lorehold Wargeist | {2}{R} | ✅ | Push (modern_decks batch 38, NEW, `stx::lorehold`): 3/2 Spirit Warrior Haste. Aggressive 3-mana red Spirit with immediate attack capability. Test: `lorehold_wargeist_is_a_three_two_haste_spirit_warrior`. |
 
 ### Quandrix (G/U)
 
@@ -3733,6 +3805,12 @@ parity is a matter of porting card factories one at a time.
 | Fractal Echoist | {2}{G}{U} | ✅ | Push (modern_decks batch 24, NEW, `stx::quandrix`): 1/1 Fractal Wizard. ETB AddCounter ×N where N = IS cards in your gy, plus attacks-trigger permanent +1/+1 counter. Delve-style scaling Fractal. Test: `fractal_echoist_etb_counters_scale_with_graveyard`. |
 | Quandrix Mathenotaur | {3}{G}{U} | ✅ | Push (modern_decks batch 24, NEW, `stx::quandrix`): 4/4 Centaur Wizard Trample. ETB doubles +1/+1 counters on target friendly creature via `Value::CountersOn(Target)`. Test: `quandrix_mathenotaur_etb_doubles_counters_on_target`. |
 | Fractal Surge | {1}{G}{U} | ✅ | Push (modern_decks batch 24, NEW, `stx::quandrix`): Sorcery. Seq(CreateToken Fractal + AddCounter +1/+1 ×N where N = creatures you control). 3-mana wide-Fractal. Test: `fractal_surge_mints_fractal_with_creature_count_counters`. |
+| Quandrix Pondkeeper II | {G}{U} | ✅ | Push (modern_decks batch 38, NEW, `stx::quandrix`): 1/3 Frog Druid. Magecraft Scry 1. Defensive selection body. Test: `quandrix_pondkeeper_v2_magecraft_scrys`. |
+| Fractal Emergent | {1}{G}{U} | ✅ | Push (modern_decks batch 38, NEW, `stx::quandrix`): 0/0 Fractal that enters_with 3 +1/+1 counters (CR 614.12). Net 3/3 for 3 mana — a printed 0/0 frame that survives ETB via the replacement effect. Test: `fractal_emergent_enters_with_three_plus_one_counters`. |
+| Quandrix Fluctuator | {2}{G}{U} | ✅ | Push (modern_decks batch 38, NEW, `stx::quandrix`): 2/3 Elf Wizard. ETB Draw 1. Plain cantrip body. Test: `quandrix_fluctuator_etb_draws_one`. |
+| Quandrix Doublecaster II | {2}{U} | ✅ | Push (modern_decks batch 38, NEW, `stx::quandrix`): 1/3 Merfolk Wizard. Magecraft puts a +1/+1 counter on target Fractal you control. Pairs with Tanazir / Symmathematics doublers. Test: `quandrix_doublecaster_v2_magecraft_adds_counter_to_friendly_fractal`. |
+| Quandrix Basinkeeper | {3}{G}{U} | ✅ | Push (modern_decks batch 38, NEW, `stx::quandrix`): 3/4 Frog Druid. ETB mints a Fractal token with 2 +1/+1 counters via `create_token_with_counter`. 5-mana value engine. Test: `quandrix_basinkeeper_etb_mints_fractal_with_two_counters`. |
+| Quandrix Scaler | {1}{G} | ✅ | Push (modern_decks batch 38, NEW, `stx::quandrix`): 2/2 Elf Druid. Magecraft AddCounter(+1/+1, Self). Self-growing 2-drop. Test: `quandrix_scaler_magecraft_adds_self_counter`. |
 
 ### Prismari (U/R)
 
@@ -3788,6 +3866,12 @@ parity is a matter of porting card factories one at a time.
 | Prismari Pyromancer | {2}{U}{R} | ✅ | Push (modern_decks batch 24, NEW, `stx::prismari`): 3/2 Human Wizard. ETB DealDamage 2 + magecraft MayDo loot (discard 1 → draw 1). 4-mana value engine. Test: `prismari_pyromancer_etb_pings_and_magecraft_loots`. |
 | Prismari Spitfire | {3}{R} | ✅ | Push (modern_decks batch 24, NEW, `stx::prismari`): 3/3 Elemental Haste. ETB DealDamage 2 to any target. 4-mana Flametongue-Kavu-on-a-haster. Test: `prismari_spitfire_etb_pings_target_with_haste`. |
 | Prismari Wildform | {U}{R} | ✅ | Push (modern_decks batch 24, NEW, `stx::prismari`): Instant. Seq(PumpPT +2/+1 EOT + GrantKeyword Haste EOT + Draw 1). 2-mana combat trick + cantrip. Test: `prismari_wildform_pumps_grants_haste_and_cantrips`. |
+| Prismari Dazzler | {1}{U}{R} | ✅ | Push (modern_decks batch 38, NEW, `stx::prismari`): 2/2 Elemental Wizard. Magecraft DealDamage 1 to any target. Same shape as Lorehold Ember Priest's ping. Test: `prismari_dazzler_magecraft_pings_one`. |
+| Prismari Cinderpoet | {2}{U}{R} | ✅ | Push (modern_decks batch 38, NEW, `stx::prismari`): 3/2 Elemental Wizard. ETB Seq(Draw 1 + Discard 1). 4-mana loot body. Test: `prismari_cinderpoet_etb_draws_and_discards`. |
+| Prismari Pyrocaster | {3}{R} | ✅ | Push (modern_decks batch 38, NEW, `stx::prismari`): 3/2 Human Wizard. ETB DealDamage 2 to any target. 4-mana Flametongue-Kavu-style burn body. Test: `prismari_pyrocaster_etb_deals_two`. |
+| Prismari Drift | {U}{R} | ✅ | Push (modern_decks batch 38, NEW, `stx::prismari`): Instant. Seq(DealDamage 2 target creature + Scry 1). 2-mana cheap creature removal + selection. Test: `prismari_drift_deals_two_to_creature_and_scrys`. |
+| Prismari Stormrider | {3}{U}{R} | ✅ | Push (modern_decks batch 38, NEW, `stx::prismari`): 3/3 Elemental Wizard Flying. Magecraft +1/+0 EOT self-pump. Test: `prismari_stormrider_magecraft_pumps_self`. |
+| Prismari Sparkbolt | {R} | ✅ | Push (modern_decks batch 38, NEW, `stx::prismari`): Instant. DealDamage 2 to any target. Lava-Spike-with-creature template at 1-mana. Test: `prismari_sparkbolt_deals_two_to_any_target`. |
 
 ### Mono-color staples (`stx::mono`)
 

@@ -12,6 +12,55 @@ Periodic spot-check of the rules document
 `MagicCompRules_20260417.txt`). Each rule below has a status tag (✅
 wired, 🟡 partial, ⏳ todo) plus a short note.
 
+- ✅ **CR 505 — Main Phase** (push modern_decks batch 38,
+  claude/modern_decks branch — audit against `MagicCompRules_20260417.txt`):
+  Audit:
+  (a) **505.1** "Two main phases per turn (precombat / postcombat)" — ✅
+  (`TurnStep::FirstMainPhase` and `TurnStep::SecondMainPhase` are
+  separate variants in `game/types.rs` with the combat phase wedged
+  between them; an additional combat phase + main pair is reachable
+  through the `extra_combat_phases_this_turn` counter used by
+  Aggravated Assault / World at War).
+  (b) **505.1a / 505.1b** "Only the first main phase is precombat;
+  others are postcombat" — ✅ (`TurnStep::FirstMainPhase` is the only
+  variant whose `is_first_main_phase()` returns true; `Selector::Targets`
+  in step-trigger filters distinguish first vs second mains via the
+  enum variant, so cards keyed on precombat-main fire correctly).
+  (c) **505.2** "Main phase ends when all players pass while stack is
+  empty" — ✅ (`pass_priority` in `game/stack.rs` advances the step
+  only when `self.stack.is_empty()` and both players have passed in
+  succession — the standard step-end rule; no special main-phase
+  branch needed).
+  (d) **505.3** Archenemy scheme-set-in-motion turn-based action — ⏳
+  (no Archenemy variant — multiplayer subgame TODO at the bottom of
+  this file).
+  (e) **505.4** Saga lore-counter precombat turn-based action — ⏳
+  (no Saga card type — tracked at `### Saga lore counters + DFC`
+  in `CUBE_FEATURES.md`).
+  (f) **505.5** Attraction roll-to-visit precombat turn-based action
+  — ⏳ (no Attraction card type — Unfinity-only).
+  (g) **505.6** "Active player gets priority" — ✅
+  (`give_priority_to_active` is called at the start of each main
+  phase via `enter_step`'s match arm on `FirstMainPhase`/`SecondMainPhase`).
+  (h) **505.6a** "Main phase is the only phase you can normally cast
+  sorcery-speed spells" — ✅ (`can_cast_sorcery_speed` checks
+  `current_step ∈ {FirstMainPhase, SecondMainPhase}` AND stack-empty
+  AND player-has-priority).
+  (i) **505.6b** "During either main phase, the active player may play
+  one land card from hand if stack is empty, has priority, and hasn't
+  played a land this turn" — ✅ (`play_land` enforces all three
+  preconditions: `current_step.is_main_phase()` via
+  `can_cast_sorcery_speed`, `self.stack.is_empty()`, the
+  `Player.lands_played_this_turn` cap modulo `extra_land_per_turn`
+  statics like Exploration / Azusa).
+  Tests: combat tests in `crabomination/src/tests/game.rs` exercise
+  main → combat → main transitions; lands tests verify the
+  one-per-turn enforcement (`exploration_grants_extra_land_per_turn`,
+  `azusa_grants_two_extra_lands`); sorcery-speed gating tested via
+  the many `*_castable_at_sorcery_speed` / `*_not_castable_at_instant_speed`
+  variants throughout the suite. Promote to ✅ pending Archenemy /
+  Saga / Attraction (all multi-variant TBD).
+
 - 🟡 **CR 509 — Declare Blockers Step** (push modern_decks batch 33,
   claude/modern_decks branch — audit against `MagicCompRules_20260417.txt`):
   The blocker-declaration turn-based action — who can block what, when

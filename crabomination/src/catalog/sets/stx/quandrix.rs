@@ -4027,6 +4027,221 @@ pub fn quandrix_b35_equation() -> CardDefinition {
     }
 }
 
+// ── Batch 38: more Quandrix cards ───────────────────────────────────────────
+
+/// Quandrix Pondkeeper (variant II) — {G}{U}, 1/3 Frog Druid.
+/// Synthesised Oracle: "Magecraft — Scry 1."
+pub fn quandrix_pondkeeper_v2() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Pondkeeper II",
+        cost: cost(&[g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Frog, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::Scry {
+            who: PlayerRef::You,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Fractal Emergent — {1}{G}{U}, 0/0 Fractal that enters with three +1/+1
+/// counters on it (CR 614.12 replacement). Synthesised Oracle.
+pub fn fractal_emergent() -> CardDefinition {
+    CardDefinition {
+        name: "Fractal Emergent",
+        cost: cost(&[generic(1), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(3))),
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Fluctuator — {2}{G}{U}, 2/3 Elf Wizard.
+/// Synthesised Oracle: "When this creature enters, draw a card."
+pub fn quandrix_fluctuator() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Fluctuator",
+        cost: cost(&[generic(2), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Doublecaster (variant II) — {2}{U}, 1/3 Merfolk Wizard.
+/// Synthesised Oracle: "Magecraft — Put a +1/+1 counter on target Fractal
+/// you control."
+pub fn quandrix_doublecaster_v2() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Doublecaster II",
+        cost: cost(&[generic(2), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::AddCounter {
+            what: target_filtered(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::ControlledByYou)
+                    .and(SelectionRequirement::HasCreatureType(CreatureType::Fractal)),
+            ),
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Scaler — {1}{G}, 2/2 Elf Druid.
+/// Synthesised Oracle: "Magecraft — Put a +1/+1 counter on this creature."
+pub fn quandrix_scaler() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Scaler",
+        cost: cost(&[generic(1), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::AddCounter {
+            what: Selector::This,
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Basinkeeper — {3}{G}{U}, 3/4 Frog Druid.
+/// Synthesised Oracle: "When this creature enters, create a 0/0 G/U
+/// Fractal creature token, then put two +1/+1 counters on it."
+pub fn quandrix_basinkeeper() -> CardDefinition {
+    use crate::effect::shortcut::create_token_with_counter;
+    CardDefinition {
+        name: "Quandrix Basinkeeper",
+        cost: cost(&[generic(3), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Frog, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: create_token_with_counter(
+                PlayerRef::You,
+                1,
+                quandrix_fractal_token(),
+                CounterType::PlusOnePlusOne,
+                2,
+            ),
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
 /// Quandrix Counterbearer — {1}{G}, 1/2 Elf Druid.
 /// Synthesised Oracle: "Whenever a +1/+1 counter is placed on another
 /// creature you control, this creature gets +1/+1 until end of turn."
