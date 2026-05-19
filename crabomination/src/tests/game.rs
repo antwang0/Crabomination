@@ -49,6 +49,66 @@ fn cannot_play_land_in_combat() {
 }
 
 #[test]
+fn annihilator_1_attack_forces_defender_sacrifice() {
+    // CR 702.85a — "Whenever a permanent with annihilator attacks,
+    // defending player sacrifices N permanents." Wire as Attacks trigger
+    // → Effect::Sacrifice { who: defender, count: N, filter: Permanent }.
+    use crate::card::{CardType, CardDefinition, CreatureType, Keyword, Subtypes};
+    use crate::effect::Effect;
+    use crate::game::{Attack, AttackTarget};
+    use crate::mana::{cost, generic};
+
+    fn annihilator_one() -> CardDefinition {
+        CardDefinition {
+            name: "Test Annihilator",
+            cost: cost(&[generic(10)]),
+            supertypes: vec![],
+            card_types: vec![CardType::Creature],
+            subtypes: Subtypes {
+                creature_types: vec![CreatureType::Eldrazi],
+                ..Default::default()
+            },
+            power: 10,
+            toughness: 10,
+            keywords: vec![Keyword::Annihilator(1)],
+            effect: Effect::Noop,
+            activated_abilities: vec![],
+            triggered_abilities: vec![],
+            static_abilities: vec![],
+            base_loyalty: 0,
+            loyalty_abilities: vec![],
+            alternative_cost: None,
+            back_face: None,
+            opening_hand: None,
+            enters_with_counters: None,
+            exile_on_resolve: false,
+            affinity_filter: None,
+        }
+    }
+
+    let mut g = two_player_game();
+    let attacker = g.add_card_to_battlefield(0, annihilator_one());
+    g.clear_sickness(attacker);
+    // Defender controls one fodder creature.
+    let fodder = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(fodder);
+
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker,
+        target: AttackTarget::Player(1),
+    }])).expect("Attacker can be declared");
+    drain_stack(&mut g);
+
+    // Defender sacrificed their bear.
+    assert!(g.battlefield_find(fodder).is_none(),
+        "defender's bear was sacrificed to Annihilator 1");
+}
+
+#[test]
 fn play_land_retains_priority_after_special_action() {
     // CR 116.3 — "If a player takes a special action, that player
     // receives priority afterward." Playing a land (CR 116.2a) is a

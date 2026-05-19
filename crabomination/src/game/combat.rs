@@ -1,6 +1,6 @@
 use super::*;
 use crate::card::Keyword;
-use crate::effect::{Effect, EventKind};
+use crate::effect::{Effect, EventKind, Selector, Value};
 use crate::game::layers::ComputedPermanent;
 
 impl GameState {
@@ -103,14 +103,29 @@ impl GameState {
                     triggers.push((id, t.effect.clone(), p, t.event.filter.clone()));
                 }
             }
-            // Annihilator: TODO — translate to Effect tree (no-op for now).
-            let _annihilator_n = computed_kw(id).iter().find_map(|kw| {
+            // Annihilator N — CR 702.85a: "Whenever this creature attacks,
+            // defending player sacrifices N permanents." Translate the
+            // keyword to an Attacks-trigger that fires
+            // `Effect::Sacrifice { who: defender, count: N, filter: Any }`.
+            // The defender comes from `atk.target`; for a planeswalker
+            // attack, that's the planeswalker's controller (CR 506.4a).
+            let annihilator_n = computed_kw(id).iter().find_map(|kw| {
                 if let Keyword::Annihilator(n) = kw {
                     Some(*n)
                 } else {
                     None
                 }
             });
+            if let Some(n) = annihilator_n {
+                if let Some(defender) = self.defender_for(atk.target) {
+                    let sac_effect = Effect::Sacrifice {
+                        who: Selector::Player(crate::effect::PlayerRef::Seat(defender)),
+                        count: Value::Const(n as i32),
+                        filter: crate::card::SelectionRequirement::Permanent,
+                    };
+                    triggers.push((id, sac_effect, p, None));
+                }
+            }
         }
         for (source, effect, controller, filter) in triggers {
             // CR 603.2 + CR 506.5: evaluate the trigger's optional filter
