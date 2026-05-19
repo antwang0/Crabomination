@@ -31860,9 +31860,246 @@ pub fn strixhaven_glyphmage() -> CardDefinition {
     }
 }
 
+// ── Batch 33: 5 cross-school extras ────────────────────────────────────
+
+/// Strixhaven Mentor — {2}{W}, 2/3 Human Cleric Vigilance.
+/// Synthesised Oracle: "Vigilance / When this creature enters, another
+/// target creature you control gets a +1/+1 counter."
+pub fn strixhaven_mentor() -> CardDefinition {
+    CardDefinition {
+        name: "Strixhaven Mentor",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::AddCounter {
+                what: target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Strixhaven Banner — {3}, Artifact.
+/// Synthesised Oracle: "{T}: Add one mana of any color. /
+/// {2}, {T}, Sacrifice this artifact: Draw a card."
+pub fn strixhaven_banner() -> CardDefinition {
+    CardDefinition {
+        name: "Strixhaven Banner",
+        cost: cost(&[generic(3)]),
+        supertypes: vec![],
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: vec![
+            // {T}: Add one mana of any color.
+            ActivatedAbility {
+                mana_cost: ManaCost::default(),
+                tap_cost: true,
+                sac_cost: false,
+                life_cost: 0,
+                exile_other_filter: None,
+                condition: None,
+                exile_self_cost: false,
+                from_graveyard: false,
+                sorcery_speed: false,
+                once_per_turn: false,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::AnyOneColor(Value::Const(1)),
+                },
+                self_counter_cost_reduction: None,
+            },
+            // {2}, {T}, Sacrifice this artifact: Draw a card.
+            ActivatedAbility {
+                mana_cost: cost(&[generic(2)]),
+                tap_cost: true,
+                sac_cost: true,
+                life_cost: 0,
+                exile_other_filter: None,
+                condition: None,
+                exile_self_cost: false,
+                from_graveyard: false,
+                sorcery_speed: false,
+                once_per_turn: false,
+                effect: Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
+                self_counter_cost_reduction: None,
+            },
+        ],
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Strixhaven Apprentice — {1}{U}, 1/2 Human Wizard.
+/// Synthesised Oracle: "When this creature enters, draw a card."
+pub fn strixhaven_apprentice() -> CardDefinition {
+    CardDefinition {
+        name: "Strixhaven Apprentice",
+        cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Strixhaven Sorcerer — {3}{R}, 3/3 Human Wizard Haste.
+/// Synthesised Oracle: "Haste / When this creature enters, it deals 2
+/// damage to any target."
+pub fn strixhaven_sorcerer() -> CardDefinition {
+    CardDefinition {
+        name: "Strixhaven Sorcerer",
+        cost: cost(&[generic(3), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Haste],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature
+                        .or(SelectionRequirement::Player)
+                        .or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::Const(2),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Strixhaven Pupil — {2}, 1/1 Human Wizard Artifact Creature.
+/// Synthesised Oracle: "{2}, {T}: Scry 1, then draw a card."
+pub fn strixhaven_pupil() -> CardDefinition {
+    CardDefinition {
+        name: "Strixhaven Pupil",
+        cost: cost(&[generic(2)]),
+        supertypes: vec![],
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            tap_cost: true,
+            sac_cost: false,
+            life_cost: 0,
+            exile_other_filter: None,
+            condition: None,
+            exile_self_cost: false,
+            from_graveyard: false,
+            sorcery_speed: false,
+            once_per_turn: false,
+            effect: Effect::Seq(vec![
+                Effect::Scry {
+                    who: PlayerRef::You,
+                    amount: Value::Const(1),
+                },
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
+            ]),
+            self_counter_cost_reduction: None,
+        }],
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
 /// Strixhaven Field Researcher — {2}{G}, 2/3 Human Druid.
-///
-/// Synthesised Oracle: "When this creature enters, put a +1/+1 counter on
+/// Original Oracle: "When this creature enters, put a +1/+1 counter on
 /// each creature you control."
 pub fn strixhaven_field_researcher() -> CardDefinition {
     CardDefinition {

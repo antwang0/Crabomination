@@ -3394,6 +3394,111 @@ pub fn quandrix_wilderwright() -> CardDefinition {
     }
 }
 
+// ── Batch 33: 3 new Quandrix cards ────────────────────────────────────
+
+/// Quandrix Pulseweaver — {1}{G}{U}, 2/2 Fractal Wizard Flash.
+/// Synthesised Oracle: "Flash / Magecraft — Whenever you cast or copy an
+/// instant or sorcery spell, this creature gets +1/+1 until end of turn."
+pub fn quandrix_pulseweaver() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Pulseweaver",
+        cost: cost(&[generic(1), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flash],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_self_pump(1, 1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Fractal Reckoner — {3}{G}{U}, 4/4 Fractal.
+/// Synthesised Oracle: "When this creature enters, draw a card."
+pub fn fractal_reckoner() -> CardDefinition {
+    CardDefinition {
+        name: "Fractal Reckoner",
+        cost: cost(&[generic(3), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Inquiry — {U}, Instant.
+/// Synthesised Oracle: "Draw a card. Scry 1."
+pub fn quandrix_inquiry() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Inquiry",
+        cost: cost(&[u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
 /// Quandrix Topologist — {2}{U}, 2/2 Merfolk Wizard.
 /// Synthesised Oracle: "When this creature enters, draw a card, then
 /// discard a card."

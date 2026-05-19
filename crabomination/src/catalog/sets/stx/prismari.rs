@@ -3132,6 +3132,109 @@ pub fn prismari_burning_lesson() -> CardDefinition {
     }
 }
 
+// ── Batch 33: 3 new Prismari cards ────────────────────────────────────
+
+/// Prismari Sparkscribe — {1}{U}{R}, 2/2 Human Wizard.
+/// Synthesised Oracle: "Magecraft — Whenever you cast or copy an
+/// instant or sorcery spell, scry 1."
+pub fn prismari_sparkscribe() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Sparkscribe",
+        cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::Scry {
+            who: PlayerRef::You,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Ember-Adept — {2}{U}{R}, 3/3 Elemental Wizard.
+/// Synthesised Oracle: "Magecraft — Whenever you cast or copy an
+/// instant or sorcery spell, this creature deals 1 damage to each
+/// opponent."
+pub fn prismari_ember_adept() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Ember-Adept",
+        cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_ping_each_opp(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Sparkflare — {2}{R}, Instant.
+/// Synthesised Oracle: "Prismari Sparkflare deals 3 damage to any
+/// target."
+pub fn prismari_sparkflare() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Sparkflare",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::DealDamage {
+            to: target_filtered(
+                SelectionRequirement::Creature
+                    .or(SelectionRequirement::Player)
+                    .or(SelectionRequirement::Planeswalker),
+            ),
+            amount: Value::Const(3),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
 /// Prismari Flameforger — {3}{R}, 3/3 Djinn Wizard Haste.
 /// Synthesised Oracle: "Magecraft — Whenever you cast or copy an instant or
 /// sorcery spell, this creature gets +2/+0 until end of turn."

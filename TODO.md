@@ -12,6 +12,76 @@ Periodic spot-check of the rules document
 `MagicCompRules_20260417.txt`). Each rule below has a status tag (✅
 wired, 🟡 partial, ⏳ todo) plus a short note.
 
+- 🟡 **CR 509 — Declare Blockers Step** (push modern_decks batch 33,
+  claude/modern_decks branch — audit against `MagicCompRules_20260417.txt`):
+  The blocker-declaration turn-based action — who can block what, when
+  triggers fire, and how block-on-ETB interacts with normal blocking.
+  Audit:
+  (a) **509.1** "Defending player declares blockers, no stack" — ✅
+  (`declare_blockers` in `game/combat.rs` is a direct mutator; emits
+  `BlockerDeclared` events but doesn't push to the stack).
+  (b) **509.1a** "Chosen creatures must be untapped, not battles, and
+  block creatures attacking the controller or their planeswalker" — ✅
+  for tap state (`can_block` checks `tapped`); the "attacking-creatures
+  only" gate enforces `defender_idx == blocker.controller` per the
+  `same_team` check (battles are not modelled as attackable but the
+  attacker → target enum supports player + planeswalker).
+  (c) **509.1b** restrictions (evasion abilities — Flying, Skulk, etc.)
+  — ✅ via `can_block_attacker_computed` which walks the keyword set
+  for Flying/Reach, Menace (handled separately), Shadow/Horsemanship
+  (not implemented), Unblockable, etc. Cumulative evasion is naturally
+  enforced (each evasion clause is its own gate).
+  (d) **509.1c** requirements (creatures that *must* block if able) —
+  ⏳ (no "must block" primitive; cards like Provoke aren't in the
+  catalog).
+  (e) **509.1d-f** cost-to-block lock-in and payment — ⏳ (no
+  blocker-cost activation pipeline; no cards in the catalog have
+  "creatures can't block unless their controller pays {N}").
+  (f) **509.1g** "Each chosen creature still controlled by the
+  defending player becomes a blocking creature" — ✅ (`block_map`
+  records the assignment; SBA later checks for blocker survival before
+  combat damage assigns).
+  (g) **509.1h** "An attacking creature with one or more declared
+  blockers becomes a blocked creature" — ✅ (`is_blocked(attacker_id)`
+  derived from `block_map` entries; persists through combat phase).
+  (h) **509.1i** "Any abilities that trigger on blockers being declared
+  trigger" — ✅ (push XXVI: `EventKind::Blocks` + `EventKind::BecomesBlocked`
+  emit per `BlockerDeclared` event; trigger dispatcher fans out matching
+  triggered abilities; test `daemogoth_titan_blocks_sacrifices_another_creature`).
+  (i) **509.2** "Active player gets priority after declare-blockers"
+  — ✅ (`give_priority_to_active()` at the end of `declare_blockers`).
+  (j) **509.2a** "Triggers from 509.1 go on the stack before AP priority,
+  order doesn't matter" — 🟡 (the dispatcher orders by emission sequence
+  rather than APNAP; in 1v1 this is the same outcome, in multiplayer the
+  APNAP order is approximated).
+  (k) **509.3a/b/c/d/e** different trigger condition shapes
+  ("blocks", "blocks a creature", "becomes blocked", "becomes blocked
+  by a creature", "blocks/blocked by N creatures") — 🟡 ✅ for the
+  basic per-blocker emission (each `BlockerDeclared` event fires one
+  trigger per ability, matching 509.3a's once-per-blocker rule). The
+  "blocks two or more creatures" multi-target counting (509.3e) is
+  exercised via per-creature trigger emission rather than per-batch
+  accumulation; functionally correct for single-creature blockers but
+  doesn't model the "Whenever this creature blocks two or more
+  creatures" pattern accurately if such a card existed.
+  (l) **509.3f** "characteristics-at-block-time gating" — ✅ (trigger
+  filter `Predicate::EntityMatches` reads layered characteristics at
+  fire time; type changes mid-combat don't retroactively trigger).
+  (m) **509.3g** "Whenever this creature attacks and isn't blocked"
+  — ⏳ (no `EventKind::AttacksAndIsntBlocked` primitive yet;
+  approximated for some cards by reading `block_map` at end of
+  declare-blockers).
+  (n) **509.4** "If a creature is put onto the battlefield blocking,
+  controller chooses which attacker it's blocking" — ⏳ (no `Effect::
+  PutOntoBattlefieldBlocking` primitive; cards like Mantis Rider don't
+  exercise this).
+  Tests: combat-coverage tests in `crabomination/src/tests/game.rs`
+  exercise basic declare-blockers + flying-evasion + menace-2-blockers;
+  STX `daemogoth_titan_blocks_sacrifices_another_creature` covers
+  509.1i + 509.3a. Promote to ✅ when 509.1c (requirements),
+  509.1d-f (cost-to-block), 509.3g (unblocked trigger), and 509.4
+  (put-onto-bf-blocking) all land.
+
 - 🟡 **CR 118 — Costs** (push modern_decks batch 16, claude/modern_decks
   branch — audit against `MagicCompRules_20260417.txt`): The cost
   framework — what counts as a cost, payment order, replacement
@@ -4915,3 +4985,45 @@ resolution time" in the Suggested next-up tasks section.
   approximates the per-add Berta pattern but doesn't gate on a target
   count. Affected cards: would unlock Spike Tiller, Carnival of Souls,
   Vish Kal's "+5 counters → ult" pattern, etc.
+
+### Suggested next-up tasks (additions from batch 33)
+
+- ⏳ **Effect::CreateEmblem primitive** (push modern_decks batch 33
+  follow-up): Implementing Professor Dellian Fel's -6 ult (and Ral
+  Zarek's -7 once it lands) needs an `Effect::CreateEmblem { who:
+  PlayerRef, triggered: Vec<TriggeredAbility>, static_abilities:
+  Vec<StaticAbility> }` primitive backed by:
+  (a) An `EmblemObject` shape stored in `Player.command` (alongside
+  Commanders) with a flag bit `is_emblem: bool` so the trigger
+  dispatcher knows to walk it.
+  (b) The trigger dispatcher already walks the command zone for
+  Commander triggers (per CR 113.6); extending to emblem-resident
+  triggers is just expanding the walk to honor `is_emblem` markers.
+  (c) Static abilities of emblems compute through `compute_battlefield`
+  similarly to off-battlefield static effects (Conspiracies).
+  CR 114 audit (TODO.md) gates on this primitive.
+
+- ⏳ **StaticEffect::ClearAbilities** (push modern_decks batch 33
+  follow-up): Mercurial Transformation, Kasmina's Transmutation, and
+  the Pongify family all set a target creature to "a Frog with base
+  P/T 1/1 and loses all abilities". The base-P/T half is wired via
+  `Effect::SetBasePT`. The "loses all abilities" half needs a
+  continuous-effect modification that clears keywords + triggered +
+  activated + static abilities from the layered view. Wiring shape:
+  add `Modification::ClearAllAbilities` (layer 6, similar to existing
+  `RemoveAllAbilities` but operating on the full ability set, not just
+  keywords), apply at compute time so the trigger dispatcher reads
+  the cleared view rather than the raw `CardDefinition` field. This
+  unlocks 2 STX 🟡 → ✅ promotions plus future Pongify-style cards.
+
+- ⏳ **Effect::GrantTriggeredAbility (transient)** (push modern_decks
+  batch 33 follow-up): Root Manipulation grants "Whenever this
+  creature attacks, you gain 1 life" to each of your creatures EOT.
+  The engine has `StaticEffect::GrantKeyword` (keyword-only, with
+  duration) but no transient triggered-ability grant. Wiring shape:
+  `Effect::GrantTriggeredAbility { what: Selector, ability:
+  TriggeredAbility, duration: Duration }` that installs the trigger
+  into a per-creature ephemeral list (cleared by SBA / cleanup based
+  on duration). The trigger dispatcher already walks per-permanent
+  abilities; just need to extend it to walk the ephemeral list too.
+  Affected cards: Root Manipulation, Rabid Attack (die-to-draw rider).
