@@ -2515,4 +2515,49 @@ pub mod shortcut {
             amount: Value::Const(amount),
         })
     }
+
+    /// ETB-Mint-Token shortcut: "When this creature enters, create
+    /// `count` copies of `definition`." Wraps [`etb`] with the
+    /// canonical create-token body. Replaces the 7-line trigger
+    /// boilerplate at the call site with a one-liner; pairs nicely
+    /// with the existing `inkling_token()`, `lorehold_spirit_token()`,
+    /// `stx_pest_token()`, `treasure_token()` factory helpers.
+    pub fn etb_mint_token(
+        definition: crate::card::TokenDefinition,
+        count: i32,
+    ) -> TriggeredAbility {
+        etb(Effect::CreateToken {
+            who: PlayerRef::You,
+            definition,
+            count: Value::Const(count),
+        })
+    }
+
+    /// ETB-Scry shortcut: "When this creature enters, scry `amount`."
+    /// Wraps [`etb`] with the canonical scry body. Used by Witherbloom
+    /// Cauldronkeeper / Quandrix Symmetrist / Silverquill Bookbearer
+    /// / Silverquill Archivist / Inkling Treasurer-style "scry on ETB"
+    /// bodies.
+    pub fn etb_scry(amount: i32) -> TriggeredAbility {
+        etb(Effect::Scry {
+            who: PlayerRef::You,
+            amount: Value::Const(amount),
+        })
+    }
+
+    /// Magecraft-Mint-Token shortcut: "Whenever you cast or copy an
+    /// instant or sorcery spell, create `count` copies of `definition`."
+    /// Wraps [`magecraft`] with a `CreateToken` body. Used by Inkling
+    /// Penmaster / Witherbloom Pestmancer / Prismari Alchemist /
+    /// Sedgemoor Witch-style "magecraft → mint a token" payoffs.
+    pub fn magecraft_mint_token(
+        definition: crate::card::TokenDefinition,
+        count: i32,
+    ) -> TriggeredAbility {
+        magecraft(Effect::CreateToken {
+            who: PlayerRef::You,
+            definition,
+            count: Value::Const(count),
+        })
+    }
 }

@@ -2043,6 +2043,32 @@ fn stress_dream_kills_creature_and_draws_a_card() {
     assert_eq!(g.players[0].hand.len(), hand_before);
 }
 
+#[test]
+fn stress_dream_scrys_two_before_drawing() {
+    // Promoted in modern_decks batch 43: the "look at top 2, choose 1
+    // to hand, other to bottom" half is now Scry 2 → Draw 1 (was Scry 1
+    // → Draw 1). The Scry 2 step lets the auto-decider see both top
+    // cards before drawing one.
+    let mut g = two_player_game();
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let lib_before = g.players[0].library.len();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::stress_dream());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Stress Dream castable for {3}{U}{R}");
+    drain_stack(&mut g);
+    // Library: -1 from the draw step. Scry 2 reorders but doesn't
+    // change library size.
+    assert_eq!(g.players[0].library.len(), lib_before - 1);
+}
+
 // ── Arcane Omens ────────────────────────────────────────────────────────────
 
 #[test]

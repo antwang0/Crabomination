@@ -6601,3 +6601,249 @@ pub fn lorehold_pyrelancer() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 43 (modern_decks) — Lorehold expansion ────────────────────────────
+
+/// Lorehold Emberhand Priest — {R}{W}, 2/2 Spirit Cleric Lifelink.
+/// Synthesised Oracle: "Lifelink. Magecraft — Whenever you cast or
+/// copy an instant or sorcery spell, this creature deals 1 damage to
+/// any target." 2-mana lifelink ping engine.
+pub fn lorehold_emberhand_priest() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Emberhand Priest",
+        cost: cost(&[r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Lifelink],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_ping_any(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Ironbacked Archivist — {2}{W}, 1/4 Human Cleric Vigilance.
+/// Synthesised Oracle: "Vigilance. When this creature enters, exile
+/// target card from a graveyard." 3-mana sticky vigilance + gy-hate.
+pub fn lorehold_ironbacked_archivist() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Ironbacked Archivist",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 4,
+        keywords: vec![Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![crate::effect::shortcut::etb(Effect::Move {
+            what: target_filtered(SelectionRequirement::Any),
+            to: ZoneDest::Exile,
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Lightspeaker — {2}{R}, 2/2 Spirit Wizard Haste.
+/// Synthesised Oracle: "Haste. Whenever this creature attacks, this
+/// creature deals 1 damage to any target." 3-mana hasty ping body.
+pub fn lorehold_lightspeaker() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Lightspeaker",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Haste],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![crate::effect::shortcut::on_attack(Effect::DealDamage {
+            to: target_filtered(
+                SelectionRequirement::Creature
+                    .or(SelectionRequirement::Player)
+                    .or(SelectionRequirement::Planeswalker),
+            ),
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Warpriest — {3}{R}{W}, 3/4 Spirit Cleric Vigilance + Lifelink.
+/// Synthesised Oracle: "Vigilance, lifelink. When this creature enters,
+/// this creature deals 2 damage to target creature." 5-mana defensive
+/// finisher + ETB removal.
+pub fn lorehold_warpriest() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Warpriest",
+        cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Vigilance, Keyword::Lifelink],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![crate::effect::shortcut::etb(Effect::DealDamage {
+            to: target_filtered(SelectionRequirement::Creature),
+            amount: Value::Const(2),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Emberscholar — {1}{R}{W}, 2/2 Spirit Wizard.
+/// Synthesised Oracle: "Magecraft — Whenever you cast or copy an
+/// instant or sorcery spell, this creature deals 1 damage to each
+/// opponent." 3-mana drain-burn engine.
+pub fn lorehold_emberscholar() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Emberscholar",
+        cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![crate::effect::shortcut::magecraft_ping_each_opp(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Relicbearer — {1}{R}{W}, 2/2 Spirit Cleric.
+/// Synthesised Oracle: "Whenever one or more cards leave your
+/// graveyard, put a +1/+1 counter on this creature." 3-mana gy-leave
+/// growth engine.
+pub fn lorehold_relicbearer() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Relicbearer",
+        cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CardLeftGraveyard, EventScope::YourControl),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Ember Sentinel — {2}{W}, 1/3 Spirit Cleric Vigilance.
+/// Synthesised Oracle: "Vigilance. When this creature enters, you
+/// gain 3 life." Defensive lifegain body.
+pub fn lorehold_ember_sentinel() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Ember Sentinel",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![crate::effect::shortcut::etb(Effect::GainLife {
+            who: Selector::You,
+            amount: Value::Const(3),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

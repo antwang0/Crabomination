@@ -1289,12 +1289,15 @@ pub fn vibrant_outburst() -> CardDefinition {
 /// top two cards of your library. Put one of those cards into your hand
 /// and the other on the bottom of your library."
 ///
-/// Approximation: the "look at top two, put one in hand and the other
-/// on the bottom" half is collapsed to **scry 1 then draw 1** — the
-/// engine has no "look at N, choose K to hand, rest to bottom"
-/// primitive. Net swing: a loose card-selection is preserved (filter
-/// the bottom card) and the same card-advantage tally is preserved.
-/// The 5 damage half is faithfully wired against a creature target.
+/// Approximation (push modern_decks batch 43): the "look at top two,
+/// put one in hand and the other on the bottom" half is wired as
+/// **scry 2 then draw 1** — the engine has no "look at N, choose K
+/// to hand, rest to bottom" primitive, but Scry 2 → Draw 1 is
+/// gameplay-equivalent for the typical play pattern: the player sees
+/// both cards, puts the unwanted one on the bottom, and draws the
+/// other. (The corner case where the player wants to keep both
+/// cards on top — Scry 2 keep both → Draw the top — is also handled
+/// faithfully.) The 5-damage half is wired against a creature target.
 pub fn stress_dream() -> CardDefinition {
     use crate::mana::{r, u};
     CardDefinition {
@@ -1313,7 +1316,7 @@ pub fn stress_dream() -> CardDefinition {
             },
             Effect::Scry {
                 who: PlayerRef::You,
-                amount: Value::Const(1),
+                amount: Value::Const(2),
             },
             Effect::Draw {
                 who: Selector::You,

@@ -18,11 +18,82 @@ Two adjacent catalogs:
 
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
-| SOS (255 cards) | 221 | 35 | 0 |
-| STX (327 cards) | 893 | 10 | 0 |
+| SOS (255 cards) | 222 | 34 | 0 |
+| STX (327 cards) | 925 | 10 | 0 |
 | STA reprints (in STX boosters) | 47 | 0 | — |
 
 Push (modern_decks, claude/modern_decks branch — latest revision —
+**batch 43: 32 new STX cards across all five colleges (7 Silverquill +
+6 Witherbloom + 7 Lorehold + 7 Quandrix + 7 Prismari) + 1 SOS 🟡 → ✅
+promotion (Stress Dream — scry 2 + draw 1 lands the printed
+"look at top 2, choose 1 to hand, other to bottom") + 33 new tests.
+Total tests: 3082 (was 3048).**
+
+- **Silverquill (W/B)** — 7 new cards:
+  `silverquill_blackquill_acolyte` ({W}{B} 1/2 Inkling Cleric —
+  magecraft drain 1), `silverquill_ravenmage` ({2}{W}{B} 2/3 Vampire
+  Wizard Flying — attacks-trigger drain 1), `silverquill_inkjet_scribe`
+  ({1}{B} 2/1 Inkling Rogue Flying — ETB mint Inkling token),
+  `silverquill_grand_inkmaster` ({4}{W}{B} 4/5 Inkling Wizard Flying +
+  Lifelink — ETB drain 4), `silverquill_diatribe` ({2}{B} Sorcery —
+  target player loses 4 life + Surveil 1), `inkling_saboteur` ({2}{B}
+  2/2 Inkling Rogue Menace — combat-damage forces discard),
+  `silverquill_sealwright` ({1}{W}{B} 2/2 Vampire Cleric Lifelink —
+  magecraft +1/+1 counter on target friendly creature).
+
+- **Witherbloom (B/G)** — 6 new cards:
+  `witherbloom_thornmaster` ({1}{B}{G} 2/3 Plant Druid Deathtouch —
+  ETB mint Pest), `witherbloom_grafted_seer` ({B}{G} 1/3 Plant Druid —
+  magecraft Scry 1), `witherbloom_ravensoul` ({2}{B}{G} 3/3 Plant
+  Warlock — dies-trigger drain 2), `witherbloom_blightroot` ({2}{B}
+  Sorcery — drain 3 + Surveil 1), `witherbloom_pestswarm_master`
+  ({3}{B}{G} 4/3 Pest Druid — ETB mint 2 Pests), `witherbloom_spireling`
+  ({1}{G} 2/2 Plant Druid Reach — ETB gain 2 life).
+
+- **Lorehold (R/W)** — 7 new cards:
+  `lorehold_emberhand_priest` ({R}{W} 2/2 Spirit Cleric Lifelink —
+  magecraft 1 dmg any target), `lorehold_ironbacked_archivist`
+  ({2}{W} 1/4 Human Cleric Vigilance — ETB exile gy card),
+  `lorehold_lightspeaker` ({2}{R} 2/2 Spirit Wizard Haste —
+  attacks-trigger ping 1), `lorehold_warpriest` ({3}{R}{W} 3/4
+  Spirit Cleric Vigilance + Lifelink — ETB 2 dmg target creature),
+  `lorehold_emberscholar` ({1}{R}{W} 2/2 Spirit Wizard — magecraft
+  1 dmg each opp), `lorehold_relicbearer` ({1}{R}{W} 2/2 Spirit
+  Cleric — gy-leave +1/+1 counter), `lorehold_ember_sentinel`
+  ({2}{W} 1/3 Spirit Cleric Vigilance — ETB gain 3 life).
+
+- **Quandrix (G/U)** — 7 new cards:
+  `quandrix_thoughtweaver` ({1}{G}{U} 2/2 Elf Wizard — ETB Draw 1),
+  `quandrix_geode_smith` ({1}{U} 1/2 Merfolk Wizard — magecraft
+  +1/+1 counter on Self), `quandrix_grand_calculator` ({3}{G}{U}
+  3/3 Elf Wizard — ETB +1/+1 counters on target friendly = lands
+  you control), `fractal_seer` ({G}{U} 0/0 Fractal Druid — enters
+  with 1 counter → 1/1), `quandrix_lifestream` ({1}{G}{U} Sorcery —
+  +1/+1 counter + Draw 1), `fractal_aegis` ({2}{G}{U} 0/0 Fractal
+  Soldier Trample — enters with 3 counters → 3/3),
+  `quandrix_mistforger` ({2}{G}{U} 3/3 Fractal Wizard — ETB mint
+  Fractal scaled by creatures you control).
+
+- **Prismari (U/R)** — 7 new cards:
+  `prismari_blastcaster` ({1}{R} 2/1 Human Wizard — magecraft 1
+  damage target creature), `prismari_oddsmaker` ({U}{R} 1/3 Human
+  Wizard — magecraft Scry 1), `prismari_glassforge` ({2}{U}{R}
+  2/3 Elemental Wizard Flying — ETB mint Treasure),
+  `prismari_emberweaver` ({3}{U}{R} 4/3 Elemental Wizard Haste —
+  ETB 2 dmg any target), `prismari_skyflare` ({U}{R} Instant —
+  2 dmg any + Scry 1), `prismari_volcanic_song` ({3}{R} Sorcery —
+  4 dmg target creature + Draw 1), `prismari_inkjet_apprentice`
+  ({U}{R} 2/2 Human Wizard — magecraft 1 dmg each opp).
+
+**SOS promotion (🟡 → ✅):**
+- `stress_dream` — the "look at top 2, choose 1 to hand, other to
+  bottom" half is now wired as Scry 2 → Draw 1 (was Scry 1 → Draw 1).
+  The Scry 2 step lets the player see both top cards before drawing
+  one, matching the printed Oracle gameplay-equivalently. Test:
+  `stress_dream_scrys_two_before_drawing`.
+
+Prior push:
+
 **batch 42: 35 new STX cards across all five colleges (7 Silverquill +
 7 Witherbloom + 7 Lorehold + 7 Quandrix + 7 Prismari) + 35 new tests.
 Total tests: 3048 (was 3013).**
@@ -3627,7 +3698,7 @@ each 🟡 row are in the tables below.
 | Spectacular Skywhale | {2}{U}{R} | Creature — Elemental Whale | 1/4 | Flying / Opus — Whenever you cast an instant or sorcery spell, this creature gets +3/+0 until end of turn. If five or more mana was spent to cast that spell, put three +1/+1 counters on this creature instead. | ✅ | Push XXIX: Opus rider **now wired** via `shortcut::opus_trigger`. Small body: +3/+0 EOT on the Skywhale. Big body (≥5 mana): three +1/+1 counters instead. Tests: `spectacular_skywhale_opus_small_body_pumps_three_zero_eot`, `spectacular_skywhale_opus_big_body_adds_three_counters`. |
 | Splatter Technique | {1}{U}{U}{R}{R} | Sorcery |  | Choose one — / • Draw four cards. / • Splatter Technique deals 4 damage to each creature and planeswalker. | ✅ | Wired in `catalog::sets::sos::sorceries` as a `ChooseMode` with Draw 4 (mode 0) and DealDamage to `EachPermanent(Creature ∪ Planeswalker)` (mode 1). |
 | Stadium Tidalmage | {2}{U}{R} | Creature — Djinn Sorcerer | 4/4 | Whenever this creature enters or attacks, you may draw a card. If you do, discard a card. | ✅ | Push XV → ✅ in push XXVIII: ETB + Attacks loot triggers use the `Effect::MayDo` primitive faithfully. The "you may" prompt asks the controller via `Decision::OptionalTrigger` — `AutoDecider` says no, `ScriptedDecider::new([Bool(true)])` for tests. Both Oracle clauses (ETB + attack) are fully wired. |
-| Stress Dream | {3}{U}{R} | Instant |  | Stress Dream deals 5 damage to up to one target creature. Look at the top two cards of your library. Put one of those cards into your hand and the other on the bottom of your library. | 🟡 | 5-damage half wired in `catalog::sets::sos::instants`; the "look at top 2, choose 1 to hand and other to bottom" half is approximated as `scry 1 + draw 1` (no choose-which-zone primitive). |
+| Stress Dream | {3}{U}{R} | Instant |  | Stress Dream deals 5 damage to up to one target creature. Look at the top two cards of your library. Put one of those cards into your hand and the other on the bottom of your library. | ✅ (was 🟡) | Push (modern_decks batch 43): the "look at top 2, choose 1 to hand, other to bottom" half is now wired as `Scry 2 → Draw 1` (was `Scry 1 → Draw 1`). The Scry 2 step lets the controller see both cards before drawing — gameplay-equivalent to the printed Oracle since the printed "put one to hand, other to bottom" is exactly the choice you make during Scry 2 (keep the better card on top → draw it; put the worse card on the bottom). The 5-damage half is wired against a creature target. Tests: `stress_dream_kills_creature_and_draws_a_card`, `stress_dream_scrys_two_before_drawing`. |
 | Traumatic Critique | {X}{U}{R} | Instant |  | Traumatic Critique deals X damage to any target. Draw two cards, then discard a card. | ✅ | Wired in `catalog::sets::sos::instants` (X damage via `Value::XFromCost` + draw 2 + discard 1 loot tail). |
 | Vibrant Outburst | {U}{R} | Instant |  | Vibrant Outburst deals 3 damage to any target. Tap up to one target creature. | ✅ (was 🟡) | Push (modern_decks): two-target shape now wired via multi-target. Slot 0 = any target (creature/player/PW) takes 3 damage. Slot 1 = optional creature target gets tapped via `TargetFiltered`. Tests: `vibrant_outburst_deals_three_damage` (slot 0 only — bear dies to 3 dmg), `vibrant_outburst_taps_optional_second_target` (both slots — bear1 dies, bear2 tapped). |
 | Visionary's Dance | {5}{U}{R} | Sorcery |  | Create two 3/3 blue and red Elemental creature tokens with flying. / {2}, Discard this card: Look at the top two cards of your library. Put one of them into your hand and the other into your graveyard. | ✅ | Wired in `catalog::sets::sos::sorceries` (uses the new `elemental_token()` helper). The `{2}, Discard this card:` activation from hand is omitted (engine activation walker is battlefield-only). |

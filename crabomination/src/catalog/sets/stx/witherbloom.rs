@@ -6033,3 +6033,218 @@ pub fn witherbloom_cinderscribe() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 43 (modern_decks) — Witherbloom expansion ─────────────────────────
+
+/// Witherbloom Thornmaster — {1}{B}{G}, 2/3 Plant Druid Deathtouch.
+/// Synthesised Oracle: "Deathtouch. When this creature enters, create
+/// a 1/1 black-and-green Pest creature token with 'When this creature
+/// dies, you gain 1 life.'" 3-mana sticky defensive Pest seeder.
+pub fn witherbloom_thornmaster() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Thornmaster",
+        cost: cost(&[generic(1), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Deathtouch],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![crate::effect::shortcut::etb(Effect::CreateToken {
+            who: PlayerRef::You,
+            definition: stx_pest_token(),
+            count: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Grafted Seer — {B}{G}, 1/3 Plant Druid.
+/// Synthesised Oracle: "Magecraft — Whenever you cast or copy an
+/// instant or sorcery spell, scry 1." 2-mana magecraft selection body.
+pub fn witherbloom_grafted_seer() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Grafted Seer",
+        cost: cost(&[b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::Scry {
+            who: PlayerRef::You,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Ravensoul — {2}{B}{G}, 3/3 Plant Warlock.
+/// Synthesised Oracle: "When this creature dies, each opponent loses
+/// 2 life and you gain 2 life." 4-mana death-drain body.
+pub fn witherbloom_ravensoul() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Ravensoul",
+        cost: cost(&[generic(2), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![crate::effect::shortcut::on_dies(Effect::Drain {
+            from: Selector::Player(PlayerRef::EachOpponent),
+            to: Selector::You,
+            amount: Value::Const(2),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Blightroot — {2}{B} Sorcery. Synthesised Oracle:
+/// "Each opponent loses 3 life and you gain 3 life. Surveil 1."
+/// 3-mana drain + selection.
+pub fn witherbloom_blightroot() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Blightroot",
+        cost: cost(&[generic(2), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Drain {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                to: Selector::You,
+                amount: Value::Const(3),
+            },
+            Effect::Surveil {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Pestswarm Master — {3}{B}{G}, 4/3 Pest Druid.
+/// Synthesised Oracle: "When this creature enters, create two 1/1
+/// black-and-green Pest creature tokens with 'When this creature dies,
+/// you gain 1 life.'" 5-mana 3-for-1 go-wide finisher.
+pub fn witherbloom_pestswarm_master() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Pestswarm Master",
+        cost: cost(&[generic(3), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Pest, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![crate::effect::shortcut::etb(Effect::CreateToken {
+            who: PlayerRef::You,
+            definition: stx_pest_token(),
+            count: Value::Const(2),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Spireling — {1}{G}, 2/2 Plant Druid Reach.
+/// Synthesised Oracle: "Reach. When this creature enters, you gain
+/// 2 life." 2-mana anti-flier + lifegain enabler.
+pub fn witherbloom_spireling() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Spireling",
+        cost: cost(&[generic(1), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Reach],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![crate::effect::shortcut::etb(Effect::GainLife {
+            who: Selector::You,
+            amount: Value::Const(2),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

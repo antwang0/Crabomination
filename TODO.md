@@ -127,6 +127,61 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   (Phasing) AND 502.2 (Day/Night) AND 502.3 untap-prevention
   effects all land.
 
+- ✅ **CR 503 — Upkeep Step** (push modern_decks batch 43,
+  claude/modern_decks branch — audit against
+  `MagicCompRules_20260417.txt`): The upkeep-step framework — no
+  turn-based actions, but the active player receives priority and
+  beginning-of-upkeep triggers go on the stack. Audit:
+  (a) **503.1** "No turn-based actions. Once it begins, the active
+  player gets priority" — ✅ (`enter_step` arm for `TurnStep::Upkeep`
+  in `game/stack.rs` opens a priority window via
+  `give_priority_to_active()` without applying any TBA between
+  Untap and Upkeep). (b) **503.1a** "Untap-step triggers AND
+  beginning-of-upkeep triggers are put on the stack before the AP
+  gets priority; emission order doesn't matter" — ✅ (untap-step
+  triggers are emitted during `do_untap` and the trigger dispatcher
+  pushes each `StackItem::Trigger` onto the stack; beginning-of-
+  upkeep triggers fire via `EventKind::StepBegins(Upkeep)` /
+  `EventScope::ActivePlayer` filter inside the upkeep-step
+  enter-hook. APNAP-order resolution of stacked triggers is the
+  default LIFO from the trigger dispatcher — for 1v1 the active
+  player's triggers are pushed first and resolve last, matching
+  the printed "AP picks order within their pile" convention).
+  (c) **503.2** "Cast only after [player's] upkeep step — applies
+  to first upkeep when multiple exist" — ⏳ (no card in the catalog
+  prints "cast only after upkeep"; the engine's cast-time predicate
+  framework doesn't gate on "first upkeep this turn"). No STX/SOS
+  card requires this.
+  Tests: existing combat/turn-loop coverage in
+  `crabomination/src/tests/game.rs` exercises Untap → Upkeep
+  transitions and BoUpkeep triggers (Lorehold the Historian's
+  opp-upkeep loot trigger, Bedlam Reveler-style triggers).
+
+- ✅ **CR 504 — Draw Step** (push modern_decks batch 43,
+  claude/modern_decks branch — audit against
+  `MagicCompRules_20260417.txt`): The two-step draw-step framework
+  — TBA to draw a card, then AP gets priority. Audit:
+  (a) **504.1** "First, the active player draws a card. This
+  turn-based action doesn't use the stack" — ✅ (`enter_step` arm
+  for `TurnStep::Draw` calls `Effect::Draw { who: active_player,
+  amount: 1 }` directly via `resolve_effect` BEFORE opening the
+  priority window — the draw is not pushed as a stack item, the
+  draw event emits `GameEvent::CardDrawn`, and any "whenever a
+  player draws a card" triggers fan out from there). (b) **504.2**
+  "Second, the active player gets priority" — ✅ (after the draw
+  TBA resolves, `give_priority_to_active()` opens the priority
+  window; trigger-stack resolution from draw-event triggers takes
+  precedence over the priority window since stack items resolve
+  first). Format-specific first-turn-draw skip (1v1 active player
+  skips draw on turn 1 per the Magic tournament rules) — ✅
+  (`format.skip_first_turn_draw` flag, checked by the draw-step
+  enter hook; the draw TBA is suppressed only on turn 1 of seat
+  0 in 2-player). Multiplayer free-for-all and Commander correctly
+  do **not** skip the first-turn draw per CR 103.8a.
+  Tests: existing combat-coverage tests exercise the draw step;
+  `format_two_headed_giant_active_player_draws_on_turn_1` etc.
+  cover the format gate.
+
 - ✅ **CR 505 — Main Phase** (push modern_decks batch 38,
   claude/modern_decks branch — audit against `MagicCompRules_20260417.txt`):
   Audit:
@@ -5650,3 +5705,52 @@ resolution time" in the Suggested next-up tasks section.
   surfaces; (c) rebalancing tribal density (Inkling, Pest, Spirit,
   Fractal, Elemental Wizard) across colleges to support sealed
   tribal pools.
+
+- ⏳ **`shortcut::etb_mint_token(definition, count)`** (push
+  modern_decks batch 43 surfaced): The
+  `etb(CreateToken { who: You, definition, count })` pattern
+  appears in hundreds of catalog factories (every Inkling /
+  Pest / Spirit / Treasure / Fractal mint creature). A helper
+  that takes a token definition + count would collapse the
+  7-line trigger boilerplate to one line, mirroring the existing
+  `etb_drain` / `etb_gain_life` / `etb_loot` shortcuts. Engine
+  shape:
+  ```rust
+  pub fn etb_mint_token(definition: TokenDefinition, count: i32) -> TriggeredAbility {
+      etb(Effect::CreateToken { who: PlayerRef::You, definition, count: Value::Const(count) })
+  }
+  ```
+  Refactor candidates: Inkling Scribe, Inkling Brigade, Inkling
+  Penmaster (magecraft variant — would need
+  `magecraft_mint_token` sibling), Lorehold Echoist,
+  Witherbloom Pest-Tender, Pest Brewer, Prismari Treasurer.
+  ~50+ catalog factories collapse to one-liners.
+
+- ⏳ **`shortcut::etb_scry(amount)`** (push modern_decks batch 43
+  surfaced): Same shape as the existing
+  `magecraft(Effect::Scry { … })` but as an ETB trigger.
+  Witherbloom Cauldronkeeper / Quandrix Symmetrist / Silverquill
+  Bookbearer / Silverquill Archivist / Inkling Treasurer all
+  use the same Scry-on-ETB pattern; a helper would clean up
+  the 7-line trigger pattern in each.
+
+- ⏳ **`shortcut::magecraft_mint_token(token, count)`** (push
+  modern_decks batch 43 surfaced): The
+  `magecraft(CreateToken { … })` pattern shows up in Inkling
+  Penmaster, Witherbloom Pestmancer, Prismari Alchemist, etc.
+  Same shape as the above ETB helper but bundled with the
+  magecraft trigger.
+
+- ⏳ **`Effect::CreateCopyToken { what }`** (push modern_decks
+  batch 43 surfaced): The "create a token that's a copy of
+  target permanent" primitive blocks 5+ STX/SOS cards:
+  Colorstorm Stallion's Opus big-body, Applied Geometry (which
+  approximates "copy a non-Aura permanent" as "mint a 0/0
+  Fractal"), Mascot Interception, Strixhaven Mascot, Spectacular
+  Skywhale Opus big-body. Engine shape: walk the target's
+  `CardDefinition`, clone it into a `TokenDefinition` (so it
+  ceases to exist as a non-token zone-change resolves per
+  CR 111.7), apply any "except it's a [type] in addition to its
+  other types" rider via field mutation. Distinct from
+  `Effect::CopySpell` which copies a stack spell. CR 707.2
+  governs the copy-and-token-mint pipeline.
