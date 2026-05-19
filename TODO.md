@@ -584,6 +584,70 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   test exercises stack ordering. Promote to ✅ after 405.3's AP-vs-NAP
   ordering for simultaneous triggers lands.
 
+- 🟡 **CR 707 — Copying Objects** (push modern_decks batch 41 audit,
+  claude/modern_decks branch — `MagicCompRules_20260417.txt`): The
+  copy-effect framework — what gets copied when an object becomes a
+  copy of another, copy-as-it-enters, and copies of spells. Audit:
+  (a) **707.1** "Some objects become or turn another object into a
+  copy of a spell, permanent, or card" — ✅ (`Effect::CopySpell`
+  resolves at cast time, stamping `StackItem::Spell.is_token = true`
+  for permanent-spell copies per CR 608.3f / 707.10f. The "copy a
+  permanent on the battlefield" half — Clone / Cackling Counterpart /
+  Phantasmal Image — is ⏳ pending an `Effect::CreateCopyToken`
+  primitive that snapshots a target permanent's CardDefinition).
+  (b) **707.2** copiable values = printed name, mana cost, color
+  indicator, types, rules text, P/T, loyalty (modified by other copy
+  effects) — ✅ for spell copies (the existing copy reads the
+  printed CardDefinition); ⏳ for permanent copies on the battlefield
+  (no copy primitive yet). Counters / stickers / status not copied —
+  ✅ for spell copies (no battlefield primitive yet).
+  (c) **707.2a** copies acquire color from cost and abilities from
+  text — ✅ (the spell copy reads its CardDefinition.cost.colors and
+  CardDefinition.{triggered,activated,static}_abilities).
+  (d) **707.2b** "Changing copiable values of the original doesn't
+  cascade to copies" — ✅ (the StackItem::Spell.copy snapshot is
+  independent of the original card; later edits to the original card
+  in hand/library don't affect the resolved copy).
+  (e) **707.2c** static copy-effect timing — ⏳ (no permanent copy
+  static; no Cytoshape / Mirror Gallery scenario in catalog).
+  (f) **707.3** copy status — ⏳ (no permanent copy primitive).
+  (g) **707.4** copying-while-on-battlefield doesn't trigger ETB/LBF
+  — ⏳ (no in-place copy primitive; Unstable Shapeshifter, Cytoshape
+  not in catalog).
+  (h) **707.5** "enters as a copy" picks up ETB-replacement effects
+  + ETB triggers of the copied object — ⏳ (Clone-style ETB-as-copy
+  not modeled; the `is_token = true` stamp from CR 608.3f is the only
+  copy-related ETB handling today).
+  (i) **707.6** copying doesn't snapshot "as it enters" choices — ⏳
+  (Clone-on-Adaptive-Automaton creature-type prompt deferred to copy
+  controller; Adaptive Automaton not in catalog).
+  (j) **707.7** linked-abilities preservation — ⏳ (no Linked
+  Abilities primitive in the catalog).
+  (k) **707.8** copy MDFC: use currently-up face — ⏳ (no MDFC
+  permanent copies; the engine's `back_face` is consulted on cast but
+  not on copy).
+  (l) **707.9** copy modifications/exceptions ("except its color is
+  black", "except it has flying") — ⏳ (no copy primitive supports
+  parameterised exceptions today; same gap as the permanent-copy
+  primitive).
+  (m) **707.10** copies of spells: not cast, no targets re-chosen
+  (unless effect says "you may choose new targets") — ✅ (see CR
+  707.10c row earlier: `Effect::CopySpell` resolves under controller =
+  spell controller; the "you may choose new targets" path is wired
+  for spells that opt in via the existing CopySpell parameter).
+  (n) **707.10a** spell copies don't go on the battlefield (creature/
+  artifact copies become tokens) — ✅ (`is_token = true` stamped on
+  permanent copies so SBA cleanup eats them when they leave the
+  battlefield).
+  Tests: spell copies exercised via `prismari_command_loots_one_copies_spell`,
+  `galvanic_iteration_copies_target_instant`,
+  `prismari_vortexweaver_etb_copies_target_instant_you_control`, and
+  the Choreographed Sparks two-mode trial. Permanent-copy primitives
+  (Clone, Echocasting Symposium body, Applied Geometry body) all
+  remain ⏳ and are tracked separately in the
+  "Card — Verdant Mastery alt-cost mode" / Permanent-copy primitive
+  rows. Promote to ✅ when `Effect::CreateCopyToken` lands.
+
 - ✅ **CR 107 — Numbers and Symbols** (push modern_decks batch 32
   audit, claude/modern_decks branch — `MagicCompRules_20260417.txt`):
   The number / X / mana-symbol foundation. Audit:
@@ -5438,3 +5502,71 @@ resolution time" in the Suggested next-up tasks section.
   call — net diff ~110 lines smaller. ~30 more candidate cards
   remain across stx::lorehold (Skydefender), stx::sos (Cauldron
   Familiar, Sedgemoor Witch, etc.) for future cleanup passes.
+
+### Suggested next-up tasks (additions from batch 41)
+
+- ⏳ **`Effect::CreateCopyToken { target_filter, mods }` primitive**
+  (push modern_decks batch 41 follow-up): The CR 707.5 "enters as a
+  copy of another permanent" + CR 707.9 "with modifications" shape.
+  At resolution time, the resolver picks a target permanent (or
+  arbitrary CardDefinition for "tokenize this card" effects), then
+  emits a new permanent on the controller's battlefield whose copiable
+  values clone the target's CardDefinition (P/T, types, abilities,
+  costs). `mods` describes per-card overrides: "except it's a 0/0
+  Fractal" (Applied Geometry), "with 6 +1/+1 counters" (Applied
+  Geometry tail), "gains Haste and 'sacrifice at end step'"
+  (Choreographed Sparks mode 1's copy). Unlocks: Clone, Cackling
+  Counterpart, Phantasmal Image, Applied Geometry, Echocasting
+  Symposium, Felidar Guardian, Spark Double, Mirror Image,
+  Mascot Interception (currently approximated as
+  GainControl/Untap/Haste rather than copying). Engine pieces
+  needed: (a) target picker that prefers nonland permanents under the
+  controller's choice; (b) CardDefinition clone helper that strips
+  layered modifications and keeps only the printed/copiable values
+  (per CR 707.2 "as modified by other copy effects, by its face-down
+  status, and by 'as . . . enters' abilities"); (c) mod-application
+  hook that overrides individual fields post-clone (creature_types,
+  enters_with_counters, keywords, etc.). Promotes 4-5 partial cards
+  from 🟡 → ✅ and is a prerequisite for CR 707's audit row promotion.
+
+- ⏳ **Spend-restricted mana primitive** (push modern_decks batch 41
+  re-raised): The "Add {X}. Spend this mana only to cast instant and
+  sorcery spells" rider on Hydro-Channeler, Great Hall of the
+  Biblioplex, Resonating Lute, Abstract Paintmage, and several SOS
+  Prismari mana sources. Currently approximated as plain `AddMana`
+  with no spend restriction tag — the mana correctly enters the pool
+  but can be spent on anything. Engine shape: extend `ManaPool` from
+  `HashMap<Color, u32>` to a structure that tracks per-source spend
+  restrictions (e.g., `Vec<(Color, u32, Option<SpendRestriction>)>`)
+  and have `pay_cost` walk restricted mana first when the spell
+  matches the restriction. Promotes ~10 SOS cards from 🟡 → ✅.
+
+- ⏳ **`Effect::FlipCoin` + `Decision::CoinFlip` primitive** (push
+  modern_decks batch 41 re-raised — CR 705 audit standalone): The
+  base coin-flip primitive blocking Karplusan Minotaur, Mana Clash,
+  Frenetic Efreet, Squee's Toy, and Ral Zarek's -7 ult ("flip five
+  coins"). Engine shape: (a) `Effect::FlipCoin { on_heads, on_tails }`
+  for the "care only about the result" path; (b)
+  `Effect::FlipCoinAndCall { caller, on_win, on_lose }` for the
+  "call heads/tails and match the result" path (CR 705.2); (c)
+  `Decision::CoinFlip` shape exposing the outcome so scripted tests
+  can deterministically inject heads/tails (matching `Decision::Mode`
+  / `Decision::MayDo` precedents); (d) RNG state on
+  `GameState` (shared with shuffle / random-discard) so server
+  replays are reproducible. The CR 705.3 "force-the-result" override
+  primitive (Krark's Thumb) can layer on top once the base lands.
+
+- ⏳ **Multi-target prompt for sorceries/instants (Selector::OneOf
+  with count range)** (push modern_decks batch 41 re-raised): Several
+  STX/SOS cards collapse "up to N targets" or "any number of targets"
+  to a single mandatory target slot today. Examples: Divergent
+  Equation (up to X gy IS cards), Rabid Attack (any number of friendly
+  creatures — already partially handled with 3 slots), Crackle With
+  Power (any number of targets, divided damage), Devious Cover-Up
+  (any number of gy cards), Magma Opus (divided damage), Reality
+  Spasm (untap up to X creatures — uses `up_to` for activated
+  abilities only). Engine shape: extend `Effect.target_filter_for_slot`
+  to expose a `count_range: (u8, u8)` and have the cast-time target
+  prompt loop slot 0..N, accepting "skip this slot" (None) when slot
+  index >= min. Auto-decider fills slot 0 and stops; scripted decider
+  can fill more.

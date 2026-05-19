@@ -6462,3 +6462,182 @@ pub fn inkling_quilltender() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+/// Silverquill Purifier — {1}{W}, 2/2 Human Cleric.
+/// Synthesised Oracle: "When this creature enters, you gain 2 life.
+/// Magecraft — Scry 1."
+pub fn silverquill_purifier() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Purifier",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![
+            etb_gain_life(2),
+            magecraft(Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) }),
+        ],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Inkling Proxy — {2}{B}, 2/3 Inkling Rogue Flying.
+/// Synthesised Oracle: "When this creature enters, target opponent
+/// discards a card at random." A 3-mana defensive flier + targeted
+/// disruption.
+pub fn inkling_proxy() -> CardDefinition {
+    CardDefinition {
+        name: "Inkling Proxy",
+        cost: cost(&[generic(2), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Rogue],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![crate::effect::shortcut::etb(Effect::Discard {
+            who: target_filtered(SelectionRequirement::Player),
+            amount: Value::Const(1),
+            random: true,
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Witnessing — {2}{W}{B} Instant.
+/// Synthesised Oracle: "Each opponent loses 3 life and you gain 3 life.
+/// Draw a card."
+pub fn silverquill_witnessing() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Witnessing",
+        cost: cost(&[generic(2), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Drain {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                to: Selector::You,
+                amount: Value::Const(3),
+            },
+            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Inkling Avant-Garde — {4}{W}{B}, 4/4 Inkling Bard Flying + Lifelink.
+/// Synthesised Oracle: "When this creature enters, each opponent loses
+/// 2 life and you gain 2 life." A 6-mana evasive race-breaker.
+pub fn inkling_avant_garde() -> CardDefinition {
+    CardDefinition {
+        name: "Inkling Avant-Garde",
+        cost: cost(&[generic(4), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Bard],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Flying, Keyword::Lifelink],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_drain(2)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Convocation — {3}{W}{B} Sorcery.
+/// Synthesised Oracle: "Create two 1/1 white-and-black Inkling creature
+/// tokens with flying. Each opponent loses 1 life and you gain 1 life
+/// for each Inkling you control."
+pub fn silverquill_convocation() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Convocation",
+        cost: cost(&[generic(3), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                definition: inkling_token(),
+                count: Value::Const(2),
+            },
+            Effect::Drain {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                to: Selector::You,
+                amount: Value::count(Selector::EachPermanent(
+                    SelectionRequirement::HasCreatureType(CreatureType::Inkling)
+                        .and(SelectionRequirement::ControlledByYou),
+                )),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
