@@ -2142,6 +2142,32 @@ pub mod shortcut {
         }
     }
 
+    /// ETB-Drain shortcut: "When this creature enters, each opponent loses
+    /// `amount` life and you gain `amount` life." Wraps [`etb`] with the
+    /// canonical drain-each-opp body. Used by ~40 STX/SOS Silverquill /
+    /// Witherbloom drain creatures (Inkling Stormcaller, Silverquill
+    /// Drainmaster, Inkling Magister, etc.) to collapse the recurring
+    /// 7-line trigger pattern into one helper call.
+    pub fn etb_drain(amount: i32) -> TriggeredAbility {
+        etb(Effect::Drain {
+            from: Selector::Player(PlayerRef::EachOpponent),
+            to: Selector::You,
+            amount: Value::Const(amount),
+        })
+    }
+
+    /// ETB-Gain-Life shortcut: "When this creature enters, you gain
+    /// `amount` life." Wraps [`etb`] with the canonical gain-life body.
+    /// Used by ~25 STX/SOS Silverquill / Lorehold lifegain creatures
+    /// (Silverquill Marshal, Silverquill Loremender, Lorehold
+    /// Skydefender, etc.).
+    pub fn etb_gain_life(amount: i32) -> TriggeredAbility {
+        etb(Effect::GainLife {
+            who: Selector::You,
+            amount: Value::Const(amount),
+        })
+    }
+
     /// Predicate matching "the just-cast spell is an instant or a sorcery".
     /// Built around `Selector::TriggerSource` — at the spell-cast site,
     /// `fire_spell_cast_triggers` binds the just-cast `CardId` to

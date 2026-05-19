@@ -12,6 +12,52 @@ Periodic spot-check of the rules document
 `MagicCompRules_20260417.txt`). Each rule below has a status tag (✅
 wired, 🟡 partial, ⏳ todo) plus a short note.
 
+- 🟡 **CR 502 — Untap Step** (push modern_decks batch 39,
+  claude/modern_decks branch — audit against
+  `MagicCompRules_20260417.txt`): The untap step's turn-based actions.
+  Audit:
+  (a) **502.1** "Phased-in permanents with phasing phase out, and
+  phased-out permanents that the active player controlled when they
+  phased out phase in" — ⏳ no Phasing keyword primitive (no
+  `Keyword::Phasing` variant; `do_untap` doesn't walk a phased-out
+  list). No STX/SOS card uses Phasing (Iceage / Mirage block only).
+  (b) **502.2** "Day/Night transition: if previous active player cast
+  0 spells while day → night; if cast 2+ spells while night → day" —
+  ⏳ no `GameState.day_night: DayNight` field; no transition logic in
+  `enter_step`. No STX/SOS card uses Day/Night (Innistrad: Midnight
+  Hunt block only).
+  (c) **502.3** "Active player determines which permanents untap, then
+  untaps them all simultaneously" — ✅ (`do_untap` in
+  `game/stack.rs:572` walks `self.battlefield`, filters by
+  `card.controller == active_player_idx`, and flips `card.tapped =
+  false`. Stun counters interpose per CR 701.46a / 122.1d via
+  `remove_counters(Stun, 1)` instead of untapping when present —
+  matches the printed Oracle of every Stun-counter source).
+  Summoning sickness clears unconditionally per CR 302.1 / 506.4.
+  Per-turn tallies reset here too: `lands_played_this_turn`,
+  `spells_cast_this_turn`, `life_gained_this_turn`,
+  `cards_drawn_this_turn`, `cards_left_graveyard_this_turn`,
+  `creatures_died_this_turn`, `cards_exiled_this_turn`,
+  `instants_or_sorceries_cast_this_turn`,
+  `creatures_cast_this_turn`, and Teferi's sorcery-as-instant flag.
+  Effects that "prevent N permanents from untapping" (Frozen Aether /
+  Stasis-class effects) — ⏳ no `StaticEffect::PreventUntap` primitive.
+  (d) **502.4** "No player receives priority during the untap step,
+  so no spells can be cast or resolve and no abilities can be
+  activated or resolve. Any ability that triggers during this step
+  will be held until the next time a player would receive priority,
+  which is usually during the upkeep step" — ✅ (`enter_step`'s
+  `TurnStep::Untap` arm at `game/stack.rs:101` calls `do_untap`,
+  emits `TurnStarted`, then immediately calls `pass_priority()` to
+  advance to Upkeep — no priority window is opened. Untap-step
+  triggers go on the stack and resolve in upkeep per CR 503.1a; the
+  engine's stack-driven priority loop naturally enforces this.).
+  Tests: `combat_tests.rs` exercises full turn loop including untap
+  → upkeep → draw → main; stun-counter regression tests at
+  `tests::stx::stun_counter_*` cover (c). Promote to ✅ when 502.1
+  (Phasing) AND 502.2 (Day/Night) AND 502.3 untap-prevention
+  effects all land.
+
 - ✅ **CR 505 — Main Phase** (push modern_decks batch 38,
   claude/modern_decks branch — audit against `MagicCompRules_20260417.txt`):
   Audit:
@@ -2409,7 +2455,42 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   before: no STX/SOS card requires the fast-path today. First Mana
   Reflection / Wirewood Channeler-class card would trigger.
 
+- ⏳ **`SelectionRequirement::ManaValueAtMostX`** (push modern_decks
+  batch 39 suggested) — the current `ManaValueAtMost(u32)` predicate
+  takes a compile-time constant, but several STX/SOS cards print
+  "mana value X or less" gates where X is the spell's cast-time X
+  (Mind into Matter's "put a permanent with mana value X or less
+  from your hand onto the battlefield tapped"). Wiring shape: add a
+  new variant that reads `EffectContext.x_value` at evaluation time,
+  same as `Value::XFromCost` reads it for damage / counters / draws.
+  The evaluator (`evaluate_requirement_static` in
+  `game/effects/eval.rs`) would need to thread the X value through,
+  same way it threads `source` today. Cards unblocked: Mind into
+  Matter, future X-cost search-and-cheat-onto-battlefield primitives.
 
+- ⏳ **Refactor existing STX/SOS Silverquill drain creatures to use
+  `etb_drain`/`etb_gain_life`** (push modern_decks batch 39 suggested)
+  — the new `effect::shortcut::etb_drain(N)` and
+  `effect::shortcut::etb_gain_life(N)` helpers (added in batch 39)
+  collapse the canonical 7-line ETB drain / gain-life trigger into
+  one helper call. ~40 existing cards across `stx::silverquill`,
+  `stx::witherbloom`, and `stx::lorehold` (Silverquill Marshal,
+  Silverquill Loremender, Silverquill Drainmaster, Inkling Scriptwarden,
+  Inkling Pamphleteer, Lorehold Skydefender, etc.) inline the same
+  pattern manually. A future cleanup pass should refactor them to
+  reduce code duplication; functional behavior is unchanged.
+
+- ⏳ **"Tap N creatures as additional cost" cost primitive** (push
+  modern_decks batch 39 noted) — Group Project's Flashback cost is
+  "Tap three untapped creatures you control" (no mana cost), which
+  doesn't fit the existing `AlternativeCost { mana_cost,
+  exile_from_graveyard_count, ... }` shape. Wiring shape: extend
+  `AlternativeCost` with `tap_count: Option<(u32, SelectionRequirement)>`
+  so a cost-paid validator can require N permanents matching the
+  filter to be untapped + tap them as the spell finishes paying.
+  Cards unblocked: Group Project (Flashback), future "Tap an
+  untapped artifact you control" cost shapes from Mirrodin /
+  Convoke siblings.
 
 - ✅ **Stack-aware `find_card_owner`** (push modern_decks): the
   card-owner lookup in `GameState::find_card_owner` (`game/mod.rs`)

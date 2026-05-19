@@ -19,14 +19,81 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 221 | 35 | 0 |
-| STX (327 cards) | 776 | 10 | 0 |
+| STX (327 cards) | 806 | 10 | 0 |
 | STA reprints (in STX boosters) | 47 | 0 | — |
 
 Push (modern_decks, claude/modern_decks branch — latest revision —
-**batch 38: 31 new STX cards across all five colleges (7 Silverquill +
-6 Witherbloom + 6 Lorehold + 6 Quandrix + 6 Prismari) + 31 new tests
-+ CR 505 (Main Phase) audit row added to TODO.md.** Total tests: 2931
-(was 2900).
+**batch 39: 30 new STX cards across all five colleges (6 Silverquill +
+6 Witherbloom + 6 Lorehold + 6 Quandrix + 6 Prismari) + 30 new tests +
+2 new engine shortcuts (`etb_drain`, `etb_gain_life`). The new
+shortcuts wrap the canonical SelfSource-scoped ETB triggers for the
+recurring `Drain { from: EachOpponent, to: You }` and `GainLife {
+who: You }` patterns — Silverquill Soulbinder and Inkling Magister
+already use them in this batch.** Total tests: 2961 (was 2931).
+
+- **Silverquill (W/B)** — 6 new cards:
+  `silverquill_liturgist` ({2}{W} 1/4 Inkling Cleric Flying — magecraft
+   gain 1 life), `inkling_bookwarden` ({3}{W}{B} 4/5 Inkling Warrior
+   Flying+Lifelink), `silverquill_soulbinder` ({1}{W}{B} 2/2 Vampire
+   Warlock — ETB drain 2 + magecraft +1/+1 counter),
+  `inkling_magister` ({4}{W}{B} 3/4 Inkling Wizard Flying+Vigilance —
+   ETB drain 3 + magecraft gain 1), `silverquill_inkproclamation`
+   ({2}{W}{B} Sorcery — each opp sacs a creature + mint 1 Inkling),
+  `inkling_loredrain` ({3}{W}{B} Sorcery — each opp discards a card +
+   drain 2).
+
+- **Witherbloom (B/G)** — 6 new cards:
+  `witherbloom_rootbinder` ({1}{B}{G} 2/3 Plant Druid — ETB gain 2 +
+   magecraft gain 1), `pest_reaver` ({2}{B}{G} 3/3 Pest Beast
+   Deathtouch), `witherbloom_decoction` ({B}{G} Instant — drain 2 +
+   Scry 1), `witherbloom_cultivator` ({2}{G} 2/3 Human Druid — ETB
+   mint Pest + magecraft +1/+1 counter), `witherbloom_spawnkeeper`
+   ({3}{B}{G} 3/4 Fungus Druid — drain 1 when another friendly
+   creature dies), `witherbloom_verdantwarden` ({4}{G} 5/5 Plant
+   Beast Trample).
+
+- **Lorehold (R/W)** — 6 new cards:
+  `lorehold_hellraiser` ({3}{R}{W} 4/4 Spirit Warrior Haste — ETB 2
+   damage), `lorehold_annalist` ({1}{R}{W} 2/3 Human Cleric Vigilance
+   — magecraft exile any graveyard card), `lorehold_bonfire` ({2}{R}
+   Sorcery — 3 damage + gain 1 life), `lorehold_spiritsage` ({2}{R}{W}
+   3/3 Spirit Cleric — ETB mint 1/1 white Spirit token Flying),
+  `lorehold_pyrokin` ({R} 1/1 Spirit Haste — magecraft +1/+0 EOT),
+  `spirit_outrider` ({3}{R}{W} 3/4 Spirit Knight First Strike).
+
+- **Quandrix (G/U)** — 6 new cards:
+  `quandrix_scrymaster` ({1}{U} 2/2 Merfolk Wizard — ETB Scry 1 +
+   magecraft Scry 1), `fractal_burst` ({2}{G}{U} Sorcery — mint Fractal
+   with 3 counters → 3/3), `quandrix_aetherwarden` ({3}{G}{U} 3/4 Frog
+   Wizard Flying — ETB Draw 1 + magecraft +1/+1 counter),
+  `quandrix_tideshaper` ({2}{U} 2/3 Merfolk Wizard — ETB bounce
+   creature), `fractal_catalyst` ({G}{U} 1/1 Fractal Druid — magecraft
+   +1/+1 on a friendly creature), `quandrix_equalizer` ({4}{G}{U} 4/4
+   Fractal Wizard — ETB +1/+1 counter on each other friendly creature).
+
+- **Prismari (U/R)** — 6 new cards:
+  `prismari_hothead` ({1}{R} 2/1 Human Wizard Haste — magecraft +1/+0
+   EOT), `prismari_cantrip_bolt` ({1}{U}{R} Instant — 2 damage to
+   creature + draw 1), `prismari_wildmage` ({2}{U}{R} 3/2 Elemental
+   Wizard — magecraft ping each opp 1), `prismari_stormbearer`
+   ({3}{U}{R} 4/3 Elemental Wizard Flying — ETB loot + magecraft
+   +1/+0 EOT), `prismari_pyromancer_v2` ({2}{R} 2/3 Human Wizard —
+   ETB 2 damage any), `prismari_tempestmage` ({U}{R} 2/2 Elemental
+   Wizard — magecraft +1/+0 EOT on target creature).
+
+**Engine improvements (push modern_decks, batch 39):**
+- New `effect::shortcut::etb_drain(amount)` helper — collapses the
+  recurring `EventSpec::EntersBattlefield/SelfSource → Drain {
+  EachOpponent, You, amount }` pattern into one helper call. Used by
+  Silverquill Soulbinder + Inkling Magister in batch 39; ~40
+  existing STX/SOS Silverquill / Witherbloom drain creatures can be
+  refactored to use it in future passes.
+- New `effect::shortcut::etb_gain_life(amount)` helper — companion to
+  `etb_drain` for the pure lifegain ETB shape (Silverquill Marshal,
+  Silverquill Loremender, Lorehold Skydefender). Ready for the next
+  pass that refactors those existing cards.
+
+Prior push:
 
 - **Silverquill (W/B)** — 7 new cards:
   `silverquill_essayist` ({1}{W} 1/3 Human Wizard — magecraft gain 1 + scry 1),
