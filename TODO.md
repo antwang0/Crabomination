@@ -263,6 +263,49 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   ult's emblem ships end-to-end (Professor Dellian Fel's lifegain →
   drain emblem is the canonical first target).
 
+- 🟡 **CR 116 — Special Actions** (push modern_decks batch 35,
+  claude/modern_decks branch — audit against `MagicCompRules_20260417.txt`):
+  Special actions are player-initiated actions that don't use the stack
+  (CR 116.1). Audit:
+  (a) **116.1** "Special actions are actions a player may take when they
+  have priority that don't use the stack" — ✅ (the engine has separate
+  `GameAction` variants for each special action; none push onto
+  `self.stack`).
+  (b) **116.2a** "Playing a land is a special action" — ✅
+  (`play_land_with_face` in `game/actions.rs` checks priority via
+  `can_cast_sorcery_speed(p)` for sorcery-speed timing, enforces the
+  per-turn limit via `can_play_land()`, requires `has_in_hand`, and
+  moves the card via direct push to battlefield without using the stack).
+  (c) **116.2b** "Turning a face-down creature face up" — ⏳ (no morph /
+  face-down primitive in the engine; the corner is not exercised by the
+  current catalog).
+  (d) **116.2c** "End a continuous effect / stop a delayed triggered
+  ability" — 🟡 (some duration-bound effects clear in cleanup; no
+  general-purpose "special action to dismiss" path).
+  (e) **116.2d** "Ignore a static ability for a duration" — ⏳ (no static
+  ability with "you may ignore" rider in the catalog).
+  (f) **116.2e** Circling Vultures "may discard at any time" — ⏳ (the
+  card isn't in the catalog).
+  (g) **116.2f** Suspend — exile from hand at priority — 🟡 (suspend
+  primitive partially modelled; see TODO row for Suspend).
+  (h) **116.2g** Companion {3}: hand from outside game — ⏳ (no
+  companion sideboard / outside-game model).
+  (i) **116.2h** Foretell — exile from hand for {2} — ⏳ (no foretell
+  primitive).
+  (j) **116.2i** Roll planar die — n/a (no Planechase).
+  (k) **116.2j** Conspiracy face-up — n/a (no Conspiracy Draft).
+  (l) **116.2k** Plot exile from hand — ⏳.
+  (m) **116.2m** Pay locked-half unlock cost (Mystery Houses / Rooms) —
+  ⏳.
+  (n) **116.3** "If a player takes a special action, that player receives
+  priority afterward" — ✅ (`play_land` does NOT call
+  `pass_priority`, leaving priority with the active player; the priority
+  system idempotently re-checks who has priority via `priority.
+  player_with_priority` and stack-empty state).
+  Tests: implicit via the entire play-land test suite + the suspended-
+  spell tests; explicit `priority_returns_to_player_after_play_land`
+  could be added.
+
 - 🟡 **CR 122 — Counters** (push modern_decks audit, claude/modern_decks
   branch — batch 10): The counter primitive — placement, accumulation,
   +1/+1 vs -1/-1 cancellation, ETB-with-counters, "Nth counter" trigger.

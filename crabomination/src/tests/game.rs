@@ -48,6 +48,22 @@ fn cannot_play_land_in_combat() {
     assert_eq!(err, GameError::SorcerySpeedOnly);
 }
 
+#[test]
+fn play_land_retains_priority_after_special_action() {
+    // CR 116.3 — "If a player takes a special action, that player
+    // receives priority afterward." Playing a land (CR 116.2a) is a
+    // special action; the active player should still hold priority
+    // after PlayLand resolves.
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::forest());
+    let before = g.priority.player_with_priority;
+    g.perform_action(GameAction::PlayLand(id)).unwrap();
+    let after = g.priority.player_with_priority;
+    assert_eq!(after, before, "playing a land does not pass priority");
+    // Stack is also empty after a special action (it doesn't use the stack).
+    assert!(g.stack.is_empty(), "PlayLand does not push to stack");
+}
+
 // ── Tap for mana ──────────────────────────────────────────────────────────
 
 #[test]

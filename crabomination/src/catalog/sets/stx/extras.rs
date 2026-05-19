@@ -8681,15 +8681,14 @@ pub fn deep_analysis() -> CardDefinition {
 /// "Target creature loses all abilities and becomes a blue Frog with
 /// base power and toughness 1/1 until end of turn."
 ///
-/// Push (modern_decks, NEW, `stx::extras`): wired via `Effect::SetBasePT`
-/// (the layer-7b primitive used by Square Up / Mercurial Transformation
-/// / Fractalize). The "loses all abilities" rider is omitted (no
-/// clear-abilities continuous primitive — tracked in TODO.md as the
-/// `StaticEffect::ClearAbilities` gap). The base-P/T override is the
-/// headline play pattern (shrinking a big threat down to a 1/1 Frog).
-/// The "becomes a blue Frog" type-and-color rewrite (layer 4 + 5) is
-/// also omitted; the target keeps its printed creature types and
-/// colors. Counters and +N/+M still stack on top per CR 613.7c-f.
+/// Push (modern_decks): the "loses all abilities" rider now lands via
+/// `Effect::LoseAllAbilities` (the same layer-6 strip primitive used by
+/// Mercurial Transformation, CR 113.10b). Body now resolves as
+/// `Seq(SetBasePT 1/1, LoseAllAbilities)` — the target shrinks to a
+/// 1/1 *and* loses Flying / triggered abilities / activated abilities
+/// for the rest of the turn. The "becomes a blue Frog" type-and-color
+/// rewrite (layer 4 + 5) is still omitted; the target keeps its
+/// printed creature types and colors.
 pub fn kasminas_transmutation() -> CardDefinition {
     CardDefinition {
         name: "Kasmina's Transmutation",
@@ -8700,12 +8699,18 @@ pub fn kasminas_transmutation() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![],
-        effect: Effect::SetBasePT {
-            what: target_filtered(SelectionRequirement::Creature),
-            power: Value::Const(1),
-            toughness: Value::Const(1),
-            duration: Duration::EndOfTurn,
-        },
+        effect: Effect::Seq(vec![
+            Effect::SetBasePT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(1),
+                toughness: Value::Const(1),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::LoseAllAbilities {
+                what: target_filtered(SelectionRequirement::Creature),
+                duration: Duration::EndOfTurn,
+            },
+        ]),
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],

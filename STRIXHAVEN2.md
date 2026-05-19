@@ -19,10 +19,71 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 221 | 35 | 0 |
-| STX (327 cards) | 717 | 11 | 0 |
-| STA reprints (in STX boosters) | 46 | 0 | — |
+| STX (327 cards) | 745 | 10 | 0 |
+| STA reprints (in STX boosters) | 47 | 0 | — |
 
 Push (modern_decks, claude/modern_decks branch — latest revision —
+**batch 35: 27 new STX cards (7 Silverquill + 5 Witherbloom + 5 Lorehold
++ 5 Quandrix + 5 Prismari) + 28 new tests + Kasmina's Transmutation
+🟡 → ✅ via the existing `Effect::LoseAllAbilities` primitive (CR
+113.10b strip-abilities — wires the second half of the printed Oracle:
+"target creature loses all abilities and becomes a 1/1") + CR 116 audit
++ `play_land_retains_priority_after_special_action` test. Total tests:
+2884 (was 2854).
+
+- **Silverquill (W/B)** — 7 new cards:
+  `silverquill_penitent` ({1}{W} 2/2 Cleric — ETB drain 1),
+  `inkling_echobringer` ({1}{W}{B} 2/2 Inkling Cleric Flying + Lifelink),
+  `silverquill_verseblade` ({1}{W}{B} Instant — +1/+1 EOT to target + draw 1),
+  `silverquill_lifepenner` ({2}{W} 2/3 Cleric — magecraft gain 2 life),
+  `inkling_maverick` ({2}{B} 3/2 Inkling Rogue Flying — ETB drain 1),
+  `silverquill_antiphony` ({2}{W}{B} Instant — drain 2 + surveil 1),
+  `inkling_cardinal` ({3}{W}{B} 3/4 Inkling Cleric Flying + Vigilance — ETB gain 2 life).
+
+- **Witherbloom (B/G)** — 5 new cards:
+  `witherbloom_hexpetal` ({1}{B}{G} 2/2 Plant Druid — ETB drain 2),
+  `pest_inkblot` ({B}{G} 1/2 Pest Warlock Deathtouch — dies gain 1 life),
+  `witherbloom_tangleweed` ({3}{B}{G} 4/5 Plant Warrior Trample),
+  `pest_hauntwing` ({2}{B} 2/1 Pest Flying — dies gain 1 life),
+  `witherbloom_soulrender` ({2}{B}{G} Sorcery — drain 3 + mill 3 self).
+
+- **Lorehold (R/W)** — 5 new cards:
+  `lorehold_pyremender` ({2}{R}{W} 3/3 Spirit Cleric Lifelink — ETB 2 damage any),
+  `spirit_vanguard` ({3}{W} 2/3 Spirit Soldier First Strike + Vigilance),
+  `lorehold_ember_sage` ({1}{R} 2/1 Wizard — magecraft ping 1),
+  `lorehold_ghostmaster` ({4}{R}{W} 4/4 Spirit Soldier Vigilance — ETB mint 3 Spirits),
+  `lorehold_b35_lightning` (factory; printed "Lorehold Lightning II" {R} Instant — 3 damage + gain 1 life).
+
+- **Quandrix (G/U)** — 5 new cards:
+  `quandrix_b35_geomancer` (factory; printed "Quandrix Geomancer II" {1}{G}{U} 2/3 Elf Wizard — ETB +1/+1 counter + magecraft +1/+1 counter),
+  `fractal_grower` ({2}{G}{U} 2/2 Fractal Druid — ETB mint 1/1 Fractal),
+  `quandrix_tideseer` ({1}{U} 1/2 Merfolk Wizard — magecraft Scry 1),
+  `fractal_tidecaller` ({3}{G}{U} 3/3 Fractal Wizard Flying — ETB draw 1),
+  `quandrix_b35_equation` (factory; printed "Quandrix Equation II" {2}{G} Instant — +2/+2 counters on friendly creature).
+
+- **Prismari (U/R)** — 5 new cards:
+  `prismari_spellforge` ({2}{U}{R} 3/3 Elemental Wizard — ETB 2 damage any + magecraft loot),
+  `prismari_b35_pyromage` (factory; printed "Prismari Pyromage II" {R}{U} 2/1 Wizard — magecraft ping 1),
+  `prismari_stormforge` ({3}{U}{R} Sorcery — 3 damage to creature + draw 2),
+  `prismari_mirror_mage` ({2}{U}{R} 2/3 Elemental Wizard — magecraft +1/+1 EOT),
+  `prismari_cinderdrake` ({4}{U}{R} 4/4 Elemental Dragon Flying — ETB 3 damage any).
+
+**STX 🟡 → ✅ promotion (Kasmina's Transmutation):**
+- **Kasmina's Transmutation** (STA reprint) — Body promoted from
+  `SetBasePT(1/1)` alone to `Seq(SetBasePT 1/1, LoseAllAbilities)`.
+  The strip-abilities half lands via the same `Effect::LoseAllAbilities`
+  primitive added in batch 34 for Mercurial Transformation (CR 113.10b).
+  Test: `kasminas_transmutation_strips_flying_from_target` — Serra
+  Angel (4/4 flying-vigilance) becomes a 1/1 with no abilities.
+
+**Rules audit (CR 116 — Special Actions):** New TODO row covering all
+twelve special actions (CR 116.2a-m). PlayLand (CR 116.2a) is fully
+wired and now has a regression test (`play_land_retains_priority_after_
+special_action`) proving CR 116.3 ("a player who takes a special
+action receives priority afterward"). Suspend / Foretell / Plot /
+unlock-cost are tracked separately under their own primitive rows.
+
+Prior push:
 **batch 34: 27 new STX cards (7 Silverquill + 5 Witherbloom + 5 Lorehold
 + 5 Quandrix + 5 Prismari) + 29 new tests + Mercurial Transformation
 🟡 → ✅ via new `Effect::LoseAllAbilities` primitive + CR 113.10b strip-
@@ -3854,7 +3915,7 @@ parity is a matter of porting card factories one at a time.
 | Valor (STA reprint) | {1}{W} | ✅ | Push (modern_decks, NEW, `stx::extras`): {1}{W} Creature — Incarnation, 2/2 (Judgment / STA reprint). "First strike / As long as Valor is in your graveyard and you control a Plains, creatures you control have first strike." Same helper-table path as Anger — Plains → First Strike. Tests: `valor_is_a_two_mana_two_two_first_strike_incarnation`, `valor_in_graveyard_grants_first_strike_with_plains`, `valor_in_graveyard_requires_plains_to_grant_first_strike`. |
 | Deep Analysis (STA reprint) | {3}{U} | ✅ | Push (modern_decks, NEW, `stx::extras`): {3}{U} Sorcery (STA reprint, originally Torment). "Target player draws two cards and loses 2 life. / Flashback—{1}{U}, Pay 3 life." Body draws 2 + loses 2 life against the target player. Flashback {1}{U} wired via `Keyword::Flashback`. The "Pay 3 life" additional cost on the flashback path is an engine-wide alt-cost-with-life-cost gap. Tests: `deep_analysis_is_a_four_mana_blue_sorcery_with_flashback`, `_draws_two_and_loses_two_life`, `_can_target_opponent`. |
 | Tribute to Hunger (STA reprint) | {2}{B} | ✅ | Push (modern_decks, NEW, `stx::extras`): {2}{B} Instant (STA reprint, originally Time Spiral). "Target opponent sacrifices a creature. You gain life equal to its toughness." Wired via `Effect::SacrificeAndRemember` + the new `Value::SacrificedToughness` primitive (which reads the `GameState.sacrificed_toughness` scratch field stamped alongside `sacrificed_power`). The auto-picker chooses the opp's cheapest creature. Tests: `tribute_to_hunger_is_a_three_mana_black_instant`, `_sacrifices_opp_creature_and_gains_life_equal_to_toughness`, `_no_creature_to_sac_gives_no_life`. |
-| Kasmina's Transmutation (STA reprint) | {1}{U}{U} | 🟡 | Push (modern_decks, NEW, `stx::extras`): {1}{U}{U} Sorcery (STA reprint, Strixhaven Loyalty). "Target creature loses all abilities and becomes a blue Frog with base power and toughness 1/1 until end of turn." Wired via `Effect::SetBasePT` (same layer-7b primitive as Square Up / Mercurial Transformation). The "loses all abilities" rider is omitted (no clear-abilities continuous primitive — tracked in TODO.md as the `StaticEffect::ClearAbilities` gap, shared with Mercurial Transformation). Tests: `kasminas_transmutation_is_a_three_mana_blue_sorcery`, `_sets_target_to_one_one_eot`. |
+| Kasmina's Transmutation (STA reprint) | {1}{U}{U} | ✅ (was 🟡) | Push (modern_decks batch 35): {1}{U}{U} Sorcery (STA reprint, Strixhaven Loyalty). "Target creature loses all abilities and becomes a blue Frog with base power and toughness 1/1 until end of turn." Body now resolves as `Seq(SetBasePT 1/1, LoseAllAbilities)` — both halves wired. The strip-abilities rider uses the `Effect::LoseAllAbilities` primitive added in batch 34 for Mercurial Transformation (CR 113.10b). The "becomes a blue Frog" type-and-color rewrite (layer 4 + 5) remains omitted; the target keeps its printed creature types and colors. Tests: `kasminas_transmutation_is_a_three_mana_blue_sorcery`, `_sets_target_to_one_one_eot`, `_strips_flying_from_target`. |
 | Crippling Fear (STA reprint) | {3}{B} | 🟡 | Push (modern_decks, NEW, `stx::extras`): {3}{B} Sorcery (STA reprint, originally Conflux). "Choose a creature type. Creatures other than creatures of the chosen type get -3/-3 until end of turn." Approximated as the strictly-stronger universal -3/-3 (every creature gets it, including your own) since the engine has no choose-creature-type primitive. The headline play pattern is a 4-mana wrath that hits everything with toughness ≤ 3. Tests: `crippling_fear_is_a_four_mana_black_sorcery`, `_kills_two_toughness_creatures`, `_does_not_kill_high_toughness_creatures`. |
 | Triskaidekaphile | {1}{U}{U} | ✅ | Push (modern_decks, NEW, `stx::extras`): {1}{U}{U} Creature — Human Wizard, 3/4 (STX 2021). "When this creature enters, draw a card. / You have no maximum hand size. / At the beginning of your upkeep, if you have exactly 13 cards in your hand, you win the game." Wired via three engine primitives: ETB Draw 1 + `Effect::SetNoMaxHandSize` (flips `Player.no_maximum_hand_size`) + upkeep trigger gated on `Predicate::ValueEquals(HandSizeOf(You), Const(13))` resolving `Effect::WinGame { who: You }`. The `EventSpec.filter` predicate is now enforced by `fire_step_triggers` (engine bug fix — CR 603.2 intervening 'if' clause, half-implemented). Tests: `triskaidekaphile_is_a_three_mana_three_four_human_wizard`, `_etb_draws_a_card_and_lifts_max_hand_size`, `_wins_at_upkeep_with_exactly_thirteen_cards`, `_does_not_win_at_upkeep_with_other_hand_size`. |
 | Excellent Education | {2}{W} | ✅ | Push (modern_decks, NEW, `stx::extras`): {2}{W} Sorcery (STX 2021). "Target player gains 4 life and draws a card." Wired as `Seq(GainLife 4 → Target(0), Draw 1 → Target(0))`. Both clauses target the same chosen player. Tests: `excellent_education_gives_target_player_life_and_draw`, `_can_target_opponent`, `_is_a_three_mana_white_sorcery`. |
