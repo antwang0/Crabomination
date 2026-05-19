@@ -34434,3 +34434,118 @@ fn prismari_maestro_draws_two_on_combat_damage() {
         "drew 2 from Maestro combat-damage trigger"
     );
 }
+
+#[test]
+fn quandrix_spellseer_etb_scrys_and_magecraft_loots() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_library(0, catalog::island());
+    let id = g.add_card_to_hand(0, catalog::quandrix_spellseer());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Spellseer castable");
+    drain_stack(&mut g);
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(crate::game::types::Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Bolt castable");
+    drain_stack(&mut g);
+    // -1 cast + 1 draw - 1 discard = -1 net
+    assert_eq!(g.players[0].hand.len(), hand_before - 1);
+}
+
+#[test]
+fn fractal_bloomweaver_etb_with_counters_and_pumps_others() {
+    let mut g = two_player_game();
+    let other_fractal = g.add_card_to_battlefield(0, catalog::fractal_grower());
+    drain_stack(&mut g);
+    let id = g.add_card_to_hand(0, catalog::fractal_bloomweaver());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Bloomweaver castable");
+    drain_stack(&mut g);
+    let bloom = g.battlefield_find(id).unwrap();
+    assert_eq!(
+        bloom
+            .counters
+            .get(&CounterType::PlusOnePlusOne)
+            .copied()
+            .unwrap_or(0),
+        3,
+        "Bloomweaver enters with 3 counters"
+    );
+    let other = g.battlefield_find(other_fractal).unwrap();
+    assert_eq!(
+        other
+            .counters
+            .get(&CounterType::PlusOnePlusOne)
+            .copied()
+            .unwrap_or(0),
+        1,
+        "other Fractal gains 1 counter via Bloomweaver ETB"
+    );
+}
+
+#[test]
+fn lorehold_ironwill_pumps_self_on_is_cast_and_is_first_strike() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::lorehold_ironwill());
+    drain_stack(&mut g);
+    let card = g.battlefield_find(id).unwrap();
+    assert!(card.has_keyword(&Keyword::FirstStrike));
+    let pwr_before = card.power();
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(crate::game::types::Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Bolt castable");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(id).unwrap().power(), pwr_before + 1);
+}
+
+#[test]
+fn spirit_pyremage_etb_pings_any_target() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::spirit_pyremage());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let opp_before = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(crate::game::types::Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Pyremage castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, opp_before - 1);
+}

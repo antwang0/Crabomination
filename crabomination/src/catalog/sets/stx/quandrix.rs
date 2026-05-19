@@ -4654,3 +4654,90 @@ pub fn quandrix_bountycaller() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+/// Quandrix Spellseer — {1}{G}{U}, 2/3 Elf Wizard.
+/// Synthesised Oracle: "When this creature enters, scry 1. Magecraft —
+/// draw a card, then discard a card."
+pub fn quandrix_spellseer() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Spellseer",
+        cost: cost(&[generic(1), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![
+            crate::effect::shortcut::etb(Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            }),
+            magecraft(Effect::Seq(vec![
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
+                Effect::Discard {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                    random: false,
+                },
+            ])),
+        ],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Fractal Bloomweaver — {2}{G}{U}, 1/1 Fractal Druid.
+/// Synthesised Oracle: "This creature enters with three +1/+1 counters
+/// on it. When this creature enters, put a +1/+1 counter on each other
+/// Fractal you control."
+pub fn fractal_bloomweaver() -> CardDefinition {
+    CardDefinition {
+        name: "Fractal Bloomweaver",
+        cost: cost(&[generic(2), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![crate::effect::shortcut::etb(Effect::AddCounter {
+            what: Selector::EachPermanent(
+                SelectionRequirement::HasCreatureType(CreatureType::Fractal)
+                    .and(SelectionRequirement::ControlledByYou)
+                    .and(SelectionRequirement::OtherThanSource),
+            ),
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(3))),
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

@@ -3737,20 +3737,8 @@ pub fn prismari_cinderpoet() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::Seq(vec![
-                Effect::Draw {
-                    who: Selector::You,
-                    amount: Value::Const(1),
-                },
-                Effect::Discard {
-                    who: Selector::You,
-                    amount: Value::Const(1),
-                    random: false,
-                },
-            ]),
-        }],
+        // Refactored in batch 40 to use the `etb_loot` shortcut.
+        triggered_abilities: vec![crate::effect::shortcut::etb_loot()],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -4020,21 +4008,9 @@ pub fn prismari_stormbearer() -> CardDefinition {
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
+        // Refactored in batch 40 to use the `etb_loot` shortcut.
         triggered_abilities: vec![
-            TriggeredAbility {
-                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-                effect: Effect::Seq(vec![
-                    Effect::Draw {
-                        who: Selector::You,
-                        amount: Value::Const(1),
-                    },
-                    Effect::Discard {
-                        who: Selector::You,
-                        amount: Value::Const(1),
-                        random: false,
-                    },
-                ]),
-            },
+            crate::effect::shortcut::etb_loot(),
             magecraft_self_pump(1, 0),
         ],
         static_abilities: vec![],

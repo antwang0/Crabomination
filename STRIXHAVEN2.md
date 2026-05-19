@@ -19,7 +19,7 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 221 | 35 | 0 |
-| STX (327 cards) | 831 | 10 | 0 |
+| STX (327 cards) | 835 | 10 | 0 |
 | STA reprints (in STX boosters) | 47 | 0 | — |
 
 Push (modern_decks, claude/modern_decks branch — latest revision —
@@ -3912,6 +3912,8 @@ parity is a matter of porting card factories one at a time.
 | Spirit Cantor | {1}{W} | ✅ | Push (modern_decks batch 40, NEW, `stx::lorehold`): 1/3 Spirit Cleric. Static "Other Spirit creatures you control get +1/+0" (Spirit-tribal anthem in the 2-drop slot). Test: `spirit_cantor_anthems_other_spirits`. |
 | Lorehold Wraithcaller | {2}{R}{W} | ✅ | Push (modern_decks batch 40, NEW, `stx::lorehold`): 2/3 Spirit Wizard. ETB mints 1/1 white Spirit Flying token. 4-mana air mint. Test: `lorehold_wraithcaller_mints_flying_spirit`. |
 | Lorehold Ballad | {R}{W} | ✅ | Push (modern_decks batch 40, NEW, `stx::lorehold`): Instant. Seq(DealDamage 2 any + GainLife 2). 2-mana Lightning-Helix-flavoured burn. Test: `lorehold_ballad_burns_and_gains_life`. |
+| Lorehold Ironwill | {2}{R}{W} | ✅ | Push (modern_decks batch 40+, NEW, `stx::lorehold`): 3/3 Spirit Soldier First Strike. Magecraft self-pump +1/+0 EOT. 4-mana combat-ready magecraft body. Test: `lorehold_ironwill_pumps_self_on_is_cast_and_is_first_strike`. |
+| Spirit Pyremage | {1}{R} | ✅ | Push (modern_decks batch 40+, NEW, `stx::lorehold`): 2/2 Spirit Wizard. ETB deal 1 damage to any target. 2-mana shock-on-a-stick body. Test: `spirit_pyremage_etb_pings_any_target`. |
 
 ### Quandrix (G/U)
 
@@ -3981,6 +3983,8 @@ parity is a matter of porting card factories one at a time.
 | Quandrix Loomweaver | {2}{G}{U} | ✅ | Push (modern_decks batch 40, NEW, `stx::quandrix`): 2/3 Elf Wizard. Magecraft Loot 1 (draw 1, discard 1). 4-mana looter for spell-heavy shells. Test: `quandrix_loomweaver_loots_on_is_cast`. |
 | Fractal Stargazer | {G}{U} | ✅ | Push (modern_decks batch 40, NEW, `stx::quandrix`): 1/2 Fractal Druid. ETB Scry 2. 2-mana selection body. Test: `fractal_stargazer_etb_scrys_two`. |
 | Quandrix Bountycaller | {3}{G}{U} | ✅ | Push (modern_decks batch 40, NEW, `stx::quandrix`): 3/3 Frog Druid. ETB mints a 0/0 Fractal + 4 +1/+1 counters → 4/4. 5-mana double-body. Test: `quandrix_bountycaller_etb_mints_fractal_with_counters`. |
+| Quandrix Spellseer | {1}{G}{U} | ✅ | Push (modern_decks batch 40+, NEW, `stx::quandrix`): 2/3 Elf Wizard. ETB Scry 1 + magecraft Loot 1. 3-mana selection + loot magecraft body. Test: `quandrix_spellseer_etb_scrys_and_magecraft_loots`. |
+| Fractal Bloomweaver | {2}{G}{U} | ✅ | Push (modern_decks batch 40+, NEW, `stx::quandrix`): 1/1 Fractal Druid. Enters with 3 +1/+1 counters (4/4 on-board) + ETB +1/+1 counter on each other friendly Fractal. Test: `fractal_bloomweaver_etb_with_counters_and_pumps_others`. |
 
 ### Prismari (U/R)
 

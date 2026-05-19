@@ -2168,6 +2168,37 @@ pub mod shortcut {
         })
     }
 
+    /// Dies-Gain-Life shortcut: "When this creature dies, you gain
+    /// `amount` life." Wraps [`on_dies`] with the canonical gain-life
+    /// body. Used by the Pest token cycle (1/1 with on-die gain 1) and
+    /// any future "when this creature dies, you gain N life" cards
+    /// (Selfless Spirit's death rider, Resilient Khenra-class).
+    pub fn dies_gain_life(amount: i32) -> TriggeredAbility {
+        on_dies(Effect::GainLife {
+            who: Selector::You,
+            amount: Value::Const(amount),
+        })
+    }
+
+    /// ETB-Loot shortcut: "When this creature enters, draw a card,
+    /// then discard a card." Wraps [`etb`] with the canonical loot
+    /// body. Used by ~10 STX/SOS Prismari / Witherbloom loot creatures
+    /// (Prismari Cinderpoet, Prismari Stormbearer) to collapse the
+    /// recurring 6-line Seq into one helper call.
+    pub fn etb_loot() -> TriggeredAbility {
+        etb(Effect::Seq(vec![
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+            Effect::Discard {
+                who: Selector::You,
+                amount: Value::Const(1),
+                random: false,
+            },
+        ]))
+    }
+
     /// Predicate matching "the just-cast spell is an instant or a sorcery".
     /// Built around `Selector::TriggerSource` — at the spell-cast site,
     /// `fire_spell_cast_triggers` binds the just-cast `CardId` to

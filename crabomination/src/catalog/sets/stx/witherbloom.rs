@@ -991,7 +991,6 @@ pub fn witherbloom_lifebleeder() -> CardDefinition {
 /// (1 life on death, mirroring the Pest token's printed shape). Pairs
 /// with Witherbloom Vinemaster's Pest-death counter trigger.
 pub fn pest_marauder() -> CardDefinition {
-    use crate::card::EventKind;
     CardDefinition {
         name: "Pest Marauder",
         cost: cost(&[generic(1), b()]),
@@ -1006,13 +1005,8 @@ pub fn pest_marauder() -> CardDefinition {
         keywords: vec![Keyword::Deathtouch],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
-            effect: Effect::GainLife {
-                who: Selector::You,
-                amount: Value::Const(1),
-            },
-        }],
+        // Refactored in batch 40 to use the `dies_gain_life` shortcut.
+        triggered_abilities: vec![crate::effect::shortcut::dies_gain_life(1)],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -1451,13 +1445,8 @@ pub fn pest_forager() -> CardDefinition {
         keywords: vec![Keyword::Trample],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
-            effect: Effect::GainLife {
-                who: Selector::You,
-                amount: Value::Const(1),
-            },
-        }],
+        // Refactored in batch 40 to use the `dies_gain_life` shortcut.
+        triggered_abilities: vec![crate::effect::shortcut::dies_gain_life(1)],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -5475,10 +5464,7 @@ pub fn pest_husk() -> CardDefinition {
         keywords: vec![Keyword::Deathtouch],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![crate::effect::shortcut::on_dies(Effect::GainLife {
-            who: Selector::You,
-            amount: Value::Const(1),
-        })],
+        triggered_abilities: vec![crate::effect::shortcut::dies_gain_life(1)],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
