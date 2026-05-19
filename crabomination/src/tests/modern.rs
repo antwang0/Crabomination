@@ -9126,3 +9126,64 @@ fn grim_lavamancer_pings_creature_with_gy_card_to_exile() {
     assert!(!g.battlefield.iter().any(|c| c.id == bear),
         "Grim Lavamancer should ping the bear for 2 (now dead)");
 }
+
+// ── Guardian Scalelord (M15 / cube card) ────────────────────────────────────
+
+#[test]
+fn guardian_scalelord_attack_grants_flying_to_target_friendly() {
+    use crate::card::{CreatureType, Keyword};
+    use crate::game::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let scalelord = g.add_card_to_battlefield(0, catalog::guardian_scalelord());
+    g.clear_sickness(scalelord);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    drain_stack(&mut g);
+    // Body sanity check.
+    let scalelord_card = g.battlefield_find(scalelord).unwrap();
+    assert!(scalelord_card.has_keyword(&Keyword::Flying));
+    assert!(scalelord_card.definition.subtypes.creature_types.contains(&CreatureType::Dragon));
+
+    // Accept the MayDo rider so the bear actually gets Flying.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: scalelord,
+        target: AttackTarget::Player(1),
+    }])).expect("Scalelord can attack");
+    drain_stack(&mut g);
+    // The bear should now have Flying EOT.
+    let bear_card = g.battlefield_find(bear).unwrap();
+    assert!(bear_card.has_keyword(&Keyword::Flying),
+        "Scalelord's attack trigger gave the bear flying");
+}
+
+#[test]
+fn guardian_scalelord_declines_optional_grant_by_default() {
+    // AutoDecider defaults to "no" on MayDo (CR 603.2 — the controller
+    // chooses; the bot harness defaults to skipping optional non-cost
+    // riders). The bear should NOT get flying without an explicit yes.
+    use crate::card::Keyword;
+    use crate::game::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let scalelord = g.add_card_to_battlefield(0, catalog::guardian_scalelord());
+    g.clear_sickness(scalelord);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    drain_stack(&mut g);
+
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: scalelord,
+        target: AttackTarget::Player(1),
+    }])).expect("Scalelord can attack");
+    drain_stack(&mut g);
+    let bear_card = g.battlefield_find(bear).unwrap();
+    assert!(!bear_card.has_keyword(&Keyword::Flying),
+        "AutoDecider declines the MayDo; bear stays grounded");
+}

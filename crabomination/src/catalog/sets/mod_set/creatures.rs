@@ -1555,3 +1555,56 @@ pub fn temur_ascendancy() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Guardian Scalelord ──────────────────────────────────────────────────────
+
+/// Guardian Scalelord — {3}{W}{W}, 4/4 Dragon with Flying.
+///
+/// Oracle: "Flying. Whenever this creature attacks, you may have target
+/// creature you control gain flying until end of turn."
+///
+/// Wired with an `Attacks/SelfSource` trigger that fans out to a
+/// `MayDo(GrantKeyword(Flying, EOT, target friendly creature))`. The
+/// "another" / "you control" rider scopes the auto-target to creatures
+/// the controller owns; the AutoDecider opts in by default (declining
+/// flying-grant is a strict downside).
+pub fn guardian_scalelord() -> CardDefinition {
+    CardDefinition {
+        name: "Guardian Scalelord",
+        cost: cost(&[generic(3), w(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dragon],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::MayDo {
+                description: "Target creature you control gains flying until end of turn.".to_string(),
+                body: Box::new(Effect::GrantKeyword {
+                    what: target_filtered(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::ControlledByYou),
+                    ),
+                    keyword: Keyword::Flying,
+                    duration: crate::effect::Duration::EndOfTurn,
+                }),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

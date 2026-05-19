@@ -116,15 +116,15 @@ impl GameState {
                     None
                 }
             });
-            if let Some(n) = annihilator_n {
-                if let Some(defender) = self.defender_for(atk.target) {
-                    let sac_effect = Effect::Sacrifice {
-                        who: Selector::Player(crate::effect::PlayerRef::Seat(defender)),
-                        count: Value::Const(n as i32),
-                        filter: crate::card::SelectionRequirement::Permanent,
-                    };
-                    triggers.push((id, sac_effect, p, None));
-                }
+            if let Some(n) = annihilator_n
+                && let Some(defender) = self.defender_for(atk.target)
+            {
+                let sac_effect = Effect::Sacrifice {
+                    who: Selector::Player(crate::effect::PlayerRef::Seat(defender)),
+                    count: Value::Const(n as i32),
+                    filter: crate::card::SelectionRequirement::Permanent,
+                };
+                triggers.push((id, sac_effect, p, None));
             }
         }
         for (source, effect, controller, filter) in triggers {

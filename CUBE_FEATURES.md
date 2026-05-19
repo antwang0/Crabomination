@@ -32,7 +32,7 @@ still ⏳.
 | Loran of the Third Path | ✅ | 1/3 Vigilance; ETB destroy artifact/enchantment; {T}: you and target opponent each draw a card. |
 | Ranger-Captain of Eos | 🟡 | ETB tutor for ≤1-CMC creature. The sac-for-no-noncreature-spells static is omitted (no sac-as-cost activation primitive). |
 | Restoration Angel | ✅ | Flash + ETB exile-and-return target non-Angel creature you control (`Exile + Move-back` flicker pattern). |
-| Guardian Scalelord | ⏳ | Flying + grant flying to attackers via attack trigger. |
+| Guardian Scalelord | ✅ (was ⏳) | Push (modern_decks): 4/4 Dragon Flying. `Attacks/SelfSource` trigger → `MayDo(GrantKeyword(Flying, EOT, target friendly creature))`. AutoDecider declines optional rider by default; scripted decider can opt in. Tests: `guardian_scalelord_attack_grants_flying_to_target_friendly`, `guardian_scalelord_declines_optional_grant_by_default`. |
 | Serra Angel | ✅ | Already in `crate::catalog::serra_angel` (4/4 flying + vigilance). |
 | Intervention Pact | ⏳ | Free prevent-damage + delayed `PayOrLoseGame` upkeep cost (reuses Pact primitive). |
 | Isolate | ✅ | Exile target permanent with mana value 1 (`ManaValueAtLeast(1) ∧ ManaValueAtMost(1)` filter). |
