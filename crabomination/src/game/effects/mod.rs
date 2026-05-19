@@ -941,6 +941,44 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::LoseAllAbilities { what, duration } => {
+                // Layer-6 strip-abilities continuous effect (CR 113.10b).
+                // Installs `Modification::RemoveAllAbilities` against each
+                // resolved permanent so the trigger dispatcher and
+                // activated-ability resolver skip the target's printed
+                // abilities while the effect is in scope. Used by Mercurial
+                // Transformation / Turn to Frog / Lignify "becomes 1/1
+                // creature and loses all abilities" patterns.
+                use crate::game::layers::{
+                    AffectedPermanents, ContinuousEffect, EffectDuration, Layer, Modification,
+                };
+                let duration_kind = match duration {
+                    crate::effect::Duration::EndOfTurn
+                    | crate::effect::Duration::EndOfCombat => EffectDuration::UntilEndOfTurn,
+                    crate::effect::Duration::UntilNextTurn
+                    | crate::effect::Duration::UntilYourNextUntap => {
+                        EffectDuration::UntilNextTurn
+                    }
+                    crate::effect::Duration::Permanent => EffectDuration::Indefinite,
+                };
+                let source = ctx.source.unwrap_or(CardId(0));
+                for ent in self.resolve_selector(what, ctx) {
+                    if let Some(cid) = ent.as_permanent_id() {
+                        let ts = self.next_timestamp();
+                        self.add_continuous_effect(ContinuousEffect {
+                            timestamp: ts,
+                            source,
+                            affected: AffectedPermanents::Specific(vec![cid]),
+                            layer: Layer::L6Ability,
+                            sublayer: None,
+                            duration: duration_kind.clone(),
+                            modification: Modification::RemoveAllAbilities,
+                        });
+                    }
+                }
+                Ok(())
+            }
+
             Effect::SetBasePT { what, power, toughness, duration } => {
                 // Layer-7b SetPT continuous effect — installs a real
                 // `Modification::SetPowerToughness(p, t)` against the

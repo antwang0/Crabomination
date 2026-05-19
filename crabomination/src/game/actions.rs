@@ -1751,6 +1751,16 @@ impl GameState {
         converged_value: u32,
     ) {
         use crate::effect::{EventKind, EventScope};
+        // CR 113.10b — permanents under a "loses all abilities" continuous
+        // effect (Mercurial Transformation / Turn to Frog) don't fire
+        // printed Magecraft / spell-cast triggers. Pre-compute the stripped
+        // set so the filter below can drop those listeners.
+        let stripped: std::collections::HashSet<CardId> = self
+            .compute_battlefield()
+            .into_iter()
+            .filter(|c| c.lost_all_abilities)
+            .map(|c| c.id)
+            .collect();
         // Walk every permanent on the battlefield — `YourControl` triggers
         // fire from the caster's permanents, while `OpponentControl` triggers
         // fire from non-caster permanents (Wandering Archaic etc.). The
@@ -1759,6 +1769,7 @@ impl GameState {
         let candidates: Vec<(CardId, usize, Effect, Option<crate::effect::Predicate>)> = self
             .battlefield
             .iter()
+            .filter(|c| !stripped.contains(&c.id))
             .flat_map(|c| {
                 let c_controller = c.controller;
                 c.definition
@@ -2084,12 +2095,27 @@ impl GameState {
                 .iter()
                 .position(|c| c.id == card_id)
                 .ok_or(GameError::CardNotOnBattlefield(card_id))?;
-            self.battlefield[pos]
+            // CR 113.10b — a permanent with all abilities stripped (Turn to
+            // Frog / Mercurial Transformation) can't have its printed
+            // activated abilities used. We allow mana abilities through (no
+            // catalog card stripping abilities has a mana ability of
+            // interest right now) by detecting them via `is_mana_ability`.
+            let stripped = self
+                .compute_battlefield()
+                .into_iter()
+                .find(|c| c.id == card_id)
+                .map(|c| c.lost_all_abilities)
+                .unwrap_or(false);
+            let raw = self.battlefield[pos]
                 .definition
                 .activated_abilities
                 .get(ability_index)
                 .cloned()
-                .ok_or(GameError::AbilityIndexOutOfBounds)?
+                .ok_or(GameError::AbilityIndexOutOfBounds)?;
+            if stripped && !is_mana_ability(&raw.effect) {
+                return Err(GameError::AbilityIndexOutOfBounds);
+            }
+            raw
         };
 
         // For graveyard activations, reject if the ability isn't flagged

@@ -191,6 +191,15 @@ pub struct ComputedPermanent {
     pub keywords: Vec<Keyword>,
     pub power: i32,
     pub toughness: i32,
+    /// True when at least one `Modification::RemoveAllAbilities` continuous
+    /// effect is in scope for this permanent. Lets the trigger dispatcher
+    /// and activated-ability resolver skip the card's printed
+    /// `triggered_abilities` / `activated_abilities` / `static_abilities` so
+    /// "loses all abilities" cards (Turn to Frog, Mercurial Transformation,
+    /// Lignify) honor CR 113.10 — the layer-6 strip applies to printed
+    /// abilities, not just keywords. Defaults to false so pre-push snapshots
+    /// keep their existing behavior.
+    pub lost_all_abilities: bool,
 }
 
 // ── Layer application ─────────────────────────────────────────────────────────
@@ -242,6 +251,7 @@ fn compute_permanent(
     let mut mod_power: i32 = 0;
     let mut mod_toughness: i32 = 0;
     let mut switched = false;
+    let mut lost_all_abilities = false;
 
     // Sort effects by layer, then sublayer, then timestamp.
     let mut sorted: Vec<&ContinuousEffect> = effects
@@ -289,7 +299,10 @@ fn compute_permanent(
                 if !keywords.contains(kw) { keywords.push(kw.clone()); }
             }
             Modification::RemoveKeyword(kw) => keywords.retain(|k| k != kw),
-            Modification::RemoveAllAbilities => keywords.clear(),
+            Modification::RemoveAllAbilities => {
+                keywords.clear();
+                lost_all_abilities = true;
+            }
 
             // Layer 7
             Modification::SetPowerToughness(p, t) => set_pt = Some((*p, *t)),
@@ -328,6 +341,7 @@ fn compute_permanent(
         keywords,
         power,
         toughness,
+        lost_all_abilities,
     }
 }
 

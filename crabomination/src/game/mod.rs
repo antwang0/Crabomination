@@ -1526,7 +1526,21 @@ impl GameState {
             event_amount: u32,
         }
         let mut candidates: Vec<TriggerCandidate> = Vec::new();
+        // Resolve per-permanent layer state once so the dispatcher can
+        // honour `Modification::RemoveAllAbilities` (Turn to Frog,
+        // Mercurial Transformation, Lignify) — printed triggered abilities
+        // are skipped while a strip-abilities effect is in scope per CR
+        // 113.10b.
+        let computed = self.compute_battlefield();
         for card in &self.battlefield {
+            let stripped = computed
+                .iter()
+                .find(|c| c.id == card.id)
+                .map(|c| c.lost_all_abilities)
+                .unwrap_or(false);
+            if stripped {
+                continue;
+            }
             for ta in &card.definition.triggered_abilities {
                 for ev in events {
                     if is_event_hardcoded(ev, &ta.event) {

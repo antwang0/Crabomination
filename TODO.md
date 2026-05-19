@@ -210,12 +210,17 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   the gap doesn't bite, but Stifle/Squelch-style "counter target
   activated/triggered ability" cards aren't in the catalog).
   (n) **113.10/a/b/c** gaining/losing abilities (most-recent wins)
-  — 🟡 (`StaticEffect::GrantKeyword` adds keywords for a
-  duration; `Modification::RemoveAllAbilities` clears keywords only,
-  not activated/triggered abilities — see the engine TODO row about
-  `Modification::RemoveAllAbilities` only clears keywords. The full
-  layer-6 add-then-remove cycle works for keywords; abilities beyond
-  keywords are ⏳).
+  — ✅ (push modern_decks batch 34) — `StaticEffect::GrantKeyword`
+  adds keywords for a duration; `Modification::RemoveAllAbilities` now
+  flips a `ComputedPermanent.lost_all_abilities` flag in addition to
+  clearing keywords, and three dispatch sites
+  (`dispatch_triggers_for_events`, `fire_spell_cast_triggers`,
+  `activate_ability`) consult that flag to skip the source's printed
+  triggered + activated abilities (CR 113.10b). Mana abilities are
+  preserved per CR 605.1a (the activate-rejection path applies only to
+  non-mana abilities). The headline test cases ship via
+  `Effect::LoseAllAbilities` (Mercurial Transformation) — Shivan Dragon
+  loses Flying, Sedgemoor Witch's Magecraft suppresses while stripped.
   (o) **113.11** "can't have" anti-grant — ⏳ (no
   `StaticEffect::CantHaveAbility` primitive; cards like Stony Silence
   approximate via different anti-activate paths).
@@ -861,6 +866,48 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   itself would ship both static abilities (DoubleTokens + DoubleCounters);
   Branching Evolution / Vorinclex / Pir / Hardened Scales (counter-only
   doublers) all wire via single-row catalog additions.
+
+- ✅ **CR 113.10b — "Loses all abilities" continuous effects** (push
+  modern_decks batch 34 audit, claude/modern_decks branch — audit
+  against `MagicCompRules_20260417.txt`): "Effects can cause an object
+  to lose abilities. … If a permanent has all of its abilities removed,
+  it has no abilities, including any printed activated abilities or
+  triggered abilities that may be relevant." Audit:
+  (a) **Layer 6 lookup** — ✅ (`Modification::RemoveAllAbilities` is
+  evaluated at layer 6 in `compute_permanent`; it now both clears the
+  `keywords` Vec AND flips the new `ComputedPermanent.lost_all_abilities`
+  flag so downstream dispatchers can short-circuit).
+  (b) **Trigger dispatch** — ✅ (`dispatch_triggers_for_events` walks
+  `compute_battlefield` once at entry; any candidate source whose
+  `lost_all_abilities` is set is skipped, so generic event-driven
+  triggers — ETB, dies, attacks, beginning-of-step — don't fire from
+  stripped permanents).
+  (c) **Spell-cast / Magecraft dispatch** — ✅ (`fire_spell_cast_triggers`
+  pre-computes the stripped set and filters candidates in the iterator
+  chain; covers Magecraft, Prowess, Repartee, Opus, Increment, and any
+  future `EventKind::SpellCast` trigger).
+  (d) **Activated abilities** — ✅ (`activate_ability` reads
+  `compute_battlefield`'s flag for the source permanent; printed
+  activations are rejected with `AbilityIndexOutOfBounds` while the
+  source is stripped. Mana abilities are preserved per CR 605.1a — the
+  `is_mana_ability` recogniser short-circuits the gate so a Galazeth-
+  style mana ability still resolves even if some other strip-abilities
+  effect is in scope; no catalog card today exercises this corner).
+  (e) **Static abilities** — 🟡 (`compute_battlefield` walks
+  `definition.static_abilities` directly when deriving continuous
+  effects; the stripped-flag isn't consulted at that walk, so a printed
+  static would still emit its layered effect. No STX/SOS card today
+  combines a static ability with a strip-abilities target. Tracked for
+  full coverage; promote to ✅ when static-emission also reads the flag).
+  (f) **Headline card** — ✅ (Mercurial Transformation 🟡 → ✅; body is
+  `Effect::Seq(SetBasePT 3/3, LoseAllAbilities)`; tests
+  `mercurial_transformation_sets_target_to_three_three_eot`,
+  `mercurial_transformation_strips_keywords_from_target` (Shivan Dragon
+  loses Flying), `mercurial_transformation_strips_etb_triggers_from_target`
+  (Sedgemoor Witch's magecraft Pest minting suppresses)). Same wire-up
+  unlocks Turn to Frog, Lignify, Song of the Dryads, Reality Acid,
+  Imprisoned in the Moon. Promote to ✅ when (e) lands — current ✅
+  reflects the four high-traffic dispatch sites all honoring the flag.
 
 - 🟡 **CR 603.4 — Intervening 'if' clause (trigger-time half)**
   (push modern_decks audit, claude/modern_decks branch): "A triggered

@@ -19,10 +19,85 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 221 | 35 | 0 |
-| STX (327 cards) | 690 | 12 | 0 |
+| STX (327 cards) | 717 | 11 | 0 |
 | STA reprints (in STX boosters) | 46 | 0 | — |
 
 Push (modern_decks, claude/modern_decks branch — latest revision —
+**batch 34: 27 new STX cards (7 Silverquill + 5 Witherbloom + 5 Lorehold
++ 5 Quandrix + 5 Prismari) + 29 new tests + Mercurial Transformation
+🟡 → ✅ via new `Effect::LoseAllAbilities` primitive + CR 113.10b strip-
+abilities engine wiring (layered `Modification::RemoveAllAbilities` now
+flips a `ComputedPermanent.lost_all_abilities` flag that the trigger
+dispatcher, the `fire_spell_cast_triggers` Magecraft path, and
+`activate_ability` all consult to skip the source's printed abilities).
+Total tests: 2854 (was 2825).
+
+- **Silverquill (W/B)** — 7 new cards:
+  `silverquill_drainwriter` ({2}{W}{B} 3/3 Inkling Wizard Flying — ETB
+  drain 2), `silverquill_battle_chant` ({3}{W} Sorcery — your creatures
+  +2/+1 and gain Vigilance EOT), `silverquill_homily` ({1}{W}{B} Sorcery
+  — drain 1 + each opp mills 2), `inkling_avenger` ({3}{W}{B} 3/3 Inkling
+  Knight Flying + First Strike — ETB +1/+1 counter on another friendly),
+  `silverquill_mandate` ({2}{B} Sorcery — each opp sacrifices a creature),
+  `silverquill_spellquill` ({W}{B} 1/2 Inkling Bard Flying — magecraft
+  gain 1 + on-die draw 1).
+
+- **Witherbloom (B/G)** — 5 new cards:
+  `witherbloom_pestrider` ({1}{B}{G} 2/2 Pest Druid — ETB mint Pest +
+  +1/+1 counter on it), `witherbloom_mosshulk` ({3}{B}{G} 4/4 Plant
+  Beast Trample), `witherbloom_lifefarmer` ({2}{G} 2/3 Plant Druid —
+  ETB gain 3 life), `pest_horde` ({4}{B}{G} Sorcery — create 4 Pests),
+  `witherbloom_thresher` ({3}{B} 2/3 Plant Insect Deathtouch — ETB drain
+  1 + magecraft drain 1).
+
+- **Lorehold (R/W)** — 5 new cards:
+  `lorehold_zealot` ({1}{R}{W} 2/2 Spirit Cleric — ETB exile target gy
+  card + gain 1 life), `lorehold_pyreheart` ({2}{R}{W} 3/3 Spirit Wizard
+  — magecraft ping 2 any target), `spirit_phalanx` ({3}{R}{W} Sorcery —
+  mint 2 Spirits + +1/+1 on each Spirit you control),
+  `lorehold_warhost` ({4}{R}{W} 5/5 Spirit Warrior Vigilance — ETB mint
+  2 Spirits), `lorehold_devotion` ({1}{R}{W} Instant — target +2/+2 EOT
+  + Trample EOT).
+
+- **Quandrix (G/U)** — 5 new cards:
+  `quandrix_wavecharger` ({2}{G}{U} 3/3 Fractal Wizard — ETB +1/+1
+  counter on each Fractal you control), `fractal_swarm` ({1}{G}{U}
+  Sorcery — mint 2/2 Fractal token + draw 1), `quandrix_proofwriter`
+  ({3}{G}{U} 4/4 Fractal Wizard — ETB Scry 2), `quandrix_solver`
+  ({2}{U} 2/2 Merfolk Wizard — magecraft loot), `quandrix_counterbearer`
+  ({1}{G} 1/2 Elf Druid — pumps +1/+1 EOT on each +1/+1 counter placed
+  on another friendly creature).
+
+- **Prismari (U/R)** — 5 new cards:
+  `prismari_stormfront` ({3}{U}{R} Sorcery — 4 damage to target creature
+  + draw 1), `prismari_eruption_mage` ({2}{U}{R} 3/3 Elemental Wizard —
+  magecraft ping 2 any target), `prismari_flamescribe` ({1}{U}{R} 2/2
+  Human Wizard — ETB loot), `prismari_sparkriot` ({1}{R} Instant —
+  3 damage to target creature + draw 1), `prismari_pyrosage` ({3}{R}
+  3/2 Human Wizard Haste — magecraft ping 1 each opp).
+
+**STX 🟡 → ✅ promotion (engine):**
+- **Mercurial Transformation** — Body uses `Effect::Seq(SetBasePT 3/3,
+  LoseAllAbilities)`. The new `Effect::LoseAllAbilities` primitive
+  installs a layer-6 `Modification::RemoveAllAbilities` continuous effect
+  against the target; the layer system flips
+  `ComputedPermanent.lost_all_abilities` while the effect is in scope,
+  and three dispatch sites now consult that flag to skip printed
+  abilities (CR 113.10b):
+  - `dispatch_triggers_for_events` (generic event-driven triggers)
+  - `fire_spell_cast_triggers` (Magecraft / prowess / opus / repartee)
+  - `activate_ability` (rejects printed activations on a stripped
+    permanent; preserves mana abilities per CR 605.1a)
+
+  Tests: `mercurial_transformation_sets_target_to_three_three_eot`
+  (existing — base-P/T override), `mercurial_transformation_strips_
+  keywords_from_target` (new — Flying stripped from a Shivan Dragon),
+  `mercurial_transformation_strips_etb_triggers_from_target` (new —
+  Sedgemoor Witch's magecraft Pest trigger suppressed after the spell
+  resolves on it). The cleanup pass naturally restores abilities when
+  the EOT-bound continuous effect expires.
+
+Prior push:
 **batch 33: 30 new STX cards (7 Witherbloom + 7 Lorehold + 5 Silverquill
 + 3 Quandrix + 3 Prismari + 5 cross-school extras) + 31 new tests + 4
 SOS 🟡 → ✅ promotions (Ark of Hunger, Practiced Scrollsmith, Suspend
@@ -3734,7 +3809,7 @@ parity is a matter of porting card factories one at a time.
 | Divine Gambit | {2}{W} | 🟡 | Push XXXVII (NEW, `stx::extras`): Instant. Exile target nonland permanent. The "its controller may put a permanent from hand to the battlefield" gift-back rider is omitted (no "opp may put a permanent from hand" decision shape). Body wires the exile half faithfully — a pure 3-mana white removal spell. Test: `divine_gambit_exiles_creature`. |
 | Cram Session | {3}{W} | ✅ | Push XXXVII (NEW, `stx::extras`): Instant. You gain 5 life. Flashback {5}{W} via `Keyword::Flashback`. The printed "target player" prompt is collapsed to "you" — same multi-target collapse used by most STX lifegain spells. Test: `cram_session_gains_five_life_and_has_flashback`. |
 | Expanded Anatomy | {3}{G} | ✅ | Push (modern_decks, NEW, `stx::lessons`): Sorcery — Lesson. "Put two +1/+1 counters on target creature." Wired as a single `AddCounter +1/+1 × 2` against a Creature target. Green's body-Lesson, slots alongside Guiding Voice (+1/+1 + Learn). Test: `expanded_anatomy_lands_two_counters_on_target_creature`. |
-| Mercurial Transformation | {2}{U} | 🟡 | Push (modern_decks, NEW, `stx::lessons`): Sorcery. "Target creature or artifact becomes a blue Frog with base power and toughness 3/3 and loses all abilities." Wired via the engine's `Effect::SetBasePT` layer-7b primitive (same path as Square Up). The "loses all abilities" rider is omitted (no clear-abilities continuous primitive — tracked in TODO.md). The base-P/T override is the headline play pattern — shrinking a 7/7 down to 3/3 closes most combat math. Test: `mercurial_transformation_sets_target_to_three_three_eot`. |
+| Mercurial Transformation | {2}{U} | ✅ (was 🟡) | Push (modern_decks batch 34): Sorcery. "Target creature or artifact becomes a blue Frog with base power and toughness 3/3 and loses all abilities." Body now wires the new `Effect::Seq(SetBasePT 3/3, LoseAllAbilities)` shape. The layered `Modification::RemoveAllAbilities` at layer 6 flips `ComputedPermanent.lost_all_abilities` while the EOT-bound continuous effect is in scope; the trigger dispatcher, `fire_spell_cast_triggers` (Magecraft path), and `activate_ability` all skip the target's printed abilities (CR 113.10b). Layer-7b set-PT still rewrites base P/T to 3/3 (a Shivan Dragon resolves to 3/3 Frog, no Flying, no activated abilities). Tests: `mercurial_transformation_sets_target_to_three_three_eot`, `mercurial_transformation_strips_keywords_from_target`, `mercurial_transformation_strips_etb_triggers_from_target`. The "becomes a Frog" type / color override (layers 4 + 5) is doc-tracked as a non-functional cosmetic — the headline play pattern (shrink + de-ability) is what closes combat math. |
 | Crux of Fate | {3}{B}{B} | ✅ | Push (modern_decks, NEW, `stx::extras`, STA reprint): Sorcery. Two-mode `ChooseMode`: mode 0 destroys each Dragon, mode 1 destroys each non-Dragon creature. Wired via `ForEach(Selector::EachPermanent(filter))` + `Destroy` for each mode; the non-Dragon filter uses `SelectionRequirement::Not(HasCreatureType(Dragon))`. Tests: `crux_of_fate_mode_zero_destroys_dragons`, `crux_of_fate_mode_one_destroys_non_dragons`. |
 | Pestilent Cauldron | {1}{B} | 🟡 | Push (modern_decks, NEW, `stx::extras`): Artifact (MDFC front-face only). `{2}, {T}, Sacrifice this artifact: Each player mills four cards. Each opponent loses 3 life and you gain 3 life.` Wired as a `sac_cost: true` activation with `Seq(Mill 4 each, Drain 3)`. The "transform-from-graveyard" rider to the back-face Restorative Burst is omitted pending the cast-from-graveyard pipeline for MDFCs (engine's `cast_spell_back_face` walks hand only). Test: `pestilent_cauldron_sac_mills_and_drains`. |
 | Eureka Moment | {2}{G}{U} | ✅ | Push (modern_decks, NEW, `stx::extras`): Quandrix Instant. "Draw two cards. You may put a land card from your hand onto the battlefield tapped." Wired as `Seq(Draw 2, MayDo(Move land from hand to bf tapped))` — same shape as Embrace the Paradox's draw-3 sibling. AutoDecider declines the land-drop; ScriptedDecider can opt in for tests. Tests: `eureka_moment_draws_two_cards`, `eureka_moment_optional_land_drop_with_scripted_decider`. |

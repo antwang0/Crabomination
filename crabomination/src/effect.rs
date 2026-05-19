@@ -869,6 +869,16 @@ pub enum Effect {
     /// Upped creature makes it 1/5, not 1/1.
     SetBasePT { what: Selector, power: Value, toughness: Value, duration: Duration },
     GrantKeyword { what: Selector, keyword: Keyword, duration: Duration },
+    /// "Target creature loses all abilities until end of turn." Installs a
+    /// `Modification::RemoveAllAbilities` continuous effect against each
+    /// resolved permanent at layer 6. While in scope, the layer system
+    /// clears keywords on the computed permanent AND flips its
+    /// `lost_all_abilities` flag — the trigger dispatcher and activated-
+    /// ability resolver consult that flag to skip the printed
+    /// triggered/activated abilities (CR 113.10b). Used by Turn to Frog,
+    /// Mercurial Transformation, Lignify (the "loses all abilities" half
+    /// of these "creature becomes X" effects).
+    LoseAllAbilities { what: Selector, duration: Duration },
     AddCounter    { what: Selector, kind: CounterType, amount: Value },
     RemoveCounter { what: Selector, kind: CounterType, amount: Value },
     /// CR 122.5 — move `amount` counters of `kind` from `from` to `to`.
@@ -1345,6 +1355,7 @@ impl Effect {
                 sel_has_target(what) || value_has_target(power) || value_has_target(toughness)
             }
             Effect::GrantKeyword { what, .. } => sel_has_target(what),
+            Effect::LoseAllAbilities { what, .. } => sel_has_target(what),
             Effect::AddCounter { what, amount, .. }
             | Effect::RemoveCounter { what, amount, .. } => {
                 sel_has_target(what) || value_has_target(amount)

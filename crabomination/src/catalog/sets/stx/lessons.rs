@@ -501,14 +501,22 @@ pub fn mercurial_transformation() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![],
-        effect: Effect::SetBasePT {
-            what: target_filtered(
-                SelectionRequirement::Creature.or(SelectionRequirement::Artifact),
-            ),
-            power: Value::Const(3),
-            toughness: Value::Const(3),
-            duration: Duration::EndOfTurn,
-        },
+        effect: Effect::Seq(vec![
+            Effect::SetBasePT {
+                what: target_filtered(
+                    SelectionRequirement::Creature.or(SelectionRequirement::Artifact),
+                ),
+                power: Value::Const(3),
+                toughness: Value::Const(3),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::LoseAllAbilities {
+                what: target_filtered(
+                    SelectionRequirement::Creature.or(SelectionRequirement::Artifact),
+                ),
+                duration: Duration::EndOfTurn,
+            },
+        ]),
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],
