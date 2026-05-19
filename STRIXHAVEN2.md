@@ -18,16 +18,18 @@ Two adjacent catalogs:
 
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
-| SOS (255 cards) | 222 | 34 | 0 |
+| SOS (255 cards) | 223 | 33 | 0 |
 | STX (327 cards) | 925 | 10 | 0 |
 | STA reprints (in STX boosters) | 47 | 0 | — |
 
 Push (modern_decks, claude/modern_decks branch — latest revision —
-**batch 43: 32 new STX cards across all five colleges (7 Silverquill +
-6 Witherbloom + 7 Lorehold + 7 Quandrix + 7 Prismari) + 1 SOS 🟡 → ✅
-promotion (Stress Dream — scry 2 + draw 1 lands the printed
-"look at top 2, choose 1 to hand, other to bottom") + 33 new tests.
-Total tests: 3082 (was 3048).**
+**batch 43: 34 new STX cards across all five colleges (7 Silverquill +
+6 Witherbloom + 7 Lorehold + 7 Quandrix + 7 Prismari) + 2 SOS 🟡 → ✅
+promotions (Stress Dream — scry 2 + draw 1 lands the printed
+"look at top 2, choose 1 to hand, other to bottom"; Mind into Matter
+— the optional "put a permanent ≤ X from hand to bf tapped" half
+now wires via MayDo + ValueAtMost(ManaValueOf, XFromCost)) + 36 new
+tests. Total tests: 3084 (was 3048).**
 
 - **Silverquill (W/B)** — 7 new cards:
   `silverquill_blackquill_acolyte` ({W}{B} 1/2 Inkling Cleric —
@@ -85,12 +87,20 @@ Total tests: 3082 (was 3048).**
   4 dmg target creature + Draw 1), `prismari_inkjet_apprentice`
   ({U}{R} 2/2 Human Wizard — magecraft 1 dmg each opp).
 
-**SOS promotion (🟡 → ✅):**
+**SOS promotions (🟡 → ✅):**
 - `stress_dream` — the "look at top 2, choose 1 to hand, other to
   bottom" half is now wired as Scry 2 → Draw 1 (was Scry 1 → Draw 1).
   The Scry 2 step lets the player see both top cards before drawing
   one, matching the printed Oracle gameplay-equivalently. Test:
   `stress_dream_scrys_two_before_drawing`.
+- `mind_into_matter` — the optional "put a permanent ≤ X from your
+  hand onto the battlefield tapped" half now wires via
+  `Effect::MayDo` wrapping a `Selector::take(EachMatching(Hand,
+  Permanent), 1)` walk gated by `Predicate::ValueAtMost(ManaValueOf,
+  XFromCost)`. The Permanent filter excludes Instant + Sorcery from
+  the hand pool. AutoDecider declines; ScriptedDecider exercises
+  the paid path. Test:
+  `mind_into_matter_optional_permanent_lands_with_scripted_yes`.
 
 Prior push:
 
@@ -3759,7 +3769,7 @@ each 🟡 row are in the tables below.
 | Fractal Tender | {3}{G}{U} | Creature — Elf Wizard | 3/3 | Ward {2} / Increment (Whenever you cast a spell, if the amount of mana you spent is greater than this creature's power or toughness, put a +1/+1 counter on this creature.) / At the beginning of each end step, if you put a counter on this creature this turn, create a 0/0 green and blue Fractal creature token and put three +1/+1 counters on it. | 🟡 | Body + `Keyword::Ward(2)` wired in `catalog::sets::sos::creatures`. Increment trigger and end-step Fractal-with-counters payoff are both omitted (Increment requires mana-spent introspection on cast; the end-step trigger needs a "did this creature gain a counter this turn" per-permanent flag the engine doesn't track yet). |
 | Geometer's Arthropod | {G}{U} | Creature — Fractal Crab | 1/4 | Whenever you cast a spell with {X} in its mana cost, look at the top X cards of your library. Put one of them into your hand and the rest on the bottom of your library in a random order. | ✅ | Push XVI: trigger fully wired via the new `Predicate::CastSpellHasX` + `RevealUntilFind { cap: XFromCost, to: Hand }`. Misses go to graveyard (engine default for `RevealUntilFind`); the printed "rest to bottom random order" rider stays approximated since the engine has no random-bottom primitive. |
 | Growth Curve | {G}{U} | Sorcery |  | Put a +1/+1 counter on target creature you control, then double the number of +1/+1 counters on that creature. | ✅ | Wired in `catalog::sets::sos::sorceries`: AddCounter(+1) then AddCounter(`Value::CountersOn`) faithfully doubles. |
-| Mind into Matter | {X}{G}{U} | Sorcery |  | Draw X cards. Then you may put a permanent card with mana value X or less from your hand onto the battlefield tapped. | 🟡 | Draw X wired in `catalog::sets::sos::sorceries` via `Value::XFromCost`. The "may put a permanent ≤ X tapped" half is omitted (no hand-to-battlefield mana-value-gated primitive yet). |
+| Mind into Matter | {X}{G}{U} | Sorcery |  | Draw X cards. Then you may put a permanent card with mana value X or less from your hand onto the battlefield tapped. | ✅ (was 🟡) | Push (modern_decks batch 43): both halves now wired. Draw X via `Value::XFromCost`; the optional "put a permanent ≤ X from hand" half lands via `Effect::MayDo` wrapping a `Selector::take(EachMatching(Hand, Permanent), 1)` walk gated by `Predicate::ValueAtMost(ManaValueOf, XFromCost)`. The Permanent filter excludes Instant + Sorcery from the hand pool. AutoDecider declines (no surprise plays); `ScriptedDecider::new([Bool(true)])` exercises the paid path. Tests: `mind_into_matter_draws_x_cards`, `mind_into_matter_optional_permanent_lands_with_scripted_yes`. |
 | Paradox Gardens |  | Land |  | This land enters tapped. / {T}: Add {G} or {U}. / {2}{G}{U}, {T}: Surveil 1. (Look at the top card of your library. You may put it into your graveyard.) | ✅ | Wired in `catalog::sets::sos::lands`. |
 | Paradox Surveyor | {G}{G/U}{U} | Creature — Elf Druid | 3/3 | Reach / When this creature enters, look at the top five cards of your library. You may reveal a land card or a card with {X} in its mana cost from among them and put it into your hand. Put the rest on the bottom of your library in a random order. | ✅ | Push XVI: filter promoted to `Land OR HasXInCost` via the new `SelectionRequirement::HasXInCost` primitive — exact-printed reveal filter. Hybrid `{G/U}` pip stays approximated as `{G}` (cost: `{G}{G}{U}`). Misses go to graveyard. |
 | Proctor's Gaze | {2}{G}{U} | Instant |  | Return up to one target nonland permanent to its owner's hand. Search your library for a basic land card, put it onto the battlefield tapped, then shuffle. | ✅ | Wired in `catalog::sets::sos::instants`: bounce target nonland to owner's hand, then `Search { filter: IsBasicLand, to: Battlefield(tapped) }`. |

@@ -14,7 +14,8 @@ use crate::card::{
     Value, Zone,
 };
 use crate::effect::shortcut::{
-    magecraft, magecraft_drain_each_opp, magecraft_gain_life, magecraft_self_pump, target_filtered,
+    etb_mint_token, magecraft, magecraft_drain_each_opp, magecraft_gain_life, magecraft_self_pump,
+    target_filtered,
 };
 use crate::effect::{Duration, ManaPayload, PlayerRef, ZoneDest};
 use crate::mana::{cost, b, g, generic, Color, ManaCost};
@@ -179,14 +180,7 @@ pub fn witherbloom_pest_tender() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::CreateToken {
-                who: PlayerRef::You,
-                count: Value::Const(1),
-                definition: stx_pest_token(),
-            },
-        }],
+        triggered_abilities: vec![etb_mint_token(stx_pest_token(), 1)],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],

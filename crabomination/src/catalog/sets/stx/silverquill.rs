@@ -1209,7 +1209,6 @@ pub fn witherspell_drain() -> CardDefinition {
 /// anthem. Each Scribe is a 1/2 body + a 1/1 flying body for 3 mana —
 /// solid Inkling tribal density.
 pub fn inkling_scribe() -> CardDefinition {
-    use crate::catalog::sets::sos::inkling_token;
     CardDefinition {
         name: "Inkling Scribe",
         cost: cost(&[generic(2), w()]),
@@ -1224,14 +1223,7 @@ pub fn inkling_scribe() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::CreateToken {
-                who: PlayerRef::You,
-                count: Value::Const(1),
-                definition: inkling_token(),
-            },
-        }],
+        triggered_abilities: vec![etb_mint_token(inkling_token(), 1)],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -1556,7 +1548,6 @@ pub fn silverquill_judge() -> CardDefinition {
 /// with Tenured Inkcaster (+2/+2 anthem) for an overnight 5/5 + two
 /// 3/3 fliers swing.
 pub fn inkling_brigade() -> CardDefinition {
-    use crate::catalog::sets::sos::inkling_token;
     CardDefinition {
         name: "Inkling Brigade",
         cost: cost(&[generic(3), w(), b()]),
@@ -1571,14 +1562,7 @@ pub fn inkling_brigade() -> CardDefinition {
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::CreateToken {
-                who: PlayerRef::You,
-                count: Value::Const(2),
-                definition: inkling_token(),
-            },
-        }],
+        triggered_abilities: vec![etb_mint_token(inkling_token(), 2)],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],

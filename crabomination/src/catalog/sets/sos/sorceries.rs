@@ -1515,11 +1515,17 @@ pub fn mind_roots() -> CardDefinition {
 /// "Draw X cards. Then you may put a permanent card with mana value X
 /// or less from your hand onto the battlefield tapped."
 ///
-/// Approximation: the "may put a permanent ≤ X onto the battlefield"
-/// half is omitted (the engine has no hand-to-battlefield primitive
-/// gated on a card's mana value yet). The Draw X half is wired
-/// faithfully via `Value::XFromCost`.
+/// Push (modern_decks batch 43, 🟡 → ✅): the "may put a permanent ≤ X
+/// from hand onto the battlefield tapped" half **now lands** via
+/// `Effect::MayDo` wrapping a `Selector::take(EachMatching(Hand,
+/// Permanent), 1)` walk gated by `Predicate::ValueAtMost(ManaValueOf,
+/// XFromCost)`. The Permanent filter excludes Instant + Sorcery from
+/// the hand pool (matching the printed "permanent card" wording).
+/// AutoDecider declines by default; `ScriptedDecider::new([Bool(true)])`
+/// exercises the paid path.
 pub fn mind_into_matter() -> CardDefinition {
+    use crate::card::Predicate;
+    use crate::effect::{ZoneDest, ZoneRef};
     use crate::mana::{ManaSymbol, g, u};
     let mut spell_cost = cost(&[g(), u()]);
     spell_cost.symbols.insert(0, ManaSymbol::X);
@@ -1532,10 +1538,38 @@ pub fn mind_into_matter() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![],
-        effect: Effect::Draw {
-            who: Selector::You,
-            amount: Value::XFromCost,
-        },
+        effect: Effect::Seq(vec![
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::XFromCost,
+            },
+            Effect::MayDo {
+                description: "put a permanent with mana value X or less from your hand onto the battlefield tapped".to_string(),
+                body: Box::new(Effect::ForEach {
+                    selector: Selector::take(
+                        Selector::EachMatching {
+                            zone: ZoneRef::Hand(PlayerRef::You),
+                            filter: SelectionRequirement::Permanent,
+                        },
+                        Value::Const(1),
+                    ),
+                    body: Box::new(Effect::If {
+                        cond: Predicate::ValueAtMost(
+                            Value::ManaValueOf(Box::new(Selector::TriggerSource)),
+                            Value::XFromCost,
+                        ),
+                        then: Box::new(Effect::Move {
+                            what: Selector::TriggerSource,
+                            to: ZoneDest::Battlefield {
+                                controller: PlayerRef::You,
+                                tapped: true,
+                            },
+                        }),
+                        else_: Box::new(Effect::Noop),
+                    }),
+                }),
+            },
+        ]),
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],

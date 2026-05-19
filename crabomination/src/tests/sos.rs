@@ -1826,8 +1826,38 @@ fn mind_into_matter_draws_x_cards() {
     .expect("Mind into Matter castable for X=3 {G}{U}");
     drain_stack(&mut g);
 
-    // -1 (cast) +3 (draw X=3) = +2.
+    // -1 (cast) +3 (draw X=3) = +2. AutoDecider declines the optional
+    // "put a permanent" step, so hand size is just affected by the draw.
     assert_eq!(g.players[0].hand.len(), hand_before - 1 + 3);
+}
+
+#[test]
+fn mind_into_matter_optional_permanent_lands_with_scripted_yes() {
+    // Promoted in modern_decks batch 43: the "may put a permanent ≤ X
+    // from hand onto the battlefield tapped" half now wires via MayDo +
+    // ForEach + ValueAtMost(ManaValueOf, XFromCost). Scripted "yes"
+    // exercises the paid path; the auto-decider declines.
+    let mut g = two_player_game();
+    for _ in 0..5 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::mind_into_matter());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    // ScriptedDecider says yes to the MayDo prompt.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: Some(3),
+    })
+    .expect("Mind into Matter castable for X=3");
+    drain_stack(&mut g);
+
+    // Bear (MV 2 ≤ 3) should be on battlefield, tapped.
+    let bear_on_bf = g.battlefield.iter().find(|c| c.id == bear);
+    assert!(bear_on_bf.is_some(), "Bear should be on battlefield");
+    assert!(bear_on_bf.unwrap().tapped, "Bear should enter tapped");
 }
 
 // ── Growth Curve ────────────────────────────────────────────────────────────

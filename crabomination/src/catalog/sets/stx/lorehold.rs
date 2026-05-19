@@ -15,7 +15,8 @@ use crate::card::{
     TriggeredAbility, Value, Zone,
 };
 use crate::effect::shortcut::{
-    magecraft, magecraft_gain_life, magecraft_ping_any, magecraft_self_pump, target_filtered,
+    etb_mint_token, magecraft, magecraft_gain_life, magecraft_ping_any, magecraft_self_pump,
+    target_filtered,
 };
 use crate::effect::{Duration, PlayerRef, ZoneDest};
 use crate::mana::{cost, generic, r, w, Color, ManaCost};
@@ -1210,14 +1211,7 @@ pub fn lorehold_echoist() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::CreateToken {
-                who: PlayerRef::You,
-                count: Value::Const(1),
-                definition: lorehold_spirit_token(),
-            },
-        }],
+        triggered_abilities: vec![etb_mint_token(lorehold_spirit_token(), 1)],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
