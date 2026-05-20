@@ -19,10 +19,62 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 227 | 29 | 0 |
-| STX (327 cards) | 1004 (incl. synthesised variants) | 8 | 0 |
+| STX (327 cards) | 1029 (incl. synthesised variants) | 8 | 0 |
 | STA reprints (in STX boosters) | 47 | 0 | — |
 
 Push (modern_decks, claude/modern_decks branch — latest revision —
+**batch 48 follow-up: 25 more synthesised STX cards across all five
+colleges (5 each) + 25 new tests. All cards use existing engine
+primitives (ETB triggers, magecraft fan-outs, target_filtered
+selectors, token mints, drain/loot/scry helpers, Search →
+SearchPending decision flow). Bringing the STX synthesised-variant
+corpus from 1004 to 1029. Total tests: 3209 (was 3184).**
+
+Follow-up batch additions (`stx::silverquill` / `stx::witherbloom` /
+`stx::lorehold` / `stx::quandrix` / `stx::prismari`):
+
+- **Silverquill (W/B)** — 5 cards: `inkling_scriptmaster` ({3}{W}{B}
+  4/3 Inkling Cleric Wizard Flying — ETB Drain 2),
+  `silverquill_inkdancer` ({1}{B} 2/2 Inkling Rogue — magecraft +1/+0
+  EOT self-pump), `silverquill_vermilion` ({2}{W} Instant — -3/-3 EOT
+  + GainLife 3), `silverquill_drainmaster_v2` ({3}{W}{B} 3/3 Inkling
+  Warlock — ETB Drain 3), `silverquill_bookbond` ({W}{B} Sorcery —
+  return creature from gy → hand + GainLife 1).
+
+- **Witherbloom (B/G)** — 5 cards: `pest_glutton` ({2}{B}{G} 3/3 Pest
+  Beast — ETB mint Pest + GainLife 1), `witherbloom_saprosage`
+  ({1}{B}{G} 2/3 Plant Druid — ETB Scry 2 + magecraft GainLife 1),
+  `pestilent_marsh` ({1}{G} Sorcery — mint 2 Pest tokens),
+  `witherbloom_witchwarden` ({3}{B}{G} 3/3 Plant Warlock Lifelink —
+  vanilla), `witherbloom_toxicvigor` ({2}{B}{G} Sorcery — Drain 3 +
+  Surveil 1).
+
+- **Lorehold (R/W)** — 5 cards: `spirit_spellsmith` ({1}{R}{W} 2/3
+  Spirit Wizard — magecraft GainLife 1), `lorehold_glimmercaller`
+  ({2}{R} 2/2 Spirit Wizard — ETB 2 dmg to creature),
+  `lorehold_refrain` ({R}{W} Instant — 2 dmg any target + GainLife 2),
+  `spirit_banner_bearer` ({2}{W} 1/3 Spirit Soldier — static "Other
+  Spirits get +1/+0"), `lorehold_battle_drum` ({2}{R}{W} Sorcery —
+  team +1/+0 EOT + GrantKeyword(Haste, EOT)).
+
+- **Quandrix (G/U)** — 5 cards: `fractal_wavebreaker` ({2}{U} 1/3
+  Merfolk Wizard — ETB bounce creature to owner's hand via
+  `PlayerRef::OwnerOf(Target)`), `quandrix_vinepriest` ({2}{G} 2/3
+  Elf Druid — ETB search basic land → hand via `Effect::Search` and
+  `Decision::SearchLibrary` flow), `fractal_anomaly_v2` ({3}{G}{U}
+  Sorcery — mint Fractal with 5 +1/+1 counters → 5/5),
+  `quandrix_calculator_v2` ({1}{G}{U} 2/2 Elf Wizard — ETB Scry 2),
+  `quandrix_tide` ({G}{U} Instant — +1/+1 counter + Draw 1).
+
+- **Prismari (U/R)** — 5 cards: `prismari_flamewright` ({2}{R} 3/2
+  Human Wizard — ETB 2 dmg any target), `prismari_cantrip_spark`
+  ({R} Instant — 1 dmg + Draw 1), `prismari_dragonkin` ({3}{U}{R}
+  4/4 Drake Wizard Flying — ETB Draw 1), `prismari_sparktwister`
+  ({U}{R} 1/3 Elemental Wizard — magecraft Scry 1),
+  `prismari_spelljay` ({2}{R}{R} Sorcery — 4 dmg target creature).
+
+Prior push:
+
 **batch 48: Expressive Iteration promoted (🟡 → ✅) via the existing
 `Effect::GrantMayPlay` primitive (closes the Prismari school's last
 🟡), plus 25 new STX cards across all five colleges + 26 new
