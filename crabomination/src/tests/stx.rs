@@ -10396,6 +10396,38 @@ fn crippling_fear_does_not_kill_high_toughness_creatures() {
 }
 
 #[test]
+fn crippling_fear_spares_chosen_creature_type() {
+    // Printed: "Choose a creature type. Creatures other than creatures
+    // of the chosen type get -3/-3 EOT." AutoDecider picks Demon, so
+    // Beledros Witherbloom (6/6 Demon) stays untouched while a 2/2
+    // Grizzly Bears (Bear) dies under the -3/-3 fan-out.
+    let mut g = two_player_game();
+    let _demon = g.add_card_to_battlefield(0, catalog::beledros_witherbloom());
+    let _bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+
+    let id = g.add_card_to_hand(0, catalog::crippling_fear());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Crippling Fear castable for {3}{B}");
+    drain_stack(&mut g);
+
+    let creatures: Vec<&str> = g
+        .battlefield
+        .iter()
+        .filter(|c| c.definition.is_creature())
+        .map(|c| c.definition.name)
+        .collect();
+    assert_eq!(
+        creatures,
+        vec!["Beledros Witherbloom"],
+        "Demon stays, Bear dies under AutoDecider's Demon pick"
+    );
+}
+
+#[test]
 fn tribute_to_hunger_no_creature_to_sac_gives_no_life() {
     // If opp has no creatures, the sac fails silently and no life is gained.
     use crate::game::Target;

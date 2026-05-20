@@ -8754,14 +8754,18 @@ pub fn crippling_fear() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![],
-        effect: Effect::ForEach {
-            selector: Selector::EachPermanent(SelectionRequirement::Creature),
-            body: Box::new(Effect::PumpPT {
-                what: Selector::TriggerSource,
-                power: Value::Const(-3),
-                toughness: Value::Const(-3),
-                duration: Duration::EndOfTurn,
-            }),
+        // CR 700.2 / printed Oracle: "Choose a creature type. Creatures
+        // other than creatures of the chosen type get -3/-3 EOT."
+        // `Effect::DiminishCreaturesExceptChosenType` surfaces the
+        // ChooseCreatureType decision and applies -3/-3 to every
+        // creature whose printed subtypes don't include the answered
+        // type. AutoDecider picks Demon, so the auto-target play
+        // wraths everything except Demons; ScriptedDecider can pick a
+        // different type for tests that want to spare a specific
+        // tribe.
+        effect: Effect::DiminishCreaturesExceptChosenType {
+            power: Value::Const(-3),
+            toughness: Value::Const(-3),
         },
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],

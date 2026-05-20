@@ -1194,6 +1194,19 @@ pub enum Effect {
     /// state. Used by Owlin Shieldmage's ETB and the Holy Day / fog
     /// family of effects.
     PreventAllCombatDamageThisTurn,
+
+    /// "Choose a creature type. Creatures other than creatures of the
+    /// chosen type get -P/-T until end of turn." Crippling Fear-style
+    /// choose-and-sweep primitive. Synchronously surfaces a
+    /// `ChooseCreatureType` decision (caster's seat) and then applies
+    /// `PumpPT(power, toughness, EOT)` to every battlefield creature
+    /// whose `definition.subtypes.creature_types` does NOT contain the
+    /// answered type. The decision is resolved synchronously off
+    /// `self.decider`, so AutoDecider (which picks `Demon`) and
+    /// ScriptedDecider both work; UI players don't get a separate
+    /// prompt today (degraded to the auto-decider choice — same as
+    /// other implicit-choice cards).
+    DiminishCreaturesExceptChosenType { power: Value, toughness: Value },
 }
 
 /// Lightweight mirror of `crate::game::types::DelayedKind` for use inside
@@ -1445,6 +1458,9 @@ impl Effect {
             Effect::NameCreatureType { what } => sel_has_target(what),
             Effect::WinGame { who } => player_has_target(who),
             Effect::PreventAllCombatDamageThisTurn => false,
+            Effect::DiminishCreaturesExceptChosenType { power, toughness } => {
+                value_has_target(power) || value_has_target(toughness)
+            }
         }
     }
 

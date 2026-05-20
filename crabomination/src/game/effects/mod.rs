@@ -2311,6 +2311,47 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::DiminishCreaturesExceptChosenType { power, toughness } => {
+                // Crippling Fear-style "Choose a creature type. Creatures
+                // other than creatures of the chosen type get -P/-T EOT."
+                // Synchronously decides via `self.decider` (AutoDecider
+                // picks Demon, ScriptedDecider can override) so the
+                // effect resolves in a single pass without
+                // suspend/resume. The pump is applied per-creature via
+                // the standard `power_bonus` / `toughness_bonus` mutation
+                // path (same code shape as Effect::PumpPT).
+                use crate::decision::{Decision, DecisionAnswer};
+                let p = self.evaluate_value(power, ctx);
+                let t = self.evaluate_value(toughness, ctx);
+                let source_id = ctx.source.unwrap_or(CardId(0));
+                let decision = Decision::ChooseCreatureType { source: source_id };
+                let answer = self.decider.decide(&decision);
+                let DecisionAnswer::CreatureType(ct) = answer else {
+                    return Err(crate::game::GameError::DecisionAnswerMismatch);
+                };
+                let card_ids: Vec<CardId> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| {
+                        c.definition.is_creature()
+                            && !c.definition.subtypes.creature_types.contains(&ct)
+                    })
+                    .map(|c| c.id)
+                    .collect();
+                for cid in card_ids {
+                    if let Some(c) = self.battlefield_find_mut(cid) {
+                        c.power_bonus += p;
+                        c.toughness_bonus += t;
+                        events.push(GameEvent::PumpApplied {
+                            card_id: cid,
+                            power: p,
+                            toughness: t,
+                        });
+                    }
+                }
+                Ok(())
+            }
+
             Effect::GrantMayPlay {
                 what,
                 duration,
