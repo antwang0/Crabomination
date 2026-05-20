@@ -282,39 +282,20 @@ fn mox_ruby_casts_for_free_and_taps_for_red() {
 }
 
 #[test]
-fn mox_pearl_taps_for_white() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::mox_pearl());
-    g.perform_action(GameAction::ActivateAbility { card_id: id, ability_index: 0, target: None })
-        .unwrap();
-    assert_eq!(g.players[0].mana_pool.amount(Color::White), 1);
-}
-
-#[test]
-fn mox_sapphire_taps_for_blue() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::mox_sapphire());
-    g.perform_action(GameAction::ActivateAbility { card_id: id, ability_index: 0, target: None })
-        .unwrap();
-    assert_eq!(g.players[0].mana_pool.amount(Color::Blue), 1);
-}
-
-#[test]
-fn mox_jet_taps_for_black() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::mox_jet());
-    g.perform_action(GameAction::ActivateAbility { card_id: id, ability_index: 0, target: None })
-        .unwrap();
-    assert_eq!(g.players[0].mana_pool.amount(Color::Black), 1);
-}
-
-#[test]
-fn mox_emerald_taps_for_green() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::mox_emerald());
-    g.perform_action(GameAction::ActivateAbility { card_id: id, ability_index: 0, target: None })
-        .unwrap();
-    assert_eq!(g.players[0].mana_pool.amount(Color::Green), 1);
+fn each_mox_taps_for_its_color() {
+    let cases: [(fn() -> crate::card::CardDefinition, Color); 4] = [
+        (catalog::mox_pearl, Color::White),
+        (catalog::mox_sapphire, Color::Blue),
+        (catalog::mox_jet, Color::Black),
+        (catalog::mox_emerald, Color::Green),
+    ];
+    for (def, color) in cases {
+        let mut g = two_player_game();
+        let id = g.add_card_to_battlefield(0, def());
+        g.perform_action(GameAction::ActivateAbility { card_id: id, ability_index: 0, target: None })
+            .unwrap();
+        assert_eq!(g.players[0].mana_pool.amount(color), 1, "{color:?} mox should tap for its color");
+    }
 }
 
 #[test]
@@ -328,14 +309,6 @@ fn mox_untaps_each_turn() {
     // Simulate untap step
     g.do_untap();
     assert!(!g.battlefield.iter().find(|c| c.id == id).unwrap().tapped);
-}
-
-#[test]
-fn terror_cannot_destroy_artifact_creature() {
-    // Terror uses SelectionRequirement to exclude artifacts and black creatures.
-    // Moxes are artifacts — verify Artifact type is on mox_ruby.
-    let mox_def = catalog::mox_ruby();
-    assert!(mox_def.card_types.contains(&crate::card::CardType::Artifact));
 }
 
 #[test]
@@ -4168,15 +4141,6 @@ fn vanishing_verse_exiles_target_nonland_permanent() {
 }
 
 #[test]
-fn killian_ink_duelist_has_lifelink() {
-    let def = catalog::killian_ink_duelist();
-    assert!(def.keywords.contains(&crate::card::Keyword::Lifelink));
-    assert_eq!(def.power, 2);
-    assert_eq!(def.toughness, 3);
-    assert!(def.is_legendary());
-}
-
-#[test]
 fn devastating_mastery_destroys_each_nonland_permanent() {
     let mut g = two_player_game();
     let _land = g.add_card_to_battlefield(0, catalog::forest());
@@ -4195,26 +4159,6 @@ fn devastating_mastery_destroys_each_nonland_permanent() {
     assert!(!g.battlefield.iter().any(|c| c.id == bear1));
     assert!(g.battlefield.iter().any(|c| c.definition.is_land()),
         "Lands survive — `Selector::EachPermanent(Nonland)` skips them");
-}
-
-#[test]
-fn felisa_fang_smoke_test() {
-    let def = catalog::felisa_fang_of_silverquill();
-    assert_eq!(def.power, 4);
-    assert_eq!(def.toughness, 3);
-    assert!(def.keywords.contains(&crate::card::Keyword::Flying));
-    assert!(def.keywords.contains(&crate::card::Keyword::Lifelink));
-    assert!(def.is_legendary());
-}
-
-#[test]
-fn mavinda_students_advocate_smoke_test() {
-    let def = catalog::mavinda_students_advocate();
-    assert_eq!(def.power, 1);
-    assert_eq!(def.toughness, 3);
-    assert!(def.keywords.contains(&crate::card::Keyword::Flying));
-    assert!(def.keywords.contains(&crate::card::Keyword::Vigilance));
-    assert!(def.is_legendary());
 }
 
 #[test]

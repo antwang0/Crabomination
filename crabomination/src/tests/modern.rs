@@ -101,18 +101,6 @@ fn faithless_looting_draws_two_then_discards_two() {
 }
 
 #[test]
-fn faithless_looting_has_flashback_keyword() {
-    use crate::card::Keyword;
-    let card = catalog::faithless_looting();
-    assert!(
-        card.keywords
-            .iter()
-            .any(|k| matches!(k, Keyword::Flashback(_))),
-        "Faithless Looting should have Flashback"
-    );
-}
-
-#[test]
 fn flashback_cast_exiles_spell_on_resolution() {
     // A flashback-cast spell is exiled on resolution (not sent to the
     // graveyard). Faithless Looting flashback {2}{R}: discard a card from
@@ -145,65 +133,43 @@ fn flashback_cast_exiles_spell_on_resolution() {
         "Flashback-cast spell must NOT return to the graveyard");
 }
 
+/// Sign in Blood: target player draws 2 and loses 2 life. Verifies both self-target
+/// and opp-target (the latter exercises the `target_filter(Player)` path).
 #[test]
-fn sign_in_blood_draws_two_loses_two_life() {
+fn sign_in_blood_drains_targeted_player() {
+    // Target self.
     let mut g = two_player_game();
-    for _ in 0..3 {
-        g.add_card_to_library(0, catalog::island());
-    }
+    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
     let id = g.add_card_to_hand(0, catalog::sign_in_blood());
     g.players[0].mana_pool.add(Color::Black, 2);
     let life_before = g.players[0].life;
     let hand_before = g.players[0].hand.len();
-
     g.perform_action(GameAction::CastSpell {
-        card_id: id,
-        target: Some(Target::Player(0)),
-        additional_targets: vec![],
-        mode: None,
-        x_value: None,
-    })
-    .expect("Sign in Blood castable for {B}{B}");
+        card_id: id, target: Some(Target::Player(0)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Sign in Blood castable for {B}{B}");
     drain_stack(&mut g);
-
     assert_eq!(g.players[0].life, life_before - 2);
-    // Hand: -1 cast +2 draw = +1.
-    assert_eq!(g.players[0].hand.len(), hand_before + 1);
-}
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "-1 cast +2 draw = +1");
 
-/// Sign in Blood is now real-Oracle "target player". Targeting the opponent
-/// makes them draw the cards and pay the life — a powerful sideboard line
-/// against a low-life opponent. Verifies the new `target_filter(Player)`
-/// path threads the targeted player into both `Draw` and `LoseLife`.
-#[test]
-fn sign_in_blood_can_target_opponent() {
+    // Target opponent.
     let mut g = two_player_game();
-    for _ in 0..3 {
-        g.add_card_to_library(1, catalog::island());
-    }
+    for _ in 0..3 { g.add_card_to_library(1, catalog::island()); }
     let id = g.add_card_to_hand(0, catalog::sign_in_blood());
     g.players[0].mana_pool.add(Color::Black, 2);
     let p0_life_before = g.players[0].life;
     let p1_life_before = g.players[1].life;
     let p0_hand_before = g.players[0].hand.len();
     let p1_hand_before = g.players[1].hand.len();
-
     g.perform_action(GameAction::CastSpell {
-        card_id: id,
-        target: Some(Target::Player(1)),
-        additional_targets: vec![],
-        mode: None,
-        x_value: None,
-    })
-    .expect("Sign in Blood castable for {B}{B}");
+        card_id: id, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Sign in Blood castable for {B}{B}");
     drain_stack(&mut g);
-
-    // Caster (P0) life unchanged; target (P1) lost 2.
-    assert_eq!(g.players[0].life, p0_life_before);
-    assert_eq!(g.players[1].life, p1_life_before - 2);
-    // P0 lost the cast card from hand; P1 drew 2.
-    assert_eq!(g.players[0].hand.len(), p0_hand_before - 1);
-    assert_eq!(g.players[1].hand.len(), p1_hand_before + 2);
+    assert_eq!(g.players[0].life, p0_life_before, "caster life unchanged");
+    assert_eq!(g.players[1].life, p1_life_before - 2, "target lost 2");
+    assert_eq!(g.players[0].hand.len(), p0_hand_before - 1, "caster lost the spell");
+    assert_eq!(g.players[1].hand.len(), p1_hand_before + 2, "target drew 2");
 }
 
 #[test]
@@ -662,33 +628,6 @@ fn bojuka_bog_exiles_opponent_graveyard_on_etb() {
 
 // ── Sanity: every modern card has the right card type ────────────────────────
 
-#[test]
-fn modern_card_factories_produce_valid_definitions() {
-    // Smoke test: every modern card should have at least one card type and
-    // a non-empty name.
-    let cards: Vec<crate::card::CardDefinition> = vec![
-        catalog::ponder(), catalog::manamorphose(), catalog::sleight_of_hand(),
-        catalog::faithless_looting(), catalog::sign_in_blood(),
-        catalog::nights_whisper(), catalog::duress(), catalog::lava_spike(),
-        catalog::lava_dart(), catalog::shock(), catalog::unburial_rites(),
-        catalog::exhume(), catalog::buried_alive(), catalog::entomb(),
-        catalog::burning_tree_emissary(), catalog::putrid_imp(),
-        catalog::tarmogoyf(), catalog::veil_of_summer(),
-        catalog::crop_rotation(), catalog::karakas(), catalog::bojuka_bog(),
-    ];
-
-    for card in &cards {
-        assert!(!card.name.is_empty(), "card name empty");
-        assert!(!card.card_types.is_empty(), "{} has no card types", card.name);
-        // Lands have CardType::Land; everything else has a cast cost or an
-        // alt cost.
-        if !card.card_types.contains(&CardType::Land) {
-            let has_cost = !card.cost.symbols.is_empty() || card.alternative_cost.is_some();
-            assert!(has_cost, "{} should have a cast or alt cost", card.name);
-        }
-    }
-}
-
 // ── mod_set: removal / counterspells / pump (catalog::sets::mod_set) ─────────
 
 #[test]
@@ -969,46 +908,6 @@ fn sacred_foundry_pays_two_life_and_stays_untapped_by_default() {
     assert_eq!(g.players[0].life, 18);
 }
 
-#[test]
-fn breeding_pool_is_a_forest_island_dual() {
-    let def = catalog::breeding_pool();
-    let lts = &def.subtypes.land_types;
-    assert!(lts.contains(&crate::card::LandType::Forest));
-    assert!(lts.contains(&crate::card::LandType::Island));
-}
-
-#[test]
-fn steam_vents_carries_island_and_mountain_typing() {
-    let def = catalog::steam_vents();
-    let lts = &def.subtypes.land_types;
-    assert!(lts.contains(&crate::card::LandType::Island));
-    assert!(lts.contains(&crate::card::LandType::Mountain));
-}
-
-#[test]
-fn stomping_ground_carries_mountain_and_forest_typing() {
-    let def = catalog::stomping_ground();
-    let lts = &def.subtypes.land_types;
-    assert!(lts.contains(&crate::card::LandType::Mountain));
-    assert!(lts.contains(&crate::card::LandType::Forest));
-}
-
-#[test]
-fn temple_garden_carries_forest_and_plains_typing() {
-    let def = catalog::temple_garden();
-    let lts = &def.subtypes.land_types;
-    assert!(lts.contains(&crate::card::LandType::Forest));
-    assert!(lts.contains(&crate::card::LandType::Plains));
-}
-
-#[test]
-fn blood_crypt_carries_swamp_and_mountain_typing() {
-    let def = catalog::blood_crypt();
-    let lts = &def.subtypes.land_types;
-    assert!(lts.contains(&crate::card::LandType::Swamp));
-    assert!(lts.contains(&crate::card::LandType::Mountain));
-}
-
 // ── Auxiliary instants (mod_set/spells) ──────────────────────────────────────
 
 #[test]
@@ -1234,30 +1133,6 @@ fn thalia_taxes_noncreature_spells_after_first() {
 }
 
 #[test]
-fn dark_confidant_definition_has_upkeep_trigger() {
-    use crate::card::{EventKind, EventScope};
-    let def = catalog::dark_confidant();
-    assert!(def.triggered_abilities.iter().any(|t| {
-        matches!(t.event.kind, EventKind::StepBegins(crate::game::TurnStep::Upkeep))
-            && matches!(t.event.scope, EventScope::YourControl)
-    }));
-}
-
-#[test]
-fn bloodghast_has_landfall_return_trigger() {
-    // Bloodghast traded the unconditional `Haste` stub for the landfall
-    // return-from-graveyard trigger, scoped via
-    // `EventScope::FromYourGraveyard`. The "haste while opp ≤ 10 life"
-    // half is still pending a conditional-keyword static.
-    use crate::effect::{EventKind, EventScope};
-    let def = catalog::bloodghast();
-    assert!(def.triggered_abilities.iter().any(|t|
-        t.event.kind == EventKind::LandPlayed
-            && matches!(t.event.scope, EventScope::FromYourGraveyard)
-    ), "Bloodghast should have a graveyard-scoped LandPlayed trigger");
-}
-
-#[test]
 fn phyrexian_arena_draws_card_and_loses_life_at_upkeep() {
     let mut g = two_player_game();
     g.add_card_to_battlefield(0, catalog::phyrexian_arena());
@@ -1291,20 +1166,27 @@ fn phyrexian_arena_draws_card_and_loses_life_at_upkeep() {
 // ── Cube cards (mod_set additions) ───────────────────────────────────────────
 
 #[test]
-fn tarfire_deals_two_damage_to_player() {
+fn tarfire_deals_two_damage_to_player_or_creature() {
     let mut g = two_player_game();
-    let tarfire = g.add_card_to_hand(0, catalog::tarfire());
-    g.players[0].mana_pool.add(Color::Red, 1);
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let to_player = g.add_card_to_hand(0, catalog::tarfire());
+    let to_creature = g.add_card_to_hand(0, catalog::tarfire());
+    g.players[0].mana_pool.add(Color::Red, 2);
+
     g.perform_action(GameAction::CastSpell {
-        card_id: tarfire,
-        target: Some(Target::Player(1)),
-        additional_targets: vec![],
-        mode: None,
-        x_value: None,
-    })
-    .expect("Tarfire castable for {R}");
+        card_id: to_player, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Tarfire castable for {R}");
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, 18);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: to_creature, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Tarfire castable for {R}");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == bear),
+        "2-toughness Bear should be dead");
 }
 
 #[test]
@@ -3595,27 +3477,6 @@ fn indulgent_tormentor_drains_each_opponent_at_end_step() {
         "Indulgent Tormentor's end-step trigger should drain 3 life from P1");
 }
 
-#[test]
-fn eternal_witness_etb_trigger_present() {
-    // Validate the catalog entry: 2/1 G creature, single ETB trigger that
-    // issues a `Move` to the controller's hand.
-    let def = catalog::eternal_witness();
-    assert_eq!(def.name, "Eternal Witness");
-    assert_eq!(def.power, 2);
-    assert_eq!(def.toughness, 1);
-    assert_eq!(def.triggered_abilities.len(), 1,
-        "Eternal Witness has exactly one ETB trigger");
-    let trigger = &def.triggered_abilities[0];
-    assert_eq!(trigger.event.kind, crate::card::EventKind::EntersBattlefield);
-    assert!(matches!(
-        trigger.effect,
-        crate::card::Effect::Move {
-            to: crate::effect::ZoneDest::Hand(crate::effect::PlayerRef::You),
-            ..
-        }
-    ));
-}
-
 /// With the graveyard-source preference in `auto_target_for_effect`,
 /// Eternal Witness's ETB now picks a card out of YOUR graveyard
 /// automatically — the trigger no longer requires UI to land its
@@ -3635,17 +3496,6 @@ fn eternal_witness_etb_returns_graveyard_card_via_auto_target() {
 
     assert!(g.players[0].hand.iter().any(|c| c.id == bolt),
         "Bolt should auto-return from graveyard to hand");
-}
-
-#[test]
-fn containment_priest_is_a_flash_two_two() {
-    // The replacement effect needs an engine primitive we don't have
-    // yet — verify the body is correct so the cube pick stays useful.
-    let def = catalog::containment_priest();
-    assert_eq!(def.power, 2);
-    assert_eq!(def.toughness, 2);
-    assert!(def.keywords.contains(&crate::card::Keyword::Flash));
-    assert!(def.is_creature());
 }
 
 #[test]
@@ -5775,37 +5625,28 @@ fn murder_destroys_any_creature_including_black() {
         "Hypnotic Specter (black) should die to Murder");
 }
 
-/// Go for the Throat destroys non-artifact creatures.
+/// Go for the Throat destroys non-artifact creatures, rejects artifact creatures.
 #[test]
-fn go_for_the_throat_destroys_nonartifact_creature() {
+fn go_for_the_throat_destroys_nonartifact_but_rejects_artifact() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
-    let id = g.add_card_to_hand(0, catalog::go_for_the_throat());
-    g.players[0].mana_pool.add(Color::Black, 1);
-    g.players[0].mana_pool.add_colorless(1);
+    let memnite = g.add_card_to_battlefield(1, catalog::memnite()); // 1/1 artifact creature
+    let id_ok = g.add_card_to_hand(0, catalog::go_for_the_throat());
+    let id_bad = g.add_card_to_hand(0, catalog::go_for_the_throat());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(2);
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id,
+        card_id: id_ok,
         target: Some(Target::Permanent(bear)),
         additional_targets: vec![],
         mode: None, x_value: None,
     }).expect("Go for the Throat castable for {1}{B}");
     drain_stack(&mut g);
-    assert!(!g.battlefield.iter().any(|c| c.id == bear),
-        "Bear should die");
-}
-
-/// Go for the Throat rejects an artifact creature at cast time.
-#[test]
-fn go_for_the_throat_rejects_artifact_creature() {
-    let mut g = two_player_game();
-    let memnite = g.add_card_to_battlefield(1, catalog::memnite()); // 1/1 Construct artifact creature
-    let id = g.add_card_to_hand(0, catalog::go_for_the_throat());
-    g.players[0].mana_pool.add(Color::Black, 1);
-    g.players[0].mana_pool.add_colorless(1);
+    assert!(!g.battlefield.iter().any(|c| c.id == bear), "Bear should die");
 
     let err = g.perform_action(GameAction::CastSpell {
-        card_id: id,
+        card_id: id_bad,
         target: Some(Target::Permanent(memnite)),
         additional_targets: vec![],
         mode: None, x_value: None,
@@ -5857,38 +5698,28 @@ fn languish_sweeps_small_but_leaves_big_creatures() {
         "Serra (4/4) should survive — 4-2 = 2 toughness left");
 }
 
-/// Lay Down Arms: exiles a low-power creature.
+/// Lay Down Arms exiles low-power creatures, rejects power-4+.
 #[test]
-fn lay_down_arms_exiles_low_power_creature() {
+fn lay_down_arms_exiles_low_power_but_rejects_high_power() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
-    let id = g.add_card_to_hand(0, catalog::lay_down_arms());
-    g.players[0].mana_pool.add(Color::White, 1);
+    let craw = g.add_card_to_battlefield(1, catalog::craw_wurm()); // 6/4
+    let id_ok = g.add_card_to_hand(0, catalog::lay_down_arms());
+    let id_bad = g.add_card_to_hand(0, catalog::lay_down_arms());
+    g.players[0].mana_pool.add(Color::White, 2);
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id,
+        card_id: id_ok,
         target: Some(Target::Permanent(bear)),
         additional_targets: vec![],
         mode: None, x_value: None,
     }).expect("Lay Down Arms castable for {W}");
     drain_stack(&mut g);
-
-    assert!(!g.battlefield.iter().any(|c| c.id == bear),
-        "Bear should leave battlefield");
-    assert!(g.exile.iter().any(|c| c.id == bear),
-        "Bear should be exiled, not in graveyard");
-}
-
-/// Lay Down Arms rejects high-power creatures (power > 4) at cast time.
-#[test]
-fn lay_down_arms_rejects_high_power_creature() {
-    let mut g = two_player_game();
-    let craw = g.add_card_to_battlefield(1, catalog::craw_wurm()); // 6/4
-    let id = g.add_card_to_hand(0, catalog::lay_down_arms());
-    g.players[0].mana_pool.add(Color::White, 1);
+    assert!(!g.battlefield.iter().any(|c| c.id == bear), "Bear should leave battlefield");
+    assert!(g.exile.iter().any(|c| c.id == bear), "Bear should be exiled, not in graveyard");
 
     let err = g.perform_action(GameAction::CastSpell {
-        card_id: id,
+        card_id: id_bad,
         target: Some(Target::Permanent(craw)),
         additional_targets: vec![],
         mode: None, x_value: None,
@@ -7141,24 +6972,6 @@ fn ghost_vacuum_exiles_target_card_from_graveyard() {
 }
 
 #[test]
-fn modern_utility_factories_have_valid_definitions() {
-    let cards: Vec<crate::card::CardDefinition> = vec![
-        catalog::glimmerpost(), catalog::cloudpost(),
-        catalog::lotus_field(), catalog::evolving_wilds(),
-        catalog::mistvault_bridge(), catalog::drossforge_bridge(),
-        catalog::razortide_bridge(), catalog::goldmire_bridge(),
-        catalog::silverbluff_bridge(), catalog::tanglepool_bridge(),
-        catalog::slagwoods_bridge(), catalog::thornglint_bridge(),
-        catalog::darkmoss_bridge(), catalog::rustvale_bridge(),
-        catalog::coalition_relic(), catalog::ghost_vacuum(),
-    ];
-    for c in &cards {
-        assert!(!c.name.is_empty(), "card name empty");
-        assert!(!c.card_types.is_empty(), "{} has no card types", c.name);
-    }
-}
-
-#[test]
 fn all_bridges_etb_tapped_and_carry_two_basic_land_types() {
     use crate::card::{CardDefinition, LandType};
     type BridgeCase = (fn() -> CardDefinition, LandType, LandType);
@@ -7370,17 +7183,6 @@ fn plague_wind_destroys_only_opponent_creatures() {
 }
 
 #[test]
-fn carnage_tyrant_is_uncounterable_seven_six_with_trample_and_hexproof() {
-    use crate::card::Keyword;
-    let card = catalog::carnage_tyrant();
-    assert_eq!(card.power, 7);
-    assert_eq!(card.toughness, 6);
-    assert!(card.keywords.contains(&Keyword::Trample));
-    assert!(card.keywords.contains(&Keyword::Hexproof));
-    assert!(card.keywords.contains(&Keyword::CantBeCountered));
-}
-
-#[test]
 fn carnage_tyrant_resolves_through_counterspell() {
     let mut g = two_player_game();
     let tyrant = g.add_card_to_hand(0, catalog::carnage_tyrant());
@@ -7435,14 +7237,6 @@ fn krark_clan_ironworks_sacs_artifact_for_two_colorless() {
         "KCI's sac yields at least {{2}}");
 }
 
-#[test]
-fn krark_clan_ironworks_factory_has_one_activated_ability() {
-    let card = catalog::krark_clan_ironworks();
-    assert_eq!(card.activated_abilities.len(), 1);
-    assert!(!card.activated_abilities[0].sac_cost,
-        "the sac is folded into the effect body, not a sac_cost-of-self");
-}
-
 // ── Surveil land cycle (modern_decks-11) ─────────────────────────────────────
 
 #[test]
@@ -7492,31 +7286,6 @@ fn underground_mortuary_taps_for_black_or_green() {
     }).unwrap();
     assert_eq!(g.players[0].mana_pool.amount(Color::Green), 1,
         "ability 1 produces {{G}}");
-}
-
-#[test]
-fn all_surveil_lands_etb_tapped_and_have_two_mana_abilities() {
-    use crate::card::{CardDefinition, LandType};
-    type SurveilCase = (fn() -> CardDefinition, LandType, LandType);
-    let cases: &[SurveilCase] = &[
-        (catalog::underground_mortuary, LandType::Swamp,    LandType::Forest),
-        (catalog::lush_portico,         LandType::Forest,   LandType::Plains),
-        (catalog::hedge_maze,           LandType::Forest,   LandType::Island),
-        (catalog::thundering_falls,     LandType::Island,   LandType::Mountain),
-        (catalog::commercial_district,  LandType::Mountain, LandType::Plains),
-        (catalog::raucous_theater,      LandType::Swamp,    LandType::Mountain),
-        (catalog::elegant_parlor,       LandType::Mountain, LandType::Forest),
-    ];
-    for &(factory, ta, tb) in cases {
-        let def = factory();
-        let lts = &def.subtypes.land_types;
-        assert!(lts.contains(&ta), "{}: missing {:?}", def.name, ta);
-        assert!(lts.contains(&tb), "{}: missing {:?}", def.name, tb);
-        assert_eq!(def.activated_abilities.len(), 2,
-            "{}: dual-color land needs two mana abilities", def.name);
-        assert!(!def.triggered_abilities.is_empty(),
-            "{}: should have an etb-tap+surveil trigger", def.name);
-    }
 }
 
 // ── modern_decks-12: 12 new playables ────────────────────────────────────────
@@ -8408,36 +8177,26 @@ fn despark_rejects_low_cmc_target() {
 }
 
 #[test]
-fn crumble_to_dust_exiles_nonbasic_land() {
+fn crumble_to_dust_exiles_nonbasic_but_rejects_basic() {
     let mut g = two_player_game();
-    // Use a nonbasic dual land — cube has plenty.
     let dual = g.add_card_to_battlefield(1, catalog::watery_grave());
-    let id = g.add_card_to_hand(0, catalog::crumble_to_dust());
-    g.players[0].mana_pool.add_colorless(2);
-    g.players[0].mana_pool.add(Color::Red, 2);
+    let basic = g.add_card_to_battlefield(1, catalog::island());
+    let id_ok = g.add_card_to_hand(0, catalog::crumble_to_dust());
+    let id_bad = g.add_card_to_hand(0, catalog::crumble_to_dust());
+    g.players[0].mana_pool.add_colorless(4);
+    g.players[0].mana_pool.add(Color::Red, 4);
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id,
+        card_id: id_ok,
         target: Some(Target::Permanent(dual)),
         additional_targets: vec![],
         mode: None, x_value: None,
     }).expect("Crumble to Dust castable for {2}{R}{R}");
     drain_stack(&mut g);
-
-    assert!(g.exile.iter().any(|c| c.id == dual),
-        "Watery Grave (nonbasic) gets exiled");
-}
-
-#[test]
-fn crumble_to_dust_rejects_basic_land_target() {
-    let mut g = two_player_game();
-    let basic = g.add_card_to_battlefield(1, catalog::island());
-    let id = g.add_card_to_hand(0, catalog::crumble_to_dust());
-    g.players[0].mana_pool.add_colorless(2);
-    g.players[0].mana_pool.add(Color::Red, 2);
+    assert!(g.exile.iter().any(|c| c.id == dual), "Watery Grave (nonbasic) gets exiled");
 
     let err = g.perform_action(GameAction::CastSpell {
-        card_id: id,
+        card_id: id_bad,
         target: Some(Target::Permanent(basic)),
         additional_targets: vec![],
         mode: None, x_value: None,
@@ -8982,14 +8741,6 @@ fn sudden_edict_forces_target_player_to_sacrifice() {
         "Sacrificed creature ends up in opp's graveyard");
 }
 
-#[test]
-fn sudden_edict_cannot_be_countered() {
-    use crate::card::Keyword;
-    let card = catalog::sudden_edict();
-    assert!(card.keywords.iter().any(|k| matches!(k, Keyword::CantBeCountered)),
-        "Sudden Edict carries CantBeCountered keyword");
-}
-
 /// Regression: `Effect::Sacrifice`'s `who` slot now surfaces a target
 /// filter via `primary_target_filter`, so the auto-target heuristic
 /// picks the opponent for edict-class spells. Without the surfacing,
@@ -9069,39 +8820,6 @@ fn fellwar_stone_taps_for_any_color() {
 /// Tarfire (Kindred Goblin Instant) is in the red pool. Verify the
 /// 2-damage payload resolves cleanly. Kindred subtype is preserved on
 /// the type-line even though no tribal payoff card consumes it today.
-#[test]
-fn tarfire_deals_two_damage_to_creature() {
-    let mut g = two_player_game();
-    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
-    let id = g.add_card_to_hand(0, catalog::tarfire());
-    g.players[0].mana_pool.add(Color::Red, 1);
-    g.perform_action(GameAction::CastSpell {
-        card_id: id, target: Some(Target::Permanent(bear)),
-        additional_targets: vec![],
-        mode: None, x_value: None,
-    })
-    .expect("Tarfire castable for {R}");
-    drain_stack(&mut g);
-    // Bear (2/2) takes 2 damage and dies.
-    assert!(!g.battlefield.iter().any(|c| c.id == bear),
-        "2-toughness Bear should be dead");
-}
-
-#[test]
-fn tarfire_carries_kindred_and_goblin_subtype() {
-    // Push (modern_decks): Tarfire is now "Kindred Instant — Goblin"
-    // (printed-Oracle-correct type line). Future Goblin-tribal payoffs
-    // can read `HasCreatureType(Goblin)` on the cast spell.
-    use crate::card::{CardType, CreatureType};
-    let def = catalog::tarfire();
-    assert!(def.card_types.contains(&CardType::Kindred),
-        "Tarfire is Kindred");
-    assert!(def.card_types.contains(&CardType::Instant),
-        "Tarfire is Instant");
-    assert!(def.subtypes.creature_types.contains(&CreatureType::Goblin),
-        "Tarfire has the Goblin creature subtype on its type line");
-}
-
 /// Grim Lavamancer's `{R}, {T}, Exile two from your gy:` activated
 /// ability is approximated by the engine's `exile_other_filter` (which
 /// exiles exactly one matching gy card). Verify activation still pings

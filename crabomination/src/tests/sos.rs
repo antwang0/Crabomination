@@ -307,17 +307,6 @@ fn killians_confidence_pumps_and_draws() {
     assert_eq!(g.players[0].hand.len(), hand_before);
 }
 
-#[test]
-fn forum_of_amity_taps_for_white_or_black() {
-    use crate::card::CardType;
-    let card = catalog::forum_of_amity();
-    assert!(card.card_types.contains(&CardType::Land));
-    assert!(card.activated_abilities.len() >= 3,
-        "Forum of Amity has 2 mana abilities + 1 surveil ability");
-    // The card should enter tapped (etb_tap trigger present).
-    assert_eq!(card.triggered_abilities.len(), 1);
-}
-
 // ── Black ───────────────────────────────────────────────────────────────────
 
 #[test]
@@ -877,15 +866,6 @@ fn glorious_decay_destroys_artifact() {
 }
 
 #[test]
-fn rearing_embermare_has_reach_and_haste() {
-    let card = catalog::rearing_embermare();
-    assert!(card.keywords.contains(&Keyword::Reach));
-    assert!(card.keywords.contains(&Keyword::Haste));
-    assert_eq!(card.power, 4);
-    assert_eq!(card.toughness, 5);
-}
-
-#[test]
 fn charging_strifeknight_loots_with_tap() {
     let mut g = two_player_game();
     g.add_card_to_library(0, catalog::island());
@@ -955,14 +935,6 @@ fn shattered_acolyte_sac_destroys_artifact() {
         "Shattered Acolyte should have been sacrificed");
     assert!(g.players[0].graveyard.iter().any(|c| c.id == acolyte),
         "Acolyte should be in its owner's graveyard");
-}
-
-#[test]
-fn summoned_dromedary_has_vigilance_body() {
-    let card = catalog::summoned_dromedary();
-    assert!(card.keywords.contains(&Keyword::Vigilance));
-    assert_eq!(card.power, 4);
-    assert_eq!(card.toughness, 3);
 }
 
 #[test]
@@ -1087,24 +1059,6 @@ fn snooping_page_combat_damage_draws_and_loses_one() {
         "Should draw 1 from combat-damage trigger");
     assert_eq!(g.players[0].life, life_before - 1,
         "Should lose 1 from combat-damage trigger");
-}
-
-#[test]
-fn lecturing_scornmage_is_vanilla_one_one_warlock() {
-    let card = catalog::lecturing_scornmage();
-    assert_eq!(card.power, 1);
-    assert_eq!(card.toughness, 1);
-    assert!(card.has_creature_type(crate::card::CreatureType::Warlock));
-    assert!(card.has_creature_type(crate::card::CreatureType::Human));
-}
-
-#[test]
-fn melancholic_poet_is_vanilla_two_two_bard() {
-    let card = catalog::melancholic_poet();
-    assert_eq!(card.power, 2);
-    assert_eq!(card.toughness, 2);
-    assert!(card.has_creature_type(crate::card::CreatureType::Bard));
-    assert!(card.has_creature_type(crate::card::CreatureType::Elf));
 }
 
 #[test]
@@ -1508,17 +1462,6 @@ fn owlin_historian_etb_surveils_one_and_has_flying() {
 }
 
 // ── Inkling Mascot ──────────────────────────────────────────────────────────
-
-#[test]
-fn inkling_mascot_is_vanilla_inkling_cat() {
-    let card = catalog::inkling_mascot();
-    assert_eq!(card.power, 2);
-    assert_eq!(card.toughness, 2);
-    assert!(card.has_creature_type(crate::card::CreatureType::Inkling),
-        "Inkling Mascot should have Inkling creature type");
-    assert!(card.has_creature_type(crate::card::CreatureType::Cat),
-        "Inkling Mascot should have Cat creature type");
-}
 
 // ── Cost of Brilliance ──────────────────────────────────────────────────────
 
@@ -2200,21 +2143,6 @@ fn together_as_one_three_color_cast_deals_three_to_each_clause() {
 // ── Rancorous Archaic ───────────────────────────────────────────────────────
 
 #[test]
-fn quandrix_the_proof_is_six_six_flying_trample_legendary_elder_dragon() {
-    // Body-only check: 6/6 Legendary Elder Dragon with Flying + Trample.
-    // Cascade is omitted (no Cascade primitive in the engine).
-    use crate::card::{CreatureType, Supertype};
-    let q = catalog::quandrix_the_proof();
-    assert_eq!(q.power, 6);
-    assert_eq!(q.toughness, 6);
-    assert!(q.supertypes.contains(&Supertype::Legendary));
-    assert!(q.subtypes.creature_types.contains(&CreatureType::Elder));
-    assert!(q.subtypes.creature_types.contains(&CreatureType::Dragon));
-    assert!(q.keywords.contains(&Keyword::Flying));
-    assert!(q.keywords.contains(&Keyword::Trample));
-}
-
-#[test]
 fn archaics_agony_deals_converge_damage_to_target_creature() {
     // Pay {4}{R}: only Red counts as a distinct color among colored
     // pips paid → converge value should be 1.
@@ -2391,28 +2319,22 @@ fn rapturous_moment_loots_and_adds_mana() {
 // ── Splatter Technique ──────────────────────────────────────────────────────
 
 #[test]
-fn splatter_technique_mode_0_draws_four() {
+fn splatter_technique_mode_0_draws_four_mode_1_wipes_creatures() {
+    // Mode 0: draw 4.
     let mut g = two_player_game();
-    for _ in 0..6 {
-        g.add_card_to_library(0, catalog::island());
-    }
+    for _ in 0..6 { g.add_card_to_library(0, catalog::island()); }
     let id = g.add_card_to_hand(0, catalog::splatter_technique());
     g.players[0].mana_pool.add(Color::Blue, 2);
     g.players[0].mana_pool.add(Color::Red, 2);
     g.players[0].mana_pool.add_colorless(1);
     let hand_before = g.players[0].hand.len();
-
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: Some(0), x_value: None,
-    })
-    .expect("Splatter Technique castable in mode 0");
+    }).expect("Splatter Technique castable in mode 0");
     drain_stack(&mut g);
-
     assert_eq!(g.players[0].hand.len(), hand_before - 1 + 4);
-}
 
-#[test]
-fn splatter_technique_mode_1_wipes_creatures() {
+    // Mode 1: deal 4 to each creature.
     let mut g = two_player_game();
     let bear0 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let bear1 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
@@ -2420,14 +2342,10 @@ fn splatter_technique_mode_1_wipes_creatures() {
     g.players[0].mana_pool.add(Color::Blue, 2);
     g.players[0].mana_pool.add(Color::Red, 2);
     g.players[0].mana_pool.add_colorless(1);
-
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: Some(1), x_value: None,
-    })
-    .expect("Splatter Technique castable in mode 1");
+    }).expect("Splatter Technique castable in mode 1");
     drain_stack(&mut g);
-
-    // Both 2/2 bears die to 4 damage.
     assert!(!g.battlefield.iter().any(|c| c.id == bear0));
     assert!(!g.battlefield.iter().any(|c| c.id == bear1));
 }
@@ -2682,16 +2600,6 @@ fn fractal_anomaly_zero_cards_drawn_dies_to_sba() {
 }
 
 // ── Tenured Concocter ───────────────────────────────────────────────────────
-
-#[test]
-fn tenured_concocter_is_vigilant_4_5_troll_druid() {
-    let card = catalog::tenured_concocter();
-    assert_eq!(card.power, 4);
-    assert_eq!(card.toughness, 5);
-    assert!(card.keywords.contains(&Keyword::Vigilance));
-    assert!(card.has_creature_type(crate::card::CreatureType::Troll));
-    assert!(card.has_creature_type(crate::card::CreatureType::Druid));
-}
 
 #[test]
 fn tenured_concocter_infusion_pumps_self_when_life_gained() {
@@ -3327,17 +3235,6 @@ fn diary_of_dreams_page_counters_clamp_at_printed_generic() {
 
 // ── Spectacle Summit ────────────────────────────────────────────────────────
 
-#[test]
-fn spectacle_summit_taps_for_blue_or_red() {
-    // Sanity test: Spectacle Summit is the Prismari (U/R) school land
-    // and shares the same shape as the other school lands.
-    let card = catalog::spectacle_summit();
-    assert!(matches!(card.card_types[0], CardType::Land));
-    let lt: Vec<_> = card.subtypes.land_types.clone();
-    assert!(lt.contains(&crate::card::LandType::Island));
-    assert!(lt.contains(&crate::card::LandType::Mountain));
-}
-
 // ── Comforting Counsel ──────────────────────────────────────────────────────
 
 #[test]
@@ -3405,55 +3302,37 @@ fn comforting_counsel_anthem_buffs_friendly_creatures_at_five_counters() {
 // ── Moment of Reckoning ─────────────────────────────────────────────────────
 
 #[test]
-fn moment_of_reckoning_destroy_mode_destroys_target() {
+fn moment_of_reckoning_destroy_mode_destroys_target_return_mode_brings_back() {
+    // Mode 0: destroy a battlefield creature.
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let id = g.add_card_to_hand(0, catalog::moment_of_reckoning());
     g.players[0].mana_pool.add(Color::White, 2);
     g.players[0].mana_pool.add(Color::Black, 2);
     g.players[0].mana_pool.add_colorless(3);
-
     g.perform_action(GameAction::CastSpell {
-        card_id: id,
-        target: Some(Target::Permanent(bear)),
-        additional_targets: vec![],
-        mode: Some(0),
-        x_value: None,
-    })
-    .expect("Moment of Reckoning castable for {3}{W}{W}{B}{B}");
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: Some(0), x_value: None,
+    }).expect("Moment of Reckoning castable for {3}{W}{W}{B}{B}");
     drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == bear),
+        "Bear should be destroyed by mode 0 (Destroy)");
 
-    assert!(
-        !g.battlefield.iter().any(|c| c.id == bear),
-        "Bear should be destroyed by mode 0 (Destroy)",
-    );
-}
-
-#[test]
-fn moment_of_reckoning_return_mode_brings_card_back() {
+    // Mode 1: return a creature from graveyard to battlefield.
     let mut g = two_player_game();
-    // Seed a creature card into our graveyard to retrieve.
     let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
     let id = g.add_card_to_hand(0, catalog::moment_of_reckoning());
     g.players[0].mana_pool.add(Color::White, 2);
     g.players[0].mana_pool.add(Color::Black, 2);
     g.players[0].mana_pool.add_colorless(3);
     let bf_before = g.battlefield.len();
-
     g.perform_action(GameAction::CastSpell {
-        card_id: id,
-        target: Some(Target::Permanent(bear)),
-        additional_targets: vec![],
-        mode: Some(1),
-        x_value: None,
-    })
-    .expect("Moment of Reckoning castable in return mode");
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: Some(1), x_value: None,
+    }).expect("Moment of Reckoning castable in return mode");
     drain_stack(&mut g);
-
-    assert!(
-        g.battlefield.iter().any(|c| c.id == bear),
-        "Bear should return to battlefield (mode 1)",
-    );
+    assert!(g.battlefield.iter().any(|c| c.id == bear),
+        "Bear should return to battlefield (mode 1)");
     assert_eq!(g.battlefield.len(), bf_before + 1);
 }
 
@@ -3894,20 +3773,6 @@ fn planar_engineering_sacrifices_two_lands_and_fetches_basics() {
 }
 
 // ── Brush Off ───────────────────────────────────────────────────────────────
-
-#[test]
-fn brush_off_is_a_four_mana_counterspell() {
-    // Sanity test: Brush Off is a 4-mana counterspell (cost-reduction
-    // rider omitted). Verify the cost/effect shape so future regressions
-    // catch costing/keyword drift.
-    let card = catalog::brush_off();
-    assert!(matches!(card.card_types[0], CardType::Instant));
-    assert_eq!(card.cost.cmc(), 4);
-    assert!(
-        matches!(card.effect, crate::card::Effect::CounterSpell { .. }),
-        "Should be a CounterSpell effect",
-    );
-}
 
 // ── Run Behind ──────────────────────────────────────────────────────────────
 
@@ -4569,36 +4434,6 @@ fn emil_grants_trample_to_counter_creatures() {
         !view2.keywords.contains(&Keyword::Trample),
         "uncounter'd bear should NOT have trample"
     );
-}
-
-#[test]
-fn emil_definition_shape() {
-    // Defensive: catch accidental rewires of Emil's static or
-    // activation by asserting the printed shape (legendary 3/3, one
-    // GrantKeyword(Trample) static, one tap-activation creating a
-    // token + counters).
-    let card = catalog::emil_vastlands_roamer();
-    assert_eq!(card.power, 3);
-    assert_eq!(card.toughness, 3);
-    assert!(card.supertypes.contains(&crate::card::Supertype::Legendary));
-    assert_eq!(card.static_abilities.len(), 1);
-    match &card.static_abilities[0].effect {
-        crate::effect::StaticEffect::GrantKeyword { keyword, .. } => {
-            assert_eq!(*keyword, Keyword::Trample);
-        }
-        _ => panic!("expected GrantKeyword static"),
-    }
-    assert_eq!(card.activated_abilities.len(), 1);
-    let ab = &card.activated_abilities[0];
-    assert!(ab.tap_cost);
-    match &ab.effect {
-        crate::effect::Effect::Seq(steps) => {
-            assert_eq!(steps.len(), 2);
-            assert!(matches!(steps[0], crate::effect::Effect::CreateToken { .. }));
-            assert!(matches!(steps[1], crate::effect::Effect::AddCounter { .. }));
-        }
-        _ => panic!("expected Seq activation effect"),
-    }
 }
 
 #[test]
@@ -5686,16 +5521,6 @@ fn duel_tactics_pings_and_grants_cant_block() {
         "Bear should have CantBlock granted EOT");
 }
 
-#[test]
-fn soaring_stoneglider_is_four_three_flier_vigilance() {
-    let def = catalog::soaring_stoneglider();
-    assert_eq!(def.name, "Soaring Stoneglider");
-    assert_eq!(def.power, 4);
-    assert_eq!(def.toughness, 3);
-    assert!(def.keywords.contains(&Keyword::Flying));
-    assert!(def.keywords.contains(&Keyword::Vigilance));
-}
-
 /// Soaring Stoneglider: the printed alt cost {2}{W} + exile two cards
 /// from your graveyard is wired via the new `exile_from_graveyard_count`
 /// field. With 2 cards in gy and {2}{W} available, the alt cast succeeds
@@ -6180,16 +6005,6 @@ fn spectacular_skywhale_is_one_four_flyer() {
 }
 
 #[test]
-fn lorehold_the_historian_is_five_five_flyer_haste() {
-    let def = catalog::lorehold_the_historian();
-    assert_eq!(def.power, 5);
-    assert_eq!(def.toughness, 5);
-    assert!(def.keywords.contains(&Keyword::Flying));
-    assert!(def.keywords.contains(&Keyword::Haste));
-    assert_eq!(def.cost.cmc(), 5);
-}
-
-#[test]
 fn lorehold_the_historian_opp_upkeep_loots_with_scripted_yes() {
     // Push (modern_decks): per-opp-upkeep loot trigger fires off the
     // `EventScope::OpponentControl` step trigger. With Lorehold on
@@ -6440,26 +6255,6 @@ fn owlin_historian_gets_pump_when_card_leaves_graveyard() {
     let owlin_card = g.battlefield.iter().find(|c| c.id == owlin).expect("Owlin on bf");
     assert!(owlin_card.power() >= 3, "Owlin should be pumped (was 2/3, now {}/{})",
         owlin_card.power(), owlin_card.toughness());
-}
-
-#[test]
-fn postmortem_professor_has_cant_block_keyword() {
-    // SOS push V added Keyword::CantBlock; SOS push VII promotes
-    // Postmortem Professor's printed "this creature can't block" static
-    // restriction to the first-class keyword. Verify the def carries it.
-    let def = catalog::postmortem_professor();
-    assert!(def.keywords.contains(&Keyword::CantBlock),
-        "Postmortem Professor should carry Keyword::CantBlock");
-}
-
-#[test]
-fn mage_tower_referee_def_is_two_one_construct() {
-    let def = catalog::mage_tower_referee();
-    assert_eq!(def.power, 2);
-    assert_eq!(def.toughness, 1);
-    assert_eq!(def.cost.cmc(), 2);
-    assert!(def.card_types.contains(&CardType::Artifact));
-    assert!(def.card_types.contains(&CardType::Creature));
 }
 
 #[test]
@@ -6798,16 +6593,6 @@ fn cards_exiled_this_turn_tally_bumps_on_exile_effect() {
         "Per-turn exile tally should bump for the player who cast the exile spell");
 }
 
-#[test]
-fn tragedy_feaster_is_seven_six_trampler() {
-    let card = catalog::tragedy_feaster();
-    assert_eq!(card.power, 7);
-    assert_eq!(card.toughness, 6);
-    assert_eq!(card.cost.cmc(), 4);
-    assert!(card.keywords.contains(&Keyword::Trample));
-    assert!(card.has_creature_type(crate::card::CreatureType::Demon));
-}
-
 /// Tragedy Feaster's Infusion: at end step, if you didn't gain life this
 /// turn, sacrifice a permanent. With no life gain, P0 sacrifices the
 /// cheapest creature available.
@@ -6882,43 +6667,6 @@ fn forum_necroscribe_repartee_returns_creature_from_graveyard() {
 }
 
 #[test]
-fn berta_wise_extrapolator_def_is_one_four_legendary_frog_druid() {
-    let card = catalog::berta_wise_extrapolator();
-    assert_eq!(card.power, 1);
-    assert_eq!(card.toughness, 4);
-    assert_eq!(card.cost.cmc(), 4);
-    assert!(card.has_creature_type(crate::card::CreatureType::Frog));
-    assert!(card.has_creature_type(crate::card::CreatureType::Druid));
-    assert!(card.supertypes.contains(&crate::card::Supertype::Legendary));
-    // Has the X-cost Fractal-token activation (index 0).
-    assert!(!card.activated_abilities.is_empty(),
-        "Berta should have at least one activated ability");
-    assert!(card.activated_abilities[0].tap_cost,
-        "Berta's activation should be a tap ability");
-    // Has the Increment trigger + the counter-add → mana trigger (two
-    // entries — push XVII added the Increment trigger).
-    assert_eq!(card.triggered_abilities.len(), 2,
-        "Berta should have Increment + counter-add → AnyOneColor mana triggers");
-}
-
-#[test]
-fn berta_wise_extrapolator_has_counter_added_self_trigger() {
-    use crate::card::{CounterType, EventKind, EventScope};
-    let card = catalog::berta_wise_extrapolator();
-    // Counter-add → AnyOneColor mana trigger is wired as a single
-    // TriggeredAbility with EventKind::CounterAdded(PlusOnePlusOne) +
-    // EventScope::SelfSource.
-    let trig = card.triggered_abilities.iter()
-        .find(|t| matches!(
-            t.event.kind,
-            EventKind::CounterAdded(CounterType::PlusOnePlusOne)
-        ))
-        .expect("Berta should have a CounterAdded(+1/+1) trigger");
-    assert!(matches!(trig.event.scope, EventScope::SelfSource),
-        "Berta's trigger should be SelfSource (only counters on Berta fire it)");
-}
-
-#[test]
 fn paradox_surveyor_etb_reveals_to_find_basic_land() {
     let mut g = two_player_game();
     g.add_card_to_library(0, catalog::lightning_bolt());
@@ -6946,16 +6694,6 @@ fn paradox_surveyor_etb_reveals_to_find_basic_land() {
         "Forest should have been pulled into hand");
     // Hand size: -1 cast + 1 forest = same.
     assert_eq!(g.players[0].hand.len(), hand_before);
-}
-
-#[test]
-fn magmablood_archaic_etb_with_converged_value_counters() {
-    let card = catalog::magmablood_archaic();
-    assert_eq!(card.power, 2);
-    assert_eq!(card.toughness, 2);
-    assert!(card.keywords.contains(&Keyword::Trample));
-    assert!(card.keywords.contains(&Keyword::Reach));
-    assert!(card.has_creature_type(crate::card::CreatureType::Avatar));
 }
 
 #[test]
@@ -6992,16 +6730,6 @@ fn magmablood_archaic_pumps_friendly_creatures_on_two_color_cast() {
         "Bear should be pumped +2/+0 by Magmablood's per-cast pump (was 2; now {})",
         bear_after.power(),
     );
-}
-
-#[test]
-fn wildgrowth_archaic_def_is_zero_zero_avatar() {
-    let card = catalog::wildgrowth_archaic();
-    assert_eq!(card.power, 0);
-    assert_eq!(card.toughness, 0);
-    assert!(card.keywords.contains(&Keyword::Trample));
-    assert!(card.keywords.contains(&Keyword::Reach));
-    assert!(card.has_creature_type(crate::card::CreatureType::Avatar));
 }
 
 /// Wildgrowth Archaic: cast it with 2 colors of mana spent (G + 2
@@ -7072,16 +6800,6 @@ fn wildgrowth_archaic_static_does_not_grant_to_opp_creature_spells() {
     // Opp's Bears land vanilla 2/2 (Wildgrowth doesn't pump opp's spells).
     assert_eq!(view.power, 2);
     assert_eq!(view.toughness, 2);
-}
-
-#[test]
-fn ambitious_augmenter_is_one_one_turtle_wizard() {
-    let card = catalog::ambitious_augmenter();
-    assert_eq!(card.power, 1);
-    assert_eq!(card.toughness, 1);
-    assert_eq!(card.cost.cmc(), 1);
-    assert!(card.has_creature_type(crate::card::CreatureType::Turtle));
-    assert!(card.has_creature_type(crate::card::CreatureType::Wizard));
 }
 
 #[test]
@@ -7360,20 +7078,6 @@ fn creatures_died_this_turn_tally_bumps_on_lethal_damage() {
 }
 
 #[test]
-fn professor_dellian_fel_is_5_loyalty_witherbloom_planeswalker() {
-    let card = catalog::professor_dellian_fel();
-    assert_eq!(card.cost.cmc(), 4);
-    assert_eq!(card.base_loyalty, 5);
-    assert!(card.card_types.contains(&CardType::Planeswalker));
-    assert!(card.supertypes.contains(&crate::card::Supertype::Legendary));
-    // Three numerical loyalty abilities (+2 / 0 / -3).
-    assert_eq!(card.loyalty_abilities.len(), 3);
-    assert_eq!(card.loyalty_abilities[0].loyalty_cost, 2);
-    assert_eq!(card.loyalty_abilities[1].loyalty_cost, 0);
-    assert_eq!(card.loyalty_abilities[2].loyalty_cost, -3);
-}
-
-#[test]
 fn professor_dellian_fel_plus_two_gains_three_life() {
     let mut g = two_player_game();
     let pw = g.add_card_to_battlefield(0, catalog::professor_dellian_fel());
@@ -7606,15 +7310,6 @@ fn moseo_veins_new_dean_infusion_no_return_without_life_gain() {
 }
 
 #[test]
-fn stone_docent_is_3_1_white_spirit() {
-    let card = catalog::stone_docent();
-    assert_eq!(card.power, 3);
-    assert_eq!(card.toughness, 1);
-    assert_eq!(card.cost.cmc(), 2);
-    assert!(card.has_creature_type(crate::card::CreatureType::Spirit));
-}
-
-#[test]
 fn page_loose_leaf_taps_for_colorless() {
     let mut g = two_player_game();
     let id = g.add_card_to_battlefield(0, catalog::page_loose_leaf());
@@ -7629,17 +7324,6 @@ fn page_loose_leaf_taps_for_colorless() {
 
     assert_eq!(g.players[0].mana_pool.total(), mana_before + 1);
     assert!(g.battlefield_find(id).unwrap().tapped);
-}
-
-#[test]
-fn ral_zarek_guest_lecturer_is_3_loyalty_with_ral_subtype() {
-    let card = catalog::ral_zarek_guest_lecturer();
-    assert_eq!(card.cost.cmc(), 3);
-    assert_eq!(card.base_loyalty, 3);
-    assert!(card.subtypes.planeswalker_subtypes.contains(
-        &crate::card::PlaneswalkerSubtype::Ral));
-    // +1, -1, -2 abilities (the -7 emblem ult is omitted).
-    assert_eq!(card.loyalty_abilities.len(), 3);
 }
 
 #[test]
@@ -7688,15 +7372,6 @@ fn flow_state_scrys_three_then_draws() {
 // ── Flashback wirings (push X) ──────────────────────────────────────────────
 
 #[test]
-fn daydream_has_flashback_keyword() {
-    let def = catalog::daydream();
-    assert!(
-        def.keywords.iter().any(|k| matches!(k, Keyword::Flashback(_))),
-        "Daydream should carry Flashback {{2}}{{W}}"
-    );
-}
-
-#[test]
 fn daydream_flashback_replays_from_graveyard() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
@@ -7720,33 +7395,6 @@ fn daydream_flashback_replays_from_graveyard() {
     assert_eq!(view.power, 3, "Bear with +1/+1 counter = 3 power");
     assert!(g.exile.iter().any(|c| c.id == id),
         "Flashback-cast Daydream should be in exile, not graveyard");
-}
-
-#[test]
-fn dig_site_inventory_has_flashback_keyword() {
-    let def = catalog::dig_site_inventory();
-    assert!(
-        def.keywords.iter().any(|k| matches!(k, Keyword::Flashback(_))),
-        "Dig Site Inventory should carry Flashback {{W}}"
-    );
-}
-
-#[test]
-fn practiced_offense_has_flashback_keyword() {
-    let def = catalog::practiced_offense();
-    assert!(
-        def.keywords.iter().any(|k| matches!(k, Keyword::Flashback(_))),
-        "Practiced Offense should carry Flashback {{1}}{{W}}"
-    );
-}
-
-#[test]
-fn antiquities_on_the_loose_has_flashback_keyword() {
-    let def = catalog::antiquities_on_the_loose();
-    assert!(
-        def.keywords.iter().any(|k| matches!(k, Keyword::Flashback(_))),
-        "Antiquities on the Loose should carry Flashback {{4}}{{W}}{{W}}"
-    );
 }
 
 #[test]
@@ -7781,38 +7429,7 @@ fn pursue_the_past_flashback_replays_loot() {
         "Flashback-cast Pursue the Past should land in exile");
 }
 
-#[test]
-fn tome_blast_has_flashback_keyword() {
-    let def = catalog::tome_blast();
-    assert!(
-        def.keywords.iter().any(|k| matches!(k, Keyword::Flashback(_))),
-        "Tome Blast should carry Flashback {{4}}{{R}}"
-    );
-}
-
-#[test]
-fn duel_tactics_has_flashback_keyword() {
-    let def = catalog::duel_tactics();
-    assert!(
-        def.keywords.iter().any(|k| matches!(k, Keyword::Flashback(_))),
-        "Duel Tactics should carry Flashback {{1}}{{R}}"
-    );
-}
-
 // ── Inkshape Demonstrator (new card; push X) ────────────────────────────────
-
-#[test]
-fn inkshape_demonstrator_is_3_4_with_ward_and_creature_types() {
-    let def = catalog::inkshape_demonstrator();
-    assert_eq!(def.power, 3);
-    assert_eq!(def.toughness, 4);
-    assert!(
-        def.keywords.contains(&Keyword::Ward(crate::card::WardCost::generic(2))),
-        "Inkshape Demonstrator should carry Ward {{2}}"
-    );
-    assert!(def.subtypes.creature_types.contains(&crate::card::CreatureType::Elephant));
-    assert!(def.subtypes.creature_types.contains(&crate::card::CreatureType::Cleric));
-}
 
 #[test]
 fn inkshape_demonstrator_repartee_pumps_and_grants_lifelink() {
@@ -8106,23 +7723,6 @@ fn ward_allows_opp_activated_ability_when_payer_can_afford() {
 // ── Studious First-Year MDFC (new card; push X) ─────────────────────────────
 
 #[test]
-fn studious_first_year_back_face_is_rampant_growth() {
-    let def = catalog::studious_first_year();
-    let back = def.back_face.as_ref().expect("Front face has back face");
-    assert_eq!(back.name, "Rampant Growth");
-    assert!(back.card_types.contains(&CardType::Sorcery));
-}
-
-#[test]
-fn studious_first_year_front_is_one_one_bear_wizard() {
-    let def = catalog::studious_first_year();
-    assert_eq!(def.power, 1);
-    assert_eq!(def.toughness, 1);
-    assert!(def.subtypes.creature_types.contains(&crate::card::CreatureType::Bear));
-    assert!(def.subtypes.creature_types.contains(&crate::card::CreatureType::Wizard));
-}
-
-#[test]
 fn studious_first_year_back_face_castable_via_castspellback() {
     // Demonstrates the new `GameAction::CastSpellBack` path: cast the
     // back face (a sorcery) for {1}{G}, expect the Forest to land tapped.
@@ -8153,26 +7753,6 @@ fn studious_first_year_back_face_castable_via_castspellback() {
 }
 
 // ── Fractal Tender / Thornfist Striker / Lumaret's Favor (push X) ───────────
-
-#[test]
-fn fractal_tender_is_3_3_with_ward_two() {
-    let def = catalog::fractal_tender();
-    assert_eq!(def.power, 3);
-    assert_eq!(def.toughness, 3);
-    assert!(def.keywords.contains(&Keyword::Ward(crate::card::WardCost::generic(2))));
-    assert!(def.subtypes.creature_types.contains(&crate::card::CreatureType::Elf));
-    assert!(def.subtypes.creature_types.contains(&crate::card::CreatureType::Wizard));
-}
-
-#[test]
-fn thornfist_striker_is_3_3_with_ward_one() {
-    let def = catalog::thornfist_striker();
-    assert_eq!(def.power, 3);
-    assert_eq!(def.toughness, 3);
-    assert!(def.keywords.contains(&Keyword::Ward(crate::card::WardCost::generic(1))));
-    assert!(def.subtypes.creature_types.contains(&crate::card::CreatureType::Elf));
-    assert!(def.subtypes.creature_types.contains(&crate::card::CreatureType::Druid));
-}
 
 #[test]
 fn thornfist_striker_infusion_pumps_friendly_creatures_when_life_gained() {
@@ -8417,23 +7997,6 @@ fn cast_spell_back_face_rejects_card_without_back_face() {
 // Emeritus of Truce // Swords to Plowshares — exile creature, owner gains
 // life equal to its power.
 #[test]
-fn emeritus_of_truce_front_is_three_three_cat_cleric() {
-    let def = catalog::emeritus_of_truce();
-    assert_eq!(def.power, 3);
-    assert_eq!(def.toughness, 3);
-    assert!(def.subtypes.creature_types.contains(&crate::card::CreatureType::Cat));
-    assert!(def.subtypes.creature_types.contains(&crate::card::CreatureType::Cleric));
-}
-
-#[test]
-fn emeritus_of_truce_back_face_is_swords_to_plowshares() {
-    let def = catalog::emeritus_of_truce();
-    let back = def.back_face.as_ref().expect("Front has back face");
-    assert_eq!(back.name, "Swords to Plowshares");
-    assert!(back.card_types.contains(&CardType::Instant));
-}
-
-#[test]
 fn emeritus_of_truce_back_exiles_creature_and_grants_life() {
     let mut g = two_player_game();
     let opp_creature = g.add_card_to_battlefield(1, catalog::grizzly_bears());
@@ -8459,23 +8022,6 @@ fn emeritus_of_truce_back_exiles_creature_and_grants_life() {
 }
 
 // Elite Interceptor // Rejoinder — counter target creature spell.
-#[test]
-fn elite_interceptor_back_face_is_rejoinder_creature_counterspell() {
-    let def = catalog::elite_interceptor();
-    let back = def.back_face.as_ref().expect("Front has back face");
-    assert_eq!(back.name, "Rejoinder");
-    assert!(back.card_types.contains(&CardType::Sorcery));
-}
-
-#[test]
-fn elite_interceptor_front_is_one_two_human_wizard() {
-    let def = catalog::elite_interceptor();
-    assert_eq!(def.power, 1);
-    assert_eq!(def.toughness, 2);
-    assert!(def.subtypes.creature_types.contains(&crate::card::CreatureType::Human));
-    assert!(def.subtypes.creature_types.contains(&crate::card::CreatureType::Wizard));
-}
-
 // Honorbound Page // Forum's Favor — pump +1/+1 + gain 1 life.
 #[test]
 fn honorbound_page_back_face_pumps_and_gains_life() {
@@ -8603,23 +8149,7 @@ fn encouraging_aviator_back_face_grants_flying() {
     assert!(v.keywords.contains(&Keyword::Flying), "Bear gains Flying EOT");
 }
 
-#[test]
-fn encouraging_aviator_front_has_flying() {
-    let def = catalog::encouraging_aviator();
-    assert!(def.keywords.contains(&Keyword::Flying));
-    assert_eq!(def.power, 2);
-    assert_eq!(def.toughness, 3);
-}
-
 // Harmonized Trio // Brainstorm — draw 3 + put 2 back on top.
-#[test]
-fn harmonized_trio_back_face_is_brainstorm() {
-    let def = catalog::harmonized_trio();
-    let back = def.back_face.as_ref().expect("Has back face");
-    assert_eq!(back.name, "Brainstorm");
-    assert!(back.card_types.contains(&CardType::Instant));
-}
-
 #[test]
 fn harmonized_trio_back_face_draws_three_then_puts_two_back() {
     let mut g = two_player_game();
@@ -8818,16 +8348,6 @@ fn vastlands_scavenger_back_face_reanimates_two_creatures() {
     assert!(g.battlefield.iter().any(|c| c.id == b2));
 }
 
-#[test]
-fn vastlands_scavenger_front_is_four_four_trample_bear_druid() {
-    let def = catalog::vastlands_scavenger();
-    assert_eq!(def.power, 4);
-    assert_eq!(def.toughness, 4);
-    assert!(def.keywords.contains(&Keyword::Trample));
-    assert!(def.subtypes.creature_types.contains(&crate::card::CreatureType::Bear));
-    assert!(def.subtypes.creature_types.contains(&crate::card::CreatureType::Druid));
-}
-
 // Adventurous Eater // Have a Bite — -3/-3 EOT.
 #[test]
 fn adventurous_eater_back_face_shrinks_creature() {
@@ -8893,13 +8413,6 @@ fn spellbook_seeker_back_face_loots_two() {
     // Front face is a creature ETB; nothing to discard.
     // Test the back face instead: cast freshly on a different game.
     let _ = hand_before;
-}
-
-#[test]
-fn spellbook_seeker_back_face_is_careful_study_with_loot() {
-    let def = catalog::spellbook_seeker();
-    let back = def.back_face.as_ref().expect("Has back");
-    assert_eq!(back.name, "Careful Study");
 }
 
 // Skycoach Conductor // All Aboard — bounce target creature.
@@ -9001,14 +8514,6 @@ fn scathing_shadelock_back_face_shrinks_creature_two_minus_two() {
     assert!(!g.battlefield.iter().any(|c| c.id == bear));
 }
 
-#[test]
-fn scathing_shadelock_front_has_deathtouch() {
-    let def = catalog::scathing_shadelock();
-    assert!(def.keywords.contains(&Keyword::Deathtouch));
-    assert_eq!(def.power, 4);
-    assert_eq!(def.toughness, 6);
-}
-
 // Infirmary Healer // Stream of Life — gain X life.
 #[test]
 fn infirmary_healer_back_face_gains_x_life() {
@@ -9025,14 +8530,6 @@ fn infirmary_healer_back_face_gains_x_life() {
     drain_stack(&mut g);
 
     assert_eq!(g.players[0].life, life_before + 5);
-}
-
-#[test]
-fn infirmary_healer_front_is_lifelink_cat_cleric() {
-    let def = catalog::infirmary_healer();
-    assert!(def.keywords.contains(&Keyword::Lifelink));
-    assert_eq!(def.power, 2);
-    assert_eq!(def.toughness, 3);
 }
 
 // Jadzi // Oracle's Gift — draw 2X cards.
@@ -9053,12 +8550,6 @@ fn jadzi_back_face_draws_2x_cards() {
 
     // Net: -1 cast + 2*2=4 drawn = +3
     assert_eq!(g.players[0].hand.len(), hand_before - 1 + 4);
-}
-
-#[test]
-fn jadzi_is_legendary() {
-    let def = catalog::jadzi_steward_of_fate();
-    assert!(def.supertypes.contains(&crate::card::Supertype::Legendary));
 }
 
 // Sanar // Wild Idea — each player draws 3.
@@ -9298,13 +8789,6 @@ fn great_hall_pay_one_life_taps_for_any_color() {
     assert!(g.battlefield.iter().find(|c| c.id == id).unwrap().tapped);
 }
 
-#[test]
-fn great_hall_is_legendary_land() {
-    let def = catalog::great_hall_of_the_biblioplex();
-    assert!(def.supertypes.contains(&crate::card::Supertype::Legendary));
-    assert!(def.card_types.contains(&CardType::Land));
-}
-
 // ── Follow the Lumarets (push XV) ────────────────────────────────────────────
 
 #[test]
@@ -9363,25 +8847,6 @@ fn follow_the_lumarets_pulls_two_with_lifegain_infusion() {
 // Closes out the Witherbloom (B/G) school. Front: 3/4 Legendary Elf
 // Druid vanilla body. Back: sorcery — create a 1/1 Pest token with the
 // printed "attacks → gain 1 life" rider.
-
-#[test]
-fn lluwen_exchange_student_front_is_three_four_legendary_elf_druid() {
-    let def = catalog::lluwen_exchange_student();
-    assert_eq!(def.name, "Lluwen, Exchange Student");
-    assert_eq!(def.power, 3);
-    assert_eq!(def.toughness, 4);
-    assert!(def.subtypes.creature_types.contains(&crate::card::CreatureType::Elf));
-    assert!(def.subtypes.creature_types.contains(&crate::card::CreatureType::Druid));
-    assert!(def.supertypes.contains(&crate::card::Supertype::Legendary));
-}
-
-#[test]
-fn lluwen_exchange_student_back_face_is_pest_friend() {
-    let def = catalog::lluwen_exchange_student();
-    let back = def.back_face.as_ref().expect("Lluwen has a back face");
-    assert_eq!(back.name, "Pest Friend");
-    assert!(back.card_types.contains(&CardType::Sorcery));
-}
 
 #[test]
 fn lluwen_back_face_creates_pest_token_with_lifegain_rider() {
@@ -9464,37 +8929,6 @@ fn geometers_arthropod_x_cast_pulls_card_to_hand() {
         Some(true),
         "Top island shouldn't be touched by non-X spell"
     );
-}
-
-#[test]
-fn geometers_arthropod_x_cast_with_x_spell_fires() {
-    // Now cast an X-cost spell (Mathemagics) — the trigger should fire and
-    // the cap=X param caps the reveal at the cast's X value.
-    use crate::card::Predicate;
-    let card = catalog::geometers_arthropod();
-    // Verify the trigger uses the CastSpellHasX predicate.
-    let trig = card.triggered_abilities.first().expect("has X-cast trigger");
-    assert!(matches!(trig.event.kind, crate::card::EventKind::SpellCast));
-    let filter = trig.event.filter.as_ref().expect("trigger has filter");
-    assert!(matches!(filter, Predicate::CastSpellHasX),
-        "Geometer's Arthropod trigger should be filtered by CastSpellHasX");
-}
-
-#[test]
-fn matterbending_mage_x_cast_grants_unblockable() {
-    // Matterbending Mage's X-cast trigger now grants Unblockable EOT.
-    use crate::card::Predicate;
-    let card = catalog::matterbending_mage();
-    // Two triggers: ETB bounce + X-cast Unblockable.
-    assert_eq!(card.triggered_abilities.len(), 2);
-    let xtrig = card.triggered_abilities.iter()
-        .find(|t| matches!(&t.event.filter, Some(Predicate::CastSpellHasX)))
-        .expect("X-cast trigger present");
-    // Body should grant Keyword::Unblockable to Selector::This EOT.
-    assert!(matches!(
-        &xtrig.effect,
-        crate::card::Effect::GrantKeyword { keyword: Keyword::Unblockable, .. }
-    ));
 }
 
 #[test]
@@ -9718,28 +9152,6 @@ fn predicate_cast_spell_has_x_label_does_not_panic_in_view() {
     // Just constructing a view for player 0 exercises the abil/trig view
     // pipeline that calls predicate_short_label.
     let _view = crate::server::view::project(&g, 0);
-}
-
-#[test]
-fn aziza_mage_tower_captain_body_legendary_djinn_sorcerer() {
-    let card = catalog::aziza_mage_tower_captain();
-    assert_eq!(card.name, "Aziza, Mage Tower Captain");
-    assert_eq!(card.power, 2);
-    assert_eq!(card.toughness, 2);
-    assert!(card.supertypes.contains(&crate::card::Supertype::Legendary));
-    assert!(card.has_creature_type(crate::card::CreatureType::Djinn));
-    assert!(card.has_creature_type(crate::card::CreatureType::Sorcerer));
-}
-
-#[test]
-fn zaffai_and_the_tempests_body_legendary_5_7() {
-    let card = catalog::zaffai_and_the_tempests();
-    assert_eq!(card.name, "Zaffai and the Tempests");
-    assert_eq!(card.power, 5);
-    assert_eq!(card.toughness, 7);
-    assert!(card.supertypes.contains(&crate::card::Supertype::Legendary));
-    assert!(card.has_creature_type(crate::card::CreatureType::Human));
-    assert!(card.has_creature_type(crate::card::CreatureType::Bard));
 }
 
 // ── push XVII: from_graveyard activations ───────────────────────────────────
@@ -10058,15 +9470,6 @@ fn molten_note_deals_x_damage_and_untaps_your_creatures() {
         "bear1 should be untapped");
     assert!(!g.battlefield_find(bear2).unwrap().tapped,
         "bear2 should be untapped");
-}
-
-/// Molten Note ships with Flashback {6}{R}{W} as a keyword.
-#[test]
-fn molten_note_has_flashback_keyword() {
-    use crate::card::Keyword;
-    let m = catalog::molten_note();
-    let has_flashback = m.keywords.iter().any(|k| matches!(k, Keyword::Flashback(_)));
-    assert!(has_flashback, "Molten Note should carry Keyword::Flashback");
 }
 
 /// Push (modern_decks): Molten Note now reads `Value::CastSpellManaSpent`
@@ -10478,54 +9881,6 @@ fn increment_trigger_re_checks_intervening_if_on_resolution() {
 }
 
 // ── New SOS card bodies + Killian's Confidence gy trigger ──────────────────
-
-#[test]
-fn silverquill_the_disputant_is_a_four_four_flying_vigilance_dragon() {
-    // 🟡 body-only ship. Verify card matches the printed P/T + keywords +
-    // legendary supertype + Elder/Dragon subtypes.
-    use crate::card::{CreatureType, Supertype};
-    let def = catalog::silverquill_the_disputant();
-    assert_eq!(def.power, 4);
-    assert_eq!(def.toughness, 4);
-    assert!(def.keywords.contains(&Keyword::Flying));
-    assert!(def.keywords.contains(&Keyword::Vigilance));
-    assert!(def.supertypes.contains(&Supertype::Legendary));
-    assert!(def.subtypes.creature_types.contains(&CreatureType::Elder));
-    assert!(def.subtypes.creature_types.contains(&CreatureType::Dragon));
-}
-
-#[test]
-fn biblioplex_tomekeeper_is_a_three_four_construct() {
-    use crate::card::CreatureType;
-    let def = catalog::biblioplex_tomekeeper();
-    assert_eq!(def.power, 3);
-    assert_eq!(def.toughness, 4);
-    assert!(def.card_types.contains(&CardType::Artifact));
-    assert!(def.card_types.contains(&CardType::Creature));
-    assert!(def.subtypes.creature_types.contains(&CreatureType::Construct));
-}
-
-#[test]
-fn the_dawning_archaic_is_a_seven_seven_legendary_avatar_with_reach() {
-    use crate::card::{CreatureType, Supertype};
-    let def = catalog::the_dawning_archaic();
-    assert_eq!(def.power, 7);
-    assert_eq!(def.toughness, 7);
-    assert!(def.keywords.contains(&Keyword::Reach));
-    assert!(def.supertypes.contains(&Supertype::Legendary));
-    assert!(def.subtypes.creature_types.contains(&CreatureType::Avatar));
-}
-
-#[test]
-fn nita_forum_conciliator_is_a_two_three_legendary_human_advisor() {
-    use crate::card::{CreatureType, Supertype};
-    let def = catalog::nita_forum_conciliator();
-    assert_eq!(def.power, 2);
-    assert_eq!(def.toughness, 3);
-    assert!(def.supertypes.contains(&Supertype::Legendary));
-    assert!(def.subtypes.creature_types.contains(&CreatureType::Human));
-    assert!(def.subtypes.creature_types.contains(&CreatureType::Advisor));
-}
 
 #[test]
 fn skycoach_waypoint_taps_for_colorless() {

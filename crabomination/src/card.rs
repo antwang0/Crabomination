@@ -407,6 +407,14 @@ pub enum SelectionRequirement {
     /// auto-target heuristic). Battlefield-only — the predicate
     /// returns false for entities outside the battlefield.
     HasGreatestManaValueAmongControlled(Box<SelectionRequirement>),
+    /// True when the candidate's `definition.name` exactly matches.
+    /// Used by Grandeur-style activations that require discarding
+    /// another card with the source's printed name (Page, Loose Leaf).
+    /// Evaluated against the candidate's printed name only. Stored as
+    /// `String` so the predicate round-trips through serde without a
+    /// `static_str_serde` adapter — the catalog passes a one-time
+    /// `.to_string()` at definition time, negligible overhead.
+    HasName(String),
     And(Box<SelectionRequirement>, Box<SelectionRequirement>),
     Or(Box<SelectionRequirement>, Box<SelectionRequirement>),
     Not(Box<SelectionRequirement>),

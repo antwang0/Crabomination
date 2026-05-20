@@ -2,9 +2,11 @@
 resolver = "3"
 members = ["crabomination", "crabomination_client", "crabomination_server"]
 
-# Enable a small amount of optimization in the dev profile.
 [profile.dev]
-opt-level = 1
+# opt-level = 0 (default) keeps clean compile times short. Dependencies
+# stay at opt-level = 3 via [profile.dev.package."*"] so bot/runtime
+# loops stay fast despite the unoptimized engine crate.
+opt-level = 0
 # Drop full DWARF/PDB tables — keep just enough for line numbers in
 # panic backtraces. Saves ~30–40 % off Bevy-heavy compile/link time and
 # shrinks `target/debug/` substantially. Switch back to `debug = true`

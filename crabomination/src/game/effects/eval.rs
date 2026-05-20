@@ -639,6 +639,7 @@ impl GameState {
                                 && other.definition.cost.cmc() > cand_mv
                         })
                     }
+                    R::HasName(name) => card.definition.name == name.as_str(),
                     _ => unreachable!("handled above"),
                 }
             }
@@ -711,6 +712,9 @@ impl GameState {
             // battlefield in the static variant; library searches don't
             // surface this filter).
             R::HasGreatestManaValueAmongControlled(_) => false,
+            // Name match works in any zone — used by Grandeur
+            // activations that walk a hand for a same-named card.
+            R::HasName(name) => card.definition.name == name.as_str(),
             // Battlefield-state predicates can't be evaluated for library cards.
             R::Tapped | R::Untapped | R::WithCounter(_)
             | R::IsAttacking | R::IsBlocking | R::IsAttackingAlone | R::IsBlockingAlone
