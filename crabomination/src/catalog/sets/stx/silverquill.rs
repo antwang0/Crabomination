@@ -8635,3 +8635,282 @@ pub fn inkling_inkblot() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 49 (modern_decks) — more Silverquill cards ────────────────────────
+
+/// Silverquill Inkscribe — {1}{W}, 1/3 Human Cleric Vigilance.
+/// Synthesised Oracle: "Vigilance. When this creature enters, you
+/// gain 1 life." Defensive 2-drop body for white-leaning Silverquill
+/// builds — pairs with the small-life-gain magecraft chain.
+pub fn silverquill_inkscribe() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Inkscribe",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_gain_life(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Bookmender — {2}{W}, 2/3 Human Cleric.
+/// Synthesised Oracle: "When this creature enters, target creature
+/// you control gets +1/+1 until end of turn." 3-mana combat-trick
+/// body — pumps any friendly creature on landing.
+pub fn silverquill_bookmender() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Bookmender",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::PumpPT {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                power: Value::Const(1),
+                toughness: Value::Const(1),
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Lifeskein — {W}{B} Instant. Synthesised Oracle:
+/// "Target opponent loses 2 life and you gain 2 life."
+/// 2-mana cheap drain instant — Silverquill's classic Hand of Silumgar
+/// at instant speed.
+pub fn silverquill_lifeskein() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Lifeskein",
+        cost: cost(&[w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Drain {
+            from: target_filtered(SelectionRequirement::Player),
+            to: Selector::You,
+            amount: Value::Const(2),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Inkling Aerialist (v2) — {2}{W}{B}, 3/3 Inkling Wizard Flying.
+/// Synthesised Oracle: "Flying. When this creature enters, target
+/// opponent loses 1 life and you gain 1 life." 4-mana evasive drain
+/// body — joins the Inkling tribal flying gang.
+pub fn inkling_aerialist_v2() -> CardDefinition {
+    CardDefinition {
+        name: "Inkling Aerialist Cantor",
+        cost: cost(&[generic(2), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_drain(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Censurewright — {1}{B}, 1/3 Human Rogue.
+/// Synthesised Oracle: "When this creature enters, target creature
+/// gets -1/-1 until end of turn." 2-mana cheap removal-trigger body.
+pub fn silverquill_censurewright() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Censurewright",
+        cost: cost(&[generic(1), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Rogue],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(-1),
+                toughness: Value::Const(-1),
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Inkling Cipherwing — {1}{W}{B}, 2/2 Inkling Wizard Flying.
+/// Synthesised Oracle: "Flying. When this creature enters, target
+/// player loses 1 life and you gain 1 life." 3-mana evasive drain
+/// body — fills the Inkling tribal flyer curve at 3 mana.
+pub fn inkling_cipherwing() -> CardDefinition {
+    CardDefinition {
+        name: "Inkling Cipherwing",
+        cost: cost(&[generic(1), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_drain(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Inkstrike — {2}{B} Sorcery. Synthesised Oracle:
+/// "Destroy target creature with toughness 2 or less." 3-mana
+/// targeted destroy effect — fills the small-creature removal slot
+/// in Silverquill's removal package.
+pub fn silverquill_inkstrike() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Inkstrike",
+        cost: cost(&[generic(2), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Destroy {
+            what: target_filtered(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::ToughnessAtMost(2)),
+            ),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Penmistress — {2}{W}{B}, 3/3 Vampire Cleric Lifelink.
+/// Synthesised Oracle: "Lifelink. Whenever you cast an instant or
+/// sorcery spell, this creature gets +1/+1 until end of turn." Combo
+/// of static lifelink with magecraft self-pump — classic Silverquill
+/// spellslinger anchor.
+pub fn silverquill_penmistress() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Penmistress",
+        cost: cost(&[generic(2), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Lifelink],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_self_pump(1, 1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

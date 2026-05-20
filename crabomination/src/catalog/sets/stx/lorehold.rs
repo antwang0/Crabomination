@@ -7494,6 +7494,195 @@ pub fn lorehold_lavabolt() -> CardDefinition {
     }
 }
 
+// ── Batch 49 (modern_decks) — more Lorehold cards ───────────────────────────
+
+/// Lorehold Skyrunner — {R}{W}, 2/1 Spirit Soldier Flying + Haste.
+/// Synthesised Oracle: "Flying, haste." 2-mana evasive Spirit beater —
+/// the canonical Lorehold drop-and-swing turn-3 attacker.
+pub fn lorehold_skyrunner() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Skyrunner",
+        cost: cost(&[r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Flying, Keyword::Haste],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Stoneward — {2}{W}, 1/4 Spirit Cleric Vigilance.
+/// Synthesised Oracle: "Vigilance. When this creature enters, target
+/// creature gets +0/+2 until end of turn." Defensive Lorehold 3-drop
+/// that helps a friendly creature survive combat.
+pub fn lorehold_stoneward() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Stoneward",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 4,
+        keywords: vec![Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(0),
+                toughness: Value::Const(2),
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Pyremender (v2) — {1}{R}, 2/2 Spirit Wizard.
+/// Synthesised Oracle: "When this creature enters, it deals 1 damage
+/// to any target." 2-mana ping-on-arrival body — pairs with the
+/// Lorehold spell-cast tribe.
+pub fn lorehold_pyremender_v2() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Pyremender Embershade",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature
+                        .or(SelectionRequirement::Player)
+                        .or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Pyreward — {R}{W} Instant. Synthesised Oracle:
+/// "Lorehold Pyreward deals 2 damage to any target. You gain 1 life."
+/// 2-mana cheap Lightning Helix variant — Lorehold's bread-and-butter
+/// burn-and-stabilize instant.
+pub fn lorehold_pyreward() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Pyreward",
+        cost: cost(&[r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature
+                        .or(SelectionRequirement::Player)
+                        .or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::Const(2),
+            },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Spirit Honor Guard — {2}{R}{W}, 2/3 Spirit Soldier Vigilance + First
+/// Strike. Synthesised Oracle: "Vigilance, first strike." 4-mana
+/// defensive Spirit body — survives combat against most attackers and
+/// keeps blocking after attacking.
+pub fn spirit_honor_guard() -> CardDefinition {
+    CardDefinition {
+        name: "Spirit Honor Guard",
+        cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Vigilance, Keyword::FirstStrike],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
 /// Lorehold Smiteseer — {2}{R}{W}, 3/3 Spirit Cleric. Synthesised
 /// Oracle: "When this creature enters, it deals 2 damage to target
 /// creature. You gain 2 life." 4-mana value body — Lightning Helix

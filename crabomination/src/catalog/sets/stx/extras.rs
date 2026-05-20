@@ -32304,6 +32304,86 @@ pub fn strixhaven_crucible() -> CardDefinition {
     }
 }
 
+/// Strixhaven Anthemcaster — {3}{W}, 2/3 Human Soldier.
+/// Synthesised Oracle: "Other creatures you control get +1/+0."
+/// Anthem of Order — a 4-mana lord whose static pump fires on every
+/// other friendly creature, including future ETBs.
+pub fn strixhaven_anthemcaster() -> CardDefinition {
+    CardDefinition {
+        name: "Strixhaven Anthemcaster",
+        cost: cost(&[generic(3), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![StaticAbility {
+            description: "Other creatures you control get +1/+0.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                power: 1,
+                toughness: 0,
+            },
+        }],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Strixhaven Stormsage — {2}{U}, 2/2 Human Wizard.
+/// Synthesised Oracle: "When this creature enters, draw a card."
+/// Cantrip body. 3-mana hand-refilling Wizard.
+pub fn strixhaven_stormsage() -> CardDefinition {
+    CardDefinition {
+        name: "Strixhaven Stormsage",
+        cost: cost(&[generic(2), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
 /// Strixhaven Skylancer — {3}{W}, 3/3 Human Knight Flying + Vigilance.
 /// Synthesised Oracle: "Flying, vigilance."
 pub fn strixhaven_skylancer() -> CardDefinition {

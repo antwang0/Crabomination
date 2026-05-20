@@ -559,6 +559,46 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   spell tests; explicit `priority_returns_to_player_after_play_land`
   could be added.
 
+- 🟡 **CR 105 — Colors** (push modern_decks claude/modern_decks branch
+  — audit against `MagicCompRules_20260417.txt`): The five-color
+  primitive — what defines an object's color, color changes, monocolor
+  vs multicolor vs colorless. Audit:
+  (a) **105.1** "five colors: white, blue, black, red, green" — ✅
+  (`mana.rs::Color::ALL` lists exactly those five, in WUBRG order).
+  (b) **105.2** "An object is the color or colors of the mana symbols
+  in its mana cost" — ✅ (`format.rs::color_identity` walks the printed
+  `cost.symbols` and unions colored / phyrexian / hybrid pips). Color
+  indicator override and CDA-defined color are not yet modeled: no card
+  in scope has a color indicator that disagrees with its mana cost
+  (Devoid is the canonical exception; not in the catalog).
+  (c) **105.2a/b/c** monocolored / multicolored / colorless predicates
+  — 🟡 (`ColorSet.count_ones()` gives the count, but there's no
+  `is_monocolored()` / `is_multicolored()` / `is_colorless()` helper
+  named-and-exported; callers reconstruct the predicate inline. Engine
+  shape: add the three helpers on `ColorSet` so cards keying on
+  "multicolored" (Multicolored Charms, Naya Charm, Edgewall variants)
+  have a one-line query).
+  (d) **105.3** "Effects may change an object's color or add to it" —
+  ⏳ (no `StaticEffect::AddColor` / `StaticEffect::BecomeColor`
+  primitive. Cards like Kasmina's Transmutation ("becomes a blue
+  Frog"), Mercurial Transformation ("becomes a blue Frog"), Fractalize
+  ("becomes a green and blue Fractal") are doc-tracked as cosmetic
+  approximations — the printed type/color rewrite half is omitted.
+  Same gap blocks the printed color-changing rider on Painter's
+  Servant, Lurking Predators, Shifting Sliver.).
+  (e) **105.4** "Choose a color" decisions exclude multicolored /
+  colorless — ⏳ (no choose-color decision shape; cards like Painter's
+  Servant ("As this enters, choose a color"), Cabal Ritual variants
+  with name choice, etc. aren't in scope today).
+  (f) **105.5** "Color pair = exactly two of the five" — ✅
+  (`cube.rs::pair_contains` walks two-color tuples; `College::colors`
+  returns exactly `[Color; 2]` for each guild; Commander color-identity
+  rule rejects 3+ pairs via `format.rs`'s deck validator).
+  Tests: `format.rs::color_identity` is exercised throughout the
+  cube/SOS test suite via Commander deck validation; promote to ✅
+  when 105.3 (color-becomes / color-adds) lands as a runtime
+  primitive backed by at least one catalog card.
+
 - 🟡 **CR 122 — Counters** (push modern_decks audit, claude/modern_decks
   branch — batch 10): The counter primitive — placement, accumulation,
   +1/+1 vs -1/-1 cancellation, ETB-with-counters, "Nth counter" trigger.
@@ -5917,3 +5957,51 @@ resolution time" in the Suggested next-up tasks section.
   activation time, applied symmetrically to + and - costs per
   the rule) and a `StaticEffect::ModifyLoyaltyAbilityCost {
   delta }` primitive that bumps the modifier.
+
+### Suggested next-up tasks (additions from batch 49 / CR 105 audit)
+
+- ⏳ **`Effect::CreateCopyToken { what: Selector }`** (batch 49
+  surfaced again — see also batch 43 entry above): The "create a
+  token that's a copy of target [permanent | creature you control]"
+  primitive. The data flow: at resolution, read the target's
+  `ComputedPermanent` (printed values **with** any layer 1-7c
+  modifications baked in per CR 707.2), instantiate a
+  `TokenDefinition` from the relevant fields, then route through
+  the existing `Effect::CreateToken` placement path so triggers
+  fire as usual. Blocks 5+ cards including Applied Geometry
+  (currently mints a vanilla 0/0 Fractal + 6 +1/+1 counters),
+  Colorstorm Stallion's big-Opus body, Mascot Interception,
+  Spectacular Skywhale's Opus rider, and Echocasting Symposium.
+
+- ⏳ **`StaticEffect::AddColor` / `StaticEffect::SetColor`** (CR
+  105.3): The color-change continuous-effect primitive. Engine
+  shape: extend `ComputedPermanent` with a `colors_override:
+  Option<Vec<Color>>` slot and a `colors_added: Vec<Color>` slot;
+  the layer-5 compute step folds both. Unlocks the printed type/
+  color half of Kasmina's Transmutation ("becomes a blue Frog"),
+  Mercurial Transformation ("becomes a blue Frog"), Fractalize
+  ("becomes a green and blue Fractal"), and lets Painter's
+  Servant exist in the catalog. Distinct from layer-7b
+  `Effect::SetBasePT` which only rewrites P/T.
+
+- ⏳ **"Choose a color" decision shape** (CR 105.4): Required for
+  Painter's Servant, Cabal Ritual's name-keyed cousin, monochrome
+  charms, and any card that prompts the controller to pick exactly
+  one of {W, U, B, R, G}. Engine shape: new `DecisionAnswer::Color
+  (Color)` variant + decision request that excludes "multicolored"
+  / "colorless" per the rule. AutoDecider picks based on the
+  caster's deck colors (highest-pip-count); ScriptedDecider takes
+  the color as the test override.
+
+- ⏳ **Per-school sealed-pool selector for `sos_mode`** (batch 49
+  surfaced — same as batch 47's Inkling-tribal note but broader):
+  Currently `sos_mode::pool_for_college` returns a uniform pool
+  weighted by ✅ card count. With the catalog now at 1069 STX
+  cards including 50+ Inklings, 60+ Pests, 40+ Spirits, 40+
+  Fractals, and 40+ Elementals, the pool grows lopsided toward
+  Lorehold (Spirit tribal) and Silverquill (Inkling tribal) on
+  random draws. A weighted selector that biases toward each
+  college's identity tribe (Lorehold→Spirit, Silverquill→Inkling,
+  Witherbloom→Pest, Quandrix→Fractal, Prismari→Elemental) would
+  produce more cohesive sealed decks. Slot into
+  `sos_mode::pool_for_college` once it supports archetype weighting.

@@ -6007,6 +6007,157 @@ pub fn fractal_sentinel() -> CardDefinition {
     }
 }
 
+// ── Batch 49 (modern_decks) — more Quandrix cards ───────────────────────────
+
+/// Quandrix Theoremist — {G}{U}, 2/1 Elf Wizard.
+/// Synthesised Oracle: "When this creature enters, draw a card."
+/// 2-mana cantrip body — Elvish Visionary in Quandrix colors.
+pub fn quandrix_theoremist() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Theoremist",
+        cost: cost(&[g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Fractal Shaper — {1}{G}, 2/2 Elf Druid. Synthesised Oracle:
+/// "When this creature enters, put a +1/+1 counter on target creature
+/// you control." Cheap +1/+1 distributor — combos with the Quandrix
+/// counter-doubling chain.
+pub fn fractal_shaper() -> CardDefinition {
+    CardDefinition {
+        name: "Fractal Shaper",
+        cost: cost(&[generic(1), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::AddCounter {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Foresight — {G}{U} Instant. Synthesised Oracle:
+/// "Put a +1/+1 counter on target creature you control. Draw a card."
+/// 2-mana growth-plus-cantrip — a classic Quandrix tempo trick.
+pub fn quandrix_foresight() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Foresight",
+        cost: cost(&[g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::AddCounter {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Fractal Bloomstalker — {2}{G}{U}, 0/0 Fractal. Synthesised Oracle:
+/// "Trample. This creature enters with four +1/+1 counters on it."
+/// 4-mana 4/4 trampler — bigger Body of Research baby.
+pub fn fractal_bloomstalker() -> CardDefinition {
+    CardDefinition {
+        name: "Fractal Bloomstalker",
+        cost: cost(&[generic(2), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 0,
+        keywords: vec![Keyword::Trample],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(4))),
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
 /// Quandrix Lensbearer — {1}{U}, 1/3 Merfolk Wizard. Synthesised
 /// Oracle: "When this creature enters, scry 1." 2-mana cheap scry
 /// body.

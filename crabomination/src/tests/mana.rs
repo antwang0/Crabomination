@@ -196,3 +196,46 @@ fn reduce_generic_does_not_touch_x_pips() {
     assert_eq!(applied, 0);
     assert_eq!(c.symbols, symbols_before, "X pips preserved");
 }
+
+// ── CR 105 — Colors: ColorSet predicate helpers ─────────────────────────────
+
+#[test]
+fn color_set_is_monocolored_for_single_color_per_cr_105_2a() {
+    use crate::mana::ColorSet;
+    let mut s = ColorSet::empty();
+    s.insert(Color::White);
+    assert!(s.is_monocolored());
+    assert!(!s.is_multicolored());
+    assert!(!s.is_colorless());
+}
+
+#[test]
+fn color_set_is_multicolored_for_two_or_more_colors_per_cr_105_2b() {
+    use crate::mana::ColorSet;
+    let mut s = ColorSet::empty();
+    s.insert(Color::Red);
+    s.insert(Color::Green);
+    assert!(!s.is_monocolored());
+    assert!(s.is_multicolored());
+    assert!(!s.is_colorless());
+}
+
+#[test]
+fn color_set_is_colorless_for_empty_per_cr_105_2c() {
+    use crate::mana::ColorSet;
+    let s = ColorSet::empty();
+    assert!(!s.is_monocolored());
+    assert!(!s.is_multicolored());
+    assert!(s.is_colorless());
+    assert!(s.is_empty()); // synonyms
+}
+
+#[test]
+fn color_set_all_five_is_multicolored() {
+    use crate::mana::ColorSet;
+    let s = ColorSet::all();
+    assert!(!s.is_monocolored());
+    assert!(s.is_multicolored());
+    assert!(!s.is_colorless());
+    assert_eq!(s.len(), 5);
+}

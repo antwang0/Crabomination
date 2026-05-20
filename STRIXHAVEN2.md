@@ -19,18 +19,29 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 227 | 29 | 0 |
-| STX (327 cards) | 1041 (incl. synthesised variants) | 8 | 0 |
+| STX (327 cards) | 1069 (incl. synthesised variants) | 8 | 0 |
 | STA reprints (in STX boosters) | 47 | 0 | — |
 
 Push (modern_decks, claude/modern_decks branch — latest revision —
-**batch 48 follow-up #2: 12 more cheap-mana STX cards (3 Silverquill
-+ 2 Witherbloom + 3 Lorehold + 2 Quandrix + 2 Prismari) + 12 new
-tests. Includes `inkling_inkblot` ({B} 1-mana cheap drain),
-`pestseed` ({G} 1-mana Pest minter), `prismari_quickburn` ({R}
-Shock clone), `lorehold_lavabolt` ({1}{R} 3-damage burn), and an
-`enters_with_counters` Fractal Soldier `fractal_sentinel`
-({3}{G}{U} → 5/5 trampler). Bringing the STX synthesised-variant
-corpus from 1029 to 1041. Total tests: 3221 (was 3209).**
+**batch 49: 27 more synthesised STX cards across all 5 colleges
+(8 Silverquill + 4 Witherbloom + 5 Lorehold + 4 Quandrix + 4 Prismari
++ 2 cross-college) + 27 new tests + CR 105 (Colors) audit + 3 new
+`ColorSet` predicate helpers (`is_monocolored`, `is_multicolored`,
+`is_colorless`) with 4 unit tests. Includes `silverquill_inkscribe`
+({1}{W} 1/3 ETB gain 1 life Vigilance), `silverquill_inkstrike`
+({2}{B} Sorcery — destroy creature with toughness ≤ 2 via
+`ToughnessAtMost(2)`), `inkling_cipherwing` ({1}{W}{B} 2/2 Flying
+ETB drain 1), `silverquill_penmistress` ({2}{W}{B} 3/3 Lifelink with
+magecraft self-pump +1/+1), `lorehold_pyreward` ({R}{W} Lightning
+Helix), `spirit_honor_guard` ({2}{R}{W} 2/3 Vigilance + First Strike),
+`fractal_bloomstalker` ({2}{G}{U} → 4/4 trampler via
+enters_with_counters), `quandrix_foresight` ({G}{U} +1/+1 counter +
+Draw 1), `prismari_searbolt` ({1}{R} 3-damage burn instant),
+`prismari_tidesinger` ({1}{U} 1/4 ETB bounce target creature),
+`strixhaven_anthemcaster` ({3}{W} 2/3 anthem +1/+0 OtherThanSource),
+and `strixhaven_stormsage` ({2}{U} cantrip 2/2). Bringing the STX
+synthesised-variant corpus from 1041 to 1069. Total tests: 3253
+(was 3221, +32 = 27 STX + 1 inkstrike-rejects-big + 4 ColorSet).**
 
 Prior push:
 

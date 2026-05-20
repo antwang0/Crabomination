@@ -6809,6 +6809,150 @@ pub fn pestseed() -> CardDefinition {
     }
 }
 
+// ── Batch 49 (modern_decks) — more Witherbloom cards ────────────────────────
+
+/// Witherbloom Pestseer — {B}{G}, 2/2 Plant Druid.
+/// Synthesised Oracle: "When this creature enters, create a 1/1
+/// black-and-green Pest creature token with 'When this creature
+/// dies, you gain 1 life.'" 2-mana value Pest-minter body.
+pub fn witherbloom_pestseer() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Pestseer",
+        cost: cost(&[b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_mint_token(stx_pest_token(), 1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Sourceweaver — {2}{B}{G}, 3/3 Plant Warlock Deathtouch.
+/// Synthesised Oracle: "Deathtouch. When this creature enters, target
+/// player loses 2 life and you gain 2 life." 4-mana drain-on-arrival
+/// body — Witherbloom's classic drain Warlock tribal payoff.
+pub fn witherbloom_sourceweaver() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Sourceweaver",
+        cost: cost(&[generic(2), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Deathtouch],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Drain {
+                from: target_filtered(SelectionRequirement::Player),
+                to: Selector::You,
+                amount: Value::Const(2),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Sapburst — {1}{G} Sorcery. Synthesised Oracle:
+/// "Put two +1/+1 counters on target creature you control. Scry 1."
+/// 2-mana growth + filter spell — Witherbloom-flavor of Tinybones.
+pub fn witherbloom_sapburst() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Sapburst",
+        cost: cost(&[generic(1), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::AddCounter {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(2),
+            },
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Pest Brewer (v2) — {1}{B}{G}, 2/3 Pest Druid.
+/// Synthesised Oracle: "When this creature enters, you gain 1 life."
+/// 3-mana cheap Pest tribal anchor.
+pub fn pest_brewer_v2() -> CardDefinition {
+    CardDefinition {
+        name: "Pest Cauldron Brewer",
+        cost: cost(&[generic(1), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Pest, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![crate::effect::shortcut::etb_gain_life(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
 /// Witherbloom Greenwarden — {2}{G}, 2/2 Plant Druid Reach.
 /// Synthesised Oracle: "Reach. When this creature enters, you gain
 /// 2 life." 3-mana defensive anti-flier lifegainer.

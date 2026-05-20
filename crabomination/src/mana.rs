@@ -101,6 +101,29 @@ impl ColorSet {
     pub fn len(self) -> u32 {
         self.0.count_ones()
     }
+
+    /// CR 105.2a — true iff this set is exactly one color. Used by
+    /// effects that key on "monocolored objects" (e.g. Painter's
+    /// Servant, monochrome charms).
+    pub fn is_monocolored(self) -> bool {
+        self.len() == 1
+    }
+
+    /// CR 105.2b — true iff this set is two or more colors. Used by
+    /// "multicolored" matters effects (Naya Charm, Brokers Charm,
+    /// Maelstrom Wanderer variants).
+    pub fn is_multicolored(self) -> bool {
+        self.len() >= 2
+    }
+
+    /// CR 105.2c — true iff this set has no colors. Note: "colorless"
+    /// is not a color (CR 105.4) — this is just a tag for objects that
+    /// are colored by nothing. Mirrors `is_empty()` with an explicit
+    /// rules-anchored name; both are kept for readability at the call
+    /// site.
+    pub fn is_colorless(self) -> bool {
+        self.0 == 0
+    }
 }
 
 /// A single symbol in a mana cost.

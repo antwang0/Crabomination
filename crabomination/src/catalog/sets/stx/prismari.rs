@@ -13,7 +13,7 @@ use crate::card::{
     SelectionRequirement, Selector, Subtypes, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{magecraft, magecraft_ping_each_opp, magecraft_self_pump, target_filtered};
-use crate::effect::{Duration, PlayerRef};
+use crate::effect::{Duration, PlayerRef, ZoneDest};
 use crate::mana::{cost, generic, r, u};
 
 // ── Prismari Pledgemage ─────────────────────────────────────────────────────
@@ -5518,6 +5518,153 @@ pub fn prismari_quickburn() -> CardDefinition {
         effect: Effect::DealDamage {
             to: target_filtered(SelectionRequirement::Creature),
             amount: Value::Const(2),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+// ── Batch 49 (modern_decks) — more Prismari cards ───────────────────────────
+
+/// Prismari Spellscribe — {U}{R}, 1/3 Human Wizard.
+/// Synthesised Oracle: "Whenever you cast an instant or sorcery spell,
+/// scry 1." 2-mana spellslinger filter body — Prismari's classic
+/// 1/3 magecraft-scry anchor.
+pub fn prismari_spellscribe() -> CardDefinition {
+    use crate::effect::shortcut::magecraft;
+    CardDefinition {
+        name: "Prismari Spellscribe",
+        cost: cost(&[u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::Scry {
+            who: PlayerRef::You,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Sparkforge (v2) — {2}{R}, 3/2 Human Artificer.
+/// Synthesised Oracle: "When this creature enters, create a Treasure
+/// token." 3-mana value body — drops a 3/2 plus a ramp Treasure.
+pub fn prismari_sparkforge_v2() -> CardDefinition {
+    use crate::game::effects::treasure_token;
+    CardDefinition {
+        name: "Prismari Sparkforge Anvil",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Artificer],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: treasure_token(),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Tidesinger — {1}{U}, 1/4 Merfolk Wizard.
+/// Synthesised Oracle: "When this creature enters, return target
+/// creature to its owner's hand." 2-mana ETB bounce — a Quandrix /
+/// Prismari combo-trick that resets opp pressure.
+pub fn prismari_tidesinger() -> CardDefinition {
+    use crate::effect::PlayerRef::OwnerOf;
+    CardDefinition {
+        name: "Prismari Tidesinger",
+        cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 4,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Move {
+                what: target_filtered(SelectionRequirement::Creature),
+                to: ZoneDest::Hand(OwnerOf(Box::new(Selector::Target(0)))),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Searbolt — {1}{R} Instant. Synthesised Oracle:
+/// "Prismari Searbolt deals 3 damage to target creature." Pure 2-mana
+/// burn instant — Lightning Strike for Prismari decks.
+pub fn prismari_searbolt() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Searbolt",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::DealDamage {
+            to: target_filtered(SelectionRequirement::Creature),
+            amount: Value::Const(3),
         },
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
