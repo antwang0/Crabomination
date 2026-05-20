@@ -12,7 +12,7 @@ use crate::card::{
     Subtypes, Supertype, TriggeredAbility, Value,
 };
 use crate::card::{EventKind, EventScope, EventSpec};
-use crate::effect::shortcut::target_filtered;
+use crate::effect::shortcut::{etb_gain_life, target_filtered};
 use crate::effect::{Duration, ManaPayload, PlayerRef, ZoneDest};
 use crate::mana::{Color, ManaCost, ManaSymbol, b, cost, g, generic, r, u, w};
 
@@ -4945,13 +4945,7 @@ pub fn glimmerpost() -> CardDefinition {
         }],
         triggered_abilities: vec![
             modern_etb_tap(),
-            TriggeredAbility {
-                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-                effect: Effect::GainLife {
-                    who: Selector::You,
-                    amount: Value::Const(1),
-                },
-            },
+            etb_gain_life(1),
         ],
         ..Default::default()
     }

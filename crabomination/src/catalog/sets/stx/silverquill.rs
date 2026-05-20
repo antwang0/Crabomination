@@ -3860,13 +3860,7 @@ pub fn silverquill_lifebinder() -> CardDefinition {
         keywords: vec![Keyword::Lifelink],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::GainLife {
-                who: Selector::You,
-                amount: Value::Const(2),
-            },
-        }],
+        triggered_abilities: vec![etb_gain_life(2)],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],

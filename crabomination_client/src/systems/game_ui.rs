@@ -2,7 +2,7 @@
 //! quality panel live in their own sibling modules (`gizmos.rs`, `quality.rs`).
 
 use std::collections::{HashMap, HashSet};
-use std::f32::consts::{FRAC_PI_2, PI};
+use std::f32::consts::PI;
 
 use bevy::prelude::*;
 use crabomination::card::CardId;
@@ -11,13 +11,13 @@ use crabomination::net::StackItemView;
 
 use super::ui::RevealPopupState;
 use crate::card::{
-    Animating, BattlefieldCard, CARD_THICKNESS, CARD_WIDTH, CardHoverLift, CardHovered,
+    Animating, BattlefieldCard, CARD_THICKNESS, CardHoverLift, CardHovered,
     CardMeshAssets, CardOwner, DECK_CARD_Y_STEP, DeckCard, DeckPile, DrawCardAnimation,
     GameCardId, GraveyardPile, HandCard, HandSlideAnimation, OpponentHandCard,
     PlayCardAnimation, PlayerTargetZone, RevealPeekAnimation, SendToGraveyardAnimation,
     StackCard, TapAnimation, TapState, ValidTarget, back_face_rotation, bf_card_transform,
     card_back_face_material, card_front_material, deck_position, graveyard_position,
-    hand_card_transform, land_card_transform, spawn_single_card,
+    hand_card_transform, land_card_transform, spawn_single_card, stack_card_transform,
 };
 use crate::game::{AbilityMenuState, BlockingState, GameLog, TargetingState, format_mana_pool_from_pool};
 use crate::net_plugin::{CurrentView, LatestServerEvents, NetOutbox};
@@ -135,83 +135,11 @@ fn event_color(ev: &crabomination::net::GameEventWire) -> Color {
 
 /// Pretty-print a `GameEventWire` for the in-game log, resolving any
 /// CardId via the running `CardNames` map so the player sees real card
-/// names instead of `CardId(N)` debug strings.
+/// names instead of `CardId(N)` debug strings. Thin wrapper around the
+/// engine-side `GameEventWire::fmt_for_log` so new event variants only
+/// need a body added in one place (`crabomination/src/net.rs`).
 fn format_event(ev: &crabomination::net::GameEventWire, names: &crate::game::CardNames) -> String {
-    use crabomination::net::GameEventWire as E;
-    let n = |id: crabomination::card::CardId| names.get(id);
-    match ev {
-        E::StepChanged(s) => format!("Step → {s:?}"),
-        E::TurnStarted { player, turn } => format!("Turn {turn} — P{player}"),
-        E::CardDrawn { player, card_id } => format!("P{player} drew {}", n(*card_id)),
-        E::CardDiscarded { player, card_id } => {
-            format!("P{player} discarded {}", n(*card_id))
-        }
-        E::LandPlayed { player, card_id } => format!("P{player} played {}", n(*card_id)),
-        E::SpellCast { player, card_id, .. } => format!("P{player} cast {}", n(*card_id)),
-        E::AbilityActivated { source } => format!("{} ability activated", n(*source)),
-        E::ManaAdded { player, color } => format!("P{player} adds {color:?}"),
-        E::ColorlessManaAdded { player } => format!("P{player} adds colorless"),
-        E::PermanentEntered { card_id } => format!("{} entered the battlefield", n(*card_id)),
-        E::PermanentExiled { card_id } => format!("{} was exiled", n(*card_id)),
-        E::DamageDealt { amount, to_player, to_card } => match (to_player, to_card) {
-            (Some(p), _) => format!("{amount} damage → P{p}"),
-            (_, Some(cid)) => format!("{amount} damage → {}", n(*cid)),
-            _ => format!("{amount} damage"),
-        },
-        E::LifeLost { player, amount } => format!("P{player} loses {amount} life"),
-        E::LifeGained { player, amount } => format!("P{player} gains {amount} life"),
-        E::CreatureDied { card_id } => format!("{} died", n(*card_id)),
-        E::PumpApplied { card_id, power, toughness } => {
-            format!("{} +{power}/+{toughness}", n(*card_id))
-        }
-        E::CounterAdded { card_id, counter_type, count } => {
-            format!("+{count} {counter_type:?} on {}", n(*card_id))
-        }
-        E::CounterRemoved { card_id, counter_type, count } => {
-            format!("−{count} {counter_type:?} on {}", n(*card_id))
-        }
-        E::PermanentTapped { card_id } => format!("{} tapped", n(*card_id)),
-        E::PermanentUntapped { card_id } => format!("{} untapped", n(*card_id)),
-        E::TokenCreated { card_id } => format!("token {} created", n(*card_id)),
-        E::CardMilled { player, card_id } => format!("P{player} milled {}", n(*card_id)),
-        E::ScryPerformed { player, looked_at, bottomed } => {
-            format!("P{player} scry {looked_at} ({bottomed} to bottom)")
-        }
-        E::AttackerDeclared(cid) => format!("{} attacks", n(*cid)),
-        E::BlockerDeclared { blocker, attacker } => {
-            format!("{} blocks {}", n(*blocker), n(*attacker))
-        }
-        E::CombatResolved => "Combat resolved".into(),
-        E::FirstStrikeDamageResolved => "First-strike damage resolved".into(),
-        E::TopCardRevealed { player, card_name, .. } => {
-            format!("P{player} revealed {card_name}")
-        }
-        E::AttachmentMoved { attachment, attached_to } => match attached_to {
-            Some(target) => format!("{} attached to {}", n(*attachment), n(*target)),
-            None => format!("{} unattached", n(*attachment)),
-        },
-        E::PoisonAdded { player, amount } => format!("P{player} +{amount} poison"),
-        E::LoyaltyAbilityActivated { planeswalker, loyalty_change } => {
-            format!("{} loyalty {loyalty_change:+}", n(*planeswalker))
-        }
-        E::LoyaltyChanged { card_id, new_loyalty } => {
-            format!("{} loyalty = {new_loyalty}", n(*card_id))
-        }
-        E::PlaneswalkerDied { card_id } => format!("{} died (planeswalker)", n(*card_id)),
-        E::SpellsCopied { original, count } => {
-            format!("{} copied ×{count}", n(*original))
-        }
-        E::SurveilPerformed { player, looked_at, graveyarded } => {
-            format!("P{player} surveil {looked_at} ({graveyarded} to graveyard)")
-        }
-        E::CardLeftGraveyard { player, card_id } => {
-            format!("P{player} {} left graveyard", n(*card_id))
-        }
-        E::GameOver { winner } => match winner {
-            Some(p) => format!("Game over — P{p} wins"),
-            None => "Game over — draw".into(),
-        },
-    }
+    ev.fmt_for_log(&|id| names.get(id))
 }
 
 /// Drives End Turn / Next Turn fast-forward: while these flags are set,
@@ -2860,15 +2788,6 @@ pub fn handle_alt_cast_buttons(
             return;
         }
     }
-}
-
-/// Returns the world transform for a card sitting on the stack at the given index.
-fn stack_card_transform(idx: usize, total: usize) -> Transform {
-    let spacing = CARD_WIDTH + 0.5;
-    let total_width = (total.saturating_sub(1) as f32) * spacing;
-    let x = (idx as f32) * spacing - total_width / 2.0;
-    Transform::from_translation(Vec3::new(x, 0.8, 0.0))
-        .with_rotation(Quat::from_rotation_x(-FRAC_PI_2))
 }
 
 /// When RevealPopupState activates, start a RevealPeekAnimation on the top

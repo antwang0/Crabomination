@@ -15,8 +15,8 @@ use crate::card::{
     TriggeredAbility, Value, Zone,
 };
 use crate::effect::shortcut::{
-    etb_mint_token, magecraft, magecraft_gain_life, magecraft_ping_any, magecraft_self_pump,
-    target_filtered,
+    etb_drain, etb_gain_life, etb_mint_token, magecraft, magecraft_gain_life, magecraft_ping_any,
+    magecraft_self_pump, target_filtered,
 };
 use crate::effect::{Duration, PlayerRef, StaticEffect, ZoneDest};
 use crate::mana::{cost, generic, r, w, Color, ManaCost};
@@ -1685,13 +1685,7 @@ pub fn lorehold_bonereader() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
         triggered_abilities: vec![
-            TriggeredAbility {
-                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-                effect: Effect::GainLife {
-                    who: Selector::You,
-                    amount: Value::Const(2),
-                },
-            },
+            etb_gain_life(2),
             magecraft_self_pump(1, 0),
         ],
         static_abilities: vec![],
@@ -3381,13 +3375,7 @@ pub fn lorehold_ironscribe() -> CardDefinition {
         keywords: vec![Keyword::Vigilance],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::GainLife {
-                who: Selector::You,
-                amount: Value::Const(3),
-            },
-        }],
+        triggered_abilities: vec![etb_gain_life(3)],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -3787,13 +3775,7 @@ pub fn lorehold_reverend() -> CardDefinition {
         keywords: vec![Keyword::Vigilance, Keyword::Lifelink],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::GainLife {
-                who: Selector::You,
-                amount: Value::Const(2),
-            },
-        }],
+        triggered_abilities: vec![etb_gain_life(2)],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -4882,14 +4864,7 @@ pub fn lorehold_ancestor() -> CardDefinition {
         keywords: vec![Keyword::Vigilance, Keyword::Trample],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::Drain {
-                from: Selector::Player(PlayerRef::EachOpponent),
-                to: Selector::You,
-                amount: Value::Const(1),
-            },
-        }],
+        triggered_abilities: vec![etb_drain(1)],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -5579,13 +5554,7 @@ pub fn lorehold_skydefender() -> CardDefinition {
         keywords: vec![Keyword::Flying, Keyword::Vigilance],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::GainLife {
-                who: Selector::You,
-                amount: Value::Const(2),
-            },
-        }],
+        triggered_abilities: vec![etb_gain_life(2)],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],

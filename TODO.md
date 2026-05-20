@@ -4271,14 +4271,29 @@ showing `+1/+1 ×3`, `Lore: 2`, `Charge: 1`, `Poison: 3`, etc., using Bevy
 
 ### Modified Power/Toughness Display
 When a creature's P/T differs from its printed values (pump spells, counters,
-static effects), the UI shows the base stats.  `PermanentView` exposes both
-`power`/`toughness` (current) and `base_power`/`base_toughness` (printed).
-Show current P/T on the card and dim or strike through the base if modified.
+static effects), the printed Scryfall art still shows the base stats.
+`PermanentView` exposes both `power`/`toughness` (current) and `base_power`/
+`base_toughness` (printed). Current surfacing of modifications:
+- 🟡 `draw_pt_modified_overlays` (`systems/gizmos.rs`) draws a coloured ring
+  around any creature whose computed P/T differs from its base (green
+  buffed / red debuffed / yellow mixed).
+- 🟡 The Alt-key counter tooltip (`systems/counter_tooltip.rs`) shows
+  `current/printed (printed X/Y)` when modified.
+- ⏳ Still missing: an in-world numeric P/T overlay anchored to the card
+  itself. Bevy's `Text2d` doesn't depth-sort with 3-D meshes, so this
+  needs either (a) a billboarded `Text3d`/quad with a generated texture
+  per card, or (b) a screen-space `Node` projected each frame off
+  `Camera::world_to_viewport(card_translation)`. (b) is the cheaper
+  retrofit; sits well next to the existing alt-tooltip projector.
 
 ### Modified Loyalty Display
-Planeswalkers show a static loyalty badge but it doesn't update as
-`CounterType::Loyalty` changes in-game.  Wire the loyalty counter from
-`PermanentView` to the badge text.
+There is no static loyalty badge today; loyalty surfaces only via the
+3-D counter coin column on each planeswalker
+(`systems/counter_coins.rs`, `CounterType::Loyalty` material). The coin
+count tracks the current loyalty correctly, but the printed starting
+loyalty from the card art and the precise current number are both
+absent at a glance. Same screen-space-overlay approach as the P/T
+overlay above would carry a "L: N" badge.
 
 ### Exile Zone Browser
 Similar to the graveyard browser, an exile browser would let players inspect
@@ -4331,11 +4346,14 @@ debug console, tooltips, export prompt) now source colors from `theme::*`
 and text from `ui_fonts.tf(size)`. Closes the long-standing "fonts and
 colors drift between files" problem.
 
-### Win/Loss Banner Color Cue
-The game-over modal (`game_over.rs::sync_game_over_modal`) shows "Victory!
-…" and "Defeat. …" in identical white text on identical dark panels — no
-emotional cue for the result. Color the panel border / subtitle / accent
-based on `winner == cv.your_seat`, optionally add a small icon.
+### Win/Loss Banner Color Cue ✅ DONE
+~~The game-over modal showed "Victory!" / "Defeat." in identical white
+text on identical dark panels.~~ Done in
+`systems/game_over.rs::sync_game_over_modal`: the subtitle line picks
+`theme::TEXT_GOOD` on win / `theme::TEXT_DANGER` on loss / `ACCENT_GOLD`
+on draw, and the panel border matches at `ACCENT_GREEN` /
+`BUTTON_DANGER_BG` / `ACCENT_GOLD`. Optional follow-up: small icon glyph
+(trophy / skull) next to the subtitle text.
 
 ### Card Art on the Stack
 The stack panel (`game_ui.rs::update_stack_panel`) shows only a "SPELL /
@@ -4470,11 +4488,15 @@ priority. A toolbar toggle ("Auto-pass: On/Off") lets new players step
 through their own turn priority-by-priority instead of having the engine
 fast-forward.
 
-### Tooltip Viewport Clamping
-`counter_tooltip.rs:80-82` and the `pile_tooltip` system use fixed
-`Val::Px` offsets without a viewport bounds check. Tooltips on cards
-near the upper-right or bottom edge clip off-screen. Clamp `node.left` /
-`node.top` to `[0, window_size - tooltip_size]`.
+### Tooltip Viewport Clamping ✅ DONE
+~~`counter_tooltip.rs` and the `pile_tooltip` system used fixed `Val::Px`
+offsets without a viewport bounds check, so tooltips on cards near the
+upper-right or bottom edge clipped off-screen.~~ `update_alt_tooltip`
+now reads the primary window size and clamps `left`/`top` to
+`[TOOLTIP_EDGE_PAD, window - tooltip_size - TOOLTIP_EDGE_PAD]` with
+conservative size estimates (240×200). `pile_tooltip` is anchored
+bottom-center on the HUD, not cursor-relative, so it doesn't need
+clamping.
 
 ### Alt-Peek Inside Decision Modals
 Scry / search / discard modal cards are 180×250 (`decision_ui.rs:124`) —

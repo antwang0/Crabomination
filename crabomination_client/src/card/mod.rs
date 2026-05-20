@@ -16,7 +16,7 @@ pub use components::{
 };
 pub use layout::{
     back_face_rotation, bf_card_transform, command_zone_card_transform, deck_position,
-    graveyard_position, hand_card_transform, land_card_transform,
+    graveyard_position, hand_card_transform, land_card_transform, stack_card_transform,
 };
 pub use mesh::{create_border_mesh, create_rounded_rect_mesh, BORDER_WIDTH, CORNER_RADIUS};
 pub use spawn::{card_back_face_material, card_front_material, init_shared_assets, spawn_single_card};

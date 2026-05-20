@@ -18,6 +18,20 @@ use super::components::{CARD_HEIGHT, CARD_THICKNESS, CARD_WIDTH};
 pub const HAND_CARD_SPACING: f32 = CARD_WIDTH * 0.85;
 pub const HAND_FAN_ANGLE: f32 = 0.06;
 pub const HAND_FAN_Y_DROP: f32 = 0.3;
+/// Hands larger than this clamp their total fan width to the 7-card width
+/// and reduce per-card spacing proportionally.
+pub const HAND_FAN_SOFT_CAP: usize = 7;
+
+/// Effective per-card hand spacing. Equals `HAND_CARD_SPACING` for hands
+/// up to `HAND_FAN_SOFT_CAP`; for larger hands, shrinks proportionally so
+/// the total fan width stays at the soft-cap value.
+fn hand_spacing(total: usize) -> f32 {
+    if total <= HAND_FAN_SOFT_CAP {
+        HAND_CARD_SPACING
+    } else {
+        HAND_CARD_SPACING * (HAND_FAN_SOFT_CAP as f32 - 1.0) / (total as f32 - 1.0)
+    }
+}
 
 const HAND_CENTER_Z: f32 = 12.0;
 const HAND_Y: f32 = CARD_HEIGHT / 2.0;
@@ -177,15 +191,16 @@ pub fn hand_card_transform(
         0.0
     };
 
+    let spacing = hand_spacing(total);
     if is_viewer(seat, viewer) {
-        let x = offset * HAND_CARD_SPACING;
+        let x = offset * spacing;
         let y = HAND_Y - offset.abs() * HAND_FAN_Y_DROP;
         let z = HAND_CENTER_Z + z_offset * CARD_THICKNESS * 4.0;
         let rot_z = -offset * HAND_FAN_ANGLE;
         Transform::from_xyz(x, y, z)
             .with_rotation(Quat::from_rotation_x(HAND_TILT_X) * Quat::from_rotation_z(rot_z))
     } else {
-        let x = offset * HAND_CARD_SPACING + opp_x_offset(seat, viewer, n_seats);
+        let x = offset * spacing + opp_x_offset(seat, viewer, n_seats);
         // Extra lift so cards clear the table at the far camera angle.
         let y = HAND_Y + 3.0 - offset.abs() * HAND_FAN_Y_DROP;
         let z = -(HAND_CENTER_Z + 2.0 + z_offset * CARD_THICKNESS * 4.0);
@@ -256,6 +271,19 @@ pub fn land_group_info_from_view(
         .position(|c| c.id == card_id)?;
 
     Some((group_slot, index_in_group, names.len()))
+}
+
+// ── Stack cards ──────────────────────────────────────────────────────────────
+
+/// World transform for a card occupying slot `idx` of a stack of `total`
+/// cards. Cards spread horizontally, centred on the table, hovering above
+/// the battlefield and facing the camera.
+pub fn stack_card_transform(idx: usize, total: usize) -> Transform {
+    let spacing = CARD_WIDTH + 0.5;
+    let total_width = (total.saturating_sub(1) as f32) * spacing;
+    let x = (idx as f32) * spacing - total_width / 2.0;
+    Transform::from_translation(Vec3::new(x, 0.8, 0.0))
+        .with_rotation(Quat::from_rotation_x(-FRAC_PI_2))
 }
 
 /// World transform for a land card with stacking offset for identical lands.

@@ -14,8 +14,8 @@ use crate::card::{
     Value, Zone,
 };
 use crate::effect::shortcut::{
-    etb_mint_token, magecraft, magecraft_drain_each_opp, magecraft_gain_life, magecraft_self_pump,
-    target_filtered,
+    etb_drain, etb_gain_life, etb_mint_token, magecraft, magecraft_drain_each_opp,
+    magecraft_gain_life, magecraft_self_pump, target_filtered,
 };
 use crate::effect::{Duration, ManaPayload, PlayerRef, ZoneDest};
 use crate::mana::{cost, b, g, generic, Color, ManaCost};
@@ -1038,14 +1038,7 @@ pub fn witherbloom_decoctor() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::Drain {
-                from: Selector::Player(PlayerRef::EachOpponent),
-                to: Selector::You,
-                amount: Value::Const(2),
-            },
-        }],
+        triggered_abilities: vec![etb_drain(2)],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -1952,13 +1945,7 @@ pub fn witherbloom_greenrot() -> CardDefinition {
         keywords: vec![Keyword::Reach],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::GainLife {
-                who: Selector::You,
-                amount: Value::Const(2),
-            },
-        }],
+        triggered_abilities: vec![etb_gain_life(2)],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -2022,14 +2009,7 @@ pub fn witherbloom_pestbroker() -> CardDefinition {
             ]),
                     self_counter_cost_reduction: None,
         }],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::Drain {
-                from: Selector::Player(PlayerRef::EachOpponent),
-                to: Selector::You,
-                amount: Value::Const(2),
-            },
-        }],
+        triggered_abilities: vec![etb_drain(2)],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -2827,13 +2807,7 @@ pub fn witherbloom_vinekeeper() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
         triggered_abilities: vec![
-            TriggeredAbility {
-                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-                effect: Effect::GainLife {
-                    who: Selector::You,
-                    amount: Value::Const(2),
-                },
-            },
+            etb_gain_life(2),
             TriggeredAbility {
                 event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours),
                 effect: Effect::GainLife {
@@ -3500,13 +3474,7 @@ pub fn witherbloom_vinemender() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::GainLife {
-                who: Selector::You,
-                amount: Value::Const(3),
-            },
-        }],
+        triggered_abilities: vec![etb_gain_life(3)],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -3893,14 +3861,7 @@ pub fn witherbloom_caulhound() -> CardDefinition {
         keywords: vec![Keyword::Trample],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::Drain {
-                from: Selector::Player(PlayerRef::EachOpponent),
-                to: Selector::You,
-                amount: Value::Const(2),
-            },
-        }],
+        triggered_abilities: vec![etb_drain(2)],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -4290,13 +4251,7 @@ pub fn witherbloom_marshtender() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
         triggered_abilities: vec![
-            TriggeredAbility {
-                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-                effect: Effect::GainLife {
-                    who: Selector::You,
-                    amount: Value::Const(1),
-                },
-            },
+            etb_gain_life(1),
             magecraft_gain_life(1),
         ],
         static_abilities: vec![],
@@ -4371,14 +4326,7 @@ pub fn bloodvine_drainmage() -> CardDefinition {
         keywords: vec![Keyword::Lifelink],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::Drain {
-                from: Selector::Player(PlayerRef::EachOpponent),
-                to: Selector::You,
-                amount: Value::Const(3),
-            },
-        }],
+        triggered_abilities: vec![etb_drain(3)],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -4505,14 +4453,7 @@ pub fn witherbloom_pestwarden() -> CardDefinition {
             },
             self_counter_cost_reduction: None,
         }],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::Drain {
-                from: Selector::Player(PlayerRef::EachOpponent),
-                to: Selector::You,
-                amount: Value::Const(2),
-            },
-        }],
+        triggered_abilities: vec![etb_drain(2)],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -4620,13 +4561,7 @@ pub fn witherbloom_lifefarmer() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::GainLife {
-                who: Selector::You,
-                amount: Value::Const(3),
-            },
-        }],
+        triggered_abilities: vec![etb_gain_life(3)],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -4691,14 +4626,7 @@ pub fn witherbloom_hexpetal() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::Drain {
-                from: Selector::Player(PlayerRef::EachOpponent),
-                to: Selector::You,
-                amount: Value::Const(2),
-            },
-        }],
+        triggered_abilities: vec![etb_drain(2)],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -4834,13 +4762,7 @@ pub fn witherbloom_verdancer() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
         triggered_abilities: vec![
-            TriggeredAbility {
-                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-                effect: Effect::GainLife {
-                    who: Selector::You,
-                    amount: Value::Const(1),
-                },
-            },
+            etb_gain_life(1),
             magecraft_gain_life(1),
         ],
         static_abilities: vec![],
@@ -5161,13 +5083,7 @@ pub fn witherbloom_rootbinder() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
         triggered_abilities: vec![
-            TriggeredAbility {
-                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-                effect: Effect::GainLife {
-                    who: Selector::You,
-                    amount: Value::Const(2),
-                },
-            },
+            etb_gain_life(2),
             magecraft_gain_life(1),
         ],
         static_abilities: vec![],

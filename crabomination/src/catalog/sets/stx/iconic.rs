@@ -9,7 +9,7 @@ use crate::card::{
     CardDefinition, CardType, CreatureType, Effect, Keyword, Selector, SelectionRequirement,
     Subtypes, Value,
 };
-use crate::effect::shortcut::{magecraft, target_filtered};
+use crate::effect::shortcut::{etb_drain, etb_gain_life, magecraft, target_filtered};
 use crate::effect::PlayerRef;
 use crate::mana::{b, cost, g, generic, r, u, w};
 
@@ -1046,7 +1046,6 @@ pub fn silverquill_novice() -> CardDefinition {
 /// 5-mana drain finisher. 8-life swing on ETB (drain 2 + 4 attack
 /// power with lifelink). Top-end Silverquill closer.
 pub fn silverquill_headmaster() -> CardDefinition {
-    use crate::card::{EventKind, EventScope, EventSpec, TriggeredAbility};
     CardDefinition {
         name: "Silverquill Headmaster",
         cost: cost(&[generic(3), w(), b()]),
@@ -1061,14 +1060,7 @@ pub fn silverquill_headmaster() -> CardDefinition {
         keywords: vec![Keyword::Flying, Keyword::Lifelink],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::Drain {
-                from: Selector::Player(PlayerRef::EachOpponent),
-                to: Selector::You,
-                amount: Value::Const(2),
-            },
-        }],
+        triggered_abilities: vec![etb_drain(2)],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -1629,7 +1621,6 @@ pub fn strixhaven_spellfletcher() -> CardDefinition {
 /// reach blocker covers fliers while feeding Pestpod Lurker / Honor
 /// Troll / Comforting Counsel triggers.
 pub fn strixhaven_forager() -> CardDefinition {
-    use crate::card::{EventKind, EventScope, EventSpec, TriggeredAbility};
     CardDefinition {
         name: "Strixhaven Forager",
         cost: cost(&[generic(2), g()]),
@@ -1644,13 +1635,7 @@ pub fn strixhaven_forager() -> CardDefinition {
         keywords: vec![Keyword::Reach],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::GainLife {
-                who: Selector::You,
-                amount: Value::Const(2),
-            },
-        }],
+        triggered_abilities: vec![etb_gain_life(2)],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],

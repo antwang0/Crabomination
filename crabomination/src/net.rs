@@ -724,6 +724,117 @@ impl From<&GameEvent> for GameEventWire {
     }
 }
 
+impl GameEventWire {
+    /// Render this event as a one-line human-readable log entry. `name`
+    /// resolves card ids to display names (typically the client's
+    /// `CardNames` table); unknown ids should fall back to a stable
+    /// placeholder like `#N`.
+    pub fn fmt_for_log(&self, name: &dyn Fn(CardId) -> String) -> String {
+        use GameEventWire as E;
+        match self {
+            E::StepChanged(s) => format!("Step → {s:?}"),
+            E::TurnStarted { player, turn } => format!("Turn {turn} — P{player}"),
+            E::CardDrawn { player, card_id } => format!("P{player} drew {}", name(*card_id)),
+            E::CardDiscarded { player, card_id } => {
+                format!("P{player} discarded {}", name(*card_id))
+            }
+            E::LandPlayed { player, card_id } => format!("P{player} played {}", name(*card_id)),
+            E::SpellCast { player, card_id, .. } => format!("P{player} cast {}", name(*card_id)),
+            E::AbilityActivated { source } => format!("{} ability activated", name(*source)),
+            E::ManaAdded { player, color } => format!("P{player} adds {color:?}"),
+            E::ColorlessManaAdded { player } => format!("P{player} adds colorless"),
+            E::PermanentEntered { card_id } => {
+                format!("{} entered the battlefield", name(*card_id))
+            }
+            E::PermanentExiled { card_id } => format!("{} was exiled", name(*card_id)),
+            E::DamageDealt {
+                amount,
+                to_player,
+                to_card,
+            } => match (to_player, to_card) {
+                (Some(p), _) => format!("{amount} damage → P{p}"),
+                (_, Some(cid)) => format!("{amount} damage → {}", name(*cid)),
+                _ => format!("{amount} damage"),
+            },
+            E::LifeLost { player, amount } => format!("P{player} loses {amount} life"),
+            E::LifeGained { player, amount } => format!("P{player} gains {amount} life"),
+            E::CreatureDied { card_id } => format!("{} died", name(*card_id)),
+            E::PumpApplied {
+                card_id,
+                power,
+                toughness,
+            } => format!("{} +{power}/+{toughness}", name(*card_id)),
+            E::CounterAdded {
+                card_id,
+                counter_type,
+                count,
+            } => format!("+{count} {counter_type:?} on {}", name(*card_id)),
+            E::CounterRemoved {
+                card_id,
+                counter_type,
+                count,
+            } => format!("−{count} {counter_type:?} on {}", name(*card_id)),
+            E::PermanentTapped { card_id } => format!("{} tapped", name(*card_id)),
+            E::PermanentUntapped { card_id } => format!("{} untapped", name(*card_id)),
+            E::TokenCreated { card_id } => format!("token {} created", name(*card_id)),
+            E::CardMilled { player, card_id } => {
+                format!("P{player} milled {}", name(*card_id))
+            }
+            E::ScryPerformed {
+                player,
+                looked_at,
+                bottomed,
+            } => format!("P{player} scry {looked_at} ({bottomed} to bottom)"),
+            E::AttackerDeclared(cid) => format!("{} attacks", name(*cid)),
+            E::BlockerDeclared { blocker, attacker } => {
+                format!("{} blocks {}", name(*blocker), name(*attacker))
+            }
+            E::CombatResolved => "Combat resolved".into(),
+            E::FirstStrikeDamageResolved => "First-strike damage resolved".into(),
+            E::TopCardRevealed {
+                player, card_name, ..
+            } => format!("P{player} revealed {card_name}"),
+            E::AttachmentMoved {
+                attachment,
+                attached_to,
+            } => match attached_to {
+                Some(target) => format!("{} attached to {}", name(*attachment), name(*target)),
+                None => format!("{} unattached", name(*attachment)),
+            },
+            E::PoisonAdded { player, amount } => format!("P{player} +{amount} poison"),
+            E::LoyaltyAbilityActivated {
+                planeswalker,
+                loyalty_change,
+            } => format!("{} loyalty {loyalty_change:+}", name(*planeswalker)),
+            E::LoyaltyChanged {
+                card_id,
+                new_loyalty,
+            } => format!("{} loyalty = {new_loyalty}", name(*card_id)),
+            E::PlaneswalkerDied { card_id } => {
+                format!("{} died (planeswalker)", name(*card_id))
+            }
+            E::SpellsCopied { original, count } => {
+                format!("{} copied ×{count}", name(*original))
+            }
+            E::SurveilPerformed {
+                player,
+                looked_at,
+                graveyarded,
+            } => format!("P{player} surveil {looked_at} ({graveyarded} to graveyard)"),
+            E::CardLeftGraveyard { player, card_id } => {
+                format!("P{player} {} left graveyard", name(*card_id))
+            }
+            E::BecameTarget { target, caster } => {
+                format!("{} targeted by P{caster}", name(*target))
+            }
+            E::GameOver { winner } => match winner {
+                Some(p) => format!("Game over — P{p} wins"),
+                None => "Game over — draw".into(),
+            },
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

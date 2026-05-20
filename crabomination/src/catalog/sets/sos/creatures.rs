@@ -5,6 +5,7 @@ use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CreatureType, Effect, EventKind, EventScope,
     EventSpec, Keyword, SelectionRequirement, Subtypes, TokenDefinition, TriggeredAbility,
 };
+use crate::effect::shortcut::etb_gain_life;
 use crate::effect::{Duration, PlayerRef, Selector, Value};
 use crate::mana::{Color, ManaCost, b, cost, generic, w};
 
@@ -571,13 +572,7 @@ pub fn mindful_biomancer() -> CardDefinition {
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None,
         }],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::GainLife {
-                who: Selector::You,
-                amount: Value::Const(1),
-            },
-        }],
+        triggered_abilities: vec![etb_gain_life(1)],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -2107,13 +2102,7 @@ pub fn pterafractyl() -> CardDefinition {
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::GainLife {
-                who: Selector::You,
-                amount: Value::Const(2),
-            },
-        }],
+        triggered_abilities: vec![etb_gain_life(2)],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
