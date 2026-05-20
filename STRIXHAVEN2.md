@@ -19,10 +19,30 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 227 | 29 | 0 |
-| STX (327 cards) | 926 | 9 | 0 |
+| STX (327 cards) | 948 | 9 | 0 |
 | STA reprints (in STX boosters) | 47 | 0 | — |
 
 Push (modern_decks, claude/modern_decks branch — latest revision —
+**batch 47: Silverquill close-out + token-death cache. 22 new ✅
+Silverquill cards (drain instants, magecraft creatures, Inkling-
+tribal anthems, the +1/+0 sergeant) covering the white-black drain
+template across 2/3/4/5 mana — 22 tests added. Engine: new
+`GameState.died_card_snapshots: HashMap<CardId, CardInstance>` cache
+populated at SBA emission time for every dying creature; consulted
+by `event_matches_spec` (controller lookup), `event_actor` (actor
+lookup), and `evaluate_requirement_static` (type/keyword filter
+walk) so AnotherOfYours-scope triggers with creature-type filters
+(Witherbloom Pestmaster, Felisa, Fang of Silverquill) fire reliably
+on TOKEN death — CR 111.7c's "ceases to exist" SBA removes the
+token from every zone in the same sweep, so the zone-walk lookups
+return None without the cache. Cache cleared after each
+`dispatch_triggers_for_events` pass to prevent stale entries
+leaking into subsequent SBA cycles. CR 606 (Loyalty Abilities)
+audit landed in TODO.md. Lock-in test:
+`pestmaster_pumps_on_pest_token_death_via_cached_controller`.
+Total tests: 3128 (was 3102).**
+
+Prior push:
 **batch 46: BecameTarget event shipped. New `EventKind::BecameTarget`
 + `GameEvent::BecameTarget { target, caster }`; emission from
 `finalize_cast` (one event per permanent target) and from
@@ -3988,6 +4008,30 @@ parity is a matter of porting card factories one at a time.
 | Silverquill Witnessing | {2}{W}{B} | ✅ | Push (modern_decks batch 41, NEW, `stx::silverquill`): Instant. Seq(Drain 3 + Draw 1). 4-mana drain-and-draw. Test: `silverquill_witnessing_drains_three_and_draws`. |
 | Inkling Avant-Garde | {4}{W}{B} | ✅ | Push (modern_decks batch 41, NEW, `stx::silverquill`): 4/4 Inkling Bard Flying + Lifelink. ETB drain 2 via the `etb_drain(2)` shortcut. 6-mana evasive race breaker. Test: `inkling_avant_garde_etb_drains_two_and_is_lifelink_flier`. |
 | Silverquill Convocation | {3}{W}{B} | ✅ | Push (modern_decks batch 41, NEW, `stx::silverquill`): Sorcery. Seq(CreateToken(2 Inklings) + Drain(EachOpponent, You, count_of(Inklings))). The token mint resolves first so the drain value reads 2 (assuming no prior Inklings). 5-mana mint-and-drain finisher. Test: `silverquill_convocation_mints_two_inklings_and_drains_per_inkling`. |
+| Silverquill Maxim | {2}{W}{B} | ✅ | Push (modern_decks batch 47, NEW, `stx::silverquill`): Sorcery. Seq(DealDamage 3 any target + GainLife 3). 4-mana flexible burn-drain finisher. Test: `silverquill_maxim_deals_three_and_gains_three_life`. |
+| Inkling Vassal | {1}{B} | ✅ | Push (modern_decks batch 47, NEW, `stx::silverquill`): 1/2 Inkling Cleric Lifelink. Magecraft Drain 1 via `magecraft_drain_each_opp(1)`. Test: `inkling_vassal_drains_each_opp_on_is_cast`. |
+| Silverquill Vellum | {W}{B} | ✅ | Push (modern_decks batch 47, NEW, `stx::silverquill`): Instant. Drain 2 each opponent. 2-mana cheap drain. Test: `silverquill_vellum_drains_two`. |
+| Inkling Decreemaster | {2}{W}{B} | ✅ | Push (modern_decks batch 47, NEW, `stx::silverquill`): 2/3 Inkling Cleric Flying + Lifelink. ETB target opp discards 1. Test: `inkling_decreemaster_etb_forces_discard`. |
+| Silverquill Penbringer | {3}{W} | ✅ | Push (modern_decks batch 47, NEW, `stx::silverquill`): 2/4 Human Cleric Vigilance. Magecraft GainLife 1. Defensive anchor. Test: `silverquill_penbringer_magecraft_gains_one_life`. |
+| Silverquill Ravenswing | {1}{W}{B} | ✅ | Push (modern_decks batch 47, NEW, `stx::silverquill`): 2/2 Vampire Cleric Flying. On-attack Drain 1. Test: `silverquill_ravenswing_attack_drains_each_opp`. |
+| Inkling Magistrate | {2}{B} | ✅ | Push (modern_decks batch 47, NEW, `stx::silverquill`): 2/2 Inkling Cleric. ETB opp loses 2 life. Test: `inkling_magistrate_etb_drains_two`. |
+| Silverquill Liturgy | {3}{W}{B} | ✅ | Push (modern_decks batch 47, NEW, `stx::silverquill`): Sorcery. Seq(EachOpp loses 2 + GainLife 4 + Draw 1). 5-mana drain + cantrip finisher. Test: `silverquill_liturgy_drains_two_each_opp_gains_four_and_draws`. |
+| Inkling Bookbinder | {1}{B} | ✅ | Push (modern_decks batch 47, NEW, `stx::silverquill`): 1/1 Inkling Cleric. Magecraft AddCounter(+1/+1, self). 2-mana magecraft scaler. Test: `inkling_bookbinder_magecraft_grows`. |
+| Silverquill Scribebearer | {1}{W} | ✅ | Push (modern_decks batch 47, NEW, `stx::silverquill`): 1/2 Human Cleric Flying. ETB Scry 2. Test: `silverquill_scribebearer_etb_scrys_two`. |
+| Silverquill Adept | {W}{B} | ✅ | Push (modern_decks batch 47, NEW, `stx::silverquill`): 2/1 Vampire Cleric. Magecraft Drain 1. Test: `silverquill_adept_magecraft_drains_each_opp`. |
+| Silverquill Spellguard | {2}{W}{B} | ✅ | Push (modern_decks batch 47, NEW, `stx::silverquill`): 3/3 Human Soldier First Strike. ETB GainLife 2. Test: `silverquill_spellguard_etb_gains_two_life_with_first_strike`. |
+| Inkling Sageling | {B} | ✅ | Push (modern_decks batch 47, NEW, `stx::silverquill`): 1/1 Inkling Cleric. Dies → Draw 1. Cheap cantrip body. Test: `inkling_sageling_dies_draws_a_card`. |
+| Silverquill Inkcaller | {1}{W}{B} | ✅ | Push (modern_decks batch 47, NEW, `stx::silverquill`): 2/2 Vampire Cleric. ETB mints 1 Inkling token. Test: `silverquill_inkcaller_etb_mints_an_inkling`. |
+| Silverquill Lecture | {1}{W}{B} | ✅ | Push (modern_decks batch 47, NEW, `stx::silverquill`): Instant. Drain 3. 3-mana instant-speed drain. Test: `silverquill_lecture_drains_three`. |
+| Inkling Battlescholar | {3}{W}{B} | ✅ | Push (modern_decks batch 47, NEW, `stx::silverquill`): 3/3 Inkling Cleric Flying. On-attack +1/+0 EOT. Test: `inkling_battlescholar_attack_pumps_self`. |
+| Silverquill Final-Year | {2}{B} | ✅ | Push (modern_decks batch 47, NEW, `stx::silverquill`): 3/2 Human Cleric Lifelink. Magecraft +1/+0 EOT self-pump. Test: `silverquill_final_year_magecraft_self_pumps`. |
+| Inkling Devotee | {2}{W} | ✅ | Push (modern_decks batch 47, NEW, `stx::silverquill`): 2/3 Inkling Cleric. ETB GainLife 2. Test: `inkling_devotee_etb_gains_two_life`. |
+| Silverquill Inkspear | {W}{B} | ✅ | Push (modern_decks batch 47, NEW, `stx::silverquill`): Instant. Target opp loses 1 / you gain 1. 2-mana point-drain. Test: `silverquill_inkspear_drains_target_opponent_for_one`. |
+| Inkling Sergeant | {2}{W} | ✅ | Push (modern_decks batch 47, NEW, `stx::silverquill`): 2/2 Inkling Soldier. Static: Other Inklings get +1/+0 (anthem). Test: `inkling_sergeant_anthems_other_inklings`. |
+| Silverquill Verdict | {2}{W} | ✅ | Push (modern_decks batch 47, NEW, `stx::silverquill`): Sorcery. Exile target Creature with PowerAtLeast(3) + GainLife 2. 3-mana power-gated white removal. Tests: `silverquill_verdict_exiles_high_power_creature`, `silverquill_verdict_rejects_low_power_target`. |
+| Silverquill Curator | {3}{B} | ✅ | Push (modern_decks batch 47, NEW, `stx::silverquill`): 2/3 Vampire Cleric. ETB return target creature card from your gy → hand. 4-mana value-recursion body. Test: `silverquill_curator_etb_returns_creature_from_graveyard`. |
+| Inkling Bondsmith | {1}{W} | ✅ | Push (modern_decks batch 47, NEW, `stx::silverquill`): 1/3 Inkling Cleric Flying. ETB target friendly creature gets +1/+0 EOT + Lifelink EOT. Test: `inkling_bondsmith_etb_pumps_and_grants_lifelink`. |
+| Inkling Aspect | {1}{B} | ✅ | Push (modern_decks batch 47, NEW, `stx::silverquill`): 2/2 Inkling Cleric. ETB self gets +1/+0 EOT + Menace EOT. Test: `inkling_aspect_etb_pumps_self_and_grants_menace`. |
 
 ### Witherbloom (B/G)
 

@@ -535,7 +535,15 @@ impl GameState {
                     // permission-checked at the call site (effects target
                     // the controller's own library).
                     .or_else(|| self.players.iter().find_map(|p| p.library.iter().find(|c| c.id == *cid)))
-                    .or_else(|| self.players.iter().find_map(|p| p.hand.iter().find(|c| c.id == *cid)));
+                    .or_else(|| self.players.iter().find_map(|p| p.hand.iter().find(|c| c.id == *cid)))
+                    // Push (modern_decks): dying-card snapshot, populated
+                    // at SBA die-time and cleared after trigger dispatch.
+                    // Lets predicates like
+                    // `EntityMatches { TriggerSource, HasCreatureType(Pest) }`
+                    // read the dying card's printed types even when the
+                    // card vanished from every zone via CR 111.7c
+                    // (token-ceases-to-exist).
+                    .or_else(|| self.died_card_snapshots.get(cid));
                 let Some(card) = card else { return false; };
                 match req {
                     R::Creature => card.definition.is_creature(),

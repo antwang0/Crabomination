@@ -852,6 +852,13 @@ impl GameState {
                                 .map(|c| c.definition.is_creature())
                                 .unwrap_or(false);
                             if is_creature {
+                                // Cache the dying card's snapshot for
+                                // AnotherOfYours-scope triggers and type
+                                // filter predicates (token deaths in
+                                // particular vanish before dispatch).
+                                if let Some(c) = self.battlefield_find(cid) {
+                                    self.died_card_snapshots.insert(cid, c.clone());
+                                }
                                 events.push(GameEvent::CreatureDied { card_id: cid });
                             }
                             let mut dies = self.remove_to_graveyard_with_triggers(cid);
@@ -1592,7 +1599,13 @@ impl GameState {
                         candidates.into_iter().take(n).map(|c| c.id).collect();
                     for id in ids {
                         let is_creature = self.battlefield_find(id).map(|c| c.definition.is_creature()).unwrap_or(false);
-                        if is_creature { events.push(GameEvent::CreatureDied { card_id: id }); }
+                        if is_creature {
+                            // Cache snapshot for AnotherOfYours triggers.
+                            if let Some(c) = self.battlefield_find(id) {
+                                self.died_card_snapshots.insert(id, c.clone());
+                            }
+                            events.push(GameEvent::CreatureDied { card_id: id });
+                        }
                         let mut die_evs = self.remove_to_graveyard_with_triggers(id);
                         events.append(&mut die_evs);
                     }
@@ -1641,6 +1654,9 @@ impl GameState {
                             .map(|c| c.definition.is_creature())
                             .unwrap_or(false);
                         if is_creature {
+                            if let Some(c) = self.battlefield_find(id) {
+                                self.died_card_snapshots.insert(id, c.clone());
+                            }
                             events.push(GameEvent::CreatureDied { card_id: id });
                         }
                         let mut die_evs = self.remove_to_graveyard_with_triggers(id);
@@ -1870,6 +1886,9 @@ impl GameState {
                         .map(|c| c.definition.is_creature())
                         .unwrap_or(false);
                     if is_creature {
+                        if let Some(c) = self.battlefield_find(cid) {
+                            self.died_card_snapshots.insert(cid, c.clone());
+                        }
                         events.push(GameEvent::CreatureDied { card_id: cid });
                     }
                     self.remove_from_battlefield_to_graveyard(cid);

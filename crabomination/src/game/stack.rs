@@ -785,6 +785,12 @@ impl GameState {
         };
         for id in legend_victims {
             events.push(GameEvent::CreatureDied { card_id: id });
+            // Cache snapshot before zone change so AnotherOfYours-scope
+            // triggers off legend-rule deaths see the right player AND
+            // can introspect the dying card's printed types.
+            if let Some(c) = self.battlefield.iter().find(|c| c.id == id) {
+                self.died_card_snapshots.insert(id, c.clone());
+            }
             self.remove_from_battlefield_to_graveyard(id);
         }
 
@@ -815,6 +821,18 @@ impl GameState {
 
         for id in dead {
             events.push(GameEvent::CreatureDied { card_id: id });
+            // Push (modern_decks claude/modern_decks): cache the dying card's
+            // snapshot so AnotherOfYours-scope triggers AND printed-type
+            // filter predicates fire reliably even for tokens. CR 111.7c's
+            // "ceases to exist" SBA removes the token from every zone in
+            // the same sweep — by dispatch time the zone-walking lookup
+            // returns None. The cached `CardInstance` survives the sweep
+            // and is consulted by `event_matches_spec` (controller lookup)
+            // and `evaluate_requirement_static` (type/keyword/counter
+            // filter). Cleared after `dispatch_triggers_for_events`.
+            if let Some(c) = self.battlefield.iter().find(|c| c.id == id) {
+                self.died_card_snapshots.insert(id, c.clone());
+            }
             // Collect Dies triggers and Persist/Undying info before removing from battlefield.
             let (
                 die_triggers,

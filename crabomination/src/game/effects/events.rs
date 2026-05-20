@@ -53,10 +53,9 @@ pub(crate) fn event_matches_spec(
     // check below then refines on the caster.
     if let (EventKind::BecameTarget, GameEvent::BecameTarget { target, .. }) =
         (&spec.kind, event)
+        && *target != source.id
     {
-        if *target != source.id {
-            return false;
-        }
+        return false;
     }
 
     let scope_ok = match spec.scope {
@@ -116,7 +115,16 @@ pub(crate) fn event_matches_spec(
                 .or_else(|| {
                     state.players.iter().position(|p|
                         p.graveyard.iter().any(|c| c.id == target))
-                });
+                })
+                // Push (modern_decks): for token deaths the SBA "ceases to
+                // exist" rule (CR 111.7c) removes the token from every zone
+                // in the same SBA sweep as the death event emission, so by
+                // the time the trigger dispatcher walks this lookup the
+                // token isn't anywhere. The `died_card_snapshots` cache
+                // is populated at die-time in `check_state_based_actions`
+                // so AnotherOfYours-scope triggers (Witherbloom Pestmaster,
+                // Felisa, Fang of Silverquill) still fire on token death.
+                .or_else(|| state.died_card_snapshots.get(&target).map(|c| c.controller));
             subject_controller == Some(source.controller)
         }
         EventScope::FromYourGraveyard => event_actor(state, event)
@@ -152,6 +160,10 @@ pub(crate) fn event_actor(state: &GameState, event: &GameEvent) -> Option<usize>
         .players
         .iter()
         .position(|p| p.graveyard.iter().any(|c| c.id == cid))
+        // Token deaths: zone walk fails because the token ceases to exist
+        // in the same SBA pass. Fall back to the snapshot cache populated
+        // at die-time in `check_state_based_actions`.
+        .or_else(|| state.died_card_snapshots.get(&cid).map(|c| c.controller))
 }
 
 fn event_player(event: &GameEvent) -> Option<usize> {

@@ -318,6 +318,25 @@ pub struct GameState {
     /// `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub commander_damage: HashMap<(usize, CardId), u32>,
+    /// Push (modern_decks claude/modern_decks): per-dying-card snapshot
+    /// cache, populated at SBA emission time for every dying creature
+    /// (token or non-token). Used by trigger-dispatch lookups
+    /// (`game/effects/events.rs::event_matches_spec`,
+    /// `evaluate_requirement_static` zone walk) so AnotherOfYours-
+    /// scope triggers with creature-type filters (Witherbloom
+    /// Pestmaster, Felisa, Fang of Silverquill) fire correctly when
+    /// the dying subject is a token — CR 111.7c's "ceases to exist"
+    /// SBA removes the token from every zone in the same sweep as
+    /// the death event emission, so by the time
+    /// `dispatch_triggers_for_events` runs the token is gone from
+    /// both battlefield and graveyard. The cached `CardInstance`
+    /// survives the SBA sweep, giving the dispatcher a reliable
+    /// way to read both the controller AND the dying card's
+    /// printed types / counters. Cleared after each dispatch pass.
+    /// `#[serde(skip)]` because it's transient scratch — snapshots
+    /// don't need to preserve mid-SBA state.
+    #[serde(skip)]
+    pub(crate) died_card_snapshots: HashMap<CardId, CardInstance>,
 }
 
 /// Manual `Clone` impl so the bot can dry-run an action against a copy
@@ -364,6 +383,7 @@ impl Clone for GameState {
             next_replacement_id: self.next_replacement_id,
             commander_cast_count: self.commander_cast_count.clone(),
             commander_damage: self.commander_damage.clone(),
+            died_card_snapshots: self.died_card_snapshots.clone(),
         }
     }
 }
@@ -423,6 +443,7 @@ impl GameState {
             next_replacement_id: 1,
             commander_cast_count: HashMap::new(),
             commander_damage: HashMap::new(),
+            died_card_snapshots: HashMap::new(),
         }
     }
 
@@ -1681,6 +1702,12 @@ impl GameState {
                 event_amount,
             });
         }
+        // Push (modern_decks): clear the per-die-event snapshot cache
+        // after the dispatcher finishes with this event batch. Any
+        // subsequent SBA cycle re-populates the entries it needs at
+        // that cycle's die-time, so stale entries from prior batches
+        // can't leak into later trigger resolution.
+        self.died_card_snapshots.clear();
     }
 
 

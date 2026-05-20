@@ -157,6 +157,40 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   transitions and BoUpkeep triggers (Lorehold the Historian's
   opp-upkeep loot trigger, Bedlam Reveler-style triggers).
 
+- ✅ **CR 606 — Loyalty Abilities** (push modern_decks claude/modern_decks
+  branch — audit against `MagicCompRules_20260417.txt`): The
+  planeswalker loyalty-ability framework — sorcery-speed activation,
+  once-per-turn cap, loyalty-counter costs. Audit:
+  (a) **606.1** loyalty abilities are activated abilities subject to
+  special rules — ✅ (`LoyaltyAbility` struct in `card.rs` keyed
+  separately from regular `ActivatedAbility`; activation routes
+  through `activate_loyalty_ability` in `game/mod.rs:1715`).
+  (b) **606.2** "An activated ability with a loyalty symbol in its
+  cost is a loyalty ability" — ✅ (`LoyaltyAbility.loyalty_cost: i32`
+  is the loyalty delta; +N to add counters, -N to remove).
+  (c) **606.3** sorcery-speed + main-phase only + own permanent +
+  once-per-turn — ✅ (`activate_loyalty_ability` gates: (i)
+  `can_cast_sorcery_speed(p)` enforces sorcery timing + main phase
+  with empty stack, (ii) `battlefield[pos].controller != p` rejects
+  activations on opponent's planeswalkers, (iii)
+  `used_loyalty_ability_this_turn` flag enforces the once-per-turn
+  rule, cleared in `do_cleanup`).
+  (d) **606.4** cost is to add/remove loyalty counters as shown by
+  the loyalty symbol — ✅ (the activation arithmetic on
+  `CounterType::Loyalty`: `current_loyalty + ability.loyalty_cost`
+  is computed; negative results reject with `NotEnoughLoyalty`).
+  (e) **606.5** multiple `[+N]`/`[-N]` costs combine — N/A (no card
+  in the catalog prints multiple loyalty modifiers in one activation;
+  the engine accepts a single `loyalty_cost: i32` per ability which
+  models this implicitly for the simpler case).
+  (f) **606.6** negative-cost ability requires sufficient loyalty —
+  ✅ (`new_loyalty < 0` → `Err(NotEnoughLoyalty)`; matches the
+  printed "X- cost requires X counters" rule).
+  Tests: existing planeswalker coverage (e.g. Ral Zarek +1 Surveil 2,
+  -1 discard, -2 reanimate) exercises the three-mode shape and
+  validates the once-per-turn lock. The "Carth the Lion" +1-modifier
+  rider (CR 606.5) stays doc-tracked.
+
 - ✅ **CR 504 — Draw Step** (push modern_decks batch 43,
   claude/modern_decks branch — audit against
   `MagicCompRules_20260417.txt`): The two-step draw-step framework
@@ -4750,28 +4784,28 @@ keyed on `ZoneChange { from: Battlefield, to: Graveyard, card_filter }`.
 Returns an `(Exile, DelayedTriggerOnExile)` 2-tuple instead of the
 default zone change.
 
-### Engine — Token subject_controller cache in CreatureDied events
+### Engine — Token subject_controller cache in CreatureDied events ✅ DONE
 
-The `EventScope::AnotherOfYours` scope check at
-`game/effects/events.rs:79+` for CreatureDied events walks the
-battlefield then per-player graveyards to find the dying card's
-controller. For dying **tokens**, CR 111.7c's "ceases to exist" SBA
-runs in the same `check_state_based_actions` sweep as the death event
-emission, so by the time the unified `dispatch_triggers_for_events`
-runs the token is gone from every zone and `subject_controller`
-returns `None` — silently dropping every AnotherOfYours trigger that
-fires off a token death.
-
-**Repro**: Witherbloom Pestmaster ("whenever another Pest you control
-dies, +1/+1 counter on this") doesn't trigger when an STX Pest token
-dies — only when a non-token Pest creature (Witherbloom Pest Eater)
-dies. Filed for batch 10.
-
-**Fix**: cache the subject's controller (and creature types) on the
-`GameEvent::CreatureDied` payload at emission time (in
-`check_state_based_actions`), so the dispatcher reads it from the
-event rather than walking zones. Same approach as the existing
-`event_amount` cache for LifeGained / DamageDealt scalars.
+✅ Done in push (modern_decks claude/modern_decks batch 47): new
+`GameState.died_card_snapshots: HashMap<CardId, CardInstance>` field
+populated at SBA emission time for every dying creature (token or
+non-token). Consulted by:
+- `event_matches_spec` AnotherOfYours scope-check (controller lookup)
+- `event_actor` (actor lookup for YourControl / OpponentControl)
+- `evaluate_requirement_static` (type/keyword/counter filter via the
+  zone-walk fallback chain)
+The full `CardInstance` snapshot (not just controller) lets
+predicate filters like
+`Predicate::EntityMatches { TriggerSource, HasCreatureType(Pest) }`
+correctly identify the dying card's printed types even after CR
+111.7c's "token ceases to exist" SBA has removed it from every zone.
+Cleared after each `dispatch_triggers_for_events` pass to prevent
+stale entries leaking into subsequent SBA cycles. Lock-in test:
+`pestmaster_pumps_on_pest_token_death_via_cached_controller`.
+Affected cards: Witherbloom Pestmaster (originally filed repro),
+Felisa Fang of Silverquill (counter-bearer-dies-mints-Inkling
+trigger), Lorehold Spiritcaller (per-leave gain-1 trigger) — all
+now fire correctly on token death.
 
 ### Engine — `Modification::RemoveAllAbilities` only clears keywords
 

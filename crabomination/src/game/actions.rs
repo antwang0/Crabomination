@@ -2369,6 +2369,12 @@ impl GameState {
                 .map(|c| c.definition.is_creature())
                 .unwrap_or(false);
             if is_creature {
+                // Cache the dying card's snapshot so AnotherOfYours
+                // triggers and type-filter predicates fire off
+                // sacrifices even when the dying card is a token.
+                if let Some(c) = self.battlefield_find(card_id) {
+                    self.died_card_snapshots.insert(card_id, c.clone());
+                }
                 events.push(GameEvent::CreatureDied { card_id });
             }
             let mut die_evs = self.remove_to_graveyard_with_triggers(card_id);
