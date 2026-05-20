@@ -41401,3 +41401,199 @@ fn prismari_riftspark_magecraft_loots_optionally() {
     // post-bolt-cast.
     assert_eq!(g.players[0].hand.len(), hand_before);
 }
+
+// ── Batch 52: more aristocrats + magecraft cards ───────────────────────────
+
+#[test]
+fn pest_anointer_gains_life_on_sacrifice() {
+    let mut g = two_player_game();
+    let _ = g.add_card_to_battlefield(0, catalog::pest_anointer());
+    // Make the fodder a token so the auto-sac picker prefers it
+    // (tokens sort before non-tokens in the heuristic).
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == fodder) {
+        c.is_token = true;
+    }
+    let life_before = g.players[0].life;
+    let sac = g.add_card_to_hand(0, catalog::witherbloom_sacrosanct());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: sac, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Sacrosanct castable");
+    drain_stack(&mut g);
+    // Sacrosanct: drain 3 = +3 life. Anointer: +1 from the sacrifice.
+    assert_eq!(g.players[0].life, life_before + 3 + 1);
+}
+
+#[test]
+fn witherbloom_bloodreaper_drains_each_opp_on_sacrifice() {
+    let mut g = two_player_game();
+    let _ = g.add_card_to_battlefield(0, catalog::witherbloom_bloodreaper());
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == fodder) {
+        c.is_token = true;
+    }
+    let opp_before = g.players[1].life;
+    let sac = g.add_card_to_hand(0, catalog::witherbloom_sacrosanct());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: sac, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Sacrosanct castable");
+    drain_stack(&mut g);
+    // Sacrosanct -3 to opp + Bloodreaper -1 to opp = -4.
+    assert_eq!(g.players[1].life, opp_before - 4);
+}
+
+#[test]
+fn pest_conservator_sac_a_pest_draws() {
+    let mut g = two_player_game();
+    let pc = g.add_card_to_battlefield(0, catalog::pest_conservator());
+    g.clear_sickness(pc);
+    // Mint a Pest token to sacrifice. Add a pest directly.
+    let pest_def = {
+        // Use Grizzly Bears retyped as a Pest for a cheap fodder.
+        let mut def = catalog::grizzly_bears();
+        def.subtypes.creature_types = vec![CreatureType::Pest];
+        def
+    };
+    let pest = g.add_card_to_battlefield(0, pest_def);
+    g.add_card_to_library(0, catalog::forest());
+    let hand_before = g.players[0].hand.len();
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: pc, ability_index: 0, target: None,
+    }).expect("Conservator activatable");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == pest),
+        "Pest should be sacrificed");
+    assert_eq!(g.players[0].hand.len(), hand_before + 1);
+}
+
+#[test]
+fn witherbloom_bloodweaver_is_a_lifelink_trampler() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::witherbloom_bloodweaver());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bloodweaver castable");
+    drain_stack(&mut g);
+    let card = g.battlefield_find(id).unwrap();
+    assert!(card.has_keyword(&Keyword::Lifelink));
+    assert!(card.has_keyword(&Keyword::Trample));
+    assert_eq!(card.power(), 4);
+}
+
+#[test]
+fn lorehold_spiritchron_magecraft_fans_counters_on_spirits() {
+    let mut g = two_player_game();
+    let spirit = g.add_card_to_battlefield(0, catalog::lorehold_reverence());
+    let _ = g.add_card_to_battlefield(0, catalog::lorehold_spiritchron());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    let before = g.battlefield_find(spirit).unwrap()
+        .counters.get(&CounterType::PlusOnePlusOne).copied().unwrap_or(0);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(crate::game::types::Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt castable");
+    drain_stack(&mut g);
+    let after = g.battlefield_find(spirit).unwrap()
+        .counters.get(&CounterType::PlusOnePlusOne).copied().unwrap_or(0);
+    assert_eq!(after, before + 1);
+}
+
+#[test]
+fn lorehold_sparklock_burns_target_creature() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::plains());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::lorehold_sparklock());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(crate::game::types::Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Sparklock castable");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == bear),
+        "Bear should die to 4 damage");
+}
+
+#[test]
+fn quandrix_cantripper_magecraft_loots_on_cast() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let _ = g.add_card_to_battlefield(0, catalog::quandrix_cantripper());
+    let _ = g.add_card_to_hand(0, catalog::forest());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    let hand_pre = g.players[0].hand.len();
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(crate::game::types::Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt castable");
+    drain_stack(&mut g);
+    // -1 (bolt cast) + 1 (magecraft draw) - 1 (magecraft discard) = -1.
+    assert_eq!(g.players[0].hand.len(), hand_pre - 1);
+}
+
+#[test]
+fn fractal_bloomanalyst_enters_with_counters_for_each_other_creature() {
+    let mut g = two_player_game();
+    // 2 other creatures.
+    let _b1 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let _b2 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::fractal_bloomanalyst());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bloomanalyst castable");
+    drain_stack(&mut g);
+    let card = g.battlefield_find(id).expect("Bloomanalyst should survive ETB");
+    let counters = card.counters.get(&CounterType::PlusOnePlusOne)
+        .copied().unwrap_or(0);
+    // 2 other creatures → 2 counters → 2/2.
+    assert_eq!(counters, 2);
+}
+
+#[test]
+fn prismari_cantrip_mage_magecraft_scrys_and_draws() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let _ = g.add_card_to_battlefield(0, catalog::prismari_cantrip_mage());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    let hand_pre = g.players[0].hand.len();
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(crate::game::types::Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt castable");
+    drain_stack(&mut g);
+    // -1 cast bolt + 1 magecraft draw = 0 net (no discard) → same as before.
+    assert_eq!(g.players[0].hand.len(), hand_pre);
+}
+
+#[test]
+fn prismari_firebrand_etb_pings_with_haste() {
+    let mut g = two_player_game();
+    let opp_before = g.players[1].life;
+    let id = g.add_card_to_hand(0, catalog::prismari_firebrand());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Firebrand castable");
+    drain_stack(&mut g);
+    let card = g.battlefield_find(id).unwrap();
+    assert!(card.has_keyword(&Keyword::Haste));
+    // Damage: auto-target picks the opponent.
+    assert_eq!(g.players[1].life, opp_before - 1);
+}
