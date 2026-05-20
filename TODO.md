@@ -1009,16 +1009,21 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   counters, Hofri/Quintorius anthems on attacking creatures).
   Promote to ✅ when 506.6 and 506.7 land.
 
-- 🟡 **CR 605 — Mana Abilities** (push modern_decks audit,
-  claude/modern_decks branch): The mana-ability framework — what
+- 🟡 **CR 605 — Mana Abilities** (push modern_decks batch 47
+  re-audit, claude/modern_decks branch — audit against
+  `MagicCompRules_20260417.txt`): The mana-ability framework — what
   qualifies as a mana ability and how it resolves. Audit confirms
   the engine's activated-mana-ability fast-path is end-to-end CR-
   compliant: (a) **605.1a** activated mana ability criteria (no
   target + could add mana + not loyalty) — ✅ (`is_mana_ability` in
   `game/actions.rs` matches the rule conservatively: pure
-  `Effect::AddMana` OR a `Seq` of mana abilities); (b) **605.2**
-  mana ability remains a mana ability even if it can't produce mana
-  right now — ✅ (the criteria check is static against the
+  `Effect::AddMana` OR a `Seq` of mana abilities). The conservative
+  filter naturally rejects abilities that mix `AddMana` with
+  non-mana effects (e.g. `{T}: Add {C}, deal 1 damage to any
+  target` — the damage step pulls a target, so the wrapper Seq
+  wouldn't pass `is_mana_ability`); (b) **605.2** mana ability
+  remains a mana ability even if it can't produce mana right now —
+  ✅ (the criteria check is static against the
   `ActivatedAbility.effect` shape, not the runtime "could it add
   mana"); (c) **605.3a** mid-cast / mid-resolve activation — ✅
   (mana abilities can be activated during cost-payment via
@@ -1026,20 +1031,27 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   ✅ (`activate_ability` routes mana abilities through
   `continue_ability_resolution` directly, skipping `StackItem::
   Trigger` push); (e) **605.3c** can't reactivate until resolved —
-  ✅ (resolution is atomic in the mana-ability path); (f) **605.4a**
-  triggered mana abilities don't go on the stack — ⏳ (no STX/SOS
-  card requires it; engine handles all triggered abilities through
-  the standard stack-push path; first card to need the fast-path
-  would be Mana Reflection / Wirewood Channeler-style "Whenever
-  a permanent taps for mana, it produces twice as much"); (g)
-  **605.5a/b** abilities with targets / spells aren't mana
-  abilities — ✅ (the `is_mana_ability` recogniser doesn't accept
-  effects with `Target(_)` selectors or any non-AddMana sub-effect).
-  No new tests added — the framework is implicitly exercised by
-  every mana-rock test and every spell-cast test in the suite
-  (Sky/Marble/Fire/Charcoal/Moss Diamond, Lorehold Excavation's
-  two color-producing taps, every Witherbloom Pledgemage / Cellar
-  of Secrets / Diamond cycle activation). Promote to ✅ when the
+  ✅ (resolution is atomic in the mana-ability path — the activate
+  → resolve transition is a single synchronous call sequence with
+  no priority window in between); (f) **605.4a** triggered mana
+  abilities don't go on the stack — ⏳ (no STX/SOS card requires
+  it; engine handles all triggered abilities through the standard
+  stack-push path; first card to need the fast-path would be Mana
+  Reflection / Wirewood Channeler-style "Whenever a permanent
+  taps for mana, it produces twice as much"); (g) **605.5a/b**
+  abilities with targets / spells aren't mana abilities — ✅ (the
+  `is_mana_ability` recogniser doesn't accept effects with
+  `Target(_)` selectors or any non-AddMana sub-effect; spells
+  resolve through the cast-spell pipeline, not the mana-ability
+  fast-path, even if they call `AddMana` as part of their effect).
+  Implicitly exercised by every mana-rock test and every spell-
+  cast test in the suite (Sky/Marble/Fire/Charcoal/Moss Diamond,
+  Lorehold Excavation's two color-producing taps, every
+  Witherbloom Pledgemage / Cellar of Secrets / Diamond cycle
+  activation), plus the new Strixhaven Crucible test
+  (`strixhaven_crucible_activation_drains_one`) which covers a
+  Drain ability that is correctly **not** a mana ability (it
+  targets a player, so 605.1a rejects it). Promote to ✅ when the
   triggered-mana-ability fast-path lands.
 
 - 🟡 **CR 701.10 — Double** (push modern_decks audit,
@@ -2630,6 +2642,40 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   Promote to ✅ when CR 701.19 (Regenerate) lands.
 
 ## Suggested next-up tasks
+
+- ⏳ **Transient triggered-ability grant primitive** (push
+  modern_decks batch 47 — new suggestion). Several STX/SOS cards
+  print "until end of turn, each [creature] you control gains
+  [trigger]" — e.g. SOS Root Manipulation ("creatures you control
+  get +2/+2 and gain menace and 'Whenever this creature attacks,
+  you gain 1 life.' until end of turn") and Rabid Attack ("any
+  number of target creatures each get +1/+0 and gain 'When this
+  creature dies, draw a card.' until end of turn"). The engine has
+  no primitive that grants a trigger for a duration; today these
+  riders are dropped (the body half ships, the trigger-grant
+  half doesn't). Wiring shape: a new `Effect::GrantTriggeredAbility
+  { what: Selector, trigger: TriggeredAbility, duration: Duration }`
+  primitive that injects a transient trigger onto each matched
+  permanent (stored alongside `granted_keywords_eot` for cleanup
+  per CR 614.7c). Cards unblocked: Root Manipulation, Rabid Attack,
+  plus future "gain 'attack-trigger gain life'" / "gain 'dies-draw'"
+  patterns.
+
+- ⏳ **Permanent-copy primitive** (push modern_decks batch 47 —
+  new suggestion). Multiple STX/SOS cards print "create a token
+  that's a copy of target X" (Echocasting Symposium, Applied
+  Geometry, the Colorstorm Stallion / Elemental Mascot "if 5+
+  mana spent, create a token that's a copy of this" Opus halves).
+  Today these collapse to a vanilla token mint. Engine needs a
+  `Effect::CreateCopyToken { what: Selector, modifier: Option<TokenModifier> }`
+  primitive that copies the chosen permanent's printed
+  characteristics (P/T, types, abilities) into a fresh
+  `TokenDefinition` at resolution time. The `modifier` field
+  would carry the optional "except it's also a Fractal" /
+  "except its base P/T is 4/4" overrides per the printed cards.
+  Cards unblocked: Echocasting Symposium, Applied Geometry,
+  Colorstorm Stallion (big-body), Elemental Mascot (big-body),
+  any future Saheeli / Sublime Epiphany permanent-copy mode.
 
 - ✅ **`Effect::GrantKeyword` duration honoring** (push modern_decks
   batch 24) — Previously mutated `c.definition.keywords` directly with

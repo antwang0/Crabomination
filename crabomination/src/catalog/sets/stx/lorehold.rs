@@ -6841,3 +6841,215 @@ pub fn lorehold_ember_sentinel() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 47 (modern_decks) — Lorehold expansion ────────────────────────────
+
+/// Lorehold Spiritbinder — {2}{R}{W}, 3/3 Spirit Cleric. Synthesised
+/// Oracle: "When this creature enters, create a 2/2 R/W Spirit creature
+/// token." 4-mana double-body wide play.
+pub fn lorehold_spiritbinder() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Spiritbinder",
+        cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_mint_token(lorehold_spirit_token(), 1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Sparkflinger — {1}{R}, 2/2 Human Wizard. Synthesised Oracle:
+/// "Magecraft — Whenever you cast or copy an instant or sorcery spell,
+/// this creature deals 1 damage to any target." 2-mana ping-engine
+/// magecraft body. Mirror of Prismari Pyrowriter at the Lorehold slot.
+pub fn lorehold_sparkflinger() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Sparkflinger",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_ping_any(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Battle Cry — {R}{W} Sorcery. Synthesised Oracle:
+/// "Create a 2/2 red and white Spirit creature token with haste."
+/// 2-mana Spirit-token enabler with built-in haste.
+pub fn lorehold_battle_cry() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Battle Cry",
+        cost: cost(&[r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: crate::effect::shortcut::create_token_with_keyword(
+            PlayerRef::You,
+            1,
+            lorehold_spirit_token(),
+            Keyword::Haste,
+            Duration::EndOfTurn,
+        ),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Battle Memorial — {3}{R}{W} Sorcery. Synthesised Oracle:
+/// "Lorehold Battle Memorial deals 3 damage to target creature and 3
+/// damage to target player." 5-mana split-shot — slot 0 = creature
+/// target, slot 1 = player target.
+pub fn lorehold_battle_memorial() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Battle Memorial",
+        cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Creature),
+                amount: Value::Const(3),
+            },
+            Effect::DealDamage {
+                to: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: SelectionRequirement::Player,
+                },
+                amount: Value::Const(3),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Veteran — {2}{R}, 3/2 Spirit Soldier Haste.
+/// Synthesised Oracle: "Haste. When this creature enters, it deals
+/// 1 damage to any target." 3-mana aggressive haste body with ETB ping.
+pub fn lorehold_veteran() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Veteran",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Haste],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature
+                        .or(SelectionRequirement::Player)
+                        .or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Scrollwarden — {3}{R}{W}, 3/4 Spirit Soldier Flying.
+/// Synthesised Oracle: "Flying. When this creature enters, create a
+/// 2/2 R/W Spirit creature token."
+pub fn lorehold_scrollwarden() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Scrollwarden",
+        cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_mint_token(lorehold_spirit_token(), 1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

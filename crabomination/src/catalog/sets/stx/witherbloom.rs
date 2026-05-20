@@ -6242,3 +6242,159 @@ pub fn witherbloom_spireling() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 47 (modern_decks) — Witherbloom expansion ─────────────────────────
+
+/// Witherbloom Vinepicker — {B}{G}, 2/2 Plant Druid. Synthesised Oracle:
+/// "Magecraft — Whenever you cast or copy an instant or sorcery spell,
+/// put a +1/+1 counter on this creature." 2-mana magecraft growth body.
+pub fn witherbloom_vinepicker() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Vinepicker",
+        cost: cost(&[b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::AddCounter {
+            what: Selector::This,
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Pestbloomer — {2}{B}{G}, 3/3 Plant Druid. Synthesised
+/// Oracle: "When this creature enters, create two 1/1 black-green
+/// Pest tokens with 'When this creature dies, you gain 1 life.'"
+/// 4-mana body + Pest engine. Pest tokens feed Bayou Groff, Pest
+/// Tender, and other sacrifice payoffs.
+pub fn witherbloom_pestbloomer() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Pestbloomer",
+        cost: cost(&[generic(2), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_mint_token(stx_pest_token(), 2)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Rotsplash — {1}{B} Instant. Synthesised Oracle:
+/// "Target creature gets -3/-3 until end of turn. You gain 1 life."
+/// 2-mana ruthlessly efficient removal trick. Trades a -1/-1 net
+/// from Glimmer for a strict upgrade to -3/-3.
+pub fn witherbloom_rotsplash() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Rotsplash",
+        cost: cost(&[generic(1), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(-3),
+                toughness: Value::Const(-3),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Vinetwister — {3}{G}, 3/4 Plant Druid. Synthesised
+/// Oracle: "When this creature enters, put a +1/+1 counter on each
+/// other creature you control." A green Champion of Lambholt-style
+/// fan-out for Witherbloom.
+pub fn witherbloom_vinetwister() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Vinetwister",
+        cost: cost(&[generic(3), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::ForEach {
+                selector: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                body: Box::new(Effect::AddCounter {
+                    what: Selector::TriggerSource,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                }),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

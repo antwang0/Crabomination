@@ -32155,3 +32155,172 @@ pub fn strixhaven_field_researcher() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 47 (modern_decks) — Strixhaven extras ─────────────────────────────
+
+/// Strixhaven Quartermaster — {1}{W}, 2/2 Human Soldier.
+/// Synthesised Oracle: "Vigilance. When this creature enters, you
+/// gain 2 life."
+pub fn strixhaven_quartermaster() -> CardDefinition {
+    CardDefinition {
+        name: "Strixhaven Quartermaster",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![crate::effect::shortcut::etb_gain_life(2)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Strixhaven Library Mage — {2}{U}, 2/3 Human Wizard.
+/// Synthesised Oracle: "When this creature enters, scry 2."
+pub fn strixhaven_library_mage() -> CardDefinition {
+    CardDefinition {
+        name: "Strixhaven Library Mage",
+        cost: cost(&[generic(2), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![crate::effect::shortcut::etb_scry(2)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Strixhaven Demonstrator — {2}{B}, 3/2 Human Warlock.
+/// Synthesised Oracle: "When this creature enters, each opponent loses
+/// 2 life and you gain 2 life."
+pub fn strixhaven_demonstrator() -> CardDefinition {
+    CardDefinition {
+        name: "Strixhaven Demonstrator",
+        cost: cost(&[generic(2), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![crate::effect::shortcut::etb_drain(2)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Strixhaven Crucible — {3}, Artifact. Synthesised Oracle:
+/// "{2}, {T}: Target player loses 1 life and you gain 1 life."
+/// A slow-burn drain engine artifact.
+pub fn strixhaven_crucible() -> CardDefinition {
+    CardDefinition {
+        name: "Strixhaven Crucible",
+        cost: cost(&[generic(3)]),
+        supertypes: vec![],
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            tap_cost: true,
+            sac_cost: false,
+            life_cost: 0,
+            exile_other_filter: None,
+            condition: None,
+            exile_self_cost: false,
+            from_graveyard: false,
+            sorcery_speed: false,
+            once_per_turn: false,
+            effect: Effect::Drain {
+                from: target_filtered(SelectionRequirement::Player),
+                to: Selector::You,
+                amount: Value::Const(1),
+            },
+            self_counter_cost_reduction: None,
+        }],
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Strixhaven Skylancer — {3}{W}, 3/3 Human Knight Flying + Vigilance.
+/// Synthesised Oracle: "Flying, vigilance."
+pub fn strixhaven_skylancer() -> CardDefinition {
+    CardDefinition {
+        name: "Strixhaven Skylancer",
+        cost: cost(&[generic(3), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying, Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

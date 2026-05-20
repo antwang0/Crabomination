@@ -7973,3 +7973,192 @@ pub fn inkling_aspect() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 47 follow-up (modern_decks) — Silverquill expansion ────────────────
+
+/// Silverquill Quillbinder — {2}{W}{B}, 3/3 Inkling Cleric Flying +
+/// Lifelink. Synthesised Oracle: "Flying, lifelink. When this creature
+/// enters, create a 1/1 W/B Inkling creature token with flying."
+/// 4-mana double-evasion drain finisher with token rider.
+pub fn silverquill_quillbinder() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Quillbinder",
+        cost: cost(&[generic(2), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying, Keyword::Lifelink],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_mint_token(inkling_token(), 1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Inkling Quillblade — {1}{W}, 2/1 Inkling Soldier Flying.
+/// Synthesised Oracle: "Flying. Magecraft — Whenever you cast or copy
+/// an instant or sorcery spell, this creature gets +1/+1 until end of
+/// turn." 2-mana evasive magecraft self-pump.
+pub fn inkling_quillblade() -> CardDefinition {
+    CardDefinition {
+        name: "Inkling Quillblade",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_self_pump(1, 1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Reprover — {2}{W}, 2/3 Human Cleric Vigilance.
+/// Synthesised Oracle: "Vigilance. When this creature enters, target
+/// creature an opponent controls gets -2/-0 until end of turn."
+/// 3-mana defensive body + combat-disruption.
+pub fn silverquill_reprover() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Reprover",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::PumpPT {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+                ),
+                power: Value::Const(-2),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Refrain — {W}{B} Instant. Synthesised Oracle: "Drain
+/// 2 (each opponent loses 2 life and you gain 2 life). Surveil 1."
+/// 2-mana drain + selection.
+pub fn silverquill_refrain() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Refrain",
+        cost: cost(&[w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Drain {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                to: Selector::You,
+                amount: Value::Const(2),
+            },
+            Effect::Surveil {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Inkling Ascendancy — {2}{W}{B} Sorcery. Synthesised Oracle:
+/// "Create two 1/1 W/B Inkling creature tokens with flying. Each
+/// creature you control gets +1/+0 until end of turn."
+/// 4-mana wide-anthem swing turn for Inkling tribal.
+pub fn inkling_ascendancy() -> CardDefinition {
+    CardDefinition {
+        name: "Inkling Ascendancy",
+        cost: cost(&[generic(2), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                definition: inkling_token(),
+            },
+            Effect::PumpPT {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                power: Value::Const(1),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
