@@ -5457,7 +5457,11 @@ fn suspend_aggression_exiles_target_and_top_of_library() {
 }
 
 #[test]
-fn wilt_in_the_heat_deals_five_to_creature() {
+fn wilt_in_the_heat_deals_five_to_creature_and_exiles_it() {
+    // Printed: "deals 5 damage; if that creature would die this turn,
+    // exile it instead." 2/2 Grizzly Bears would die to 5 damage, so
+    // the death is redirected to exile (not graveyard) per the
+    // synchronous toughness-gate exile move.
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let id = g.add_card_to_hand(0, catalog::wilt_in_the_heat());
@@ -5471,8 +5475,51 @@ fn wilt_in_the_heat_deals_five_to_creature() {
     .expect("Wilt in the Heat castable for {2}{R}{W}");
     drain_stack(&mut g);
 
-    assert!(!g.battlefield.iter().any(|c| c.id == bear), "Bear should die to 5 damage");
-    assert!(g.players[1].graveyard.iter().any(|c| c.id == bear));
+    assert!(!g.battlefield.iter().any(|c| c.id == bear), "Bear leaves the battlefield");
+    assert!(
+        !g.players[1].graveyard.iter().any(|c| c.id == bear),
+        "Bear does NOT go to graveyard — exile rider redirects"
+    );
+    assert!(
+        g.exile.iter().any(|c| c.id == bear),
+        "Bear is exiled per 'would die this turn' rider"
+    );
+}
+
+#[test]
+fn wilt_in_the_heat_leaves_high_toughness_creature_in_play() {
+    // Serra Angel has 4 toughness — wait, toughness 4 <= 5 so still
+    // exiled. Use a higher-toughness creature. We don't have a 6+
+    // toughness bear in catalog handy; use Tenured Concocter (4/5
+    // Troll Druid). Toughness 5 = boundary; 5 <= 5 still triggers
+    // exile. Use a 6/6 token construct or just verify the predicate
+    // works at boundary with a 6-toughness creature.
+    //
+    // For this case use Beledros Witherbloom (6/6) which definitely
+    // doesn't die to 5 damage.
+    let mut g = two_player_game();
+    let beledros = g.add_card_to_battlefield(1, catalog::beledros_witherbloom());
+    let id = g.add_card_to_hand(0, catalog::wilt_in_the_heat());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(beledros)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Wilt in the Heat castable");
+    drain_stack(&mut g);
+
+    let bel = g.battlefield_find(beledros).expect("Beledros still on bf");
+    assert_eq!(bel.damage, 5, "Beledros has 5 damage marked");
+    assert!(
+        !g.exile.iter().any(|c| c.id == beledros),
+        "Beledros not exiled — toughness 6 > 5"
+    );
 }
 
 #[test]

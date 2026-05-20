@@ -1701,7 +1701,7 @@ pub fn burrog_barrage() -> CardDefinition {
 /// creatures die normally to graveyard.
 pub fn wilt_in_the_heat() -> CardDefinition {
     use crate::card::AlternativeCost;
-    use crate::effect::Predicate;
+    use crate::effect::{Predicate, ZoneDest};
     use crate::mana::{r, w};
     CardDefinition {
         name: "Wilt in the Heat",
@@ -1712,10 +1712,33 @@ pub fn wilt_in_the_heat() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![],
-        effect: Effect::DealDamage {
-            to: Selector::Target(0),
-            amount: Value::Const(5),
-        },
+        // 5 damage to the target creature; if its effective toughness
+        // is <= 5 (i.e. it would die from this damage), follow up with
+        // an exile move so the death is redirected out of the
+        // graveyard. The engine has no general damage-replacement
+        // primitive, but this synchronous toughness gate gives the
+        // observable printed-Oracle outcome for every creature with
+        // toughness <= 5 at resolution time. Move runs before SBA, so
+        // the creature is still on battlefield at exile-move time —
+        // moving it from battlefield -> exile bypasses the
+        // damage-driven graveyard route entirely.
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: Selector::Target(0),
+                amount: Value::Const(5),
+            },
+            Effect::If {
+                cond: Predicate::ValueAtMost(
+                    Value::ToughnessOf(Box::new(Selector::Target(0))),
+                    Value::Const(5),
+                ),
+                then: Box::new(Effect::Move {
+                    what: Selector::Target(0),
+                    to: ZoneDest::Exile,
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],
