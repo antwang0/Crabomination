@@ -2368,6 +2368,15 @@ impl GameState {
                 .battlefield_find(card_id)
                 .map(|c| c.definition.is_creature())
                 .unwrap_or(false);
+            // The activator is the player paying the cost; the
+            // sacrifice attribution should match the controller of the
+            // sacrificed permanent, which is `p` (priority player) for
+            // activated abilities since you only activate abilities of
+            // permanents you control.
+            let sac_who = self
+                .battlefield_find(card_id)
+                .map(|c| c.controller)
+                .unwrap_or(p);
             if is_creature {
                 // Cache the dying card's snapshot so AnotherOfYours
                 // triggers and type-filter predicates fire off
@@ -2375,6 +2384,8 @@ impl GameState {
                 if let Some(c) = self.battlefield_find(card_id) {
                     self.died_card_snapshots.insert(card_id, c.clone());
                 }
+                // CR 701.16 — emit the sacrifice-specific event first.
+                events.push(GameEvent::CreatureSacrificed { card_id, who: sac_who });
                 events.push(GameEvent::CreatureDied { card_id });
             }
             let mut die_evs = self.remove_to_graveyard_with_triggers(card_id);

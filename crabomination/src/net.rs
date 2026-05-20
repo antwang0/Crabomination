@@ -524,6 +524,10 @@ pub enum GameEventWire {
     LifeLost { player: usize, amount: u32 },
     LifeGained { player: usize, amount: u32 },
     CreatureDied { card_id: CardId },
+    /// Wire mirror of `GameEvent::CreatureSacrificed`. Surfaced so client
+    /// UIs can highlight a sacrifice (CR 701.16) distinctly from a
+    /// natural death — useful for replay rewinds and aristocrats payoffs.
+    CreatureSacrificed { card_id: CardId, who: usize },
     PumpApplied { card_id: CardId, power: i32, toughness: i32 },
     CounterAdded { card_id: CardId, counter_type: CounterType, count: u32 },
     CounterRemoved { card_id: CardId, counter_type: CounterType, count: u32 },
@@ -612,6 +616,9 @@ impl From<&GameEvent> for GameEventWire {
             },
             GameEvent::CreatureDied { card_id } => {
                 GameEventWire::CreatureDied { card_id: *card_id }
+            }
+            GameEvent::CreatureSacrificed { card_id, who } => {
+                GameEventWire::CreatureSacrificed { card_id: *card_id, who: *who }
             }
             GameEvent::PumpApplied { card_id, power, toughness } => GameEventWire::PumpApplied {
                 card_id: *card_id,

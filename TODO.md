@@ -12,6 +12,47 @@ Periodic spot-check of the rules document
 `MagicCompRules_20260417.txt`). Each rule below has a status tag (✅
 wired, 🟡 partial, ⏳ todo) plus a short note.
 
+- ✅ **CR 701.21 — Sacrifice** (push modern_decks batch 51,
+  claude/modern_decks branch — audit against
+  `MagicCompRules_20260417.txt`). The sacrifice primitive — how
+  sacrifice routes a permanent to graveyard, when it can be
+  performed, and how it interacts with destruction-replacement
+  effects (regenerate, indestructible).
+  (a) **701.21a** "To sacrifice a permanent, its controller moves
+  it from the battlefield directly to its owner's graveyard" — ✅
+  (`Effect::Sacrifice` and the `sac_cost: true` activated-ability
+  path both bypass destruction-replacement: the
+  `remove_from_battlefield_to_graveyard` helper moves the card
+  directly to graveyard without re-routing through the destroy
+  pipeline). Sacrifice ignores Indestructible and Regenerate.
+  (b) **701.21a** "A player can't sacrifice something that isn't a
+  permanent, or something that's a permanent they don't control" — ✅
+  (the `sac_cost` cost validation in `actions.rs` rejects activations
+  where the source isn't on the battlefield or isn't controlled by
+  the activator; `Effect::Sacrifice`'s filter pass + `c.controller
+  == p` clause picks only `who`'s controlled permanents).
+  (c) **701.21a** "Sacrificing a permanent doesn't destroy it, so
+  regeneration or other effects that replace destruction can't affect
+  this action" — ✅ (the engine moves the card directly via
+  `remove_from_battlefield_to_graveyard`; the regen replacement
+  effect framework hooks into `Effect::Destroy`, not the sacrifice
+  path).
+  (d) **Sacrifice as a distinct game event from death (CR 701.16
+  semantic, doc-cited as "sacrifice")** — ✅ (push modern_decks batch
+  51: new `EventKind::CreatureSacrificed` + `GameEvent::
+  CreatureSacrificed { card_id, who }` shipped. All three sacrifice
+  resolvers (`Effect::Sacrifice`, `Effect::SacrificeGreatestMV`,
+  `Effect::SacrificeAndRemember`) and the activated-ability
+  `sac_cost` path emit `CreatureSacrificed` immediately followed by
+  `CreatureDied`, so death triggers fire and sacrifice-specific
+  triggers (Mortician Beetle template) can distinguish the two
+  causes). Cards: Witherbloom Mortician (AnyPlayer scope), Pest
+  Pestmaster (YourControl scope). Tests cover both scope variants
+  and the "lethal damage isn't a sacrifice" negative case.
+  Affected primitives: `Effect::Sacrifice`, `Effect::Sacrifice
+  GreatestMV`, `Effect::SacrificeAndRemember`,
+  `ActivatedAbility.sac_cost: true`.
+
 - 🟡 **CR 119 — Life** (push modern_decks batch 50,
   claude/modern_decks branch — audit against
   `MagicCompRules_20260417.txt`). The life-total primitive — how
@@ -2777,21 +2818,42 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
 
 ## Suggested next-up tasks
 
-- ⏳ **`EventKind::CreatureSacrificed` event separation** (push
-  modern_decks batch 50 — new suggestion). Today `Effect::Sacrifice`
-  emits `GameEvent::CreatureDied` only — sacrifice and natural death
-  are indistinguishable from a trigger's perspective. CR 701.16
-  defines sacrifice as a distinct game event; cards like Mortician
-  Beetle ("Whenever a player sacrifices a creature"), Yahenni,
-  Bone Picker, Solemn Recruit-style triggers want the
-  sacrifice-specific event, not a death-of-any-cause trigger.
-  Wiring shape: add `EventKind::CreatureSacrificed` + `GameEvent::
-  CreatureSacrificed { card_id, who }` (new variants). Have
-  `Effect::Sacrifice` resolver emit both events in order
-  (CreatureSacrificed first, then CreatureDied) so existing
-  death-triggers still fire. Update Mortician Beetle's trigger
-  from `CreatureDied / AnyPlayer` to `CreatureSacrificed / AnyPlayer`
-  — tightening the body for the printed Oracle.
+- ✅ **`EventKind::CreatureSacrificed` event separation** (push
+  modern_decks batch 51) — CR 701.16 sacrifice-as-distinct-event
+  shipped. Both event variants landed: `EventKind::CreatureSacrificed`
+  (`effect.rs`) and `GameEvent::CreatureSacrificed { card_id, who }`
+  (`game/types.rs`) — the latter carries the player who paid the
+  sacrifice for `YourControl`/`OpponentControl` scope dispatch via
+  `event_player` / `event_actor`. Three emitters: `Effect::Sacrifice`,
+  `Effect::SacrificeGreatestMV`, `Effect::SacrificeAndRemember`, and
+  the `sac_cost: true` activated-ability path in `actions.rs`. Each
+  emits `CreatureSacrificed` immediately followed by `CreatureDied`
+  so existing death triggers still fire (and order-sensitive
+  triggers see the sacrifice-specific event first). Cards using the
+  new event: Witherbloom Mortician ({2}{B} 2/2 "Whenever a player
+  sacrifices a creature, +1/+1 counter on this creature" — AnyPlayer
+  scope) and Pest Pestmaster ({3}{B}{G} 3/3 "Whenever you sacrifice
+  a creature, +1/+1 counter" — YourControl scope). Lock-in tests:
+  `witherbloom_mortician_grows_on_sacrifice`,
+  `witherbloom_mortician_does_not_grow_on_natural_death` (lethal
+  damage emits CreatureDied but NOT CreatureSacrificed — Mortician
+  doesn't fire), `pest_pestmaster_b51_grows_only_on_own_sacrifices`.
+  Wire mirror added to `GameEventWire::CreatureSacrificed` so client
+  UIs can highlight the sacrifice distinctly from a natural death.
+
+- ⏳ **`EventKind::PermanentSacrificed` for non-creature sacrifices**
+  (push modern_decks batch 51 — new suggestion). The just-shipped
+  `EventKind::CreatureSacrificed` only fires for creature sacrifices
+  (the `is_creature` gate in the `Effect::Sacrifice` resolver). A
+  more general `EventKind::PermanentSacrificed` (or extending the
+  existing variant to drop the creature-only gate) would unblock
+  Korlash-, Smokestack-, Zealous Conscripts-style "Whenever a player
+  sacrifices a permanent" payoffs (artifact-sac, land-sac, planeswalker
+  -sac). Wiring shape: emit a parallel event for non-creature
+  sacrifices, or rename the existing variant and split into two via a
+  `PermanentKind` discriminant. No catalog card needs this today; the
+  gap is doc-tracked for future Modern Horizons-style "sacrifice
+  matters" lord cards.
 
 - ⏳ **Transient triggered-ability grant primitive** (push
   modern_decks batch 47 — new suggestion). Several STX/SOS cards

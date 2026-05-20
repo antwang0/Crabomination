@@ -563,6 +563,13 @@ pub enum EventKind {
     EntersBattlefield,
     /// A creature died (hit a graveyard from the battlefield).
     CreatureDied,
+    /// A creature was sacrificed. Per CR 701.16, "sacrifice" is a distinct
+    /// game event from "die" — Mortician Beetle / Yahenni / Bone Picker
+    /// ("Whenever a player sacrifices a creature") want this specific
+    /// event, not a death-of-any-cause trigger. The `Effect::Sacrifice`
+    /// resolver emits both events in order (CreatureSacrificed first,
+    /// then CreatureDied) so existing death-triggers still fire.
+    CreatureSacrificed,
     /// Any permanent left the battlefield.
     PermanentLeavesBattlefield,
     /// A card was drawn.

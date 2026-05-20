@@ -367,6 +367,11 @@ pub enum GameEvent {
     LifeLost { player: usize, amount: u32 },
     LifeGained { player: usize, amount: u32 },
     CreatureDied { card_id: CardId },
+    /// A creature was sacrificed by `who` (CR 701.16). Fires before the
+    /// corresponding `CreatureDied` event so order-sensitive sacrifice
+    /// triggers (Mortician Beetle, Yahenni-class) see the
+    /// sacrifice-specific event first.
+    CreatureSacrificed { card_id: CardId, who: usize },
     PumpApplied { card_id: CardId, power: i32, toughness: i32 },
     CounterAdded { card_id: CardId, counter_type: CounterType, count: u32 },
     CounterRemoved { card_id: CardId, counter_type: CounterType, count: u32 },

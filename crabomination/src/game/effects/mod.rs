@@ -1604,6 +1604,10 @@ impl GameState {
                             if let Some(c) = self.battlefield_find(id) {
                                 self.died_card_snapshots.insert(id, c.clone());
                             }
+                            // Emit CreatureSacrificed before CreatureDied
+                            // so order-sensitive triggers (CR 701.16) see
+                            // the sacrifice-specific event first.
+                            events.push(GameEvent::CreatureSacrificed { card_id: id, who: p });
                             events.push(GameEvent::CreatureDied { card_id: id });
                         }
                         let mut die_evs = self.remove_to_graveyard_with_triggers(id);
@@ -1657,6 +1661,7 @@ impl GameState {
                             if let Some(c) = self.battlefield_find(id) {
                                 self.died_card_snapshots.insert(id, c.clone());
                             }
+                            events.push(GameEvent::CreatureSacrificed { card_id: id, who: p });
                             events.push(GameEvent::CreatureDied { card_id: id });
                         }
                         let mut die_evs = self.remove_to_graveyard_with_triggers(id);
@@ -1889,6 +1894,7 @@ impl GameState {
                         if let Some(c) = self.battlefield_find(cid) {
                             self.died_card_snapshots.insert(cid, c.clone());
                         }
+                        events.push(GameEvent::CreatureSacrificed { card_id: cid, who: p });
                         events.push(GameEvent::CreatureDied { card_id: cid });
                     }
                     self.remove_from_battlefield_to_graveyard(cid);

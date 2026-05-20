@@ -7354,6 +7354,201 @@ pub fn witherbloom_decaymage() -> CardDefinition {
     }
 }
 
+/// Witherbloom Mortician — {2}{B}, 2/2 Human Warlock. "Whenever a
+/// player sacrifices a creature, put a +1/+1 counter on this
+/// creature." Aristocrats-style Mortician-Beetle template wired off
+/// the new `EventKind::CreatureSacrificed` event (CR 701.16) — the
+/// sacrifice-specific event fires before the CreatureDied event, so
+/// this trigger fires on sacrifices but **not** on natural deaths
+/// (combat damage, lethal pings, exile-via-Path).
+pub fn witherbloom_mortician() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Mortician",
+        cost: cost(&[generic(2), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureSacrificed, EventScope::AnyPlayer),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Sacrosanct — {B}{G}, Sorcery. As an additional cost,
+/// sacrifice a creature. Drain 3.
+pub fn witherbloom_sacrosanct() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Sacrosanct",
+        cost: cost(&[b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        // Approximation: sacrifice at resolution rather than as
+        // additional cost (engine-wide gap shared with Necrotic Fumes).
+        // Functionally equivalent — the fodder hits the graveyard and
+        // the drain fires whether the sac is paid as cost or as effect.
+        effect: Effect::Seq(vec![
+            Effect::Sacrifice {
+                who: Selector::You,
+                count: Value::Const(1),
+                filter: SelectionRequirement::Creature,
+            },
+            Effect::Drain {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                to: Selector::You,
+                amount: Value::Const(3),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Pest Pestmaster — {3}{B}{G}, 3/3 Pest Warlock. "Whenever you
+/// sacrifice a creature, you may put a +1/+1 counter on this
+/// creature." A controlled-side variant of Witherbloom Mortician — uses
+/// EventScope::YourControl so opponent sacrifices don't trigger.
+pub fn pest_pestmaster_b51() -> CardDefinition {
+    CardDefinition {
+        name: "Pest Pestmaster",
+        cost: cost(&[generic(3), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Pest, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureSacrificed, EventScope::YourControl),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Lichbloom — {2}{B}{G}, 3/3 Plant Zombie. "When this
+/// creature dies, return target creature card from your graveyard to
+/// your hand." Self-replacing on death.
+pub fn witherbloom_lichbloom() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Lichbloom",
+        cost: cost(&[generic(2), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Zombie],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+            effect: Effect::Move {
+                what: Selector::one_of(Selector::CardsInZone {
+                    who: PlayerRef::You,
+                    zone: Zone::Graveyard,
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::OtherThanSource),
+                }),
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Pest Cradlescale — {1}{G}, 2/2 Pest Insect Reach. ETB mints a 1/1
+/// Pest token. Anti-flier + Pest engine.
+pub fn pest_cradlescale() -> CardDefinition {
+    CardDefinition {
+        name: "Pest Cradlescale",
+        cost: cost(&[generic(1), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Pest, CreatureType::Insect],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Reach],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_mint_token(stx_pest_token(), 1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
 /// Witherbloom Pestcaller v2 — {3}{B}{G}, 3/3 Pest Warlock. ETB mints
 /// 3 Pest tokens. 5-mana go-wide finisher.
 /// (Disambiguated from the existing batch-X Pestcaller.)
