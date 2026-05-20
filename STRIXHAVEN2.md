@@ -19,14 +19,15 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 227 | 29 | 0 |
-| STX (327 cards) | 1120 (incl. synthesised variants) | 8 | 0 |
+| STX (327 cards) | 1131 (incl. synthesised variants) | 8 | 0 |
 | STA reprints (in STX boosters) | 47 | 0 | — |
 
 Push (modern_decks, claude/modern_decks branch — latest revision —
-**batch 50: 51 more synthesised STX cards (29 Silverquill + 12
-Witherbloom + 10 Lorehold) + 51 new tests + CR 119 (Life) audit +
-3 new effect shortcuts (`etb_draw`, `magecraft_loot`,
-`magecraft_scry`) folding canonical ETB-cantrip /
+**batch 50: 62 more synthesised STX cards across all 5 colleges
+(29 Silverquill + 12 Witherbloom + 10 Lorehold + 6 Quandrix + 5
+Prismari) + 62 new tests + CR 119 (Life) audit + 3 new effect
+shortcuts (`etb_draw`, `magecraft_loot`, `magecraft_scry`) folding
+canonical ETB-cantrip /
 loot-on-cast / scry-on-cast patterns into one-line helpers.
 Includes `silverquill_cantor` ({W} 1/2 ETB gain 1 life),
 `silverquill_inkscholar_b50` ({1}{W} 2/2 ETB draw a card via the new
@@ -4601,6 +4602,12 @@ parity is a matter of porting card factories one at a time.
 | Quandrix Snapcaster | {1}{U} | ✅ | Push (modern_decks batch 47, NEW, `stx::quandrix`): 2/1 Elf Wizard Flash. ETB returns target IS card from your gy to hand via `Selector::one_of(CardsInZone(You, Graveyard, IS))`. Blue-side Snapcaster approximation. Test: `quandrix_snapcaster_etb_returns_is_from_graveyard`. |
 | Quandrix Counterfold | {3}{G}{U} | ✅ | Push (modern_decks batch 47, NEW, `stx::quandrix`): Sorcery. Doubles +1/+1 counters on target friendly creature using `Value::CountersOn { what: Target(0), kind: PlusOnePlusOne }`. 5-mana doubling pump. Test: `quandrix_counterfold_doubles_counters_on_creature`. |
 | Quandrix Augurer | {3}{G}{U} | ✅ | Push (modern_decks batch 47, NEW, `stx::quandrix`): 3/4 Elf Druid. ETB Seq(Draw 1 + fan-out +1/+1 counter to each friendly creature). Test: `quandrix_augurer_etb_draws_and_fans_counters`. |
+| Quandrix Scryweaver | {G}{U} | ✅ | Push (modern_decks batch 50, NEW, `stx::quandrix`): 1/2 Elf Wizard. Magecraft Scry 1 via `magecraft_scry`. 2-mana magecraft scry body. Test: `quandrix_scryweaver_magecraft_scrys`. |
+| Fractal Bloomthorn | {2}{G}{U} | ✅ | Push (modern_decks batch 50, NEW, `stx::quandrix`): 0/0 Fractal Trample. Enters with 3 +1/+1 counters via `enters_with_counters` (CR 614.12). 4-mana 3/3 trampler. Test: `fractal_bloomthorn_enters_with_three_counters`. |
+| Quandrix Pupil Adept | {G} | ✅ | Push (modern_decks batch 50, NEW, `stx::quandrix`): 1/1 Elf Wizard. Magecraft AddCounter(+1/+1, Self). Cheapest magecraft self-scaling body. Test: `quandrix_pupil_b50_magecraft_self_grows`. |
+| Quandrix Forge | {2}{G}{U} | ✅ | Push (modern_decks batch 50, NEW, `stx::quandrix`): Sorcery. Mints a Fractal token with 4 +1/+1 counters via `create_token_with_counter`. 4-mana flat Fractal token. Test: `quandrix_forge_mints_fractal_with_four_counters`. |
+| Quandrix Algorithmist | {2}{G}{U} | ✅ | Push (modern_decks batch 50, NEW, `stx::quandrix`): 2/3 Elf Druid. Magecraft +1/+1 counter on each Fractal you control. 4-mana team-pump magecraft. Test: `quandrix_algorithmist_magecraft_pumps_each_fractal`. |
+| Quandrix Refractor | {1}{G}{U} | ✅ | Push (modern_decks batch 50, NEW, `stx::quandrix`): 2/3 Fractal Wizard. ETB Draw 1 via `etb_draw`. 3-mana cantrip Fractal. Test: `quandrix_refractor_etb_draws_a_card`. |
 
 ### Prismari (U/R)
 
@@ -4681,6 +4688,11 @@ parity is a matter of porting card factories one at a time.
 | Prismari Embershout | {2}{R} | ✅ | Push (modern_decks batch 47, NEW, `stx::prismari`): Sorcery. Seq(DealDamage 3 to any target + Scry 1). 3-mana flexible burn + smoothing. Test: `prismari_embershout_burns_creature_or_player_and_scrys`. |
 | Prismari Stormcoil | {2}{U}{R} | ✅ | Push (modern_decks batch 47, NEW, `stx::prismari`): 3/3 Elemental. Magecraft self-pump +1/+1 EOT. Pump engine on a vanilla frame. Test: `prismari_stormcoil_magecraft_self_pumps`. |
 | Prismari Treasurespark | {1}{U}{R} | ✅ | Push (modern_decks batch 47, NEW, `stx::prismari`): Sorcery. Seq(CreateToken(Treasure) + Draw 1). 3-mana ramp + draw. Test: `prismari_treasurespark_mints_treasure_and_draws`. |
+| Prismari Bonfire | {1}{R} | ✅ | Push (modern_decks batch 50, NEW, `stx::prismari`): Sorcery. Deals 3 damage to target creature. 2-mana creature-only burn. Test: `prismari_bonfire_burns_creature_for_three`. |
+| Prismari Snapcaster | {U}{R} | ✅ | Push (modern_decks batch 50, NEW, `stx::prismari`): 2/1 Human Wizard. ETB Seq(Scry 1 + Draw 1). 2-mana cantrip + smoothing. Test: `prismari_snapcaster_etb_scrys_and_draws`. |
+| Prismari Pyrolancer | {2}{R} | ✅ | Push (modern_decks batch 50, NEW, `stx::prismari`): 3/2 Human Wizard. Magecraft 1 damage to each opp. 3-mana drain-style magecraft. Test: `prismari_pyrolancer_magecraft_pings_each_opp`. |
+| Prismari Drakemage | {3}{U}{R} | ✅ | Push (modern_decks batch 50, NEW, `stx::prismari`): 3/3 Drake Wizard Flying. Magecraft loot via `magecraft_loot()` shortcut. 5-mana evasive looter. Test: `prismari_drakemage_is_a_flying_looter`. |
+| Prismari Cinder-Apprentice | {U}{R} | ✅ | Push (modern_decks batch 50, NEW, `stx::prismari`): 1/2 Human Wizard. Magecraft self-pump +1/+0 EOT. 2-mana prowess-like magecraft body. Test: `prismari_cinder_apprentice_magecraft_pumps_self`. |
 
 ### Mono-color staples (`stx::mono`)
 
