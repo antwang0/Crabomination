@@ -1313,6 +1313,52 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   lifelink). Promote to ✅ when the multi-blocker damage-split player
   prompt lands (CR 510.1c-d).
 
+- ✅ **CR 511 — End of Combat Step** (push modern_decks batch 55 audit,
+  claude/modern_decks branch — audit against
+  `MagicCompRules_20260417.txt`). The terminal step of the combat
+  phase — last priority window for combat-window effects, expiration
+  of "until end of combat" effects, and remove-from-combat cleanup.
+  Audit:
+  (a) **511.1** "The end of combat step has no turn-based actions.
+  Once it begins, the active player gets priority" — ✅
+  (`pass_priority` in `game/stack.rs` advances into
+  `TurnStep::EndCombat` and immediately gives priority to the active
+  player via `give_priority_to_active`; no turn-based actions are
+  enqueued).
+  (b) **511.2** "Abilities that trigger 'at end of combat' trigger as
+  the end of combat step begins" — ✅ (the `EventKind::StepBegins
+  (TurnStep::EndCombat)` event scope already wires "at end of combat"
+  triggers through the standard `fire_step_triggers` dispatcher).
+  (c) **511.2** "Effects that last 'until end of combat' expire at the
+  end of the combat phase" — ✅ (push modern_decks batch 55: new
+  `EffectDuration::UntilEndOfCombat` variant in `game/layers.rs`,
+  cast-site `Duration::EndOfCombat` now maps onto it via the new
+  `map_effect_duration` helper in `game/effects/mod.rs`, and the
+  `pass_priority` step transition in `game/stack.rs` calls
+  `expire_end_of_combat_effects` as we leave `EndCombat` for a
+  non-combat step. Prior to this push the cast-site `EndOfCombat`
+  duration silently downgraded to `UntilEndOfTurn`, so "until end of
+  combat" effects bled across the post-combat main phase. Test:
+  `until_end_of_combat_expires_when_combat_phase_ends`.).
+  Defensive sweep: `expire_end_of_turn_effects` (cleanup-step pass)
+  also clears `UntilEndOfCombat` effects so an effect registered in a
+  no-combat turn (a player who took no combat step) doesn't leak
+  forever.
+  (d) **511.3** "As soon as the end of combat step ends, all creatures,
+  battles, and planeswalkers are removed from combat" — 🟡 (the engine
+  retains `self.attacking` and `self.block_map` after the step ends
+  because the post-combat-main phase has no consumer of them; they're
+  rebuilt next combat phase from scratch. The observable behavior
+  matches the rule — no combat-state lookup outside the combat phase
+  succeeds — but a strict CR-compliant implementation would clear
+  these slots in the EndCombat → PostCombatMain transition. Catalog
+  cards that key on "still attacking after combat ends" (currently
+  none) would expose the gap).
+  Tests: `until_end_of_combat_expires_when_combat_phase_ends` covers
+  the 511.2 expiration semantic with `Effect::SetBasePT { duration:
+  EndOfCombat }`. Promote 511.3 (combat-state cleanup) to ✅ when a
+  catalog card actually checks the bookkeeping post-combat.
+
 - 🟡 **CR 506 — Combat Phase** (push modern_decks audit,
   claude/modern_decks branch): The combat-phase framework — five
   steps, attacker/blocker declaration, removed-from-combat semantics,
@@ -6407,3 +6453,49 @@ resolution time" in the Suggested next-up tasks section.
   Skulk, plus Mantis Rider-style "enters attacking" siblings if a
   separate primitive lands. Currently the flicker-and-block line
   no-ops the block half.
+
+### Engine — `Effect::PumpPT` should honor `Duration::EndOfCombat`
+
+Push (modern_decks batch 55) added `EffectDuration::UntilEndOfCombat`
+and made `Effect::SetBasePT` route through it correctly via the new
+`map_effect_duration` helper. But `Effect::PumpPT` still writes to the
+legacy `CardInstance.power_bonus / toughness_bonus` fields directly,
+bypassing the continuous-effect layer system. Those fields are cleared
+in bulk at the next cleanup step (`clear_end_of_turn_effects`), so a
+PumpPT with `Duration::EndOfCombat` silently lasts until end of turn
+even though the rule says it should clear at end of combat.
+
+**Fix**: route PumpPT through the same `ContinuousEffect` registry as
+SetBasePT. The cleanup-step sweep can then drop `UntilEndOfCombat`
+modifications without needing a special-case field. This also picks
+up the duration mapping for free. Engine-wide ⏳ until a catalog card
+actually uses `Duration::EndOfCombat` for a pump.
+
+### Engine — Replacement-effect framework for triggered abilities
+
+Strict Proctor (STX 🟡) wants "if a permanent entering the battlefield
+causes a triggered ability of a permanent to trigger, that ability's
+controller sacrifices the permanent unless they pay {2}." The
+existing `ReplacementEffect` framework (`replacement.rs`) only models
+zone-change replacements — it has no concept of "intercept an
+about-to-fire trigger and tax it". Generalizing the framework to a
+`TriggerReplacement` would unlock Strict Proctor, Torpor Orb, Hushwing
+Gryff, Hushbringer, and several Strixhaven-adjacent cards. Engine
+shape: extend the replacement registry with a separate
+`TriggerReplacement { matcher: TriggerMatcher, action: ReplacementAction }`
+slot consulted in `push_trigger` (game/actions.rs) before the trigger
+hits the stack.
+
+### Engine — Storm primitive (CR 702.40)
+
+Prismari, the Inspiration (STX 🟡) grants "instant and sorcery spells
+you cast have storm" — fan out a copy for each spell cast earlier this
+turn. The engine tracks `spells_cast_this_turn` on `Player` already,
+so the missing piece is a static "spells of type X gain storm"
+modifier plus a Storm-resolution path that produces N copies via the
+existing `Effect::CopySpell` primitive. Engine shape: a new
+`Keyword::Storm` variant + a static-effect template
+`StaticEffect::GrantKeyword { filter: HasCardType(Instant) ∨
+HasCardType(Sorcery), keyword: Storm }` + a spell-cast hook that fans
+out the copies. Promotes Prismari, the Inspiration + any future
+storm-keyword card.

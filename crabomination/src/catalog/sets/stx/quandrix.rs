@@ -6929,3 +6929,197 @@ pub fn fractal_resonance_v2() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Push (modern_decks, batch 55): 5 more Quandrix cards ───────────────────
+
+/// Quandrix Calcographer — {1}{G}{U}, 2/3 Elf Druid. ETB Seq(mint a 0/0
+/// Fractal with one +1/+1 counter + magecraft +1/+1 counter on self).
+/// Self-scaling + Fractal-mint headline body.
+pub fn quandrix_calcographer() -> CardDefinition {
+    use crate::effect::shortcut::{create_token_with_counter, etb};
+    CardDefinition {
+        name: "Quandrix Calcographer",
+        cost: cost(&[generic(1), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![
+            etb(create_token_with_counter(
+                PlayerRef::You,
+                1,
+                quandrix_fractal_token(),
+                CounterType::PlusOnePlusOne,
+                1,
+            )),
+            magecraft(Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            }),
+        ],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Fractal Initiate — {1}{G}, 2/2 Fractal. Vanilla 2-mana Fractal body.
+/// Slots into Tanazir doubling + +1/+1 counter shells.
+pub fn fractal_initiate() -> CardDefinition {
+    CardDefinition {
+        name: "Fractal Initiate",
+        cost: cost(&[generic(1), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Splitcaster — {2}{G}{U}, 3/3 Elf Wizard. Magecraft mints a
+/// 0/0 Fractal token with one +1/+1 counter on it. 4-mana per-spell
+/// Fractal engine that goes wide quickly.
+pub fn quandrix_splitcaster() -> CardDefinition {
+    use crate::effect::shortcut::create_token_with_counter;
+    CardDefinition {
+        name: "Quandrix Splitcaster",
+        cost: cost(&[generic(2), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(create_token_with_counter(
+            PlayerRef::You,
+            1,
+            quandrix_fractal_token(),
+            CounterType::PlusOnePlusOne,
+            1,
+        ))],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Calculation — {1}{G}{U}, Instant. Seq(target friendly
+/// creature gets a +1/+1 counter + Draw 1). 3-mana scaling-counter
+/// cantrip — Quandrix's signature math-themed combat trick.
+pub fn quandrix_calculation() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Calculation",
+        cost: cost(&[generic(1), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::AddCounter {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Bookkeeper — {2}{U}, 1/3 Merfolk Wizard. Magecraft Scry 1
+/// + Draw 1 on self. Smooths the topdeck on every IS cast.
+pub fn quandrix_bookkeeper() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Bookkeeper",
+        cost: cost(&[generic(2), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::Seq(vec![
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]))],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

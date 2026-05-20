@@ -34,6 +34,12 @@ pub enum EffectDuration {
     UntilEndOfTurn,
     /// Lasts until the beginning of the next turn.
     UntilNextTurn,
+    /// Expires when the current combat phase ends (CR 511.2 — "Effects
+    /// that last 'until end of combat' expire at the end of the combat
+    /// phase"). Cleared as the end-of-combat step ends. If the effect
+    /// is registered outside a combat phase it falls through to the
+    /// next combat phase's end-of-combat step.
+    UntilEndOfCombat,
     /// Indefinite (e.g. counters, "for as long as" effects).
     Indefinite,
 }

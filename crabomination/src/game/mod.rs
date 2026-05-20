@@ -1199,9 +1199,23 @@ impl GameState {
     }
 
     /// Expire all `UntilEndOfTurn` continuous effects (called during Cleanup).
+    /// Also sweeps `UntilEndOfCombat` for cards that registered combat-
+    /// scoped effects during a turn that ended without an actual combat
+    /// phase (defensive cleanup so they don't leak indefinitely).
     pub(crate) fn expire_end_of_turn_effects(&mut self) {
+        self.continuous_effects.retain(|e| {
+            e.duration != EffectDuration::UntilEndOfTurn
+                && e.duration != EffectDuration::UntilEndOfCombat
+        });
+    }
+
+    /// Expire all `UntilEndOfCombat` continuous effects (CR 511.2 —
+    /// "Effects that last 'until end of combat' expire at the end of the
+    /// combat phase"). Invoked from `do_combat_end` once the end-of-
+    /// combat step finishes.
+    pub(crate) fn expire_end_of_combat_effects(&mut self) {
         self.continuous_effects
-            .retain(|e| e.duration != EffectDuration::UntilEndOfTurn);
+            .retain(|e| e.duration != EffectDuration::UntilEndOfCombat);
     }
 
     /// True if the stack is empty and it is `player`'s main phase — sorcery timing.

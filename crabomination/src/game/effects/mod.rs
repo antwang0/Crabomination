@@ -26,7 +26,32 @@ use crate::effect::{
     Effect, ManaPayload, PlayerRef,
     Selector, ZoneDest, ZoneRef,
 };
+use crate::game::layers::EffectDuration;
 use crate::mana::Color;
+
+/// Translate the cast-site `effect::Duration` into the runtime
+/// `layers::EffectDuration` used by the continuous-effect layer system.
+///
+/// CR 511.2 mapping for `EndOfCombat` lands here: prior to push
+/// modern_decks batch 55 the cast-site `Duration::EndOfCombat` was
+/// downgraded to `EffectDuration::UntilEndOfTurn`, which let "until end
+/// of combat" effects linger across the post-combat main phase. The
+/// dedicated `UntilEndOfCombat` variant clears the effect at the end of
+/// the combat phase (via the cleanup pass in `do_combat_end`), matching
+/// the printed rule.
+pub(crate) fn map_effect_duration(
+    duration: crate::effect::Duration,
+) -> EffectDuration {
+    match duration {
+        crate::effect::Duration::EndOfTurn => EffectDuration::UntilEndOfTurn,
+        crate::effect::Duration::EndOfCombat => EffectDuration::UntilEndOfCombat,
+        crate::effect::Duration::UntilNextTurn
+        | crate::effect::Duration::UntilYourNextUntap => {
+            EffectDuration::UntilNextTurn
+        }
+        crate::effect::Duration::Permanent => EffectDuration::Indefinite,
+    }
+}
 
 /// Runtime context threaded through effect resolution.
 #[derive(Debug, Clone)]
@@ -957,17 +982,9 @@ impl GameState {
                 // Transformation / Turn to Frog / Lignify "becomes 1/1
                 // creature and loses all abilities" patterns.
                 use crate::game::layers::{
-                    AffectedPermanents, ContinuousEffect, EffectDuration, Layer, Modification,
+                    AffectedPermanents, ContinuousEffect, Layer, Modification,
                 };
-                let duration_kind = match duration {
-                    crate::effect::Duration::EndOfTurn
-                    | crate::effect::Duration::EndOfCombat => EffectDuration::UntilEndOfTurn,
-                    crate::effect::Duration::UntilNextTurn
-                    | crate::effect::Duration::UntilYourNextUntap => {
-                        EffectDuration::UntilNextTurn
-                    }
-                    crate::effect::Duration::Permanent => EffectDuration::Indefinite,
-                };
+                let duration_kind = map_effect_duration(*duration);
                 let source = ctx.source.unwrap_or(CardId(0));
                 for ent in self.resolve_selector(what, ctx) {
                     if let Some(cid) = ent.as_permanent_id() {
@@ -996,20 +1013,12 @@ impl GameState {
                 // Square Up's 0/4 yields 1/5 — matching the printed
                 // rules exactly.
                 use crate::game::layers::{
-                    AffectedPermanents, ContinuousEffect, EffectDuration, Layer, Modification,
+                    AffectedPermanents, ContinuousEffect, Layer, Modification,
                     PtSublayer,
                 };
                 let p = self.evaluate_value(power, ctx);
                 let t = self.evaluate_value(toughness, ctx);
-                let duration_kind = match duration {
-                    crate::effect::Duration::EndOfTurn
-                    | crate::effect::Duration::EndOfCombat => EffectDuration::UntilEndOfTurn,
-                    crate::effect::Duration::UntilNextTurn
-                    | crate::effect::Duration::UntilYourNextUntap => {
-                        EffectDuration::UntilNextTurn
-                    }
-                    crate::effect::Duration::Permanent => EffectDuration::Indefinite,
-                };
+                let duration_kind = map_effect_duration(*duration);
                 let source = ctx.source.unwrap_or(CardId(0));
                 for ent in self.resolve_selector(what, ctx) {
                     if let Some(cid) = ent.as_permanent_id() {

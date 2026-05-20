@@ -93,6 +93,15 @@ impl GameState {
             next = next.next(); // skip directly to CombatDamage
         }
 
+        // CR 511.2 — "Effects that last 'until end of combat' expire at the
+        // end of the combat phase." When we leave the EndCombat step (the
+        // last step of the combat phase) sweep any `UntilEndOfCombat`
+        // continuous effects so they don't bleed into the post-combat
+        // main phase.
+        if self.step == TurnStep::EndCombat && !next.is_combat_phase() {
+            self.expire_end_of_combat_effects();
+        }
+
         self.step = next;
         events.push(GameEvent::StepChanged(next));
 
