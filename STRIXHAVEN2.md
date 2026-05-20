@@ -19,14 +19,14 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 227 | 29 | 0 |
-| STX (327 cards) | 1110 (incl. synthesised variants) | 8 | 0 |
+| STX (327 cards) | 1120 (incl. synthesised variants) | 8 | 0 |
 | STA reprints (in STX boosters) | 47 | 0 | — |
 
 Push (modern_decks, claude/modern_decks branch — latest revision —
-**batch 50: 41 more synthesised STX cards (29 Silverquill + 12
-Witherbloom) + 41 new tests + CR 119 (Life) audit + 3 new effect
-shortcuts (`etb_draw`, `magecraft_loot`, `magecraft_scry`) folding
-canonical ETB-cantrip /
+**batch 50: 51 more synthesised STX cards (29 Silverquill + 12
+Witherbloom + 10 Lorehold) + 51 new tests + CR 119 (Life) audit +
+3 new effect shortcuts (`etb_draw`, `magecraft_loot`,
+`magecraft_scry`) folding canonical ETB-cantrip /
 loot-on-cast / scry-on-cast patterns into one-line helpers.
 Includes `silverquill_cantor` ({W} 1/2 ETB gain 1 life),
 `silverquill_inkscholar_b50` ({1}{W} 2/2 ETB draw a card via the new
@@ -4511,6 +4511,16 @@ parity is a matter of porting card factories one at a time.
 | Lorehold Battle Memorial | {3}{R}{W} | ✅ | Push (modern_decks batch 47, NEW, `stx::lorehold`): Sorcery. Seq(DealDamage 3 to slot-0 creature + DealDamage 3 to slot-1 player). First Lorehold dual-target burn — uses `TargetFiltered { slot: 1 }` for the player slot. Test: `lorehold_battle_memorial_deals_three_to_creature_and_three_to_player`. |
 | Lorehold Veteran | {2}{R} | ✅ | Push (modern_decks batch 47, NEW, `stx::lorehold`): 3/2 Spirit Soldier Haste. ETB 1 damage to any target. 3-mana aggressive haste body with ETB ping. Test: `lorehold_veteran_haste_etb_pings_target`. |
 | Lorehold Scrollwarden | {3}{R}{W} | ✅ | Push (modern_decks batch 47, NEW, `stx::lorehold`): 3/4 Spirit Soldier Flying. ETB mints a 2/2 R/W Spirit token. 5-mana evasive double-body play. Test: `lorehold_scrollwarden_etb_mints_spirit_token`. |
+| Lorehold Embersmith | {R} | ✅ | Push (modern_decks batch 50, NEW, `stx::lorehold`): 1/1 Spirit Wizard Haste. Magecraft 1 damage to any target. 1-mana hasty magecraft burner. Test: `lorehold_embersmith_magecraft_pings_target`. |
+| Spirit Mentor | {1}{W} | ✅ | Push (modern_decks batch 50, NEW, `stx::lorehold`): 1/3 Spirit Cleric Vigilance. Magecraft GainLife 1. 2-mana defensive lifegain-on-cast body. Test: `spirit_mentor_magecraft_gains_one_life`. |
+| Lorehold Wargist | {2}{R} | ✅ | Push (modern_decks batch 50, NEW, `stx::lorehold`): 3/2 Spirit Warrior. ETB DealDamage 1 to each opp. 3-mana drain-equivalent ping body. Test: `lorehold_wargist_etb_deals_one_to_each_opp`. |
+| Lorehold Sparkstrike Burst | {R} | ✅ | Push (modern_decks batch 50, NEW, `stx::lorehold`): Instant. Deals 2 damage to target creature. 1-mana creature-only burn. Test: `lorehold_sparkstrike_b50_burns_creature`. |
+| Spirit Battlemaster | {3}{R}{W} | ✅ | Push (modern_decks batch 50, NEW, `stx::lorehold`): 4/4 Spirit Soldier First Strike. Magecraft self-pump +1/+0 EOT. 5-mana combat-ready scaling magecraft body. Test: `spirit_battlemaster_magecraft_pumps_self`. |
+| Lorehold Memoriam | {2}{R}{W} | ✅ | Push (modern_decks batch 50, NEW, `stx::lorehold`): Sorcery. Seq(CreateToken(2 Spirits) + GainLife 2). 4-mana mint + lifegain swing. Test: `lorehold_memoriam_mints_two_spirits_and_gains_two_life`. |
+| Spirit Berserker | {1}{R} | ✅ | Push (modern_decks batch 50, NEW, `stx::lorehold`): 2/1 Spirit Warrior Trample + Haste. 2-mana hasty trampler. Test: `spirit_berserker_has_haste_and_trample`. |
+| Lorehold Memorialist Adept | {2}{W} | ✅ | Push (modern_decks batch 50, NEW, `stx::lorehold`): 1/3 Human Cleric Vigilance. ETB returns target creature from your gy to hand. 3-mana defensive value body. Test: `lorehold_memorialist_b50_etb_returns_creature_from_graveyard`. |
+| Lorehold Echocaller | {1}{R}{W} | ✅ | Push (modern_decks batch 50, NEW, `stx::lorehold`): 2/2 Spirit Cleric. ETB Seq(CreateToken Spirit + GainLife 1). 3-mana double-payoff ETB body. Test: `lorehold_echocaller_etb_mints_spirit_and_gains_one_life`. |
+| Lorehold Sparkshock | {1}{R} | ✅ | Push (modern_decks batch 50, NEW, `stx::lorehold`): Instant. Seq(DealDamage 2 to any target + Scry 1). 2-mana shock + smoothing. Test: `lorehold_sparkshock_deals_two_and_scrys`. |
 
 ### Quandrix (G/U)
 

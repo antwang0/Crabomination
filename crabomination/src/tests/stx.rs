@@ -40546,3 +40546,169 @@ fn witherbloom_pestcaller_b50_etb_mints_three_pests() {
     assert_eq!(pests.len(), 3);
     let _ = id;
 }
+
+// ── Batch 50 (Lorehold synthesised variants) ───────────────────────────────
+
+#[test]
+fn lorehold_embersmith_magecraft_pings_target() {
+    let mut g = two_player_game();
+    let _id = g.add_card_to_battlefield(0, catalog::lorehold_embersmith());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    let opp_before = g.players[1].life;
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(crate::game::types::Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt castable");
+    drain_stack(&mut g);
+    // Bolt -3 + Embersmith magecraft 1 = -4.
+    assert_eq!(g.players[1].life, opp_before - 4);
+}
+
+#[test]
+fn spirit_mentor_magecraft_gains_one_life() {
+    let mut g = two_player_game();
+    let _id = g.add_card_to_battlefield(0, catalog::spirit_mentor());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    let life_before = g.players[0].life;
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(crate::game::types::Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life_before + 1);
+}
+
+#[test]
+fn lorehold_wargist_etb_deals_one_to_each_opp() {
+    let mut g = two_player_game();
+    let opp_before = g.players[1].life;
+    let id = g.add_card_to_hand(0, catalog::lorehold_wargist());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Wargist castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, opp_before - 1);
+}
+
+#[test]
+fn lorehold_sparkstrike_b50_burns_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::lorehold_sparkstrike_b50());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(crate::game::types::Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Sparkstrike castable");
+    drain_stack(&mut g);
+    // Bear 2/2 takes 2 damage and dies.
+    assert!(g.battlefield_find(bear).is_none());
+}
+
+#[test]
+fn spirit_battlemaster_magecraft_pumps_self() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::spirit_battlemaster());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(crate::game::types::Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt castable");
+    drain_stack(&mut g);
+    let card = g.battlefield_find(id).unwrap();
+    assert_eq!(card.power(), 5);
+    assert!(card.has_keyword(&Keyword::FirstStrike));
+}
+
+#[test]
+fn lorehold_memoriam_mints_two_spirits_and_gains_two_life() {
+    let mut g = two_player_game();
+    let life_before = g.players[0].life;
+    let id = g.add_card_to_hand(0, catalog::lorehold_memoriam());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Memoriam castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life_before + 2);
+    let spirits: Vec<_> = g.battlefield.iter()
+        .filter(|c| c.controller == 0 && c.is_token
+            && c.definition.subtypes.creature_types.contains(&CreatureType::Spirit))
+        .collect();
+    assert_eq!(spirits.len(), 2);
+}
+
+#[test]
+fn spirit_berserker_has_haste_and_trample() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::spirit_berserker());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Berserker castable");
+    drain_stack(&mut g);
+    let card = g.battlefield_find(id).unwrap();
+    assert!(card.has_keyword(&Keyword::Haste));
+    assert!(card.has_keyword(&Keyword::Trample));
+}
+
+#[test]
+fn lorehold_memorialist_b50_etb_returns_creature_from_graveyard() {
+    let mut g = two_player_game();
+    let bear_in_gy = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::lorehold_memorialist_b50());
+    let hand_before = g.players[0].hand.len();
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Memorialist castable");
+    drain_stack(&mut g);
+    // -1 (cast) + 1 (return) = 0 net.
+    assert_eq!(g.players[0].hand.len(), hand_before);
+    assert!(g.players[0].graveyard.iter().all(|c| c.id != bear_in_gy));
+}
+
+#[test]
+fn lorehold_echocaller_etb_mints_spirit_and_gains_one_life() {
+    let mut g = two_player_game();
+    let life_before = g.players[0].life;
+    let id = g.add_card_to_hand(0, catalog::lorehold_echocaller());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Echocaller castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life_before + 1);
+    let spirits: Vec<_> = g.battlefield.iter()
+        .filter(|c| c.controller == 0 && c.is_token
+            && c.definition.subtypes.creature_types.contains(&CreatureType::Spirit))
+        .collect();
+    assert_eq!(spirits.len(), 1);
+}
+
+#[test]
+fn lorehold_sparkshock_deals_two_and_scrys() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::plains());
+    let opp_before = g.players[1].life;
+    let id = g.add_card_to_hand(0, catalog::lorehold_sparkshock());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(crate::game::types::Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Sparkshock castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, opp_before - 2);
+}
