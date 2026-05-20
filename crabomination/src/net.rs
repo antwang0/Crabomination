@@ -759,6 +759,9 @@ impl GameEventWire {
             E::LifeLost { player, amount } => format!("P{player} loses {amount} life"),
             E::LifeGained { player, amount } => format!("P{player} gains {amount} life"),
             E::CreatureDied { card_id } => format!("{} died", name(*card_id)),
+            E::CreatureSacrificed { card_id, who } => {
+                format!("P{who} sacrificed {}", name(*card_id))
+            }
             E::PumpApplied {
                 card_id,
                 power,
