@@ -8528,3 +8528,110 @@ pub fn silverquill_bookbond() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 48 follow-up #2 (modern_decks) — more Silverquill cards ───────────
+
+/// Inkling Scrollwarden — {3}{W}, 2/4 Inkling Soldier Flying + Vigilance.
+/// Synthesised Oracle: "Flying, vigilance." 4-mana defensive evasive
+/// body — pairs with the Inkling tribal anthem stack.
+pub fn inkling_scrollwarden() -> CardDefinition {
+    CardDefinition {
+        name: "Inkling Scrollwarden",
+        cost: cost(&[generic(3), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        keywords: vec![Keyword::Flying, Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Pencrafter — {1}{W}{B}, 2/3 Inkling Wizard. Synthesised
+/// Oracle: "When this creature enters, draw a card. You lose 1 life."
+/// 3-mana cantrip body with life cost.
+pub fn silverquill_pencrafter() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Pencrafter",
+        cost: cost(&[generic(1), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
+                Effect::LoseLife {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
+            ]),
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Inkling Inkblot — {B} Sorcery. Synthesised Oracle: "Target opponent
+/// loses 1 life and you gain 1 life." 1-mana cheap drain spell.
+pub fn inkling_inkblot() -> CardDefinition {
+    CardDefinition {
+        name: "Inkling Inkblot",
+        cost: cost(&[b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Drain {
+            from: Selector::Player(PlayerRef::EachOpponent),
+            to: Selector::You,
+            amount: Value::Const(1),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

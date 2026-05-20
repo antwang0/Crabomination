@@ -19,10 +19,21 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 227 | 29 | 0 |
-| STX (327 cards) | 1029 (incl. synthesised variants) | 8 | 0 |
+| STX (327 cards) | 1041 (incl. synthesised variants) | 8 | 0 |
 | STA reprints (in STX boosters) | 47 | 0 | — |
 
 Push (modern_decks, claude/modern_decks branch — latest revision —
+**batch 48 follow-up #2: 12 more cheap-mana STX cards (3 Silverquill
++ 2 Witherbloom + 3 Lorehold + 2 Quandrix + 2 Prismari) + 12 new
+tests. Includes `inkling_inkblot` ({B} 1-mana cheap drain),
+`pestseed` ({G} 1-mana Pest minter), `prismari_quickburn` ({R}
+Shock clone), `lorehold_lavabolt` ({1}{R} 3-damage burn), and an
+`enters_with_counters` Fractal Soldier `fractal_sentinel`
+({3}{G}{U} → 5/5 trampler). Bringing the STX synthesised-variant
+corpus from 1029 to 1041. Total tests: 3221 (was 3209).**
+
+Prior push:
+
 **batch 48 follow-up: 25 more synthesised STX cards across all five
 colleges (5 each) + 25 new tests. All cards use existing engine
 primitives (ETB triggers, magecraft fan-outs, target_filtered

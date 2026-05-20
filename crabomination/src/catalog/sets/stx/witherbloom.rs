@@ -6774,3 +6774,68 @@ pub fn witherbloom_toxicvigor() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 48 follow-up #2 (modern_decks) — more Witherbloom cards ───────────
+
+/// Pestseed — {G} Sorcery. Synthesised Oracle: "Create a 1/1 B/G
+/// Pest token with 'When this creature dies, you gain 1 life.'"
+/// 1-mana cheap Pest minter.
+pub fn pestseed() -> CardDefinition {
+    CardDefinition {
+        name: "Pestseed",
+        cost: cost(&[g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: stx_pest_token(),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Greenwarden — {2}{G}, 2/2 Plant Druid Reach.
+/// Synthesised Oracle: "Reach. When this creature enters, you gain
+/// 2 life." 3-mana defensive anti-flier lifegainer.
+pub fn witherbloom_greenwarden() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Greenwarden",
+        cost: cost(&[generic(2), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Reach],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![crate::effect::shortcut::etb_gain_life(2)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

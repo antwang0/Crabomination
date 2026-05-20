@@ -39163,3 +39163,203 @@ fn prismari_spelljay_burns_creature_for_four() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(bear).is_none());
 }
+
+// ── Batch 48 follow-up #2 (modern_decks) — additional card tests ────────────
+
+#[test]
+fn inkling_scrollwarden_is_flying_vigilance() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::inkling_scrollwarden());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Scrollwarden castable");
+    drain_stack(&mut g);
+    let card = g.battlefield_find(id).unwrap();
+    assert!(card.has_keyword(&Keyword::Flying));
+    assert!(card.has_keyword(&Keyword::Vigilance));
+}
+
+#[test]
+fn silverquill_pencrafter_etb_draws_and_loses_life() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::plains());
+    let life_before = g.players[0].life;
+    let id = g.add_card_to_hand(0, catalog::silverquill_pencrafter());
+    let hand_before = g.players[0].hand.len();
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Pencrafter castable");
+    drain_stack(&mut g);
+    // Net hand: -1 (cast) +1 (draw) = same.
+    assert_eq!(g.players[0].hand.len(), hand_before);
+    assert_eq!(g.players[0].life, life_before - 1);
+}
+
+#[test]
+fn inkling_inkblot_drains_one() {
+    let mut g = two_player_game();
+    let opp_before = g.players[1].life;
+    let life_before = g.players[0].life;
+    let id = g.add_card_to_hand(0, catalog::inkling_inkblot());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Inkblot castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, opp_before - 1);
+    assert_eq!(g.players[0].life, life_before + 1);
+}
+
+#[test]
+fn spirit_spearmaiden_is_first_strike_two_two() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::spirit_spearmaiden());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Spearmaiden castable");
+    drain_stack(&mut g);
+    let card = g.battlefield_find(id).unwrap();
+    assert_eq!(card.power(), 2);
+    assert_eq!(card.toughness(), 2);
+    assert!(card.has_keyword(&Keyword::FirstStrike));
+}
+
+#[test]
+fn lorehold_lavabolt_deals_three_to_player() {
+    let mut g = two_player_game();
+    let opp_before = g.players[1].life;
+    let id = g.add_card_to_hand(0, catalog::lorehold_lavabolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(crate::game::types::Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Lavabolt castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, opp_before - 3);
+}
+
+#[test]
+fn lorehold_smiteseer_etb_burns_creature_and_gains_life() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let life_before = g.players[0].life;
+    let id = g.add_card_to_hand(0, catalog::lorehold_smiteseer());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(crate::game::types::Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Smiteseer castable");
+    drain_stack(&mut g);
+    // Bear 2/2 takes 2 damage → dies.
+    assert!(g.battlefield_find(bear).is_none());
+    assert_eq!(g.players[0].life, life_before + 2);
+}
+
+#[test]
+fn fractal_sentinel_enters_with_five_counters() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::fractal_sentinel());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Sentinel castable");
+    drain_stack(&mut g);
+    let card = g.battlefield_find(id).unwrap();
+    assert_eq!(card.counter_count(CounterType::PlusOnePlusOne), 5);
+    assert_eq!(card.power(), 5);
+    assert_eq!(card.toughness(), 5);
+    assert!(card.has_keyword(&Keyword::Trample));
+}
+
+#[test]
+fn quandrix_lensbearer_etb_scrys_one() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::plains());
+    let id = g.add_card_to_hand(0, catalog::quandrix_lensbearer());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Lensbearer castable");
+    drain_stack(&mut g);
+    let card = g.battlefield_find(id).unwrap();
+    assert_eq!(card.power(), 1);
+    assert_eq!(card.toughness(), 3);
+}
+
+#[test]
+fn prismari_quickburn_burns_creature_for_two() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::prismari_quickburn());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(crate::game::types::Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Quickburn castable");
+    drain_stack(&mut g);
+    // Bear 2/2 takes 2 → dies.
+    assert!(g.battlefield_find(bear).is_none());
+}
+
+#[test]
+fn prismari_inkflame_etb_loots() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::plains());
+    let id = g.add_card_to_hand(0, catalog::prismari_inkflame());
+    let hand_before = g.players[0].hand.len();
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Inkflame castable");
+    drain_stack(&mut g);
+    let card = g.battlefield_find(id).unwrap();
+    assert_eq!(card.power(), 2);
+    assert_eq!(card.toughness(), 2);
+    // Net hand: -1 (cast) +1 (draw) -1 (discard) = -1.
+    assert_eq!(g.players[0].hand.len(), hand_before - 1);
+}
+
+#[test]
+fn pestseed_mints_one_pest() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::pestseed());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Pestseed castable");
+    drain_stack(&mut g);
+    let pests: Vec<_> = g.battlefield.iter()
+        .filter(|c| c.is_token && c.definition.subtypes.creature_types.contains(&CreatureType::Pest))
+        .collect();
+    assert_eq!(pests.len(), 1);
+}
+
+#[test]
+fn witherbloom_greenwarden_is_reach_and_gains_two_life_on_etb() {
+    let mut g = two_player_game();
+    let life_before = g.players[0].life;
+    let id = g.add_card_to_hand(0, catalog::witherbloom_greenwarden());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Greenwarden castable");
+    drain_stack(&mut g);
+    let card = g.battlefield_find(id).unwrap();
+    assert!(card.has_keyword(&Keyword::Reach));
+    assert_eq!(g.players[0].life, life_before + 2);
+}

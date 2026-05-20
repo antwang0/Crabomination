@@ -5500,3 +5500,66 @@ pub fn prismari_spelljay() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 48 follow-up #2 (modern_decks) — more Prismari cards ──────────────
+
+/// Prismari Quickburn — {R} Instant. Synthesised Oracle: "Prismari
+/// Quickburn deals 2 damage to target creature." 1-mana Shock clone.
+pub fn prismari_quickburn() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Quickburn",
+        cost: cost(&[r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::DealDamage {
+            to: target_filtered(SelectionRequirement::Creature),
+            amount: Value::Const(2),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Inkflame — {U}{R}, 2/2 Elemental Wizard. Synthesised
+/// Oracle: "When this creature enters, draw a card, then discard a
+/// card." 2-mana loot body.
+pub fn prismari_inkflame() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Inkflame",
+        cost: cost(&[u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![crate::effect::shortcut::etb_loot()],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

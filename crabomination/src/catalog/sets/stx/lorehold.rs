@@ -7427,3 +7427,113 @@ pub fn lorehold_battle_drum() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 48 follow-up #2 (modern_decks) — more Lorehold cards ──────────────
+
+/// Spirit Spearmaiden — {1}{W}, 2/2 Spirit Soldier. Synthesised
+/// Oracle: "First strike." 2-mana aggressive first-striker.
+pub fn spirit_spearmaiden() -> CardDefinition {
+    CardDefinition {
+        name: "Spirit Spearmaiden",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::FirstStrike],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Lavabolt — {1}{R} Instant. Synthesised Oracle: "Lorehold
+/// Lavabolt deals 3 damage to any target." 2-mana Lightning Bolt clone.
+pub fn lorehold_lavabolt() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Lavabolt",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::DealDamage {
+            to: target_filtered(
+                SelectionRequirement::Creature
+                    .or(SelectionRequirement::Player)
+                    .or(SelectionRequirement::Planeswalker),
+            ),
+            amount: Value::Const(3),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Smiteseer — {2}{R}{W}, 3/3 Spirit Cleric. Synthesised
+/// Oracle: "When this creature enters, it deals 2 damage to target
+/// creature. You gain 2 life." 4-mana value body — Lightning Helix
+/// stapled to a 3/3.
+pub fn lorehold_smiteseer() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Smiteseer",
+        cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::DealDamage {
+                    to: target_filtered(SelectionRequirement::Creature),
+                    amount: Value::Const(2),
+                },
+                Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::Const(2),
+                },
+            ]),
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

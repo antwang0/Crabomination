@@ -5973,3 +5973,73 @@ pub fn quandrix_tide() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 48 follow-up #2 (modern_decks) — more Quandrix cards ──────────────
+
+/// Fractal Sentinel — {3}{G}{U}, 0/0 Fractal Soldier Trample. Enters
+/// with five +1/+1 counters via `CardDefinition.enters_with_counters`
+/// (CR 614.12). Net 5/5 trampler for 5 mana.
+pub fn fractal_sentinel() -> CardDefinition {
+    CardDefinition {
+        name: "Fractal Sentinel",
+        cost: cost(&[generic(3), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 0,
+        keywords: vec![Keyword::Trample],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(5))),
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Lensbearer — {1}{U}, 1/3 Merfolk Wizard. Synthesised
+/// Oracle: "When this creature enters, scry 1." 2-mana cheap scry
+/// body.
+pub fn quandrix_lensbearer() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Lensbearer",
+        cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
