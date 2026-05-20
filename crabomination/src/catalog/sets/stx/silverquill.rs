@@ -10111,3 +10111,256 @@ pub fn silverquill_festscribe() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── batch 53: more Silverquill cards ────────────────────────────────────────
+
+/// Silverquill Scryward — {1}{W}, 2/2 Human Wizard. ETB Scry 1 + magecraft
+/// gain 1 life. 2-mana scaling defender.
+pub fn silverquill_scryward() -> CardDefinition {
+    use crate::effect::shortcut::{etb_scry, magecraft_gain_life};
+    CardDefinition {
+        name: "Silverquill Scryward",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_scry(1), magecraft_gain_life(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Inkling Archivist — {2}{W}{B}, 2/3 Inkling Cleric Flying. ETB drain 1
+/// and magecraft Scry 1. 4-mana evasive scaler.
+pub fn inkling_archivist() -> CardDefinition {
+    use crate::effect::shortcut::{etb_drain, magecraft_scry};
+    CardDefinition {
+        name: "Inkling Archivist",
+        cost: cost(&[generic(2), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_drain(1), magecraft_scry(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Ledgermage — {2}{W}{B}, 3/3 Vampire Wizard. ETB Drain 2 via
+/// the canonical drain template. 4-mana race-breaker body.
+pub fn silverquill_ledgermage() -> CardDefinition {
+    use crate::effect::shortcut::etb_drain;
+    CardDefinition {
+        name: "Silverquill Ledgermage",
+        cost: cost(&[generic(2), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_drain(2)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Inkling Inkscribe — {W}{B}, 2/1 Inkling Soldier Flying. Aggressive
+/// 2-mana evasive Inkling.
+pub fn inkling_inkscribe() -> CardDefinition {
+    CardDefinition {
+        name: "Inkling Inkscribe",
+        cost: cost(&[w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Codex — {1}{W}, Sorcery. Seq(GainLife 2 + Draw 1). 2-mana
+/// defensive cantrip.
+pub fn silverquill_codex() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Codex",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Studyhall — {2}{W}, 2/3 Human Cleric Vigilance. Magecraft
+/// gain 1 life — defensive vigilance body that scales with IS casts.
+pub fn silverquill_studyhall() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Studyhall",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_gain_life(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Pronouncer — {3}{W}{B}, 4/4 Inkling Bard Flying + Lifelink.
+/// ETB drain 1 — 5-mana evasive lifelink finisher.
+pub fn silverquill_pronouncer() -> CardDefinition {
+    use crate::effect::shortcut::etb_drain;
+    CardDefinition {
+        name: "Silverquill Pronouncer",
+        cost: cost(&[generic(3), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Bard],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Flying, Keyword::Lifelink],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_drain(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Etching — {W}{B}, Instant. Seq(GainLife 2 + LoseLife 2 each
+/// opp). 2-mana symmetric drain.
+pub fn silverquill_etching() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Etching",
+        cost: cost(&[w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Drain {
+            from: Selector::Player(PlayerRef::EachOpponent),
+            to: Selector::You,
+            amount: Value::Const(2),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

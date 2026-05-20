@@ -7745,3 +7745,128 @@ pub fn witherbloom_bloodweaver() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── batch 53: more Witherbloom cards ────────────────────────────────────────
+
+/// Witherbloom Grimherb — {B}{G}, 2/2 Plant Druid Deathtouch. Magecraft
+/// gain 1 life. 2-mana defensive deathtouch lifegain body.
+pub fn witherbloom_grimherb() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Grimherb",
+        cost: cost(&[b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Deathtouch],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_gain_life(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Pest Brood — {1}{B}{G}, Sorcery. Creates 2 Pest tokens (each carries
+/// the standard die-to-gain-1-life trigger via the shared
+/// `stx_pest_token()` helper).
+pub fn pest_brood() -> CardDefinition {
+    CardDefinition {
+        name: "Pest Brood",
+        cost: cost(&[generic(1), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(2),
+            definition: stx_pest_token(),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Pestpath — {3}{B}{G}, 3/4 Plant Beast Trample. 5-mana
+/// curve-topper.
+pub fn witherbloom_pestpath() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Pestpath",
+        cost: cost(&[generic(3), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Beast],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Trample],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Rotbloom — {2}{B}, Sorcery. Drain 3 (each opp loses 3, you
+/// gain 3). 3-mana drain finisher.
+pub fn witherbloom_rotbloom() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Rotbloom",
+        cost: cost(&[generic(2), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Drain {
+            from: Selector::Player(PlayerRef::EachOpponent),
+            to: Selector::You,
+            amount: Value::Const(3),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

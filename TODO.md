@@ -609,6 +609,116 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   ult's emblem ships end-to-end (Professor Dellian Fel's lifegain →
   drain emblem is the canonical first target).
 
+- 🟡 **CR 115 — Targets** (push modern_decks batch 53,
+  claude/modern_decks branch — audit against `MagicCompRules_20260417.txt`):
+  The targeting framework — declaring targets at cast / activation time,
+  legal-target check at resolution time, and "change targets" effects.
+  Audit:
+  (a) **115.1** "Some spells and abilities require their controller to
+  choose one or more targets for them. The targets are declared as part
+  of the process of putting the spell or ability on the stack. The
+  targets can't be changed except by another spell or ability that
+  explicitly says it can do so" — ✅ (`GameAction::CastSpell.target` +
+  `additional_targets: Vec<Target>` capture the target slots at cast
+  time; `StackItem::Spell.target` + `additional_targets` persist them
+  through the resolution window. Triggered/activated targets are stored
+  on `StackItem::Trigger.target` similarly. No "change targets" effect
+  exists today; engine has no `Effect::ChangeTarget` primitive).
+  (b) **115.1a/c/d** "Instants/sorceries/activated/triggered abilities
+  are targeted if they say 'target [something]'" — ✅ (the `Selector::
+  Target(slot)` and `Selector::TargetFiltered { slot, filter }` shapes
+  on effects flag an ability as targeted; the cast pipeline's
+  `requires_target_check` walks the effect tree at cast time to enforce
+  target selection. The CR 115.1a corner — "if an activated or triggered
+  ability of an instant or sorcery uses the word target, that ability is
+  targeted, but the spell is not" — is naturally honored: the engine
+  attaches targets to the *trigger* StackItem, not the originating spell).
+  (c) **115.1b** Aura spells — ⏳ (no Aura subtype primitive; the engine
+  has no Enchant keyword + attached-to mechanic. Affected cards: any
+  Aura — no STX/SOS Aura is wired today).
+  (d) **115.2** "Only permanents are legal targets for spells and
+  abilities, unless a spell or ability (a) specifies that it can target
+  an object in another zone or a player, or (b) targets an object that
+  can't exist on the battlefield, such as a spell or ability" — ✅
+  (`check_target_legality_with_source` walks the battlefield by default;
+  `SelectionRequirement::IsSpellOnStack` and `SelectionRequirement::
+  CardsInZone` shapes opt-in to other-zone targets. `Target::Player`
+  takes the player variant). The `Selector::one_of(CardsInZone { ... })`
+  shape used by graveyard-recursion cards (Witherbloom Recourse,
+  Silverquill Necroscribe) explicitly targets the graveyard residents
+  per 115.2(a).
+  (e) **115.3** "The same target can't be chosen multiple times for any
+  one instance of the word 'target' on a spell or ability" — 🟡 (the
+  multi-target slots in `additional_targets` allow the caller to repeat
+  the same `Target::Permanent` at different slot indices; the engine
+  doesn't reject same-target across slots today. In practice no STX/SOS
+  catalog card with multi-target slots actually exercises the
+  same-target case where it matters — Lorehold Battle Memorial's
+  creature-vs-player slots can't collapse since the filters differ;
+  Quandrix Pairweaver's two slot-0/slot-1 friendly-creature picks would
+  be a candidate, but the auto-picker walks distinct creatures in
+  iteration order so the issue is invisible in bot play. A future
+  refinement would have `check_target_legality` reject a repeated
+  `Target::Permanent` across slots with the same filter signature).
+  (f) **115.4** "Any target" / "another target" — ✅ (`SelectionRequirement
+  ::Creature.or(Player).or(Planeswalker)` is the canonical "any target"
+  filter, used pervasively by burn (Lightning Bolt template, Lorehold
+  Apprentice ping, Storm-Kiln Artist, etc.). The "another target"
+  variant chains through `Predicate::All` to exclude the source / first
+  target — handled per-card today rather than via a dedicated primitive).
+  (g) **115.5** "A spell or ability on the stack is an illegal target
+  for itself" — ✅ (`check_target_legality_with_source` accepts an
+  optional `source_card_id` and rejects targets that match. The cast
+  pipeline at `game/actions.rs:657` passes the casting spell's own
+  `CardId` so e.g. Bury in Books can't put itself on top of the
+  library; existing test `cr_115_5_spell_targeting_itself_is_illegal_via_permanent_id`
+  locks the regression).
+  (h) **115.6** "A spell or ability that requires targets may allow zero
+  targets to be chosen" — 🟡 (Divergent Equation's "up to X" picker uses
+  `Selector::take` with `Value::XFromCost`; at X=0 the selector returns
+  empty and the spell still resolves. No general "zero-target" gate
+  rejects a target-required spell at cast time — `additional_targets`
+  is an unconditional `Vec` with no per-slot "optional" marker. The
+  engine ships the *outcome* of zero-target casts correctly but doesn't
+  encode the cast-time CR 115.6 "still requires targets" distinction).
+  (i) **115.7** Change-target / choose-new-target effects — ⏳ (no
+  `Effect::ChangeTarget` / `Effect::ChooseNewTargets` primitive; cards
+  like Redirect, Arcane Denial-style "exchange targets" aren't in the
+  catalog. Choreographed Sparks' "copy target, you may choose new
+  targets" rider on the *copy* is handled via `Effect::CopySpell`'s
+  internal `choose_new_targets: bool` flag, but the per-original change
+  shape from CR 115.7a-d is missing).
+  (j) **115.8** Modal targeting — ✅ (Modal spells declared via
+  `Effect::ChooseMode` / `Effect::ChooseN` resolve each mode against
+  the spell's `target` slot at resolution time; the
+  `pick_trigger_mode` path at `game/stack.rs` handles mode-pick for
+  triggered abilities. Different modes can have different target
+  filters because each `Effect` branch carries its own `Selector::
+  TargetFiltered { slot: 0, filter }` — though only the first mode's
+  filter is enforced at cast time today; mode-pick after-cast
+  validation against the chosen mode's filter is a future polish item.
+  In practice the AutoDecider picks a mode whose filter is consistent
+  with the cast-time target, so the gap is invisible).
+  (k) **115.9** "Object that checks what another spell is targeting" —
+  ✅ (the `Predicate::CastSpellTargetsMatch(filter)` reads the firing
+  spell's `target` slot at trigger-resolution time; Strixhaven Repartee
+  uses this for "spells that target a creature" payoffs (Stirring
+  Hopesinger, Rehearsed Debater, Informed Inkwright, etc.). The
+  "[spell] with [N] targets" multi-target count check from 115.9a is
+  not exposed as a separate predicate — no STX/SOS card needs it).
+  (l) **115.10** "Spells and abilities can affect objects and players
+  they don't target" — ✅ (`Selector::EachPermanent(filter)` and
+  `Selector::Player(EachOpponent)`-style fan-outs resolve at
+  resolution time and don't require cast-time target declaration; the
+  Sweeper template (Pestilent Haze, Crippling Fear, Wrath of God, Crux
+  of Fate) uses this exclusively).
+  Tests: existing `cr_115_5_*` lock the self-target gate; the new STX
+  batch 53 cards (Lorehold Emberlock, Prismari Firechord, Lorehold
+  Sparkflinger, etc.) all exercise the standard target-filter pipeline
+  end-to-end. Promote to ✅ when 115.1b (Aura), 115.3 (same-target
+  rejection across slots), 115.6 (zero-target cast-time gate), and
+  115.7 (change-target primitives) all land.
+
 - 🟡 **CR 116 — Special Actions** (push modern_decks batch 35,
   claude/modern_decks branch — audit against `MagicCompRules_20260417.txt`):
   Special actions are player-initiated actions that don't use the stack
@@ -6135,3 +6245,57 @@ resolution time" in the Suggested next-up tasks section.
   Witherbloom→Pest, Quandrix→Fractal, Prismari→Elemental) would
   produce more cohesive sealed decks. Slot into
   `sos_mode::pool_for_college` once it supports archetype weighting.
+
+### Suggested next-up tasks (additions from batch 53 / CR 115 audit)
+
+- ⏳ **`SelectionRequirement::SameTargetRejection`** (CR 115.3): The
+  "same target can't be chosen multiple times for any one instance of
+  the word 'target'" rule. Engine shape: extend
+  `check_target_legality` (and its `_with_source` variant) to accept
+  the full `additional_targets: &[Target]` slot list, and reject a
+  newly-added target if it duplicates an earlier slot whose filter
+  signature matches. The cast/activation pipelines at
+  `game/actions.rs:657` (and the trigger-target pipeline) would
+  pass the running slot vector instead of just the source id. No
+  STX/SOS card currently leans on this (auto-target picker walks
+  distinct creatures), but future cards (Lightning Reaver
+  "two target creatures", Twin Bolt-style "two creatures") would
+  surface a bug without this gate.
+
+- ⏳ **`Effect::ChangeTargets { what: Selector, mode: ChangeTargetMode }`**
+  (CR 115.7a-d): The "change the targets" / "change a target" /
+  "change any targets" / "choose new targets" primitive. The
+  `ChangeTargetMode` enum distinguishes 115.7a (all-or-nothing must
+  re-target legally), 115.7b (exactly one slot changes), 115.7c
+  (any subset), 115.7d (Redirect-style "choose new targets" where
+  the player may leave any unchanged even if illegal). Unlocks
+  Redirect, Bolt to the Face's misdirect rider, and the Disinformation
+  Campaign-style "change target spell" interaction. The picked
+  modifications flow into the targeted `StackItem::Spell.target` /
+  `additional_targets` slots and resolve at resolution time per
+  CR 115.7e ("only the final set of targets is evaluated to
+  determine whether the change is legal").
+
+- ⏳ **`SelectionRequirement::IsAura` + the Enchant keyword**
+  (CR 115.1b): Aura spells are *always* targeted via the Enchant
+  keyword on the printed card. Engine shape: add a
+  `Keyword::Enchant(SelectionRequirement)` variant + a
+  `CardDefinition.is_aura: bool` derived from the enchantment
+  subtypes. The cast pipeline's `requires_target_check` would
+  surface a target slot for any `is_aura` spell whose Enchant
+  filter matches at least one battlefield permanent; rejection
+  on no-match falls out naturally from the existing
+  `InvalidTarget` error. The attached-to mechanic (CR 702.5b) is
+  a separate slot — `CardInstance.attached_to: Option<CardId>`.
+  Unlocks ~30 cards (Pacifism, Faith's Shield, Mortal's Resolve,
+  and Strixhaven's Aura cycle).
+
+- ⏳ **`Effect::PutOntoBattlefieldBlocking { what: Selector,
+  attacker: Selector }`** (CR 509.4): When a creature enters the
+  battlefield blocking, its controller chooses which attacker it's
+  blocking. Engine shape: a `block_map` entry added at ETB time
+  with the controller-picked attacker. Powers Restoration Angel's
+  attack-trigger blink + the "enters blocking" mode of Mistmeadow
+  Skulk, plus Mantis Rider-style "enters attacking" siblings if a
+  separate primitive lands. Currently the flicker-and-block line
+  no-ops the block half.
