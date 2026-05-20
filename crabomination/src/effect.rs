@@ -2578,6 +2578,45 @@ pub mod shortcut {
         })
     }
 
+    /// ETB-Draw shortcut: "When this creature enters, draw `amount`
+    /// cards." Wraps [`etb`] with the canonical draw body. Used by
+    /// Spirited Companion / Elvish Visionary style cantrip ETB bodies.
+    pub fn etb_draw(amount: i32) -> TriggeredAbility {
+        etb(Effect::Draw {
+            who: Selector::You,
+            amount: Value::Const(amount),
+        })
+    }
+
+    /// Magecraft-Loot shortcut: "Whenever you cast or copy an instant or
+    /// sorcery spell, draw a card, then discard a card." Wraps
+    /// [`magecraft`] with the canonical loot body (Seq[Draw 1, Discard 1]).
+    /// Used by Prismari Looter / Storm-Caller / Stormcaster / Aquamancer.
+    pub fn magecraft_loot() -> TriggeredAbility {
+        magecraft(Effect::Seq(vec![
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+            Effect::Discard {
+                who: Selector::You,
+                amount: Value::Const(1),
+                random: false,
+            },
+        ]))
+    }
+
+    /// Magecraft-Scry shortcut: "Whenever you cast or copy an instant or
+    /// sorcery spell, scry `amount`." Wraps [`magecraft`] with the
+    /// canonical scry body. Used by Silverquill Pen-Pusher,
+    /// Quandrix Mistshaper, etc. — the "smooth on cast" pattern.
+    pub fn magecraft_scry(amount: i32) -> TriggeredAbility {
+        magecraft(Effect::Scry {
+            who: PlayerRef::You,
+            amount: Value::Const(amount),
+        })
+    }
+
     /// Magecraft-Mint-Token shortcut: "Whenever you cast or copy an
     /// instant or sorcery spell, create `count` copies of `definition`."
     /// Wraps [`magecraft`] with a `CreateToken` body. Used by Inkling

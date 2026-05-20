@@ -19,10 +19,50 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 227 | 29 | 0 |
-| STX (327 cards) | 1069 (incl. synthesised variants) | 8 | 0 |
+| STX (327 cards) | 1110 (incl. synthesised variants) | 8 | 0 |
 | STA reprints (in STX boosters) | 47 | 0 | — |
 
 Push (modern_decks, claude/modern_decks branch — latest revision —
+**batch 50: 41 more synthesised STX cards (29 Silverquill + 12
+Witherbloom) + 41 new tests + CR 119 (Life) audit + 3 new effect
+shortcuts (`etb_draw`, `magecraft_loot`, `magecraft_scry`) folding
+canonical ETB-cantrip /
+loot-on-cast / scry-on-cast patterns into one-line helpers.
+Includes `silverquill_cantor` ({W} 1/2 ETB gain 1 life),
+`silverquill_inkscholar_b50` ({1}{W} 2/2 ETB draw a card via the new
+`etb_draw` shortcut), `silverquill_quillrunner` ({1}{W} 2/2 Vigilance
+magecraft Scry 1), `inkling_stylescribe` ({W}{B} 2/2 Inkling Flying
+magecraft Scry 1), `silverquill_pageturner` ({1}{W} 1/3 Vigilance ETB
+Scry 1), `inkling_stormwriter` ({2}{W}{B} 3/2 Flying magecraft gain 1
+life), `silverquill_inkbinder` ({2}{W} 2/3 ETB pump +1/+1 + Lifelink
+EOT to target friendly creature), `silverquill_quietus` ({1}{B}
+Instant -3/-3 EOT), `inkling_skywriter` ({1}{W}{B} 2/2 Flying
+magecraft +1/+1 EOT), `silverquill_glyphmaster` ({3}{W}{B} 3/4
+Lifelink ETB drain 2), `inkling_mournful` ({2}{B} 2/2 Flying dies
+drain 1), `silverquill_pen_squire` ({W} 1/1 magecraft self-pump
++1/+0), `inkling_spellbinder` ({3}{W}{B} 4/4 Flying Lifelink),
+`silverquill_diction` ({W}{B} Instant drain 2 + Surveil 1),
+`silverquill_quietude` ({2}{W}{B} Sorcery drain 3 + Scry 2),
+`inkling_beautisage` ({3}{W} 3/3 Vigilance ETB gain 3 life),
+`silverquill_inkmender` ({1}{W}{B} 2/3 Lifelink ETB returns ≤2-MV
+creature from gy), `silverquill_memorial` ({2}{W}{B} Sorcery
+reanimate + drain 1), `inkling_inkstain` ({1}{W} 2/1 attack shrink
+target -1/-0), `silverquill_convene` ({2}{W}{B} Sorcery mint 2
+Inklings + drain 1), `silverquill_sermoneer` ({3}{W} 2/4 Vigilance
+ETB Scry 1 + gain 1 life), `inkling_pageboy` ({W} 1/2 Inkling
+Flying), `silverquill_inkstrike_page` ({1}{B} Sorcery destroy creature
+power ≤2), `silverquill_mentor` ({2}{W} 2/3 Vigilance ETB +1/+1
+counter on target friendly creature), `silverquill_necroscribe`
+({3}{B} 3/3 ETB returns IS from gy), `silverquill_pronouncement`
+({3}{W}{B} Sorcery drain 3 + mint 2 Inklings), `silverquill_cipher`
+({W}{B} Instant drain 1 + Draw 1), `inkling_quillpoint` ({1}{W}{B}
+2/3 Inkling Knight First Strike), and `silverquill_festscribe`
+({2}{W}{B} 3/3 ETB mint Inkling + gain 2 life). Bringing the STX
+synthesised-variant corpus from 1069 to 1098. Total tests: 3282
+(was 3253).**
+
+Prior push:
+
 **batch 49: 27 more synthesised STX cards across all 5 colleges
 (8 Silverquill + 4 Witherbloom + 5 Lorehold + 4 Quandrix + 4 Prismari
 + 2 cross-college) + 27 new tests + CR 105 (Colors) audit + 3 new
@@ -4235,6 +4275,35 @@ parity is a matter of porting card factories one at a time.
 | Silverquill Reprover | {2}{W} | ✅ | Push (modern_decks batch 47 follow-up, NEW, `stx::silverquill`): 2/3 Human Cleric Vigilance. ETB shrinks target opp creature -2/-0 EOT. Combat-disruption defender body. Test: `silverquill_reprover_shrinks_opp_creature_on_etb`. |
 | Silverquill Refrain | {W}{B} | ✅ | Push (modern_decks batch 47 follow-up, NEW, `stx::silverquill`): Instant. Seq(Drain 2 + Surveil 1). 2-mana drain + selection. Test: `silverquill_refrain_drains_two_and_surveils`. |
 | Inkling Ascendancy | {2}{W}{B} | ✅ | Push (modern_decks batch 47 follow-up, NEW, `stx::silverquill`): Sorcery. Seq(CreateToken(2 Inklings) + PumpPT(each_your_creature, +1/+0, EOT)). 4-mana wide-anthem swing turn for Inkling tribal. Test: `inkling_ascendancy_mints_two_inklings_and_pumps_team`. |
+| Silverquill Cantor | {W} | ✅ | Push (modern_decks batch 50, NEW, `stx::silverquill`): 1/2 Human Cleric. ETB GainLife 1 — 1-mana defensive lifegain enabler. Test: `silverquill_cantor_etb_gains_one_life`. |
+| Silverquill Inkscholar Adept | {1}{W} | ✅ | Push (modern_decks batch 50, NEW, `stx::silverquill`): 2/2 Human Wizard. ETB Draw 1 via the new `etb_draw(1)` shortcut. 2-mana cantrip body. Test: `silverquill_inkscholar_adept_etb_draws_a_card`. |
+| Silverquill Quillrunner | {1}{W} | ✅ | Push (modern_decks batch 50, NEW, `stx::silverquill`): 2/2 Human Soldier Vigilance. Magecraft Scry 1 via the new `magecraft_scry(1)` shortcut. 2-mana scry-on-cast body. Test: `silverquill_quillrunner_magecraft_scrys`. |
+| Inkling Stylescribe | {W}{B} | ✅ | Push (modern_decks batch 50, NEW, `stx::silverquill`): 2/2 Inkling Cleric Flying. Magecraft Scry 1 — Inkling-tribal smoother. Test: `inkling_stylescribe_is_a_two_mana_flying_inkling`. |
+| Silverquill Pageturner | {1}{W} | ✅ | Push (modern_decks batch 50, NEW, `stx::silverquill`): 1/3 Human Wizard Vigilance. ETB Scry 1 — defensive smoothing body. Test: `silverquill_pageturner_etb_scrys_with_vigilance`. |
+| Inkling Stormwriter | {2}{W}{B} | ✅ | Push (modern_decks batch 50, NEW, `stx::silverquill`): 3/2 Inkling Wizard Flying. Magecraft GainLife 1 — evasive lifegain-on-cast. Test: `inkling_stormwriter_magecraft_gains_one_life`. |
+| Silverquill Inkbinder | {2}{W} | ✅ | Push (modern_decks batch 50, NEW, `stx::silverquill`): 2/3 Human Cleric. ETB Seq(PumpPT(+1/+1 EOT, target friendly creature) + GrantKeyword(Lifelink, EOT, target friendly creature)) — 3-mana combat trick + lifelink-on-the-pumped-creature. Test: `silverquill_inkbinder_etb_pumps_and_grants_lifelink`. |
+| Silverquill Quietus | {1}{B} | ✅ | Push (modern_decks batch 50, NEW, `stx::silverquill`): Instant. PumpPT(-3/-3 EOT target creature). 2-mana shrink-removal. Test: `silverquill_quietus_shrinks_creature`. |
+| Inkling Skywriter | {1}{W}{B} | ✅ | Push (modern_decks batch 50, NEW, `stx::silverquill`): 2/2 Inkling Wizard Flying. Magecraft +1/+1 EOT to target friendly creature. Test: `inkling_skywriter_magecraft_pumps_target_creature`. |
+| Silverquill Glyphmaster | {3}{W}{B} | ✅ | Push (modern_decks batch 50, NEW, `stx::silverquill`): 3/4 Vampire Cleric Lifelink. ETB drain 2 — 5-mana race breaker. Test: `silverquill_glyphmaster_etb_drains_two_with_lifelink`. |
+| Inkling Mournful | {2}{B} | ✅ | Push (modern_decks batch 50, NEW, `stx::silverquill`): 2/2 Inkling Rogue Flying. Dies → drain 1. 3-mana evasive trade-up body. Test: `inkling_mournful_dies_drains_one`. |
+| Silverquill Pen-Squire | {W} | ✅ | Push (modern_decks batch 50, NEW, `stx::silverquill`): 1/1 Human Soldier. Magecraft self-pump +1/+0 EOT — cheapest Silverquill self-pump magecraft body. Test: `silverquill_pen_squire_magecraft_self_pumps`. |
+| Inkling Spellbinder | {3}{W}{B} | ✅ | Push (modern_decks batch 50, NEW, `stx::silverquill`): 4/4 Inkling Wizard Flying + Lifelink. 5-mana evasive race breaker — vanilla flier + lifelink. Test: `inkling_spellbinder_is_a_lifelink_flier`. |
+| Silverquill Diction | {W}{B} | ✅ | Push (modern_decks batch 50, NEW, `stx::silverquill`): Instant. Seq(Drain 2 + Surveil 1). 2-mana drain + selection. Test: `silverquill_diction_drains_two_and_surveils`. |
+| Silverquill Quietude | {2}{W}{B} | ✅ | Push (modern_decks batch 50, NEW, `stx::silverquill`): Sorcery. Seq(Drain 3 + Scry 2). 4-mana drain + selection. Test: `silverquill_quietude_drains_three_and_scrys`. |
+| Inkling Beautisage | {3}{W} | ✅ | Push (modern_decks batch 50, NEW, `stx::silverquill`): 3/3 Inkling Cleric Vigilance. ETB gain 3 life. 4-mana defensive lifegain finisher. Test: `inkling_beautisage_etb_gains_three_life`. |
+| Silverquill Inkmender | {1}{W}{B} | ✅ | Push (modern_decks batch 50, NEW, `stx::silverquill`): 2/3 Vampire Warlock Lifelink. ETB returns target ≤2-MV creature from your gy to hand. 3-mana lifelink reanimator. Test: `silverquill_inkmender_etb_returns_low_mv_creature`. |
+| Silverquill Memorial | {2}{W}{B} | ✅ | Push (modern_decks batch 50, NEW, `stx::silverquill`): Sorcery. Seq(Move(target creature from gy → bf) + Drain 1). 4-mana reanimator + drain. Test: `silverquill_memorial_reanimates_and_drains`. |
+| Inkling Inkstain | {1}{W} | ✅ | Push (modern_decks batch 50, NEW, `stx::silverquill`): 2/1 Inkling Soldier. Attacks-trigger -1/-0 EOT on target creature — tempo-shrink attacker. Test: `inkling_inkstain_attack_shrinks_target_creature`. |
+| Silverquill Convene | {2}{W}{B} | ✅ | Push (modern_decks batch 50, NEW, `stx::silverquill`): Sorcery. Seq(CreateToken(2 Inklings) + LoseLife 1 each opp). 4-mana double mint + drain rider. Test: `silverquill_convene_mints_two_inklings_and_drains`. |
+| Silverquill Sermoneer | {3}{W} | ✅ | Push (modern_decks batch 50, NEW, `stx::silverquill`): 2/4 Human Cleric Vigilance. ETB Seq(Scry 1 + GainLife 1). 4-mana defensive smoother body. Test: `silverquill_sermoneer_etb_scrys_and_gains_life`. |
+| Inkling Pageboy | {W} | ✅ | Push (modern_decks batch 50, NEW, `stx::silverquill`): 1/2 Inkling Cleric Flying. Vanilla 1-drop evasive Inkling — cheapest evasive Inkling. Test: `inkling_pageboy_is_a_one_mana_flier`. |
+| Silverquill Inkstrike-Page | {1}{B} | ✅ | Push (modern_decks batch 50, NEW, `stx::silverquill`): Sorcery. Destroy target creature with power ≤ 2. Cheap power-gated removal. Test: `silverquill_inkstrike_page_destroys_low_power_creature`. |
+| Silverquill Mentor | {2}{W} | ✅ | Push (modern_decks batch 50, NEW, `stx::silverquill`): 2/3 Human Cleric Vigilance. ETB +1/+1 counter on target friendly creature. 3-mana sticky pumper. Test: `silverquill_mentor_etb_adds_plus_one_counter`. |
+| Silverquill Necroscribe | {3}{B} | ✅ | Push (modern_decks batch 50, NEW, `stx::silverquill`): 3/3 Vampire Wizard. ETB returns target IS card from your gy to hand. 4-mana value-recursion body. Test: `silverquill_necroscribe_etb_returns_is_card_from_graveyard`. |
+| Silverquill Pronouncement | {3}{W}{B} | ✅ | Push (modern_decks batch 50, NEW, `stx::silverquill`): Sorcery. Seq(Drain 3 + CreateToken 2 Inklings). 5-mana drain + double mint finisher. Test: `silverquill_pronouncement_drains_three_and_mints_two_inklings`. |
+| Silverquill Cipher | {W}{B} | ✅ | Push (modern_decks batch 50, NEW, `stx::silverquill`): Instant. Seq(Drain 1 + Draw 1). 2-mana micro drain cantrip. Test: `silverquill_cipher_drains_one_and_cantrips`. |
+| Inkling Quillpoint | {1}{W}{B} | ✅ | Push (modern_decks batch 50, NEW, `stx::silverquill`): 2/3 Inkling Knight First Strike. 3-mana first-strike Inkling — combat-leaning Tenured Inkcaster fodder. Test: `inkling_quillpoint_is_a_first_strike_inkling`. |
+| Silverquill Festscribe | {2}{W}{B} | ✅ | Push (modern_decks batch 50, NEW, `stx::silverquill`): 3/3 Vampire Wizard. ETB Seq(CreateToken Inkling + GainLife 2). 4-mana double-payoff ETB body. Test: `silverquill_festscribe_etb_mints_inkling_and_gains_two_life`. |
 
 ### Witherbloom (B/G)
 
@@ -4333,6 +4402,18 @@ parity is a matter of porting card factories one at a time.
 | Witherbloom Pestbloomer | {2}{B}{G} | ✅ | Push (modern_decks batch 47, NEW, `stx::witherbloom`): 3/3 Plant Druid. ETB mints 2 Pest tokens via `etb_mint_token(stx_pest_token(), 2)`. 4-mana body + Pest engine. Test: `witherbloom_pestbloomer_etb_mints_two_pests`. |
 | Witherbloom Rotsplash | {1}{B} | ✅ | Push (modern_decks batch 47, NEW, `stx::witherbloom`): Instant. Seq(PumpPT(-3/-3 EOT) + GainLife 1). 2-mana efficient removal trick. Test: `witherbloom_rotsplash_shrinks_creature_and_gains_one_life`. |
 | Witherbloom Vinetwister | {3}{G} | ✅ | Push (modern_decks batch 47, NEW, `stx::witherbloom`): 3/4 Plant Druid. ETB +1/+1 counter on each *other* friendly creature (`SelectionRequirement::OtherThanSource`). Test: `witherbloom_vinetwister_etb_fans_counters_on_other_creatures`. |
+| Witherbloom Drainscholar Adept | {1}{B} | ✅ | Push (modern_decks batch 50, NEW, `stx::witherbloom`): 1/3 Plant Warlock. Magecraft GainLife 1 — defensive lifegain-on-cast body. Test: `witherbloom_drainscholar_b50_magecraft_gains_one_life`. |
+| Pest Hierarch | {B}{G} | ✅ | Push (modern_decks batch 50, NEW, `stx::witherbloom`): 2/1 Pest. ETB mints 1 Pest token. Aggressive 2-mana Pest engine. Test: `pest_hierarch_etb_mints_pest_token`. |
+| Witherbloom Bloodseeker | {2}{B}{G} | ✅ | Push (modern_decks batch 50, NEW, `stx::witherbloom`): 3/3 Plant Vampire Lifelink. 4-mana lifelink anchor. Test: `witherbloom_bloodseeker_is_a_lifelink_three_three`. |
+| Pest Disciple | {1}{G} | ✅ | Push (modern_decks batch 50, NEW, `stx::witherbloom`): 1/2 Pest Druid. ETB Seq(Scry 1 + GainLife 1). 2-mana defensive smoother. Test: `pest_disciple_etb_scrys_and_gains_one_life`. |
+| Witherbloom Lifescribe | {1}{B}{G} | ✅ | Push (modern_decks batch 50, NEW, `stx::witherbloom`): 2/3 Human Druid. ETB Drain 1 + magecraft GainLife 1. 3-mana scaling lifegain body. Test: `witherbloom_lifescribe_etb_drains_one_then_magecraft_gains_one_life`. |
+| Pest Lifebloom | {B}{G} | ✅ | Push (modern_decks batch 50, NEW, `stx::witherbloom`): Instant. Seq(GainLife 4 + Surveil 1). 2-mana big lifegain + selection. Test: `pest_lifebloom_gains_four_life_and_surveils`. |
+| Witherbloom Pestmage | {2}{B} | ✅ | Push (modern_decks batch 50, NEW, `stx::witherbloom`): 3/2 Pest Wizard Menace. Aggressive 3-mana Pest with menace. Test: `witherbloom_pestmage_is_three_two_menace`. |
+| Witherbloom Vinedrain | {2}{B}{G} | ✅ | Push (modern_decks batch 50, NEW, `stx::witherbloom`): Sorcery. Seq(Drain 3 + Draw 1). 4-mana drain + cantrip. Test: `witherbloom_vinedrain_drains_three_and_cantrips`. |
+| Witherbloom Roto-Sage | {3}{B}{G} | ✅ | Push (modern_decks batch 50, NEW, `stx::witherbloom`): 4/4 Plant Druid Deathtouch. 5-mana finisher with deathtouch. Test: `witherbloom_roto_sage_is_a_four_four_deathtouch`. |
+| Pest Cultivator-Sage | {2}{B}{G} | ✅ | Push (modern_decks batch 50, NEW, `stx::witherbloom`): 3/3 Plant Druid. Attacks-trigger mints a Pest token — Hierarch-style scaling attacker. Test: `pest_cultivator_sage_attack_mints_a_pest`. |
+| Witherbloom Decaymage | {1}{B} | ✅ | Push (modern_decks batch 50, NEW, `stx::witherbloom`): 2/2 Pest Warlock. Magecraft drain each opp 1 — same shape as Witherbloom Apprentice but on a Pest-typed 2-mana body. Test: `witherbloom_decaymage_magecraft_drains_each_opp`. |
+| Witherbloom Pest-Caller Adept | {3}{B}{G} | ✅ | Push (modern_decks batch 50, NEW, `stx::witherbloom`): 3/3 Pest Warlock. ETB mints 3 Pest tokens via `etb_mint_token(stx_pest_token(), 3)`. 5-mana go-wide finisher. Test: `witherbloom_pestcaller_b50_etb_mints_three_pests`. |
 
 ### Lorehold (R/W)
 

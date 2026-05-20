@@ -12,6 +12,58 @@ Periodic spot-check of the rules document
 `MagicCompRules_20260417.txt`). Each rule below has a status tag (✅
 wired, 🟡 partial, ⏳ todo) plus a short note.
 
+- 🟡 **CR 119 — Life** (push modern_decks batch 50,
+  claude/modern_decks branch — audit against
+  `MagicCompRules_20260417.txt`). The life-total primitive — how
+  gain/lose life are computed, payment-of-life validity, and the
+  "can't gain/lose life" effect framework.
+  (a) **119.1** "Each player begins the game with a starting life
+  total of 20" — ✅ (`Player::new` in `game/types.rs` initialises
+  `life: 20`; format mod sets Commander's 40 and Two-Headed Giant's
+  30 via `Player::with_starting_life`).
+  (b) **119.2** "Damage dealt to a player causes that player to
+  lose that much life" — ✅ (`deal_damage_to` in `game/effects/mod.rs`
+  routes player damage through `Player.life -= amount` and emits
+  `GameEvent::LifeLost`).
+  (c) **119.3** "Gain/lose life adjusts life total" — ✅ (`Effect::
+  GainLife` / `Effect::LoseLife` both modify `Player.life` and emit
+  the matching events; `Player.life_gained_this_turn` tracks the
+  per-turn fan-out for Honor Troll / Children of Korlis-class
+  triggers).
+  (d) **119.4** "Pay X life requires life ≥ X" — 🟡 (the engine
+  enforces this via `Player.can_pay_life` for activated-ability
+  `life_cost: u32` and `Effect::LoseLife` clamps at 0 instead of
+  going negative; no cards that pay life as a spell-cast cost are
+  in the catalog beyond the Vicious Rivalry / Pay-X-life-as-effect
+  template).
+  (e) **119.4b** "Players can always pay 0 life" — ✅ (the cost
+  validator short-circuits when `amount == 0` and never checks the
+  life total; this matches the CR-correct behavior).
+  (f) **119.5** "Set life to specific number → gain/lose enough" —
+  ✅ (`Effect::SetLife { who, amount }` computes the delta and emits
+  the matching `LifeGained` / `LifeLost` event; Beacon of Immortality,
+  Magus of the Mirror, Skull of Orm-class effects all route through
+  this).
+  (g) **119.6** "Player at 0 or less life loses the game" — ✅
+  (state-based actions in `state_based_actions.rs` emit
+  `GameEvent::PlayerLost` when `Player.life <= 0`; CR 704.5a).
+  (h) **119.7-119.8** "Can't gain/lose life" — ⏳ (no `Player.can_
+  not_gain_life: bool` flag; no card in the catalog grants this).
+  (i) **119.9** "Whenever [player] gains life" — ✅ (`EventKind::
+  LifeGained` triggers fire per-event with `event_amount` threaded
+  through `EffectContext`; `Value::TriggerEventAmount` reads the
+  amount in trigger bodies for Light of Promise-class "that many"
+  riders).
+  (j) **119.10** "If [player] would gain life" replacement — 🟡
+  (the replacement-effect framework supports life-gain replacement
+  via `ReplacementEffect::DoubleLifeGain` keyed off `EventKind::
+  LifeGained`; only the Boon-Reflection / Cathars' Crusade replacement
+  shapes are wired today).
+  Affected: Honor Troll (lifegain-this-turn predicate) ✅, Light of
+  Promise (LifeGained trigger amount fan-out) ✅, Felisa's drain
+  ✅, all etb_drain / drain_each_opp cards (canonical drain pattern)
+  ✅, Vicious Rivalry (pay X life as additional cost) ✅.
+
 - 🟡 **CR 121 — Drawing a Card** (push modern_decks batch 40,
   claude/modern_decks branch — audit against
   `MagicCompRules_20260417.txt`): The card-draw primitive — what
@@ -2724,6 +2776,22 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   Promote to ✅ when CR 701.19 (Regenerate) lands.
 
 ## Suggested next-up tasks
+
+- ⏳ **`EventKind::CreatureSacrificed` event separation** (push
+  modern_decks batch 50 — new suggestion). Today `Effect::Sacrifice`
+  emits `GameEvent::CreatureDied` only — sacrifice and natural death
+  are indistinguishable from a trigger's perspective. CR 701.16
+  defines sacrifice as a distinct game event; cards like Mortician
+  Beetle ("Whenever a player sacrifices a creature"), Yahenni,
+  Bone Picker, Solemn Recruit-style triggers want the
+  sacrifice-specific event, not a death-of-any-cause trigger.
+  Wiring shape: add `EventKind::CreatureSacrificed` + `GameEvent::
+  CreatureSacrificed { card_id, who }` (new variants). Have
+  `Effect::Sacrifice` resolver emit both events in order
+  (CreatureSacrificed first, then CreatureDied) so existing
+  death-triggers still fire. Update Mortician Beetle's trigger
+  from `CreatureDied / AnyPlayer` to `CreatureSacrificed / AnyPlayer`
+  — tightening the body for the printed Oracle.
 
 - ⏳ **Transient triggered-ability grant primitive** (push
   modern_decks batch 47 — new suggestion). Several STX/SOS cards
