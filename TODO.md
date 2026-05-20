@@ -5788,3 +5788,44 @@ resolution time" in the Suggested next-up tasks section.
   other types" rider via field mutation. Distinct from
   `Effect::CopySpell` which copies a stack spell. CR 707.2
   governs the copy-and-token-mint pipeline.
+
+### Suggested next-up tasks (additions from batch 47)
+
+- ⏳ **Inkling-tribal Silverquill subpool (revisit)** — push
+  (modern_decks batch 47) brings the catalog to 38+ Inkling cards
+  in `stx::silverquill` including 5+ Inkling lords / anthems
+  (Tenured Inkcaster +2/+2, Inkling Verselord lifelink-grant,
+  Inkling Sergeant +1/+0, Inkling Banner-Bearer, Inkling
+  Calligraphist) and 15+ Inkling minters. The Silverquill college
+  is now closed-out (only Mavinda 🟡). A sealed-pool selector that
+  weights toward Inkling cards when Silverquill is the chosen
+  college would lean the typical SOS Silverquill draft into
+  Inkling-tribal payoffs more reliably. Slot into
+  `sos_mode::pool_for_college(Silverquill)` once the
+  deck-construction code supports archetype weighting.
+
+- ⏳ **Token-death `died_card_snapshots` cache: extend to
+  PermanentLeavesBattlefield events** — push (modern_decks batch
+  47) ships the cache for CreatureDied. Token-leave triggers
+  (Lorehold Spiritcaller's per-leave gain-1, Lorehold Reliquary's
+  per-leave-graveyard +1/+1) for non-creature permanent leave
+  paths (`PermanentLeavesBattlefield` event) need the same
+  treatment when the leaving permanent is a token. Currently the
+  engine emits CreatureDied for dying creatures only; PW dying,
+  enchantment / artifact leaves go through a separate event path
+  whose AnotherOfYours-scope lookups have the same zone-walk
+  blind spot. Affects ~3 cards in the catalog. Engine shape:
+  cache snapshots for every leave-bf zone change of a token,
+  consult them from the same lookup chain.
+
+- ⏳ **CR 606.5 — Combined loyalty cost (Carth the Lion)** —
+  push (modern_decks batch 47, CR 606 audit) flagged that the
+  engine accepts a single `loyalty_cost: i32` per ability, so a
+  hypothetical "loyalty abilities cost an additional [+1]"
+  static can't compose with the printed `[-N]` of a target
+  ability to land at `[-(N-1)]`. No card in STX/SOS/cube uses
+  this composition today, so doc-tracked. Engine shape: add a
+  `loyalty_cost_modifier: i32` field on `Player` (read at
+  activation time, applied symmetrically to + and - costs per
+  the rule) and a `StaticEffect::ModifyLoyaltyAbilityCost {
+  delta }` primitive that bumps the modifier.

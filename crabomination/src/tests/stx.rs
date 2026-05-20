@@ -37502,3 +37502,72 @@ fn pestmaster_pumps_on_pest_token_death_via_cached_controller() {
         "Pestmaster gained a +1/+1 counter on Pest *token* death (cache lookup path)"
     );
 }
+
+#[test]
+fn felisa_pumps_inkling_on_pest_token_with_counter_death() {
+    // Lock-in for the push (modern_decks batch 47) token-death snapshot
+    // cache: Felisa's "creature with +1/+1 counter dies → 1/1 W/B
+    // Inkling" trigger fires for TOKEN deaths too. Before the cache
+    // landed, the CR 111.7c "token ceases to exist" SBA removed the
+    // dying token from every zone in the same sweep — by dispatch time
+    // the `WithCounter(+1/+1)` filter (evaluated via
+    // evaluate_requirement_static on the dying card) returned false
+    // because no zone had the card.
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let _felisa = g.add_card_to_battlefield(0, catalog::felisa_fang_of_silverquill());
+    // Mint a Pest token under P0 (the Pest also has a +1/+1 counter
+    // applied directly to the battlefield instance — simulating a
+    // mid-game scenario where, say, Silverquill Memorize pumped a
+    // friendly Pest before it died).
+    let ps = g.add_card_to_hand(0, catalog::pest_summoning());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: ps,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Pest Summoning castable");
+    drain_stack(&mut g);
+    // Find the first Pest token.
+    let pest_id = g
+        .battlefield
+        .iter()
+        .find(|c| c.definition.subtypes.creature_types.contains(&CreatureType::Pest))
+        .map(|c| c.id)
+        .expect("Pest token created");
+    // Add a +1/+1 counter directly.
+    if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == pest_id) {
+        c.add_counters(CounterType::PlusOnePlusOne, 1);
+    }
+    let bf_before = g.battlefield.len();
+    // Kill the Pest with a Bolt.
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Permanent(pest_id)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Bolt castable");
+    drain_stack(&mut g);
+    // The Pest is gone (ceased to exist), Bolt is in graveyard, and
+    // Felisa minted an Inkling because the cache let her counter
+    // filter resolve on the dying token. Net: -1 pest, -0 bolt
+    // (still in gy, off bf) + 1 inkling = bf_before.
+    let inkling_present = g
+        .battlefield
+        .iter()
+        .any(|c| c.definition.name == "Inkling");
+    assert!(
+        inkling_present,
+        "Felisa mints an Inkling when a counter-bearing Pest token dies"
+    );
+    // Sanity: bf size is unchanged (pest out, inkling in).
+    assert_eq!(g.battlefield.len(), bf_before);
+}
