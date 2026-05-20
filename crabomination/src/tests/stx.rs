@@ -859,6 +859,59 @@ fn galazeth_prismari_is_three_four_flying_dragon_with_etb_treasure() {
 }
 
 #[test]
+fn galazeth_prismari_grants_tap_for_any_color_to_artifacts() {
+    // Printed: "Artifacts you control have '{T}: Add one mana of any
+    // color.'" The static is surfaced as a virtual activated ability
+    // at index = printed_count on each artifact controlled by
+    // Galazeth's controller. Strixhaven Skycoach (artifact, 0 printed
+    // activated abilities) gets the grant at index 0; tapping it adds
+    // one mana of any color via the existing AnyOneColor decision
+    // (AutoDecider picks the first legal color).
+    let mut g = two_player_game();
+    let _galazeth = g.add_card_to_battlefield(0, catalog::galazeth_prismari());
+    let skycoach = g.add_card_to_battlefield(0, catalog::strixhaven_skycoach());
+
+    let pool_before = g.players[0].mana_pool.total();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: skycoach,
+        ability_index: 0,
+        target: None,
+    })
+    .expect("Galazeth grant: {T}: Add one mana of any color");
+
+    let pool_after = g.players[0].mana_pool.total();
+    assert_eq!(
+        pool_after - pool_before, 1,
+        "Galazeth-granted ability adds one mana to caster's pool"
+    );
+
+    // Verify the Skycoach is now tapped (paid the tap cost).
+    let sc = g.battlefield_find(skycoach).expect("Skycoach still on bf");
+    assert!(sc.tapped, "Skycoach paid the tap cost for the granted ability");
+}
+
+#[test]
+fn galazeth_prismari_grant_requires_galazeth_in_play() {
+    // Without Galazeth on the battlefield, an artifact has no virtual
+    // tap-for-any-color ability — activating index 0 on a Skycoach
+    // (0 printed abilities) is rejected as out-of-bounds.
+    let mut g = two_player_game();
+    let skycoach = g.add_card_to_battlefield(0, catalog::strixhaven_skycoach());
+
+    let err = g
+        .perform_action(GameAction::ActivateAbility {
+            card_id: skycoach,
+            ability_index: 0,
+            target: None,
+        })
+        .expect_err("no Galazeth → no grant → rejected");
+    assert!(
+        matches!(err, GameError::AbilityIndexOutOfBounds),
+        "expected AbilityIndexOutOfBounds, got {err:?}"
+    );
+}
+
+#[test]
 fn beledros_witherbloom_six_six_flying_trample_lifelink() {
     let b = catalog::beledros_witherbloom();
     assert_eq!(b.power, 6);

@@ -2103,6 +2103,48 @@ impl GameState {
 
     // ── Activate ability ──────────────────────────────────────────────────────
 
+    /// Galazeth Prismari static — "Artifacts you control have
+    /// '{T}: Add one mana of any color.'" If any Galazeth Prismari is
+    /// on the battlefield under the given controller's seat, returns a
+    /// virtual mana ability that can be slotted in as the artifact's
+    /// `printed_count`-th ability. Otherwise returns `None`.
+    ///
+    /// Hooked into `activate_ability` so the standard cost-pay /
+    /// target-validation / mana-emit path "just works" — no separate
+    /// branch in the resolver. The granted ability uses
+    /// `ManaPayload::AnyOneColor(1)`, which routes through the
+    /// `AnyOneColorPending` decision (chooser picks the color) for UI
+    /// players; the AutoDecider picks the first legal color.
+    fn galazeth_artifact_grant(
+        &self,
+        controller: usize,
+    ) -> Option<crate::effect::ActivatedAbility> {
+        use crate::effect::{ActivatedAbility, Effect, ManaPayload, PlayerRef};
+        let galazeth_in_play = self.battlefield.iter().any(|c| {
+            c.definition.name == "Galazeth Prismari" && c.controller == controller
+        });
+        if !galazeth_in_play {
+            return None;
+        }
+        Some(ActivatedAbility {
+            tap_cost: true,
+            mana_cost: crate::mana::ManaCost::default(),
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::AnyOneColor(crate::card::Value::Const(1)),
+            },
+            once_per_turn: false,
+            sorcery_speed: false,
+            sac_cost: false,
+            condition: None,
+            life_cost: 0,
+            from_graveyard: false,
+            exile_self_cost: false,
+            exile_other_filter: None,
+            self_counter_cost_reduction: None,
+        })
+    }
+
     pub(crate) fn activate_ability(
         &mut self,
         card_id: CardId,
@@ -2152,16 +2194,34 @@ impl GameState {
                 .find(|c| c.id == card_id)
                 .map(|c| c.lost_all_abilities)
                 .unwrap_or(false);
-            let raw = self.battlefield[pos]
-                .definition
-                .activated_abilities
-                .get(ability_index)
-                .cloned()
-                .ok_or(GameError::AbilityIndexOutOfBounds)?;
-            if stripped && !is_mana_ability(&raw.effect) {
-                return Err(GameError::AbilityIndexOutOfBounds);
+            // Galazeth Prismari static: "Artifacts you control have
+            // '{T}: Add one mana of any color.'" Surface this as a
+            // virtual activated ability at index = printed_count, so
+            // standard activate_ability validation and mana payment
+            // work without modifying every ability lookup path.
+            let printed_count = self.battlefield[pos].definition.activated_abilities.len();
+            let granted = if ability_index == printed_count
+                && self.battlefield[pos].definition.is_artifact()
+                && !stripped
+            {
+                self.galazeth_artifact_grant(self.battlefield[pos].controller)
+            } else {
+                None
+            };
+            if let Some(g) = granted {
+                g
+            } else {
+                let raw = self.battlefield[pos]
+                    .definition
+                    .activated_abilities
+                    .get(ability_index)
+                    .cloned()
+                    .ok_or(GameError::AbilityIndexOutOfBounds)?;
+                if stripped && !is_mana_ability(&raw.effect) {
+                    return Err(GameError::AbilityIndexOutOfBounds);
+                }
+                raw
             }
-            raw
         };
 
         // For graveyard activations, reject if the ability isn't flagged
